@@ -43,6 +43,8 @@ const TYPE_LABELS: Record<SelectMonitorContentCheck["type"], string> = {
 	regex: "Matches regex",
 };
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 /** Renders the monitor's existing content checks (each with its own delete-confirmation dialog) plus a form to add a new one, capped at 10 checks. */
 export default function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 	return () => {
@@ -133,17 +135,19 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="content_check_id" value={check.id} />
 													<input type="hidden" name="monitor_id" value={monitorId} />
-													<Button
-														type="button"
-														variant="outline"
-														commandfor={`delete-content-check-${check.id}`}
-														command="close"
-													>
-														Cancel
-													</Button>
-													<Button type="submit" color="danger">
-														Delete
-													</Button>
+													<div mix={[dialogActions]}>
+														<Button
+															type="button"
+															variant="outline"
+															commandfor={`delete-content-check-${check.id}`}
+															command="close"
+														>
+															Cancel
+														</Button>
+														<Button type="submit" color="danger">
+															Delete
+														</Button>
+													</div>
 												</form>
 											</dialog>
 										</td>

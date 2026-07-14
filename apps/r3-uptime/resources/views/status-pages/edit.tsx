@@ -50,6 +50,8 @@ const dialogText = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace EditStatusPageView {
 	export interface Props {
 		team: { slug: string };
@@ -99,12 +101,19 @@ export default function EditStatusPageView(handle: Handle<EditStatusPageView.Pro
 					<form method="post" action={routes.actions.statusPage.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="status_page_id" value={page.id} />
-						<Button type="button" variant="outline" commandfor="delete-status-page" command="close">
-							Cancel
-						</Button>
-						<Button type="submit" color="danger">
-							Delete
-						</Button>
+						<div mix={[dialogActions]}>
+							<Button
+								type="button"
+								variant="outline"
+								commandfor="delete-status-page"
+								command="close"
+							>
+								Cancel
+							</Button>
+							<Button type="submit" color="danger">
+								Delete
+							</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>

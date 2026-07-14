@@ -60,6 +60,8 @@ const card = css({
 	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace AccountView {
 	export interface Props {
 		viewer: { name: string; email: string; avatar: string };
@@ -271,10 +273,12 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 								]}
 							/>
 						</Field>
-						<Button type="button" variant="outline" commandfor="create-team" command="close">
-							Cancel
-						</Button>
-						<Button type="submit">Create team</Button>
+						<div mix={[dialogActions]}>
+							<Button type="button" variant="outline" commandfor="create-team" command="close">
+								Cancel
+							</Button>
+							<Button type="submit">Create team</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>

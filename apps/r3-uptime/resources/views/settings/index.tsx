@@ -39,6 +39,8 @@ const neutral = {
 	950: "oklch(0.16 0.004 145)",
 } as const;
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace SettingsView {
 	export interface Props {
 		team: SelectTeam;
@@ -156,10 +158,12 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 								]}
 							/>
 						</Field>
-						<Button type="button" variant="outline" commandfor="invite-member" command="close">
-							Cancel
-						</Button>
-						<Button type="submit">Send invite</Button>
+						<div mix={[dialogActions]}>
+							<Button type="button" variant="outline" commandfor="invite-member" command="close">
+								Cancel
+							</Button>
+							<Button type="submit">Send invite</Button>
+						</div>
 					</form>
 				</dialog>
 
@@ -262,17 +266,19 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 																name="email"
 																value={subject?.emailAddress ?? ""}
 															/>
-															<Button
-																type="button"
-																variant="outline"
-																commandfor={`remove-member-${member.id}`}
-																command="close"
-															>
-																Cancel
-															</Button>
-															<Button type="submit" color="danger">
-																Remove
-															</Button>
+															<div mix={[dialogActions]}>
+																<Button
+																	type="button"
+																	variant="outline"
+																	commandfor={`remove-member-${member.id}`}
+																	command="close"
+																>
+																	Cancel
+																</Button>
+																<Button type="submit" color="danger">
+																	Remove
+																</Button>
+															</div>
 														</form>
 													</dialog>
 												</>
@@ -544,12 +550,14 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 								}),
 							]}
 						/>
-						<Button type="button" variant="outline" commandfor="delete-team" command="close">
-							Cancel
-						</Button>
-						<Button type="submit" color="danger">
-							Delete team
-						</Button>
+						<div mix={[dialogActions]}>
+							<Button type="button" variant="outline" commandfor="delete-team" command="close">
+								Cancel
+							</Button>
+							<Button type="submit" color="danger">
+								Delete team
+							</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>

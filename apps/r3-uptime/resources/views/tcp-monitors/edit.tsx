@@ -42,6 +42,8 @@ const dialogText = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace EditTcpMonitorView {
 	export interface Props {
 		team: { slug: string };
@@ -81,12 +83,19 @@ export default function EditTcpMonitorView(handle: Handle<EditTcpMonitorView.Pro
 					<form method="post" action={routes.actions.monitor.tcp.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="monitor_id" value={monitor.id} />
-						<Button type="button" variant="outline" commandfor="delete-tcp-monitor" command="close">
-							Cancel
-						</Button>
-						<Button type="submit" color="danger">
-							Delete
-						</Button>
+						<div mix={[dialogActions]}>
+							<Button
+								type="button"
+								variant="outline"
+								commandfor="delete-tcp-monitor"
+								command="close"
+							>
+								Cancel
+							</Button>
+							<Button type="submit" color="danger">
+								Delete
+							</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>

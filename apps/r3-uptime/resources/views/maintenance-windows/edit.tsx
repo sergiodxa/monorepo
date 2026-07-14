@@ -44,6 +44,8 @@ const dialogText = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace EditMaintenanceWindowView {
 	export interface Props {
 		team: { slug: string };
@@ -107,17 +109,19 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 					>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="window_id" value={window.id} />
-						<Button
-							type="button"
-							variant="outline"
-							commandfor="delete-maintenance-window"
-							command="close"
-						>
-							Cancel
-						</Button>
-						<Button type="submit" color="danger">
-							Delete
-						</Button>
+						<div mix={[dialogActions]}>
+							<Button
+								type="button"
+								variant="outline"
+								commandfor="delete-maintenance-window"
+								command="close"
+							>
+								Cancel
+							</Button>
+							<Button type="submit" color="danger">
+								Delete
+							</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>

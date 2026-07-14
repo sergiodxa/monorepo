@@ -46,6 +46,8 @@ const dialogText = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
+const dialogActions = css({ display: "flex", gap: 8, justifyContent: "flex-end" });
+
 namespace EditMonitorView {
 	export interface Props {
 		team: { slug: string };
@@ -90,12 +92,14 @@ export default function EditMonitorView(handle: Handle<EditMonitorView.Props>) {
 					<form method="post" action={routes.actions.monitor.http.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="monitor_id" value={monitor.id} />
-						<Button type="button" variant="outline" commandfor="delete-monitor" command="close">
-							Cancel
-						</Button>
-						<Button type="submit" color="danger">
-							Delete
-						</Button>
+						<div mix={[dialogActions]}>
+							<Button type="button" variant="outline" commandfor="delete-monitor" command="close">
+								Cancel
+							</Button>
+							<Button type="submit" color="danger">
+								Delete
+							</Button>
+						</div>
 					</form>
 				</dialog>
 			</div>
