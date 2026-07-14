@@ -69,16 +69,13 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<Button type="submit" variant="outline">
-									Check now
-								</Button>
+								<Button type="submit">Check now</Button>
 							</form>
 							<LinkButton
 								href={routes.app.team.tcpMonitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}
-								variant="outline"
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
 								Edit

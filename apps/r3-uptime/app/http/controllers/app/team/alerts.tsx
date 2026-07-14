@@ -53,10 +53,7 @@ export default createAction(routes.app.team.alerts.index, {
 					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-							<LinkButton
-								variant="outline"
-								href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}
-							>
+							<LinkButton href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}>
 								<HistoryIcon size={16} strokeWidth={1.5} />
 								View History
 							</LinkButton>

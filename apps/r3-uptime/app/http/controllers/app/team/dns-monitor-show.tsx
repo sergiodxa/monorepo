@@ -65,13 +65,12 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<Button type="submit" variant="outline">
+								<Button type="submit">
 									<PlayIcon size={16} strokeWidth={1.5} />
 									Check Now
 								</Button>
 							</form>
 							<LinkButton
-								variant="outline"
 								href={routes.app.team.dnsMonitors.show.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
@@ -81,7 +80,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								Refresh
 							</LinkButton>
 							<LinkButton
-								variant="outline"
 								href={routes.app.team.dnsMonitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,

@@ -75,12 +75,11 @@ export default createAction(routes.app.team.monitors.show, {
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}
-								variant="outline"
 							>
 								<PencilIcon size={16} strokeWidth={1.5} />
 								Edit Monitor
 							</LinkButton>
-							<LinkButton href={ctx.url.pathname} variant="outline">
+							<LinkButton href={ctx.url.pathname}>
 								<RefreshCwIcon size={16} strokeWidth={1.5} />
 								Refresh
 							</LinkButton>

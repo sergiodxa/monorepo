@@ -65,7 +65,6 @@ export default createAction(routes.app.team.cronJobs.show, {
 					]}
 					actions={
 						<LinkButton
-							variant="outline"
 							href={routes.app.team.cronJobs.edit.href({
 								team: ctx.team.slug,
 								monitorId: monitor.id,

@@ -64,7 +64,7 @@ export const RunMonitorButton = clientEntry(
 				<button
 					type="submit"
 					disabled={pending}
-					mix={[buttonBase, buttonSizeMix.md, buttonVariantMix.outline.neutral]}
+					mix={[buttonBase, buttonSizeMix.md, buttonVariantMix.solid.neutral]}
 				>
 					{pending ? (
 						<LoaderIcon size={16} strokeWidth={1.5} mix={[spinner]} />
