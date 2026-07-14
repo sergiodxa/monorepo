@@ -59,7 +59,10 @@ export default createAction(routes.app.team.monitors.show, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: monitor.name },
+						{
+							label: "HTTP Monitors",
+							href: routes.app.team.monitors.index.href({ team: ctx.team.slug }),
+						},
 					]}
 					actions={
 						<Fragment>

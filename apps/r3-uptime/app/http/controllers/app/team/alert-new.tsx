@@ -40,7 +40,6 @@ export default createAction(routes.app.team.alerts.new, {
 					heading="Create Alert"
 					breadcrumbs={[
 						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
-						{ label: "Create Alert" },
 					]}
 				>
 					<NewAlertView team={ctx.team} monitors={monitors} />

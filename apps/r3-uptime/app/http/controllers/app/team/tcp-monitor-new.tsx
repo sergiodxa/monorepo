@@ -42,7 +42,6 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 							label: "TCP Monitors",
 							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Create TCP Monitor" },
 					]}
 				>
 					<NewTcpMonitorView team={ctx.team} />

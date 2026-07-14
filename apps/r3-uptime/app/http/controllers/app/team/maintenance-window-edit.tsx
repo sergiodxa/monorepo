@@ -52,7 +52,6 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							href: routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
 						},
 						{ label: window.name },
-						{ label: "Edit" },
 					]}
 				>
 					<EditMaintenanceWindowView team={ctx.team} window={window} monitors={monitors} />

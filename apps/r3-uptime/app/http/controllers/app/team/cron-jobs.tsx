@@ -45,7 +45,6 @@ export default createAction(routes.app.team.cronJobs.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Cron Jobs" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.cronJobs.new.href({ team: ctx.team.slug })}>

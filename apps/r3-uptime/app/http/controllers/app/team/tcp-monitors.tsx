@@ -45,7 +45,6 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "TCP Monitors" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug })}>

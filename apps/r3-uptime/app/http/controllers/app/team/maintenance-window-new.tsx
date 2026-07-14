@@ -43,7 +43,6 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							label: "Maintenance",
 							href: routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Schedule Maintenance" },
 					]}
 				>
 					<NewMaintenanceWindowView team={ctx.team} monitors={monitors} />

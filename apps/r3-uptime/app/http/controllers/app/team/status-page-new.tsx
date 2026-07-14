@@ -51,7 +51,6 @@ export default createAction(routes.app.team.statusPages.new, {
 							label: "Status Pages",
 							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Create Status Page" },
 					]}
 				>
 					<NewStatusPageView

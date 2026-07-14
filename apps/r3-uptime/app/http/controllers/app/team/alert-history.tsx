@@ -45,7 +45,6 @@ export default createAction(routes.app.team.alerts.history, {
 					heading="Alert History"
 					breadcrumbs={[
 						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
-						{ label: "Alert History" },
 					]}
 				>
 					<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />

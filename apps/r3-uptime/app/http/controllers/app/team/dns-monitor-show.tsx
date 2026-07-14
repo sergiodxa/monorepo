@@ -56,7 +56,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							label: "DNS Monitors",
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
-						{ label: monitor.name },
 					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>

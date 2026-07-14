@@ -58,7 +58,6 @@ export default createAction(routes.app.team.monitors.edit, {
 								monitorId: monitor.id,
 							}),
 						},
-						{ label: "Edit Monitor" },
 					]}
 				>
 					<EditMonitorView team={ctx.team} monitor={monitor} contentChecks={contentChecks} />

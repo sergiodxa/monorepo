@@ -48,7 +48,6 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Maintenance Windows" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}>

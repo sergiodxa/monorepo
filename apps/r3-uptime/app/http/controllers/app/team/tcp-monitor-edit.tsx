@@ -59,7 +59,6 @@ export default createAction(routes.app.team.tcpMonitors.edit, {
 								monitorId: monitor.id,
 							}),
 						},
-						{ label: "Edit TCP Monitor" },
 					]}
 				>
 					<EditTcpMonitorView team={ctx.team} monitor={monitor} />

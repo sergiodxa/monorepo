@@ -60,7 +60,6 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							label: "TCP Monitors",
 							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
 						},
-						{ label: monitor.name },
 					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>

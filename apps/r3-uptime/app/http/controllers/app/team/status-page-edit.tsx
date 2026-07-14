@@ -61,7 +61,6 @@ export default createAction(routes.app.team.statusPages.edit, {
 							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
 						},
 						{ label: page.name },
-						{ label: "Edit Status Page" },
 					]}
 				>
 					<EditStatusPageView

@@ -42,7 +42,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 							label: "Cron Jobs",
 							href: routes.app.team.cronJobs.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Create Cron Job" },
 					]}
 				>
 					<NewCronJobView team={ctx.team} />

@@ -55,7 +55,6 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 								monitorId: monitor.id,
 							}),
 						},
-						{ label: "Edit DNS Monitor" },
 					]}
 				>
 					<EditDnsMonitorView team={ctx.team} monitor={monitor} />

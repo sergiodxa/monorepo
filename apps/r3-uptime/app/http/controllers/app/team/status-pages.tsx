@@ -57,7 +57,6 @@ export default createAction(routes.app.team.statusPages.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Status Pages" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>

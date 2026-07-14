@@ -38,7 +38,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 							label: "DNS Monitors",
 							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Create DNS Monitor" },
 					]}
 				>
 					<NewDnsMonitorView team={ctx.team} />

@@ -62,12 +62,11 @@ export default createAction(routes.app.team.monitors.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "HTTP Monitors" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
 							<PlusIcon size={16} strokeWidth={1.5} />
-							Create Monitor
+							Create HTTP Monitor
 						</LinkButton>
 					}
 				>

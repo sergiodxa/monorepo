@@ -62,7 +62,6 @@ export default createAction(routes.app.team.cronJobs.show, {
 							label: "Cron Jobs",
 							href: routes.app.team.cronJobs.index.href({ team: ctx.team.slug }),
 						},
-						{ label: monitor.name },
 					]}
 					actions={
 						<LinkButton

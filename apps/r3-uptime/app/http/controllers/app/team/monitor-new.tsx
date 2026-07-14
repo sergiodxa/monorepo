@@ -32,7 +32,7 @@ export default createAction(routes.app.team.monitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Create Monitor"
+					heading="Create HTTP Monitor"
 				>
 					<NewMonitorView team={ctx.team} />
 				</AppShell>

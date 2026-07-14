@@ -45,7 +45,6 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "DNS Monitors" },
 					]}
 					actions={
 						<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}>

@@ -59,7 +59,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								monitorId: monitor.id,
 							}),
 						},
-						{ label: "Edit Cron Job" },
 					]}
 				>
 					<EditCronJobView team={ctx.team} monitor={monitor} />

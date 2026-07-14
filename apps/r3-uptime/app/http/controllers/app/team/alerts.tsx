@@ -50,7 +50,6 @@ export default createAction(routes.app.team.alerts.index, {
 							label: "Dashboard",
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
-						{ label: "Alerts" },
 					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
