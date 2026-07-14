@@ -25,7 +25,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import { neutral, primary, status } from "~/resources/theme";
-import Heatmap from "~/resources/views/shared/heatmap";
+import MiniHeatmap from "~/resources/views/shared/mini-heatmap";
 import routes from "~/routes/web";
 
 const success = {
@@ -304,7 +304,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 									<strong>{service.name}</strong>
 									<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
 								</div>
-								<Heatmap days={service.days} />
+								<MiniHeatmap days={service.days} />
 							</div>
 						))}
 
