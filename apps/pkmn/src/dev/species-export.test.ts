@@ -10,7 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@pkg/result";
@@ -175,15 +175,17 @@ describe("shapeSpeciesExport", () => {
 describe("runSpeciesExport", () => {
 	// A scratch id written into the real species.json, removed after the suite.
 	let SCRATCH_ID = "EXPORT_TEST_SPECIES";
+	// The exact on-disk bytes, captured before any test writes, so the file can be
+	// restored byte-for-byte afterward instead of re-serialized from parsed data
+	// (which can reformat in ways `bun format:fix` would otherwise need to undo).
+	let originalContents: string;
+
+	beforeAll(async () => {
+		originalContents = await Bun.file(resolve(APP_ROOT, SPECIES_CONTENT_PATH)).text();
+	});
 
 	afterAll(async () => {
-		// Restore species.json to just its real entries (drop the scratch entry).
-		let index = await currentIndex();
-		if (SCRATCH_ID in index) {
-			delete index[SCRATCH_ID];
-			let contents = `${JSON.stringify(index, null, "\t")}\n`;
-			await Bun.write(resolve(APP_ROOT, SPECIES_CONTENT_PATH), contents);
-		}
+		await Bun.write(resolve(APP_ROOT, SPECIES_CONTENT_PATH), originalContents);
 	});
 
 	test("rejects a non-object payload", async () => {
