@@ -150,6 +150,11 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									// Chromium/Safari both give a native <select> a taller intrinsic
+									// content box than a same-padding <input> (room reserved for the
+									// dropdown affordance), so an explicit height is needed to keep it
+									// the same size as the text inputs above.
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
@@ -185,6 +190,7 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",

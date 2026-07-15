@@ -98,6 +98,10 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									// Matches the text inputs' rendered height: a native <select> is
+									// intrinsically taller than a same-padding <input> unless pinned
+									// to an explicit height.
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
@@ -152,6 +156,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
