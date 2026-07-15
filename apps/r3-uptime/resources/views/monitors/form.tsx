@@ -2,8 +2,8 @@
  * Shared HTTP monitor form fields, used by both the new-monitor and edit-monitor
  * views. Renders name/URL/method/expected-status/interval/timeout/degraded-threshold/
  * location-hint inputs pre-filled from `handle.props.monitor` when editing. SSL
- * settings are a separate form/action (see `ssl-form.tsx`). It exists so the two
- * pages don't duplicate the field markup.
+ * settings are a separate form/action. It exists so the two pages don't duplicate
+ * the field markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -27,6 +27,7 @@ import { createAction } from "remix/fetch-router";
 import { css } from "remix/ui";
 
 import type { ServiceStatus } from "~/app/services/status-page";
+import type { SelectMonitorDailyStats } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -47,7 +48,6 @@ import Badge from "~/resources/components/badge";
 import Empty from "~/resources/components/empty";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral, primary, status } from "~/resources/theme";
-import MiniHeatmap from "~/resources/views/shared/mini-heatmap";
 import routes from "~/routes/web";
 
 const success = {
@@ -184,6 +184,264 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 	return () => {
 		let Icon = STATUS_ICON[handle.props.status];
 		return <Icon size={16} mix={[ICON_COLOR_MIX[BADGE_TONE[handle.props.status]]]} />;
+	};
+}
+
+/** How many trailing days {@link MiniHeatmap}'s row of bars covers. */
+const MINI_HEATMAP_DAYS = 90;
+
+/** The last {@link MINI_HEATMAP_DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
+function buildLastNDays(): string[] {
+	let today = new Date();
+	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+	let dates: string[] = [];
+	for (let i = MINI_HEATMAP_DAYS - 1; i >= 0; i--) {
+		dates.push(new Date(end.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+	}
+	return dates;
+}
+
+/**
+ * Aggregate uptime across `days` as a formatted percentage, or `null` when
+ * there's no data at all. `days` may cover more than {@link MINI_HEATMAP_DAYS}
+ * (the caller passes a full year's worth) — this only sums entries whose `date`
+ * falls in `dates`, so the percentage matches the same window the bars render.
+ */
+function calculateUptimePercentage(
+	days: SelectMonitorDailyStats[],
+	dates: string[],
+): string | null {
+	let windowDates = new Set(dates);
+	let totalChecks = 0;
+	let successfulChecks = 0;
+
+	for (let day of days) {
+		if (!windowDates.has(day.date)) continue;
+		totalChecks += day.total_checks;
+		successfulChecks += day.successful_checks;
+	}
+
+	if (totalChecks === 0) return null;
+
+	let percentage = (successfulChecks / totalChecks) * 100;
+	return `${percentage.toFixed(percentage === 100 ? 0 : 2)}% uptime`;
+}
+
+namespace MiniHeatmap {
+	export interface Props {
+		days: SelectMonitorDailyStats[];
+	}
+}
+
+/**
+ * Renders a single-row, last-90-days heatmap for `days`, as thin vertical bars with
+ * a range/uptime caption above and a status-color legend below. A single row of
+ * thin vertical bars for the last 90 days (today inclusive), one per day, colored
+ * by that day's `monitor_daily_stats.status`. Days with no data (not yet reached, or
+ * the monitor didn't exist yet) render as empty bars. The bars stretch to fill the
+ * full row width (no per-bar max width), so the row never trails off into empty
+ * space regardless of how many days actually have data. This caption/legend copy is
+ * a new design for this component and has no equivalent copy to translate, so it's
+ * hardcoded rather than pulled from `ctx.i18next`.
+ */
+function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
+	return () => {
+		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));
+		let dates = buildLastNDays();
+		let uptime = calculateUptimePercentage(handle.props.days, dates);
+
+		return (
+			<div>
+				<div mix={[css({ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 })]}>
+					<span
+						mix={[
+							css({
+								fontSize: "0.75rem",
+								color: "oklch(0.55 0.01 145)",
+								whiteSpace: "nowrap",
+								"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+							}),
+						]}
+					>
+						90 days ago
+					</span>
+					<div
+						mix={[
+							css({
+								flex: 1,
+								height: 1,
+								background: "oklch(0.87 0.01 145)",
+								"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
+							}),
+						]}
+					/>
+					{uptime !== null && (
+						<span
+							mix={[
+								css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									whiteSpace: "nowrap",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								}),
+							]}
+						>
+							{uptime}
+						</span>
+					)}
+					<div
+						mix={[
+							css({
+								flex: 1,
+								height: 1,
+								background: "oklch(0.87 0.01 145)",
+								"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
+							}),
+						]}
+					/>
+					<span
+						mix={[
+							css({
+								fontSize: "0.75rem",
+								color: "oklch(0.55 0.01 145)",
+								whiteSpace: "nowrap",
+								"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+							}),
+						]}
+					>
+						Today
+					</span>
+				</div>
+
+				<div mix={[css({ display: "flex", alignItems: "stretch", gap: 2, height: 32 })]}>
+					{dates.map((date) => {
+						let day = byDate.get(date);
+						return (
+							<div
+								key={date}
+								title={
+									day
+										? `${date}: ${day.status} (${day.successful_checks}/${day.total_checks})`
+										: date
+								}
+								mix={[
+									css({ flex: 1, minWidth: 2, borderRadius: 1 }),
+									day?.status === "up"
+										? css({ background: "oklch(0.7 0.2 155)" })
+										: day?.status === "degraded"
+											? css({ background: "oklch(0.72 0.18 85)" })
+											: day?.status === "down"
+												? css({ background: "oklch(0.68 0.2 25)" })
+												: css({
+														background: "oklch(0.91 0.008 145)",
+														"@media (prefers-color-scheme: dark)": {
+															background: "oklch(0.42 0.008 145)",
+														},
+													}),
+								]}
+							/>
+						);
+					})}
+				</div>
+
+				<div
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "flex-end",
+							gap: 12,
+							marginTop: 6,
+						}),
+					]}
+				>
+					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
+						<div
+							mix={[
+								css({ width: 10, height: 10, borderRadius: 2 }),
+								css({ background: "oklch(0.7 0.2 155)" }),
+							]}
+						/>
+						<span
+							mix={[
+								css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									whiteSpace: "nowrap",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								}),
+							]}
+						>
+							100%
+						</span>
+					</div>
+					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
+						<div
+							mix={[
+								css({ width: 10, height: 10, borderRadius: 2 }),
+								css({ background: "oklch(0.72 0.18 85)" }),
+							]}
+						/>
+						<span
+							mix={[
+								css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									whiteSpace: "nowrap",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								}),
+							]}
+						>
+							Partial
+						</span>
+					</div>
+					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
+						<div
+							mix={[
+								css({ width: 10, height: 10, borderRadius: 2 }),
+								css({ background: "oklch(0.68 0.2 25)" }),
+							]}
+						/>
+						<span
+							mix={[
+								css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									whiteSpace: "nowrap",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								}),
+							]}
+						>
+							Down
+						</span>
+					</div>
+					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
+						<div
+							mix={[
+								css({ width: 10, height: 10, borderRadius: 2 }),
+								css({
+									background: "oklch(0.91 0.008 145)",
+									"@media (prefers-color-scheme: dark)": { background: "oklch(0.42 0.008 145)" },
+								}),
+							]}
+						/>
+						<span
+							mix={[
+								css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									whiteSpace: "nowrap",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								}),
+							]}
+						>
+							No data
+						</span>
+					</div>
+				</div>
+			</div>
+		);
 	};
 }
 

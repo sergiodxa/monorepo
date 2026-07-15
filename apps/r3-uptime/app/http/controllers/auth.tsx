@@ -20,6 +20,7 @@ import { getContext } from "remix/async-context-middleware";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
+import { css } from "remix/ui";
 
 import { createAuthProvider } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
@@ -29,7 +30,6 @@ import { returnTo, safeReturnTo } from "~/app/http/cookies";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import DocumentLayout from "~/resources/layouts/document";
-import AuthErrorView from "~/resources/views/auth-error";
 import routes from "~/routes/web";
 
 /** Builds the OIDC provider from the app's registered client credentials. */
@@ -41,11 +41,59 @@ function provider(ctx: { request: Request }) {
 	});
 }
 
-/** Renders the sign-in failure page. */
+/** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
 function authError(ctx: { render: Renderer<RemixNode> }, message: string) {
 	return ctx.render(
 		<DocumentLayout title="Sign-in failed">
-			<AuthErrorView message={message} />
+			<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
+				<div
+					mix={[
+						css({
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							textAlign: "center",
+							gap: 12,
+							padding: "64px 32px",
+							border: "1px dashed oklch(0.83 0.01 145)",
+							borderRadius: 12,
+							"@media (prefers-color-scheme: dark)": {
+								borderColor: "oklch(0.42 0.008 145)",
+							},
+						}),
+					]}
+				>
+					<h1 mix={[css({ margin: 0 })]}>Sign-in failed</h1>
+					<p
+						mix={[
+							css({
+								fontSize: "0.8125rem",
+								color: "oklch(0.62 0.01 145)",
+								"@media (prefers-color-scheme: dark)": {
+									color: "oklch(0.73 0.01 145)",
+								},
+							}),
+						]}
+					>
+						{message}
+					</p>
+					<a
+						href={routes.home.href()}
+						mix={[
+							css({
+								color: "oklch(0.6 0.16 142)",
+								textDecoration: "none",
+								"&:hover": { textDecoration: "underline" },
+								"@media (prefers-color-scheme: dark)": {
+									color: "oklch(0.78 0.16 142)",
+								},
+							}),
+						]}
+					>
+						Back home
+					</a>
+				</div>
+			</main>
 		</DocumentLayout>,
 		{ status: 400 },
 	);
