@@ -30,17 +30,6 @@ type DocsNavProps = {
 	searchPlaceholder: string;
 };
 
-const searchRoot = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	padding: "8px 20px",
-	margin: "0 0 8px",
-	color: neutral[500],
-	"& input": { color: "inherit" },
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-});
-
 const navList = css({ listStyle: "none", margin: 0, padding: 0 });
 
 const sectionTitle = css({
@@ -98,7 +87,18 @@ export const DocsNav = clientEntry(
 
 			return (
 				<div>
-					<div mix={[input.root(), searchRoot]}>
+					<div
+						mix={[
+							input.root(),
+							css({
+								width: "auto",
+								margin: "0 20px 8px",
+								color: neutral[500],
+								"& input": { color: "inherit" },
+								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+							}),
+						]}
+					>
 						<SearchIcon size={16} strokeWidth={1.5} />
 						<input
 							type="search"
