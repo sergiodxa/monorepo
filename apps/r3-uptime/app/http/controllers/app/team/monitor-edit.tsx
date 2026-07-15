@@ -27,6 +27,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { mixForSelect } from "~/resources/mix-for-select";
@@ -411,7 +412,7 @@ export default createAction(routes.app.team.monitors.edit, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.monitor.http.update.href({ team: ctx.team.slug })}
@@ -505,7 +506,7 @@ export default createAction(routes.app.team.monitors.edit, {
 								</div>
 							</form>
 						</dialog>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

@@ -18,6 +18,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { apiKeyScopes } from "~/database/schema";
 import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral } from "~/resources/theme";
@@ -41,7 +42,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 					isAdmin={ctx.membership.role === "admin"}
 					heading={ctx.i18next.t("page.apiKeys.form.title")}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.teamAdminActions.apiKey.create.href({ team: ctx.team.slug })}
@@ -130,7 +131,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 
 							<Button type="submit">{ctx.i18next.t("page.apiKeys.form.actions.create")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

@@ -19,6 +19,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral, primary } from "~/resources/theme";
@@ -66,7 +67,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.cronJob.update.href({ team: ctx.team.slug })}
@@ -141,7 +142,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								</div>
 							</form>
 						</dialog>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

@@ -8,12 +8,12 @@
 
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorFormFields from "~/resources/views/monitors/form";
@@ -37,7 +37,7 @@ export default createAction(routes.app.team.monitors.new, {
 					isAdmin={ctx.membership.role === "admin"}
 					heading={ctx.i18next.t("page.createMonitor.header.title")}
 				>
-					<div mix={[css({ maxWidth: 640 })]}>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.monitor.http.create.href({ team: ctx.team.slug })}
@@ -45,7 +45,7 @@ export default createAction(routes.app.team.monitors.new, {
 							<MonitorFormFields i18next={ctx.i18next} page="createMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

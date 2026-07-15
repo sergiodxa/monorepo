@@ -15,6 +15,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import AlertFormFields from "~/resources/views/alerts/form";
@@ -48,12 +49,12 @@ export default createAction(routes.app.team.alerts.new, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form method="post" action={routes.actions.alert.create.href({ team: ctx.team.slug })}>
 							<AlertFormFields monitors={monitors} />
 							<Button type="submit">{ctx.i18next.t("page.alerts.form.cta")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

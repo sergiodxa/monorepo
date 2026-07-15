@@ -13,6 +13,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import TcpMonitorFormFields from "~/resources/views/tcp-monitors/form";
@@ -46,7 +47,7 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.monitor.tcp.create.href({ team: ctx.team.slug })}
@@ -54,7 +55,7 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 							<TcpMonitorFormFields />
 							<Button type="submit">{ctx.i18next.t("page.createTcpMonitor.form.cta")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

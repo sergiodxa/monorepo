@@ -12,6 +12,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import CronJobFormFields from "~/resources/views/cron-jobs/form";
@@ -47,7 +48,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.cronJob.create.href({ team: ctx.team.slug })}
@@ -55,7 +56,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 							<CronJobFormFields />
 							<Button type="submit">{ctx.i18next.t("page.createCronJob.form.cta")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);

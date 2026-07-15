@@ -15,6 +15,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Button from "~/resources/components/button";
+import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MaintenanceWindowFormFields from "~/resources/views/maintenance-windows/form";
@@ -48,7 +49,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 						},
 					]}
 				>
-					<div>
+					<FormPage>
 						<form
 							method="post"
 							action={routes.actions.maintenanceWindow.create.href({ team: ctx.team.slug })}
@@ -56,7 +57,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							<MaintenanceWindowFormFields monitors={monitors} />
 							<Button type="submit">{ctx.i18next.t("page.createMaintenance.form.cta")}</Button>
 						</form>
-					</div>
+					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
 		);
