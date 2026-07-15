@@ -1,7 +1,10 @@
 /**
  * Shared HTTP monitor form fields, used by both the new-monitor and edit-monitor
- * views. Renders name/URL/method/expected-status/interval/timeout/degraded-threshold/
- * location-hint inputs pre-filled from `handle.props.monitor` when editing. SSL
+ * views. Renders name/URL/check-interval/expected-status/region inputs, pre-filled
+ * from `handle.props.monitor` when editing. Method, timeout and degraded-threshold
+ * aren't collected here — they keep their table default on create (HEAD / 10s /
+ * 5000ms) and stay untouched on update, the same way the region select has no
+ * pre-selected value on create but keeps the monitor's existing one on edit. SSL
  * settings are a separate form/action. It exists so the two pages don't duplicate
  * the field markup.
  *
@@ -9,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
@@ -19,8 +23,6 @@ import Field from "~/resources/components/field";
 import RangeSlider from "~/resources/components/range-slider";
 import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral } from "~/resources/theme";
-
-const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 
 const LOCATION_HINTS = [
 	{ value: "wnam", label: "Western North America" },
@@ -57,70 +59,111 @@ const EXPECTED_STATUS_CODES = [
 	{ value: 503, label: "503 Service Unavailable" },
 ] as const;
 
-const input = css({
-	padding: "8px 12px",
-	borderRadius: 6,
-	border: `1px solid ${neutral[200]}`,
-	fontSize: "0.875rem",
-	fontFamily: "inherit",
-	background: neutral[50],
-	color: "inherit",
-	"@media (prefers-color-scheme: dark)": {
-		borderColor: neutral[700],
-		background: neutral[900],
-	},
-});
-
 namespace MonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectMonitor;
+		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
+		i18next: ReturnType<typeof getContext>["i18next"];
+		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
+		page: "createMonitor" | "editMonitor";
 	}
 }
 
-/** Renders the URL/method/expected-status/interval/timeout/degraded-threshold/region fields, pre-filled from `monitor` when editing and defaulted to a HEAD check expecting status 200 when creating. */
+/** Renders the name/URL/check-interval/expected-status/region fields, pre-filled from `monitor` when editing and defaulted to a 10-minute interval expecting status 200 when creating. */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
-		let monitor = handle.props.monitor;
-		let method = monitor?.method ?? "HEAD";
+		let { monitor, i18next, page } = handle.props;
+		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
+
 		let expectedStatus = monitor?.expected_status ?? 200;
-		let locationHint = monitor?.location_hint ?? "wnam";
+		let locationHint = monitor?.location_hint;
 
 		return (
 			<>
-				<Field label="Name" description="Shown across your dashboard and in alert notifications.">
-					<input type="text" name="name" required defaultValue={monitor?.name} mix={[input]} />
+				<Field label={t("name.label")} description={t("name.description")}>
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={monitor?.name}
+						placeholder={t("name.placeholder")}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
-				<Field label="URL" description="The endpoint we check on each run.">
+				<Field label={t("url.label")} description={t("url.description")}>
 					<input
 						type="url"
 						name="url"
 						required
 						defaultValue={monitor?.url}
-						placeholder="https://example.com"
-						mix={[input]}
+						placeholder={t("url.placeholder")}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
-				<Field
-					label="Method"
-					description="The HTTP method used for the check request. HEAD is fastest for simple uptime checks."
-				>
-					<select name="method" mix={[mixForSelect(input)]}>
-						{HTTP_METHODS.map((value) => (
-							<option key={value} value={value} selected={value === method}>
-								{value}
-							</option>
-						))}
-					</select>
-				</Field>
+				<RangeSlider
+					label={t("interval.label")}
+					name="interval_seconds"
+					min={60}
+					max={3600}
+					step={60}
+					scale={60}
+					unit="m"
+					defaultValue={monitor?.interval_seconds ?? 600}
+					rangeLabels={["1m", "60m"]}
+				/>
 
-				<Field
-					label="Expected status code"
-					description="The response status code that counts as this endpoint being healthy."
-				>
-					<select name="expected_status" mix={[mixForSelect(input)]}>
+				<Field label={t("status.label")} description={t("status.description")}>
+					<select
+						name="expected_status"
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
 						{EXPECTED_STATUS_CODES.map((status) => (
 							<option
 								key={status.value}
@@ -133,52 +176,34 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					</select>
 				</Field>
 
-				<RangeSlider
-					label="Check interval"
-					description="How often we run this check, from every minute up to once an hour."
-					name="interval_seconds"
-					min={60}
-					max={3600}
-					step={60}
-					scale={60}
-					unit="m"
-					defaultValue={monitor?.interval_seconds ?? 60}
-					rangeLabels={["1m", "60m"]}
-				/>
-
-				<Field
-					label="Timeout (seconds)"
-					description="How long to wait for a response before treating the check as failed."
-				>
-					<input
-						type="number"
-						name="timeout_seconds"
-						min={1}
-						max={60}
-						defaultValue={monitor?.timeout_seconds ?? 10}
-						mix={[input]}
-					/>
-				</Field>
-
-				<Field
-					label="Degraded threshold (ms)"
-					description="Response times above this threshold are marked as degraded instead of healthy."
-				>
-					<input
-						type="number"
-						name="degraded_after_ms"
-						min={1}
-						max={60_000}
-						defaultValue={monitor?.degraded_after_ms ?? 5000}
-						mix={[input]}
-					/>
-				</Field>
-
-				<Field
-					label="Check region"
-					description="The Cloudflare network region used to run the check, useful for testing regional latency."
-				>
-					<select name="location_hint" mix={[mixForSelect(input)]}>
+				<Field label={t("region.label")} description={t("region.description")}>
+					<select
+						name="location_hint"
+						required
+						defaultValue={locationHint ?? ""}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
+						{!locationHint && (
+							<option value="" disabled selected>
+								{t("region.placeholder")}
+							</option>
+						)}
 						{LOCATION_HINTS.map((hint) => (
 							<option key={hint.value} value={hint.value} selected={hint.value === locationHint}>
 								{hint.label}

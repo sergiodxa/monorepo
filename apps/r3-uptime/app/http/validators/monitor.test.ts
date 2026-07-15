@@ -1,7 +1,8 @@
 /**
- * Unit tests for the HTTP monitor create/update form validators: the required `url`
- * format check, the `method`/`location_hint` enums and their defaults, and the
- * numeric bounds on timing fields.
+ * Unit tests for the HTTP monitor create/update web-form validators: the required
+ * `url` format check, the `location_hint` enum and its default, and the
+ * `interval_seconds`/`expected_status` numeric bounds. Method/timeout/degraded-threshold
+ * aren't fields on these schemas — see `app/http/validators/monitor.ts`'s docstring.
  *
  * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
  * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
@@ -49,22 +50,6 @@ describe("CreateMonitorSchema", () => {
 		expect(s.parseSafe(CreateMonitorSchema, formData).success).toBe(false);
 	});
 
-	test("defaults method to HEAD when omitted", () => {
-		let result = s.parseSafe(CreateMonitorSchema, baseFormData());
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.value.method).toBe("HEAD");
-		}
-	});
-
-	test.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"])("accepts method '%s'", (method) => {
-		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ method })).success).toBe(true);
-	});
-
-	test("rejects an unsupported method", () => {
-		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ method: "TRACE" })).success).toBe(false);
-	});
-
 	test("defaults expected_status to 200 when omitted", () => {
 		let result = s.parseSafe(CreateMonitorSchema, baseFormData());
 		expect(result.success).toBe(true);
@@ -82,11 +67,11 @@ describe("CreateMonitorSchema", () => {
 		);
 	});
 
-	test("defaults interval_seconds to 60 and rejects values outside 60-3600", () => {
+	test("defaults interval_seconds to 600 and rejects values outside 60-3600", () => {
 		let defaulted = s.parseSafe(CreateMonitorSchema, baseFormData());
 		expect(defaulted.success).toBe(true);
 		if (defaulted.success) {
-			expect(defaulted.value.interval_seconds).toBe(60);
+			expect(defaulted.value.interval_seconds).toBe(600);
 		}
 
 		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ interval_seconds: "59" })).success).toBe(
@@ -94,36 +79,6 @@ describe("CreateMonitorSchema", () => {
 		);
 		expect(
 			s.parseSafe(CreateMonitorSchema, baseFormData({ interval_seconds: "3601" })).success,
-		).toBe(false);
-	});
-
-	test("defaults timeout_seconds to 10 and rejects values outside 1-60", () => {
-		let defaulted = s.parseSafe(CreateMonitorSchema, baseFormData());
-		expect(defaulted.success).toBe(true);
-		if (defaulted.success) {
-			expect(defaulted.value.timeout_seconds).toBe(10);
-		}
-
-		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ timeout_seconds: "0" })).success).toBe(
-			false,
-		);
-		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ timeout_seconds: "61" })).success).toBe(
-			false,
-		);
-	});
-
-	test("defaults degraded_after_ms to 5000 and rejects values outside 1-60000", () => {
-		let defaulted = s.parseSafe(CreateMonitorSchema, baseFormData());
-		expect(defaulted.success).toBe(true);
-		if (defaulted.success) {
-			expect(defaulted.value.degraded_after_ms).toBe(5000);
-		}
-
-		expect(s.parseSafe(CreateMonitorSchema, baseFormData({ degraded_after_ms: "0" })).success).toBe(
-			false,
-		);
-		expect(
-			s.parseSafe(CreateMonitorSchema, baseFormData({ degraded_after_ms: "60001" })).success,
 		).toBe(false);
 	});
 

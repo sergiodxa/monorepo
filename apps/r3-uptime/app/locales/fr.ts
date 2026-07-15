@@ -1214,7 +1214,7 @@ export default {
 					region: {
 						label: "Région",
 						description: "La région depuis laquelle le ping sera exécuté.",
-						placeholder: "wnam",
+						placeholder: "Sélectionner une région",
 						options: {
 							afr: "{{emoji}} Afrique",
 							apac: "{{emoji}} Asie-Pacifique",

@@ -42,7 +42,7 @@ export default createAction(routes.app.team.monitors.new, {
 							method="post"
 							action={routes.actions.monitor.http.create.href({ team: ctx.team.slug })}
 						>
-							<MonitorFormFields />
+							<MonitorFormFields i18next={ctx.i18next} page="createMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
 						</form>
 					</div>

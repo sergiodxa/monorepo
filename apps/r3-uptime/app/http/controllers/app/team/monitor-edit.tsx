@@ -417,7 +417,7 @@ export default createAction(routes.app.team.monitors.edit, {
 							action={routes.actions.monitor.http.update.href({ team: ctx.team.slug })}
 						>
 							<input type="hidden" name="monitor_id" value={monitor.id} />
-							<MonitorFormFields monitor={monitor} />
+							<MonitorFormFields monitor={monitor} i18next={ctx.i18next} page="editMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.editMonitor.form.cta")}</Button>
 						</form>
 

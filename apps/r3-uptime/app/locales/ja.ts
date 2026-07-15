@@ -1202,7 +1202,7 @@ export default {
 					region: {
 						label: "リージョン",
 						description: "pingが実行されるリージョン。",
-						placeholder: "wnam",
+						placeholder: "リージョンを選択",
 						options: {
 							afr: "{{emoji}} アフリカ",
 							apac: "{{emoji}} アジア太平洋",
