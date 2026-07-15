@@ -65,6 +65,7 @@ export default createAction(routes.app.team.statusPages.new, {
 								dnsMonitors={dnsMonitors}
 								tcpMonitors={tcpMonitors}
 								cronJobs={cronJobs}
+								i18next={ctx.i18next}
 							/>
 							<Button type="submit">{ctx.i18next.t("page.statusPages.form.cta")}</Button>
 						</form>

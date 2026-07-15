@@ -83,6 +83,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 								attachedDnsMonitorIds={attachedIds.dnsMonitorIds}
 								attachedTcpMonitorIds={attachedIds.tcpMonitorIds}
 								attachedCronJobIds={attachedIds.cronJobIds}
+								i18next={ctx.i18next}
 							/>
 							<Button type="submit">{ctx.i18next.t("page.statusPages.form.ctaUpdate")}</Button>
 						</form>
