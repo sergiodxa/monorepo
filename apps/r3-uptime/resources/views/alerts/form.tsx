@@ -16,6 +16,7 @@ import { css } from "remix/ui";
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import Switch from "~/resources/components/switch";
 import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral } from "~/resources/theme";
 
@@ -68,6 +69,10 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									// Matches the text inputs' rendered height: a native <select> is
+									// intrinsically taller than a same-padding <input> unless pinned
+									// to an explicit height.
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
@@ -99,6 +104,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
@@ -120,7 +126,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</select>
 				</Field>
 
-				<fieldset>
+				<fieldset mix={[css({ marginBottom: 28 })]}>
 					<legend>Email settings</legend>
 					<Field label="Recipient">
 						<input
@@ -168,7 +174,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</Field>
 				</fieldset>
 
-				<fieldset>
+				<fieldset mix={[css({ marginBottom: 28 })]}>
 					<legend>Webhook settings</legend>
 					<Field label="URL">
 						<input
@@ -228,7 +234,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</p>
 				</fieldset>
 
-				<fieldset>
+				<fieldset mix={[css({ marginBottom: 28 })]}>
 					<legend>Slack settings</legend>
 					<Field label="Webhook URL">
 						<input
@@ -277,7 +283,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</Field>
 				</fieldset>
 
-				<fieldset>
+				<fieldset mix={[css({ marginBottom: 28 })]}>
 					<legend>Discord settings</legend>
 					<Field label="Webhook URL">
 						<input
@@ -303,25 +309,9 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</Field>
 				</fieldset>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="notify_on_recovery"
-						value="true"
-						defaultChecked={alert?.notify_on_recovery ?? true}
-					/>
-					<span>Notify on recovery</span>
-				</label>
+				<Switch name="notify_on_recovery" defaultChecked={alert?.notify_on_recovery ?? true}>
+					Notify on recovery
+				</Switch>
 
 				<Field label="Cooldown (minutes, 0 = no cooldown)">
 					<input

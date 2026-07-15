@@ -14,6 +14,7 @@ import { css } from "remix/ui";
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import Switch from "~/resources/components/switch";
 import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral } from "~/resources/theme";
 
@@ -72,6 +73,10 @@ export default function MaintenanceWindowFormFields(
 							mixForSelect(
 								css({
 									padding: "8px 12px",
+									// Matches the text inputs' rendered height: a native <select> is
+									// intrinsically taller than a same-padding <input> unless pinned
+									// to an explicit height.
+									height: 34,
 									borderRadius: 6,
 									border: `1px solid ${neutral[200]}`,
 									fontSize: "0.875rem",
@@ -143,65 +148,17 @@ export default function MaintenanceWindowFormFields(
 					/>
 				</Field>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="suppress_alerts"
-						value="true"
-						defaultChecked={window?.suppress_alerts ?? true}
-					/>
-					<span>Suppress alerts during this window</span>
-				</label>
+				<Switch name="suppress_alerts" defaultChecked={window?.suppress_alerts ?? true}>
+					Suppress alerts during this window
+				</Switch>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="show_on_status_page"
-						value="true"
-						defaultChecked={window?.show_on_status_page ?? true}
-					/>
-					<span>Show on status page</span>
-				</label>
+				<Switch name="show_on_status_page" defaultChecked={window?.show_on_status_page ?? true}>
+					Show on status page
+				</Switch>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="is_recurring"
-						value="true"
-						defaultChecked={window?.is_recurring ?? false}
-					/>
-					<span>Recurring</span>
-				</label>
+				<Switch name="is_recurring" defaultChecked={window?.is_recurring ?? false}>
+					Recurring
+				</Switch>
 
 				<Field label="Recurrence pattern (when recurring)">
 					<input
