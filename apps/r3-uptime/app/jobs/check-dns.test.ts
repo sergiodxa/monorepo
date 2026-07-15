@@ -50,18 +50,21 @@ let notifyDnsResultMock = mock(
 	},
 );
 
-mock.module("~/app/services/dns-check", () => ({ checkDns: checkDnsMock }));
+let realDnsCheckModule = await import("~/app/services/dns-check");
+let realAlertsModule = await import("~/app/services/alerts");
+
+mock.module("~/app/services/dns-check", () => ({ ...realDnsCheckModule, checkDns: checkDnsMock }));
 /**
- * All four `notify*` exports are stubbed here (not just `notifyDnsResult`) because
- * `check-tcp.test.ts`, `check-cron-jobs.test.ts`, and `check-ssl.test.ts` mock this same
- * module path — `bun test` shares one module registry across files in a run, so a mock
- * missing an export another file's job imports fails with "export not found".
+ * Every `notify*`/other export is spread from the real module here (not just
+ * `notifyDnsResult` replaced) because `check-tcp.test.ts`, `check-cron-jobs.test.ts`,
+ * and `check-ssl.test.ts` mock this same module path — `bun test` shares one module
+ * registry across files in a run, so a mock missing an export another file needs
+ * (either "export not found", or silently getting a no-op stub instead of the real
+ * implementation another file is trying to test) leaks into whichever file runs next.
  */
 mock.module("~/app/services/alerts", () => ({
+	...realAlertsModule,
 	notifyDnsResult: notifyDnsResultMock,
-	notifyTcpResult: mock(async () => {}),
-	notifyCronJobResult: mock(async () => {}),
-	notifySslResult: mock(async () => {}),
 }));
 
 let { CheckDnsJob } = await import("./check-dns");

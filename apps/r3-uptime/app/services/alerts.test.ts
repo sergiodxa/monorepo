@@ -34,25 +34,34 @@ let isInCooldownMock = mock(async (..._args: unknown[]) => false);
 
 /**
  * `bun:test`'s `mock.module` patches the shared module registry for the lifetime of
- * the whole `bun test` process (it's a live rebinding, not scoped to this file), so
- * applying it at module-load time would corrupt every other test file that imports
- * the real `~/app/data/alert`/`~/app/data/alert-event` (e.g. the `alerts.ts` action
- * controller's tests) for however long this file's mock stays active. `bun test` runs
- * every file's top-level module code before running any test bodies, then runs each
- * file's tests (and its `beforeAll`/`afterAll`) in turn — so applying the mock in
- * `beforeAll` and restoring it in `afterAll` scopes the corruption window to just this
- * file's own test execution instead of leaking into whichever file runs next.
+ * the whole `bun test` process (it's a live rebinding, not scoped to this file), and
+ * `beforeAll`/`afterAll` don't actually bound that window the way they look like they
+ * should — `bun test` can interleave another file's test bodies with this file's
+ * mocked window, so a same-process file that imports the real `~/app/data/alert`
+ * (e.g. a page controller's own test) can observe the mock. Subclassing the real
+ * `Alert`/`AlertEvent` classes (rather than object-spreading them) means any other
+ * file caught in that window still gets every real static method it needs — object
+ * spread silently drops class static methods since they're non-enumerable, which is
+ * exactly what caused the two overridden methods to look like the only ones that
+ * existed at all. Only `listForHttpMonitor`/`listTeamWide` (and
+ * `record`/`isInCooldown` on `AlertEvent`) are actually faked here.
  */
 let realAlertModule = await import("~/app/data/alert");
 let realAlertEventModule = await import("~/app/data/alert-event");
 
 beforeAll(async () => {
-	await mock.module("~/app/data/alert", () => ({
-		default: { listForHttpMonitor: listForHttpMonitorMock, listTeamWide: listTeamWideMock },
-	}));
-	await mock.module("~/app/data/alert-event", () => ({
-		default: { record: recordMock, isInCooldown: isInCooldownMock },
-	}));
+	class FakeAlert extends realAlertModule.default {
+		static override listForHttpMonitor = listForHttpMonitorMock;
+		static override listTeamWide = listTeamWideMock;
+	}
+	class FakeAlertEvent extends realAlertEventModule.default {
+		static override record =
+			recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
+		static override isInCooldown = isInCooldownMock;
+	}
+
+	await mock.module("~/app/data/alert", () => ({ default: FakeAlert }));
+	await mock.module("~/app/data/alert-event", () => ({ default: FakeAlertEvent }));
 });
 
 afterAll(async () => {
