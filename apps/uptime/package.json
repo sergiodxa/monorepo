@@ -83,7 +83,7 @@
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "^0.31.10",
 		"tailwindcss": "^4.3.1",
-		"typescript": "^6.0.2",
+		"typescript": "^6.0.3",
 		"vite": "^8.0.16",
 		"vite-tsconfig-paths": "^6.1.1",
 		"wrangler": "^4.103.0"
