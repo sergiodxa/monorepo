@@ -2624,6 +2624,10 @@ export default {
 					confirmation: {
 						revokeInvite: "{{email}}の招待を取り消してもよろしいですか？",
 					},
+
+					empty: {
+						description: "保留中の招待はありません。",
+					},
 				},
 			},
 
@@ -2659,6 +2663,10 @@ export default {
 
 					confirmation: {
 						removeDomain: "{{hostname}}をチームから削除してもよろしいですか？",
+					},
+
+					empty: {
+						description: "確認済みドメインはまだありません。",
 					},
 				},
 

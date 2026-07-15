@@ -2647,6 +2647,10 @@ export default {
 					confirmation: {
 						revokeInvite: "Êtes-vous sûr de vouloir révoquer l'invitation de {{email}} ?",
 					},
+
+					empty: {
+						description: "Aucune invitation en attente.",
+					},
 				},
 			},
 
@@ -2683,6 +2687,10 @@ export default {
 
 					confirmation: {
 						removeDomain: "Êtes-vous sûr de vouloir supprimer {{hostname}} de l'équipe ?",
+					},
+
+					empty: {
+						description: "Aucun domaine vérifié pour le moment.",
 					},
 				},
 

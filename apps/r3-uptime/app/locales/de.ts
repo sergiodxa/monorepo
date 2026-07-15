@@ -2660,6 +2660,10 @@ export default {
 						revokeInvite:
 							"Sind Sie sicher, dass Sie die Einladung von {{email}} widerrufen möchten?",
 					},
+
+					empty: {
+						description: "Keine ausstehenden Einladungen.",
+					},
 				},
 			},
 
@@ -2696,6 +2700,10 @@ export default {
 
 					confirmation: {
 						removeDomain: "Sind Sie sicher, dass Sie {{hostname}} aus dem Team entfernen möchten?",
+					},
+
+					empty: {
+						description: "Noch keine verifizierten Domains.",
 					},
 				},
 
