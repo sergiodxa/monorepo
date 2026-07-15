@@ -82,11 +82,11 @@ describe("CreateTcpMonitorSchema", () => {
 		);
 	});
 
-	test("defaults interval_seconds to 60 and rejects values outside 10-86400", () => {
+	test("defaults interval_seconds to 300 and rejects values outside 10-86400", () => {
 		let defaulted = s.parseSafe(CreateTcpMonitorSchema, baseFormData());
 		expect(defaulted.success).toBe(true);
 		if (defaulted.success) {
-			expect(defaulted.value.interval_seconds).toBe(60);
+			expect(defaulted.value.interval_seconds).toBe(300);
 		}
 
 		expect(
@@ -97,11 +97,11 @@ describe("CreateTcpMonitorSchema", () => {
 		).toBe(false);
 	});
 
-	test("defaults is_enabled to false when omitted", () => {
+	test("defaults is_enabled to true when omitted, since the create form has no toggle", () => {
 		let result = s.parseSafe(CreateTcpMonitorSchema, baseFormData());
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.value.is_enabled).toBe(false);
+			expect(result.value.is_enabled).toBe(true);
 		}
 	});
 });
@@ -114,6 +114,14 @@ describe("UpdateTcpMonitorSchema", () => {
 
 	test("rejects an update missing monitor_id", () => {
 		expect(s.parseSafe(UpdateTcpMonitorSchema, baseFormData()).success).toBe(false);
+	});
+
+	test("defaults is_enabled to false when omitted, so unchecking the edit form's toggle disables the monitor", () => {
+		let result = s.parseSafe(UpdateTcpMonitorSchema, baseFormData({ monitor_id: "mon_1" }));
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.value.is_enabled).toBe(false);
+		}
 	});
 });
 

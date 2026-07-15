@@ -1,6 +1,8 @@
 /**
  * Shared cron-job monitor form fields, used by both the new-monitor and edit-monitor
- * views. It exists so the two pages don't duplicate the field markup.
+ * views. The cron expression starts blank on create, forcing a deliberate choice
+ * instead of silently scheduling an hourly job. It exists so the two pages don't
+ * duplicate the field markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +24,7 @@ namespace CronJobFormFields {
 	}
 }
 
-/** Renders the schedule/grace-period/alert fields, pre-filled from `monitor` when editing and defaulted to an hourly UTC schedule when creating. */
+/** Renders the name/description/cron-expression/grace-period/timezone/alert fields, pre-filled from `monitor` when editing and left blank (except for a UTC timezone default) when creating. */
 export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;
@@ -81,33 +83,8 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 						type="text"
 						name="cron_expression"
 						required
-						defaultValue={monitor?.cron_expression ?? "0 * * * *"}
+						defaultValue={monitor?.cron_expression ?? ""}
 						placeholder="0 * * * *"
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
-
-				<Field label="Timezone">
-					<input
-						type="text"
-						name="timezone"
-						required
-						defaultValue={monitor?.timezone ?? "UTC"}
-						placeholder="UTC"
 						mix={[
 							css({
 								padding: "8px 12px",
@@ -133,6 +110,31 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 						min={60}
 						max={86_400}
 						defaultValue={monitor?.grace_period_seconds ?? 300}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
+				</Field>
+
+				<Field label="Timezone">
+					<input
+						type="text"
+						name="timezone"
+						required
+						defaultValue={monitor?.timezone ?? "UTC"}
+						placeholder="UTC"
 						mix={[
 							css({
 								padding: "8px 12px",

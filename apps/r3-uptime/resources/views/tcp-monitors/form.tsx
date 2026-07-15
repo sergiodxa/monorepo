@@ -1,6 +1,9 @@
 /**
  * Shared TCP monitor form fields, used by both the new-monitor and edit-monitor views.
- * It exists so the two pages don't duplicate the field markup.
+ * The enabled toggle only renders when editing an existing monitor — a new monitor has
+ * no toggle and is always created enabled (see `CreateTcpMonitorSchema`'s `is_enabled`
+ * default in `app/http/validators/tcp-monitor.ts`). It exists so the two pages don't
+ * duplicate the field markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,7 +25,7 @@ namespace TcpMonitorFormFields {
 	}
 }
 
-/** Renders the host/port/timeout/interval fields, pre-filled from `monitor` when editing. */
+/** Renders the host/port/interval/timeout fields (plus an enabled toggle when editing), pre-filled from `monitor` when editing. */
 export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;
@@ -85,7 +88,32 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						required
 						min={1}
 						max={65_535}
-						defaultValue={monitor?.port}
+						defaultValue={monitor?.port ?? 80}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
+				</Field>
+
+				<Field label="Check interval (seconds)">
+					<input
+						type="number"
+						name="interval_seconds"
+						min={10}
+						max={86_400}
+						defaultValue={monitor?.interval_seconds ?? 300}
 						mix={[
 							css({
 								padding: "8px 12px",
@@ -129,50 +157,27 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					/>
 				</Field>
 
-				<Field label="Check interval (seconds)">
-					<input
-						type="number"
-						name="interval_seconds"
-						min={10}
-						max={86_400}
-						defaultValue={monitor?.interval_seconds ?? 60}
+				{monitor && (
+					<label
 						mix={[
 							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
+								display: "flex",
+								alignItems: "center",
+								gap: 8,
+								marginBottom: 16,
 								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
 							}),
 						]}
-					/>
-				</Field>
-
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="is_enabled"
-						value="true"
-						defaultChecked={monitor?.is_enabled ?? true}
-					/>
-					<span>Enabled</span>
-				</label>
+					>
+						<input
+							type="checkbox"
+							name="is_enabled"
+							value="true"
+							defaultChecked={monitor.is_enabled}
+						/>
+						<span>Enabled</span>
+					</label>
+				)}
 			</>
 		);
 	};
