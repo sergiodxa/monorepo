@@ -229,6 +229,22 @@ export async function getLatestHttpResult(
 	return success(result.data[0] ?? null);
 }
 
+/** One monitor's slowest response time over the last 24 hours, in milliseconds, or `null` when it has no checks in range. */
+export async function getSlowestResultForMonitor(
+	teamId: string,
+	monitorId: string,
+): Promise<Result<number | null, Error>> {
+	let sql = `
+		SELECT MAX(double1) AS maxResponseTimeMs
+		FROM uptime_monitor_results
+		WHERE index1 = '${teamId}' AND blob1 = '${monitorId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR
+	`;
+
+	let result = await queryAnalytics<{ maxResponseTimeMs: number | null }>(sql);
+	if (isFailure(result)) return result;
+	return success(result.data[0]?.maxResponseTimeMs ?? null);
+}
+
 /** The last `limit` HTTP ping response times for one monitor, oldest first. */
 export async function getMonitorSparkline(
 	teamId: string,

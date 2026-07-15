@@ -264,4 +264,25 @@ export default class Monitor {
 
 		return Math.round(httpPings + dnsPings + tcpPings + cronPings);
 	}
+
+	/**
+	 * Estimates one HTTP monitor's ping consumption for the calendar month containing
+	 * `date`, projected from its current check interval — the same
+	 * `monthMilliseconds / intervalMs` projection {@link estimateConsumedPingsByTeam}
+	 * sums across every monitor. Returns 0 when the monitor doesn't exist.
+	 */
+	static async estimateConsumedPingsByMonitor(
+		db: Database,
+		monitorId: string,
+		date: Date,
+	): Promise<number> {
+		let monitor = await db.findOne(monitors, { where: { id: monitorId } });
+		if (!monitor) return 0;
+
+		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		let monthMs = end.getTime() - start.getTime();
+
+		return Math.round(monthMs / (monitor.interval_seconds * 1000));
+	}
 }

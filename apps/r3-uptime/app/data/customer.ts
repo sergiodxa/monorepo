@@ -52,6 +52,21 @@ export default class Customer {
 		return await polar.getMeterUsage(ownerId, PING_METER_ID, { start, end }, { teamId });
 	}
 
+	/**
+	 * The same monthly `ping` usage as {@link getUsagePerMonth}, scoped down further to
+	 * one monitor's own ingested metadata, for a monitor detail page's usage stat.
+	 */
+	static async getUsagePerMonthForMonitor(
+		polar: PolarClient,
+		ownerId: string,
+		monitorId: string,
+		date: Date,
+	) {
+		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		return await polar.getMeterUsage(ownerId, PING_METER_ID, { start, end }, { monitorId });
+	}
+
 	/** Creates a hosted Polar checkout session for the team owner to subscribe. */
 	static async checkout(polar: PolarClient, ownerId: string, successUrl: string): Promise<string> {
 		let customer = await polar.getExternalCustomer(ownerId);
