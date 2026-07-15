@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
@@ -29,20 +29,10 @@ import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral, primary } from "~/resources/theme";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
-
-/** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
-function mixForSelect(
-	mixin: CSSMixinDescriptor,
-): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
-	return mixin as unknown as MixinDescriptor<
-		HTMLSelectElement,
-		CSSMixinDescriptor["args"],
-		ElementProps
-	>;
-}
 
 /** Translates a content check's `type` into its display label, aliasing `not_contains` to the `notContains` key. */
 function contentCheckTypeLabel(

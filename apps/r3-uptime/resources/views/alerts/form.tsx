@@ -9,29 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral } from "~/resources/theme";
-
-/**
- * Re-types a `css()` mixin for `<select>`. `css()`'s return type doesn't directly fit
- * `HTMLSelectElement` due to a Cloudflare Workers types conflict; only the compile-time
- * type changes, the runtime value is identical.
- */
-function mixForSelect(
-	mixin: CSSMixinDescriptor,
-): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
-	return mixin as unknown as MixinDescriptor<
-		HTMLSelectElement,
-		CSSMixinDescriptor["args"],
-		ElementProps
-	>;
-}
 
 namespace AlertFormFields {
 	export interface Props {

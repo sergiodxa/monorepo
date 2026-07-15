@@ -7,25 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral } from "~/resources/theme";
-
-/** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
-function mixForSelect(
-	mixin: CSSMixinDescriptor,
-): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
-	return mixin as unknown as MixinDescriptor<
-		HTMLSelectElement,
-		CSSMixinDescriptor["args"],
-		ElementProps
-	>;
-}
 
 namespace MaintenanceWindowFormFields {
 	export interface Props {

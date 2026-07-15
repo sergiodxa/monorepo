@@ -10,8 +10,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
-
 import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -31,19 +29,9 @@ import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
-
-/** {@link css}'s return type doesn't fit `HTMLSelectElement` (Cloudflare Workers types conflict). */
-function mixForSelect(
-	mixin: CSSMixinDescriptor,
-): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
-	return mixin as unknown as MixinDescriptor<
-		HTMLSelectElement,
-		CSSMixinDescriptor["args"],
-		ElementProps
-	>;
-}
 
 /** GET /app/:team/account — the signed-in user's account settings. */
 export default createAction(routes.app.team.account, {
