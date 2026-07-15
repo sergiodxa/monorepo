@@ -1,9 +1,10 @@
 /**
  * Calendar-year uptime heatmap: one column per week, one cell per day, colored by
- * that day's `monitor_daily_stats.status`. Days with no data (not yet reached, or
- * the monitor didn't exist yet) render as empty cells. Weeks start on Sunday, from
- * January 1st of the current year through today (see `docs/analytics.md`). A date-range
- * caption sits above the grid and a status-color legend below it.
+ * that day's success rate (`successful_checks / total_checks`) on a six-tier gradient
+ * from full green (100%) down through amber to red, with a neutral color when a day
+ * has no data. Weeks start on Sunday, from January 1st of the current year through
+ * today. Row labels for Monday/Wednesday/Friday sit to the left of the grid, a
+ * date-range caption above it, and a color-scale legend below it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,154 +22,113 @@ namespace Heatmap {
 	}
 }
 
-/** Small gray caption/legend text shared by the date-range row and the legend row. */
-const caption = css({
-	fontSize: "0.75rem",
-	color: "oklch(0.55 0.01 145)",
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
-});
-
-/** Date-range caption row above the grid: start of year on the left, "Today" on the right. */
-const rangeCaption = css({
-	display: "flex",
-	justifyContent: "space-between",
-});
-
-/** Horizontally-scrollable row of heatmap week-columns. */
-const heatmap = css({
-	display: "flex",
-	gap: 3,
-	overflowX: "auto",
-	padding: "4px 0",
-});
-
-/** Legend row below the grid: one colored swatch + label per status, right-aligned. */
-const legend = css({
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "flex-end",
-	gap: 12,
-	marginTop: 4,
-});
-
-/** One swatch + label pair within the legend row. */
-const legendItem = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 4,
-});
-
-/** Legend color swatch; combine with a status color mixin or `heatmapCellEmpty`. */
-const legendSwatch = css({
-	width: 10,
-	height: 10,
-	borderRadius: 2,
-});
-
-/** One week's column of day-cells in the heatmap. */
-const heatmapWeek = css({
-	display: "flex",
-	flexDirection: "column",
-	gap: 3,
-});
-
-/** One day-cell in the heatmap; combine with a status color mixin. */
-const heatmapCell = css({
-	width: 11,
-	height: 11,
-	borderRadius: 2,
-});
-
-/** Heatmap cell: no data for that day yet. */
-const heatmapCellEmpty = css({
-	background: "oklch(0.91 0.008 145)",
-	"@media (prefers-color-scheme: dark)": { background: "oklch(0.42 0.008 145)" },
-});
-
-/**
- * Heatmap cell: fully up for that day. This and the degraded/down variants below
- * intentionally have no dark-mode override, so all three stay flat across color
- * schemes.
- */
-const heatmapCellUp = css({
-	background: "oklch(0.7 0.2 155)",
-});
-
-/** Heatmap cell: degraded for that day. */
-const heatmapCellDegraded = css({
-	background: "oklch(0.72 0.18 85)",
-});
-
-/** Heatmap cell: down for that day. */
-const heatmapCellDown = css({
-	background: "oklch(0.68 0.2 25)",
-});
-
-const CELL_MIX: Record<string, typeof heatmapCellUp> = {
-	up: heatmapCellUp,
-	degraded: heatmapCellDegraded,
-	down: heatmapCellDown,
-};
-
-/** Sunday-aligned week columns from Jan 1 of the current year through today, plus that range's endpoints. */
-interface WeekGrid {
-	weeks: Array<Array<string | null>>;
-	start: Date;
-	end: Date;
+/** Maps a day's success rate (0-100, or `null` for no data) to a cell background color, graded from full green down through amber to red. */
+function getCellColor(successRate: number | null): string {
+	if (successRate === null) return "oklch(0.91 0.008 145)";
+	if (successRate === 100) return "oklch(0.55 0.2 155)";
+	if (successRate >= 90) return "oklch(0.62 0.2 155)";
+	if (successRate >= 70) return "oklch(0.7 0.2 155)";
+	if (successRate >= 40) return "oklch(0.72 0.18 85)";
+	if (successRate >= 20) return "oklch(0.72 0.2 25)";
+	return "oklch(0.6 0.2 25)";
 }
 
-/** Builds Sunday-aligned week columns from Jan 1 of the current year through today. */
-function buildWeeks(): WeekGrid {
-	let year = new Date().getUTCFullYear();
-	let start = new Date(Date.UTC(year, 0, 1));
-	let today = new Date();
-	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-
-	let days: string[] = [];
-	for (let d = start; d <= end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-		days.push(d.toISOString().slice(0, 10));
-	}
-
-	let leadingBlanks = start.getUTCDay();
-	let cells: Array<string | null> = [...Array(leadingBlanks).fill(null), ...days];
-
-	let weeks: Array<Array<string | null>> = [];
-	for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-	return { weeks, start, end };
-}
-
-/** Renders the calendar-year heatmap grid for `days`, using {@link buildWeeks} for the week layout, a date-range caption above it, and a status-color legend below it. */
+/** Renders the calendar-year heatmap grid for `days`, with Mon/Wed/Fri row labels, a date-range caption above it, and a color-scale legend below it. */
 export default function Heatmap(handle: Handle<Heatmap.Props>) {
 	return () => {
 		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));
-		let { weeks, start } = buildWeeks();
+
+		let year = new Date().getUTCFullYear();
+		let start = new Date(Date.UTC(year, 0, 1));
+		let today = new Date();
+		let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+		let dates: string[] = [];
+		for (let d = start; d <= end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+			dates.push(d.toISOString().slice(0, 10));
+		}
+
+		let leadingBlanks = start.getUTCDay();
+		let cells: Array<string | null> = [...Array(leadingBlanks).fill(null), ...dates];
+
+		let weeks: Array<Array<string | null>> = [];
+		for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
 		return (
 			<div>
-				<div mix={[caption, rangeCaption]}>
-					<span>{start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-					<span>Today</span>
+				<div mix={css({ display: "flex", justifyContent: "space-between" })}>
+					<span
+						mix={css({
+							fontSize: "0.75rem",
+							color: "oklch(0.55 0.01 145)",
+							"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+						})}
+					>
+						{start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+					</span>
+					<span
+						mix={css({
+							fontSize: "0.75rem",
+							color: "oklch(0.55 0.01 145)",
+							"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+						})}
+					>
+						Today
+					</span>
 				</div>
 
-				<div mix={[heatmap]}>
+				<div mix={css({ display: "flex", gap: 6, overflowX: "auto", padding: "4px 0" })}>
+					<div
+						mix={css({
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "space-between",
+							gap: 3,
+							paddingTop: 0,
+						})}
+					>
+						{["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => (
+							<span
+								key={index}
+								mix={css({
+									height: 11,
+									fontSize: "0.6875rem",
+									fontWeight: 600,
+									lineHeight: "11px",
+									color: "oklch(0.55 0.01 145)",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								})}
+							>
+								{label}
+							</span>
+						))}
+					</div>
+
 					{weeks.map((week, weekIndex) => (
-						<div key={weekIndex} mix={[heatmapWeek]}>
+						<div key={weekIndex} mix={css({ display: "flex", flexDirection: "column", gap: 3 })}>
 							{week.map((date, dayIndex) => {
 								if (date === null) {
-									return <div key={dayIndex} mix={[heatmapCell]} />;
+									return <div key={dayIndex} mix={css({ width: 11, height: 11 })} />;
 								}
 								let day = byDate.get(date);
-								let statusMix = day ? CELL_MIX[day.status] : undefined;
+								let successRate =
+									day && day.total_checks > 0
+										? Math.round((day.successful_checks / day.total_checks) * 100)
+										: null;
 								return (
 									<div
 										key={dayIndex}
 										title={
 											day
-												? `${date}: ${day.status} (${day.successful_checks}/${day.total_checks})`
+												? `${date}: ${successRate}% success (${day.successful_checks}/${day.total_checks})`
 												: date
 										}
-										mix={[heatmapCell, statusMix ?? heatmapCellEmpty]}
+										mix={css({
+											width: 11,
+											height: 11,
+											borderRadius: 2,
+											background: getCellColor(successRate),
+										})}
 									/>
 								);
 							})}
@@ -176,23 +136,45 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 					))}
 				</div>
 
-				<div mix={[legend]}>
-					<div mix={[legendItem]}>
-						<div mix={[legendSwatch, heatmapCellUp]} />
-						<span mix={[caption]}>100%</span>
-					</div>
-					<div mix={[legendItem]}>
-						<div mix={[legendSwatch, heatmapCellDegraded]} />
-						<span mix={[caption]}>Partial</span>
-					</div>
-					<div mix={[legendItem]}>
-						<div mix={[legendSwatch, heatmapCellDown]} />
-						<span mix={[caption]}>Down</span>
-					</div>
-					<div mix={[legendItem]}>
-						<div mix={[legendSwatch, heatmapCellEmpty]} />
-						<span mix={[caption]}>No data</span>
-					</div>
+				<div
+					mix={css({
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "flex-end",
+						flexWrap: "wrap",
+						gap: 12,
+						marginTop: 4,
+					})}
+				>
+					{[
+						{ label: "Success", rates: [70, 90, 100] },
+						{ label: "Mixed", rates: [50] },
+						{ label: "Failure", rates: [10, 30] },
+						{ label: "No data", rates: [null] },
+					].map(({ label, rates }) => (
+						<div key={label} mix={css({ display: "flex", alignItems: "center", gap: 4 })}>
+							{rates.map((rate, index) => (
+								<div
+									key={index}
+									mix={css({
+										width: 10,
+										height: 10,
+										borderRadius: 2,
+										background: getCellColor(rate),
+									})}
+								/>
+							))}
+							<span
+								mix={css({
+									fontSize: "0.75rem",
+									color: "oklch(0.55 0.01 145)",
+									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
+								})}
+							>
+								{label}
+							</span>
+						</div>
+					))}
 				</div>
 			</div>
 		);
