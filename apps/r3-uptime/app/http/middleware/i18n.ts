@@ -27,7 +27,13 @@ import { supportedLanguages, userPreferences } from "~/database/schema";
 
 const DEFAULT_LANGUAGE = "en";
 
-/** Resolves the request language and initializes a per-request i18next instance. */
+/**
+ * Resolves the request language and initializes a per-request i18next instance.
+ *
+ * Interpolation escaping is disabled: `ctx.i18next.t(...)` is always rendered
+ * through JSX, which already HTML-escapes text nodes, so leaving i18next's own
+ * escaping on would double-encode interpolated values.
+ */
 export const i18n = i18next({
 	detection: {
 		supportedLanguages: [...supportedLanguages],
@@ -52,6 +58,10 @@ export const i18n = i18next({
 			fr: { translation: fr },
 			it: { translation: it },
 		},
+		// JSX already HTML-escapes text nodes when it renders, so i18next's own
+		// interpolation escaping is redundant and double-encodes values (e.g. an
+		// apostrophe becomes the literal string "&#39;" instead of being decoded).
+		interpolation: { escapeValue: false },
 	},
 });
 
