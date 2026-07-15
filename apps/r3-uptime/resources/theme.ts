@@ -1,12 +1,30 @@
 /**
- * Shared color tokens for the whole UI. Every scale is `oklch`; `neutral` is the
- * achromatic gray used for text/borders/backgrounds, `primary` is the brand green
- * used for links and primary actions, `danger` is the red used for destructive
- * actions, and `status` covers the four monitor/badge tones.
+ * Shared color and font tokens for the whole UI. Every color scale is `oklch`;
+ * `neutral` is the achromatic gray used for text/borders/backgrounds, `primary` is
+ * the brand green used for links and primary actions, `danger` is the red used for
+ * destructive actions, and `status` covers the four monitor/badge tones. `fontMono`
+ * is the document's default body font, and `fontSans` is the self-hosted display
+ * font the marketing chrome opts into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+/**
+ * The document's default font, rendered on `<body>` unless a layout opts into
+ * {@link fontSans}: the platform's own UI monospace font, with no self-hosted file.
+ */
+export const fontMono =
+	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
+/**
+ * Self-hosted display font the marketing site opts into (nav, brand mark,
+ * headings), with system sans-serif fallbacks. The `/docs` chrome keeps the
+ * document's {@link fontMono} default instead. Its `@font-face` rule is declared
+ * once in `DocumentLayout`.
+ */
+export const fontSans =
+	'"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
 
 export const neutral = {
 	50: "oklch(0.98 0.005 145)",

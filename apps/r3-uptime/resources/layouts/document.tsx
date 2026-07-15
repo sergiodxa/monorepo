@@ -12,16 +12,15 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import { neutral } from "~/resources/theme";
-
-/** App-wide sans-serif font stack rendered on `<body>` by default: Mona Sans, with system fallbacks. */
-const fontSans =
-	'"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
+import { fontMono, neutral } from "~/resources/theme";
 
 /**
- * Raw `@font-face` rule for Mona Sans. Emitted as a plain `<style>` tag rather than
- * through the `css()` mixin because that mixin scopes every rule to a generated
- * element class name, which can't express a top-level, unscoped at-rule like this.
+ * Raw `@font-face` rule for Mona Sans, the display font the marketing chrome opts
+ * into (see `resources/theme.ts`'s `fontSans`). Declared here, once, so every
+ * page's `<head>` gets it regardless of which layout it renders through. Emitted
+ * as a plain `<style>` tag rather than through the `css()` mixin because that
+ * mixin scopes every rule to a generated element class name, which can't express
+ * a top-level, unscoped at-rule like this.
  */
 const fontFaceCss = `
 	@font-face {
@@ -63,7 +62,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 							margin: 0,
 							background: neutral[50],
 							color: neutral[950],
-							fontFamily: fontSans,
+							fontFamily: fontMono,
 							"@media (prefers-color-scheme: dark)": {
 								background: neutral[950],
 								color: neutral[50],

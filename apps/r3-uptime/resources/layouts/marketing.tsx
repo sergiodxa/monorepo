@@ -15,7 +15,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import { css } from "remix/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import { primary } from "~/resources/theme";
+import { fontSans, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** Neutral scale shades used on this page, hue 145. */
@@ -29,10 +29,6 @@ const neutral = {
 	900: "oklch(0.24 0.005 145)",
 	950: "oklch(0.16 0.004 145)",
 };
-
-/** Marketing/docs font stack: Mona Sans, with system fallbacks. */
-const fontSans =
-	'"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
 
 /** Inserts an alpha channel into an `oklch(...)` color string. */
 function alpha(color: string, value: number): string {

@@ -21,11 +21,8 @@ import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout from "~/resources/layouts/marketing";
+import { fontMono } from "~/resources/theme";
 import routes from "~/routes/web";
-
-/** App-wide monospace font stack. */
-const fontMono =
-	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
 /** Neutral scale shades used on this page, hue 145. */
 const neutral = {
