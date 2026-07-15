@@ -91,54 +91,56 @@ namespace DashboardPanel {
 		tabLabels: Record<DashboardTab, string>;
 	}
 
-	export type Props =
-		| (Common & {
-				tab: "http";
-				httpRows: Array<{
-					monitor: SelectMonitor;
-					health: MonitorHealth;
-					sparklinePoints: SparklinePoint[];
-				}>;
-				copy: {
-					emptyTitle: string;
-					emptyDescription: string;
-					emptyCta: string;
-					columns: { name: string; latencyChart: string; status: string };
-					statusLabels: Record<MonitorHealth, string>;
-				};
-		  })
-		| (Common & {
-				tab: "dns";
-				dnsMonitors: SelectDnsMonitor[];
-				copy: {
-					emptyTitle: string;
-					emptyDescription: string;
-					emptyCta: string;
-					columns: { name: string; domain: string; status: string };
-				};
-		  })
-		| (Common & {
-				tab: "tcp";
-				tcpMonitors: SelectTcpMonitor[];
-				copy: {
-					emptyTitle: string;
-					emptyDescription: string;
-					emptyCta: string;
-					columns: { name: string; endpoint: string; status: string };
-					statusLabels: Record<string, string>;
-				};
-		  })
-		| (Common & {
-				tab: "cron-jobs";
-				cronJobMonitors: SelectCronJobMonitor[];
-				copy: {
-					emptyTitle: string;
-					emptyDescription: string;
-					emptyCta: string;
-					columns: { name: string; schedule: string; status: string };
-					statusLabels: Record<string, string>;
-				};
-		  });
+	export type Props = Common &
+		(
+			| {
+					tab: "http";
+					httpRows: Array<{
+						monitor: SelectMonitor;
+						health: MonitorHealth;
+						sparklinePoints: SparklinePoint[];
+					}>;
+					copy: {
+						emptyTitle: string;
+						emptyDescription: string;
+						emptyCta: string;
+						columns: { name: string; latencyChart: string; status: string };
+						statusLabels: Record<MonitorHealth, string>;
+					};
+			  }
+			| {
+					tab: "dns";
+					dnsMonitors: SelectDnsMonitor[];
+					copy: {
+						emptyTitle: string;
+						emptyDescription: string;
+						emptyCta: string;
+						columns: { name: string; domain: string; status: string };
+					};
+			  }
+			| {
+					tab: "tcp";
+					tcpMonitors: SelectTcpMonitor[];
+					copy: {
+						emptyTitle: string;
+						emptyDescription: string;
+						emptyCta: string;
+						columns: { name: string; endpoint: string; status: string };
+						statusLabels: Record<string, string>;
+					};
+			  }
+			| {
+					tab: "cron-jobs";
+					cronJobMonitors: SelectCronJobMonitor[];
+					copy: {
+						emptyTitle: string;
+						emptyDescription: string;
+						emptyCta: string;
+						columns: { name: string; schedule: string; status: string };
+						statusLabels: Record<string, string>;
+					};
+			  }
+		);
 }
 
 /** Renders the tab bar plus the table for whichever tab {@link DashboardPanel.Props.tab} names. */
