@@ -1,18 +1,19 @@
 /**
  * Tests for the HTTP monitor detail page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` (and `~/app/services/analytics`, used for the recent-
- * latency sparkline) reads `env` at module load — following the exact pattern
- * established in `app/http/controllers/actions/monitors.test.ts` — and the global
- * `fetch` is mocked so `getMonitorSparkline`'s Analytics Engine SQL API call never hits
- * the network. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly
- * by a fake middleware standing in for the real `auth`/`requireUser`/`requireTeam`
- * chain, matching the same template's `seedTeam` helper.
+ * because `~/app/data/monitor` reads `env` at module load, following the exact pattern
+ * established in `app/http/controllers/actions/monitors.test.ts`. `getViewer()`/
+ * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
+ * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the same
+ * template's `seedTeam` helper. The page itself no longer queries Polar/Analytics
+ * Engine/`monitor_daily_stats` directly — it only renders `<Frame>` placeholders
+ * pointed at the monitor-card-* fragment routes, so `resolveFrame` is a no-op here,
+ * same as `dashboard.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
@@ -75,10 +76,10 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
+/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
-		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });
@@ -111,12 +112,6 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
-beforeEach(() => {
-	globalThis.fetch = mock(
-		async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-	) as unknown as typeof fetch;
-});
-
 describe("monitorShow", () => {
 	test("renders the monitor's configuration and SSL status", async () => {
 		let { db, team, membership } = await createFixture();
@@ -138,7 +133,6 @@ describe("monitorShow", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Homepage");
-		expect(body).toContain("https://example.com");
 		expect(body).toContain("SSL Certificate");
 		expect(body).toContain("Not Configured");
 		expect(body).toContain("Edit Monitor");

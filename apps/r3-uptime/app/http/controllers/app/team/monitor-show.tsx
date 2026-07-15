@@ -1,8 +1,12 @@
 /**
- * HTTP monitor detail page controller. Shows the monitor's configuration, SSL status,
- * a recent-latency sparkline from Analytics Engine, a calendar-year uptime heatmap
- * from `monitor_daily_stats`, and run/edit actions. Requires `requireUser` +
- * `requireTeam`; 404s when the monitor doesn't belong to the current team.
+ * HTTP monitor detail page controller. Shows the monitor's usage/performance stat
+ * cards, SSL status, and a calendar-year uptime heatmap from `monitor_daily_stats`,
+ * plus run/edit actions. Requires `requireUser` + `requireTeam`; 404s when the
+ * monitor doesn't belong to the current team. The usage/slowest-result/uptime stat
+ * cards and the heatmap all load via named `Frame`s pointed at their own fragment
+ * routes (`monitor-card-usage.tsx`, `-slowest-result.tsx`, `-uptime.tsx`,
+ * `-heatmap.tsx`), so this controller no longer blocks on any of it (notably Polar's
+ * API, the slowest of those fetches) before it can render the page shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,34 +23,29 @@ import {
 	ShieldCheckIcon,
 	ShieldXIcon,
 } from "@pkg/lucide-remix";
-import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css, Fragment } from "remix/ui";
+import { css, Fragment, Frame } from "remix/ui";
 
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { SelectMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Monitor from "~/app/data/monitor";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { getMonitorSparkline } from "~/app/services/analytics";
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import Badge from "~/resources/components/badge";
 import LinkButton from "~/resources/components/link-button";
 import RunMonitorButton from "~/resources/components/run-monitor-button";
-import StatCard from "~/resources/components/stat-card";
+import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral } from "~/resources/theme";
-import Sparkline from "~/resources/views/monitors/sparkline";
-import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId — a monitor's detail page. */
@@ -60,10 +59,6 @@ export default createAction(routes.app.team.monitors.show, {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
-
-		let sparklineResult = await getMonitorSparkline(ctx.team.id, monitor.id);
-		let sparkline = isFailure(sparklineResult) ? [] : sparklineResult.data;
-		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "http");
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
@@ -108,18 +103,44 @@ export default createAction(routes.app.team.monitors.show, {
 				>
 					<div>
 						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
-							<StatCard label="URL" value={<code>{monitor.url}</code>} />
-							<StatCard label="Method" value={monitor.method} />
-							<StatCard label="Check interval" value={`${monitor.interval_seconds}s`} />
+							<Frame
+								name="monitor-card-usage"
+								src={routes.app.team.monitors.cards.usage.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="monitor-card-slowest-result"
+								src={routes.app.team.monitors.cards.slowestResult.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="monitor-card-uptime"
+								src={routes.app.team.monitors.cards.uptime.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
 						</div>
 
-						<h2>Recent response time</h2>
-						<Sparkline points={sparkline} />
-
-						<h2>Uptime history</h2>
-						<Heatmap days={dailyStats} />
-
 						<SslCard team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
+
+						<div mix={[css({ marginTop: 24 })]}>
+							<Frame
+								name="monitor-card-heatmap"
+								src={routes.app.team.monitors.cards.heatmap.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+						</div>
 					</div>
 				</AppShell>
 			</DocumentLayout>,

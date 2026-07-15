@@ -82,10 +82,25 @@ export default route({
 					count: get("/app/:team/dashboard/cards/count/:resource"),
 				},
 			},
-			monitors: resources("/app/:team/monitors", {
-				param: "monitorId",
-				only: ["index", "new", "show", "edit"],
-			}),
+			monitors: {
+				...resources("/app/:team/monitors", {
+					param: "monitorId",
+					only: ["index", "new", "show", "edit"],
+				}),
+				/**
+				 * Fragment routes: each renders exactly one monitor-detail-page stat card (or
+				 * the heatmap), loaded into its own named `Frame` with a skeleton `fallback` so
+				 * none of them block the page shell or each other — notably the usage card's
+				 * Polar API call, the slowest of the bunch. Same rationale as
+				 * `dashboard.cards` above, scoped down to one monitor via `:monitorId`.
+				 */
+				cards: {
+					usage: get("/app/:team/monitors/:monitorId/cards/usage"),
+					slowestResult: get("/app/:team/monitors/:monitorId/cards/slowest-result"),
+					uptime: get("/app/:team/monitors/:monitorId/cards/uptime"),
+					heatmap: get("/app/:team/monitors/:monitorId/cards/heatmap"),
+				},
+			},
 			dnsMonitors: resources("/app/:team/dns", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],
