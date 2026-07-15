@@ -29,6 +29,8 @@ import { renderToStream } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import Invite from "~/app/data/invite";
+import TeamDomain from "~/app/data/team-domain";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
@@ -141,5 +143,51 @@ describe("settings page", () => {
 		expect(response.status).toBe(200);
 		expect(body).toContain(`remove-member-${nonOwnerMembership.id}`);
 		expect(body).not.toContain(`remove-member-${ownerMembership.id}`);
+	});
+
+	test("shows an empty state instead of a bare table for pending invitations with none", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+
+		let response = await renderSettings(db, team, ownerMembership);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain(en.page.settings.members.invitedTable.empty.description);
+		expect(body).not.toContain(en.page.settings.members.invitedTable.columns.expires);
+	});
+
+	test("shows an empty state instead of a bare table for verified domains with none", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+
+		let response = await renderSettings(db, team, ownerMembership);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain(en.page.settings.domains.table.empty.description);
+		expect(body).not.toContain(en.page.settings.domains.table.columns.hostname);
+	});
+
+	test("renders the pending invitations and verified domains tables when non-empty", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+
+		let invite = await Invite.create(
+			db,
+			team.id,
+			ownerMembership.subject_id,
+			"invitee@example.com",
+		);
+		let domain = await TeamDomain.create(db, team.id, "example.com");
+
+		let response = await renderSettings(db, team, ownerMembership);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain(en.page.settings.members.invitedTable.columns.expires);
+		expect(body).toContain(invite.email);
+		expect(body).not.toContain(en.page.settings.members.invitedTable.empty.description);
+
+		expect(body).toContain(en.page.settings.domains.table.columns.hostname);
+		expect(body).toContain(domain.hostname);
+		expect(body).not.toContain(en.page.settings.domains.table.empty.description);
 	});
 });

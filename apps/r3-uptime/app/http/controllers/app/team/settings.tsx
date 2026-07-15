@@ -7,7 +7,9 @@
  * invite, remove domain) is gated behind a `<dialog>` confirmation. Billing and Danger
  * Zone are owner-only — an admin who isn't the owner never sees them. The danger-zone
  * delete button relies on the native `pattern="DELETE"` constraint (no client JS) to
- * stay disabled-in-effect until the confirmation input matches exactly.
+ * stay disabled-in-effect until the confirmation input matches exactly. The Pending
+ * Invitations and Verified Domains cards each swap their table for an `Empty` state
+ * when their list has zero rows, instead of rendering a table with only a header row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,6 +43,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { resolveSubjects } from "~/app/services/subjects";
 import Avatar from "~/resources/components/avatar";
 import Button from "~/resources/components/button";
+import Empty from "~/resources/components/empty";
 import Field from "~/resources/components/field";
 import LinkButton from "~/resources/components/link-button";
 import RowMenu, { menuItem, menuItemDanger, menuSeparator } from "~/resources/components/row-menu";
@@ -107,22 +110,6 @@ function textInput() {
 		"@media (prefers-color-scheme: dark)": {
 			borderColor: neutral[700],
 			background: neutral[900],
-		},
-	});
-}
-
-/** Shared visual style for every confirmation `<dialog>` on this page. */
-function dialogStyle() {
-	return css({
-		padding: 24,
-		borderRadius: 8,
-		border: `1px solid ${neutral[300]}`,
-		maxWidth: 400,
-		"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-		"@media (prefers-color-scheme: dark)": {
-			borderColor: neutral[700],
-			background: neutral[900],
-			color: neutral[50],
 		},
 	});
 }
@@ -354,7 +341,24 @@ export default createAction(routes.app.team.settings, {
 								</Button>
 							</div>
 
-							<dialog id="invite-member" mix={[dialogStyle()]}>
+							<dialog
+								id="invite-member"
+								mix={[
+									css({
+										width: "100%",
+										maxWidth: 440,
+										padding: 24,
+										borderRadius: 8,
+										border: `1px solid ${neutral[300]}`,
+										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+										"@media (prefers-color-scheme: dark)": {
+											borderColor: neutral[700],
+											background: neutral[900],
+											color: neutral[50],
+										},
+									}),
+								]}
+							>
 								<h3>{ctx.i18next.t("page.invite.header.title")}</h3>
 								<form
 									method="post"
@@ -572,7 +576,24 @@ export default createAction(routes.app.team.settings, {
 																		)}
 																	</RowMenu>
 
-																	<dialog id={`remove-member-${member.id}`} mix={[dialogStyle()]}>
+																	<dialog
+																		id={`remove-member-${member.id}`}
+																		mix={[
+																			css({
+																				width: "100%",
+																				maxWidth: 440,
+																				padding: 24,
+																				borderRadius: 8,
+																				border: `1px solid ${neutral[300]}`,
+																				"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+																				"@media (prefers-color-scheme: dark)": {
+																					borderColor: neutral[700],
+																					background: neutral[900],
+																					color: neutral[50],
+																				},
+																			}),
+																		]}
+																	>
 																		<h3>
 																			{ctx.i18next.t(
 																				"page.settings.members.table.confirmation.removeMember",
@@ -632,43 +653,51 @@ export default createAction(routes.app.team.settings, {
 								</div>
 							</div>
 
-							{pendingInvites.length > 0 && (
+							<div
+								mix={[
+									css({
+										borderRadius: 12,
+										border: `1px solid ${neutral[200]}`,
+										overflow: "hidden",
+										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+									}),
+								]}
+							>
 								<div
 									mix={[
 										css({
-											borderRadius: 12,
-											border: `1px solid ${neutral[200]}`,
-											overflow: "hidden",
+											padding: "20px 24px",
+											borderBottom: `1px solid ${neutral[200]}`,
 											"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 										}),
 									]}
 								>
-									<div
+									<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+										{ctx.i18next.t("page.settings.members.invitedTable.label")}
+									</h3>
+									<p
 										mix={[
 											css({
-												padding: "20px 24px",
-												borderBottom: `1px solid ${neutral[200]}`,
-												"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+												margin: 0,
+												fontSize: "0.8125rem",
+												color: neutral[500],
+												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 											}),
 										]}
 									>
-										<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
-											{ctx.i18next.t("page.settings.members.invitedTable.label")}
-										</h3>
-										<p
-											mix={[
-												css({
-													margin: 0,
-													fontSize: "0.8125rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												}),
-											]}
-										>
-											{ctx.i18next.t("page.settings.members.invitedTable.description")}
-										</p>
-									</div>
+										{ctx.i18next.t("page.settings.members.invitedTable.description")}
+									</p>
+								</div>
 
+								{pendingInvites.length === 0 ? (
+									<div mix={[css({ padding: 24 })]}>
+										<Empty>
+											<Empty.Description>
+												{ctx.i18next.t("page.settings.members.invitedTable.empty.description")}
+											</Empty.Description>
+										</Empty>
+									</div>
+								) : (
 									<div mix={[css({ overflowX: "auto" })]}>
 										<table
 											mix={[
@@ -760,7 +789,24 @@ export default createAction(routes.app.team.settings, {
 																	</button>
 																</RowMenu>
 
-																<dialog id={`revoke-invite-${invite.id}`} mix={[dialogStyle()]}>
+																<dialog
+																	id={`revoke-invite-${invite.id}`}
+																	mix={[
+																		css({
+																			width: "100%",
+																			maxWidth: 440,
+																			padding: 24,
+																			borderRadius: 8,
+																			border: `1px solid ${neutral[300]}`,
+																			"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+																			"@media (prefers-color-scheme: dark)": {
+																				borderColor: neutral[700],
+																				background: neutral[900],
+																				color: neutral[50],
+																			},
+																		}),
+																	]}
+																>
 																	<h3>
 																		{ctx.i18next.t(
 																			"page.settings.members.invitedTable.confirmation.revokeInvite",
@@ -807,8 +853,8 @@ export default createAction(routes.app.team.settings, {
 											</tbody>
 										</table>
 									</div>
-								</div>
-							)}
+								)}
+							</div>
 						</section>
 
 						{/* Domains */}
@@ -843,7 +889,24 @@ export default createAction(routes.app.team.settings, {
 								</p>
 							</div>
 
-							<dialog id="add-domain" mix={[dialogStyle()]}>
+							<dialog
+								id="add-domain"
+								mix={[
+									css({
+										width: "100%",
+										maxWidth: 440,
+										padding: 24,
+										borderRadius: 8,
+										border: `1px solid ${neutral[300]}`,
+										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+										"@media (prefers-color-scheme: dark)": {
+											borderColor: neutral[700],
+											background: neutral[900],
+											color: neutral[50],
+										},
+									}),
+								]}
+							>
 								<h3>{ctx.i18next.t("page.settings.domains.table.label")}</h3>
 								<form
 									method="post"
@@ -926,176 +989,203 @@ export default createAction(routes.app.team.settings, {
 									</Button>
 								</div>
 
-								<div mix={[css({ overflowX: "auto" })]}>
-									<table
-										mix={[
-											css({
-												width: "100%",
-												borderCollapse: "collapse",
-												fontSize: "0.875rem",
-												"& th, & td": {
-													textAlign: "left",
-													padding: "12px 16px",
-													borderBottom: `1px solid ${neutral[200]}`,
-												},
-												"& tr:last-child td": { borderBottom: "none" },
-												"@media (prefers-color-scheme: dark)": {
-													"& th, & td": { borderColor: neutral[800] },
-												},
-											}),
-										]}
-									>
-										<thead>
-											<tr>
-												<th>{ctx.i18next.t("page.settings.domains.table.columns.hostname")}</th>
-												<th mix={[css({ textAlign: "right" })]}>
-													<span
-														mix={
-															hasPendingDomainVerification
-																? []
-																: [
-																		css({
-																			position: "absolute",
-																			width: 1,
-																			height: 1,
-																			padding: 0,
-																			margin: -1,
-																			overflow: "hidden",
-																			clip: "rect(0, 0, 0, 0)",
-																			whiteSpace: "nowrap",
-																			border: 0,
-																		}),
-																	]
-														}
-													>
-														{ctx.i18next.t("page.settings.domains.table.columns.id")}
-													</span>
-												</th>
-												<th mix={[css({ textAlign: "right" })]}>
-													{ctx.i18next.t("page.settings.domains.table.columns.verifiedAt")}
-												</th>
-												<th mix={[css({ textAlign: "center" })]}>
-													<span
-														mix={[
-															css({
-																position: "absolute",
-																width: 1,
-																height: 1,
-																padding: 0,
-																margin: -1,
-																overflow: "hidden",
-																clip: "rect(0, 0, 0, 0)",
-																whiteSpace: "nowrap",
-																border: 0,
-															}),
-														]}
-													>
-														{ctx.i18next.t("page.settings.domains.table.columns.actions")}
-													</span>
-												</th>
-											</tr>
-										</thead>
-										<tbody>
-											{domains.map((domain) => (
-												<tr key={domain.id}>
-													<td>{domain.hostname}</td>
-													<td
-														mix={[
-															css({
-																textAlign: "right",
-																fontFamily: "inherit",
-																fontSize: "0.8125rem",
-															}),
-														]}
-													>
-														{domain.verified_at === null ? `ping_${domain.id}` : null}
-													</td>
-													<td mix={[css({ textAlign: "right" })]}>
-														{domain.verified_at !== null
-															? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
-															: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
-													</td>
-													<td mix={[css({ textAlign: "center" })]}>
-														<RowMenu
-															id={`domain-menu-${domain.id}`}
-															label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
+								{domains.length === 0 ? (
+									<div mix={[css({ padding: 24 })]}>
+										<Empty>
+											<Empty.Description>
+												{ctx.i18next.t("page.settings.domains.table.empty.description")}
+											</Empty.Description>
+										</Empty>
+									</div>
+								) : (
+									<div mix={[css({ overflowX: "auto" })]}>
+										<table
+											mix={[
+												css({
+													width: "100%",
+													borderCollapse: "collapse",
+													fontSize: "0.875rem",
+													"& th, & td": {
+														textAlign: "left",
+														padding: "12px 16px",
+														borderBottom: `1px solid ${neutral[200]}`,
+													},
+													"& tr:last-child td": { borderBottom: "none" },
+													"@media (prefers-color-scheme: dark)": {
+														"& th, & td": { borderColor: neutral[800] },
+													},
+												}),
+											]}
+										>
+											<thead>
+												<tr>
+													<th>{ctx.i18next.t("page.settings.domains.table.columns.hostname")}</th>
+													<th mix={[css({ textAlign: "right" })]}>
+														<span
+															mix={
+																hasPendingDomainVerification
+																	? []
+																	: [
+																			css({
+																				position: "absolute",
+																				width: 1,
+																				height: 1,
+																				padding: 0,
+																				margin: -1,
+																				overflow: "hidden",
+																				clip: "rect(0, 0, 0, 0)",
+																				whiteSpace: "nowrap",
+																				border: 0,
+																			}),
+																		]
+															}
 														>
-															{domain.verified_at === null && (
+															{ctx.i18next.t("page.settings.domains.table.columns.id")}
+														</span>
+													</th>
+													<th mix={[css({ textAlign: "right" })]}>
+														{ctx.i18next.t("page.settings.domains.table.columns.verifiedAt")}
+													</th>
+													<th mix={[css({ textAlign: "center" })]}>
+														<span
+															mix={[
+																css({
+																	position: "absolute",
+																	width: 1,
+																	height: 1,
+																	padding: 0,
+																	margin: -1,
+																	overflow: "hidden",
+																	clip: "rect(0, 0, 0, 0)",
+																	whiteSpace: "nowrap",
+																	border: 0,
+																}),
+															]}
+														>
+															{ctx.i18next.t("page.settings.domains.table.columns.actions")}
+														</span>
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{domains.map((domain) => (
+													<tr key={domain.id}>
+														<td>{domain.hostname}</td>
+														<td
+															mix={[
+																css({
+																	textAlign: "right",
+																	fontFamily: "inherit",
+																	fontSize: "0.8125rem",
+																}),
+															]}
+														>
+															{domain.verified_at === null ? `ping_${domain.id}` : null}
+														</td>
+														<td mix={[css({ textAlign: "right" })]}>
+															{domain.verified_at !== null
+																? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
+																: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
+														</td>
+														<td mix={[css({ textAlign: "center" })]}>
+															<RowMenu
+																id={`domain-menu-${domain.id}`}
+																label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
+															>
+																{domain.verified_at === null && (
+																	<form
+																		method="post"
+																		action={routes.teamAdminActions.domain.retryVerification.href({
+																			team: team.slug,
+																		})}
+																	>
+																		<input type="hidden" name="domain_id" value={domain.id} />
+																		<button type="submit" mix={[menuItem]}>
+																			<RefreshCcwIcon size={16} strokeWidth={1.5} />
+																			<span>
+																				{ctx.i18next.t(
+																					"page.settings.domains.table.actions.retryVerification",
+																				)}
+																			</span>
+																		</button>
+																	</form>
+																)}
+
+																<button
+																	type="button"
+																	commandfor={`remove-domain-${domain.id}`}
+																	command="show-modal"
+																	mix={[menuItem, menuItemDanger]}
+																>
+																	<BadgeMinusIcon size={16} strokeWidth={1.5} />
+																	<span>
+																		{ctx.i18next.t("page.settings.domains.table.actions.remove")}
+																	</span>
+																</button>
+															</RowMenu>
+
+															<dialog
+																id={`remove-domain-${domain.id}`}
+																mix={[
+																	css({
+																		width: "100%",
+																		maxWidth: 440,
+																		padding: 24,
+																		borderRadius: 8,
+																		border: `1px solid ${neutral[300]}`,
+																		"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+																		"@media (prefers-color-scheme: dark)": {
+																			borderColor: neutral[700],
+																			background: neutral[900],
+																			color: neutral[50],
+																		},
+																	}),
+																]}
+															>
+																<h3>
+																	{ctx.i18next.t(
+																		"page.settings.domains.table.confirmation.removeDomain",
+																		{ hostname: domain.hostname },
+																	)}
+																</h3>
 																<form
 																	method="post"
-																	action={routes.teamAdminActions.domain.retryVerification.href({
+																	action={routes.teamAdminActions.domain.remove.href({
 																		team: team.slug,
 																	})}
 																>
+																	<input type="hidden" name="_method" value="DELETE" />
 																	<input type="hidden" name="domain_id" value={domain.id} />
-																	<button type="submit" mix={[menuItem]}>
-																		<RefreshCcwIcon size={16} strokeWidth={1.5} />
-																		<span>
-																			{ctx.i18next.t(
-																				"page.settings.domains.table.actions.retryVerification",
-																			)}
-																		</span>
-																	</button>
-																</form>
-															)}
-
-															<button
-																type="button"
-																commandfor={`remove-domain-${domain.id}`}
-																command="show-modal"
-																mix={[menuItem, menuItemDanger]}
-															>
-																<BadgeMinusIcon size={16} strokeWidth={1.5} />
-																<span>
-																	{ctx.i18next.t("page.settings.domains.table.actions.remove")}
-																</span>
-															</button>
-														</RowMenu>
-
-														<dialog id={`remove-domain-${domain.id}`} mix={[dialogStyle()]}>
-															<h3>
-																{ctx.i18next.t(
-																	"page.settings.domains.table.confirmation.removeDomain",
-																	{ hostname: domain.hostname },
-																)}
-															</h3>
-															<form
-																method="post"
-																action={routes.teamAdminActions.domain.remove.href({
-																	team: team.slug,
-																})}
-															>
-																<input type="hidden" name="_method" value="DELETE" />
-																<input type="hidden" name="domain_id" value={domain.id} />
-																<div
-																	mix={[
-																		css({
-																			display: "flex",
-																			gap: 8,
-																			justifyContent: "flex-end",
-																		}),
-																	]}
-																>
-																	<Button
-																		type="button"
-																		variant="outline"
-																		commandfor={`remove-domain-${domain.id}`}
-																		command="close"
+																	<div
+																		mix={[
+																			css({
+																				display: "flex",
+																				gap: 8,
+																				justifyContent: "flex-end",
+																			}),
+																		]}
 																	>
-																		{ctx.i18next.t("page.settings.form.actions.cancel")}
-																	</Button>
-																	<Button type="submit" color="danger">
-																		{ctx.i18next.t("page.settings.domains.table.actions.remove")}
-																	</Button>
-																</div>
-															</form>
-														</dialog>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
+																		<Button
+																			type="button"
+																			variant="outline"
+																			commandfor={`remove-domain-${domain.id}`}
+																			command="close"
+																		>
+																			{ctx.i18next.t("page.settings.form.actions.cancel")}
+																		</Button>
+																		<Button type="submit" color="danger">
+																			{ctx.i18next.t("page.settings.domains.table.actions.remove")}
+																		</Button>
+																	</div>
+																</form>
+															</dialog>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
 							</div>
 
 							{hasPendingDomainVerification && (
