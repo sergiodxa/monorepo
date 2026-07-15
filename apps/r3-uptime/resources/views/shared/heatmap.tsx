@@ -2,9 +2,13 @@
  * Calendar-year uptime heatmap: one column per week, one cell per day, colored by
  * that day's success rate (`successful_checks / total_checks`) on a six-tier gradient
  * from full green (100%) down through amber to red, with a neutral color when a day
- * has no data. Weeks start on Sunday, from January 1st of the current year through
- * today. Row labels for Monday/Wednesday/Friday sit to the left of the grid, a
- * date-range caption above it, and a color-scale legend below it.
+ * has no data. Weeks start on Sunday and cover the full current year, from January
+ * 1st through December 31st (days beyond today simply render as "no data"). Row
+ * labels for Monday/Wednesday/Friday sit to the left of the grid, a date-range
+ * caption above it, and a color-scale legend below it. Cells are a fixed 16px
+ * square, matching a full year's worth of columns naturally produces a grid wide
+ * enough to fill most container widths; on narrower viewports the grid scrolls
+ * horizontally instead of shrinking.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +44,7 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 
 		let year = new Date().getUTCFullYear();
 		let start = new Date(Date.UTC(year, 0, 1));
-		let today = new Date();
-		let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+		let end = new Date(Date.UTC(year, 11, 31));
 
 		let dates: string[] = [];
 		for (let d = start; d <= end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
@@ -64,7 +67,11 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 							"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 						})}
 					>
-						{start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+						{start.toLocaleDateString(undefined, {
+							month: "short",
+							day: "numeric",
+							timeZone: "UTC",
+						})}
 					</span>
 					<span
 						mix={css({
@@ -73,17 +80,17 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 							"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 						})}
 					>
-						Today
+						{end.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}
 					</span>
 				</div>
 
-				<div mix={css({ display: "flex", gap: 6, overflowX: "auto", padding: "4px 0" })}>
+				<div mix={css({ display: "flex", gap: 8, overflowX: "auto", padding: "4px 0" })}>
 					<div
 						mix={css({
 							display: "flex",
 							flexDirection: "column",
 							justifyContent: "space-between",
-							gap: 3,
+							gap: 4,
 							paddingTop: 0,
 						})}
 					>
@@ -91,10 +98,10 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 							<span
 								key={index}
 								mix={css({
-									height: 11,
+									height: 16,
 									fontSize: "0.6875rem",
 									fontWeight: 600,
-									lineHeight: "11px",
+									lineHeight: "16px",
 									color: "oklch(0.55 0.01 145)",
 									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								})}
@@ -104,36 +111,38 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 						))}
 					</div>
 
-					{weeks.map((week, weekIndex) => (
-						<div key={weekIndex} mix={css({ display: "flex", flexDirection: "column", gap: 3 })}>
-							{week.map((date, dayIndex) => {
-								if (date === null) {
-									return <div key={dayIndex} mix={css({ width: 11, height: 11 })} />;
-								}
-								let day = byDate.get(date);
-								let successRate =
-									day && day.total_checks > 0
-										? Math.round((day.successful_checks / day.total_checks) * 100)
-										: null;
-								return (
-									<div
-										key={dayIndex}
-										title={
-											day
-												? `${date}: ${successRate}% success (${day.successful_checks}/${day.total_checks})`
-												: date
-										}
-										mix={css({
-											width: 11,
-											height: 11,
-											borderRadius: 2,
-											background: getCellColor(successRate),
-										})}
-									/>
-								);
-							})}
-						</div>
-					))}
+					<div mix={css({ display: "flex", gap: 4 })}>
+						{weeks.map((week, weekIndex) => (
+							<div key={weekIndex} mix={css({ display: "flex", flexDirection: "column", gap: 4 })}>
+								{week.map((date, dayIndex) => {
+									if (date === null) {
+										return <div key={dayIndex} mix={css({ width: 16, height: 16 })} />;
+									}
+									let day = byDate.get(date);
+									let successRate =
+										day && day.total_checks > 0
+											? Math.round((day.successful_checks / day.total_checks) * 100)
+											: null;
+									return (
+										<div
+											key={dayIndex}
+											title={
+												day
+													? `${date}: ${successRate}% success (${day.successful_checks}/${day.total_checks})`
+													: date
+											}
+											mix={css({
+												width: 16,
+												height: 16,
+												borderRadius: 2,
+												background: getCellColor(successRate),
+											})}
+										/>
+									);
+								})}
+							</div>
+						))}
+					</div>
 				</div>
 
 				<div
@@ -157,8 +166,8 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 								<div
 									key={index}
 									mix={css({
-										width: 10,
-										height: 10,
+										width: 16,
+										height: 16,
 										borderRadius: 2,
 										background: getCellColor(rate),
 									})}
