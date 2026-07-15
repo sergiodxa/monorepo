@@ -106,10 +106,29 @@ describe("GET /docs/*slug", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("<title>Overview | Documentation | Uptime</title>");
+		expect(body).toContain("<title>Overview | Documentation - Uptime</title>");
 		expect(body).toContain("<h1>Overview</h1>");
 		expect(body).toContain("Last updated: 2026-02-14");
 		expect(body).toContain("Key Features");
+	});
+
+	test("marks the current page's sidebar link active and builds a home > ... breadcrumb", async () => {
+		let response = await getDocsShow("concepts/http-monitors");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain('href="/docs/concepts/http-monitors" aria-current="page"');
+		expect(body).toContain(">Home<");
+		expect(body).toContain(">concepts<");
+		expect(body).toContain(">HTTP Monitors<");
+	});
+
+	test("renders the signed-out dashboard CTA as a sign-in button", async () => {
+		let response = await getDocsShow("overview");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain("Start Monitoring");
 	});
 
 	test("renders the not-found page for an unknown slug", async () => {
@@ -117,7 +136,8 @@ describe("GET /docs/*slug", () => {
 
 		expect(response.status).toBe(404);
 		let body = await response.text();
-		expect(body).toContain("<title>Doc Not Found</title>");
-		expect(body).toContain("doesn't exist or may have moved");
+		expect(body).toContain("<title>Page Not Found | Documentation - Uptime</title>");
+		expect(body).toContain("<h1>Page Not Found</h1>");
+		expect(body).toContain("The documentation page you're looking for doesn't exist.");
 	});
 });

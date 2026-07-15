@@ -1,8 +1,7 @@
 /**
- * Shared chrome for the `/docs` site: a sidebar grouping every doc by section (no
- * client-side search — a plain, always-visible link list is enough for this app's
- * doc count) plus the article content column. Both the docs index and individual
- * doc pages compose their content into this layout.
+ * Shared chrome for the `/docs` site: a searchable sidebar grouping every doc by
+ * section, a topbar with a breadcrumb trail and a dashboard call to action, and the
+ * article content column. Every doc page composes its content into this layout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,13 +9,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { MenuIcon } from "@pkg/lucide-remix";
-import { css } from "remix/ui";
+import { ArrowRightIcon, MenuIcon } from "@pkg/lucide-remix";
+import { css, Fragment } from "remix/ui";
 
 import type { DocSection } from "~/app/services/docs";
 
-import { primary } from "~/resources/theme";
-import routes from "~/routes/web";
+import DocsNav from "~/resources/components/docs-nav";
+import AuthCta from "~/resources/components/marketing/auth-cta";
 
 /** Neutral scale shades used on this page, hue 145. */
 const neutral = {
@@ -47,79 +46,121 @@ const sidebarToggle = css({
 	background: "transparent",
 	color: "inherit",
 	cursor: "pointer",
+	flexShrink: 0,
 	"&:hover": { background: neutral[100] },
 	"@media (min-width: 768px)": { display: "none" },
 	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
 });
 
-/** Marketing/docs brand mark, measured 20px. */
-const marketingBrand = css({
+/** The sidebar's title, e.g. "Documentation". */
+const sidebarTitleCss = css({
 	fontWeight: 700,
-	fontSize: "1.25rem",
-	textDecoration: "none",
+	fontSize: "1.0625rem",
+	margin: "0 20px",
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
-/** One link inside a footer/sidebar column. */
-const marketingFooterLink = css({
-	display: "block",
-	fontSize: "0.875rem",
-	color: neutral[600],
-	textDecoration: "none",
-	marginBottom: 8,
-	"&:hover": { color: primary[600] },
-	"@media (prefers-color-scheme: dark)": {
-		color: neutral[400],
-		"&:hover": { color: primary[400] },
-	},
+/** The sidebar's subtitle, e.g. "Guides and reference". */
+const sidebarDescriptionCss = css({
+	fontSize: "0.8125rem",
+	margin: "4px 20px 20px",
+	color: neutral[500],
+	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
+
+/** The topbar row: nav toggle + breadcrumb on the left, the dashboard CTA on the right. */
+const topbar = css({
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	gap: 16,
+	padding: "12px 20px",
+	borderBottom: `1px solid ${neutral[200]}`,
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+});
+
+const topbarLeft = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
+
+/** The small, muted `docs > overview`-style breadcrumb trail. */
+const breadcrumbTrail = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 4,
+	fontSize: "0.8125rem",
+	color: neutral[500],
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+});
+
+/** A linked (non-current) breadcrumb segment. */
+const breadcrumbLink = css({
+	color: "inherit",
+	textDecoration: "none",
+	"&:hover": { textDecoration: "underline" },
+});
+
+/** The current, non-linked breadcrumb segment. */
+const breadcrumbCurrent = css({
+	color: neutral[900],
+	fontWeight: 500,
+	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+});
+
+/** The `›` glyph separating breadcrumb segments. */
+const breadcrumbSeparator = css({ flexShrink: 0 });
 
 namespace DocsLayout {
 	export interface Props {
 		sections: DocSection[];
+		/** Current doc's `/docs/...` path, compared against each nav link to mark it active. */
+		activePath?: string;
+		/** The `docs > overview`-style breadcrumb trail; the last item renders as plain (non-linked) text. */
+		breadcrumbs?: Array<{ label: string; href?: string }>;
+		isSignedIn: boolean;
+		dashboardLabel: string;
+		startLabel: string;
+		sidebarTitle: string;
+		sidebarDescription: string;
+		searchPlaceholder: string;
+		toggleNavLabel: string;
 		children: RemixNode;
 	}
 }
 
-/** Renders the docs sidebar (grouped by {@link DocsLayout.Props.sections}) plus `children` as the article column. */
+/** Renders the searchable docs sidebar, a breadcrumb + dashboard-CTA topbar, and `children` as the article column. */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
-		let { sections, children } = handle.props;
+		let {
+			sections,
+			activePath = "",
+			breadcrumbs = [],
+			isSignedIn,
+			dashboardLabel,
+			startLabel,
+			sidebarTitle,
+			sidebarDescription,
+			searchPlaceholder,
+			toggleNavLabel,
+			children,
+		} = handle.props;
+
+		let navSections = sections.map((section) => ({
+			title: section.title,
+			docs: section.docs.map((doc) => ({ path: doc.path, title: doc.frontmatter.title })),
+		}));
 
 		return (
 			<div mix={[css({ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 })]}>
-				{/* Mobile-only topbar holding the sidebar's hamburger toggle, hidden at ≥768px. */}
-				<div
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							padding: "12px 20px",
-							borderBottom: `1px solid ${neutral[200]}`,
-							"@media (min-width: 768px)": { display: "none" },
-							"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-						}),
-					]}
-				>
-					<button
-						type="button"
-						commandfor="docs-sidebar"
-						command="toggle-popover"
-						aria-label="Toggle navigation"
-						mix={[sidebarToggle]}
-					>
-						<MenuIcon size={18} strokeWidth={1.5} />
-					</button>
-				</div>
-
 				<div
 					mix={[
 						css({
 							display: "flex",
 							flex: 1,
 							minHeight: 0,
-							maxWidth: 1024,
+							maxWidth: 1152,
 							margin: "0 auto",
 							width: "100%",
 						}),
@@ -127,7 +168,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				>
 					{/*
 					 * Fully hidden below 768px and replaced by a slide-in native
-					 * popover drawer triggered by the hamburger above. At ≥768px
+					 * popover drawer triggered by the topbar's hamburger. At ≥768px
 					 * this resets to a normal static column (`!important` beats
 					 * the UA `[popover]:not(:popover-open) { display: none }`).
 					 */}
@@ -143,7 +184,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								margin: 0,
 								width: "min(80vw, 288px)",
 								maxHeight: "100vh",
-								padding: "32px 20px",
+								padding: "24px 0",
 								border: "none",
 								borderRight: `1px solid ${neutral[200]}`,
 								background: "#ffffff",
@@ -155,10 +196,11 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 									top: "auto",
 									left: "auto",
 									bottom: "auto",
-									width: 240,
+									width: 272,
 									maxHeight: "none",
 									flexShrink: 0,
 									boxShadow: "none",
+									overflowY: "auto",
 								},
 								"@media (prefers-color-scheme: dark)": {
 									background: neutral[950],
@@ -167,71 +209,98 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							}),
 						]}
 					>
-						<a href={routes.docs.index.href()} mix={[marketingBrand]}>
-							Documentation
-						</a>
+						<p mix={[sidebarTitleCss]}>{sidebarTitle}</p>
+						<p mix={[sidebarDescriptionCss]}>{sidebarDescription}</p>
 
-						{sections.map((section) => (
-							<div key={section.title}>
-								<p
-									mix={[
-										css({
-											fontSize: "0.75rem",
-											fontWeight: 700,
-											textTransform: "uppercase",
-											letterSpacing: "0.03em",
-											color: neutral[500],
-											margin: "20px 0 8px",
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-										}),
-									]}
-								>
-									{section.title}
-								</p>
-								{section.docs.map((doc) => (
-									<a key={doc.path} href={doc.path} mix={[marketingFooterLink]}>
-										{doc.frontmatter.title}
-									</a>
-								))}
-							</div>
-						))}
+						<DocsNav
+							sections={navSections}
+							activePath={activePath}
+							searchPlaceholder={searchPlaceholder}
+						/>
 					</aside>
 
-					<div
-						mix={[
-							css({
-								flex: 1,
-								minWidth: 0,
-								padding: "32px 24px 80px",
-								lineHeight: 1.75,
-								"& h1": {
-									fontSize: "1.875rem",
-									fontWeight: 700,
-									letterSpacing: "-0.025em",
-									lineHeight: 1,
-									margin: "0 0 16px",
-									color: neutral[900],
-								},
-								"& h2": {
-									fontSize: "1.5rem",
-									fontWeight: 700,
-									margin: "48px 0 24px",
-									color: neutral[900],
-								},
-								"& h3": {
-									fontSize: "1.25rem",
-									fontWeight: 600,
-									margin: "0 0 12px",
-									color: neutral[900],
-								},
-								"& p": { margin: "20px 0" },
-								"@media (prefers-color-scheme: dark)": {
-									"& h1, & h2, & h3": { color: neutral[50] },
-								},
-							}),
-						]}
-					>
-						{children}
+					<div mix={[css({ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 })]}>
+						<div mix={[topbar]}>
+							<div mix={[topbarLeft]}>
+								<button
+									type="button"
+									commandfor="docs-sidebar"
+									command="toggle-popover"
+									aria-label={toggleNavLabel}
+									mix={[sidebarToggle]}
+								>
+									<MenuIcon size={18} strokeWidth={1.5} />
+								</button>
+
+								{breadcrumbs.length > 0 && (
+									<div mix={[breadcrumbTrail]}>
+										{breadcrumbs.map((crumb, index) => (
+											<Fragment key={`${crumb.label}-${index}`}>
+												{index > 0 && (
+													<span mix={[breadcrumbSeparator]} aria-hidden="true">
+														›
+													</span>
+												)}
+												{crumb.href ? (
+													<a href={crumb.href} mix={[breadcrumbLink]}>
+														{crumb.label}
+													</a>
+												) : (
+													<span aria-current="page" mix={[breadcrumbCurrent]}>
+														{crumb.label}
+													</span>
+												)}
+											</Fragment>
+										))}
+									</div>
+								)}
+							</div>
+
+							<AuthCta
+								isSignedIn={isSignedIn}
+								dashboardLabel={dashboardLabel}
+								startLabel={startLabel}
+								size="sm"
+								icon={<ArrowRightIcon size={16} strokeWidth={1.5} />}
+							/>
+						</div>
+
+						<div
+							mix={[
+								css({
+									flex: 1,
+									minWidth: 0,
+									padding: "32px 24px 80px",
+									lineHeight: 1.75,
+									"& h1": {
+										fontSize: "1.875rem",
+										fontWeight: 700,
+										letterSpacing: "-0.025em",
+										lineHeight: 1,
+										margin: "0 0 16px",
+										color: neutral[900],
+									},
+									"& h2": {
+										fontSize: "1.5rem",
+										fontWeight: 700,
+										margin: "48px 0 24px",
+										color: neutral[900],
+									},
+									"& h3": {
+										fontSize: "1.25rem",
+										fontWeight: 600,
+										margin: "0 0 12px",
+										color: neutral[900],
+									},
+									"& p": { margin: "20px 0" },
+									"@media (prefers-color-scheme: dark)": {
+										"& h1, & h2, & h3": { color: neutral[50] },
+									},
+								}),
+							]}
+						>
+							{children}
+						</div>
 					</div>
 				</div>
 			</div>

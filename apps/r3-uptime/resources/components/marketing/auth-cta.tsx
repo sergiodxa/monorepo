@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -28,6 +28,8 @@ namespace AuthCta {
 		 * font weight than the hero/final-CTA's larger button.
 		 */
 		size?: "sm" | "lg";
+		/** Optional trailing icon (e.g. an arrow), rendered after the label. */
+		icon?: RemixNode;
 	}
 }
 
@@ -42,6 +44,7 @@ function primaryButtonStyle(size: "sm" | "lg") {
 		display: "inline-flex",
 		alignItems: "center",
 		justifyContent: "center",
+		gap: 6,
 		padding: isLarge ? "12px 24px" : "8px 16px",
 		borderRadius: 8,
 		border: "1px solid transparent",
@@ -76,6 +79,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			startLabel = "Start Monitoring",
 			dashboardLabel = "Go to dashboard",
 			size = "lg",
+			icon,
 		} = handle.props;
 		let buttonMix = primaryButtonStyle(size);
 
@@ -83,6 +87,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			return (
 				<a href={routes.app.index.href()} mix={[buttonMix]}>
 					{dashboardLabel}
+					{icon}
 				</a>
 			);
 		}
@@ -91,6 +96,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			<form method="post" action={routes.auth.action.href()}>
 				<button type="submit" mix={[buttonMix]}>
 					{startLabel}
+					{icon}
 				</button>
 			</form>
 		);
