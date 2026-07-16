@@ -3394,10 +3394,6 @@ export default {
 			closeMenu: "Cerrar menú",
 		},
 
-		breadcrumb: {
-			home: "Inicio",
-		},
-
 		nav: {
 			gettingStarted: "Primeros Pasos",
 			overview: "Descripción General",

@@ -40,22 +40,22 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let searchPlaceholder = ctx.i18next.t("docs.sidebar.searchPlaceholder");
 	let toggleNavLabel = ctx.i18next.t("docs.sidebar.openMenu");
 
-	/** Builds the `home > ... > <segment>` trail, one crumb per slug segment. */
-	function buildBreadcrumbs(leafLabel: string) {
-		let segments = slug.split("/");
+	/** Builds the `docs > ... > <segment>` trail, one crumb per URL path segment. */
+	function buildBreadcrumbs() {
+		let pathSegments = activePath.split("/").filter(Boolean);
+		let docSegments = pathSegments.slice(1);
 
-		return [
-			{ label: ctx.i18next.t("docs.breadcrumb.home"), href: routes.docs.index.href() },
-			...segments.map((segment, index) => {
-				let isLast = index === segments.length - 1;
-				return {
-					label: isLast ? leafLabel : segment.replace(/-/g, " "),
-					href: isLast
-						? undefined
-						: routes.docs.show.href({ slug: segments.slice(0, index + 1).join("/") }),
-				};
-			}),
-		];
+		return pathSegments.map((segment, index) => {
+			let isLast = index === pathSegments.length - 1;
+			return {
+				label: segment.replace(/-/g, " "),
+				href: isLast
+					? undefined
+					: index === 0
+						? routes.docs.index.href()
+						: routes.docs.show.href({ slug: docSegments.slice(0, index).join("/") }),
+			};
+		});
 	}
 
 	let renderNotFound = () => {
@@ -66,7 +66,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 				<DocsLayout
 					sections={sections}
 					activePath={activePath}
-					breadcrumbs={buildBreadcrumbs(ctx.i18next.t("docs.error.notFoundTitle"))}
+					breadcrumbs={buildBreadcrumbs()}
 					isSignedIn={isSignedIn}
 					dashboardLabel={dashboardLabel}
 					startLabel={startLabel}
@@ -97,7 +97,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 			<DocsLayout
 				sections={sections}
 				activePath={activePath}
-				breadcrumbs={buildBreadcrumbs(frontmatter.title)}
+				breadcrumbs={buildBreadcrumbs()}
 				isSignedIn={isSignedIn}
 				dashboardLabel={dashboardLabel}
 				startLabel={startLabel}
@@ -107,14 +107,14 @@ export default createAction(routes.docs.show, async (ctx) => {
 				toggleNavLabel={toggleNavLabel}
 			>
 				<article>
-					<header>
-						<h1>{frontmatter.title}</h1>
+					<header mix={[css({ display: "flex", flexDirection: "column", gap: 2 })]}>
+						<h1 mix={[css({ margin: 0 })]}>{frontmatter.title}</h1>
 						<p
 							mix={[
 								css({
 									fontSize: "1.0625rem",
 									color: "oklch(0.52 0.01 145)",
-									margin: "8px 0 32px",
+									margin: "6px 0 0",
 									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 								}),
 							]}
@@ -127,6 +127,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 									css({
 										fontSize: "0.8125rem",
 										color: neutral[500],
+										margin: 0,
 										"@media (prefers-color-scheme: dark)": {
 											color: neutral[400],
 										},

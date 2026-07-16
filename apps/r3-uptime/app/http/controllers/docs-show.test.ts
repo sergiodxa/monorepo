@@ -107,20 +107,20 @@ describe("GET /docs/*slug", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<title>Overview | Documentation - Uptime</title>");
-		expect(body).toContain("<h1>Overview</h1>");
+		expect(body).toContain(">Overview</h1>");
 		expect(body).toContain("Last updated: 2026-02-14");
 		expect(body).toContain("Key Features");
 	});
 
-	test("marks the current page's sidebar link active and builds a home > ... breadcrumb", async () => {
+	test("marks the current page's sidebar link active and builds a docs > ... breadcrumb", async () => {
 		let response = await getDocsShow("concepts/http-monitors");
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain('href="/docs/concepts/http-monitors" aria-current="page"');
-		expect(body).toContain(">Home<");
+		expect(body).toContain(">docs<");
 		expect(body).toContain(">concepts<");
-		expect(body).toContain(">HTTP Monitors<");
+		expect(body).toContain(">http monitors<");
 	});
 
 	test("renders the signed-out dashboard CTA as a sign-in button", async () => {

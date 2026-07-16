@@ -3706,10 +3706,6 @@ export default {
 			closeMenu: "Close menu",
 		},
 
-		breadcrumb: {
-			home: "Home",
-		},
-
 		nav: {
 			gettingStarted: "Getting Started",
 			overview: "Overview",
