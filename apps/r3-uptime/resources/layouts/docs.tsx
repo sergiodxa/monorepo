@@ -54,8 +54,8 @@ const sidebarToggle = css({
 
 /** The sidebar's title, e.g. "Documentation". */
 const sidebarTitleCss = css({
-	fontWeight: 700,
-	fontSize: "1.0625rem",
+	fontWeight: 600,
+	fontSize: "1.125rem",
 	margin: "0 20px",
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
@@ -75,9 +75,13 @@ const topbar = css({
 	alignItems: "center",
 	justifyContent: "space-between",
 	gap: 16,
-	padding: "12px 20px",
+	padding: "12px 24px",
+	background: "oklch(0.98 0.005 145 / 0.5)",
 	borderBottom: `1px solid ${neutral[200]}`,
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+	"@media (prefers-color-scheme: dark)": {
+		background: "oklch(0.24 0.005 145 / 0.5)",
+		borderColor: neutral[800],
+	},
 });
 
 const topbarLeft = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
@@ -194,7 +198,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 									top: "auto",
 									left: "auto",
 									bottom: "auto",
-									width: 272,
+									width: 256,
 									maxHeight: "none",
 									flexShrink: 0,
 									boxShadow: "none",
@@ -267,7 +271,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							<div
 								mix={[
 									css({
-										maxWidth: "60ch",
+										maxWidth: "896px",
 										margin: "0 auto",
 										lineHeight: 1.75,
 										"& h1": {
