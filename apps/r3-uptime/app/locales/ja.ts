@@ -2448,7 +2448,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "言語",
+							label: "優先言語",
 							description: "優先言語を選択してください。自動検出はブラウザの設定を使用します。",
 							options: {
 								auto: "自動検出",

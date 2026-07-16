@@ -2466,7 +2466,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "Idioma",
+							label: "Idioma preferido",
 							description:
 								"Seleccione su idioma preferido. Auto-detectar usa la configuración de su navegador.",
 							options: {

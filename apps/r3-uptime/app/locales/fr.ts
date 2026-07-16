@@ -2470,7 +2470,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "Langue",
+							label: "Langue préférée",
 							description:
 								"Sélectionnez votre langue préférée. La détection automatique utilise les paramètres de votre navigateur.",
 							options: {

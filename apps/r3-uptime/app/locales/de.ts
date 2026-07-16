@@ -2481,7 +2481,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "Sprache",
+							label: "Bevorzugte Sprache",
 							description:
 								"Wählen Sie Ihre bevorzugte Sprache. Automatische Erkennung verwendet Ihre Browser-Einstellungen.",
 							options: {

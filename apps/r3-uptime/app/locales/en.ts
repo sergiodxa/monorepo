@@ -2773,7 +2773,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "Language",
+							label: "Preferred Language",
 							description:
 								"Select your preferred language. Auto-detect uses your browser settings.",
 							options: {

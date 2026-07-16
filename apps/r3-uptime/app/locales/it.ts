@@ -2460,7 +2460,7 @@ export default {
 				form: {
 					fields: {
 						language: {
-							label: "Lingua",
+							label: "Lingua preferita",
 							description:
 								"Selezioni la sua lingua preferita. Il rilevamento automatico utilizza le impostazioni del suo browser.",
 							options: {

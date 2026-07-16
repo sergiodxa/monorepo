@@ -27,8 +27,8 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
-import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
+import Empty from "~/resources/components/empty";
 import Field from "~/resources/components/field";
 import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
@@ -224,7 +224,18 @@ export default createAction(routes.app.team.account, {
 									</div>
 
 									<div
-										mix={[css({ padding: 24, display: "flex", flexDirection: "column", gap: 8 })]}
+										mix={[
+											css({
+												// `Field`'s own trailing margin already spaces its last
+												// instance from the footer below, so this region carries no
+												// bottom padding of its own — otherwise the two would stack
+												// into a gap far larger than every other card's footer rhythm.
+												padding: "24px 24px 0",
+												display: "flex",
+												flexDirection: "column",
+												gap: 8,
+											}),
+										]}
 									>
 										<Field
 											label={ctx.i18next.t("page.account.language.form.fields.language.label")}
@@ -340,6 +351,65 @@ export default createAction(routes.app.team.account, {
 								</Button>
 							</div>
 
+							<dialog
+								id="create-team"
+								mix={[
+									css({
+										width: "100%",
+										maxWidth: 440,
+										padding: 24,
+										borderRadius: 8,
+										border: `1px solid ${neutral[300]}`,
+										"&::backdrop": {
+											background: "rgba(0, 0, 0, 0.4)",
+										},
+										"@media (prefers-color-scheme: dark)": {
+											borderColor: neutral[700],
+											background: neutral[900],
+											color: neutral[50],
+										},
+									}),
+								]}
+							>
+								<h3>{ctx.i18next.t("page.createTeam.header.title")}</h3>
+								<form method="post" action={routes.accountActions.createTeam.href()}>
+									<Field label={ctx.i18next.t("page.createTeam.form.fields.name.label")}>
+										<input
+											type="text"
+											name="name"
+											required
+											placeholder={ctx.i18next.t("page.createTeam.form.fields.name.placeholder")}
+											mix={[
+												css({
+													padding: "8px 12px",
+													borderRadius: 6,
+													border: `1px solid ${neutral[200]}`,
+													fontSize: "0.875rem",
+													fontFamily: "inherit",
+													background: neutral[50],
+													color: "inherit",
+													"@media (prefers-color-scheme: dark)": {
+														borderColor: neutral[700],
+														background: neutral[900],
+													},
+												}),
+											]}
+										/>
+									</Field>
+									<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
+										<Button
+											type="button"
+											variant="outline"
+											commandfor="create-team"
+											command="close"
+										>
+											{ctx.i18next.t("page.createTeam.form.cancel")}
+										</Button>
+										<Button type="submit">{ctx.i18next.t("page.createTeam.form.cta")}</Button>
+									</div>
+								</form>
+							</dialog>
+
 							<div
 								mix={[
 									css({
@@ -376,218 +446,175 @@ export default createAction(routes.app.team.account, {
 									</p>
 								</div>
 
-								<div mix={[css({ overflowX: "auto" })]}>
-									<table
-										mix={[
-											css({
-												width: "100%",
-												borderCollapse: "collapse",
-												fontSize: "0.875rem",
-												"& th, & td": {
-													textAlign: "left",
-													padding: "12px 16px",
-													borderBottom: `1px solid ${neutral[200]}`,
-												},
-												"& tr:last-child td": { borderBottom: "none" },
-												"@media (prefers-color-scheme: dark)": {
-													"& th, & td": { borderColor: neutral[800] },
-												},
-											}),
-										]}
-									>
-										<thead>
-											<tr>
-												<th>{ctx.i18next.t("page.account.teams.table.columns.team")}</th>
-												<th mix={[css({ textAlign: "right" })]}>
-													{ctx.i18next.t("page.account.teams.table.columns.role")}
-												</th>
-												<th mix={[css({ textAlign: "center" })]}>
-													<span
-														mix={[
-															css({
-																position: "absolute",
-																width: 1,
-																height: 1,
-																padding: 0,
-																margin: -1,
-																overflow: "hidden",
-																clip: "rect(0, 0, 0, 0)",
-																whiteSpace: "nowrap",
-																border: 0,
-															}),
-														]}
-													>
-														{ctx.i18next.t("page.account.teams.table.columns.actions")}
-													</span>
-												</th>
-											</tr>
-										</thead>
-										<tbody>
-											{memberships.map(({ team, role, isOwner }) => {
-												let canLeave = !isOwner && role === "member";
+								{memberships.length === 0 ? (
+									<div mix={[css({ padding: 24 })]}>
+										<Empty>
+											<Empty.Description>
+												{ctx.i18next.t("page.account.teams.empty.description")}
+											</Empty.Description>
+										</Empty>
+									</div>
+								) : (
+									<div mix={[css({ overflowX: "auto" })]}>
+										<table
+											mix={[
+												css({
+													width: "100%",
+													borderCollapse: "collapse",
+													fontSize: "0.875rem",
+													"& th, & td": {
+														textAlign: "left",
+														padding: "12px 16px",
+														borderBottom: `1px solid ${neutral[200]}`,
+													},
+													"& tr:last-child td": { borderBottom: "none" },
+													"@media (prefers-color-scheme: dark)": {
+														"& th, & td": { borderColor: neutral[800] },
+													},
+												}),
+											]}
+										>
+											<thead>
+												<tr>
+													<th>{ctx.i18next.t("page.account.teams.table.columns.team")}</th>
+													<th mix={[css({ textAlign: "right" })]}>
+														{ctx.i18next.t("page.account.teams.table.columns.role")}
+													</th>
+													<th mix={[css({ textAlign: "center" })]}>
+														<span
+															mix={[
+																css({
+																	position: "absolute",
+																	width: 1,
+																	height: 1,
+																	padding: 0,
+																	margin: -1,
+																	overflow: "hidden",
+																	clip: "rect(0, 0, 0, 0)",
+																	whiteSpace: "nowrap",
+																	border: 0,
+																}),
+															]}
+														>
+															{ctx.i18next.t("page.account.teams.table.columns.actions")}
+														</span>
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{memberships.map(({ team, role, isOwner }) => {
+													let canLeave = !isOwner && role === "member";
 
-												return (
-													<tr key={team.id}>
-														<td>
-															<a
-																href={routes.app.team.dashboard.index.href({ team: team.slug })}
-																mix={[
-																	css({
-																		color: primary[600],
-																		textDecoration: "none",
-																		"&:hover": { textDecoration: "underline" },
-																		"@media (prefers-color-scheme: dark)": {
-																			color: primary[400],
-																		},
-																	}),
-																]}
-															>
-																{team.name}
-															</a>
-														</td>
-														<td mix={[css({ textAlign: "right" })]}>
-															<Badge tone={isOwner ? "up" : "neutral"}>
+													return (
+														<tr key={team.id}>
+															<td>
+																<a
+																	href={routes.app.team.dashboard.index.href({ team: team.slug })}
+																	mix={[
+																		css({
+																			color: primary[600],
+																			textDecoration: "none",
+																			"&:hover": { textDecoration: "underline" },
+																			"@media (prefers-color-scheme: dark)": {
+																				color: primary[400],
+																			},
+																		}),
+																	]}
+																>
+																	{team.name}
+																</a>
+															</td>
+															<td mix={[css({ textAlign: "right" })]}>
 																{ctx.i18next.t(
 																	`page.account.teams.table.role.${isOwner ? "owner" : role}`,
 																)}
-															</Badge>
-														</td>
-														<td mix={[css({ textAlign: "center" })]}>
-															{canLeave && (
-																<>
-																	<RowMenu
-																		id={`team-menu-${team.id}`}
-																		label={ctx.i18next.t("page.account.teams.table.actions.menu")}
-																	>
-																		<button
-																			type="button"
-																			commandfor={`leave-team-${team.id}`}
-																			command="show-modal"
-																			mix={[menuItem, menuItemDanger]}
+															</td>
+															<td mix={[css({ textAlign: "center" })]}>
+																{canLeave && (
+																	<>
+																		<RowMenu
+																			id={`team-menu-${team.id}`}
+																			label={ctx.i18next.t("page.account.teams.table.actions.menu")}
 																		>
-																			<LogOutIcon size={16} strokeWidth={1.5} />
-																			<span>
-																				{ctx.i18next.t("page.account.teams.table.actions.leave")}
-																			</span>
-																		</button>
-																	</RowMenu>
-
-																	<dialog
-																		id={`leave-team-${team.id}`}
-																		mix={[
-																			css({
-																				width: "100%",
-																				maxWidth: 440,
-																				padding: 24,
-																				borderRadius: 8,
-																				border: `1px solid ${neutral[300]}`,
-																				"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																				"@media (prefers-color-scheme: dark)": {
-																					borderColor: neutral[700],
-																					background: neutral[900],
-																					color: neutral[50],
-																				},
-																			}),
-																		]}
-																	>
-																		<h3>
-																			{ctx.i18next.t(
-																				"page.account.teams.table.confirmation.leaveTeam",
-																				{ name: team.name },
-																			)}
-																		</h3>
-																		<form
-																			method="post"
-																			action={routes.accountActions.leaveTeam.href()}
-																		>
-																			<input type="hidden" name="team_id" value={team.id} />
-																			<div
-																				mix={[
-																					css({
-																						display: "flex",
-																						gap: 8,
-																						justifyContent: "flex-end",
-																					}),
-																				]}
+																			<button
+																				type="button"
+																				commandfor={`leave-team-${team.id}`}
+																				command="show-modal"
+																				mix={[menuItem, menuItemDanger]}
 																			>
-																				<Button
-																					type="button"
-																					variant="outline"
-																					commandfor={`leave-team-${team.id}`}
-																					command="close"
-																				>
-																					{ctx.i18next.t("page.account.form.actions.cancel")}
-																				</Button>
-																				<Button type="submit" color="danger">
+																				<LogOutIcon size={16} strokeWidth={1.5} />
+																				<span>
 																					{ctx.i18next.t("page.account.teams.table.actions.leave")}
-																				</Button>
-																			</div>
-																		</form>
-																	</dialog>
-																</>
-															)}
-														</td>
-													</tr>
-												);
-											})}
-										</tbody>
-									</table>
-								</div>
+																				</span>
+																			</button>
+																		</RowMenu>
+
+																		<dialog
+																			id={`leave-team-${team.id}`}
+																			mix={[
+																				css({
+																					width: "100%",
+																					maxWidth: 440,
+																					padding: 24,
+																					borderRadius: 8,
+																					border: `1px solid ${neutral[300]}`,
+																					"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+																					"@media (prefers-color-scheme: dark)": {
+																						borderColor: neutral[700],
+																						background: neutral[900],
+																						color: neutral[50],
+																					},
+																				}),
+																			]}
+																		>
+																			<h3>
+																				{ctx.i18next.t(
+																					"page.account.teams.table.confirmation.leaveTeam",
+																					{ name: team.name },
+																				)}
+																			</h3>
+																			<form
+																				method="post"
+																				action={routes.accountActions.leaveTeam.href()}
+																			>
+																				<input type="hidden" name="team_id" value={team.id} />
+																				<div
+																					mix={[
+																						css({
+																							display: "flex",
+																							gap: 8,
+																							justifyContent: "flex-end",
+																						}),
+																					]}
+																				>
+																					<Button
+																						type="button"
+																						variant="outline"
+																						commandfor={`leave-team-${team.id}`}
+																						command="close"
+																					>
+																						{ctx.i18next.t("page.account.form.actions.cancel")}
+																					</Button>
+																					<Button type="submit" color="danger">
+																						{ctx.i18next.t(
+																							"page.account.teams.table.actions.leave",
+																						)}
+																					</Button>
+																				</div>
+																			</form>
+																		</dialog>
+																	</>
+																)}
+															</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+								)}
 							</div>
 						</section>
-
-						<dialog
-							id="create-team"
-							mix={[
-								css({
-									padding: 24,
-									borderRadius: 8,
-									border: `1px solid ${neutral[300]}`,
-									maxWidth: 400,
-									"&::backdrop": {
-										background: "rgba(0, 0, 0, 0.4)",
-									},
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-										color: neutral[50],
-									},
-								}),
-							]}
-						>
-							<h3>{ctx.i18next.t("page.createTeam.header.title")}</h3>
-							<form method="post" action={routes.accountActions.createTeam.href()}>
-								<Field label={ctx.i18next.t("page.createTeam.form.fields.name.label")}>
-									<input
-										type="text"
-										name="name"
-										required
-										placeholder={ctx.i18next.t("page.createTeam.form.fields.name.placeholder")}
-										mix={[
-											css({
-												padding: "8px 12px",
-												borderRadius: 6,
-												border: `1px solid ${neutral[200]}`,
-												fontSize: "0.875rem",
-												fontFamily: "inherit",
-												background: neutral[50],
-												color: "inherit",
-												"@media (prefers-color-scheme: dark)": {
-													borderColor: neutral[700],
-													background: neutral[900],
-												},
-											}),
-										]}
-									/>
-								</Field>
-								<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
-									<Button type="button" variant="outline" commandfor="create-team" command="close">
-										{ctx.i18next.t("page.createTeam.form.cancel")}
-									</Button>
-									<Button type="submit">{ctx.i18next.t("page.createTeam.form.cta")}</Button>
-								</div>
-							</form>
-						</dialog>
 					</div>
 				</AppShell>
 			</DocumentLayout>,
