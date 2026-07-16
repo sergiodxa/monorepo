@@ -356,8 +356,9 @@ export default createAction(routes.app.team.account, {
 								mix={[
 									css({
 										width: "100%",
-										maxWidth: 440,
+										maxWidth: "min(440px, calc(100vw - 32px))",
 										padding: 24,
+										boxSizing: "border-box",
 										borderRadius: 8,
 										border: `1px solid ${neutral[300]}`,
 										"&::backdrop": {
@@ -554,8 +555,9 @@ export default createAction(routes.app.team.account, {
 																			mix={[
 																				css({
 																					width: "100%",
-																					maxWidth: 440,
+																					maxWidth: "min(440px, calc(100vw - 32px))",
 																					padding: 24,
+																					boxSizing: "border-box",
 																					borderRadius: 8,
 																					border: `1px solid ${neutral[300]}`,
 																					"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
