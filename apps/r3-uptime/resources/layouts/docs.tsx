@@ -16,19 +16,7 @@ import type { DocSection } from "~/app/services/docs";
 
 import DocsNav from "~/resources/components/docs-nav";
 import AuthCta from "~/resources/components/marketing/auth-cta";
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	100: "oklch(0.96 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-};
+import { neutral } from "~/resources/theme";
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
@@ -93,23 +81,47 @@ const breadcrumbTrail = css({
 	gap: 4,
 	fontSize: "0.8125rem",
 	color: neutral[500],
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
+	minWidth: 0,
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
-/** A linked (non-current) breadcrumb segment. */
+/**
+ * A linked (non-current) breadcrumb segment. Allowed to shrink and truncate
+ * with its own ellipsis so the trailing, current segment never loses space to
+ * it on narrow viewports.
+ */
 const breadcrumbLink = css({
 	color: "inherit",
 	textDecoration: "none",
+	minWidth: 0,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
 	"&:hover": { textDecoration: "underline" },
 });
 
-/** The current, non-linked breadcrumb segment. */
+/**
+ * A middle segment that has no page of its own to link to (e.g. an `api` or
+ * `resources` grouping crumb). Rendered as plain, non-linked text, but still
+ * allowed to shrink and truncate like {@link breadcrumbLink} — only the
+ * trailing, current segment is exempt from shrinking.
+ */
+const breadcrumbMuted = css({
+	minWidth: 0,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+});
+
+/** The current, non-linked breadcrumb segment. Never shrinks, so it stays visible. */
 const breadcrumbCurrent = css({
 	color: neutral[900],
 	fontWeight: 500,
+	flexShrink: 0,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+	maxWidth: "40vw",
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
@@ -157,7 +169,16 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		}));
 
 		return (
-			<div mix={[css({ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 })]}>
+			<div
+				mix={[
+					css({
+						display: "flex",
+						flexDirection: "column",
+						height: "100dvh",
+						overflow: "hidden",
+					}),
+				]}
+			>
 				<div
 					mix={[
 						css({
@@ -221,7 +242,11 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						/>
 					</aside>
 
-					<div mix={[css({ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 })]}>
+					<div
+						mix={[
+							css({ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }),
+						]}
+					>
 						<div mix={[topbar]}>
 							<div mix={[topbarLeft]}>
 								<button
@@ -247,10 +272,12 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 													<a href={crumb.href} mix={[breadcrumbLink]}>
 														{crumb.label}
 													</a>
-												) : (
+												) : index === breadcrumbs.length - 1 ? (
 													<span aria-current="page" mix={[breadcrumbCurrent]}>
 														{crumb.label}
 													</span>
+												) : (
+													<span mix={[breadcrumbMuted]}>{crumb.label}</span>
 												)}
 											</Fragment>
 										))}
@@ -267,7 +294,17 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							/>
 						</div>
 
-						<div mix={[css({ flex: 1, minWidth: 0, padding: "32px 24px 80px" })]}>
+						<div
+							mix={[
+								css({
+									flex: 1,
+									minWidth: 0,
+									minHeight: 0,
+									overflowY: "auto",
+									padding: "32px 24px 80px",
+								}),
+							]}
+						>
 							<div
 								mix={[
 									css({
