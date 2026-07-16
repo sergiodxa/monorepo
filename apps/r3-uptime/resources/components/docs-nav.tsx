@@ -61,10 +61,12 @@ const navLinkActive = css({
 	background: primary[100],
 	color: primary[600],
 	fontWeight: 500,
+	padding: "6px 8px",
+	margin: "0 16px",
 	"&:hover": { background: primary[100] },
 	"@media (prefers-color-scheme: dark)": {
 		background: "oklch(0.3 0.06 142)",
-		color: primary[400],
+		color: neutral[50],
 		"&:hover": { background: "oklch(0.3 0.06 142)" },
 	},
 });
@@ -91,8 +93,12 @@ export const DocsNav = clientEntry(
 						mix={[
 							input.root(),
 							css({
+								position: "relative",
 								width: "auto",
+								height: 40,
 								margin: "0 20px 8px",
+								padding: "8px 32px 8px 36px",
+								borderRadius: 6,
 								color: neutral[500],
 								background: neutral[50],
 								border: `1px solid ${neutral[200]}`,
@@ -101,13 +107,22 @@ export const DocsNav = clientEntry(
 								"& input": { color: "inherit" },
 								"@media (prefers-color-scheme: dark)": {
 									color: neutral[400],
-									background: neutral[900],
-									borderColor: neutral[700],
+									background: neutral[950],
+									borderColor: neutral[800],
 								},
 							}),
 						]}
 					>
-						<SearchIcon size={16} strokeWidth={1.5} />
+						<SearchIcon
+							size={16}
+							strokeWidth={1.5}
+							mix={css({
+								position: "absolute",
+								left: 12,
+								top: "50%",
+								transform: "translateY(-50%)",
+							})}
+						/>
 						<input
 							type="search"
 							value={search}
