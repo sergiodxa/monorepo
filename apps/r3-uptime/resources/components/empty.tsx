@@ -24,6 +24,7 @@ namespace Empty {
 const empty = css({
 	display: "flex",
 	width: "100%",
+	boxSizing: "border-box",
 	flexDirection: "column",
 	alignItems: "center",
 	gap: 12,
