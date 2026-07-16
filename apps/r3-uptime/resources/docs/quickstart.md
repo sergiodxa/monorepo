@@ -69,7 +69,7 @@ Now that you have basic monitoring in place, explore these additional features:
 
 - **DNS Monitors** - Track DNS record changes and verify propagation. See [DNS Monitoring](/docs/concepts/dns-monitors).
 - **TCP Monitors** - Check if a port is open and responding. Useful for databases and custom services. See [TCP Monitoring](/docs/concepts/tcp-monitors).
-- **Cron Job Monitors** - Ensure your scheduled tasks run on time. Your jobs ping Uptime when they complete. See [Cron Job Monitoring](/docs/concepts/cron-job-monitors).
+- **Cron Job Monitors** - Ensure your scheduled tasks run on time. Your jobs ping Uptime when they complete. See [Cron Job Monitoring](/docs/concepts/cron-jobs).
 
 ### Advanced HTTP Features
 
@@ -83,9 +83,9 @@ Share your service status publicly with a hosted status page. See [Status Pages]
 
 ### Maintenance Windows
 
-Prevent false alerts during planned maintenance. See [Maintenance Windows](/docs/concepts/maintenance-windows).
+Prevent false alerts during planned maintenance. See [Maintenance Windows](/docs/concepts/maintenance).
 
 ## Need Help?
 
-- Check the [API Reference](/docs/api) for programmatic access
-- Review [Concepts](/docs/concepts) for detailed documentation on each feature
+- Check the [API Reference](/docs/api/overview) for programmatic access
+- Review [Concepts](/docs/concepts/monitors) for detailed documentation on each feature

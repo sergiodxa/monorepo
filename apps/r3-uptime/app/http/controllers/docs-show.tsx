@@ -40,20 +40,21 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let searchPlaceholder = ctx.i18next.t("docs.sidebar.searchPlaceholder");
 	let toggleNavLabel = ctx.i18next.t("docs.sidebar.openMenu");
 
-	/** Builds the `docs > ... > <segment>` trail, one crumb per URL path segment. */
+	/**
+	 * Builds the `docs > ... > <segment>` trail, one crumb per URL path segment. Only
+	 * the `docs` root segment links anywhere — every doc slug under it (`concepts`,
+	 * `api`, `api/resources`, `team`, ...) is a directory used to group and order doc
+	 * files, not a real page on its own, so intermediate segments render as plain,
+	 * non-clickable text alongside the current (last) segment.
+	 */
 	function buildBreadcrumbs() {
 		let pathSegments = activePath.split("/").filter(Boolean);
-		let docSegments = pathSegments.slice(1);
 
 		return pathSegments.map((segment, index) => {
-			let isLast = index === pathSegments.length - 1;
+			let isRoot = index === 0;
 			return {
 				label: segment.replace(/-/g, " "),
-				href: isLast
-					? undefined
-					: index === 0
-						? routes.docs.index.href()
-						: routes.docs.show.href({ slug: docSegments.slice(0, index).join("/") }),
+				href: isRoot ? routes.docs.index.href() : undefined,
 			};
 		});
 	}

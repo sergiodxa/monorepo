@@ -123,6 +123,20 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain(">http monitors<");
 	});
 
+	test("only links the docs root breadcrumb — intermediate path segments have no real page", async () => {
+		let response = await getDocsShow("api/resources/http-monitors");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+
+		// "docs" links to the docs index, since it's a real page.
+		expect(body).toContain(`href="${routes.docs.index.href()}"`);
+		// "api" and "resources" are directory groupings with no page of their own —
+		// they must not be rendered as links to `/docs/api` or `/docs/api/resources`.
+		expect(body).not.toContain('href="/docs/api"');
+		expect(body).not.toContain('href="/docs/api/resources"');
+	});
+
 	test("renders the signed-out dashboard CTA as a sign-in button", async () => {
 		let response = await getDocsShow("overview");
 

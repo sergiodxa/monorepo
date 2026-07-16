@@ -62,7 +62,7 @@ Cron job monitors work differently—instead of Uptime checking your service, yo
 - Data synchronization jobs
 - Any recurring process that should run on a schedule
 
-If a job fails to check in within its expected window, you'll know something went wrong. See [Cron Job Monitors](/docs/concepts/cron-monitors) for details.
+If a job fails to check in within its expected window, you'll know something went wrong. See [Cron Job Monitors](/docs/concepts/cron-jobs) for details.
 
 ## Common Concepts
 
@@ -162,5 +162,5 @@ Review your monitors periodically:
 - [HTTP Monitors](/docs/concepts/http-monitors) — Deep dive into monitoring web endpoints
 - [DNS Monitors](/docs/concepts/dns-monitors) — Learn about DNS verification
 - [TCP Monitors](/docs/concepts/tcp-monitors) — Monitor services at the network level
-- [Cron Job Monitors](/docs/concepts/cron-monitors) — Track scheduled jobs
+- [Cron Job Monitors](/docs/concepts/cron-jobs) — Track scheduled jobs
 - [Understanding Alerts](/docs/concepts/alerts) — Configure how you get notified

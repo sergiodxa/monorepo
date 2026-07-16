@@ -38,6 +38,6 @@ Schedule maintenance periods to pause monitoring and prevent false alerts during
 
 Explore the documentation to get the most out of Uptime:
 
-- [Concepts](/docs/concepts) - Understand how monitors, alerts, and status pages work
-- [API Reference](/docs/api) - Integrate Uptime into your workflows
-- [Team Management](/docs/team) - Manage users and permissions
+- [Concepts](/docs/concepts/monitors) - Understand how monitors, alerts, and status pages work
+- [API Reference](/docs/api/overview) - Integrate Uptime into your workflows
+- [Team Management](/docs/team/members) - Manage users and permissions
