@@ -2687,6 +2687,8 @@ export default {
 				},
 
 				form: {
+					title: "ドメインを追加",
+
 					fields: {
 						hostname: {
 							label: "ドメイン",

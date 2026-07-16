@@ -234,25 +234,21 @@ export default createAction(routes.app.team.settings, {
 											}),
 										]}
 									>
-										<div mix={[css({ display: "flex", alignItems: "center", gap: 16 })]}>
-											<Avatar src={team.logo || null} name={team.name} size={48} />
-											<div mix={[css({ flex: 1 })]}>
-												<Field
-													label={ctx.i18next.t("page.settings.form.fields.logo.label")}
-													description={ctx.i18next.t("page.settings.form.fields.logo.description")}
-												>
-													<input
-														type="url"
-														name="logo"
-														defaultValue={team.logo ?? ""}
-														placeholder={ctx.i18next.t(
-															"page.settings.form.fields.logo.placeholder",
-														)}
-														mix={[textInput()]}
-													/>
-												</Field>
+										<Field
+											label={ctx.i18next.t("page.settings.form.fields.logo.label")}
+											description={ctx.i18next.t("page.settings.form.fields.logo.description")}
+										>
+											<div mix={[css({ display: "flex", alignItems: "center", gap: 16 })]}>
+												<Avatar src={team.logo || null} name={team.name} size={48} />
+												<input
+													type="url"
+													name="logo"
+													defaultValue={team.logo ?? ""}
+													placeholder={ctx.i18next.t("page.settings.form.fields.logo.placeholder")}
+													mix={[textInput(), css({ flex: 1 })]}
+												/>
 											</div>
-										</div>
+										</Field>
 
 										<Field
 											label={ctx.i18next.t("page.settings.form.fields.name.label")}
@@ -350,8 +346,9 @@ export default createAction(routes.app.team.settings, {
 								mix={[
 									css({
 										width: "100%",
-										maxWidth: 440,
+										maxWidth: "min(440px, calc(100vw - 32px))",
 										padding: 24,
+										boxSizing: "border-box",
 										borderRadius: 8,
 										border: `1px solid ${neutral[300]}`,
 										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
@@ -363,7 +360,9 @@ export default createAction(routes.app.team.settings, {
 									}),
 								]}
 							>
-								<h3>{ctx.i18next.t("page.invite.header.title")}</h3>
+								<h3 mix={[css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 })]}>
+									{ctx.i18next.t("page.invite.header.title")}
+								</h3>
 								<form
 									method="post"
 									action={routes.teamAdminActions.invite.create.href({ team: team.slug })}
@@ -585,8 +584,9 @@ export default createAction(routes.app.team.settings, {
 																		mix={[
 																			css({
 																				width: "100%",
-																				maxWidth: 440,
+																				maxWidth: "min(440px, calc(100vw - 32px))",
 																				padding: 24,
+																				boxSizing: "border-box",
 																				borderRadius: 8,
 																				border: `1px solid ${neutral[300]}`,
 																				"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
@@ -598,7 +598,15 @@ export default createAction(routes.app.team.settings, {
 																			}),
 																		]}
 																	>
-																		<h3>
+																		<h3
+																			mix={[
+																				css({
+																					margin: "0 0 16px",
+																					fontSize: "1rem",
+																					fontWeight: 600,
+																				}),
+																			]}
+																		>
 																			{ctx.i18next.t(
 																				"page.settings.members.table.confirmation.removeMember",
 																				{ name: displayName },
@@ -798,8 +806,9 @@ export default createAction(routes.app.team.settings, {
 																	mix={[
 																		css({
 																			width: "100%",
-																			maxWidth: 440,
+																			maxWidth: "min(440px, calc(100vw - 32px))",
 																			padding: 24,
+																			boxSizing: "border-box",
 																			borderRadius: 8,
 																			border: `1px solid ${neutral[300]}`,
 																			"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
@@ -811,7 +820,15 @@ export default createAction(routes.app.team.settings, {
 																		}),
 																	]}
 																>
-																	<h3>
+																	<h3
+																		mix={[
+																			css({
+																				margin: "0 0 16px",
+																				fontSize: "1rem",
+																				fontWeight: 600,
+																			}),
+																		]}
+																	>
 																		{ctx.i18next.t(
 																			"page.settings.members.invitedTable.confirmation.revokeInvite",
 																			{ email: invite.email },
@@ -898,8 +915,9 @@ export default createAction(routes.app.team.settings, {
 								mix={[
 									css({
 										width: "100%",
-										maxWidth: 440,
+										maxWidth: "min(440px, calc(100vw - 32px))",
 										padding: 24,
+										boxSizing: "border-box",
 										borderRadius: 8,
 										border: `1px solid ${neutral[300]}`,
 										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
@@ -911,7 +929,9 @@ export default createAction(routes.app.team.settings, {
 									}),
 								]}
 							>
-								<h3>{ctx.i18next.t("page.settings.domains.table.label")}</h3>
+								<h3 mix={[css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 })]}>
+									{ctx.i18next.t("page.settings.domains.form.title")}
+								</h3>
 								<form
 									method="post"
 									action={routes.teamAdminActions.domain.add.href({ team: team.slug })}
@@ -1002,7 +1022,27 @@ export default createAction(routes.app.team.settings, {
 										</Empty>
 									</div>
 								) : (
-									<div mix={[css({ overflowX: "auto" })]}>
+									<div
+										mix={[
+											css({
+												position: "relative",
+												overflowX: "auto",
+												"&::after": {
+													content: '""',
+													position: "absolute",
+													top: 0,
+													right: 0,
+													bottom: 0,
+													width: 24,
+													pointerEvents: "none",
+													boxShadow: `inset -16px 0 12px -12px rgba(0, 0, 0, 0.18)`,
+													"@media (prefers-color-scheme: dark)": {
+														boxShadow: `inset -16px 0 12px -12px rgba(0, 0, 0, 0.6)`,
+													},
+												},
+											}),
+										]}
+									>
 										<table
 											mix={[
 												css({
@@ -1023,7 +1063,9 @@ export default createAction(routes.app.team.settings, {
 										>
 											<thead>
 												<tr>
-													<th>{ctx.i18next.t("page.settings.domains.table.columns.hostname")}</th>
+													<th mix={[css({ whiteSpace: "nowrap", minWidth: 200 })]}>
+														{ctx.i18next.t("page.settings.domains.table.columns.hostname")}
+													</th>
 													<th mix={[css({ textAlign: "right" })]}>
 														<span
 															mix={
@@ -1074,13 +1116,15 @@ export default createAction(routes.app.team.settings, {
 											<tbody>
 												{domains.map((domain) => (
 													<tr key={domain.id}>
-														<td>{domain.hostname}</td>
+														<td mix={[css({ whiteSpace: "nowrap" })]}>{domain.hostname}</td>
 														<td
 															mix={[
 																css({
 																	textAlign: "right",
 																	fontFamily: "inherit",
-																	fontSize: "0.8125rem",
+																	fontSize: "0.75rem",
+																	maxWidth: 140,
+																	wordBreak: "break-all",
 																}),
 															]}
 														>
@@ -1133,8 +1177,9 @@ export default createAction(routes.app.team.settings, {
 																mix={[
 																	css({
 																		width: "100%",
-																		maxWidth: 440,
+																		maxWidth: "min(440px, calc(100vw - 32px))",
 																		padding: 24,
+																		boxSizing: "border-box",
 																		borderRadius: 8,
 																		border: `1px solid ${neutral[300]}`,
 																		"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
@@ -1146,7 +1191,11 @@ export default createAction(routes.app.team.settings, {
 																	}),
 																]}
 															>
-																<h3>
+																<h3
+																	mix={[
+																		css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 }),
+																	]}
+																>
 																	{ctx.i18next.t(
 																		"page.settings.domains.table.confirmation.removeDomain",
 																		{ hostname: domain.hostname },

@@ -2711,6 +2711,8 @@ export default {
 				},
 
 				form: {
+					title: "Ajouter un domaine",
+
 					fields: {
 						hostname: {
 							label: "Domaine",

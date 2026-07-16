@@ -3013,6 +3013,8 @@ export default {
 				},
 
 				form: {
+					title: "Add Domain",
+
 					fields: {
 						hostname: {
 							label: "Domain",
