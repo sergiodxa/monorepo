@@ -223,7 +223,11 @@ export default createAction(routes.app.team.settings, {
 									<div
 										mix={[
 											css({
-												padding: 24,
+												// `Field`'s own trailing margin already spaces its last
+												// instance from the footer below, so this region carries no
+												// bottom padding of its own — otherwise the two would stack
+												// into a gap far larger than every other card's footer rhythm.
+												padding: "24px 24px 0",
 												display: "flex",
 												flexDirection: "column",
 												gap: 8,
@@ -1451,7 +1455,17 @@ export default createAction(routes.app.team.settings, {
 
 										<div
 											mix={[
-												css({ padding: 24, display: "flex", flexDirection: "column", gap: 16 }),
+												css({
+													// `Field`'s own trailing margin already spaces the
+													// confirmation input from the footer below, so this region
+													// carries no bottom padding of its own — otherwise the two
+													// would stack into a gap far larger than every other card's
+													// footer rhythm.
+													padding: "24px 24px 0",
+													display: "flex",
+													flexDirection: "column",
+													gap: 16,
+												}),
 											]}
 										>
 											<p mix={[css({ margin: 0, fontSize: "0.875rem", color: danger[600] })]}>
