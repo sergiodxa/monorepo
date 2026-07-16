@@ -1,9 +1,10 @@
 /**
  * Client island: the docs sidebar's search box and navigation list. Typing into the
  * search field filters every doc by title (case-insensitive substring match) into a
- * flat result list; clearing it restores the sections grouped by
- * `frontmatter.section.title`. The link matching `activePath` renders with a solid
- * active background so visitors can tell which page they're on.
+ * flat result list, each row labeled with its source section so docs that share a
+ * title across sections stay distinguishable; clearing it restores the sections
+ * grouped by `frontmatter.section.title`. The link matching `activePath` renders
+ * with a solid active background so visitors can tell which page they're on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,7 +84,7 @@ export const DocsNav = clientEntry(
 			let results =
 				query.length > 0
 					? sections
-							.flatMap((section) => section.docs)
+							.flatMap((section) => section.docs.map((doc) => ({ ...doc, section: section.title })))
 							.filter((doc) => doc.title.toLowerCase().includes(query))
 					: null;
 
@@ -148,6 +149,16 @@ export const DocsNav = clientEntry(
 											mix={doc.path === activePath ? [navLink, navLinkActive] : [navLink]}
 										>
 											{doc.title}
+											<span
+												mix={css({
+													display: "block",
+													fontSize: "0.75rem",
+													color: neutral[500],
+													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+												})}
+											>
+												{doc.section}
+											</span>
 										</a>
 									</li>
 								))}
