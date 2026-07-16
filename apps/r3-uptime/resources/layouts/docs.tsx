@@ -160,8 +160,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							display: "flex",
 							flex: 1,
 							minHeight: 0,
-							maxWidth: 1152,
-							margin: "0 auto",
 							width: "100%",
 						}),
 					]}
@@ -203,7 +201,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 									overflowY: "auto",
 								},
 								"@media (prefers-color-scheme: dark)": {
-									background: neutral[950],
+									background: neutral[900],
 									borderColor: neutral[800],
 								},
 							}),
@@ -260,46 +258,47 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								isSignedIn={isSignedIn}
 								dashboardLabel={dashboardLabel}
 								startLabel={startLabel}
-								size="sm"
+								size="docs"
 								icon={<ArrowRightIcon size={16} strokeWidth={1.5} />}
 							/>
 						</div>
 
-						<div
-							mix={[
-								css({
-									flex: 1,
-									minWidth: 0,
-									padding: "32px 24px 80px",
-									lineHeight: 1.75,
-									"& h1": {
-										fontSize: "1.875rem",
-										fontWeight: 700,
-										letterSpacing: "-0.025em",
-										lineHeight: 1,
-										margin: "0 0 16px",
-										color: neutral[900],
-									},
-									"& h2": {
-										fontSize: "1.5rem",
-										fontWeight: 700,
-										margin: "48px 0 24px",
-										color: neutral[900],
-									},
-									"& h3": {
-										fontSize: "1.25rem",
-										fontWeight: 600,
-										margin: "0 0 12px",
-										color: neutral[900],
-									},
-									"& p": { margin: "20px 0" },
-									"@media (prefers-color-scheme: dark)": {
-										"& h1, & h2, & h3": { color: neutral[50] },
-									},
-								}),
-							]}
-						>
-							{children}
+						<div mix={[css({ flex: 1, minWidth: 0, padding: "32px 24px 80px" })]}>
+							<div
+								mix={[
+									css({
+										maxWidth: "60ch",
+										margin: "0 auto",
+										lineHeight: 1.75,
+										"& h1": {
+											fontSize: "1.875rem",
+											fontWeight: 700,
+											letterSpacing: "-0.025em",
+											lineHeight: 1,
+											margin: "0 0 16px",
+											color: neutral[900],
+										},
+										"& h2": {
+											fontSize: "1.5rem",
+											fontWeight: 700,
+											margin: "48px 0 24px",
+											color: neutral[900],
+										},
+										"& h3": {
+											fontSize: "1.25rem",
+											fontWeight: 600,
+											margin: "0 0 12px",
+											color: neutral[900],
+										},
+										"& p": { margin: "20px 0" },
+										"@media (prefers-color-scheme: dark)": {
+											"& h1, & h2, & h3": { color: neutral[50] },
+										},
+									}),
+								]}
+							>
+								{children}
+							</div>
 						</div>
 					</div>
 				</div>

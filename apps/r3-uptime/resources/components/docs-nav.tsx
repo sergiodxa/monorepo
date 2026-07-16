@@ -94,8 +94,16 @@ export const DocsNav = clientEntry(
 								width: "auto",
 								margin: "0 20px 8px",
 								color: neutral[500],
+								background: neutral[50],
+								border: `1px solid ${neutral[200]}`,
+								boxShadow: "none",
+								textShadow: "none",
 								"& input": { color: "inherit" },
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+								"@media (prefers-color-scheme: dark)": {
+									color: neutral[400],
+									background: neutral[900],
+									borderColor: neutral[700],
+								},
 							}),
 						]}
 					>

@@ -23,11 +23,11 @@ namespace AuthCta {
 		startLabel?: string;
 		dashboardLabel?: string;
 		/**
-		 * `"lg"` (default) for hero/final-CTA placements; `"sm"` for the sticky
-		 * header and docs topbar, which use smaller padding, font size, and
-		 * font weight than the hero/final-CTA's larger button.
+		 * `"lg"` (default) for hero/final-CTA placements, `"sm"` for the sticky
+		 * marketing header, and `"docs"` for the docs topbar — each with its own
+		 * padding, gap, font size, and font weight matched to that placement.
 		 */
-		size?: "sm" | "lg";
+		size?: "sm" | "lg" | "docs";
 		/** Optional trailing icon (e.g. an arrow), rendered after the label. */
 		icon?: RemixNode;
 	}
@@ -37,19 +37,21 @@ namespace AuthCta {
  * Builds the primary marketing CTA button for a given size (only used here,
  * so no `styles.ts` export is needed).
  */
-function primaryButtonStyle(size: "sm" | "lg") {
+function primaryButtonStyle(size: "sm" | "lg" | "docs") {
 	let isLarge = size === "lg";
+	let isDocs = size === "docs";
 
 	return css({
 		display: "inline-flex",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 6,
-		padding: isLarge ? "12px 24px" : "8px 16px",
+		gap: isDocs ? 8 : 6,
+		padding: isLarge ? "12px 24px" : isDocs ? "6px 12px" : "8px 16px",
 		borderRadius: 8,
 		border: "1px solid transparent",
 		background: primary[600],
 		color: "#ffffff",
+		textDecoration: "none",
 		fontFamily: "inherit",
 		fontSize: isLarge ? "1rem" : "0.875rem",
 		fontWeight: isLarge ? 600 : 500,
