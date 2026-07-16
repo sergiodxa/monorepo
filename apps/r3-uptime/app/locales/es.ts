@@ -2438,14 +2438,30 @@ export default {
 				title: "Cuenta",
 			},
 
+			form: {
+				actions: {
+					cancel: "Cancelar",
+				},
+			},
+
 			profile: {
 				title: "Perfil",
 				description: "Su información personal.",
+
+				card: {
+					title: "Detalles del perfil",
+					description: "Su nombre, dirección de correo electrónico y avatar.",
+				},
 			},
 
 			language: {
 				title: "Preferencia de idioma",
 				description: "Elija su idioma preferido para la interfaz.",
+
+				card: {
+					title: "Idioma",
+					description: "Se aplica al panel y a las notificaciones por correo electrónico.",
+				},
 
 				form: {
 					fields: {

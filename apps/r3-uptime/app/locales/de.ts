@@ -2453,14 +2453,30 @@ export default {
 				title: "Konto",
 			},
 
+			form: {
+				actions: {
+					cancel: "Abbrechen",
+				},
+			},
+
 			profile: {
 				title: "Profil",
 				description: "Ihre persönlichen Informationen.",
+
+				card: {
+					title: "Profildetails",
+					description: "Ihr Name, Ihre E-Mail-Adresse und Ihr Avatar.",
+				},
 			},
 
 			language: {
 				title: "Spracheinstellung",
 				description: "Wählen Sie Ihre bevorzugte Sprache für die Oberfläche.",
+
+				card: {
+					title: "Sprache",
+					description: "Gilt für das Dashboard und E-Mail-Benachrichtigungen.",
+				},
 
 				form: {
 					fields: {

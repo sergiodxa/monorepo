@@ -150,7 +150,9 @@ describe("account page", () => {
 		let leaveLabel = en.page.account.teams.table.actions.leave;
 		let occurrences = body.split(leaveLabel).length - 1;
 		// Only the "Beta" row (where the viewer is a plain member) should render the
-		// Leave button; the "Acme" row (where the viewer is the owner) should not.
-		expect(occurrences).toBe(1);
+		// Leave action; the "Acme" row (where the viewer is the owner) should not. A
+		// leavable row renders the label twice — once in its row menu, once in its
+		// confirmation dialog's submit button.
+		expect(occurrences).toBe(2);
 	});
 });

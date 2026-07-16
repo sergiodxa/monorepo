@@ -2745,14 +2745,30 @@ export default {
 				title: "Account",
 			},
 
+			form: {
+				actions: {
+					cancel: "Cancel",
+				},
+			},
+
 			profile: {
 				title: "Profile",
 				description: "Your personal information.",
+
+				card: {
+					title: "Profile Details",
+					description: "Your name, email address, and avatar.",
+				},
 			},
 
 			language: {
 				title: "Language Preference",
 				description: "Choose your preferred language for the interface.",
+
+				card: {
+					title: "Language",
+					description: "Applies across the dashboard and email notifications.",
+				},
 
 				form: {
 					fields: {

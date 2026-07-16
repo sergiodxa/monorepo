@@ -2432,14 +2432,30 @@ export default {
 				title: "Account",
 			},
 
+			form: {
+				actions: {
+					cancel: "Annulla",
+				},
+			},
+
 			profile: {
 				title: "Profilo",
 				description: "Le sue informazioni personali.",
+
+				card: {
+					title: "Dettagli profilo",
+					description: "Il suo nome, indirizzo email e avatar.",
+				},
 			},
 
 			language: {
 				title: "Preferenza Lingua",
 				description: "Scelga la sua lingua preferita per l'interfaccia.",
+
+				card: {
+					title: "Lingua",
+					description: "Si applica alla dashboard e alle notifiche via email.",
+				},
 
 				form: {
 					fields: {

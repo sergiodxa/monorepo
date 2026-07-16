@@ -2420,14 +2420,30 @@ export default {
 				title: "アカウント",
 			},
 
+			form: {
+				actions: {
+					cancel: "キャンセル",
+				},
+			},
+
 			profile: {
 				title: "プロフィール",
 				description: "個人情報。",
+
+				card: {
+					title: "プロフィール詳細",
+					description: "お名前、メールアドレス、アバター。",
+				},
 			},
 
 			language: {
 				title: "言語設定",
 				description: "インターフェースの優先言語を選択してください。",
+
+				card: {
+					title: "言語",
+					description: "ダッシュボードとメール通知に適用されます。",
+				},
 
 				form: {
 					fields: {

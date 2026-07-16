@@ -2442,14 +2442,30 @@ export default {
 				title: "Compte",
 			},
 
+			form: {
+				actions: {
+					cancel: "Annuler",
+				},
+			},
+
 			profile: {
 				title: "Profil",
 				description: "Vos informations personnelles.",
+
+				card: {
+					title: "Détails du profil",
+					description: "Votre nom, votre adresse e-mail et votre avatar.",
+				},
 			},
 
 			language: {
 				title: "Préférence de langue",
 				description: "Choisissez votre langue préférée pour l'interface.",
+
+				card: {
+					title: "Langue",
+					description: "S'applique au tableau de bord et aux notifications par e-mail.",
+				},
 
 				form: {
 					fields: {
