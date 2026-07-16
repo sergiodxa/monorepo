@@ -96,6 +96,12 @@ const outline: Record<ButtonColor, ReturnType<typeof css>> = {
 		background: "#ffffff",
 		color: neutral[500],
 		"&:hover": { background: neutral[50] },
+		"@media (prefers-color-scheme: dark)": {
+			borderColor: neutral[700],
+			background: neutral[900],
+			color: neutral[400],
+			"&:hover": { background: neutral[800] },
+		},
 	}),
 	danger: css({
 		border: `2px solid ${danger[600]}`,
