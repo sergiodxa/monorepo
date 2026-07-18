@@ -86,21 +86,19 @@ const outline: Record<ButtonColor, ReturnType<typeof css>> = {
 		color: primary[600],
 		"&:hover": { background: `color-mix(in srgb, ${primary[600]} 10%, transparent)` },
 		"@media (prefers-color-scheme: dark)": {
-			borderColor: primary[400],
 			color: primary[400],
-			"&:hover": { background: `color-mix(in srgb, ${primary[400]} 16%, transparent)` },
+			"&:hover": { background: `color-mix(in srgb, ${primary[600]} 16%, transparent)` },
 		},
 	}),
 	neutral: css({
-		border: `2px solid ${neutral[300]}`,
-		background: "#ffffff",
-		color: neutral[500],
+		border: `2px solid ${neutral[600]}`,
+		background: "transparent",
+		color: neutral[600],
 		"&:hover": { background: neutral[50] },
 		"@media (prefers-color-scheme: dark)": {
-			borderColor: neutral[700],
-			background: neutral[900],
+			borderColor: neutral[400],
 			color: neutral[400],
-			"&:hover": { background: neutral[800] },
+			"&:hover": { background: neutral[950] },
 		},
 	}),
 	danger: css({
