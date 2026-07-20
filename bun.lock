@@ -758,6 +758,17 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/r3-ui": {
+      "name": "@pkg/r3-ui",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/lucide-remix": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/r3-ui-router": {
       "name": "@pkg/r3-ui-router",
       "version": "0.0.0",
@@ -1546,6 +1557,8 @@
     "@pkg/oidc-provider": ["@pkg/oidc-provider@workspace:packages/oidc-provider"],
 
     "@pkg/polar": ["@pkg/polar@workspace:packages/polar"],
+
+    "@pkg/r3-ui": ["@pkg/r3-ui@workspace:packages/r3-ui"],
 
     "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
 

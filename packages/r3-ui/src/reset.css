@@ -1,0 +1,223 @@
+/*
+ * Base reset: border-box sizing, zeroed margins/padding,
+ * borders reset to "0 solid" so bare border-widths work later, form controls
+ * that inherit font/color/line-height, transparent button/input backgrounds
+ * with a sensible cursor, block-level media, and the rest of the usual
+ * list/table/[hidden] normalizations.
+ *
+ * Every selector is wrapped in :where(...) so the whole file carries zero
+ * specificity and can never beat a component's own css() rules.
+ *
+ * Deliberate exemption: this reset does NOT touch the user-agent styles that
+ * <dialog> and [popover] depend on. ::backdrop is left alone entirely, and
+ * dialog/[popover] are excluded from the margin reset so their default
+ * `margin: auto` centering survives untouched. Overlay components own the
+ * rest of their presentation explicitly instead of fighting the reset.
+ */
+
+@layer base, rmx;
+
+@layer base {
+	:where(*),
+	:where(*)::before,
+	:where(*)::after {
+		box-sizing: border-box;
+		border: 0 solid;
+	}
+
+	:where(:not(dialog, [popover])),
+	:where(*)::before,
+	:where(*)::after {
+		margin: 0;
+		padding: 0;
+	}
+
+	:where(html, :host) {
+		line-height: 1.5;
+		-webkit-text-size-adjust: 100%;
+		tab-size: 4;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	:where(hr) {
+		height: 0;
+		color: inherit;
+		border-top-width: 1px;
+	}
+
+	:where(abbr[title]) {
+		text-decoration: underline dotted;
+	}
+
+	:where(h1, h2, h3, h4, h5, h6) {
+		font-size: inherit;
+		font-weight: inherit;
+	}
+
+	:where(a) {
+		color: inherit;
+		text-decoration: inherit;
+	}
+
+	:where(b, strong) {
+		font-weight: bolder;
+	}
+
+	:where(code, kbd, samp, pre) {
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+			monospace;
+		font-size: 1em;
+	}
+
+	:where(small) {
+		font-size: 80%;
+	}
+
+	:where(sub, sup) {
+		font-size: 75%;
+		line-height: 0;
+		position: relative;
+		vertical-align: baseline;
+	}
+
+	:where(sub) {
+		bottom: -0.25em;
+	}
+
+	:where(sup) {
+		top: -0.5em;
+	}
+
+	:where(table) {
+		text-indent: 0;
+		border-color: inherit;
+		border-collapse: collapse;
+		border-spacing: 0;
+	}
+
+	:where(:-moz-focusring) {
+		outline: auto;
+	}
+
+	:where(progress) {
+		vertical-align: baseline;
+	}
+
+	:where(summary) {
+		display: list-item;
+	}
+
+	:where(ol, ul, menu) {
+		list-style: none;
+	}
+
+	:where(img, svg, video, canvas, audio, iframe, embed, object) {
+		display: block;
+		max-width: 100%;
+		vertical-align: middle;
+	}
+
+	:where(img, video) {
+		height: auto;
+	}
+
+	:where(button, input, select, optgroup, textarea),
+	:where(*)::file-selector-button {
+		font: inherit;
+		font-feature-settings: inherit;
+		font-variation-settings: inherit;
+		letter-spacing: inherit;
+		color: inherit;
+		border-radius: 0;
+		background-color: transparent;
+		opacity: 1;
+	}
+
+	:where(select:is([multiple], [size]) optgroup) {
+		font-weight: bolder;
+	}
+
+	:where(select:is([multiple], [size]) optgroup option) {
+		padding-inline-start: 20px;
+	}
+
+	:where(*)::file-selector-button {
+		margin-inline-end: 4px;
+	}
+
+	:where(*)::placeholder {
+		opacity: 1;
+	}
+
+	@supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+		:where(*)::placeholder {
+			color: color-mix(in oklab, currentcolor 50%, transparent);
+		}
+	}
+
+	:where(textarea) {
+		resize: vertical;
+	}
+
+	:where(*)::-webkit-search-decoration {
+		-webkit-appearance: none;
+	}
+
+	:where(*)::-webkit-date-and-time-value {
+		min-height: 1lh;
+		text-align: inherit;
+	}
+
+	:where(*)::-webkit-datetime-edit {
+		display: inline-flex;
+	}
+
+	:where(*)::-webkit-datetime-edit-fields-wrapper {
+		padding: 0;
+	}
+
+	:where(*)::-webkit-datetime-edit,
+	:where(*)::-webkit-datetime-edit-year-field,
+	:where(*)::-webkit-datetime-edit-month-field,
+	:where(*)::-webkit-datetime-edit-day-field,
+	:where(*)::-webkit-datetime-edit-hour-field,
+	:where(*)::-webkit-datetime-edit-minute-field,
+	:where(*)::-webkit-datetime-edit-second-field,
+	:where(*)::-webkit-datetime-edit-millisecond-field,
+	:where(*)::-webkit-datetime-edit-meridiem-field {
+		padding-block: 0;
+	}
+
+	:where(*)::-webkit-calendar-picker-indicator {
+		line-height: 1;
+	}
+
+	:where(:-moz-ui-invalid) {
+		box-shadow: none;
+	}
+
+	:where(button, input[type="button"], input[type="reset"], input[type="submit"]),
+	:where(*)::file-selector-button {
+		appearance: button;
+	}
+
+	:where(button, input[type="button"], input[type="reset"], input[type="submit"]):where(
+		:not(:disabled)
+	) {
+		cursor: pointer;
+	}
+
+	:where(:disabled) {
+		cursor: not-allowed;
+	}
+
+	:where(*)::-webkit-inner-spin-button,
+	:where(*)::-webkit-outer-spin-button {
+		height: auto;
+	}
+
+	:where([hidden]:not([hidden="until-found"])) {
+		display: none !important;
+	}
+}
