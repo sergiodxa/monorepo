@@ -78,6 +78,14 @@ Components never read the viewport — no `@media (min-width: ...)` for layout. 
 
 At full-viewport container width, components render at their default, unconstrained layout. Embedded narrower — a dashboard column, a split pane, a `<Frame>` — components adapt to the space they actually occupy.
 
+### Accessibility media features
+
+Three user preferences get baseline support, not per-component discretion:
+
+- **`prefers-reduced-motion: reduce`** is handled by the animation layer: every factory built there emits an override collapsing movement to opacity-only. A component that reaches for one of those factories gets this for free; a component animating something outside that layer (a bare CSS `transition`/`animation` declaration) must add the same override itself.
+- **`prefers-contrast: more`** is handled centrally in the theme: every color's subtle `border` is promoted to its `border-strong` value under this preference, and every component already reads `border` from the semantic variable rather than a hardcoded value, so this requires no per-component work. The one thing to double-check when building a component: never let color alone carry a state distinction (e.g. selected vs. unselected) — pair it with a border, icon, or weight change so the high-contrast border promotion has something to reinforce.
+- **`prefers-reduced-transparency: reduce`** applies to any component using `backdrop-filter` (blur/saturate "backdrop material" on Dialog's `::backdrop`, Popover, Sheet, Drawer, Menu surfaces, and Toast). Gate the blur/saturate declaration behind `@media (prefers-reduced-transparency: no-preference)` (or wrap the reduced case in `@media (prefers-reduced-transparency: reduce)` and fall back to a solid/near-opaque background there) so transparency is progressive enhancement, never the only rendering.
+
 ## CSS Layer Order
 
 The layer contract is fixed and every component and consumer must respect it:
@@ -140,6 +148,11 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 - Add or extend the `bun:test` suite alongside the code it covers: behavior-class unit tests (construct, call methods, assert on state/events, no DOM), pure-helper unit tests, and the component-purity import check.
 - Write the component's documentation page in `apps/ui-docs`, including rendered variants, usage guidance, and the hydration note of every mixin the component pairs with — writing the docs page is part of building the component, not a follow-up task.
 - Verify against `apps/ui-docs` with the `agent-browser` CLI: an axe-core audit, and a screenshot-based visual regression check against the component's previously approved rendering to sign off visual parity (documenting any deliberate deviation directly on the component's own docs page).
+
+## Documentation Style
+
+- Describe every component, mixin, behavior class, and animation factory standalone, purely by what it is and does. Never name another monorepo app or package as a source/counterpart/comparison, never cite a design record (an ADR) by name, and never define something by what it _isn't_ (no "zero React", "no Tailwind needed", "unlike X") — state the affirmative fact instead ("styled through `css()` mixins", "a plain `:root` block is enough").
+- This applies to JSDoc, this file, the README, TODO.md, and code comments alike. The one place the package's own npm name (`@pkg/r3-ui`) belongs in prose is the README's H1 — everywhere else, either omit it or refer to "this package"/"the component"/"the mixin" instead. Import paths inside actual code examples and API-reference tables are exempt (they're documenting real values, not descriptive prose).
 
 ## Tooling
 

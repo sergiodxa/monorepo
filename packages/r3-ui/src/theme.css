@@ -14,6 +14,10 @@
  * Dark Mode:
  * - Add .dark class to <html> for forced dark mode
  * - Add .system class to <html> for system preference (prefers-color-scheme)
+ *
+ * High Contrast:
+ * - Under `prefers-contrast: more`, every color's subtle `border` is promoted
+ *   to its `border-strong` value, in every color scheme.
  */
 
 :root {
@@ -230,5 +234,16 @@
 		--ui-success-fg: var(--color-success-400);
 		--ui-success-fg-muted: var(--color-success-400);
 		--ui-success-fg-emphasis: var(--color-success-100);
+	}
+}
+
+/* High contrast: promote the subtle border to its strong variant, in every color scheme */
+@media (prefers-contrast: more) {
+	:root {
+		--ui-primary-border: var(--ui-primary-border-strong);
+		--ui-neutral-border: var(--ui-neutral-border-strong);
+		--ui-danger-border: var(--ui-danger-border-strong);
+		--ui-warning-border: var(--ui-warning-border-strong);
+		--ui-success-border: var(--ui-success-border-strong);
 	}
 }

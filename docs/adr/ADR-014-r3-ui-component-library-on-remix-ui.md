@@ -166,6 +166,8 @@ Switching schemes is the `themeToggle()` mixin's job: it flips `.dark`/`.system`
 
 Color is not the only themable surface. The non-color constants the port would otherwise hardcode — radii, control heights, focus-ring width — are emitted as custom properties with their Tailwind-scale values as fallbacks (`border-radius: var(--ui-radius-md, 0.375rem)`). An app that defines nothing renders identically to `@pkg/ui`; an app that wants denser tables or squarer buttons sets a handful of variables instead of overriding styles per component. `@pkg/ui` could never offer this — its constants are baked into utility class names.
 
+`theme.css` also answers `prefers-contrast: more`: under that media feature, every color's subtle `border` is promoted to its already-defined `border-strong` value, in every color scheme. Because every component reads `border` from the semantic variable rather than a literal, this one block raises border visibility library-wide with zero per-component work — the same mechanism (a variable swap keyed off a media feature) that makes the whole non-color-surface story work.
+
 #### Base reset: `reset.css`
 
 Dropping Tailwind drops Preflight, and the source styles were authored against Preflight's normalizations: `box-sizing: border-box`, zeroed margins, borders reset to `0 solid` (which is why bare border-widths work), form controls inheriting font and color, transparent button backgrounds, block-level media. Without an equivalent, user-agent styles leak through and the parity claim fails on the first `<button>`. The library therefore ships `@pkg/r3-ui/reset.css`:
@@ -456,7 +458,8 @@ Interaction detail follows the repo's [Apple HIG web skill](../../.agents/skills
 - **Text inputs use ≥1rem type on coarse pointers.** iOS Safari zooms into any focused input below 16px; the source stylesheet's `text-sm` inputs trigger exactly that. Recorded as a deliberate parity deviation on touch devices.
 - **Immediate feedback on every control**: designed `:hover`, `:active`, `:focus-visible`, disabled, invalid, and `aria-busy` pending states — none left as browser defaults — plus `touch-action: manipulation` to remove double-tap-zoom lag.
 - **Scroll discipline.** Scrollable overlays (Menu, Dialog, Sheet, Drawer, Command list) set `overscroll-behavior: contain` so inner scroll never chains to the page.
-- **Depth is a scale, not per-component taste.** One elevation token set (flat, raised, overlay, modal) shared by Card, Popover, Menu, and the Dialog family; optional backdrop material (blur/saturate behind `@supports (backdrop-filter: blur(0))`) as polish on top.
+- **Depth is a scale, not per-component taste.** One elevation token set (flat, raised, overlay, modal) shared by Card, Popover, Menu, and the Dialog family; optional backdrop material (blur/saturate behind `@supports (backdrop-filter: blur(0))`) as polish on top, itself gated behind `@media (prefers-reduced-transparency: reduce)` so it falls back to a solid/near-opaque surface rather than assuming transparency is always welcome.
+- **Contrast is a preference, not a fixed design.** `prefers-contrast: more` promotes every color's subtle `border` to its strong variant library-wide (section 3) — components additionally never rely on color alone to carry a state distinction, so the promoted border always has something to reinforce.
 - **Fixed chrome respects safe areas.** Sheet, Drawer, the Toast region, and Sidebar pad with `env(safe-area-inset-*)`.
 - **Destructive actions are explicit.** Danger tone plus the AlertDialog/Confirm pattern; never a bare danger button for an irreversible operation.
 
@@ -465,7 +468,7 @@ Interaction detail follows the repo's [Apple HIG web skill](../../.agents/skills
 1. All interactive states designed: hover, active, focus-visible, disabled, invalid, selected, pending
 2. Dark mode, RTL, and container adaptation verified
 3. Touch, pointer, and keyboard paths complete; screen-reader labels wired
-4. Reduced-motion behavior verified
+4. Reduced-motion, high-contrast, and reduced-transparency behavior verified
 5. JSDoc on every public export it adds; axe-clean `ui-docs` page with a visible-source example
 6. Screenshot parity signed off, or the deviation recorded in this ADR
 7. Tests at the right layer: class unit tests, mixin DOM tests, component render tests
