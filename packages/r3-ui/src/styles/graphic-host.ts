@@ -1,0 +1,39 @@
+/**
+ * The flex-item layout and current-color declarations shared by a leading
+ * graphic slot — whichever of an icon or a loading graphic currently
+ * occupies that slot — so the two stay laid out identically and a host can
+ * swap between them without the rest of its layout shifting.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import type { ElementProps, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
+
+import type { CSSStyles } from "../utils/css-styles";
+
+/**
+ * A shrink-resistant, nudged-down, current-colored mixin for a leading
+ * graphic slot: `flexShrink: 0` keeps the slot from collapsing alongside
+ * flexible text content beside it, a small block-start margin lines its
+ * glyph up with the first line of that text, and `color: currentcolor` picks
+ * up whatever foreground color the host already carries.
+ *
+ * @returns A `css()` mixin ready for a host element's `mix` prop.
+ * @example
+ * <div data-slot="icon" mix={[graphicHostStyle(), css({ ...ownStyles })]}>
+ *   <CircleCheckIcon />
+ * </div>;
+ */
+export function graphicHostStyle<Node extends Element = Element>(): MixinDescriptor<
+	Node,
+	[styles: CSSStyles],
+	ElementProps
+> {
+	return css<Node>({
+		flexShrink: "0",
+		marginBlockStart: "0.125rem",
+		color: "currentcolor",
+	});
+}
