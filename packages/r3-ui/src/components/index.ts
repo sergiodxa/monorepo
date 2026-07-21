@@ -1,10 +1,110 @@
 /**
  * Barrel for the component catalog: one module per component, each keeping
  * the compound pattern (`Dialog`, `Dialog.Header`, …) with styles inlined
- * via `css()` on the host element.
+ * via `css()` on the host element. Re-exports every named export from every
+ * component module in the catalog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-export {};
+export * from "./accordion";
+export * from "./alert";
+export * from "./alert-dialog";
+export * from "./aspect-ratio";
+export * from "./attachment";
+export * from "./avatar";
+export * from "./badge";
+export * from "./breadcrumbs";
+export * from "./bubble";
+export * from "./button";
+export * from "./calendar";
+export * from "./card";
+export * from "./carousel";
+export * from "./chart";
+export * from "./checkbox";
+export * from "./checkbox-group";
+export * from "./color-area";
+export * from "./color-field";
+export * from "./color-picker";
+export * from "./color-slider";
+export * from "./color-swatch";
+export * from "./color-swatch-picker";
+export * from "./color-wheel";
+export * from "./combobox";
+export * from "./command";
+export * from "./confirm";
+export * from "./context-menu";
+export * from "./date-field";
+export * from "./date-picker";
+export * from "./date-range-picker";
+export * from "./description";
+export * from "./dialog";
+export * from "./disclosure";
+export * from "./drawer";
+export * from "./drop-indicator";
+export * from "./drop-zone";
+export * from "./empty";
+export * from "./field-error";
+export * from "./file-trigger";
+export * from "./form";
+export * from "./grid-list";
+export * from "./group";
+export * from "./header";
+export * from "./heading";
+export * from "./heading-scope";
+export * from "./hover-card";
+export * from "./image-placeholder";
+export * from "./input";
+export * from "./item";
+export * from "./keyboard";
+export * from "./label";
+export * from "./link";
+export * from "./link-button";
+export * from "./listbox";
+export * from "./logo";
+export * from "./marker";
+export * from "./menu";
+export * from "./menubar";
+export * from "./message";
+export * from "./message-scroller";
+export * from "./meter";
+export * from "./modal";
+export * from "./nav-link";
+export * from "./navigation-menu";
+export * from "./number-field";
+export * from "./otp-field";
+export * from "./overlay-arrow";
+export * from "./pagination";
+export * from "./popover";
+export * from "./progress-bar";
+export * from "./radio-group";
+export * from "./range-calendar";
+export * from "./resizable";
+export * from "./scroll-area";
+export * from "./search-field";
+export * from "./section";
+export * from "./select";
+export * from "./selection-indicator";
+export * from "./sentinel-row";
+export * from "./separator";
+export * from "./shared-element";
+export * from "./sheet";
+export * from "./sidebar";
+export * from "./skeleton";
+export * from "./slider";
+export * from "./spinner";
+export * from "./switch";
+export * from "./table";
+export * from "./tabs";
+export * from "./tag-group";
+export * from "./text";
+export * from "./text-field";
+export * from "./textarea";
+export * from "./time-field";
+export * from "./toast";
+export * from "./toggle-button";
+export * from "./toolbar";
+export * from "./tooltip";
+export * from "./tree";
+export * from "./typeset";

@@ -95,6 +95,16 @@
 	--ui-success-fg-muted: var(--color-success-500);
 	--ui-success-fg-emphasis: var(--color-success-900);
 	--ui-success-fg-on-solid: white;
+
+	/* Chart: categorical sequence for multi-series charts */
+	--ui-chart-1: var(--color-primary-600);
+	--ui-chart-2: var(--color-success-600);
+	--ui-chart-3: var(--color-warning-600);
+	--ui-chart-4: var(--color-danger-600);
+	--ui-chart-5: var(--color-neutral-600);
+	--ui-chart-6: var(--color-primary-400);
+	--ui-chart-7: var(--color-success-400);
+	--ui-chart-8: var(--color-warning-400);
 }
 
 /* Dark mode variables - forced dark with .dark class */
@@ -164,6 +174,16 @@
 	--ui-success-fg: var(--color-success-400);
 	--ui-success-fg-muted: var(--color-success-400);
 	--ui-success-fg-emphasis: var(--color-success-100);
+
+	/* Chart: categorical sequence for multi-series charts */
+	--ui-chart-1: var(--color-primary-400);
+	--ui-chart-2: var(--color-success-400);
+	--ui-chart-3: var(--color-warning-400);
+	--ui-chart-4: var(--color-danger-400);
+	--ui-chart-5: var(--color-neutral-400);
+	--ui-chart-6: var(--color-primary-300);
+	--ui-chart-7: var(--color-success-300);
+	--ui-chart-8: var(--color-warning-300);
 }
 
 /* Dark mode variables - system preference with .system class */
@@ -234,6 +254,16 @@
 		--ui-success-fg: var(--color-success-400);
 		--ui-success-fg-muted: var(--color-success-400);
 		--ui-success-fg-emphasis: var(--color-success-100);
+
+		/* Chart: categorical sequence for multi-series charts */
+		--ui-chart-1: var(--color-primary-400);
+		--ui-chart-2: var(--color-success-400);
+		--ui-chart-3: var(--color-warning-400);
+		--ui-chart-4: var(--color-danger-400);
+		--ui-chart-5: var(--color-neutral-400);
+		--ui-chart-6: var(--color-primary-300);
+		--ui-chart-7: var(--color-success-300);
+		--ui-chart-8: var(--color-warning-300);
 	}
 }
 
