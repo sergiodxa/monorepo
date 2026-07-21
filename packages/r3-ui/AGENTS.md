@@ -47,6 +47,14 @@ Two escape hatches sit on top of the compound pattern, and every host element su
 
 Component APIs favor platform-native state over JavaScript-tracked props: `Dialog` takes an `id` targeted by Invoker Commands (`commandfor` / `command`) rather than an `isOpen` boolean, since open/closed state lives on the `<dialog>` element itself. The compound shape and the `mix`/`parts` passthroughs stay the consistent API surface across every component built this way.
 
+## Ambient Context Pattern
+
+Some structural values are more natural to read from the nearest ancestor than to thread through every intermediate component as a prop. `HeadingScope` establishes one of these: it provides a semantic heading depth through `handle.context`, moving one level deeper than the ambient depth of any `HeadingScope` it is nested inside, or starting the outline at its first level where nothing wraps it at all. `Heading`, and every component with a title or header slot, reads that ambient depth automatically and renders the native heading element it matches, so composing sections keeps a document outline sequential purely by nesting `HeadingScope` around them.
+
+This mechanism keeps every component pure: `HeadingScope` and `Heading` publish and read the ambient depth entirely through `handle.context`, with no ref or DOM access involved. That purity meets its limit at a hydration boundary — an independently hydrated island mounts its own runtime tree, so its root component has no ancestor context to read even when the surrounding server-rendered page nests it under a real scope. Recovering the level there means reading a DOM attribute back off the page, which pure component logic cannot do, so that recovery is a mixin — `headingLevelFallback()` — rather than logic added to `HeadingScope` or `Heading` themselves.
+
+The plain rule for an island's author: thread the ambient level down as an explicit `level` prop whenever the island's heading depends on a scope outside itself — cheap, exact, and the path to reach for first. Apply `headingLevelFallback()` on the island's root `HeadingScope` or `Heading` only where threading that prop through isn't practical; it detects the ambient level from the DOM once, on attach, and reports it back for the island to store and re-render with.
+
 ## CSS & Styling Rules
 
 - Every component's styles are inline `css()` mixins applied to the host element (`mix={css({...})}`) — there is no shared stylesheet file to edit. `css()` rules are emitted under the `rmx` cascade layer.
@@ -129,6 +137,14 @@ Because no component carries behavior, every component works with JavaScript dis
 ## Component Purity
 
 `src/components/**` modules may import only `css`, `attrs`, and types from `remix/ui` — never `on`, `ref`, or `createMixin`. This is enforced mechanically, not by convention: a `bun:test` suite asserts on the import list of every module under `src/components/`, and an `on`, `ref`, or `createMixin` import in a component module fails the suite. If a component needs behavior, that behavior is a mixin or behavior class the consumer attaches — it is never added to the component module itself.
+
+Non-visual helper logic a component builds on — scale/path math, color parsing, anything with zero `remix/ui` dependency of its own — lives under `src/utils/` instead of alongside the component, so purity checks and framework-free logic never mix in the same module. A component imports what it needs from there the same way it imports a sibling component.
+
+## Style Mixin Factories
+
+A recurring border, focus ring, panel chrome, or gradient recipe shared by several components is a mixin factory under `src/styles/`: it calls `css()` itself and returns a ready mixin, composed directly in a `mix` array (`mix={[floatingSurface(), css({ ...ownStyles })]}`) exactly the way an animation factory already does (`mix={[fade(), css({ ... })]}`) — never a plain CSS-properties object a component spreads with `...` into its own inline `css()` call. A factory that varies by an option (the selector a focus ring gates on, the property and combinator a chart's categorical palette paints) takes that option the same way an animation factory takes `duration`/`easing`/`when`; one with nothing to vary stays a plain zero-argument call.
+
+This is exactly what `src/utils/` cannot hold: calling `css()` means importing it from `remix/ui`, and `src/utils/` modules stay free of that import so purity checks and framework-free logic never mix in the same layer. `src/styles/` is where that `remix/ui` dependency lives instead, wired the same way `src/animations/`, `src/behaviors/`, and `src/mixins/` already are — its own barrel, its own `"./styles"` package export.
 
 ## Copy: the library ships no strings
 
