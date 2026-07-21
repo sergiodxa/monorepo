@@ -9,6 +9,8 @@
 		"./animations": "./src/animations/index.ts",
 		"./behaviors": "./src/behaviors/index.ts",
 		"./mixins": "./src/mixins/index.ts",
+		"./styles": "./src/styles/index.ts",
+		"./utils": "./src/utils/index.ts",
 		"./reset.css": "./src/reset.css",
 		"./theme.css": "./src/theme.css"
 	},
