@@ -23,6 +23,6 @@
 	"oxc.path.oxlint": "./node_modules/.bin/oxlint",
 	"window.autoDetectColorScheme": true,
 	"workbench.colorTheme": "GitHub Light Default",
-	"workbench.preferredDarkColorTheme": "GitHub Dark",
+	"workbench.preferredDarkColorTheme": "GitHub Dark Default",
 	"workbench.preferredLightColorTheme": "GitHub Light Default"
 }
