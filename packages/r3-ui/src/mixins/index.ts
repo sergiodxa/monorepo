@@ -18,6 +18,7 @@ export * from "./color-preview";
 export * from "./color-wheel-drag";
 export * from "./combobox-filter";
 export * from "./command-filter";
+export * from "./command-keys";
 export * from "./context-menu";
 export * from "./copy-to-clipboard";
 export * from "./dismiss";

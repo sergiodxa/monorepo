@@ -21,24 +21,29 @@ import { createElement, createMixin, on } from "remix/ui";
 import type { FilterModel } from "../behaviors/filter-model";
 
 /**
- * Attribute the search input exposes itself on. `commandFilter()` listens
- * for `input` events bubbling from the element carrying this attribute and
+ * Attribute the search input exposes itself on — `Command.Input`'s own
+ * `<input>` carries this automatically. `commandFilter()` listens for
+ * `input` events bubbling from the element carrying this attribute and
  * forwards the typed value into {@link FilterModel.setQuery}.
  */
 export const COMMAND_INPUT_ATTRIBUTE = "data-command-input";
 
 /**
- * Attribute every filterable item exposes itself on, its value doubling as
- * the text compared against the query. `commandFilter()` reads every
- * element carrying this attribute into a {@link FilterModel.Option} and
- * later toggles the same elements' `hidden` property as matches change.
+ * Attribute every filterable item exposes itself on — the same `data-value`
+ * attribute `Command.Item` already sets from its own `value` prop, so no
+ * extra wiring is needed to make a `Command` root's pre-rendered items
+ * filterable. Its value doubles as the text compared against the query;
+ * `commandFilter()` reads every element carrying this attribute into a
+ * {@link FilterModel.Option} and later toggles the same elements' `hidden`
+ * property as matches change.
  */
-export const COMMAND_ITEM_ATTRIBUTE = "data-command-item";
+export const COMMAND_ITEM_ATTRIBUTE = "data-value";
 
 /**
- * Attribute the empty-state element exposes itself on. `commandFilter()`
- * toggles its `hidden` property opposite {@link FilterModel.isEmpty}, so it
- * shows only while the current query has no matches.
+ * Attribute the empty-state element exposes itself on — `Command.Empty`
+ * carries this automatically. `commandFilter()` toggles its `hidden`
+ * property opposite {@link FilterModel.isEmpty}, so it shows only while the
+ * current query has no matches.
  */
 export const COMMAND_EMPTY_ATTRIBUTE = "data-command-empty";
 
@@ -46,13 +51,15 @@ export const COMMAND_EMPTY_ATTRIBUTE = "data-command-empty";
  * Resolves the id a DOM item correlates to a {@link FilterModel.Option} by:
  * the item's own `id` attribute when set, so it stays usable as an
  * `aria-activedescendant` target for whatever else reads the same model,
- * falling back to its position among the other items otherwise.
+ * falling back to its position among the other items otherwise. Exported so
+ * a paired mixin — `commandKeys()`, in particular — resolves the exact same
+ * id for a given item that `commandFilter()` already put in the model.
  *
  * @param item Item element read from the DOM.
  * @param index Item's position among the other items carrying {@link COMMAND_ITEM_ATTRIBUTE}.
  * @returns The id to correlate this item with in the model's option set.
  */
-function getItemId(item: HTMLElement, index: number): string {
+export function getCommandItemId(item: HTMLElement, index: number): string {
 	return item.id !== "" ? item.id : String(index);
 }
 
@@ -70,7 +77,7 @@ function collectOptions(root: HTMLElement): FilterModel.Option[] {
 
 	for (let [index, item] of items.entries()) {
 		let value = item.getAttribute(COMMAND_ITEM_ATTRIBUTE) || item.textContent?.trim() || "";
-		options.push({ id: getItemId(item, index), value });
+		options.push({ id: getCommandItemId(item, index), value });
 	}
 
 	return options;
@@ -88,7 +95,7 @@ function syncMatches(root: HTMLElement, model: FilterModel): void {
 	let items = root.querySelectorAll<HTMLElement>(`[${COMMAND_ITEM_ATTRIBUTE}]`);
 
 	for (let [index, item] of items.entries()) {
-		item.hidden = !model.isMatch(getItemId(item, index));
+		item.hidden = !model.isMatch(getCommandItemId(item, index));
 	}
 
 	let empty = root.querySelector<HTMLElement>(`[${COMMAND_EMPTY_ATTRIBUTE}]`);
@@ -112,12 +119,12 @@ function syncMatches(root: HTMLElement, model: FilterModel): void {
  * @param model Behavior class instance owning the query, matched option set, and active option.
  * @example
  * let model = new FilterModel();
- * <div mix={[commandFilter(model)]}>
- * 	<input data-command-input />
- * 	<div data-command-item id="home">Home</div>
- * 	<div data-command-item id="settings">Settings</div>
- * 	<p data-command-empty>No matches</p>
- * </div>
+ * <Command mix={commandFilter(model)}>
+ * 	<Command.Input />
+ * 	<Command.Item id="home" value="Home">Home</Command.Item>
+ * 	<Command.Item id="settings" value="Settings">Settings</Command.Item>
+ * 	<Command.Empty>No matches</Command.Empty>
+ * </Command>
  */
 export const commandFilter = createMixin<HTMLElement, [model: FilterModel]>((handle) => {
 	let hostNode: HTMLElement | undefined;
@@ -127,6 +134,7 @@ export const commandFilter = createMixin<HTMLElement, [model: FilterModel]>((han
 		hostNode = event.node;
 		boundModel?.setOptions(collectOptions(hostNode));
 	});
+
 	handle.addEventListener("remove", () => {
 		hostNode = undefined;
 	});

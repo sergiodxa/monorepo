@@ -18,7 +18,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { attrs, css } from "remix/ui";
 
-import { visuallyHiddenInput } from "../styles/visually-hidden-input";
+import { visuallyHidden } from "../styles/visually-hidden-input";
 
 import { ColorSwatch } from "./color-swatch";
 
@@ -233,7 +233,7 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 					disabled={disabled}
 					required={required}
 					aria-label={ariaLabel}
-					mix={[visuallyHiddenInput(), parts?.input]}
+					mix={[visuallyHidden(), parts?.input]}
 				/>
 				<ColorSwatch
 					value={value}

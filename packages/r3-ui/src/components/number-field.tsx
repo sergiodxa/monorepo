@@ -228,14 +228,21 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
  * directly or mirrored in by a validation script, or the platform's own
  * post-interaction `:user-invalid` — recolors the typed digits in the
  * semantic danger tone without adding a border or ring of its own, since
- * {@link NumberField.Group} already owns the frame's shared perimeter.
+ * {@link NumberField.Group} already owns the frame's shared perimeter. The
+ * platform's own visual spin-button arrows are hidden, since
+ * {@link NumberField.DecrementButton} and {@link NumberField.IncrementButton}
+ * already occupy that same corner of the group with a larger, consistently
+ * styled target — a second, browser-drawn pair of arrows right next to them
+ * would only compete for the same gesture.
  *
  * `min`, `max`, and `step` bound the accepted range and its granularity
- * through the platform's own numeric spinner and typed-entry validation.
- * Press-and-hold repeat on {@link NumberField.DecrementButton} and
- * {@link NumberField.IncrementButton} needing `stepUp()`/`stepDown()` is a
- * script-only capability a consumer opts into separately; without it, the
- * platform's own spinner arrows and typed entry remain fully functional.
+ * through the platform's own typed-entry validation, and the platform's own
+ * `ArrowUp`/`ArrowDown` key stepping on a focused input keeps working
+ * regardless of the hidden spin buttons. Press-and-hold repeat on
+ * {@link NumberField.DecrementButton} and {@link NumberField.IncrementButton}
+ * needing `stepUp()`/`stepDown()` is a script-only capability a consumer opts
+ * into separately; without it, those buttons render but do nothing; typed
+ * entry and the arrow keys remain the no-JS baseline.
  *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the control's markup.
@@ -260,7 +267,12 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 						backgroundColor: "transparent",
 						color: "inherit",
 						textAlign: "center",
+						"-moz-appearance": "textfield",
 
+						"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
+							"-webkit-appearance": "none",
+							margin: "0",
+						},
 						"&:focus-visible": {
 							outlineWidth: "0",
 						},

@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { attrs, css } from "remix/ui";
 
-import { visuallyHiddenInput } from "../styles/visually-hidden-input";
+import { visuallyHidden } from "../styles/visually-hidden-input";
 
 /**
  * `role="radiogroup"` applied through {@link attrs} unless a consumer
@@ -222,7 +222,7 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 					defaultChecked={defaultChecked}
 					disabled={disabled}
 					required={required}
-					mix={[visuallyHiddenInput(), parts?.input]}
+					mix={[visuallyHidden(), parts?.input]}
 				/>
 				<span
 					data-slot="indicator"

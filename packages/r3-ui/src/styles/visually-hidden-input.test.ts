@@ -1,5 +1,5 @@
 /**
- * Covers {@link visuallyHiddenInput} as pure `css()` output: the exact
+ * Covers {@link visuallyHidden} as pure `css()` output: the exact
  * property set and values every compound option composes into its hidden
  * input's own `mix` array.
  *
@@ -10,16 +10,16 @@ import { describe, expect, test } from "bun:test";
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
-import { visuallyHiddenInput } from "./visually-hidden-input";
+import { visuallyHidden } from "./visually-hidden-input";
 
 /** Unwraps a `css()` mixin descriptor back to the style object it was built from. */
 function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 	return mixin.args[0] as Record<string, unknown>;
 }
 
-describe("visuallyHiddenInput", () => {
+describe("visuallyHidden", () => {
 	test("clips the input to a single, borderless, absolutely positioned pixel", () => {
-		expect(styles(visuallyHiddenInput())).toEqual({
+		expect(styles(visuallyHidden())).toEqual({
 			position: "absolute",
 			inlineSize: "1px",
 			blockSize: "1px",
@@ -33,7 +33,7 @@ describe("visuallyHiddenInput", () => {
 	});
 
 	test("carries exactly the nine clipping properties, nothing else", () => {
-		expect(Object.keys(styles(visuallyHiddenInput())).sort()).toEqual(
+		expect(Object.keys(styles(visuallyHidden())).sort()).toEqual(
 			[
 				"position",
 				"inlineSize",
@@ -49,6 +49,6 @@ describe("visuallyHiddenInput", () => {
 	});
 
 	test("returns a fresh mixin descriptor on every call", () => {
-		expect(visuallyHiddenInput()).not.toBe(visuallyHiddenInput());
+		expect(visuallyHidden()).not.toBe(visuallyHidden());
 	});
 });
