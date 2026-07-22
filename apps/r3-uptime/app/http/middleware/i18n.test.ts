@@ -1,11 +1,10 @@
 /**
  * Integration tests for the language-resolution middleware. `@pkg/i18n/middleware`'s
  * generic cookie/header detection is covered by that package's own tests; these
- * focus on this file's app-specific decision — the `findLocale` lookup that reads
- * a signed-in viewer's `user_preferences.preferred_language` from the database —
- * and its priority against the `language` cookie and `Accept-Language` header,
- * using a real in-memory database and the real session + auth chain to resolve
- * the viewer.
+ * focus on this file's app-specific configuration — the `language` cookie takes
+ * priority over the `Accept-Language` header, falling back to English — using the
+ * real session + auth chain to resolve the viewer (resolution is identical for a
+ * signed-in viewer and an anonymous request, since neither queries the database).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +24,6 @@ import { language } from "~/app/http/cookies";
 import { auth, login, type Viewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { userPreferences } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -58,21 +56,19 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 }
 
 describe("i18n middleware", () => {
-	test("prefers the signed-in viewer's stored preferred_language over the Accept-Language header", async () => {
+	test("prefers the language cookie over the Accept-Language header for a signed-in viewer", async () => {
 		let { db } = createTestDatabase();
-		await db.create(
-			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: viewer.id, preferred_language: "es" },
-			{ touch: true, returnRow: true },
-		);
 
-		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
+		let response = await dispatch(db, {
+			viewer,
+			headers: { "Accept-Language": "fr", Cookie: await language.serialize("es") },
+		});
 
 		let body = (await response.json()) as { locale: string };
 		expect(body.locale).toBe("es");
 	});
 
-	test("falls back to the Accept-Language header when the viewer has no stored preference", async () => {
+	test("falls back to the Accept-Language header when the viewer has no language cookie", async () => {
 		let { db } = createTestDatabase();
 
 		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
