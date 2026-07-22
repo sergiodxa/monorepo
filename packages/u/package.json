@@ -1,0 +1,47 @@
+{
+	"name": "@pkg/u",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts",
+		"./general": "./src/general/index.ts",
+		"./general/*": "./src/general/*.ts",
+		"./layout": "./src/layout/index.ts",
+		"./layout/*": "./src/layout/*.ts",
+		"./size": "./src/size/index.ts",
+		"./size/*": "./src/size/*.ts",
+		"./color": "./src/color/index.ts",
+		"./color/*": "./src/color/*.ts",
+		"./typography": "./src/typography/index.ts",
+		"./typography/*": "./src/typography/*.ts",
+		"./effects": "./src/effects/index.ts",
+		"./effects/*": "./src/effects/*.ts",
+		"./overflow": "./src/overflow/index.ts",
+		"./overflow/*": "./src/overflow/*.ts",
+		"./stacking": "./src/stacking/index.ts",
+		"./stacking/*": "./src/stacking/*.ts",
+		"./a11y": "./src/a11y/index.ts",
+		"./a11y/*": "./src/a11y/*.ts",
+		"./state": "./src/state/index.ts",
+		"./state/*": "./src/state/*.ts",
+		"./responsive": "./src/responsive/index.ts",
+		"./responsive/*": "./src/responsive/*.ts",
+		"./animation": "./src/animation/index.ts",
+		"./animation/*": "./src/animation/*.ts",
+		"./transform": "./src/transform/index.ts",
+		"./transform/*": "./src/transform/*.ts",
+		"./tokens": "./src/tokens.ts",
+		"./theme.css": "./src/theme.css"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14"
+	}
+}

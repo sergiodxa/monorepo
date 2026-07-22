@@ -1,0 +1,12 @@
+export { balance } from "./balance";
+export { font } from "./font";
+export { leading } from "./leading";
+export { lineClamp } from "./line-clamp";
+export { nowrap } from "./nowrap";
+export { pretty } from "./pretty";
+export { text } from "./text";
+export { textAlign } from "./text-align";
+export { tracking } from "./tracking";
+export { truncate } from "./truncate";
+export { type } from "./type";
+export { weight } from "./weight";

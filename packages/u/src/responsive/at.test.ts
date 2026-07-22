@@ -1,0 +1,44 @@
+/**
+ * Unit tests for `at.ts`, the container-query wrapper.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { describe, expect, test } from "bun:test";
+
+import type { CSSMixinDescriptor } from "remix/ui";
+
+import { p } from "../size/p";
+
+import { at } from "./at";
+
+/** Unwraps a utility mixin back to the style tree it was built from. */
+function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
+	return descriptor.args[0] as Record<string, unknown>;
+}
+
+describe("at", () => {
+	test("nests the wrapped utility's styles under a container query for a known name", () => {
+		expect(styles(at("md", p(4)))).toEqual({
+			"@container (min-width: var(--ui-container-md, 36rem))": {
+				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+			},
+		});
+	});
+
+	test("falls back through container()'s own fallback for an unrecognized name", () => {
+		expect(styles(at("made-up", p(4)))).toEqual({
+			"@container (min-width: var(--ui-container-made-up, 36rem))": {
+				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+			},
+		});
+	});
+
+	test("a third argument targets a specific named container instead of the nearest one", () => {
+		expect(styles(at("md", "sidebar", p(4)))).toEqual({
+			"@container sidebar (min-width: var(--ui-container-md, 36rem))": {
+				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+			},
+		});
+	});
+});

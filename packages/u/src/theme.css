@@ -1,0 +1,218 @@
+/*
+ * Theme Contract
+ *
+ * The `--ui-*` variable layer the utility mixins in this package read from.
+ * Plain CSS, imported once by an app after its reset and before its own
+ * styles.
+ *
+ * Layers, outermost to innermost:
+ *   1. Palette tokens   --ui-color-{name}-{50..950}   — apps define these;
+ *      no default is shipped here, matching the extension contract that lets
+ *      an app add a palette name through declaration merging plus this same
+ *      variable convention.
+ *   2. Semantic tone tokens --ui-{tone}-{property}     — this file maps each
+ *      tone's properties onto the palette scale, for neutral/brand/success/
+ *      warning/danger.
+ *   3. System defaults  --ui-bg, --ui-fg, --ui-border, --ui-ring — tiny,
+ *      point at the semantic layer first with a platform system-color
+ *      fallback.
+ *   4. Scale variables — spacing, container breakpoints, font families, and
+ *      the text size scale.
+ *
+ * Dark Mode:
+ * - Add .dark to an ancestor (typically <html>) for forced dark mode.
+ * - Add .system to an ancestor for system preference (prefers-color-scheme).
+ *
+ * High Contrast:
+ * - Under `prefers-contrast: more`, every tone's subtle `border` is promoted
+ *   to its `border-strong` value, in every color scheme.
+ */
+
+:root {
+	/* Brand */
+	--ui-brand-bg-tint: var(--ui-color-brand-50);
+	--ui-brand-bg-solid: var(--ui-color-brand-600);
+	--ui-brand-fg: var(--ui-color-brand-600);
+	--ui-brand-fg-muted: var(--ui-color-brand-500);
+	--ui-brand-fg-emphasis: var(--ui-color-brand-900);
+	--ui-brand-fg-on-solid: white;
+	--ui-brand-border: var(--ui-color-brand-200);
+	--ui-brand-border-strong: var(--ui-color-brand-600);
+	--ui-brand-ring: var(--ui-color-brand-500);
+
+	/* Neutral — solid backgrounds use inverted shades (dark on light) */
+	--ui-neutral-bg-tint: var(--ui-color-neutral-50);
+	--ui-neutral-bg-solid: var(--ui-color-neutral-900);
+	--ui-neutral-fg: var(--ui-color-neutral-600);
+	--ui-neutral-fg-muted: var(--ui-color-neutral-500);
+	--ui-neutral-fg-emphasis: var(--ui-color-neutral-900);
+	--ui-neutral-fg-on-solid: white;
+	--ui-neutral-border: var(--ui-color-neutral-200);
+	--ui-neutral-border-strong: var(--ui-color-neutral-600);
+	--ui-neutral-ring: var(--ui-color-neutral-500);
+
+	/* Success */
+	--ui-success-bg-tint: var(--ui-color-success-50);
+	--ui-success-bg-solid: var(--ui-color-success-600);
+	--ui-success-fg: var(--ui-color-success-600);
+	--ui-success-fg-muted: var(--ui-color-success-500);
+	--ui-success-fg-emphasis: var(--ui-color-success-900);
+	--ui-success-fg-on-solid: white;
+	--ui-success-border: var(--ui-color-success-200);
+	--ui-success-border-strong: var(--ui-color-success-600);
+	--ui-success-ring: var(--ui-color-success-500);
+
+	/* Warning */
+	--ui-warning-bg-tint: var(--ui-color-warning-50);
+	--ui-warning-bg-solid: var(--ui-color-warning-600);
+	--ui-warning-fg: var(--ui-color-warning-600);
+	--ui-warning-fg-muted: var(--ui-color-warning-500);
+	--ui-warning-fg-emphasis: var(--ui-color-warning-900);
+	--ui-warning-fg-on-solid: white;
+	--ui-warning-border: var(--ui-color-warning-200);
+	--ui-warning-border-strong: var(--ui-color-warning-600);
+	--ui-warning-ring: var(--ui-color-warning-500);
+
+	/* Danger */
+	--ui-danger-bg-tint: var(--ui-color-danger-50);
+	--ui-danger-bg-solid: var(--ui-color-danger-600);
+	--ui-danger-fg: var(--ui-color-danger-600);
+	--ui-danger-fg-muted: var(--ui-color-danger-500);
+	--ui-danger-fg-emphasis: var(--ui-color-danger-900);
+	--ui-danger-fg-on-solid: white;
+	--ui-danger-border: var(--ui-color-danger-200);
+	--ui-danger-border-strong: var(--ui-color-danger-600);
+	--ui-danger-ring: var(--ui-color-danger-500);
+
+	/* System defaults — tiny, point at the semantic layer first */
+	--ui-bg: var(--ui-neutral-bg-tint, Canvas);
+	--ui-fg: var(--ui-neutral-fg-emphasis, CanvasText);
+	--ui-border: var(--ui-neutral-border, color-mix(in oklab, CanvasText 16%, transparent));
+	--ui-ring: var(--ui-brand-ring, Highlight);
+
+	/* Spacing scale */
+	--ui-spacing: 0.25rem;
+
+	/* Container breakpoints, read by u.at() */
+	--ui-container-xs: 20rem;
+	--ui-container-sm: 24rem;
+	--ui-container-md: 36rem;
+	--ui-container-lg: 48rem;
+	--ui-container-xl: 64rem;
+	--ui-container-2xl: 80rem;
+
+	/* Font families */
+	--ui-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--ui-font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+	--ui-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+	/* Text size scale */
+	--ui-text-xs: 0.75rem;
+	--ui-text-sm: 0.875rem;
+	--ui-text-base: 1rem;
+	--ui-text-lg: 1.125rem;
+	--ui-text-xl: 1.25rem;
+	--ui-text-2xl: 1.5rem;
+	--ui-text-3xl: 1.875rem;
+	--ui-text-4xl: 2.25rem;
+	--ui-text-5xl: 3rem;
+	--ui-text-6xl: 3.75rem;
+	--ui-text-7xl: 4.5rem;
+	--ui-text-8xl: 6rem;
+	--ui-text-9xl: 8rem;
+}
+
+/* Forced dark mode */
+:is(.dark, .dark *) {
+	--ui-brand-bg-tint: var(--ui-color-brand-950);
+	--ui-brand-bg-solid: var(--ui-color-brand-600);
+	--ui-brand-fg: var(--ui-color-brand-400);
+	--ui-brand-fg-muted: var(--ui-color-brand-400);
+	--ui-brand-fg-emphasis: var(--ui-color-brand-100);
+	--ui-brand-border: var(--ui-color-brand-800);
+	--ui-brand-border-strong: var(--ui-color-brand-600);
+
+	--ui-neutral-bg-tint: var(--ui-color-neutral-950);
+	--ui-neutral-bg-solid: var(--ui-color-neutral-100);
+	--ui-neutral-fg: var(--ui-color-neutral-400);
+	--ui-neutral-fg-muted: var(--ui-color-neutral-400);
+	--ui-neutral-fg-emphasis: var(--ui-color-neutral-100);
+	--ui-neutral-fg-on-solid: var(--ui-color-neutral-900);
+	--ui-neutral-border: var(--ui-color-neutral-700);
+	--ui-neutral-border-strong: var(--ui-color-neutral-400);
+
+	--ui-success-bg-tint: var(--ui-color-success-950);
+	--ui-success-fg: var(--ui-color-success-400);
+	--ui-success-fg-muted: var(--ui-color-success-400);
+	--ui-success-fg-emphasis: var(--ui-color-success-100);
+	--ui-success-border: var(--ui-color-success-800);
+	--ui-success-border-strong: var(--ui-color-success-600);
+
+	--ui-warning-bg-tint: var(--ui-color-warning-950);
+	--ui-warning-fg: var(--ui-color-warning-400);
+	--ui-warning-fg-muted: var(--ui-color-warning-400);
+	--ui-warning-fg-emphasis: var(--ui-color-warning-100);
+	--ui-warning-border: var(--ui-color-warning-800);
+	--ui-warning-border-strong: var(--ui-color-warning-600);
+
+	--ui-danger-bg-tint: var(--ui-color-danger-950);
+	--ui-danger-fg: var(--ui-color-danger-400);
+	--ui-danger-fg-muted: var(--ui-color-danger-400);
+	--ui-danger-fg-emphasis: var(--ui-color-danger-100);
+	--ui-danger-border: var(--ui-color-danger-800);
+	--ui-danger-border-strong: var(--ui-color-danger-600);
+}
+
+/* System-preference dark mode */
+@media (prefers-color-scheme: dark) {
+	:is(.system, .system *) {
+		--ui-brand-bg-tint: var(--ui-color-brand-950);
+		--ui-brand-bg-solid: var(--ui-color-brand-600);
+		--ui-brand-fg: var(--ui-color-brand-400);
+		--ui-brand-fg-muted: var(--ui-color-brand-400);
+		--ui-brand-fg-emphasis: var(--ui-color-brand-100);
+		--ui-brand-border: var(--ui-color-brand-800);
+		--ui-brand-border-strong: var(--ui-color-brand-600);
+
+		--ui-neutral-bg-tint: var(--ui-color-neutral-950);
+		--ui-neutral-bg-solid: var(--ui-color-neutral-100);
+		--ui-neutral-fg: var(--ui-color-neutral-400);
+		--ui-neutral-fg-muted: var(--ui-color-neutral-400);
+		--ui-neutral-fg-emphasis: var(--ui-color-neutral-100);
+		--ui-neutral-fg-on-solid: var(--ui-color-neutral-900);
+		--ui-neutral-border: var(--ui-color-neutral-700);
+		--ui-neutral-border-strong: var(--ui-color-neutral-400);
+
+		--ui-success-bg-tint: var(--ui-color-success-950);
+		--ui-success-fg: var(--ui-color-success-400);
+		--ui-success-fg-muted: var(--ui-color-success-400);
+		--ui-success-fg-emphasis: var(--ui-color-success-100);
+		--ui-success-border: var(--ui-color-success-800);
+		--ui-success-border-strong: var(--ui-color-success-600);
+
+		--ui-warning-bg-tint: var(--ui-color-warning-950);
+		--ui-warning-fg: var(--ui-color-warning-400);
+		--ui-warning-fg-muted: var(--ui-color-warning-400);
+		--ui-warning-fg-emphasis: var(--ui-color-warning-100);
+		--ui-warning-border: var(--ui-color-warning-800);
+		--ui-warning-border-strong: var(--ui-color-warning-600);
+
+		--ui-danger-bg-tint: var(--ui-color-danger-950);
+		--ui-danger-fg: var(--ui-color-danger-400);
+		--ui-danger-fg-muted: var(--ui-color-danger-400);
+		--ui-danger-fg-emphasis: var(--ui-color-danger-100);
+		--ui-danger-border: var(--ui-color-danger-800);
+		--ui-danger-border-strong: var(--ui-color-danger-600);
+	}
+}
+
+/* High contrast: promote the subtle border to its strong variant, in every color scheme */
+@media (prefers-contrast: more) {
+	:root {
+		--ui-brand-border: var(--ui-brand-border-strong);
+		--ui-neutral-border: var(--ui-neutral-border-strong);
+		--ui-success-border: var(--ui-success-border-strong);
+		--ui-warning-border: var(--ui-warning-border-strong);
+		--ui-danger-border: var(--ui-danger-border-strong);
+	}
+}
