@@ -17,11 +17,12 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@pkg/r3-ui/mixins";
-import { focusRingByColor, panelChrome } from "@pkg/r3-ui/styles";
+import { focusRingByColor, panelChrome, visuallyHidden } from "@pkg/r3-ui/styles";
 import { css, on } from "remix/ui";
 
 import type { Album } from "../data/types";
 
+import { AlbumSearch } from "../components/album-search";
 import { Shell } from "../components/shell";
 import { routes } from "../routes";
 import { titleCase } from "../utils/title-case";
@@ -63,7 +64,9 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 					mix={[router.form(), css({ flexDirection: "row", flexWrap: "wrap", alignItems: "end" })]}
 				>
 					<NumberField>
-						<Label htmlFor="albumId">Jump to album</Label>
+						<Label htmlFor="albumId" mix={visuallyHidden()}>
+							Jump to album
+						</Label>
 						<NumberField.Group mix={stepper()}>
 							<NumberField.DecrementButton
 								command={NUMBER_FIELD_STEP_DOWN_COMMAND}
@@ -82,23 +85,27 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 						Open album
 					</Button>
 				</Form>
-				<Button
-					type="button"
-					color="primary"
-					variant="outline"
-					mix={on<HTMLButtonElement, "click">("click", () => {
-						let album = handle.props.albums[Math.floor(Math.random() * handle.props.albums.length)];
+				<div mix={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" })}>
+					<Button
+						type="button"
+						color="primary"
+						variant="outline"
+						mix={on<HTMLButtonElement, "click">("click", () => {
+							let album =
+								handle.props.albums[Math.floor(Math.random() * handle.props.albums.length)];
 
-						if (!album) return;
+							if (!album) return;
 
-						void router.submit(
-							{ albumId: album.id },
-							{ method: "POST", action: routes.openAlbum.href() },
-						);
-					})}
-				>
-					Surprise me
-				</Button>
+							void router.submit(
+								{ albumId: album.id },
+								{ method: "POST", action: routes.openAlbum.href() },
+							);
+						})}
+					>
+						Surprise me
+					</Button>
+					<AlbumSearch albums={handle.props.albums} />
+				</div>
 			</Toolbar>
 			<ul
 				mix={css({
@@ -121,7 +128,8 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 								css({
 									display: "grid",
 									boxSizing: "border-box",
-									minHeight: "13rem",
+									overflow: "hidden",
+									height: "14rem",
 									padding: "1.2rem",
 									borderRadius: "1.5rem",
 									backgroundColor: "var(--ui-neutral-bg-tint)",
@@ -159,8 +167,12 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 									fontSize: "1.8rem",
 									fontWeight: 500,
 									letterSpacing: "-0.04em",
-									lineHeight: 1,
+									lineHeight: 1.1,
 									color: "inherit",
+									display: "-webkit-box",
+									overflow: "hidden",
+									"-webkit-line-clamp": "3",
+									"-webkit-box-orient": "vertical",
 								})}
 							>
 								{titleCase(album.title)}

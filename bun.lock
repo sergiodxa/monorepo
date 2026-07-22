@@ -324,6 +324,7 @@
     "apps/r3-gallery": {
       "name": "@apps/r3-gallery",
       "dependencies": {
+        "@pkg/lucide-remix": "workspace:*",
         "@pkg/r3-ui": "workspace:*",
         "@pkg/r3-ui-router": "workspace:*",
         "@pkg/result": "workspace:*",

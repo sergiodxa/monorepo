@@ -10,9 +10,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { AspectRatio, Badge, Button, Form, Text } from "@pkg/r3-ui";
+import { AspectRatio, Badge, Button, Card, Form } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
-import { focusRingPrimary, panelChrome } from "@pkg/r3-ui/styles";
+import { focusRingPrimary } from "@pkg/r3-ui/styles";
 import { addEventListeners, css, on } from "remix/ui";
 
 import type { Photo } from "../data/types";
@@ -45,101 +45,106 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 		},
 	});
 
+	function openPhoto(event: MouseEvent) {
+		event.preventDefault();
+
+		let albumURL = new URL(
+			routes.album.href({ id: String(handle.props.photo.albumId) }),
+			window.location.href,
+		);
+		albumURL.searchParams.set("photoId", String(handle.props.photo.id));
+
+		void router.navigate(albumURL, {
+			mask: routes.photo.href({ id: String(handle.props.photo.id) }),
+		});
+	}
+
 	return () => {
 		let liked =
 			fetcher.data?.photoId === handle.props.photo.id ? fetcher.data.liked : handle.props.liked;
+		let photoHref = routes.photo.href({ id: String(handle.props.photo.id) });
+		let title = titleCase(handle.props.photo.title);
 
 		return (
-			<article
-				mix={[
-					panelChrome(),
-					css({
-						display: "grid",
-						overflow: "hidden",
-						borderRadius: "1.35rem",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)",
-						color: "inherit",
-					}),
-				]}
+			<Card
+				mix={css({
+					overflow: "hidden",
+					borderRadius: "1.35rem",
+					boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)",
+				})}
 			>
-				<a
-					href={routes.photo.href({ id: String(handle.props.photo.id) })}
-					mix={[
-						focusRingPrimary({ when: "&:focus-visible" }),
-						css({
-							display: "grid",
-							color: "inherit",
-							textDecoration: "none",
-							WebkitTapHighlightColor: "transparent",
-						}),
-						on<HTMLAnchorElement, "click">("click", (event) => {
-							event.preventDefault();
-
-							let albumURL = new URL(
-								routes.album.href({ id: String(handle.props.photo.albumId) }),
-								window.location.href,
-							);
-							albumURL.searchParams.set("photoId", String(handle.props.photo.id));
-
-							void router.navigate(albumURL, {
-								mask: routes.photo.href({ id: String(handle.props.photo.id) }),
-							});
-						}),
-					]}
-				>
-					<AspectRatio ratio="1 / 1">
-						<img
-							mix={css({ display: "block", width: "100%", height: "100%", objectFit: "cover" })}
-							src={handle.props.photo.thumbnailUrl}
-							alt=""
-							loading="lazy"
-						/>
-					</AspectRatio>
-					<Text
-						mix={css({
-							display: "block",
-							padding: "0.85rem 0.85rem 0.35rem",
-							color: "var(--ui-neutral-fg-emphasis)",
-							fontSize: "0.9rem",
-							fontWeight: 700,
-						})}
+				<Card.Content mix={css({ padding: 0 })}>
+					<a
+						href={photoHref}
+						aria-label={title}
+						mix={[
+							focusRingPrimary({ when: "&:focus-visible" }),
+							css({ display: "block", WebkitTapHighlightColor: "transparent" }),
+							on<HTMLAnchorElement, "click">("click", openPhoto),
+						]}
 					>
-						{titleCase(handle.props.photo.title)}
-					</Text>
-				</a>
-				<Form
-					method="POST"
-					action={routes.likePhoto.href({
-						albumId: String(handle.props.photo.albumId),
-						photoId: String(handle.props.photo.id),
-					})}
-					mix={[
-						fetcher.form(),
-						css({
-							flexDirection: "row",
-							justifyContent: "space-between",
-							alignItems: "center",
-							gap: "0.5rem",
-							padding: "0 0.85rem 0.85rem",
-						}),
-					]}
-				>
-					<input type="hidden" name="photoId" value={String(handle.props.photo.id)} />
-					<Button
-						type="submit"
-						size="sm"
+						<AspectRatio ratio="1 / 1">
+							<img
+								mix={css({ display: "block", width: "100%", height: "100%", objectFit: "cover" })}
+								src={handle.props.photo.thumbnailUrl}
+								alt=""
+								loading="lazy"
+							/>
+						</AspectRatio>
+					</a>
+				</Card.Content>
+				<Card.Header>
+					<Badge
 						color={liked ? "primary" : "neutral"}
-						variant={liked ? "solid" : "outline"}
-						isPending={fetcher.state !== "idle"}
+						variant={liked ? "secondary" : "outline"}
+						mix={css({ alignSelf: "flex-start" })}
 					>
-						{liked ? "Liked" : "Like"}
-					</Button>
-					<Badge color={liked ? "primary" : "neutral"} variant={liked ? "secondary" : "outline"}>
 						{liked ? "Saved" : "Unsaved"}
 					</Badge>
-				</Form>
-			</article>
+					<Card.Title
+						mix={css({
+							fontSize: "0.9rem",
+							lineHeight: 1.3,
+							minHeight: "3.5rem",
+							display: "-webkit-box",
+							overflow: "hidden",
+							"-webkit-line-clamp": "3",
+							"-webkit-box-orient": "vertical",
+						})}
+					>
+						<a
+							href={photoHref}
+							mix={[
+								css({ color: "inherit", textDecoration: "none" }),
+								on<HTMLAnchorElement, "click">("click", openPhoto),
+							]}
+						>
+							{title}
+						</a>
+					</Card.Title>
+				</Card.Header>
+				<Card.Footer>
+					<Form
+						method="POST"
+						action={routes.likePhoto.href({
+							albumId: String(handle.props.photo.albumId),
+							photoId: String(handle.props.photo.id),
+						})}
+						mix={fetcher.form()}
+					>
+						<input type="hidden" name="photoId" value={String(handle.props.photo.id)} />
+						<Button
+							type="submit"
+							size="sm"
+							color={liked ? "primary" : "neutral"}
+							variant={liked ? "solid" : "outline"}
+							isPending={fetcher.state !== "idle"}
+						>
+							{liked ? "Liked" : "Like"}
+						</Button>
+					</Form>
+				</Card.Footer>
+			</Card>
 		);
 	};
 }

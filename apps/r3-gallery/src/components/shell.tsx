@@ -48,54 +48,48 @@ export function Shell(handle: Handle<ShellProps>) {
 		>
 			<header
 				mix={css({
+					display: "grid",
 					boxSizing: "border-box",
+					gap: "1rem",
+					maxWidth: "72rem",
+					margin: "0 auto",
 					padding: "clamp(2rem, 7vw, 5rem) clamp(1rem, 4vw, 4rem) clamp(1.5rem, 4vw, 3rem)",
 				})}
 			>
-				<div
+				<Header
 					mix={css({
-						display: "grid",
-						boxSizing: "border-box",
-						gap: "1rem",
-						maxWidth: "72rem",
-						margin: "0 auto",
+						padding: 0,
+						color: "var(--ui-primary-fg-emphasis)",
+						fontSize: "0.78rem",
+						letterSpacing: "0.18em",
 					})}
 				>
-					<Header
-						mix={css({
-							padding: 0,
-							color: "var(--ui-primary-fg-emphasis)",
-							fontSize: "0.78rem",
-							letterSpacing: "0.18em",
-						})}
-					>
-						{handle.props.eyebrow}
-					</Header>
-					<Heading
-						level={1}
-						mix={css({
-							maxWidth: "14ch",
-							fontFamily: 'Georgia, "Times New Roman", serif',
-							fontSize: "clamp(3rem, 10vw, 8.5rem)",
-							fontWeight: 500,
-							letterSpacing: "-0.08em",
-							lineHeight: 0.84,
-							color: "inherit",
-						})}
-					>
-						{handle.props.title}
-					</Heading>
-					<Text
-						mix={css({
-							display: "block",
-							maxWidth: "42rem",
-							color: "#6b4f43",
-							fontSize: "clamp(1rem, 2vw, 1.2rem)",
-						})}
-					>
-						{handle.props.intro}
-					</Text>
-				</div>
+					{handle.props.eyebrow}
+				</Header>
+				<Heading
+					level={1}
+					mix={css({
+						maxWidth: "14ch",
+						fontFamily: 'Georgia, "Times New Roman", serif',
+						fontSize: "clamp(3rem, 10vw, 8.5rem)",
+						fontWeight: 500,
+						letterSpacing: "-0.08em",
+						lineHeight: 0.84,
+						color: "inherit",
+					})}
+				>
+					{handle.props.title}
+				</Heading>
+				<Text
+					mix={css({
+						display: "block",
+						maxWidth: "42rem",
+						color: "#6b4f43",
+						fontSize: "clamp(1rem, 2vw, 1.2rem)",
+					})}
+				>
+					{handle.props.intro}
+				</Text>
 			</header>
 			<main
 				mix={css({
