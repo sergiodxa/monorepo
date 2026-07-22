@@ -12,6 +12,12 @@
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/auth", "dev"],
 			"port": 3001
+		},
+		{
+			"name": "r3-gallery",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/r3-gallery", "dev", "--port", "3010"],
+			"port": 3010
 		}
 	]
 }

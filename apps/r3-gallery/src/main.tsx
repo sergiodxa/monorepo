@@ -18,6 +18,8 @@ import { renderPhoto } from "./controllers/photo";
 import { loadLikes } from "./middleware/likes";
 import { routes } from "./routes";
 
+import "./theme.css";
+
 let router = createRouter({
 	defaultElement: renderNotFound,
 	middleware: [loadLikes],

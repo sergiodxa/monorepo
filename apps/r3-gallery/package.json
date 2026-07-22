@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/r3-ui": "workspace:*",
 		"@pkg/r3-ui-router": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"remix": "3.0.0-beta.5"

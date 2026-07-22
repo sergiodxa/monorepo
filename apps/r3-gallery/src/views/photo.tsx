@@ -10,7 +10,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { css, on } from "remix/ui";
+import { Button } from "@pkg/r3-ui";
+import { on } from "remix/ui";
 
 import type { Photo } from "../data/types";
 
@@ -52,41 +53,18 @@ export function PhotoPage(handle: Handle<PhotoPageProps>) {
 			<PhotoPreview
 				photo={handle.props.photo}
 				actions={
-					<button
+					<Button
 						type="button"
-						mix={[
-							frameButtonStyles(),
-							on<HTMLButtonElement, "click">("click", () => {
-								void handle.frame.reload();
-							}),
-						]}
+						color="primary"
+						variant="outline"
+						mix={on<HTMLButtonElement, "click">("click", () => {
+							void handle.frame.reload();
+						})}
 					>
 						Reload frame
-					</button>
+					</Button>
 				}
 			/>
 		);
 	};
-}
-
-/** Button style used by frame-only photo controls. */
-function frameButtonStyles() {
-	return css({
-		display: "inline-flex",
-		minHeight: "2.5rem",
-		alignItems: "center",
-		justifyContent: "center",
-		padding: "0.6rem 0.9rem",
-		border: "1px solid rgb(154 52 18 / 0.18)",
-		borderRadius: "999rem",
-		background: "rgb(255 255 255 / 0.74)",
-		color: "#7c2d12",
-		cursor: "pointer",
-		font: "inherit",
-		fontWeight: 800,
-		"&:focus-visible": {
-			outline: "3px solid #f97316",
-			outlineOffset: "4px",
-		},
-	});
 }

@@ -9,6 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { Header, Heading, HeadingScope, Text } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 /**
@@ -60,41 +61,40 @@ export function Shell(handle: Handle<ShellProps>) {
 						margin: "0 auto",
 					})}
 				>
-					<p
+					<Header
 						mix={css({
-							margin: 0,
-							color: "#9a3412",
+							padding: 0,
+							color: "var(--ui-primary-fg-emphasis)",
 							fontSize: "0.78rem",
-							fontWeight: 800,
 							letterSpacing: "0.18em",
-							textTransform: "uppercase",
 						})}
 					>
 						{handle.props.eyebrow}
-					</p>
-					<h1
+					</Header>
+					<Heading
+						level={1}
 						mix={css({
 							maxWidth: "14ch",
-							margin: 0,
 							fontFamily: 'Georgia, "Times New Roman", serif',
 							fontSize: "clamp(3rem, 10vw, 8.5rem)",
 							fontWeight: 500,
 							letterSpacing: "-0.08em",
 							lineHeight: 0.84,
+							color: "inherit",
 						})}
 					>
 						{handle.props.title}
-					</h1>
-					<p
+					</Heading>
+					<Text
 						mix={css({
+							display: "block",
 							maxWidth: "42rem",
-							margin: 0,
 							color: "#6b4f43",
 							fontSize: "clamp(1rem, 2vw, 1.2rem)",
 						})}
 					>
 						{handle.props.intro}
-					</p>
+					</Text>
 				</div>
 			</header>
 			<main
@@ -105,7 +105,7 @@ export function Shell(handle: Handle<ShellProps>) {
 					padding: "0 clamp(1rem, 4vw, 4rem) 5rem",
 				})}
 			>
-				{handle.props.children}
+				<HeadingScope level={2}>{handle.props.children}</HeadingScope>
 			</main>
 		</div>
 	);

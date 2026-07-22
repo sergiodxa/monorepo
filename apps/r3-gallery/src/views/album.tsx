@@ -10,12 +10,13 @@
 
 import type { Handle } from "remix/ui";
 
+import { Button, LinkButton, Text } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
+import { floatingSurface } from "@pkg/r3-ui/styles";
 import { Frame, css, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
 
-import { ActionLink } from "../components/action-link";
 import { PhotoGridItem } from "../components/photo-grid-item";
 import { Shell } from "../components/shell";
 import { routes } from "../routes";
@@ -59,12 +60,12 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 						marginBlockEnd: "1.5rem",
 					})}
 				>
-					<ActionLink href={routes.home.href()} variant="compact">
+					<LinkButton href={routes.home.href()} color="primary" variant="outline" size="sm">
 						Back to albums
-					</ActionLink>
-					<span>
+					</LinkButton>
+					<Text>
 						{handle.props.photos.length} photos · {handle.props.likedPhotoIds.length} liked
-					</span>
+					</Text>
 				</div>
 				<section
 					mix={css({
@@ -99,16 +100,26 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							}),
 						]}
 					>
+						{/*
+						 * Not r3-ui's Dialog: this overlay's open/close state comes from
+						 * router navigation (the masked photo URL), not commandfor Invoker
+						 * Commands, so a plain panel styled with floatingSurface() fits
+						 * without fighting that model.
+						 */}
 						<div
-							mix={css({
-								display: "block",
-								overflow: "auto",
-								width: "min(100%, 62rem)",
-								maxHeight: "min(90vh, 44rem)",
-								borderRadius: "1.75rem",
-								background: "#fff7ed",
-								boxShadow: "0 2rem 8rem rgb(0 0 0 / 0.28)",
-							})}
+							mix={[
+								floatingSurface(),
+								css({
+									position: "relative",
+									display: "block",
+									overflow: "auto",
+									width: "min(100%, 62rem)",
+									maxHeight: "min(90vh, 44rem)",
+									borderRadius: "1.75rem",
+									backgroundColor: "#fff7ed",
+									boxShadow: "0 2rem 8rem rgb(0 0 0 / 0.28)",
+								}),
+							]}
 							role="dialog"
 							aria-modal="true"
 							aria-label={`Photo ${handle.props.selectedPhoto.id}`}
@@ -116,39 +127,24 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							<Frame
 								name="selected-photo"
 								src={routes.photo.href({ id: String(handle.props.selectedPhoto.id) })}
-								fallback={<div mix={css({ padding: "2rem" })}>Loading photo...</div>}
+								fallback={
+									<Text mix={css({ display: "block", padding: "2rem" })}>Loading photo...</Text>
+								}
 							/>
-							<button
+							<Button
 								type="button"
+								color="neutral"
+								variant="solid"
+								size="sm"
 								mix={[
-									css({
-										position: "absolute",
-										top: "1rem",
-										right: "1rem",
-										display: "inline-flex",
-										minHeight: "2.5rem",
-										alignItems: "center",
-										justifyContent: "center",
-										padding: "0.6rem 0.9rem",
-										border: "1px solid rgb(154 52 18 / 0.18)",
-										borderRadius: "999rem",
-										background: "rgb(255 255 255 / 0.82)",
-										color: "#7c2d12",
-										cursor: "pointer",
-										font: "inherit",
-										fontWeight: 800,
-										"&:focus-visible": {
-											outline: "3px solid #f97316",
-											outlineOffset: "4px",
-										},
-									}),
+									css({ position: "absolute", top: "1rem", right: "1rem" }),
 									on<HTMLButtonElement, "click">("click", () => {
 										void router.navigate(routes.album.href({ id: albumId }));
 									}),
 								]}
 							>
 								Close photo
-							</button>
+							</Button>
 						</div>
 					</div>
 				) : null}

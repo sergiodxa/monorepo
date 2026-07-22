@@ -10,7 +10,9 @@
 
 import type { Handle } from "remix/ui";
 
+import { AspectRatio, Badge, Button, Form, Text } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
+import { focusRingPrimary, panelChrome } from "@pkg/r3-ui/styles";
 import { addEventListeners, css, on } from "remix/ui";
 
 import type { Photo } from "../data/types";
@@ -49,27 +51,27 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 
 		return (
 			<article
-				mix={css({
-					display: "grid",
-					overflow: "hidden",
-					borderRadius: "1.35rem",
-					background: "#fff",
-					boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)",
-					color: "inherit",
-				})}
+				mix={[
+					panelChrome(),
+					css({
+						display: "grid",
+						overflow: "hidden",
+						borderRadius: "1.35rem",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)",
+						color: "inherit",
+					}),
+				]}
 			>
 				<a
 					href={routes.photo.href({ id: String(handle.props.photo.id) })}
 					mix={[
+						focusRingPrimary({ when: "&:focus-visible" }),
 						css({
 							display: "grid",
 							color: "inherit",
 							textDecoration: "none",
 							WebkitTapHighlightColor: "transparent",
-							"&:focus-visible": {
-								outline: "3px solid #f97316",
-								outlineOffset: "-3px",
-							},
 						}),
 						on<HTMLAnchorElement, "click">("click", (event) => {
 							event.preventDefault();
@@ -86,27 +88,27 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 						}),
 					]}
 				>
-					<img
-						mix={css({ display: "block", width: "100%", height: "auto" })}
-						src={handle.props.photo.thumbnailUrl}
-						alt=""
-						loading="lazy"
-						width="150"
-						height="150"
-					/>
-					<p
+					<AspectRatio ratio="1 / 1">
+						<img
+							mix={css({ display: "block", width: "100%", height: "100%", objectFit: "cover" })}
+							src={handle.props.photo.thumbnailUrl}
+							alt=""
+							loading="lazy"
+						/>
+					</AspectRatio>
+					<Text
 						mix={css({
-							margin: 0,
+							display: "block",
 							padding: "0.85rem 0.85rem 0.35rem",
-							color: "#5f3f33",
+							color: "var(--ui-neutral-fg-emphasis)",
 							fontSize: "0.9rem",
 							fontWeight: 700,
 						})}
 					>
 						{titleCase(handle.props.photo.title)}
-					</p>
+					</Text>
 				</a>
-				<form
+				<Form
 					method="POST"
 					action={routes.likePhoto.href({
 						albumId: String(handle.props.photo.albumId),
@@ -115,53 +117,28 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 					mix={[
 						fetcher.form(),
 						css({
-							display: "flex",
+							flexDirection: "row",
 							justifyContent: "space-between",
+							alignItems: "center",
 							gap: "0.5rem",
 							padding: "0 0.85rem 0.85rem",
 						}),
 					]}
 				>
 					<input type="hidden" name="photoId" value={String(handle.props.photo.id)} />
-					<button
+					<Button
 						type="submit"
-						disabled={fetcher.state !== "idle"}
-						mix={css({
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "0.35rem",
-							padding: "0.45rem 0.7rem",
-							border: "1px solid rgb(154 52 18 / 0.18)",
-							borderRadius: "999rem",
-							background: liked ? "#fed7aa" : "rgb(255 247 237 / 0.9)",
-							color: "#7c2d12",
-							cursor: "pointer",
-							font: "inherit",
-							fontSize: "0.82rem",
-							fontWeight: 800,
-							"&:disabled": {
-								cursor: "wait",
-								opacity: 0.72,
-							},
-							"&:focus-visible": {
-								outline: "3px solid #f97316",
-								outlineOffset: "3px",
-							},
-						})}
+						size="sm"
+						color={liked ? "primary" : "neutral"}
+						variant={liked ? "solid" : "outline"}
+						isPending={fetcher.state !== "idle"}
 					>
-						{fetcher.state === "submitting" ? "Saving" : liked ? "Liked" : "Like"}
-					</button>
-					<span
-						mix={css({
-							alignSelf: "center",
-							color: "#9a3412",
-							fontSize: "0.78rem",
-							fontWeight: 800,
-						})}
-					>
+						{liked ? "Liked" : "Like"}
+					</Button>
+					<Badge color={liked ? "primary" : "neutral"} variant={liked ? "secondary" : "outline"}>
 						{liked ? "Saved" : "Unsaved"}
-					</span>
-				</form>
+					</Badge>
+				</Form>
 			</article>
 		);
 	};
