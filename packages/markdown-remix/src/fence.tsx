@@ -35,8 +35,8 @@ export function Fence({ props }: Handle<Fence.Props>) {
 						overscrollBehaviorX: "contain",
 						overscrollBehaviorInline: "contain",
 						borderRadius: "0.5rem",
-						border: "1px solid #e5e5e5",
-						backgroundColor: "#fafafa",
+						border: "1px solid var(--ui-neutral-border)",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
 						padding: "1rem",
 						fontSize: "0.875rem",
 					}),
@@ -47,7 +47,7 @@ export function Fence({ props }: Handle<Fence.Props>) {
 						mix={[
 							css({
 								marginBottom: "0.75rem",
-								borderBottom: "1px solid #e5e5e5",
+								borderBottom: "1px solid var(--ui-neutral-border)",
 								paddingBottom: "0.5rem",
 							}),
 						]}
@@ -59,7 +59,7 @@ export function Fence({ props }: Handle<Fence.Props>) {
 									alignItems: "center",
 									gap: "0.5rem",
 									fontSize: "0.75rem",
-									color: "#525252",
+									color: "var(--ui-neutral-fg-muted)",
 								}),
 							]}
 						>

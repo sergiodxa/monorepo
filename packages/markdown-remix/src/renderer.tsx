@@ -18,7 +18,7 @@ interface Tag {
 type CSSProps = Parameters<typeof css>[0];
 
 const STYLES = {
-	heading: { color: "#171717", fontWeight: 700, lineHeight: 1.2 },
+	heading: { color: "var(--ui-neutral-fg-emphasis)", fontWeight: 700, lineHeight: 1.2 },
 	paragraph: { margin: "0 0 1rem" },
 	list: { margin: "0 0 1rem", paddingLeft: "1.25rem" },
 	inlineCode: {
@@ -26,7 +26,7 @@ const STYLES = {
 		fontSize: "0.9em",
 		padding: "0.125rem 0.3rem",
 		borderRadius: "0.25rem",
-		backgroundColor: "#f5f5f5",
+		backgroundColor: "var(--ui-neutral-bg-tint-hover)",
 	},
 };
 
@@ -180,7 +180,11 @@ function renderChild(
 				target={typeof attrs.target === "string" ? attrs.target : undefined}
 				rel={typeof attrs.rel === "string" ? attrs.rel : undefined}
 				mix={[
-					css({ color: "#0c4a6e", textDecoration: "underline", textUnderlineOffset: "0.15em" }),
+					css({
+						color: "var(--ui-primary-fg)",
+						textDecoration: "underline",
+						textUnderlineOffset: "0.15em",
+					}),
 				]}
 			>
 				{children}
@@ -199,8 +203,8 @@ function renderChild(
 					css({
 						margin: "0 0 1rem",
 						padding: "0 0 0 1rem",
-						borderLeft: "3px solid #d4d4d4",
-						color: "#404040",
+						borderLeft: "3px solid var(--ui-neutral-border-strong)",
+						color: "var(--ui-neutral-fg)",
 					}),
 				]}
 			>
@@ -219,7 +223,7 @@ function renderChild(
 						margin: "0 0 1rem",
 						overflowX: "auto",
 						borderRadius: "0.5rem",
-						border: "1px solid #e5e5e5",
+						border: "1px solid var(--ui-neutral-border)",
 					}),
 				]}
 			>
@@ -235,36 +239,36 @@ function renderChild(
 	if (tagName === "li") return <li mix={[css({ marginBottom: "0.4rem" })]}>{children}</li>;
 
 	if (tagName === "hr") {
-		return <hr mix={[css({ margin: "2rem 0", border: 0, borderTop: "1px solid #e5e5e5" })]} />;
+		return (
+			<hr
+				mix={[
+					css({ margin: "2rem 0", border: 0, borderTop: "1px solid var(--ui-neutral-border)" }),
+				]}
+			/>
+		);
 	}
 
 	if (tagName === "br") return <br />;
 
-	if (tagName === "table") {
-		return (
-			<div mix={[css({ overflowX: "auto", marginBottom: "1rem" })]}>
-				<table mix={[css({ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" })]}>
-					{children}
-				</table>
-			</div>
-		);
-	}
+	// `table`/`th`/`td` render bare here — the surrounding `Typeset` wrapper
+	// (see `@pkg/r3-ui`) already sizes and colors them (width, overflow-driven
+	// scroll + edge fade for a table wider than its container, cell padding,
+	// borders, header weight), so styling them again here would only compete
+	// with it: two separate `overflow-x: auto` scroll containers nested
+	// inside each other, and two conflicting table widths.
+	if (tagName === "table") return <table>{children}</table>;
 
 	if (tagName === "thead")
-		return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
+		return <thead mix={[css({ backgroundColor: "var(--ui-neutral-bg-tint)" })]}>{children}</thead>;
 
 	if (tagName === "tbody") return <tbody>{children}</tbody>;
 
 	if (tagName === "tr")
-		return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
+		return <tr mix={[css({ borderBottom: "1px solid var(--ui-neutral-border)" })]}>{children}</tr>;
 
-	if (tagName === "th") {
-		return (
-			<th mix={[css({ textAlign: "left", padding: "0.6rem", fontWeight: 600 })]}>{children}</th>
-		);
-	}
+	if (tagName === "th") return <th>{children}</th>;
 
-	if (tagName === "td") return <td mix={[css({ padding: "0.6rem" })]}>{children}</td>;
+	if (tagName === "td") return <td>{children}</td>;
 
 	return createElement(
 		tagName,
