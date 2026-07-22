@@ -17,6 +17,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+/// <reference path="./html-parse-stringify.d.ts" />
+
 import type { HtmlAstNode } from "html-parse-stringify";
 import type { RemixElement, RemixNode } from "remix/ui";
 
