@@ -39,18 +39,23 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	let idOrSlug = ctx.params.team!;
 	let db = getServiceContainer().get(Database);
 
-	let team = await Team.findByIdOrSlug(db, idOrSlug);
-	if (!team) return notFound("Not Found");
-
 	let viewer = getViewer();
 	if (!viewer) return notFound("Not Found");
+
+	// `listBySubjectId` doesn't depend on `idOrSlug` resolving to anything, so it
+	// runs alongside `findByIdOrSlug` instead of after it.
+	let [team, teams] = await Promise.all([
+		Team.findByIdOrSlug(db, idOrSlug),
+		Team.listBySubjectId(db, viewer.id),
+	]);
+	if (!team) return notFound("Not Found");
 
 	let membership = await Team.findMembership(db, team.id, viewer.id);
 	if (!membership) return notFound("Not Found");
 
 	ctx.team = team;
 	ctx.membership = membership;
-	ctx.teams = await Team.listBySubjectId(db, viewer.id);
+	ctx.teams = teams;
 
 	return next();
 };
