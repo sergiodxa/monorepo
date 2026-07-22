@@ -5,12 +5,14 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./middleware": "./src/middleware.ts"
+		"./middleware": "./src/middleware.ts",
+		"./ui": "./src/ui/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"html-parse-stringify": "^3.0.1",
 		"i18next": "^26.3.1",
 		"remix": "3.0.0-beta.5"
 	},

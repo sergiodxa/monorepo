@@ -592,6 +592,7 @@
       "name": "@pkg/i18n",
       "version": "0.0.1",
       "dependencies": {
+        "html-parse-stringify": "^3.0.1",
         "i18next": "^26.3.1",
         "remix": "3.0.0-beta.5",
       },
