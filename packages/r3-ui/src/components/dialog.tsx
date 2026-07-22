@@ -146,7 +146,6 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 				mix={[
 					css({
 						position: "relative",
-						display: "flex",
 						flexDirection: "column",
 						gap: "1.5rem",
 						padding: "1.5rem",
@@ -161,6 +160,11 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
 						backgroundColor: "var(--ui-neutral-bg-tint)",
 						color: "var(--ui-neutral-fg-emphasis)",
+
+						/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
+						"&[open]": {
+							display: "flex",
+						},
 
 						"&::backdrop": {
 							backgroundColor: "rgb(0 0 0 / 0.5)",
