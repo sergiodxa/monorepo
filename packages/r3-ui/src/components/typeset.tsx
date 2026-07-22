@@ -320,7 +320,12 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						// a differently styled scrollbar of its own.
 						"& :where(table)": {
 							display: "block",
-							inlineSize: "max-content",
+							// Stretches to the full available width when the table's own
+							// content is narrower than that, but still falls back to its
+							// natural (possibly wider) content width otherwise, so the
+							// `maxInlineSize`/`overflow` pair below still turns it into its
+							// own scrolling region instead of overflowing the page.
+							inlineSize: "max(100%, max-content)",
 							maxInlineSize: "100%",
 							overflow: "auto",
 							borderCollapse: "collapse",
@@ -329,8 +334,16 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							scrollbarGutter: "stable",
 
 							[TABLE_FADE_DIRECTION_PROPERTY]: "right",
-							maskImage: TABLE_FADE_SETTLED_MASK,
-							"-webkit-mask-image": TABLE_FADE_SETTLED_MASK,
+							// `none` until the `@supports` block below proves this table is
+							// an active scroll container: `animation-timeline: scroll(self
+							// inline)` only ever takes over `mask-image` while its timeline
+							// is active, which requires genuine scrollable overflow. A table
+							// that already fits its container has no scrollable overflow, so
+							// the timeline stays inactive and this base value is what actually
+							// paints — settling it on the fade here (instead of `none`) faded
+							// both edges of every table, scrollable or not.
+							maskImage: "none",
+							"-webkit-mask-image": "none",
 
 							"&:dir(rtl)": {
 								[TABLE_FADE_DIRECTION_PROPERTY]: "left",
