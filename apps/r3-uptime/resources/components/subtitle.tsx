@@ -3,15 +3,20 @@
  * description slot, so this renders inside its `value`. Shared by the dashboard's
  * stat-card fragment views (usage, overview, counts).
  *
+ * Built on `@pkg/r3-ui`'s `Text` — its default size and `--ui-neutral-fg` color are
+ * already the catalog's "small, muted body copy" contract, so this only adds the
+ * block-level display and top margin a standalone caption line needs (`Text` itself
+ * renders an inline `<span>`, styled here to sit on its own line below the value it
+ * follows).
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { Text } from "@pkg/r3-ui";
 import { css } from "remix/ui";
-
-import { neutral } from "~/resources/theme";
 
 namespace Subtitle {
 	export interface Props {
@@ -19,16 +24,11 @@ namespace Subtitle {
 	}
 }
 
-const subtitle = css({
-	fontSize: "0.75rem",
-	fontWeight: 400,
-	lineHeight: "1rem",
-	marginTop: 4,
-	color: neutral[500],
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-});
-
 /** Renders {@link Subtitle.Props.children} as a stat card's muted description line. */
 export default function Subtitle(handle: Handle<Subtitle.Props>) {
-	return () => <div mix={[subtitle]}>{handle.props.children}</div>;
+	return () => (
+		<Text mix={css({ display: "block", marginBlockStart: "0.25rem" })}>
+			{handle.props.children}
+		</Text>
+	);
 }

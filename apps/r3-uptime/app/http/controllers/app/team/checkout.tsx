@@ -73,7 +73,7 @@ export default createAction(routes.app.team.checkout, {
 									}),
 								]}
 							>
-								Only the team owner can view and manage billing for this team.
+								{ctx.i18next.t("page.billing.ownerOnly")}
 							</p>
 						</div>
 					</AppShell>

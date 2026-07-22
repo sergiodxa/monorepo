@@ -18,6 +18,7 @@ import {
 	ClockIcon,
 	TriangleAlertIcon,
 } from "@pkg/lucide-remix";
+import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -45,7 +46,6 @@ import {
 	deriveTcpStatus,
 } from "~/app/services/status-page";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral, primary, status } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -111,17 +111,11 @@ const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof css>> = {
 	}),
 };
 
-const BANNER_LABEL: Record<ServiceStatus, string> = {
-	operational: "All Systems Operational",
-	degraded: "Partial System Outage",
-	down: "Major System Outage",
-	unknown: "All Systems Operational",
-};
-
 /**
  * Icon shown in the overall-status banner. `computeOverallStatus` never actually
- * returns `"unknown"`, but this mirrors {@link BANNER_MIX} and {@link BANNER_LABEL}
- * by aliasing it to the operational icon rather than surfacing a separate "unknown"
+ * returns `"unknown"`, but this mirrors {@link BANNER_MIX} and the handler's own
+ * `bannerLabel` lookup (built from `ctx.i18next.t("statusPage.banner.*")`) by
+ * aliasing it to the operational icon rather than surfacing a separate "unknown"
  * banner state.
  */
 const BANNER_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
@@ -136,13 +130,6 @@ const BADGE_TONE: Record<ServiceStatus, BadgeTone> = {
 	degraded: "degraded",
 	down: "down",
 	unknown: "neutral",
-};
-
-const BADGE_LABEL: Record<ServiceStatus, string> = {
-	operational: "Operational",
-	degraded: "Degraded",
-	down: "Down",
-	unknown: "Unknown",
 };
 
 /** Status icon shown left of each card's name, and (operational/degraded/down only) in the overall-status banner. */
@@ -203,10 +190,12 @@ function buildLastNDays(): string[] {
 }
 
 /**
- * Aggregate uptime across `days` as a formatted percentage, or `null` when
- * there's no data at all. `days` may cover more than {@link MINI_HEATMAP_DAYS}
- * (the caller passes a full year's worth) — this only sums entries whose `date`
- * falls in `dates`, so the percentage matches the same window the bars render.
+ * Aggregate uptime across `days` as a formatted percentage value (no unit or
+ * copy attached — pass it through {@link MiniHeatmap.Props.formatUptime} for the
+ * translated caption), or `null` when there's no data at all. `days` may cover
+ * more than {@link MINI_HEATMAP_DAYS} (the caller passes a full year's worth) —
+ * this only sums entries whose `date` falls in `dates`, so the percentage
+ * matches the same window the bars render.
  */
 function calculateUptimePercentage(
 	days: SelectMonitorDailyStats[],
@@ -225,12 +214,25 @@ function calculateUptimePercentage(
 	if (totalChecks === 0) return null;
 
 	let percentage = (successfulChecks / totalChecks) * 100;
-	return `${percentage.toFixed(percentage === 100 ? 0 : 2)}% uptime`;
+	return percentage.toFixed(percentage === 100 ? 0 : 2);
 }
 
 namespace MiniHeatmap {
 	export interface Props {
 		days: SelectMonitorDailyStats[];
+		/** Pre-translated captions and legend labels, shared across every card's heatmap. */
+		labels: {
+			daysAgo: string;
+			today: string;
+			legend: {
+				full: string;
+				partial: string;
+				down: string;
+				noData: string;
+			};
+		};
+		/** Formats a {@link calculateUptimePercentage} result into the translated "X% uptime" caption. */
+		formatUptime: (percentage: string) => string;
 	}
 }
 
@@ -241,12 +243,16 @@ namespace MiniHeatmap {
  * by that day's `monitor_daily_stats.status`. Days with no data (not yet reached, or
  * the monitor didn't exist yet) render as empty bars. The bars stretch to fill the
  * full row width (no per-bar max width), so the row never trails off into empty
- * space regardless of how many days actually have data. This caption/legend copy is
- * a new design for this component and has no equivalent copy to translate, so it's
- * hardcoded rather than pulled from `ctx.i18next`.
+ * space regardless of how many days actually have data. The caption/legend copy
+ * comes from `handle.props.labels`/`handle.props.formatUptime`, both built once by
+ * the handler from `ctx.i18next.t("statusPage.heatmap.*")` and shared across every
+ * card's heatmap. Bar/legend colors read the shared `--ui-success/warning/danger/
+ * neutral-*` design tokens instead of ad-hoc `oklch(...)` literals, so they follow
+ * the app's light/dark theming automatically.
  */
 function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 	return () => {
+		let { labels, formatUptime } = handle.props;
 		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));
 		let dates = buildLastNDays();
 		let uptime = calculateUptimePercentage(handle.props.days, dates);
@@ -258,59 +264,38 @@ function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 						mix={[
 							css({
 								fontSize: "0.75rem",
-								color: "oklch(0.55 0.01 145)",
+								color: "var(--ui-neutral-fg-muted)",
 								whiteSpace: "nowrap",
-								"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 							}),
 						]}
 					>
-						90 days ago
+						{labels.daysAgo}
 					</span>
-					<div
-						mix={[
-							css({
-								flex: 1,
-								height: 1,
-								background: "oklch(0.87 0.01 145)",
-								"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
-							}),
-						]}
-					/>
+					<div mix={[css({ flex: 1, height: 1, background: "var(--ui-neutral-border)" })]} />
 					{uptime !== null && (
 						<span
 							mix={[
 								css({
 									fontSize: "0.75rem",
-									color: "oklch(0.55 0.01 145)",
+									color: "var(--ui-neutral-fg-muted)",
 									whiteSpace: "nowrap",
-									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								}),
 							]}
 						>
-							{uptime}
+							{formatUptime(uptime)}
 						</span>
 					)}
-					<div
-						mix={[
-							css({
-								flex: 1,
-								height: 1,
-								background: "oklch(0.87 0.01 145)",
-								"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
-							}),
-						]}
-					/>
+					<div mix={[css({ flex: 1, height: 1, background: "var(--ui-neutral-border)" })]} />
 					<span
 						mix={[
 							css({
 								fontSize: "0.75rem",
-								color: "oklch(0.55 0.01 145)",
+								color: "var(--ui-neutral-fg-muted)",
 								whiteSpace: "nowrap",
-								"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 							}),
 						]}
 					>
-						Today
+						{labels.today}
 					</span>
 				</div>
 
@@ -328,17 +313,12 @@ function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 								mix={[
 									css({ flex: 1, minWidth: 2, borderRadius: 1 }),
 									day?.status === "up"
-										? css({ background: "oklch(0.7 0.2 155)" })
+										? css({ background: "var(--ui-success-bg-solid)" })
 										: day?.status === "degraded"
-											? css({ background: "oklch(0.72 0.18 85)" })
+											? css({ background: "var(--ui-warning-bg-solid)" })
 											: day?.status === "down"
-												? css({ background: "oklch(0.68 0.2 25)" })
-												: css({
-														background: "oklch(0.91 0.008 145)",
-														"@media (prefers-color-scheme: dark)": {
-															background: "oklch(0.42 0.008 145)",
-														},
-													}),
+												? css({ background: "var(--ui-danger-bg-solid)" })
+												: css({ background: "var(--ui-neutral-border)" }),
 								]}
 							/>
 						);
@@ -360,83 +340,76 @@ function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 						<div
 							mix={[
 								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "oklch(0.7 0.2 155)" }),
+								css({ background: "var(--ui-success-bg-solid)" }),
 							]}
 						/>
 						<span
 							mix={[
 								css({
 									fontSize: "0.75rem",
-									color: "oklch(0.55 0.01 145)",
+									color: "var(--ui-neutral-fg-muted)",
 									whiteSpace: "nowrap",
-									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								}),
 							]}
 						>
-							100%
+							{labels.legend.full}
 						</span>
 					</div>
 					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
 						<div
 							mix={[
 								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "oklch(0.72 0.18 85)" }),
+								css({ background: "var(--ui-warning-bg-solid)" }),
 							]}
 						/>
 						<span
 							mix={[
 								css({
 									fontSize: "0.75rem",
-									color: "oklch(0.55 0.01 145)",
+									color: "var(--ui-neutral-fg-muted)",
 									whiteSpace: "nowrap",
-									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								}),
 							]}
 						>
-							Partial
+							{labels.legend.partial}
 						</span>
 					</div>
 					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
 						<div
 							mix={[
 								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "oklch(0.68 0.2 25)" }),
+								css({ background: "var(--ui-danger-bg-solid)" }),
 							]}
 						/>
 						<span
 							mix={[
 								css({
 									fontSize: "0.75rem",
-									color: "oklch(0.55 0.01 145)",
+									color: "var(--ui-neutral-fg-muted)",
 									whiteSpace: "nowrap",
-									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								}),
 							]}
 						>
-							Down
+							{labels.legend.down}
 						</span>
 					</div>
 					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
 						<div
 							mix={[
 								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({
-									background: "oklch(0.91 0.008 145)",
-									"@media (prefers-color-scheme: dark)": { background: "oklch(0.42 0.008 145)" },
-								}),
+								css({ background: "var(--ui-neutral-border)" }),
 							]}
 						/>
 						<span
 							mix={[
 								css({
 									fontSize: "0.75rem",
-									color: "oklch(0.55 0.01 145)",
+									color: "var(--ui-neutral-fg-muted)",
 									whiteSpace: "nowrap",
-									"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 								}),
 							]}
 						>
-							No data
+							{labels.legend.noData}
 						</span>
 					</div>
 				</div>
@@ -538,6 +511,31 @@ export default createAction(
 		let isEmpty = heatmapServices.length === 0 && cronServices.length === 0;
 		let BannerIcon = BANNER_ICON[overallStatus];
 
+		let bannerLabel: Record<ServiceStatus, string> = {
+			operational: ctx.i18next.t("statusPage.banner.operational"),
+			degraded: ctx.i18next.t("statusPage.banner.degraded"),
+			down: ctx.i18next.t("statusPage.banner.down"),
+			unknown: ctx.i18next.t("statusPage.banner.operational"),
+		};
+		let statusLabel: Record<ServiceStatus, string> = {
+			operational: ctx.i18next.t("statusPage.status.operational"),
+			degraded: ctx.i18next.t("statusPage.status.degraded"),
+			down: ctx.i18next.t("statusPage.status.down"),
+			unknown: ctx.i18next.t("statusPage.status.unknown"),
+		};
+		let heatmapLabels: MiniHeatmap.Props["labels"] = {
+			daysAgo: ctx.i18next.t("statusPage.heatmap.daysAgo"),
+			today: ctx.i18next.t("statusPage.heatmap.today"),
+			legend: {
+				full: ctx.i18next.t("statusPage.heatmap.legend.full"),
+				partial: ctx.i18next.t("statusPage.heatmap.legend.partial"),
+				down: ctx.i18next.t("statusPage.heatmap.legend.down"),
+				noData: ctx.i18next.t("statusPage.heatmap.legend.noData"),
+			},
+		};
+		let formatUptime = (percentage: string) =>
+			ctx.i18next.t("statusPage.heatmap.tooltip.uptime", { percentage });
+
 		return ctx.render(
 			<DocumentLayout title={page.title}>
 				<main
@@ -608,15 +606,13 @@ export default createAction(
 							]}
 						>
 							<BannerIcon size={22} />
-							<span>{BANNER_LABEL[overallStatus]}</span>
+							<span>{bannerLabel[overallStatus]}</span>
 						</div>
 					)}
 
 					{isEmpty ? (
 						<Empty>
-							<Empty.Description>
-								No services are configured for this status page.
-							</Empty.Description>
+							<Empty.Description>{ctx.i18next.t("statusPage.empty.description")}</Empty.Description>
 						</Empty>
 					) : (
 						<>
@@ -643,9 +639,13 @@ export default createAction(
 									<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 										<CardStatusIcon status={service.status} />
 										<strong>{service.name}</strong>
-										<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
+										<Badge tone={BADGE_TONE[service.status]}>{statusLabel[service.status]}</Badge>
 									</div>
-									<MiniHeatmap days={service.days} />
+									<MiniHeatmap
+										days={service.days}
+										labels={heatmapLabels}
+										formatUptime={formatUptime}
+									/>
 								</div>
 							))}
 
@@ -678,7 +678,7 @@ export default createAction(
 												<CardStatusIcon status={service.status} />
 												<strong>{service.name}</strong>
 												<Badge tone={BADGE_TONE[service.status]}>
-													{BADGE_LABEL[service.status]}
+													{statusLabel[service.status]}
 												</Badge>
 											</div>
 											<p
@@ -735,7 +735,8 @@ export default createAction(
 							}),
 						]}
 					>
-						Last updated {new Date().toLocaleString()} ·{" "}
+						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: new Date().toLocaleString() })}{" "}
+						·{" "}
 						<a
 							href={routes.home.href()}
 							mix={[
@@ -749,7 +750,7 @@ export default createAction(
 								}),
 							]}
 						>
-							Powered by Uptime
+							{ctx.i18next.t("statusPage.footer.poweredBy")}
 						</a>
 					</p>
 				</main>

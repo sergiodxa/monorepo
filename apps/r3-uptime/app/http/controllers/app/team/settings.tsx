@@ -4,7 +4,7 @@
  *
  * Renders the team settings page as a series of card-boxed sections (General, Members,
  * Domains, Billing, Danger Zone); every destructive action (remove member, revoke
- * invite, remove domain) is gated behind a `<dialog>` confirmation. Billing and Danger
+ * invite, remove domain) is gated behind an `AlertDialog` confirmation. Billing and Danger
  * Zone are owner-only — an admin who isn't the owner never sees them. The danger-zone
  * delete button relies on the native `pattern="DELETE"` constraint (no client JS) to
  * stay disabled-in-effect until the confirmation input matches exactly. The Pending
@@ -27,6 +27,7 @@ import {
 	UserMinusIcon,
 	UserPlusIcon,
 } from "@pkg/lucide-remix";
+import { AlertDialog, Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -43,7 +44,6 @@ import requireUser from "~/app/http/middleware/require-user";
 import { resolveSubjects } from "~/app/services/subjects";
 import Avatar from "~/resources/components/avatar";
 import Button from "~/resources/components/button";
-import Empty from "~/resources/components/empty";
 import Field from "~/resources/components/field";
 import LinkButton from "~/resources/components/link-button";
 import RowMenu, { menuItem, menuItemDanger, menuSeparator } from "~/resources/components/row-menu";
@@ -426,32 +426,17 @@ export default createAction(routes.app.team.settings, {
 									</p>
 								</div>
 
-								<div mix={[css({ overflowX: "auto" })]}>
-									<table
-										mix={[
-											css({
-												width: "100%",
-												borderCollapse: "collapse",
-												fontSize: "0.875rem",
-												"& th, & td": {
-													textAlign: "left",
-													padding: "12px 16px",
-													borderBottom: `1px solid ${neutral[200]}`,
-												},
-												"& tr:last-child td": { borderBottom: "none" },
-												"@media (prefers-color-scheme: dark)": {
-													"& th, & td": { borderColor: neutral[800] },
-												},
-											}),
-										]}
-									>
-										<thead>
-											<tr>
-												<th>{ctx.i18next.t("page.settings.members.table.columns.name")}</th>
-												<th mix={[css({ textAlign: "right" })]}>
+								<Table.Container>
+									<Table aria-label={ctx.i18next.t("page.settings.members.table.label")}>
+										<Table.Header>
+											<Table.Row>
+												<Table.Column>
+													{ctx.i18next.t("page.settings.members.table.columns.name")}
+												</Table.Column>
+												<Table.Column align="end">
 													{ctx.i18next.t("page.settings.members.table.columns.role")}
-												</th>
-												<th mix={[css({ textAlign: "center" })]}>
+												</Table.Column>
+												<Table.Column align="center">
 													<span
 														mix={[
 															css({
@@ -469,19 +454,21 @@ export default createAction(routes.app.team.settings, {
 													>
 														{ctx.i18next.t("page.settings.members.table.columns.actions")}
 													</span>
-												</th>
-											</tr>
-										</thead>
-										<tbody>
+												</Table.Column>
+											</Table.Row>
+										</Table.Header>
+										<Table.Body>
 											{members.map((member) => {
 												let subject = subjectsById.get(member.subject_id);
 												let memberIsOwner = member.subject_id === team.owner_id;
 												let nextRole = member.role === "admin" ? "member" : "admin";
 												let displayName = subject?.displayName ?? member.subject_id;
+												let removeDialogId = `remove-member-${member.id}`;
+												let removeDialogTitleId = `${removeDialogId}-title`;
 
 												return (
-													<tr key={member.id}>
-														<td>
+													<Table.Row key={member.id}>
+														<Table.Cell>
 															<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 																<Avatar
 																	src={subject?.avatar || null}
@@ -512,13 +499,13 @@ export default createAction(routes.app.team.settings, {
 																	)}
 																</div>
 															</div>
-														</td>
-														<td mix={[css({ textAlign: "right" })]}>
+														</Table.Cell>
+														<Table.Cell mix={[css({ textAlign: "right" })]}>
 															{ctx.i18next.t(
 																`page.settings.members.table.role.${memberIsOwner ? "owner" : member.role}`,
 															)}
-														</td>
-														<td mix={[css({ textAlign: "center" })]}>
+														</Table.Cell>
+														<Table.Cell mix={[css({ textAlign: "center" })]}>
 															{!memberIsOwner && (
 																<>
 																	<RowMenu
@@ -551,7 +538,7 @@ export default createAction(routes.app.team.settings, {
 
 																		<button
 																			type="button"
-																			commandfor={`remove-member-${member.id}`}
+																			commandfor={removeDialogId}
 																			command="show-modal"
 																			mix={[menuItem, menuItemDanger]}
 																		>
@@ -579,39 +566,18 @@ export default createAction(routes.app.team.settings, {
 																		)}
 																	</RowMenu>
 
-																	<dialog
-																		id={`remove-member-${member.id}`}
-																		mix={[
-																			css({
-																				width: "100%",
-																				maxWidth: "min(440px, calc(100vw - 32px))",
-																				padding: 24,
-																				boxSizing: "border-box",
-																				borderRadius: 8,
-																				border: `1px solid ${neutral[300]}`,
-																				"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																				"@media (prefers-color-scheme: dark)": {
-																					borderColor: neutral[700],
-																					background: neutral[900],
-																					color: neutral[50],
-																				},
-																			}),
-																		]}
+																	<AlertDialog
+																		id={removeDialogId}
+																		aria-labelledby={removeDialogTitleId}
 																	>
-																		<h3
-																			mix={[
-																				css({
-																					margin: "0 0 16px",
-																					fontSize: "1rem",
-																					fontWeight: 600,
-																				}),
-																			]}
-																		>
-																			{ctx.i18next.t(
-																				"page.settings.members.table.confirmation.removeMember",
-																				{ name: displayName },
-																			)}
-																		</h3>
+																		<AlertDialog.Header>
+																			<AlertDialog.Title id={removeDialogTitleId}>
+																				{ctx.i18next.t(
+																					"page.settings.members.table.confirmation.removeMember",
+																					{ name: displayName },
+																				)}
+																			</AlertDialog.Title>
+																		</AlertDialog.Header>
 																		<form
 																			method="post"
 																			action={routes.teamAdminActions.member.remove.href({
@@ -629,40 +595,30 @@ export default createAction(routes.app.team.settings, {
 																				name="email"
 																				value={subject?.emailAddress ?? ""}
 																			/>
-																			<div
-																				mix={[
-																					css({
-																						display: "flex",
-																						gap: 8,
-																						justifyContent: "flex-end",
-																					}),
-																				]}
-																			>
-																				<Button
-																					type="button"
-																					variant="outline"
-																					commandfor={`remove-member-${member.id}`}
-																					command="close"
-																				>
+																			<AlertDialog.Footer>
+																				<AlertDialog.Cancel commandfor={removeDialogId}>
 																					{ctx.i18next.t("page.settings.form.actions.cancel")}
-																				</Button>
-																				<Button type="submit" color="danger">
+																				</AlertDialog.Cancel>
+																				<AlertDialog.Action
+																					type="submit"
+																					commandfor={removeDialogId}
+																				>
 																					{ctx.i18next.t(
 																						"page.settings.members.table.actions.remove",
 																					)}
-																				</Button>
-																			</div>
+																				</AlertDialog.Action>
+																			</AlertDialog.Footer>
 																		</form>
-																	</dialog>
+																	</AlertDialog>
 																</>
 															)}
-														</td>
-													</tr>
+														</Table.Cell>
+													</Table.Row>
 												);
 											})}
-										</tbody>
-									</table>
-								</div>
+										</Table.Body>
+									</Table>
+								</Table.Container>
 							</div>
 
 							<div
@@ -710,34 +666,17 @@ export default createAction(routes.app.team.settings, {
 										</Empty>
 									</div>
 								) : (
-									<div mix={[css({ overflowX: "auto" })]}>
-										<table
-											mix={[
-												css({
-													width: "100%",
-													borderCollapse: "collapse",
-													fontSize: "0.875rem",
-													"& th, & td": {
-														textAlign: "left",
-														padding: "12px 16px",
-														borderBottom: `1px solid ${neutral[200]}`,
-													},
-													"& tr:last-child td": { borderBottom: "none" },
-													"@media (prefers-color-scheme: dark)": {
-														"& th, & td": { borderColor: neutral[800] },
-													},
-												}),
-											]}
-										>
-											<thead>
-												<tr>
-													<th>
+									<Table.Container>
+										<Table aria-label={ctx.i18next.t("page.settings.members.invitedTable.label")}>
+											<Table.Header>
+												<Table.Row>
+													<Table.Column>
 														{ctx.i18next.t("page.settings.members.invitedTable.columns.email")}
-													</th>
-													<th mix={[css({ textAlign: "right" })]}>
+													</Table.Column>
+													<Table.Column align="end">
 														{ctx.i18next.t("page.settings.members.invitedTable.columns.expires")}
-													</th>
-													<th mix={[css({ textAlign: "center" })]}>
+													</Table.Column>
+													<Table.Column align="center">
 														<span
 															mix={[
 																css({
@@ -755,20 +694,22 @@ export default createAction(routes.app.team.settings, {
 														>
 															{ctx.i18next.t("page.settings.members.invitedTable.columns.actions")}
 														</span>
-													</th>
-												</tr>
-											</thead>
-											<tbody>
+													</Table.Column>
+												</Table.Row>
+											</Table.Header>
+											<Table.Body>
 												{pendingInvites.map((invite) => {
 													let expiration = formatRelativeTime(
 														getInviteExpirationDate(invite.created_at),
 														ctx.locale,
 													);
+													let revokeDialogId = `revoke-invite-${invite.id}`;
+													let revokeDialogTitleId = `${revokeDialogId}-title`;
 
 													return (
-														<tr key={invite.id}>
-															<td>{invite.email}</td>
-															<td mix={[css({ textAlign: "right" })]}>
+														<Table.Row key={invite.id}>
+															<Table.Cell>{invite.email}</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "right" })]}>
 																{expiration.isExpired ? (
 																	<span mix={[css({ color: danger[600] })]}>
 																		{ctx.i18next.t(
@@ -778,8 +719,8 @@ export default createAction(routes.app.team.settings, {
 																) : (
 																	<span>{expiration.text}</span>
 																)}
-															</td>
-															<td mix={[css({ textAlign: "center" })]}>
+															</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "center" })]}>
 																<RowMenu
 																	id={`invite-menu-${invite.id}`}
 																	label={ctx.i18next.t(
@@ -788,7 +729,7 @@ export default createAction(routes.app.team.settings, {
 																>
 																	<button
 																		type="button"
-																		commandfor={`revoke-invite-${invite.id}`}
+																		commandfor={revokeDialogId}
 																		command="show-modal"
 																		mix={[menuItem, menuItemDanger]}
 																	>
@@ -801,39 +742,18 @@ export default createAction(routes.app.team.settings, {
 																	</button>
 																</RowMenu>
 
-																<dialog
-																	id={`revoke-invite-${invite.id}`}
-																	mix={[
-																		css({
-																			width: "100%",
-																			maxWidth: "min(440px, calc(100vw - 32px))",
-																			padding: 24,
-																			boxSizing: "border-box",
-																			borderRadius: 8,
-																			border: `1px solid ${neutral[300]}`,
-																			"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																			"@media (prefers-color-scheme: dark)": {
-																				borderColor: neutral[700],
-																				background: neutral[900],
-																				color: neutral[50],
-																			},
-																		}),
-																	]}
+																<AlertDialog
+																	id={revokeDialogId}
+																	aria-labelledby={revokeDialogTitleId}
 																>
-																	<h3
-																		mix={[
-																			css({
-																				margin: "0 0 16px",
-																				fontSize: "1rem",
-																				fontWeight: 600,
-																			}),
-																		]}
-																	>
-																		{ctx.i18next.t(
-																			"page.settings.members.invitedTable.confirmation.revokeInvite",
-																			{ email: invite.email },
-																		)}
-																	</h3>
+																	<AlertDialog.Header>
+																		<AlertDialog.Title id={revokeDialogTitleId}>
+																			{ctx.i18next.t(
+																				"page.settings.members.invitedTable.confirmation.revokeInvite",
+																				{ email: invite.email },
+																			)}
+																		</AlertDialog.Title>
+																	</AlertDialog.Header>
 																	<form
 																		method="post"
 																		action={routes.teamAdminActions.invite.revoke.href({
@@ -842,38 +762,25 @@ export default createAction(routes.app.team.settings, {
 																	>
 																		<input type="hidden" name="_method" value="DELETE" />
 																		<input type="hidden" name="invite_id" value={invite.id} />
-																		<div
-																			mix={[
-																				css({
-																					display: "flex",
-																					gap: 8,
-																					justifyContent: "flex-end",
-																				}),
-																			]}
-																		>
-																			<Button
-																				type="button"
-																				variant="outline"
-																				commandfor={`revoke-invite-${invite.id}`}
-																				command="close"
-																			>
+																		<AlertDialog.Footer>
+																			<AlertDialog.Cancel commandfor={revokeDialogId}>
 																				{ctx.i18next.t("page.settings.form.actions.cancel")}
-																			</Button>
-																			<Button type="submit" color="danger">
+																			</AlertDialog.Cancel>
+																			<AlertDialog.Action type="submit" commandfor={revokeDialogId}>
 																				{ctx.i18next.t(
 																					"page.settings.members.invitedTable.actions.revoke",
 																				)}
-																			</Button>
-																		</div>
+																			</AlertDialog.Action>
+																		</AlertDialog.Footer>
 																	</form>
-																</dialog>
-															</td>
-														</tr>
+																</AlertDialog>
+															</Table.Cell>
+														</Table.Row>
 													);
 												})}
-											</tbody>
-										</table>
-									</div>
+											</Table.Body>
+										</Table>
+									</Table.Container>
 								)}
 							</div>
 						</section>
@@ -1022,11 +929,9 @@ export default createAction(routes.app.team.settings, {
 										</Empty>
 									</div>
 								) : (
-									<div
+									<Table.Container
 										mix={[
 											css({
-												position: "relative",
-												overflowX: "auto",
 												"&::after": {
 													content: '""',
 													position: "absolute",
@@ -1043,30 +948,13 @@ export default createAction(routes.app.team.settings, {
 											}),
 										]}
 									>
-										<table
-											mix={[
-												css({
-													width: "100%",
-													borderCollapse: "collapse",
-													fontSize: "0.875rem",
-													"& th, & td": {
-														textAlign: "left",
-														padding: "12px 16px",
-														borderBottom: `1px solid ${neutral[200]}`,
-													},
-													"& tr:last-child td": { borderBottom: "none" },
-													"@media (prefers-color-scheme: dark)": {
-														"& th, & td": { borderColor: neutral[800] },
-													},
-												}),
-											]}
-										>
-											<thead>
-												<tr>
-													<th mix={[css({ whiteSpace: "nowrap", minWidth: 200 })]}>
+										<Table aria-label={ctx.i18next.t("page.settings.domains.table.label")}>
+											<Table.Header>
+												<Table.Row>
+													<Table.Column mix={[css({ whiteSpace: "nowrap", minWidth: 200 })]}>
 														{ctx.i18next.t("page.settings.domains.table.columns.hostname")}
-													</th>
-													<th mix={[css({ textAlign: "right" })]}>
+													</Table.Column>
+													<Table.Column align="end">
 														<span
 															mix={
 																hasPendingDomainVerification
@@ -1088,11 +976,11 @@ export default createAction(routes.app.team.settings, {
 														>
 															{ctx.i18next.t("page.settings.domains.table.columns.id")}
 														</span>
-													</th>
-													<th mix={[css({ textAlign: "right" })]}>
+													</Table.Column>
+													<Table.Column align="end">
 														{ctx.i18next.t("page.settings.domains.table.columns.verifiedAt")}
-													</th>
-													<th mix={[css({ textAlign: "center" })]}>
+													</Table.Column>
+													<Table.Column align="center">
 														<span
 															mix={[
 																css({
@@ -1110,134 +998,115 @@ export default createAction(routes.app.team.settings, {
 														>
 															{ctx.i18next.t("page.settings.domains.table.columns.actions")}
 														</span>
-													</th>
-												</tr>
-											</thead>
-											<tbody>
-												{domains.map((domain) => (
-													<tr key={domain.id}>
-														<td mix={[css({ whiteSpace: "nowrap" })]}>{domain.hostname}</td>
-														<td
-															mix={[
-																css({
-																	textAlign: "right",
-																	fontFamily: "inherit",
-																	fontSize: "0.75rem",
-																	maxWidth: 140,
-																	wordBreak: "break-all",
-																}),
-															]}
-														>
-															{domain.verified_at === null ? `ping_${domain.id}` : null}
-														</td>
-														<td mix={[css({ textAlign: "right" })]}>
-															{domain.verified_at !== null
-																? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
-																: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
-														</td>
-														<td mix={[css({ textAlign: "center" })]}>
-															<RowMenu
-																id={`domain-menu-${domain.id}`}
-																label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
-															>
-																{domain.verified_at === null && (
-																	<form
-																		method="post"
-																		action={routes.teamAdminActions.domain.retryVerification.href({
-																			team: team.slug,
-																		})}
-																	>
-																		<input type="hidden" name="domain_id" value={domain.id} />
-																		<button type="submit" mix={[menuItem]}>
-																			<RefreshCcwIcon size={16} strokeWidth={1.5} />
-																			<span>
-																				{ctx.i18next.t(
-																					"page.settings.domains.table.actions.retryVerification",
-																				)}
-																			</span>
-																		</button>
-																	</form>
-																)}
+													</Table.Column>
+												</Table.Row>
+											</Table.Header>
+											<Table.Body>
+												{domains.map((domain) => {
+													let removeDialogId = `remove-domain-${domain.id}`;
+													let removeDialogTitleId = `${removeDialogId}-title`;
 
-																<button
-																	type="button"
-																	commandfor={`remove-domain-${domain.id}`}
-																	command="show-modal"
-																	mix={[menuItem, menuItemDanger]}
-																>
-																	<BadgeMinusIcon size={16} strokeWidth={1.5} />
-																	<span>
-																		{ctx.i18next.t("page.settings.domains.table.actions.remove")}
-																	</span>
-																</button>
-															</RowMenu>
-
-															<dialog
-																id={`remove-domain-${domain.id}`}
+													return (
+														<Table.Row key={domain.id}>
+															<Table.Cell mix={[css({ whiteSpace: "nowrap" })]}>
+																{domain.hostname}
+															</Table.Cell>
+															<Table.Cell
 																mix={[
 																	css({
-																		width: "100%",
-																		maxWidth: "min(440px, calc(100vw - 32px))",
-																		padding: 24,
-																		boxSizing: "border-box",
-																		borderRadius: 8,
-																		border: `1px solid ${neutral[300]}`,
-																		"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																		"@media (prefers-color-scheme: dark)": {
-																			borderColor: neutral[700],
-																			background: neutral[900],
-																			color: neutral[50],
-																		},
+																		textAlign: "right",
+																		fontFamily: "inherit",
+																		fontSize: "0.75rem",
+																		maxWidth: 140,
+																		wordBreak: "break-all",
 																	}),
 																]}
 															>
-																<h3
-																	mix={[
-																		css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 }),
-																	]}
+																{domain.verified_at === null ? `ping_${domain.id}` : null}
+															</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "right" })]}>
+																{domain.verified_at !== null
+																	? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
+																	: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
+															</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "center" })]}>
+																<RowMenu
+																	id={`domain-menu-${domain.id}`}
+																	label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
 																>
-																	{ctx.i18next.t(
-																		"page.settings.domains.table.confirmation.removeDomain",
-																		{ hostname: domain.hostname },
-																	)}
-																</h3>
-																<form
-																	method="post"
-																	action={routes.teamAdminActions.domain.remove.href({
-																		team: team.slug,
-																	})}
-																>
-																	<input type="hidden" name="_method" value="DELETE" />
-																	<input type="hidden" name="domain_id" value={domain.id} />
-																	<div
-																		mix={[
-																			css({
-																				display: "flex",
-																				gap: 8,
-																				justifyContent: "flex-end",
-																			}),
-																		]}
-																	>
-																		<Button
-																			type="button"
-																			variant="outline"
-																			commandfor={`remove-domain-${domain.id}`}
-																			command="close"
+																	{domain.verified_at === null && (
+																		<form
+																			method="post"
+																			action={routes.teamAdminActions.domain.retryVerification.href(
+																				{
+																					team: team.slug,
+																				},
+																			)}
 																		>
-																			{ctx.i18next.t("page.settings.form.actions.cancel")}
-																		</Button>
-																		<Button type="submit" color="danger">
+																			<input type="hidden" name="domain_id" value={domain.id} />
+																			<button type="submit" mix={[menuItem]}>
+																				<RefreshCcwIcon size={16} strokeWidth={1.5} />
+																				<span>
+																					{ctx.i18next.t(
+																						"page.settings.domains.table.actions.retryVerification",
+																					)}
+																				</span>
+																			</button>
+																		</form>
+																	)}
+
+																	<button
+																		type="button"
+																		commandfor={removeDialogId}
+																		command="show-modal"
+																		mix={[menuItem, menuItemDanger]}
+																	>
+																		<BadgeMinusIcon size={16} strokeWidth={1.5} />
+																		<span>
 																			{ctx.i18next.t("page.settings.domains.table.actions.remove")}
-																		</Button>
-																	</div>
-																</form>
-															</dialog>
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
+																		</span>
+																	</button>
+																</RowMenu>
+
+																<AlertDialog
+																	id={removeDialogId}
+																	aria-labelledby={removeDialogTitleId}
+																>
+																	<AlertDialog.Header>
+																		<AlertDialog.Title id={removeDialogTitleId}>
+																			{ctx.i18next.t(
+																				"page.settings.domains.table.confirmation.removeDomain",
+																				{ hostname: domain.hostname },
+																			)}
+																		</AlertDialog.Title>
+																	</AlertDialog.Header>
+																	<form
+																		method="post"
+																		action={routes.teamAdminActions.domain.remove.href({
+																			team: team.slug,
+																		})}
+																	>
+																		<input type="hidden" name="_method" value="DELETE" />
+																		<input type="hidden" name="domain_id" value={domain.id} />
+																		<AlertDialog.Footer>
+																			<AlertDialog.Cancel commandfor={removeDialogId}>
+																				{ctx.i18next.t("page.settings.form.actions.cancel")}
+																			</AlertDialog.Cancel>
+																			<AlertDialog.Action type="submit" commandfor={removeDialogId}>
+																				{ctx.i18next.t(
+																					"page.settings.domains.table.actions.remove",
+																				)}
+																			</AlertDialog.Action>
+																		</AlertDialog.Footer>
+																	</form>
+																</AlertDialog>
+															</Table.Cell>
+														</Table.Row>
+													);
+												})}
+											</Table.Body>
+										</Table>
+									</Table.Container>
 								)}
 							</div>
 

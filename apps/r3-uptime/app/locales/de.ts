@@ -21,6 +21,8 @@ export default {
 			nav: {
 				pricing: "Preise",
 				features: "Funktionen",
+				compare: "Vergleichen",
+				docs: "Docs",
 
 				cta: {
 					in: "Dashboard öffnen",
@@ -443,6 +445,7 @@ export default {
 						domains: "Domains",
 						members: "Mitglieder",
 						team: "Team",
+						docs: "Dokumentation",
 						apiKeys: "API-Schlüssel",
 					},
 				},
@@ -495,8 +498,19 @@ export default {
 	},
 
 	statusPage: {
+		banner: {
+			operational: "Alle Systeme funktionieren",
+			degraded: "Teilweiser Systemausfall",
+			down: "Größerer Systemausfall",
+		},
+		status: {
+			operational: "Betriebsbereit",
+			degraded: "Beeinträchtigt",
+			down: "Ausgefallen",
+			unknown: "Unbekannt",
+		},
 		heatmap: {
-			daysAgo: "Vor 30 Tagen",
+			daysAgo: "Vor 90 Tagen",
 			today: "Heute",
 			legend: {
 				full: "100%",
@@ -508,6 +522,19 @@ export default {
 				uptime: "{{percentage}}% Uptime",
 				noData: "Keine Daten",
 			},
+		},
+		cronJobs: {
+			title: "Geplante Jobs",
+			lastPing: "Letzter Ping",
+			never: "Nie",
+			schedule: "Zeitplan",
+		},
+		empty: {
+			description: "Für diese Statusseite sind keine Dienste konfiguriert.",
+		},
+		footer: {
+			lastUpdated: "Zuletzt aktualisiert {{date}}",
+			poweredBy: "Bereitgestellt von Uptime",
 		},
 		error: {
 			title: "Statusseite nicht gefunden",
@@ -545,9 +572,15 @@ export default {
 		},
 
 		item: {
+			type: "Typ",
+			status: "Status",
 			caseSensitive: "Groß-/Kleinschreibung beachten",
+			enabled: "Aktiviert",
 			disabled: "Deaktiviert",
+			yes: "Ja",
+			no: "Nein",
 			delete: "Löschen",
+			deleteConfirmTitle: "Diese Inhaltsprüfung löschen?",
 		},
 
 		types: {
@@ -565,6 +598,11 @@ export default {
 			uri: "URI:",
 			tryAgain:
 				"Bitte versuchen Sie es erneut oder kontaktieren Sie den Support, wenn das Problem weiterhin besteht.",
+
+			signInFailedTitle: "Anmeldung fehlgeschlagen",
+			signInFailedGeneric:
+				"Der Anmeldeversuch konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+			missingIdToken: "Der Identitätsanbieter hat kein ID-Token zurückgegeben.",
 		},
 	},
 
@@ -677,6 +715,10 @@ export default {
 				mixed: "Gemischt",
 				noData: "Keine Daten",
 			},
+		},
+		copyButton: {
+			label: "Kopieren",
+			copied: "Kopiert!",
 		},
 	},
 
@@ -1084,6 +1126,7 @@ export default {
 					label: "Monatliche Ping-Nutzung",
 					value: "{{consumed}}<small> verwendet</small>",
 					description: "Von {{estimated}} geschätzt",
+					unavailable: "Schätzung nicht verfügbar",
 				},
 
 				uptime: {
@@ -1115,6 +1158,33 @@ export default {
 					},
 					value: { noData: "N/V" },
 					description: "In den letzten 24 Stunden",
+				},
+
+				sslMonitors: {
+					label: "SSL-Monitore",
+					description: "{{valid}} gültig, {{expiring}} bald ablaufend, {{expired}} abgelaufen",
+				},
+			},
+
+			loading: "Wird geladen…",
+
+			panel: {
+				tabsLabel: "Monitortyp",
+				tabPanelLabel: "{{tab}}-Monitore",
+			},
+
+			error: {
+				card: {
+					label: "Fehler",
+					value: "-",
+					description: "Daten konnten nicht geladen werden",
+				},
+				table: {
+					message: "Monitore konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+				},
+				analytics: {
+					message:
+						"Analysedaten sind vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
 				},
 			},
 
@@ -1330,6 +1400,16 @@ export default {
 				cancel: "Abbrechen",
 				cta: "Änderungen speichern",
 			},
+
+			ssl: {
+				title: "SSL-Zertifikatsüberwachung",
+				cta: "SSL-Einstellungen speichern",
+			},
+
+			dangerZone: {
+				title: "Gefahrenzone",
+				delete: "Monitor löschen",
+			},
 		},
 
 		monitor: {
@@ -1338,6 +1418,7 @@ export default {
 
 				action: {
 					play: "Monitor ausführen",
+					running: "Wird ausgeführt…",
 					edit: "Monitor bearbeiten",
 					refresh: "Aktualisieren",
 				},
@@ -1357,6 +1438,7 @@ export default {
 					label: "Monatliche Ping-Nutzung",
 					value: "{{consumed}}<small> verwendet</small>",
 					description: "Von {{estimated}} geschätzt",
+					estimateUnavailable: "Schätzung nicht verfügbar",
 				},
 
 				uptime: {
@@ -1402,6 +1484,7 @@ export default {
 			header: {
 				title: "Abrechnung",
 			},
+			ownerOnly: "Nur der Teambesitzer kann die Abrechnung für dieses Team einsehen und verwalten.",
 		},
 
 		members: {
@@ -1523,8 +1606,11 @@ export default {
 				notFound: "Diese Einladung existiert nicht.",
 				gone: "Diese Einladung wurde bereits angenommen.",
 				forbidden: "Diese Einladung war nicht für Sie bestimmt.",
+				pageTitle: "Einladung nicht verfügbar",
 				badRequest:
 					"Sie haben anscheinend keine E-Mail-Adresse. Versuchen Sie, sich erneut anzumelden.",
+				wrongEmail:
+					"Diese Einladung wurde an {{email}} gesendet. Melde dich mit dieser E-Mail-Adresse an, um sie anzunehmen.",
 			},
 		},
 
@@ -1652,6 +1738,8 @@ export default {
 				cta: "Benachrichtigung erstellen",
 			},
 
+			limitReached: "Dieses Team hat das Limit von {{limit}} Benachrichtigungen erreicht.",
+
 			form: {
 				fields: {
 					name: {
@@ -1660,9 +1748,14 @@ export default {
 						description: "Ein Name zur Identifizierung der Benachrichtigung.",
 					},
 
-					strategy: {
-						label: "Strategie",
-						description: "Die Strategie für die Benachrichtigung.",
+					scope: {
+						label: "Umfang",
+						teamWide: "Teamweit (alle Monitore)",
+					},
+
+					channel: {
+						label: "Kanal",
+						description: "Der Kanal für die Benachrichtigung.",
 						options: {
 							webhook: "Webhook",
 							email: "E-Mail",
@@ -1674,26 +1767,28 @@ export default {
 					config: {
 						webhook: {
 							url: {
-								label: "Webhook-URL",
+								label: "URL",
 								placeholder: "https://beispiel.de/webhook",
 								description: "Die URL, an die die Benachrichtigungs-Payload gesendet wird.",
 							},
 							secret: {
-								label: "Geheimschlüssel",
+								label: "Signatur-Geheimschlüssel (optional)",
 								placeholder: "optionaler-geheimschlüssel",
 								description:
 									"Ein optionaler Geheimschlüssel für die Request-Header. Ein `Webhook-Signature`-Header wird mit einer HMAC SHA256-Signatur der Payload unter Verwendung dieses Geheimnisses hinzugefügt.",
 							},
+							signatureNote:
+								"Wenn festgelegt, tragen Anfragen einen <code>Webhook-Signature: sha256=<hex></code>-Header — eine HMAC-SHA256-Signatur des rohen JSON-Bodys mit diesem Geheimnis.",
 						},
 						email: {
 							to: {
-								label: "E-Mail-Adresse",
+								label: "Empfänger",
 								placeholder: "cto@beispiel.de",
 								description: "Die E-Mail-Adresse, an die die Benachrichtigung gesendet wird.",
 							},
 
 							subjectPrefix: {
-								label: "Betreff-Präfix",
+								label: "Betreff-Präfix (optional)",
 								placeholder: "[Uptime-Benachrichtigung]",
 								description:
 									"Ein optionales Präfix für den E-Mail-Betreff. Nützlich zum Filtern von Benachrichtigungen in Ihrem Posteingang.",
@@ -1701,13 +1796,13 @@ export default {
 						},
 						slack: {
 							webhookUrl: {
-								label: "Slack Webhook-URL",
+								label: "Webhook-URL",
 								placeholder: "https://hooks.slack.com/services/...",
 								description:
 									"Die Slack Incoming Webhook-URL. Erstellen Sie eine unter api.slack.com/apps > Incoming Webhooks.",
 							},
 							channel: {
-								label: "Kanal-Override",
+								label: "Kanal-Override (optional)",
 								placeholder: "#alerts",
 								description:
 									"Optionaler Kanal anstelle des Webhook-Standards. Fügen Sie das #-Präfix hinzu.",
@@ -1715,7 +1810,7 @@ export default {
 						},
 						discord: {
 							webhookUrl: {
-								label: "Discord Webhook-URL",
+								label: "Webhook-URL",
 								placeholder: "https://discord.com/api/webhooks/...",
 								description:
 									"Die Discord Webhook-URL. Erstellen Sie eine unter Servereinstellungen > Integrationen > Webhooks.",
@@ -1748,6 +1843,17 @@ export default {
 							description: "Geben Sie die Anzahl der Minuten zwischen Benachrichtigungen ein.",
 						},
 					},
+
+					cooldownMinutes: {
+						label: "Cooldown (Minuten, 0 = kein Cooldown)",
+					},
+
+					legends: {
+						email: "E-Mail-Einstellungen",
+						webhook: "Webhook-Einstellungen",
+						slack: "Slack-Einstellungen",
+						discord: "Discord-Einstellungen",
+					},
 				},
 
 				cta: "Benachrichtigung erstellen",
@@ -1758,10 +1864,16 @@ export default {
 
 				columns: {
 					name: "Name",
+					scope: "Umfang",
 					strategy: "Typ",
 					notifyOnRecovery: "Wiederherstellung",
 					cooldown: "Cooldown",
 					actions: "Aktionen",
+				},
+
+				scope: {
+					unknownMonitor: "Unbekannter Monitor",
+					teamWide: "Teamweit",
 				},
 
 				cooldown: {
@@ -1816,6 +1928,7 @@ export default {
 				columns: {
 					name: "Name",
 					slug: "URL",
+					services: "Dienste",
 					monitors: "Monitore",
 					visibility: "Sichtbarkeit",
 					actions: "Aktionen",
@@ -1920,6 +2033,7 @@ export default {
 					actions: "Aktionen",
 				},
 				neverChecked: "Nie",
+				disabled: "Deaktiviert",
 				actions: {
 					menu: "Aktionsmenü",
 					view: "Ansehen",
@@ -1934,6 +2048,8 @@ export default {
 				},
 				confirmation: {
 					delete: "Sind Sie sicher, dass Sie den Monitor {{name}} löschen möchten?",
+					deleteDescription:
+						"Dadurch werden auch die Inhaltsprüfungen und der Prüfergebnisverlauf gelöscht. Dies kann nicht rückgängig gemacht werden.",
 				},
 			},
 		},
@@ -1967,6 +2083,7 @@ export default {
 
 				disabled: "Deaktiviert",
 				neverChecked: "Nie",
+				notChecked: "Nicht geprüft",
 
 				actions: {
 					menu: "Aktionsmenü",
@@ -2090,6 +2207,13 @@ export default {
 				cancel: "Abbrechen",
 				cta: "Änderungen speichern",
 			},
+
+			dangerZone: {
+				title: "Gefahrenzone",
+				deleteMonitor: "Monitor löschen",
+				deleteDescription:
+					"Dies löscht auch den zugehörigen Prüfergebnisverlauf. Dies kann nicht rückgängig gemacht werden.",
+			},
 		},
 
 		dnsMonitorDetail: {
@@ -2102,6 +2226,9 @@ export default {
 					edit: "Bearbeiten",
 				},
 			},
+
+			uptimeHistory: "Verlauf der Verfügbarkeit",
+			notChecked: "Nicht geprüft",
 
 			info: {
 				domain: "Domain",
@@ -2177,10 +2304,16 @@ export default {
 					monitor: "Monitor",
 					status: "Status",
 					actions: "Aktionen",
+					scope: "Bereich",
+					starts: "Beginn",
+					ends: "Ende",
 				},
 
 				allMonitors: "Alle Monitore",
 				recurring: "Wiederkehrend",
+				unknownMonitor: "Unbekannter Monitor",
+				endedEarly: "Vorzeitig beendet",
+				edit: "Bearbeiten",
 
 				status: {
 					active: "Aktiv",
@@ -2268,6 +2401,74 @@ export default {
 				},
 
 				cta: "Wartung planen",
+			},
+		},
+
+		editMaintenance: {
+			header: {
+				title: "{{name}} bearbeiten",
+			},
+
+			form: {
+				cta: "Änderungen speichern",
+				cancel: "Abbrechen",
+			},
+
+			endNow: {
+				cta: "Wartung jetzt beenden",
+			},
+
+			danger: {
+				title: "Gefahrenzone",
+
+				delete: {
+					trigger: "Wartungsfenster löschen",
+					confirmTitle: "Dieses Wartungsfenster löschen?",
+					confirmDescription: "Dies kann nicht rückgängig gemacht werden.",
+					confirm: "Löschen",
+				},
+			},
+		},
+
+		maintenanceWindows: {
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+					},
+
+					scope: {
+						label: "Bereich",
+						allMonitors: "Alle Monitore",
+					},
+
+					startsAt: {
+						label: "Beginn",
+					},
+
+					endsAt: {
+						label: "Ende",
+					},
+
+					suppressAlerts: {
+						label: "Benachrichtigungen während dieses Fensters unterdrücken",
+					},
+
+					showOnStatusPage: {
+						label: "Auf Statusseite anzeigen",
+					},
+
+					recurring: {
+						label: "Wiederkehrend",
+					},
+
+					recurringPattern: {
+						label: "Wiederholungsmuster (falls wiederkehrend)",
+						placeholder: "weekly:monday:02:00-04:00",
+						description:
+							"daily:HH:MM-HH:MM, weekly:<Wochentag>:HH:MM-HH:MM, oder monthly:<Tag-des-Monats>:HH:MM-HH:MM, in UTC.",
+					},
+				},
 			},
 		},
 
@@ -2428,6 +2629,28 @@ export default {
 				},
 
 				cta: "Benachrichtigung erstellen",
+			},
+		},
+
+		editAlert: {
+			header: {
+				title: "Benachrichtigung bearbeiten",
+			},
+
+			form: {
+				cta: "Änderungen speichern",
+				cancel: "Abbrechen",
+			},
+
+			danger: {
+				title: "Gefahrenzone",
+
+				delete: {
+					trigger: "Benachrichtigung löschen",
+					confirmTitle: "Diese Benachrichtigung löschen?",
+					confirmDescription: "Dies kann nicht rückgängig gemacht werden.",
+					confirm: "Löschen",
+				},
 			},
 		},
 
@@ -2893,15 +3116,21 @@ export default {
 						label: "Port",
 						placeholder: "5432",
 						description: "Der zu prüfende TCP-Port (1-65535).",
+						decrement: "Port verringern",
+						increment: "Port erhöhen",
 					},
 					interval: {
 						label: "Prüfintervall",
 						description: "Wie oft der Port geprüft werden soll.",
+						decrement: "Prüfintervall verringern",
+						increment: "Prüfintervall erhöhen",
 					},
 					timeout: {
 						label: "Verbindungs-Timeout",
 						description:
 							"Wie lange auf eine Verbindung gewartet wird, bevor eine Zeitüberschreitung auftritt.",
+						decrement: "Verbindungs-Timeout verringern",
+						increment: "Verbindungs-Timeout erhöhen",
 					},
 				},
 				cta: "Monitor erstellen",
@@ -2941,15 +3170,21 @@ export default {
 						label: "Port",
 						placeholder: "5432",
 						description: "Der zu prüfende TCP-Port (1-65535).",
+						decrement: "Port verringern",
+						increment: "Port erhöhen",
 					},
 					interval: {
 						label: "Prüfintervall",
 						description: "Wie oft der Port geprüft werden soll.",
+						decrement: "Prüfintervall verringern",
+						increment: "Prüfintervall erhöhen",
 					},
 					timeout: {
 						label: "Verbindungs-Timeout",
 						description:
 							"Wie lange auf eine Verbindung gewartet wird, bevor eine Zeitüberschreitung auftritt.",
+						decrement: "Verbindungs-Timeout verringern",
+						increment: "Verbindungs-Timeout erhöhen",
 					},
 					isEnabled: {
 						label: "Überwachung aktivieren",
@@ -2957,6 +3192,13 @@ export default {
 				},
 				cancel: "Abbrechen",
 				cta: "Änderungen speichern",
+			},
+
+			danger: {
+				title: "Gefahrenzone",
+				cta: "Monitor löschen",
+				description:
+					"Dadurch wird auch der Prüfergebnisverlauf gelöscht. Dies kann nicht rückgängig gemacht werden.",
 			},
 		},
 
@@ -2967,6 +3209,7 @@ export default {
 				},
 				action: {
 					edit: "Bearbeiten",
+					checkNow: "Jetzt prüfen",
 				},
 			},
 
@@ -3002,6 +3245,10 @@ export default {
 				},
 			},
 
+			history: {
+				title: "Uptime-Verlauf",
+			},
+
 			results: {
 				title: "Prüfverlauf",
 				description: "Aktuelle TCP-Verbindungsprüfungsergebnisse",
@@ -3022,6 +3269,11 @@ export default {
 				action: {
 					create: "API-Schlüssel erstellen",
 				},
+			},
+
+			docsLink: {
+				text: "Erfahre, wie du API-Schlüssel verwendest, in unserer",
+				link: "Dokumentation",
 			},
 
 			alert: {
@@ -3045,6 +3297,7 @@ export default {
 				description:
 					"Kopieren Sie diesen Schlüssel jetzt. Aus Sicherheitsgründen können Sie ihn nicht erneut sehen.",
 				dismiss: "Ich habe meinen Schlüssel kopiert",
+				copyLabel: "Schlüssel kopieren",
 			},
 
 			form: {
@@ -3167,6 +3420,7 @@ export default {
 					missed: "Verpasst",
 					new: "Neu",
 				},
+				disabled: "Deaktiviert",
 				actions: {
 					edit: "Bearbeiten",
 					delete: "Löschen",
@@ -3229,6 +3483,8 @@ export default {
 						label: "Karenzzeit",
 						description:
 							"Wie lange nach der erwarteten Zeit gewartet werden soll, bevor als verspätet markiert wird.",
+						decrement: "Karenzzeit verringern",
+						increment: "Karenzzeit erhöhen",
 						unit: {
 							minutes: "Minuten",
 							seconds: "Sekunden",
@@ -3305,6 +3561,8 @@ export default {
 						label: "Karenzzeit",
 						description:
 							"Wie lange nach der erwarteten Zeit gewartet werden soll, bevor als verspätet markiert wird.",
+						decrement: "Karenzzeit verringern",
+						increment: "Karenzzeit erhöhen",
 						unit: {
 							minutes: "Minuten",
 							seconds: "Sekunden",
@@ -3327,6 +3585,18 @@ export default {
 				},
 				cancel: "Abbrechen",
 				cta: "Änderungen speichern",
+			},
+
+			danger: {
+				title: "Gefahrenzone",
+
+				delete: {
+					trigger: "Monitor löschen",
+					confirmTitle: "Diesen Cron-Job-Monitor löschen?",
+					confirmDescription:
+						"Dies löscht auch dessen Ping-Verlauf. Dies kann nicht rückgängig gemacht werden.",
+					confirm: "Löschen",
+				},
 			},
 		},
 
@@ -3371,12 +3641,21 @@ export default {
 				lastPing: {
 					label: "Letzter Ping",
 					description: "Wann der letzte Ping empfangen wurde",
+					never: "Nie",
 				},
 				nextExpected: {
 					label: "Nächster Erwartet",
 					description: "Wann der nächste Ping erwartet wird",
 				},
 			},
+
+			ping: {
+				title: "Diesen Monitor pingen",
+				description:
+					"Lassen Sie Ihren Job nach Abschluss eine POST-Anfrage hierher senden. Keine Authentifizierung erforderlich — behandeln Sie diese URL als Geheimnis.",
+			},
+
+			uptimeHistory: "Verlauf der Betriebszeit",
 
 			pings: {
 				title: "Ping-Verlauf",

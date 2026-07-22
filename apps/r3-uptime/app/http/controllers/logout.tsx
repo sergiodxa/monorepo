@@ -22,7 +22,7 @@ export default createController(routes.logout, {
 		/** GET /logout — confirmation page. */
 		index(ctx) {
 			return ctx.render(
-				<DocumentLayout title="Sign out">
+				<DocumentLayout title={ctx.i18next.t("page.logout.title")}>
 					<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
 						<div
 							mix={[

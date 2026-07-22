@@ -52,7 +52,7 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 							method="post"
 							action={routes.actions.monitor.tcp.create.href({ team: ctx.team.slug })}
 						>
-							<TcpMonitorFormFields />
+							<TcpMonitorFormFields i18next={ctx.i18next} page="createTcpMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.createTcpMonitor.form.cta")}</Button>
 						</form>
 					</FormPage>

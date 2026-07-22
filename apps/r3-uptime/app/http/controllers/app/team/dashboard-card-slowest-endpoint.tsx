@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Trans } from "@pkg/i18n/ui";
+import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -19,7 +21,6 @@ import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
-import Empty from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
@@ -39,7 +40,7 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 			return ctx.render(
 				<Empty>
 					<Empty.Description>
-						Analytics data temporarily unavailable. Please retry later.
+						{ctx.i18next.t("page.dashboard.error.analytics.message")}
 					</Empty.Description>
 				</Empty>,
 			);
@@ -63,17 +64,22 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 			<StatCard
 				label={
 					slowestMonitorName ? (
-						<>
-							Slowest Endpoint "<em>{slowestMonitorName}</em>"
-						</>
+						<Trans
+							i18n={ctx.i18next}
+							i18nKey="page.dashboard.stats.slowestEndpoint.label.default"
+							values={{ name: slowestMonitorName }}
+							components={{ em: <em /> }}
+						/>
 					) : (
-						"Slowest Endpoint"
+						ctx.i18next.t("page.dashboard.stats.slowestEndpoint.label.noData")
 					)
 				}
 				value={
 					<>
-						{slowestResponseMs === null ? "N/A" : `${slowestResponseMs}ms`}
-						<Subtitle>In the last 24 hours</Subtitle>
+						{slowestResponseMs === null
+							? ctx.i18next.t("page.dashboard.stats.slowestEndpoint.value.noData")
+							: `${slowestResponseMs}ms`}
+						<Subtitle>{ctx.i18next.t("page.dashboard.stats.slowestEndpoint.description")}</Subtitle>
 					</>
 				}
 			/>,

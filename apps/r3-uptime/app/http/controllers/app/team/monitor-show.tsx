@@ -15,6 +15,7 @@
 import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
+import { IntlProvider } from "@pkg/i18n/ui";
 import {
 	LockIcon,
 	PencilIcon,
@@ -81,10 +82,22 @@ export default createAction(routes.app.team.monitors.show, {
 					]}
 					actions={
 						<Fragment>
-							<RunMonitorButton
-								action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
-								monitorId={monitor.id}
-							/>
+							{/*
+							 * RunMonitorButton is a `clientEntry` island: its render function runs
+							 * both server-side (for the no-JS baseline markup) and client-side
+							 * (after hydration). Client-side, `intl(handle)` falls back to the
+							 * module-scoped default `bootstrap/browser.ts` registers via `setIntl()` —
+							 * but that default is never set server-side (it's guarded browser-only,
+							 * since a module-scoped instance would leak across concurrent requests in
+							 * a Workers isolate), so the SSR pass needs this request-scoped
+							 * `IntlProvider` ancestor for `intl(handle)` to resolve at all.
+							 */}
+							<IntlProvider i18n={ctx.i18next}>
+								<RunMonitorButton
+									action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
+									monitorId={monitor.id}
+								/>
+							</IntlProvider>
 							<LinkButton
 								href={routes.app.team.monitors.edit.href({
 									team: ctx.team.slug,

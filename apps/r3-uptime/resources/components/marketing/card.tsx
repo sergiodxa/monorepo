@@ -1,7 +1,11 @@
 /**
  * Title + description card used in marketing feature/use-case/pricing grids. Renders
  * as a link when `href` is given (e.g. a feature card linking to its own page) or a
- * plain `<div>` otherwise (e.g. a pricing tile with no destination).
+ * plain panel otherwise (e.g. a pricing tile with no destination). Composes
+ * `@pkg/r3-ui`'s `Card`/`Card.Header`/`Card.Title`/`Card.Description` for its panel
+ * chrome instead of a hand-rolled `css()` block; `Card` itself always renders a
+ * `<section>` (no polymorphic `href`/`as` prop), so the link variant wraps that
+ * panel in a plain block-level `<a>` instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +13,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { Card, HeadingScope } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 namespace MarketingCard {
@@ -19,62 +24,43 @@ namespace MarketingCard {
 	}
 }
 
-/**
- * One card inside a marketing grid: a white/near-black card with a neutral
- * border, `24px` padding, and a 12px radius.
- */
-const marketingCard = css({
-	display: "block",
-	padding: 24,
-	borderRadius: 12,
-	border: "1px solid oklch(0.91 0.008 145)",
-	background: "#ffffff",
-	color: "inherit",
-	textDecoration: "none",
-	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.32 0.006 145)",
-		background: "oklch(0.24 0.005 145)",
-	},
-});
-
-/** Card/section heading inside a marketing card, measured 20px/600/28px line-height. */
-const marketingCardTitle = css({
-	fontSize: "1.25rem",
-	fontWeight: 600,
-	lineHeight: "1.75rem",
-	margin: "0 0 6px",
-	color: "oklch(0.24 0.005 145)",
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.98 0.005 145)" },
-});
-
-/** Card description text, muted, measured at the base 16px body size. */
-const marketingCardDescription = css({
-	fontSize: "1rem",
-	color: "oklch(0.52 0.01 145)",
-	margin: 0,
-	lineHeight: 1.55,
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.73 0.01 145)" },
-});
-
-/** Renders a marketing card, as an `<a>` when {@link MarketingCard.Props.href} is set. */
+/** Renders a marketing card, wrapped in a link when {@link MarketingCard.Props.href} is set. */
 export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 	return () => {
 		let { title, description, href } = handle.props;
-		let content = (
-			<>
-				<h3 mix={[marketingCardTitle]}>{title}</h3>
-				<p mix={[marketingCardDescription]}>{description}</p>
-			</>
+
+		let card = (
+			// `level={3}`: every marketing page nests this grid below its own
+			// `<h1>` hero and `<h2>` section heading, so each card's own title
+			// renders as `<h3>` regardless of whatever (if any) ambient
+			// `HeadingScope` wraps the page.
+			<HeadingScope level={3}>
+				<Card mix={[href && css({ height: "100%" })]}>
+					<Card.Header>
+						<Card.Title mix={[css({ fontSize: "1.25rem" })]}>{title}</Card.Title>
+						<Card.Description
+							mix={[css({ fontSize: "1rem", opacity: 1, color: "var(--ui-neutral-fg)" })]}
+						>
+							{description}
+						</Card.Description>
+					</Card.Header>
+				</Card>
+			</HeadingScope>
 		);
 
 		if (href) {
 			return (
-				<a href={href} mix={[marketingCard]}>
-					{content}
+				<a
+					href={href}
+					mix={[
+						css({ display: "block", height: "100%", textDecoration: "none", color: "inherit" }),
+					]}
+				>
+					{card}
 				</a>
 			);
 		}
 
-		return <div mix={[marketingCard]}>{content}</div>;
+		return card;
 	};
 }

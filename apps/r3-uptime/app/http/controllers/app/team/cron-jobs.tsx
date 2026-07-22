@@ -6,6 +6,7 @@
  */
 
 import { ClockIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -19,11 +20,10 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
@@ -83,35 +83,25 @@ export default createAction(routes.app.team.cronJobs.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.cronJobs.table.columns.name")}</th>
-											<th>{ctx.i18next.t("page.cronJobs.table.columns.schedule")}</th>
-											<th>{ctx.i18next.t("page.cronJobs.table.columns.status")}</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.cronJobs.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobs.table.columns.name")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobs.table.columns.schedule")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobs.table.columns.status")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{monitors.map((monitor) => (
-											<tr key={monitor.id}>
-												<td>
+											<Table.Row key={monitor.id}>
+												<Table.Cell>
 													<a
 														href={routes.app.team.cronJobs.show.href({
 															team: ctx.team.slug,
@@ -128,19 +118,25 @@ export default createAction(routes.app.team.cronJobs.index, {
 													>
 														{monitor.name}
 													</a>
-													{monitor.enabled_at === null && <Badge tone="neutral">Disabled</Badge>}
-												</td>
-												<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
-												<td>
+													{monitor.enabled_at === null && (
+														<Badge tone="neutral">
+															{ctx.i18next.t("page.cronJobs.table.disabled")}
+														</Badge>
+													)}
+												</Table.Cell>
+												<Table.Cell>
+													{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
+												</Table.Cell>
+												<Table.Cell>
 													<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
 														{ctx.i18next.t(`page.cronJobs.table.status.${monitor.status}`)}
 													</Badge>
-												</td>
-											</tr>
+												</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

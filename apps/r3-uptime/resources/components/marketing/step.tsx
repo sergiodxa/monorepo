@@ -1,6 +1,8 @@
 /**
  * One numbered item in a "how it works" list. The number itself is drawn by a CSS
- * counter, not client script.
+ * counter, not client script. Reuses `@pkg/r3-ui`'s `Card.Title`/`Card.Description`
+ * for its title/description typography — the same pieces `card.tsx` composes —
+ * instead of re-declaring the same two `css()` blocks a second time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +10,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { Card, HeadingScope } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 namespace MarketingStep {
@@ -19,7 +22,7 @@ namespace MarketingStep {
 
 /**
  * One step inside a numbered steps grid, numbered via a `::before` circle in
- * the brand green with white text.
+ * the brand-primary color with on-solid text.
  */
 const marketingStep = css({
 	position: "relative",
@@ -36,38 +39,26 @@ const marketingStep = css({
 		width: 28,
 		height: 28,
 		borderRadius: "50%",
-		background: "oklch(0.6 0.16 142)",
-		color: "#ffffff",
+		background: "var(--ui-primary-bg-solid)",
+		color: "var(--ui-primary-fg-on-solid)",
 		fontSize: "0.8125rem",
 		fontWeight: 700,
 	},
-});
-
-/** Card/section heading inside a marketing card, measured 20px/600/28px line-height. */
-const marketingCardTitle = css({
-	fontSize: "1.25rem",
-	fontWeight: 600,
-	lineHeight: "1.75rem",
-	margin: "0 0 6px",
-	color: "oklch(0.24 0.005 145)",
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.98 0.005 145)" },
-});
-
-/** Card description text, muted, measured at the base 16px body size. */
-const marketingCardDescription = css({
-	fontSize: "1rem",
-	color: "oklch(0.52 0.01 145)",
-	margin: 0,
-	lineHeight: 1.55,
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.73 0.01 145)" },
 });
 
 /** Renders one numbered step entry with a title and description. */
 export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 	return () => (
 		<div mix={[marketingStep]}>
-			<h3 mix={[marketingCardTitle]}>{handle.props.title}</h3>
-			<p mix={[marketingCardDescription]}>{handle.props.description}</p>
+			{/* `level={3}`: nested below each page's own `<h1>` hero and `<h2>` "How it works" heading. */}
+			<HeadingScope level={3}>
+				<Card.Title mix={[css({ fontSize: "1.25rem" })]}>{handle.props.title}</Card.Title>
+			</HeadingScope>
+			<Card.Description
+				mix={[css({ fontSize: "1rem", opacity: 1, color: "var(--ui-neutral-fg)" })]}
+			>
+				{handle.props.description}
+			</Card.Description>
 		</div>
 	);
 }

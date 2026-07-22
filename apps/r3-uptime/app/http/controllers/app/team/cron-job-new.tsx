@@ -53,7 +53,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 							method="post"
 							action={routes.actions.cronJob.create.href({ team: ctx.team.slug })}
 						>
-							<CronJobFormFields />
+							<CronJobFormFields i18next={ctx.i18next} page="createCronJob" />
 							<Button type="submit">{ctx.i18next.t("page.createCronJob.form.cta")}</Button>
 						</form>
 					</FormPage>

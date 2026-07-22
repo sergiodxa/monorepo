@@ -48,7 +48,7 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 							method="post"
 							action={routes.actions.monitor.dns.create.href({ team: ctx.team.slug })}
 						>
-							<DnsMonitorFormFields />
+							<DnsMonitorFormFields i18next={ctx.i18next} page="createDnsMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.createDnsMonitor.form.cta")}</Button>
 						</form>
 					</FormPage>

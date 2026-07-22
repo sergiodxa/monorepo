@@ -3,15 +3,21 @@
  * any node (not just text) since some stat cards render badges instead of a plain
  * number, e.g. the dashboard's SSL certificate counts.
  *
+ * Composed from `@pkg/r3-ui`'s `Card` (the bordered, shadowed panel and its
+ * `Card.Header` slot, which already stacks children in a column with a small gap —
+ * exactly the "muted label, then big value" layout this card needs) plus `Text` for
+ * both lines, muted-copy defaults for the label and an overridden size/weight/color
+ * for the value. `@pkg/r3-ui` has no dedicated stat-card component, so this is a
+ * composition rather than a single import.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { Card, Text } from "@pkg/r3-ui";
 import { css } from "remix/ui";
-
-import { neutral } from "~/resources/theme";
 
 namespace StatCard {
 	export interface Props {
@@ -27,44 +33,20 @@ namespace StatCard {
 /** Renders a dashboard stat card with a muted label and a large value. */
 export default function StatCard(handle: Handle<StatCard.Props>) {
 	return () => (
-		<div
-			mix={[
-				css({
-					flex: "1 1 160px",
-					padding: 16,
-					borderRadius: 8,
-					border: `1px solid ${neutral[200]}`,
-					"@media (prefers-color-scheme: dark)": {
-						borderColor: neutral[800],
-					},
-				}),
-			]}
-		>
-			<div
-				mix={[
-					css({
-						fontSize: "0.8125rem",
-						marginBottom: 8,
-						color: neutral[500],
-						"@media (prefers-color-scheme: dark)": {
-							color: neutral[400],
-						},
-					}),
-				]}
-			>
-				{handle.props.label}
-			</div>
-			<div
-				mix={[
-					css({
+		<Card mix={css({ flex: "1 1 160px" })}>
+			<Card.Header>
+				<Text>{handle.props.label}</Text>
+				<Text
+					mix={css({
 						fontSize: "1.5rem",
 						fontWeight: 700,
 						lineHeight: "2rem",
-					}),
-				]}
-			>
-				{handle.props.value}
-			</div>
-		</div>
+						color: "var(--ui-neutral-fg-emphasis)",
+					})}
+				>
+					{handle.props.value}
+				</Text>
+			</Card.Header>
+		</Card>
 	);
 }

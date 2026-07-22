@@ -78,8 +78,8 @@ describe("GET /vs/:slug", () => {
 		let body = await response.text();
 		expect(body).toContain(`<title>${content.metaTitle}</title>`);
 		expect(body).toContain(content.title);
-		expect(body).toContain(`<th>${content.competitor}</th>`);
-		expect(body).toContain(`<td>${content.rows[0]!.label}</td>`);
+		expect(body).toContain(`>${content.competitor}</th>`);
+		expect(body).toContain(`>${content.rows[0]!.label}</td>`);
 	});
 
 	test("renders the not-found page for an unknown slug", async () => {

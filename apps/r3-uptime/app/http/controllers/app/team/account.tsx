@@ -14,6 +14,7 @@
  */
 
 import { LogOutIcon, PlusIcon } from "@pkg/lucide-remix";
+import { AlertDialog, Empty, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -28,12 +29,10 @@ import requireUser from "~/app/http/middleware/require-user";
 import { supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
 import Button from "~/resources/components/button";
-import Empty from "~/resources/components/empty";
 import Field from "~/resources/components/field";
 import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -243,38 +242,18 @@ export default createAction(routes.app.team.account, {
 												"page.account.language.form.fields.language.description",
 											)}
 										>
-											<select
-												name="language"
-												defaultValue={preferredLanguage ?? "auto"}
-												mix={[
-													mixForSelect(
-														css({
-															padding: "8px 12px",
-															borderRadius: 6,
-															border: `1px solid ${neutral[200]}`,
-															fontSize: "0.875rem",
-															fontFamily: "inherit",
-															background: neutral[50],
-															color: "inherit",
-															"@media (prefers-color-scheme: dark)": {
-																borderColor: neutral[700],
-																background: neutral[900],
-															},
-														}),
-													),
-												]}
-											>
-												<option value="auto">
+											<Select name="language" defaultValue={preferredLanguage ?? "auto"}>
+												<Select.Option value="auto">
 													{ctx.i18next.t("page.account.language.form.fields.language.options.auto")}
-												</option>
+												</Select.Option>
 												{supportedLanguages.map((code) => (
-													<option key={code} value={code}>
+													<Select.Option key={code} value={code}>
 														{ctx.i18next.t(
 															`page.account.language.form.fields.language.options.${code}`,
 														)}
-													</option>
+													</Select.Option>
 												))}
-											</select>
+											</Select>
 										</Field>
 									</div>
 
@@ -456,32 +435,17 @@ export default createAction(routes.app.team.account, {
 										</Empty>
 									</div>
 								) : (
-									<div mix={[css({ overflowX: "auto" })]}>
-										<table
-											mix={[
-												css({
-													width: "100%",
-													borderCollapse: "collapse",
-													fontSize: "0.875rem",
-													"& th, & td": {
-														textAlign: "left",
-														padding: "12px 16px",
-														borderBottom: `1px solid ${neutral[200]}`,
-													},
-													"& tr:last-child td": { borderBottom: "none" },
-													"@media (prefers-color-scheme: dark)": {
-														"& th, & td": { borderColor: neutral[800] },
-													},
-												}),
-											]}
-										>
-											<thead>
-												<tr>
-													<th>{ctx.i18next.t("page.account.teams.table.columns.team")}</th>
-													<th mix={[css({ textAlign: "right" })]}>
+									<Table.Container>
+										<Table aria-label={ctx.i18next.t("page.account.teams.table.label")}>
+											<Table.Header>
+												<Table.Row>
+													<Table.Column>
+														{ctx.i18next.t("page.account.teams.table.columns.team")}
+													</Table.Column>
+													<Table.Column align="end">
 														{ctx.i18next.t("page.account.teams.table.columns.role")}
-													</th>
-													<th mix={[css({ textAlign: "center" })]}>
+													</Table.Column>
+													<Table.Column align="center">
 														<span
 															mix={[
 																css({
@@ -499,16 +463,18 @@ export default createAction(routes.app.team.account, {
 														>
 															{ctx.i18next.t("page.account.teams.table.columns.actions")}
 														</span>
-													</th>
-												</tr>
-											</thead>
-											<tbody>
+													</Table.Column>
+												</Table.Row>
+											</Table.Header>
+											<Table.Body>
 												{memberships.map(({ team, role, isOwner }) => {
 													let canLeave = !isOwner && role === "member";
+													let leaveDialogId = `leave-team-${team.id}`;
+													let leaveDialogTitleId = `${leaveDialogId}-title`;
 
 													return (
-														<tr key={team.id}>
-															<td>
+														<Table.Row key={team.id}>
+															<Table.Cell>
 																<a
 																	href={routes.app.team.dashboard.index.href({ team: team.slug })}
 																	mix={[
@@ -524,13 +490,13 @@ export default createAction(routes.app.team.account, {
 																>
 																	{team.name}
 																</a>
-															</td>
-															<td mix={[css({ textAlign: "right" })]}>
+															</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "right" })]}>
 																{ctx.i18next.t(
 																	`page.account.teams.table.role.${isOwner ? "owner" : role}`,
 																)}
-															</td>
-															<td mix={[css({ textAlign: "center" })]}>
+															</Table.Cell>
+															<Table.Cell mix={[css({ textAlign: "center" })]}>
 																{canLeave && (
 																	<>
 																		<RowMenu
@@ -539,7 +505,7 @@ export default createAction(routes.app.team.account, {
 																		>
 																			<button
 																				type="button"
-																				commandfor={`leave-team-${team.id}`}
+																				commandfor={leaveDialogId}
 																				command="show-modal"
 																				mix={[menuItem, menuItemDanger]}
 																			>
@@ -550,70 +516,47 @@ export default createAction(routes.app.team.account, {
 																			</button>
 																		</RowMenu>
 
-																		<dialog
-																			id={`leave-team-${team.id}`}
-																			mix={[
-																				css({
-																					width: "100%",
-																					maxWidth: "min(440px, calc(100vw - 32px))",
-																					padding: 24,
-																					boxSizing: "border-box",
-																					borderRadius: 8,
-																					border: `1px solid ${neutral[300]}`,
-																					"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																					"@media (prefers-color-scheme: dark)": {
-																						borderColor: neutral[700],
-																						background: neutral[900],
-																						color: neutral[50],
-																					},
-																				}),
-																			]}
+																		<AlertDialog
+																			id={leaveDialogId}
+																			aria-labelledby={leaveDialogTitleId}
 																		>
-																			<h3>
-																				{ctx.i18next.t(
-																					"page.account.teams.table.confirmation.leaveTeam",
-																					{ name: team.name },
-																				)}
-																			</h3>
+																			<AlertDialog.Header>
+																				<AlertDialog.Title id={leaveDialogTitleId}>
+																					{ctx.i18next.t(
+																						"page.account.teams.table.confirmation.leaveTeam",
+																						{ name: team.name },
+																					)}
+																				</AlertDialog.Title>
+																			</AlertDialog.Header>
 																			<form
 																				method="post"
 																				action={routes.accountActions.leaveTeam.href()}
 																			>
 																				<input type="hidden" name="team_id" value={team.id} />
-																				<div
-																					mix={[
-																						css({
-																							display: "flex",
-																							gap: 8,
-																							justifyContent: "flex-end",
-																						}),
-																					]}
-																				>
-																					<Button
-																						type="button"
-																						variant="outline"
-																						commandfor={`leave-team-${team.id}`}
-																						command="close"
-																					>
+																				<AlertDialog.Footer>
+																					<AlertDialog.Cancel commandfor={leaveDialogId}>
 																						{ctx.i18next.t("page.account.form.actions.cancel")}
-																					</Button>
-																					<Button type="submit" color="danger">
+																					</AlertDialog.Cancel>
+																					<AlertDialog.Action
+																						type="submit"
+																						commandfor={leaveDialogId}
+																					>
 																						{ctx.i18next.t(
 																							"page.account.teams.table.actions.leave",
 																						)}
-																					</Button>
-																				</div>
+																					</AlertDialog.Action>
+																				</AlertDialog.Footer>
 																			</form>
-																		</dialog>
+																		</AlertDialog>
 																	</>
 																)}
-															</td>
-														</tr>
+															</Table.Cell>
+														</Table.Row>
 													);
 												})}
-											</tbody>
-										</table>
-									</div>
+											</Table.Body>
+										</Table>
+									</Table.Container>
 								)}
 							</div>
 						</section>

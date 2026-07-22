@@ -2,7 +2,10 @@
  * Primary marketing call-to-action: a link to the dashboard when signed in, or a
  * one-click sign-in form posting to the auth action otherwise. Every marketing hero
  * and final-CTA section repeats this exact `isSignedIn` branch, so it's centralized
- * here instead of duplicating the link/form pair per section.
+ * here instead of duplicating the link/form pair per section. Renders through the
+ * shared `Button`/`LinkButton` components (themselves thin wrappers over
+ * `@pkg/r3-ui`'s own) instead of a hand-rolled "solid primary" style, so this CTA
+ * never drifts from every other button in the app.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,22 +13,31 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { css } from "remix/ui";
+import type { ButtonSize } from "~/resources/components/button";
 
+import Button from "~/resources/components/button";
+import LinkButton from "~/resources/components/link-button";
 import routes from "~/routes/web";
-
-/** Primary (brand) scale shades used on this button, hue 142. */
-const primary = { 600: "oklch(0.6 0.16 142)", 700: "oklch(0.5 0.14 142)" };
 
 namespace AuthCta {
 	export interface Props {
 		isSignedIn: boolean;
-		startLabel?: string;
-		dashboardLabel?: string;
+		/**
+		 * Label for the signed-out state's submit button. Required rather than
+		 * defaulted — an English fallback here would silently leak into every
+		 * non-English locale, so every call site must pass its own translated
+		 * copy (e.g. `ctx.i18next.t("landing.hero.cta.out")`).
+		 */
+		startLabel: string;
+		/**
+		 * Label for the signed-in state's dashboard link. Required for the same
+		 * reason as {@link AuthCta.Props.startLabel}.
+		 */
+		dashboardLabel: string;
 		/**
 		 * `"lg"` (default) for hero/final-CTA placements, `"sm"` for the sticky
-		 * marketing header, and `"docs"` for the docs topbar — each with its own
-		 * padding, gap, font size, and font weight matched to that placement.
+		 * marketing header, and `"docs"` for the docs topbar — `"docs"` renders
+		 * at the same `"sm"` button size, just with its own placement context.
 		 */
 		size?: "sm" | "lg" | "docs";
 		/** Optional trailing icon (e.g. an arrow), rendered after the label. */
@@ -33,73 +45,41 @@ namespace AuthCta {
 	}
 }
 
-/**
- * Builds the primary marketing CTA button for a given size (only used here,
- * so no `styles.ts` export is needed).
- */
-function primaryButtonStyle(size: "sm" | "lg" | "docs") {
-	let isLarge = size === "lg";
-	let isDocs = size === "docs";
-
-	return css({
-		display: "inline-flex",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: isDocs ? 8 : 6,
-		padding: isLarge ? "12px 24px" : isDocs ? "6px 12px" : "8px 16px",
-		borderRadius: 8,
-		border: "1px solid transparent",
-		background: primary[600],
-		color: "#ffffff",
-		textDecoration: "none",
-		fontFamily: "inherit",
-		fontSize: isLarge ? "1rem" : "0.875rem",
-		fontWeight: isLarge ? 600 : 500,
-		cursor: "pointer",
-		boxShadow: isLarge
-			? "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)"
-			: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-		"&:hover": {
-			background: primary[700],
-			boxShadow: isLarge
-				? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
-				: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
-		},
-	});
+/** Maps {@link AuthCta.Props.size} onto the shared `Button`/`LinkButton` size scale — `"docs"` reuses `"sm"`. */
+function resolveButtonSize(size: "sm" | "lg" | "docs"): ButtonSize {
+	return size === "lg" ? "lg" : "sm";
 }
 
 /**
- * Renders {@link AuthCta.Props.dashboardLabel} (default "Go to dashboard") linking to
- * the app when signed in, otherwise a submit button reading
- * {@link AuthCta.Props.startLabel} (default "Start Monitoring") that posts to the
- * auth action.
+ * Renders {@link AuthCta.Props.dashboardLabel} linking to the app when signed in,
+ * otherwise a submit button reading {@link AuthCta.Props.startLabel} that posts to
+ * the auth action.
  */
 export default function AuthCta(handle: Handle<AuthCta.Props>) {
 	return () => {
-		let {
-			isSignedIn,
-			startLabel = "Start Monitoring",
-			dashboardLabel = "Go to dashboard",
-			size = "lg",
-			icon,
-		} = handle.props;
-		let buttonMix = primaryButtonStyle(size);
+		let { isSignedIn, startLabel, dashboardLabel, size = "lg", icon } = handle.props;
+		let buttonSize = resolveButtonSize(size);
 
 		if (isSignedIn) {
 			return (
-				<a href={routes.app.index.href()} mix={[buttonMix]}>
+				<LinkButton
+					href={routes.app.index.href()}
+					color="primary"
+					variant="solid"
+					size={buttonSize}
+				>
 					{dashboardLabel}
 					{icon}
-				</a>
+				</LinkButton>
 			);
 		}
 
 		return (
 			<form method="post" action={routes.auth.action.href()}>
-				<button type="submit" mix={[buttonMix]}>
+				<Button type="submit" color="primary" variant="solid" size={buttonSize}>
 					{startLabel}
 					{icon}
-				</button>
+				</Button>
 			</form>
 		);
 	};

@@ -6,6 +6,7 @@
  */
 
 import { BellIcon, HistoryIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -20,7 +21,6 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -89,50 +89,44 @@ export default createAction(routes.app.team.alerts.history, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.alertHistory.table.columns.alert")}</th>
-											<th>{ctx.i18next.t("page.alertHistory.table.columns.monitor")}</th>
-											<th>{ctx.i18next.t("page.alertHistory.table.columns.eventType")}</th>
-											<th>{ctx.i18next.t("page.alertHistory.table.columns.status")}</th>
-											<th>{ctx.i18next.t("page.alertHistory.table.columns.sentAt")}</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.alertHistory.header.title")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.alertHistory.table.columns.alert")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alertHistory.table.columns.monitor")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alertHistory.table.columns.eventType")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alertHistory.table.columns.status")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alertHistory.table.columns.sentAt")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{events.map((event) => (
-											<tr key={event.id}>
-												<td>
+											<Table.Row key={event.id}>
+												<Table.Cell>
 													{alertsById.get(event.alert_id)?.name ??
 														ctx.i18next.t("page.alertHistory.table.unknownAlert")}
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													{event.monitor_name ??
 														ctx.i18next.t("page.alertHistory.table.unknownMonitor")}
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<Badge tone={EVENT_TYPE_BADGE_TONE[event.event_type] ?? "neutral"}>
 														{ctx.i18next.t(`page.alertHistory.table.eventType.${event.event_type}`)}
 													</Badge>
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<Badge tone={STATUS_BADGE_TONE[event.status] ?? "neutral"}>
 														{ctx.i18next.t(`page.alertHistory.table.status.${event.status}`)}
 													</Badge>
@@ -149,13 +143,13 @@ export default createAction(routes.app.team.alerts.history, {
 															{event.error_message}
 														</p>
 													)}
-												</td>
-												<td>{new Date(event.sent_at).toLocaleString()}</td>
-											</tr>
+												</Table.Cell>
+												<Table.Cell>{new Date(event.sent_at).toLocaleString()}</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

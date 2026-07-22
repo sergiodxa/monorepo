@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -26,7 +27,7 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import StatusPageFormFields from "~/resources/views/status-pages/form";
 import routes from "~/routes/web";
 
@@ -111,58 +112,38 @@ export default createAction(routes.app.team.statusPages.edit, {
 						>
 							{ctx.i18next.t("page.statusPages.table.actions.delete")}
 						</Button>
-						<dialog
-							id="delete-status-page"
-							mix={[
-								css({
-									padding: 24,
-									borderRadius: 8,
-									border: `1px solid ${neutral[300]}`,
-									maxWidth: 400,
-									"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-										color: neutral[50],
-									},
-								}),
-							]}
-						>
-							<h3>
-								{ctx.i18next.t("page.statusPages.table.confirmation.delete", { name: page.name })}
-							</h3>
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
-								]}
-							>
-								This can't be undone.
-							</p>
+						<AlertDialog id="delete-status-page" aria-labelledby="delete-status-page-title">
+							<AlertDialog.Header>
+								<AlertDialog.Title id="delete-status-page-title">
+									{ctx.i18next.t("page.statusPages.table.confirmation.delete", { name: page.name })}
+								</AlertDialog.Title>
+								<AlertDialog.Description>This can't be undone.</AlertDialog.Description>
+							</AlertDialog.Header>
+							{/*
+							 * The confirming control is a plain `Button`, not `AlertDialog.Action`:
+							 * that compound part always carries `command="close"`, which — per the
+							 * Invoker Commands spec — replaces a button's native type-based
+							 * activation, so a `type="submit"` button wired to it would stop
+							 * submitting its form. This delete flow is a real `<form method="post">`
+							 * POST (progressive enhancement, no client JS required), so the actual
+							 * submit control must stay a plain button outside that command wiring.
+							 */}
 							<form
 								method="post"
 								action={routes.actions.statusPage.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="status_page_id" value={page.id} />
-								<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="delete-status-page"
-										command="close"
-									>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel commandfor="delete-status-page">
 										{ctx.i18next.t("page.editMonitor.form.cancel")}
-									</Button>
+									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
 										{ctx.i18next.t("page.statusPages.table.actions.delete")}
 									</Button>
-								</div>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

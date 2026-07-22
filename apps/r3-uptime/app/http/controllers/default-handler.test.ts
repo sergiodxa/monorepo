@@ -12,11 +12,23 @@ import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
+import { asyncContext } from "remix/async-context-middleware";
+import { Auth } from "remix/auth-middleware";
 import { createRouter } from "remix/fetch-router";
 import { renderWith } from "remix/render-middleware";
 import { renderToString } from "remix/ui/server";
 
+import i18n from "~/app/http/middleware/i18n";
+
 import defaultHandler from "./default-handler";
+
+/** Sets the `Auth` context state directly, standing in for the real session-backed `auth` middleware. `i18n`'s language detection reads the signed-in viewer to look up their saved language preference. */
+function seedAuth(): Middleware {
+	return (ctx, next) => {
+		ctx.set(Auth, { ok: false });
+		return next();
+	};
+}
 
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
@@ -30,8 +42,16 @@ function createTestRenderer(): Renderer<RemixNode> {
 
 describe("default handler", () => {
 	test("renders the not-found page with a 404 status for any unmatched route", async () => {
+		// `i18n` (rather than a stub) — `defaultHandler` renders its copy through
+		// `ctx.i18next.t()`, and the global `i18n` middleware wraps the whole
+		// router (see `bootstrap/app.tsx`), `defaultHandler` included.
 		let router = createRouter({
-			middleware: [renderWith(createTestRenderer) as Middleware],
+			middleware: [
+				asyncContext(),
+				seedAuth(),
+				i18n as Middleware,
+				renderWith(createTestRenderer) as Middleware,
+			],
 			defaultHandler,
 		});
 

@@ -7,21 +7,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Input, Label, Select, TextField } from "@pkg/r3-ui";
+import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { css } from "remix/ui";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
 import Switch from "~/resources/components/switch";
-import { mixForSelect } from "~/resources/mix-for-select";
-import { neutral } from "~/resources/theme";
 
 namespace MaintenanceWindowFormFields {
 	export interface Props {
 		monitors: SelectMonitor[];
 		window?: SelectMaintenanceWindow;
+		/** The request's i18next instance, used to read this shared form's `page.maintenanceWindows.form.fields.*` copy. */
+		i18next: ReturnType<typeof getContext>["i18next"];
 	}
 }
 
@@ -37,164 +40,73 @@ export default function MaintenanceWindowFormFields(
 	handle: Handle<MaintenanceWindowFormFields.Props>,
 ) {
 	return () => {
-		let { monitors, window } = handle.props;
+		let { monitors, window, i18next } = handle.props;
+		let t = i18next.getFixedT(null, "translation", "page.maintenanceWindows.form.fields");
 
 		return (
 			<>
-				<Field label="Name">
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={window?.name}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("name.label")}
+					type="text"
+					name="name"
+					required
+					defaultValue={window?.name}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Scope">
-					<select
-						name="monitor_id"
-						defaultValue={window?.monitor_id ?? ""}
-						mix={[
-							mixForSelect(
-								css({
-									padding: "8px 12px",
-									// Matches the text inputs' rendered height: a native <select> is
-									// intrinsically taller than a same-padding <input> unless pinned
-									// to an explicit height.
-									height: 34,
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							),
-						]}
-					>
-						<option value="">All monitors</option>
+				<Field label={t("scope.label")}>
+					<Select name="monitor_id" defaultValue={window?.monitor_id ?? ""}>
+						<Select.Option value="">{t("scope.allMonitors")}</Select.Option>
 						{monitors.map((monitor) => (
-							<option key={monitor.id} value={monitor.id}>
+							<Select.Option key={monitor.id} value={monitor.id}>
 								{monitor.name} (HTTP)
-							</option>
+							</Select.Option>
 						))}
-					</select>
+					</Select>
 				</Field>
 
-				<Field label="Starts at">
-					<input
+				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+					<Label htmlFor="maintenance-window-starts-at">{t("startsAt.label")}</Label>
+					<Input
+						id="maintenance-window-starts-at"
 						type="datetime-local"
 						name="starts_at"
 						required
 						defaultValue={window ? toDatetimeLocal(window.starts_at) : undefined}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
 					/>
-				</Field>
+				</div>
 
-				<Field label="Ends at">
-					<input
+				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+					<Label htmlFor="maintenance-window-ends-at">{t("endsAt.label")}</Label>
+					<Input
+						id="maintenance-window-ends-at"
 						type="datetime-local"
 						name="ends_at"
 						required
 						defaultValue={window ? toDatetimeLocal(window.ends_at) : undefined}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
 					/>
-				</Field>
+				</div>
 
 				<Switch name="suppress_alerts" defaultChecked={window?.suppress_alerts ?? true}>
-					Suppress alerts during this window
+					{t("suppressAlerts.label")}
 				</Switch>
 
 				<Switch name="show_on_status_page" defaultChecked={window?.show_on_status_page ?? true}>
-					Show on status page
+					{t("showOnStatusPage.label")}
 				</Switch>
 
 				<Switch name="is_recurring" defaultChecked={window?.is_recurring ?? false}>
-					Recurring
+					{t("recurring.label")}
 				</Switch>
 
-				<Field label="Recurrence pattern (when recurring)">
-					<input
-						type="text"
-						name="recurring_pattern"
-						defaultValue={window?.recurring_pattern ?? ""}
-						placeholder="weekly:monday:02:00-04:00"
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-							}),
-						]}
-					>
-						<code>daily:HH:MM-HH:MM</code>, <code>weekly:&lt;day&gt;:HH:MM-HH:MM</code>, or{" "}
-						<code>monthly:&lt;day-of-month&gt;:HH:MM-HH:MM</code>, in UTC.
-					</p>
-				</Field>
+				<TextField
+					label={t("recurringPattern.label")}
+					name="recurring_pattern"
+					defaultValue={window?.recurring_pattern ?? ""}
+					placeholder={t("recurringPattern.placeholder")}
+					description={t("recurringPattern.description")}
+					mix={css({ marginBottom: 28 })}
+				/>
 			</>
 		);
 	};

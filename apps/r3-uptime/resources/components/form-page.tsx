@@ -8,6 +8,13 @@
  * already uses for its sections. It exists so that width doesn't get repeated as a
  * literal across every one of those controller files.
  *
+ * Reviewed as part of the `@pkg/r3-ui` migration and intentionally left as a
+ * plain composed `<div>`: it carries no color (nothing to route through
+ * `--ui-*` custom properties) and `@pkg/r3-ui`'s `Section`/`Group` primitives
+ * are shaped for listbox groups and control clusters, not a centered
+ * max-width content column, so reaching for either here would force-fit an
+ * ill-suited abstraction rather than simplify anything.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

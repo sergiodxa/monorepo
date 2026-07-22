@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { i18n } from "i18next";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
@@ -41,10 +42,22 @@ function provider(ctx: { request: Request }) {
 	});
 }
 
+/**
+ * Narrowed shape of `remix/fetch-router`'s `RequestContext` this helper
+ * actually reads. `i18next` is declared here only to keep this file's
+ * dependency surface explicit — the global `i18n` middleware (see
+ * `bootstrap/app.tsx`) already populates `ctx.i18next` for every action this
+ * controller's `createController` call handles.
+ */
+interface AuthErrorContext {
+	render: Renderer<RemixNode>;
+	i18next: i18n;
+}
+
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
-function authError(ctx: { render: Renderer<RemixNode> }, message: string) {
+function authError(ctx: AuthErrorContext, message: string) {
 	return ctx.render(
-		<DocumentLayout title="Sign-in failed">
+		<DocumentLayout title={ctx.i18next.t("auth.error.signInFailedTitle")}>
 			<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
 				<div
 					mix={[
@@ -63,7 +76,7 @@ function authError(ctx: { render: Renderer<RemixNode> }, message: string) {
 						}),
 					]}
 				>
-					<h1 mix={[css({ margin: 0 })]}>Sign-in failed</h1>
+					<h1 mix={[css({ margin: 0 })]}>{ctx.i18next.t("auth.error.signInFailedTitle")}</h1>
 					<p
 						mix={[
 							css({
@@ -90,7 +103,7 @@ function authError(ctx: { render: Renderer<RemixNode> }, message: string) {
 							}),
 						]}
 					>
-						Back home
+						{ctx.i18next.t("errors.backHome")}
 					</a>
 				</div>
 			</main>
@@ -127,11 +140,11 @@ export default createController(routes.auth, {
 						oauthError: ctx.url.searchParams.get("error"),
 						oauthErrorDescription: ctx.url.searchParams.get("error_description"),
 					});
-					return authError(ctx, "The sign-in attempt could not be completed. Please try again.");
+					return authError(ctx, ctx.i18next.t("auth.error.signInFailedGeneric"));
 				}
 
 				let idTokenRaw = finished.result.tokens.idToken;
-				if (!idTokenRaw) return authError(ctx, "The identity provider did not return an ID token.");
+				if (!idTokenRaw) return authError(ctx, ctx.i18next.t("auth.error.missingIdToken"));
 
 				let idToken = await verifyIdToken(idTokenRaw, await verificationKey.value, env.CLIENT_ID);
 

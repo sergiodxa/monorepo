@@ -9,6 +9,7 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -25,12 +26,10 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
@@ -94,7 +93,9 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<Button type="submit">Check now</Button>
+								<Button type="submit">
+									{ctx.i18next.t("page.tcpMonitorDetail.header.action.checkNow")}
+								</Button>
 							</form>
 							<LinkButton
 								href={routes.app.team.tcpMonitors.edit.href({
@@ -153,7 +154,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							/>
 						</div>
 
-						<h2>Uptime history</h2>
+						<h2>{ctx.i18next.t("page.tcpMonitorDetail.history.title")}</h2>
 						<Heatmap days={dailyStats} />
 
 						<h2>{ctx.i18next.t("page.tcpMonitorDetail.results.title")}</h2>
@@ -164,50 +165,42 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								</Empty.Description>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.tcpMonitorDetail.results.columns.time")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitorDetail.results.columns.status")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitorDetail.results.columns.responseTime")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitorDetail.results.columns.error")}</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.tcpMonitorDetail.results.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitorDetail.results.columns.time")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitorDetail.results.columns.status")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitorDetail.results.columns.responseTime")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitorDetail.results.columns.error")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{results.map((result) => (
-											<tr key={result.id}>
-												<td>{new Date(result.checked_at).toLocaleString()}</td>
-												<td>
+											<Table.Row key={result.id}>
+												<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
+												<Table.Cell>
 													<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
 														{ctx.i18next.t(`page.tcpMonitors.table.status.${result.status}`)}
 													</Badge>
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
-												</td>
-												<td>{result.error_message ?? "—"}</td>
-											</tr>
+												</Table.Cell>
+												<Table.Cell>{result.error_message ?? "—"}</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

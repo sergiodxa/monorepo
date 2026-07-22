@@ -6,12 +6,21 @@
  * every tabbed view in this app (currently just the dashboard) shares one ARIA-correct
  * tab bar instead of hand-rolling `role`/`aria-selected` per page.
  *
- * The active-tab indicator is one shared, absolutely-positioned bar rather than a
- * border on each `Tab`, so it can slide between tabs on `transform` alone — no client
- * JS, since every tab has the same fixed width and the indicator's `translateX` is a
- * plain `activeIndex * TAB_WIDTH` computed server-side. A named `Frame` reload
- * (`dashboard-panel`) diffs rather than replaces this markup, so the indicator persists
- * as the same DOM node across a tab switch and the `transition` actually animates.
+ * Composes `@pkg/r3-ui`'s compound `Tabs`/`Tabs.List`/`Tabs.Tab` internally —
+ * `TabList` wraps a `Tabs` root around `Tabs.List` so call sites keep using it
+ * standalone (no enclosing `<Tabs>` of their own), and `Tab` renders a
+ * `Tabs.Tab`, which is already the same "real `<a>` with a manually-set
+ * `aria-selected`" shape this app needs, plus the `link()`/`frameTarget`
+ * wiring layered on top through `mix`.
+ *
+ * The active-tab indicator reuses `Tabs.List`'s own sliding indicator — a
+ * `::after` pseudo-element positioned entirely from the
+ * `--ui-tab-indicator-inline-start`/`-inline-size`/`-opacity` custom properties
+ * — by setting those three properties from `activeIndex * TAB_WIDTH`, computed
+ * server-side with no client JS, the same way the original bespoke indicator
+ * `<div>` did. A named `Frame` reload (`dashboard-panel`) diffs rather than
+ * replaces this markup, so the indicator persists as the same DOM node across
+ * a tab switch and its `transition` actually animates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,57 +28,11 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { Tabs } from "@pkg/r3-ui";
 import { css, link } from "remix/ui";
-
-import { neutral, primary } from "~/resources/theme";
 
 /** Every tab's fixed width, in px — must be wide enough for the longest label. */
 const TAB_WIDTH = 110;
-
-const tabList = css({
-	position: "relative",
-	display: "flex",
-	marginBottom: 16,
-	borderBottom: `1px solid ${neutral[200]}`,
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-});
-
-const tab = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: TAB_WIDTH,
-	padding: "0 0 12px",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	color: neutral[500],
-	textDecoration: "none",
-	"&:hover": { color: neutral[900] },
-	"@media (prefers-color-scheme: dark)": {
-		"&:hover": { color: neutral[50] },
-	},
-});
-
-const tabActive = css({
-	color: primary[600],
-	fontWeight: 600,
-	"&:hover": { color: primary[600] },
-	"@media (prefers-color-scheme: dark)": {
-		color: primary[400],
-		"&:hover": { color: primary[400] },
-	},
-});
-
-const indicator = css({
-	position: "absolute",
-	bottom: -1,
-	left: 0,
-	width: TAB_WIDTH,
-	height: 2,
-	background: primary[600],
-	transition: "transform 0.2s ease",
-	"@media (prefers-color-scheme: dark)": { background: primary[400] },
-});
 
 namespace TabList {
 	export interface Props {
@@ -80,19 +43,28 @@ namespace TabList {
 	}
 }
 
-/** `role="tablist"` wrapper with a sliding active-tab indicator; place one `Tab` per child. */
+/** `role="tablist"` wrapper (via `Tabs`/`Tabs.List`) with a sliding active-tab indicator; place one `Tab` per child. */
 export function TabList(handle: Handle<TabList.Props>) {
-	return () => (
-		<div role="tablist" aria-label={handle.props["aria-label"]} mix={[tabList]}>
-			{handle.props.children}
-			<div
-				mix={[
-					indicator,
-					css({ transform: `translateX(${handle.props.activeIndex * TAB_WIDTH}px)` }),
-				]}
-			/>
-		</div>
-	);
+	return () => {
+		let { "aria-label": ariaLabel, activeIndex, children } = handle.props;
+
+		return (
+			<Tabs mix={[css({ marginBottom: 16 })]}>
+				<Tabs.List
+					aria-label={ariaLabel}
+					mix={[
+						css({
+							"--ui-tab-indicator-inline-start": `${activeIndex * TAB_WIDTH}px`,
+							"--ui-tab-indicator-inline-size": `${TAB_WIDTH}px`,
+							"--ui-tab-indicator-opacity": "1",
+						}),
+					]}
+				>
+					{children}
+				</Tabs.List>
+			</Tabs>
+		);
+	};
 }
 
 namespace Tab {
@@ -114,26 +86,24 @@ namespace Tab {
 	}
 }
 
-/** A single `role="tab"` link. Navigates a named `Frame` when `frameTarget` is set. */
+/** A single `role="tab"` link (via `Tabs.Tab`), fixed to {@link TAB_WIDTH}. Navigates a named `Frame` when `frameTarget` is set. */
 export function Tab(handle: Handle<Tab.Props>) {
 	return () => {
 		let { href, active, controls, frameTarget, frameSrc, children } = handle.props;
 
 		return (
-			<a
+			<Tabs.Tab
 				href={href}
-				role="tab"
 				aria-selected={active}
 				aria-controls={controls}
 				tabIndex={active ? 0 : -1}
 				mix={[
-					tab,
-					active && tabActive,
+					css({ width: TAB_WIDTH, justifyContent: "center" }),
 					link(href, frameTarget ? { target: frameTarget, src: frameSrc } : {}),
 				]}
 			>
 				{children}
-			</a>
+			</Tabs.Tab>
 		);
 	};
 }

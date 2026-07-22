@@ -40,7 +40,9 @@ export default createAction(routes.app.team.statusPages.new, {
 		]);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Create Status Page`}>
+			<DocumentLayout
+				title={`${ctx.team.name} · ${ctx.i18next.t("page.createStatusPage.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

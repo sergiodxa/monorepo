@@ -4,7 +4,9 @@
  * numbered "how it works" list, an FAQ accordion (native `<details>`, no client
  * JS), and a final call to action. It exists so those three route families reuse
  * one view instead of near-duplicate ones, driven entirely by
- * `resources/content/marketing.ts` data.
+ * `resources/content/marketing.ts` data plus a handful of translated section
+ * titles the calling controller threads through as plain props (the same
+ * convention `AppShell` uses for its own `heading`/`breadcrumbs` props).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,38 +26,47 @@ import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingStep from "~/resources/components/marketing/step";
 
 namespace MarketingPageView {
-	/** Adds `isSignedIn` (drives the CTA's copy/target) on top of the raw marketing-page content shape. */
+	/** Adds `isSignedIn` (drives the CTA's copy/target) and the translated section titles/CTA copy on top of the raw marketing-page content shape. */
 	export interface Props extends MarketingContent.Page {
 		isSignedIn: boolean;
+		/** Label for the signed-out CTA button (`landing.hero.cta.out`). */
+		startLabel: string;
+		/** Label for the signed-in CTA link (`landing.hero.cta.in`). */
+		dashboardLabel: string;
+		/** Title for the feature-grid section (`landing.marketingPage.everythingTitle`). */
+		everythingTitle: string;
+		/** Title for the numbered "how it works" section (`landing.marketingPage.howItWorksTitle`). */
+		howItWorksTitle: string;
+		/** Title for the FAQ section (`landing.marketingPage.faqTitle`). */
+		faqTitle: string;
+		/** Heading for the final call-to-action banner (`landing.marketingPage.finalCtaTitle`). */
+		finalCtaTitle: string;
+		/** Supporting copy for the final call-to-action banner (`landing.finalCta.body`). */
+		finalCtaBody: string;
 	}
 }
-
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = {
-	50: "oklch(0.98 0.02 142)",
-	200: "oklch(0.92 0.08 142)",
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-	700: "oklch(0.5 0.14 142)",
-	800: "oklch(0.42 0.12 142)",
-	950: "oklch(0.24 0.06 142)",
-} as const;
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-} as const;
 
 /** Renders the generic marketing page sections, populated entirely from `handle.props`. */
 export default function MarketingPageView(handle: Handle<MarketingPageView.Props>) {
 	return () => {
-		let { isSignedIn, badge, title, highlight, description, highlights, features, steps, faqs } =
-			handle.props;
+		let {
+			isSignedIn,
+			startLabel,
+			dashboardLabel,
+			badge,
+			title,
+			highlight,
+			description,
+			highlights,
+			features,
+			steps,
+			faqs,
+			everythingTitle,
+			howItWorksTitle,
+			faqTitle,
+			finalCtaTitle,
+			finalCtaBody,
+		} = handle.props;
 
 		return (
 			<>
@@ -64,12 +75,10 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						css({
 							padding: "64px 0",
 							textAlign: "center",
-							background: `linear-gradient(to bottom, ${primary[50]}, #ffffff)`,
+							background:
+								"linear-gradient(to bottom, var(--ui-primary-bg-tint), var(--ui-neutral-bg-tint))",
 							"@media (min-width: 640px)": { padding: "96px 0" },
 							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": {
-								background: `linear-gradient(to bottom, oklch(0.24 0.06 142 / 0.2), ${neutral[950]})`,
-							},
 						}),
 					]}
 				>
@@ -93,15 +102,10 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 									borderRadius: 999,
 									fontSize: "0.75rem",
 									fontWeight: 600,
-									border: `1px solid ${primary[200]}`,
-									background: primary[50],
-									color: primary[600],
+									border: "1px solid var(--ui-primary-border)",
+									background: "var(--ui-primary-bg-tint)",
+									color: "var(--ui-primary-fg)",
 									marginBottom: 16,
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: primary[800],
-										background: primary[950],
-										color: primary[400],
-									},
 								}),
 							]}
 						>
@@ -116,34 +120,22 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 									letterSpacing: "-0.025em",
 									margin: "0 auto 16px",
 									maxWidth: 760,
-									color: neutral[900],
+									color: "var(--ui-neutral-fg-emphasis)",
 									"@media (min-width: 640px)": { fontSize: "3rem" },
 									"@media (min-width: 1024px)": { fontSize: "3.75rem" },
-									"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 								}),
 							]}
 						>
-							{title}{" "}
-							<span
-								mix={[
-									css({
-										color: primary[600],
-										"@media (prefers-color-scheme: dark)": { color: primary[400] },
-									}),
-								]}
-							>
-								{highlight}
-							</span>
+							{title} <span mix={[css({ color: "var(--ui-primary-fg)" })]}>{highlight}</span>
 						</h1>
 						<p
 							mix={[
 								css({
 									fontSize: "1.125rem",
-									color: neutral[600],
+									color: "var(--ui-neutral-fg)",
 									margin: "0 auto 24px",
 									maxWidth: 576,
 									lineHeight: 1.625,
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 								}),
 							]}
 						>
@@ -170,8 +162,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 											alignItems: "center",
 											gap: 6,
 											fontSize: "0.875rem",
-											color: neutral[500],
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+											color: "var(--ui-neutral-fg-muted)",
 										}),
 									]}
 								>
@@ -193,7 +184,11 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								}),
 							]}
 						>
-							<AuthCta isSignedIn={isSignedIn} />
+							<AuthCta
+								isSignedIn={isSignedIn}
+								startLabel={startLabel}
+								dashboardLabel={dashboardLabel}
+							/>
 						</div>
 					</div>
 				</section>
@@ -218,7 +213,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							}),
 						]}
 					>
-						<SectionHeader title="Everything you need" />
+						<SectionHeader title={everythingTitle} />
 
 						<div
 							mix={[
@@ -246,10 +241,9 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					mix={[
 						css({
 							padding: "64px 0",
-							background: neutral[50],
+							background: "var(--ui-neutral-bg-tint)",
 							"@media (min-width: 640px)": { padding: "96px 0" },
 							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
 						}),
 					]}
 				>
@@ -264,7 +258,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							}),
 						]}
 					>
-						<SectionHeader title="How it works" />
+						<SectionHeader title={howItWorksTitle} />
 
 						<div
 							mix={[
@@ -305,7 +299,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							}),
 						]}
 					>
-						<SectionHeader title="Frequently asked questions" />
+						<SectionHeader title={faqTitle} />
 
 						<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
 					</div>
@@ -316,13 +310,14 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						css({
 							padding: "56px 0",
 							textAlign: "center",
-							background: `linear-gradient(to right, ${primary[600]}, ${primary[700]})`,
-							color: "#ffffff",
+							background:
+								"linear-gradient(to right, var(--ui-primary-bg-solid), var(--ui-primary-bg-solid-hover))",
+							color: "var(--ui-primary-fg-on-solid)",
 						}),
 					]}
 				>
-					<h2>Start monitoring your services</h2>
-					<p>Create your first monitor in under 2 minutes. No credit card required to start.</p>
+					<h2>{finalCtaTitle}</h2>
+					<p>{finalCtaBody}</p>
 
 					<div
 						mix={[
@@ -336,7 +331,11 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							}),
 						]}
 					>
-						<AuthCta isSignedIn={isSignedIn} />
+						<AuthCta
+							isSignedIn={isSignedIn}
+							startLabel={startLabel}
+							dashboardLabel={dashboardLabel}
+						/>
 					</div>
 				</section>
 			</>

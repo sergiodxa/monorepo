@@ -9,174 +9,110 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Description, Label, NumberField, TextField } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
-import Field from "~/resources/components/field";
-import { neutral } from "~/resources/theme";
+import Switch from "~/resources/components/switch";
 
 namespace TcpMonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectTcpMonitor;
+		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
+		i18next: ReturnType<typeof getContext>["i18next"];
+		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
+		page: "createTcpMonitor" | "editTcpMonitor";
 	}
 }
 
 /** Renders the host/port/interval/timeout fields (plus an enabled toggle when editing), pre-filled from `monitor` when editing. */
 export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields.Props>) {
 	return () => {
-		let monitor = handle.props.monitor;
+		let { monitor, i18next, page } = handle.props;
+		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
 		return (
 			<>
-				<Field label="Name">
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={monitor?.name}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					type="text"
+					name="name"
+					required
+					defaultValue={monitor?.name}
+					label={t("name.label")}
+					placeholder={t("name.placeholder")}
+					description={t("name.description")}
+					mix={[css({ marginBottom: 28 })]}
+				/>
 
-				<Field label="Host">
-					<input
-						type="text"
-						name="host"
-						required
-						defaultValue={monitor?.host}
-						placeholder="db.example.com"
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					type="text"
+					name="host"
+					required
+					defaultValue={monitor?.host}
+					label={t("host.label")}
+					placeholder={t("host.placeholder")}
+					description={t("host.description")}
+					mix={[css({ marginBottom: 28 })]}
+				/>
 
-				<Field label="Port">
-					<input
-						type="number"
-						name="port"
-						required
-						min={1}
-						max={65_535}
-						defaultValue={monitor?.port ?? 80}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<NumberField mix={[css({ marginBottom: 28 })]}>
+					<Label htmlFor="tcp-monitor-port">{t("port.label")}</Label>
+					<NumberField.Group>
+						<NumberField.DecrementButton aria-label={t("port.decrement")} />
+						<NumberField.Input
+							id="tcp-monitor-port"
+							name="port"
+							required
+							min={1}
+							max={65_535}
+							defaultValue={monitor?.port ?? 80}
+						/>
+						<NumberField.IncrementButton aria-label={t("port.increment")} />
+					</NumberField.Group>
+					<Description>{t("port.description")}</Description>
+				</NumberField>
 
-				<Field label="Check interval (seconds)">
-					<input
-						type="number"
-						name="interval_seconds"
-						min={10}
-						max={86_400}
-						defaultValue={monitor?.interval_seconds ?? 300}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<NumberField mix={[css({ marginBottom: 28 })]}>
+					<Label htmlFor="tcp-monitor-interval-seconds">{t("interval.label")}</Label>
+					<NumberField.Group>
+						<NumberField.DecrementButton aria-label={t("interval.decrement")} />
+						<NumberField.Input
+							id="tcp-monitor-interval-seconds"
+							name="interval_seconds"
+							min={10}
+							max={86_400}
+							defaultValue={monitor?.interval_seconds ?? 300}
+						/>
+						<NumberField.IncrementButton aria-label={t("interval.increment")} />
+					</NumberField.Group>
+					<Description>{t("interval.description")}</Description>
+				</NumberField>
 
-				<Field label="Timeout (ms)">
-					<input
-						type="number"
-						name="timeout_ms"
-						min={100}
-						max={60_000}
-						defaultValue={monitor?.timeout_ms ?? 5000}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<NumberField mix={[css({ marginBottom: 28 })]}>
+					<Label htmlFor="tcp-monitor-timeout-ms">{t("timeout.label")}</Label>
+					<NumberField.Group>
+						<NumberField.DecrementButton aria-label={t("timeout.decrement")} />
+						<NumberField.Input
+							id="tcp-monitor-timeout-ms"
+							name="timeout_ms"
+							min={100}
+							max={60_000}
+							defaultValue={monitor?.timeout_ms ?? 5000}
+						/>
+						<NumberField.IncrementButton aria-label={t("timeout.increment")} />
+					</NumberField.Group>
+					<Description>{t("timeout.description")}</Description>
+				</NumberField>
 
 				{monitor && (
-					<label
-						mix={[
-							css({
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-								marginBottom: 16,
-								fontSize: "0.875rem",
-							}),
-						]}
-					>
-						<input
-							type="checkbox"
-							name="is_enabled"
-							value="true"
-							defaultChecked={monitor.is_enabled}
-						/>
-						<span>Enabled</span>
-					</label>
+					<Switch name="is_enabled" defaultChecked={monitor.is_enabled}>
+						{t("isEnabled.label")}
+					</Switch>
 				)}
 			</>
 		);

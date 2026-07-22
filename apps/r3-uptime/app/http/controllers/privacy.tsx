@@ -1,7 +1,12 @@
 /**
  * Privacy Policy controller. Renders the static GDPR-oriented prose — covering data
  * collected, usage, sharing, retention, rights, security, and cookies — inside the
- * shared `MarketingLayout` chrome.
+ * shared `MarketingLayout` chrome. Every section's copy comes from
+ * `legal.privacy.sections.*` in the locale files; the sibling `apps/uptime` app only
+ * ever translated this page's SEO `meta.title`/`meta.description` (never its body
+ * prose), so these `sections.*` keys are new and — like every other freshly added
+ * key in this pass — only populated in `en.ts` for now, falling back to English in
+ * every other locale until translated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,17 +17,18 @@ import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";
-import MarketingLayout from "~/resources/layouts/marketing";
+import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /privacy — the Privacy Policy page. */
 export default createAction(routes.legal.privacy, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
+	let chrome = buildMarketingChrome(ctx.i18next.t);
 
 	return ctx.render(
-		<DocumentLayout title="Privacy Policy | Uptime">
-			<MarketingLayout isSignedIn={isSignedIn}>
+		<DocumentLayout title={ctx.i18next.t("legal.privacy.meta.title")}>
+			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<article
 					mix={[
 						css({
@@ -74,206 +80,174 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 							}),
 						]}
 					>
-						Last updated: February 11, 2026
+						{ctx.i18next.t("legal.privacy.lastUpdated")}
 					</p>
 
-					<h1>Privacy Policy</h1>
+					<h1>{ctx.i18next.t("legal.privacy.title")}</h1>
 
-					<h2>1. Introduction</h2>
-					<p>
-						This Privacy Policy describes how Uptime, operated by Sergio Xalambrí ("we", "us", or
-						"our"), collects, uses, and protects your personal information when you use our uptime
-						monitoring service.
-					</p>
-					<p>
-						This policy applies to all users of our service and covers data collected through our
-						website and monitoring platform.
-					</p>
+					<h2>{ctx.i18next.t("legal.privacy.sections.introduction.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.introduction.first")}</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.introduction.second")}</p>
 
-					<h2>2. Data We Collect</h2>
+					<h2>{ctx.i18next.t("legal.privacy.sections.dataCollected.title")}</h2>
 
-					<h3>Account Data</h3>
-					<p>
-						When you sign up using GitHub authentication, we collect your email address and display
-						name from your GitHub profile.
-					</p>
+					<h3>{ctx.i18next.t("legal.privacy.sections.dataCollected.accountData.title")}</h3>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.accountData.body")}</p>
 
-					<h3>Monitoring Data</h3>
-					<p>
-						We collect data related to the monitors you create, including URLs you choose to
-						monitor, response times, HTTP status codes, and uptime/downtime events.
-					</p>
+					<h3>{ctx.i18next.t("legal.privacy.sections.dataCollected.monitoringData.title")}</h3>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.monitoringData.body")}</p>
 
-					<h3>Cron Job Monitoring Data</h3>
-					<p>For cron job (scheduled task) monitoring, we collect:</p>
+					<h3>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.title")}</h3>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.intro")}</p>
 					<ul>
-						<li>Ping timestamps (when your scheduled tasks report completion)</li>
-						<li>Source IP addresses of ping requests</li>
-						<li>User agent strings from ping requests</li>
-						<li>Schedule configuration (cron expressions, timezones, grace periods)</li>
+						<li>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.first")}</li>
+						<li>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.second")}</li>
+						<li>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.third")}</li>
+						<li>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.fourth")}</li>
 					</ul>
-					<p>
-						This data helps you track whether your scheduled tasks are running on time and enables
-						us to alert you when expected pings are missed.
-					</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.cronJobData.outro")}</p>
 
-					<h3>Usage Data</h3>
-					<p>
-						We collect analytics and log data about how you interact with our service, including
-						page views, feature usage, and error logs.
-					</p>
+					<h3>{ctx.i18next.t("legal.privacy.sections.dataCollected.usageData.title")}</h3>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.usageData.body")}</p>
 
-					<h3>Payment Data</h3>
-					<p>
-						Payment processing is handled by Polar. We do not store your credit card information. We
-						only receive confirmation of your subscription status and billing history from Polar.
-					</p>
+					<h3>{ctx.i18next.t("legal.privacy.sections.dataCollected.paymentData.title")}</h3>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataCollected.paymentData.body")}</p>
 
-					<h2>3. How We Use Your Data</h2>
+					<h2>{ctx.i18next.t("legal.privacy.sections.dataUsage.title")}</h2>
 					<ul>
 						<li>
-							<strong>To provide the monitoring service:</strong> We use your data to monitor your
-							specified URLs and track their availability.
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataUsage.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataUsage.first.body")}
 						</li>
 						<li>
-							<strong>To send alerts and notifications:</strong> We use your email to send you
-							downtime alerts and status notifications.
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataUsage.second.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataUsage.second.body")}
 						</li>
 						<li>
-							<strong>To improve the service:</strong> We analyze usage patterns to enhance features
-							and fix issues.
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataUsage.third.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataUsage.third.body")}
 						</li>
 						<li>
-							<strong>To communicate with you:</strong> We may send you service updates, security
-							notices, and support messages.
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataUsage.fourth.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataUsage.fourth.body")}
 						</li>
 					</ul>
 
-					<h2>4. Data Sharing</h2>
+					<h2>{ctx.i18next.t("legal.privacy.sections.dataSharing.title")}</h2>
 					<p>
-						<strong>We do not sell your personal data.</strong>
+						<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.noSell")}</strong>
 					</p>
-					<p>We share data with the following third-party services that help us operate Uptime:</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataSharing.intro")}</p>
 					<ul>
 						<li>
-							<strong>Cloudflare:</strong> Infrastructure, hosting, and content delivery
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataSharing.first.body")}
 						</li>
 						<li>
-							<strong>Polar:</strong> Payment processing and subscription management
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.second.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataSharing.second.body")}
 						</li>
 						<li>
-							<strong>Resend:</strong> Email delivery for alerts and notifications
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.third.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataSharing.third.body")}
 						</li>
 						<li>
-							<strong>GitHub:</strong> Authentication services
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.fourth.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataSharing.fourth.body")}
 						</li>
 					</ul>
-					<p>
-						We may also disclose your data if required by law or to protect our rights and the
-						safety of our users.
-					</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.dataSharing.outro")}</p>
 
-					<h2>5. Data Retention</h2>
+					<h2>{ctx.i18next.t("legal.privacy.sections.dataRetention.title")}</h2>
 					<ul>
 						<li>
-							<strong>Monitoring data:</strong> Retained for 365 days from collection
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataRetention.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataRetention.first.body")}
 						</li>
 						<li>
-							<strong>Account data:</strong> Retained until you delete your account
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataRetention.second.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataRetention.second.body")}
 						</li>
 						<li>
-							<strong>Logs:</strong> Retained for 30 days
-						</li>
-					</ul>
-
-					<h2>6. Your Rights (GDPR)</h2>
-					<p>Under the General Data Protection Regulation (GDPR), you have the right to:</p>
-					<ul>
-						<li>
-							<strong>Access your data:</strong> Request a copy of the personal data we hold about
-							you
-						</li>
-						<li>
-							<strong>Correct your data:</strong> Request correction of inaccurate personal data
-						</li>
-						<li>
-							<strong>Delete your data:</strong> Request deletion of your personal data
-						</li>
-						<li>
-							<strong>Export your data:</strong> Receive your data in a portable format
-						</li>
-						<li>
-							<strong>Object to processing:</strong> Object to certain types of data processing
-						</li>
-					</ul>
-					<p>
-						To exercise any of these rights, please contact us at the email address provided below.
-					</p>
-
-					<h2>7. Security</h2>
-					<p>We implement appropriate security measures to protect your data:</p>
-					<ul>
-						<li>
-							<strong>Encryption in transit:</strong> All data is transmitted over HTTPS/TLS
-						</li>
-						<li>
-							<strong>Encryption at rest:</strong> Stored data is encrypted
-						</li>
-						<li>
-							<strong>Access controls:</strong> Strict access controls limit who can access your
-							data
-						</li>
-						<li>
-							<strong>Regular security reviews:</strong> We regularly review our security practices
+							<strong>{ctx.i18next.t("legal.privacy.sections.dataRetention.third.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.dataRetention.third.body")}
 						</li>
 					</ul>
 
-					<h2>8. Cookies</h2>
-					<p>We use minimal cookies necessary for the service to function:</p>
+					<h2>{ctx.i18next.t("legal.privacy.sections.rights.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.rights.intro")}</p>
 					<ul>
 						<li>
-							<strong>Session cookies:</strong> Used for authentication and maintaining your
-							logged-in state
+							<strong>{ctx.i18next.t("legal.privacy.sections.rights.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.rights.first.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.rights.second.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.rights.second.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.rights.third.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.rights.third.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.rights.fourth.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.rights.fourth.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.rights.fifth.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.rights.fifth.body")}
 						</li>
 					</ul>
-					<p>
-						We do not use tracking cookies, third-party advertising cookies, or any cookies for
-						marketing purposes.
-					</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.rights.outro")}</p>
 
-					<h2>9. Children's Privacy</h2>
-					<p>
-						Uptime is not intended for use by individuals under 18 years of age. We do not knowingly
-						collect personal information from children under 18.
-					</p>
+					<h2>{ctx.i18next.t("legal.privacy.sections.security.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.security.intro")}</p>
+					<ul>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.security.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.security.first.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.security.second.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.security.second.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.security.third.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.security.third.body")}
+						</li>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.security.fourth.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.security.fourth.body")}
+						</li>
+					</ul>
 
-					<h2>10. International Data Transfers</h2>
-					<p>
-						Your data may be processed via Cloudflare's global network. If you are located in the
-						European Union, your data may be transferred to and processed in the United States.
-					</p>
-					<p>
-						We rely on Cloudflare's Standard Contractual Clauses and other appropriate safeguards to
-						ensure your data is protected in accordance with GDPR requirements.
-					</p>
+					<h2>{ctx.i18next.t("legal.privacy.sections.cookies.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.cookies.intro")}</p>
+					<ul>
+						<li>
+							<strong>{ctx.i18next.t("legal.privacy.sections.cookies.first.label")}</strong>{" "}
+							{ctx.i18next.t("legal.privacy.sections.cookies.first.body")}
+						</li>
+					</ul>
+					<p>{ctx.i18next.t("legal.privacy.sections.cookies.outro")}</p>
 
-					<h2>11. Changes to This Policy</h2>
-					<p>
-						We may update this Privacy Policy from time to time. We will notify you of any material
-						changes by posting the new policy on this page and updating the "Last updated" date.
-					</p>
-					<p>
-						For significant changes, we will also send you an email notification if you have an
-						account with us.
-					</p>
+					<h2>{ctx.i18next.t("legal.privacy.sections.childrensPrivacy.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.childrensPrivacy.body")}</p>
 
-					<h2>12. Contact Us</h2>
+					<h2>{ctx.i18next.t("legal.privacy.sections.internationalTransfers.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.internationalTransfers.first")}</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.internationalTransfers.second")}</p>
+
+					<h2>{ctx.i18next.t("legal.privacy.sections.changesToPolicy.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.changesToPolicy.first")}</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.changesToPolicy.second")}</p>
+
+					<h2>{ctx.i18next.t("legal.privacy.sections.contact.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.contact.body")}</p>
 					<p>
-						If you have any questions about this Privacy Policy or wish to exercise your data
-						rights, please contact us at:
-					</p>
-					<p>
-						<a href="mailto:privacy@sergiodxa.com">privacy@sergiodxa.com</a>
+						<a href={`mailto:${ctx.i18next.t("legal.privacy.sections.contact.email")}`}>
+							{ctx.i18next.t("legal.privacy.sections.contact.email")}
+						</a>
 					</p>
 				</article>
 			</MarketingLayout>

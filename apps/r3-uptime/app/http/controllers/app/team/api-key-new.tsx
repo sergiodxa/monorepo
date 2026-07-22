@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { css } from "remix/ui";
@@ -23,6 +24,9 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
+
+/** DOM id for the scopes {@link CheckboxGroup}'s visible caption, wired through `aria-labelledby`. */
+const SCOPES_LABEL_ID = "api-key-scopes-label";
 
 /** GET /app/:team/api-keys/new — the new API key form. */
 export default createAction(routes.app.team.apiKeys.new, {
@@ -71,41 +75,25 @@ export default createAction(routes.app.team.apiKeys.new, {
 								/>
 							</Field>
 
-							<fieldset
-								mix={[
-									css({
-										display: "flex",
-										flexDirection: "column",
-										gap: 4,
-										marginBottom: 20,
-										fontSize: "0.875rem",
-										fontWeight: 500,
-									}),
-								]}
+							<div
+								mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}
 							>
-								<legend>{ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}</legend>
-								{apiKeyScopes.map((scope) => (
-									<label
-										key={scope}
-										mix={[
-											css({
-												display: "flex",
-												alignItems: "center",
-												gap: 8,
-												marginBottom: 16,
-												fontSize: "0.875rem",
-											}),
-										]}
-									>
-										<input type="checkbox" name="scopes" value={scope} />
-										<span>
+								<CheckboxGroup aria-labelledby={SCOPES_LABEL_ID}>
+									<Label id={SCOPES_LABEL_ID}>
+										{ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
+									</Label>
+									{apiKeyScopes.map((scope) => (
+										<Checkbox key={scope} name="scopes" value={scope}>
 											{ctx.i18next.t(`page.apiKeys.form.fields.scopes.options.${scope}`, {
 												nsSeparator: false,
 											})}
-										</span>
-									</label>
-								))}
-							</fieldset>
+										</Checkbox>
+									))}
+								</CheckboxGroup>
+								<Description>
+									{ctx.i18next.t("page.apiKeys.form.fields.scopes.description")}
+								</Description>
+							</div>
 
 							<Field label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}>
 								<input

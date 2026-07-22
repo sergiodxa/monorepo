@@ -15,6 +15,8 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Checkbox, CheckboxGroup, Description, Label, TextArea, TextField } from "@pkg/r3-ui";
+import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { css } from "remix/ui";
 
 import type {
@@ -25,8 +27,7 @@ import type {
 	SelectTcpMonitor,
 } from "~/database/schema";
 
-import Field from "~/resources/components/field";
-import { neutral } from "~/resources/theme";
+import Switch from "~/resources/components/switch";
 
 namespace StatusPageFormFields {
 	export interface Props {
@@ -61,6 +62,9 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 		} = handle.props;
 
 		let t = i18next.getFixedT(null, "translation", "page.statusPages.form.fields");
+		let monitorsLabelId = `${handle.id}-monitors-label`;
+		let cronJobsLabelId = `${handle.id}-cron-jobs-label`;
+		let descriptionFieldId = `${handle.id}-description`;
 
 		let selectableMonitors = [
 			...monitors.map((monitor) => ({
@@ -85,255 +89,109 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 
 		return (
 			<>
-				<Field label="Name">
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={page?.name}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("name.label")}
+					type="text"
+					name="name"
+					required
+					placeholder={t("name.placeholder")}
+					description={t("name.description")}
+					defaultValue={page?.name}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Slug">
-					<input
-						type="text"
-						name="slug"
-						required
-						defaultValue={page?.slug}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-							}),
-						]}
-					>
-						Lowercase letters, numbers, and hyphens only.
-					</p>
-				</Field>
+				<TextField
+					label={t("slug.label")}
+					type="text"
+					name="slug"
+					required
+					placeholder={t("slug.placeholder")}
+					description={t("slug.description")}
+					defaultValue={page?.slug}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Title">
-					<input
-						type="text"
-						name="title"
-						required
-						defaultValue={page?.title}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("title.label")}
+					type="text"
+					name="title"
+					required
+					placeholder={t("title.placeholder")}
+					description={t("title.description")}
+					defaultValue={page?.title}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Description">
-					<textarea
+				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+					<Label htmlFor={descriptionFieldId}>{t("description.label")}</Label>
+					<TextArea
+						id={descriptionFieldId}
 						name="description"
+						placeholder={t("description.placeholder")}
 						defaultValue={page?.description ?? ""}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
 					/>
-				</Field>
+					<Description>{t("description.description")}</Description>
+				</div>
 
-				<Field label="Logo URL">
-					<input
-						type="url"
-						name="logo_url"
-						defaultValue={page?.logo_url ?? ""}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("logoUrl.label")}
+					type="url"
+					name="logo_url"
+					placeholder={t("logoUrl.placeholder")}
+					description={t("logoUrl.description")}
+					defaultValue={page?.logo_url ?? ""}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="is_public"
-						value="true"
-						defaultChecked={page?.is_public ?? true}
-					/>
-					<span>Public — anyone with the link can view this page</span>
-				</label>
+				<div mix={[fieldStackLayout(), css({ marginBottom: 16 })]}>
+					<Switch name="is_public" defaultChecked={page?.is_public ?? true}>
+						{t("isPublic.label")}
+					</Switch>
+					<Description>{t("isPublic.description")}</Description>
+				</div>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="show_overall_status"
-						value="true"
-						defaultChecked={page?.show_overall_status ?? true}
-					/>
-					<span>Show the overall status banner</span>
-				</label>
+				<div mix={[fieldStackLayout(), css({ marginBottom: 16 })]}>
+					<Switch name="show_overall_status" defaultChecked={page?.show_overall_status ?? true}>
+						{t("showOverallStatus.label")}
+					</Switch>
+					<Description>{t("showOverallStatus.description")}</Description>
+				</div>
 
 				{selectableMonitors.length > 0 && (
-					<div mix={[css({ display: "flex", flexDirection: "column", marginBottom: 20 })]}>
-						<p mix={[css({ margin: 0, fontSize: "0.875rem", fontWeight: 600 })]}>
-							{t("monitors.label")}
-						</p>
-						<p
-							mix={[
-								css({
-									margin: "4px 0 8px",
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
-							]}
-						>
-							{t("monitors.description")}
-						</p>
-						{selectableMonitors.map((monitor) => (
-							<label
-								key={`${monitor.fieldName}-${monitor.id}`}
-								mix={[
-									css({
-										display: "flex",
-										alignItems: "center",
-										gap: 8,
-										marginBottom: 16,
-										fontSize: "0.875rem",
-									}),
-								]}
-							>
-								<input
-									type="checkbox"
+					<div mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}>
+						<CheckboxGroup aria-labelledby={monitorsLabelId}>
+							<Label id={monitorsLabelId}>{t("monitors.label")}</Label>
+							{selectableMonitors.map((monitor) => (
+								<Checkbox
+									key={`${monitor.fieldName}-${monitor.id}`}
 									name={monitor.fieldName}
 									value={monitor.id}
 									defaultChecked={monitor.checked}
-								/>
-								<span>{monitor.name}</span>
-							</label>
-						))}
+								>
+									{monitor.name}
+								</Checkbox>
+							))}
+						</CheckboxGroup>
+						<Description>{t("monitors.description")}</Description>
 					</div>
 				)}
 
 				{cronJobs.length > 0 && (
-					<div mix={[css({ display: "flex", flexDirection: "column", marginBottom: 20 })]}>
-						<p mix={[css({ margin: 0, fontSize: "0.875rem", fontWeight: 600 })]}>
-							{t("cronJobs.label")}
-						</p>
-						<p
-							mix={[
-								css({
-									margin: "4px 0 8px",
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
-							]}
-						>
-							{t("cronJobs.description")}
-						</p>
-						{cronJobs.map((cronJob) => (
-							<label
-								key={cronJob.id}
-								mix={[
-									css({
-										display: "flex",
-										alignItems: "center",
-										gap: 8,
-										marginBottom: 16,
-										fontSize: "0.875rem",
-									}),
-								]}
-							>
-								<input
-									type="checkbox"
+					<div mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}>
+						<CheckboxGroup aria-labelledby={cronJobsLabelId}>
+							<Label id={cronJobsLabelId}>{t("cronJobs.label")}</Label>
+							{cronJobs.map((cronJob) => (
+								<Checkbox
+									key={cronJob.id}
 									name="cron_job_ids"
 									value={cronJob.id}
 									defaultChecked={attachedCronJobIds.includes(cronJob.id)}
-								/>
-								<span>{cronJob.name}</span>
-							</label>
-						))}
+								>
+									{cronJob.name}
+								</Checkbox>
+							))}
+						</CheckboxGroup>
+						<Description>{t("cronJobs.description")}</Description>
 					</div>
 				)}
 			</>

@@ -8,190 +8,105 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Label, NumberField, TextField } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 
-import Field from "~/resources/components/field";
-import { neutral } from "~/resources/theme";
+import Switch from "~/resources/components/switch";
+
+/** Stable id linking the grace-period field's `Label` to its `NumberField.Input`. */
+const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
 namespace CronJobFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectCronJobMonitor;
+		/** The request's i18next instance, used to read this page's `form.fields.*` copy. */
+		i18next: ReturnType<typeof getContext>["i18next"];
+		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
+		page: "createCronJob" | "editCronJob";
 	}
 }
 
 /** Renders the name/description/cron-expression/grace-period/timezone/alert fields, pre-filled from `monitor` when editing and left blank (except for a UTC timezone default) when creating. */
 export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props>) {
 	return () => {
-		let monitor = handle.props.monitor;
+		let { monitor, i18next, page } = handle.props;
+		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
 		return (
 			<>
-				<Field label="Name">
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={monitor?.name}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("name.label")}
+					type="text"
+					name="name"
+					required
+					defaultValue={monitor?.name}
+					placeholder={t("name.placeholder")}
+					description={t("name.description")}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Description (optional)">
-					<input
-						type="text"
-						name="description"
-						defaultValue={monitor?.description ?? ""}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("description.label")}
+					type="text"
+					name="description"
+					defaultValue={monitor?.description ?? ""}
+					placeholder={t("description.placeholder")}
+					description={t("description.description")}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Cron expression">
-					<input
-						type="text"
-						name="cron_expression"
-						required
-						defaultValue={monitor?.cron_expression ?? ""}
-						placeholder="0 * * * *"
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("cronExpression.label")}
+					type="text"
+					name="cron_expression"
+					required
+					defaultValue={monitor?.cron_expression ?? ""}
+					placeholder={t("cronExpression.placeholder")}
+					description={t("cronExpression.description")}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<Field label="Grace period (seconds)">
-					<input
-						type="number"
-						name="grace_period_seconds"
-						min={60}
-						max={86_400}
-						defaultValue={monitor?.grace_period_seconds ?? 300}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<NumberField mix={css({ marginBottom: 28 })}>
+					<Label htmlFor={GRACE_PERIOD_INPUT_ID}>
+						{t("gracePeriod.label")} ({t("gracePeriod.unit.seconds")})
+					</Label>
+					<NumberField.Group>
+						<NumberField.DecrementButton aria-label={t("gracePeriod.decrement")} />
+						<NumberField.Input
+							id={GRACE_PERIOD_INPUT_ID}
+							name="grace_period_seconds"
+							min={60}
+							max={86_400}
+							defaultValue={monitor?.grace_period_seconds ?? 300}
+						/>
+						<NumberField.IncrementButton aria-label={t("gracePeriod.increment")} />
+					</NumberField.Group>
+				</NumberField>
 
-				<Field label="Timezone">
-					<input
-						type="text"
-						name="timezone"
-						required
-						defaultValue={monitor?.timezone ?? "UTC"}
-						placeholder="UTC"
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("timezone.label")}
+					type="text"
+					name="timezone"
+					required
+					defaultValue={monitor?.timezone ?? "UTC"}
+					placeholder={t("timezone.placeholder")}
+					description={t("timezone.description")}
+					mix={css({ marginBottom: 28 })}
+				/>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="alert_on_late"
-						value="true"
-						defaultChecked={monitor?.alert_on_late ?? false}
-					/>
-					<span>Alert when late (not just when missed)</span>
-				</label>
+				<Switch name="alert_on_late" defaultChecked={monitor?.alert_on_late ?? false}>
+					{t("alertOnLate.label")}
+				</Switch>
 
-				<label
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							marginBottom: 16,
-							fontSize: "0.875rem",
-						}),
-					]}
-				>
-					<input
-						type="checkbox"
-						name="is_enabled"
-						value="true"
-						defaultChecked={monitor ? monitor.enabled_at !== null : true}
-					/>
-					<span>Enabled</span>
-				</label>
+				<Switch name="is_enabled" defaultChecked={monitor ? monitor.enabled_at !== null : true}>
+					{t("enabled.label")}
+				</Switch>
 			</>
 		);
 	};

@@ -6,34 +6,27 @@
  * exists so those 40+ public pages share one header/footer instead of repeating
  * the chrome per page.
  *
+ * Every piece of copy — the brand mark, nav labels, CTA labels, footer columns, and
+ * the copyright line — arrives as a plain, already-translated prop, the same
+ * convention `AppShell` uses for its own `heading`/`breadcrumbs` props: this layout
+ * never reads `ctx.i18next` itself. {@link buildMarketingChrome} centralizes the
+ * `t()` calls building those props (and the `routes`-derived hrefs alongside them)
+ * so every calling controller (home, the marketing/legal pages) shares one
+ * definition instead of repeating the same dozens of `t()` calls seven times over.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TFunction } from "i18next";
 import type { Handle, RemixNode } from "remix/ui";
 
+import { NavLink } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import { fontSans, primary } from "~/resources/theme";
+import { fontSans } from "~/resources/theme";
 import routes from "~/routes/web";
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-};
-
-/** Inserts an alpha channel into an `oklch(...)` color string. */
-function alpha(color: string, value: number): string {
-	return color.replace(/\)$/, ` / ${value})`);
-}
 
 /** Page-level flex column filling the viewport height. */
 const page = css({ display: "flex", flexDirection: "column", minHeight: "100vh" });
@@ -41,11 +34,23 @@ const page = css({ display: "flex", flexDirection: "column", minHeight: "100vh" 
 namespace MarketingLayout {
 	export interface Props {
 		isSignedIn: boolean;
+		/** Brand mark shown at the header's leading edge, linking home (`landing.header.title`). */
+		brandLabel: string;
+		/** Header nav links, already translated and pointed at their `routes.*` hrefs. */
+		navLinks: Array<{ href: string; label: string }>;
+		/** Label for the header CTA's signed-in state (`landing.header.nav.cta.in`). */
+		dashboardLabel: string;
+		/** Label for the header CTA's signed-out state (`landing.header.nav.cta.out`). */
+		startLabel: string;
+		/** Footer columns, already translated and pointed at their `routes.*` hrefs. */
+		footerColumns: FooterColumn[];
+		/** Fully formatted copyright line (`landing.footer.copyright`, year already interpolated). */
+		copyrightLine: string;
 		children: RemixNode;
 	}
 }
 
-interface FooterColumn {
+export interface FooterColumn {
 	title: string;
 	links: Array<{ label: string; href: string }>;
 }
@@ -59,107 +64,163 @@ type FooterCell =
 	| { kind: "column"; column: FooterColumn }
 	| { kind: "combined"; columns: FooterColumn[] };
 
-const FOOTER_COLUMNS: FooterColumn[] = [
-	{
-		title: "Features",
-		links: [
-			{ label: "HTTP Monitors", slug: "monitors" },
-			{ label: "Alerts", slug: "alerts" },
-			{ label: "Status Pages", slug: "status-pages" },
-			{ label: "SSL Monitoring", slug: "ssl" },
-			{ label: "DNS Monitoring", slug: "dns" },
-			{ label: "Cron Job Monitoring", slug: "cron-jobs" },
-			{ label: "Content Monitoring", slug: "content-monitoring" },
-			{ label: "Maintenance Windows", slug: "maintenance" },
-			{ label: "Integrations", slug: "integrations" },
-			{ label: "Teams", slug: "teams" },
-			{ label: "Analytics", slug: "analytics" },
-			{ label: "API Access", slug: "api" },
-		].map((link) => ({
-			label: link.label,
-			href: routes.marketing.feature.href({ slug: link.slug }),
-		})),
-	},
-	{
-		title: "Use Cases",
-		links: [
-			{ label: "Website Monitoring", slug: "website-monitoring" },
-			{ label: "API Monitoring", slug: "api-monitoring" },
-			{ label: "SaaS Applications", slug: "saas" },
-			{ label: "E-commerce", slug: "ecommerce" },
-			{ label: "Cron Job Monitoring", slug: "cron-jobs" },
-			{ label: "Microservices", slug: "microservices" },
-			{ label: "Health Checks", slug: "healthcheck" },
-		].map((link) => ({
-			label: link.label,
-			href: routes.marketing.useCase.href({ slug: link.slug }),
-		})),
-	},
-	{
-		title: "Solutions",
-		links: [
-			{ label: "For Indie Hackers", slug: "indie-hackers" },
-			{ label: "For Solo Developers", slug: "solo-devs" },
-			{ label: "For Startups", slug: "startups" },
-			{ label: "For Agencies", slug: "agencies" },
-			{ label: "For Enterprises", slug: "enterprises" },
-			{ label: "For DevOps", slug: "devops" },
-		].map((link) => ({
-			label: link.label,
-			href: routes.marketing.audience.href({ slug: link.slug }),
-		})),
-	},
-	{
-		title: "Compare",
-		links: [
-			{ label: "vs UptimeRobot", slug: "uptimerobot" },
-			{ label: "vs Pingdom", slug: "pingdom" },
-			{ label: "vs Better Uptime", slug: "better-uptime" },
-			{ label: "vs Healthchecks.io", slug: "healthchecks" },
-			{ label: "vs Cronitor", slug: "cronitor" },
-			{ label: "vs Checkly", slug: "checkly" },
-			{ label: "vs StatusCake", slug: "statuscake" },
-			{ label: "vs Datadog", slug: "datadog" },
-			{ label: "vs Site24x7", slug: "site24x7" },
-			{ label: "vs Oh Dear", slug: "ohdear" },
-		].map((link) => ({
-			label: link.label,
-			href: routes.marketing.comparison.href({ slug: link.slug }),
-		})),
-	},
-	{
-		title: "Documentation",
-		links: [
-			{ label: "Overview", href: routes.docs.index.href() },
-			{ label: "Quick Start", href: "/docs/quickstart" },
-			{ label: "API Reference", href: "/docs/api/overview" },
-		],
-	},
-	{
-		title: "Legal",
-		links: [
-			{ label: "Terms of Service", href: routes.legal.terms.href() },
-			{ label: "Privacy Policy", href: routes.legal.privacy.href() },
-		],
-	},
-];
+/** Splits {@link MarketingLayout.Props.footerColumns} into the footer's grid cells — the last two columns share one cell, every other gets its own. */
+function buildFooterGrid(footerColumns: FooterColumn[]): FooterCell[] {
+	return [
+		...footerColumns.slice(0, 4).map((column): FooterCell => ({ kind: "column", column })),
+		{ kind: "combined", columns: footerColumns.slice(4) },
+	];
+}
 
-const FOOTER_GRID: FooterCell[] = [
-	...FOOTER_COLUMNS.slice(0, 4).map((column): FooterCell => ({ kind: "column", column })),
-	{ kind: "combined", columns: FOOTER_COLUMNS.slice(4) },
-];
+/**
+ * Builds every translated, already-`t()`-resolved prop {@link MarketingLayout}
+ * needs, from a controller's own `ctx.i18next.t`. Centralized here (rather than
+ * repeated across every marketing/legal controller) since the nav/footer link
+ * structure — which labels pair with which `routes.*` href — belongs to this
+ * layout's own chrome, not to any one page's content.
+ *
+ * @example
+ * let chrome = buildMarketingChrome(ctx.i18next.t);
+ * return ctx.render(
+ * 	<DocumentLayout title={...}>
+ * 		<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
+ * 			{...}
+ * 		</MarketingLayout>
+ * 	</DocumentLayout>,
+ * );
+ */
+export function buildMarketingChrome(
+	t: TFunction,
+): Omit<MarketingLayout.Props, "isSignedIn" | "children"> {
+	let footerColumns: FooterColumn[] = [
+		{
+			title: t("landing.footer.sections.features.title"),
+			links: [
+				{ label: t("landing.footer.sections.features.monitors"), slug: "monitors" },
+				{ label: t("landing.footer.sections.features.alerts"), slug: "alerts" },
+				{ label: t("landing.footer.sections.features.statusPages"), slug: "status-pages" },
+				{ label: t("landing.footer.sections.features.ssl"), slug: "ssl" },
+				{ label: t("landing.footer.sections.features.dns"), slug: "dns" },
+				{ label: t("landing.footer.sections.features.cronJobs"), slug: "cron-jobs" },
+				{
+					label: t("landing.footer.sections.features.contentMonitoring"),
+					slug: "content-monitoring",
+				},
+				{ label: t("landing.footer.sections.features.maintenance"), slug: "maintenance" },
+				{ label: t("landing.footer.sections.features.integrations"), slug: "integrations" },
+				{ label: t("landing.footer.sections.features.teams"), slug: "teams" },
+				{ label: t("landing.footer.sections.features.analytics"), slug: "analytics" },
+				{ label: t("landing.footer.sections.features.api"), slug: "api" },
+			].map((link) => ({
+				label: link.label,
+				href: routes.marketing.feature.href({ slug: link.slug }),
+			})),
+		},
+		{
+			title: t("landing.footer.sections.useCases.title"),
+			links: [
+				{
+					label: t("landing.footer.sections.useCases.websiteMonitoring"),
+					slug: "website-monitoring",
+				},
+				{ label: t("landing.footer.sections.useCases.apiMonitoring"), slug: "api-monitoring" },
+				{ label: t("landing.footer.sections.useCases.saas"), slug: "saas" },
+				{ label: t("landing.footer.sections.useCases.ecommerce"), slug: "ecommerce" },
+				{ label: t("landing.footer.sections.useCases.cronJobs"), slug: "cron-jobs" },
+				{ label: t("landing.footer.sections.useCases.microservices"), slug: "microservices" },
+				{ label: t("landing.footer.sections.useCases.healthChecks"), slug: "healthcheck" },
+			].map((link) => ({
+				label: link.label,
+				href: routes.marketing.useCase.href({ slug: link.slug }),
+			})),
+		},
+		{
+			title: t("landing.footer.sections.solutions.title"),
+			links: [
+				{ label: t("landing.footer.sections.solutions.indieHackers"), slug: "indie-hackers" },
+				{ label: t("landing.footer.sections.solutions.soloDevs"), slug: "solo-devs" },
+				{ label: t("landing.footer.sections.solutions.startups"), slug: "startups" },
+				{ label: t("landing.footer.sections.solutions.agencies"), slug: "agencies" },
+				{ label: t("landing.footer.sections.solutions.enterprises"), slug: "enterprises" },
+				{ label: t("landing.footer.sections.solutions.devops"), slug: "devops" },
+			].map((link) => ({
+				label: link.label,
+				href: routes.marketing.audience.href({ slug: link.slug }),
+			})),
+		},
+		{
+			title: t("landing.footer.sections.compare.title"),
+			links: [
+				{ label: t("landing.footer.sections.compare.uptimerobot"), slug: "uptimerobot" },
+				{ label: t("landing.footer.sections.compare.pingdom"), slug: "pingdom" },
+				{ label: t("landing.footer.sections.compare.betterUptime"), slug: "better-uptime" },
+				{ label: t("landing.footer.sections.compare.healthchecks"), slug: "healthchecks" },
+				{ label: t("landing.footer.sections.compare.cronitor"), slug: "cronitor" },
+				{ label: t("landing.footer.sections.compare.checkly"), slug: "checkly" },
+				{ label: t("landing.footer.sections.compare.statuscake"), slug: "statuscake" },
+				{ label: t("landing.footer.sections.compare.datadog"), slug: "datadog" },
+				{ label: t("landing.footer.sections.compare.site24x7"), slug: "site24x7" },
+				{ label: t("landing.footer.sections.compare.ohdear"), slug: "ohdear" },
+			].map((link) => ({
+				label: link.label,
+				href: routes.marketing.comparison.href({ slug: link.slug }),
+			})),
+		},
+		{
+			title: t("landing.footer.sections.docs.title"),
+			links: [
+				{ label: t("landing.footer.sections.docs.overview"), href: routes.docs.index.href() },
+				{ label: t("landing.footer.sections.docs.quickstart"), href: "/docs/quickstart" },
+				{ label: t("landing.footer.sections.docs.apiReference"), href: "/docs/api/overview" },
+			],
+		},
+		{
+			title: t("landing.footer.sections.legal.title"),
+			links: [
+				{ label: t("landing.footer.sections.legal.terms"), href: routes.legal.terms.href() },
+				{ label: t("landing.footer.sections.legal.privacy"), href: routes.legal.privacy.href() },
+			],
+		},
+	];
 
-const HEADER_NAV_LINKS = [
-	{ href: routes.marketing.feature.href({ slug: "monitors" }), label: "Features" },
-	{ href: routes.marketing.comparison.href({ slug: "uptimerobot" }), label: "Compare" },
-	{ href: `${routes.home.href()}#pricing`, label: "Pricing" },
-	{ href: routes.docs.index.href(), label: "Docs" },
-];
+	let navLinks = [
+		{
+			href: routes.marketing.feature.href({ slug: "monitors" }),
+			label: t("landing.header.nav.features"),
+		},
+		{
+			href: routes.marketing.comparison.href({ slug: "uptimerobot" }),
+			label: t("landing.header.nav.compare"),
+		},
+		{ href: `${routes.home.href()}#pricing`, label: t("landing.header.nav.pricing") },
+		{ href: routes.docs.index.href(), label: t("landing.header.nav.docs") },
+	];
+
+	return {
+		brandLabel: t("landing.header.title"),
+		navLinks,
+		dashboardLabel: t("landing.header.nav.cta.in"),
+		startLabel: t("landing.header.nav.cta.out"),
+		footerColumns,
+		copyrightLine: t("landing.footer.copyright", { year: new Date().getFullYear() }),
+	};
+}
 
 /** Renders the sticky header nav and multi-column footer around `children`; the header's CTA switches on {@link MarketingLayout.Props.isSignedIn}. */
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
-		let { isSignedIn, children } = handle.props;
+		let {
+			isSignedIn,
+			brandLabel,
+			navLinks,
+			dashboardLabel,
+			startLabel,
+			footerColumns,
+			copyrightLine,
+			children,
+		} = handle.props;
+
+		let footerGrid = buildFooterGrid(footerColumns);
 
 		return (
 			<div mix={[page, css({ fontFamily: fontSans })]}>
@@ -174,13 +235,9 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							justifyContent: "space-between",
 							gap: 16,
 							padding: "14px 24px",
-							borderBottom: `1px solid ${neutral[200]}`,
-							background: "rgba(255, 255, 255, 0.8)",
+							borderBottom: "1px solid var(--ui-neutral-border)",
+							background: "color-mix(in oklab, var(--ui-neutral-bg-tint) 80%, transparent)",
 							backdropFilter: "blur(12px)",
-							"@media (prefers-color-scheme: dark)": {
-								borderColor: neutral[800],
-								background: alpha(neutral[950], 0.8),
-							},
 						}),
 					]}
 				>
@@ -191,12 +248,11 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 								fontWeight: 700,
 								fontSize: "1.25rem",
 								textDecoration: "none",
-								color: neutral[900],
-								"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+								color: "var(--ui-neutral-fg-emphasis)",
 							}),
 						]}
 					>
-						Uptime
+						{brandLabel}
 					</a>
 
 					<nav mix={[css({ display: "flex", alignItems: "center", gap: 20 })]}>
@@ -204,32 +260,31 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 						 * Hidden entirely below `md` — no hamburger/drawer here,
 						 * only the logo and CTA remain visible on mobile.
 						 */}
-						{HEADER_NAV_LINKS.map((link) => (
-							<a
+						{navLinks.map((link) => (
+							<NavLink
 								key={link.href}
 								href={link.href}
+								hasBackground
 								mix={[
 									css({
-										fontSize: "0.875rem",
-										color: neutral[600],
-										textDecoration: "none",
-										"&:hover": { color: primary[600] },
-										"@media (prefers-color-scheme: dark)": {
-											color: neutral[400],
-											"&:hover": { color: primary[400] },
-										},
-									}),
-									css({
 										display: "none",
+										fontSize: "0.875rem",
+										color: "var(--ui-neutral-fg)",
+										"&:hover": { color: "var(--ui-primary-fg)" },
 										"@media (min-width: 768px)": { display: "inline" },
 									}),
 								]}
 							>
 								{link.label}
-							</a>
+							</NavLink>
 						))}
 
-						<AuthCta isSignedIn={isSignedIn} dashboardLabel="Dashboard" size="sm" />
+						<AuthCta
+							isSignedIn={isSignedIn}
+							dashboardLabel={dashboardLabel}
+							startLabel={startLabel}
+							size="sm"
+						/>
 					</nav>
 				</header>
 
@@ -238,13 +293,9 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 				<footer
 					mix={[
 						css({
-							borderTop: `1px solid ${neutral[200]}`,
-							background: "#ffffff",
+							borderTop: "1px solid var(--ui-neutral-border)",
+							background: "var(--ui-neutral-bg-tint)",
 							padding: "48px 24px 24px",
-							"@media (prefers-color-scheme: dark)": {
-								borderColor: neutral[800],
-								background: neutral[950],
-							},
 						}),
 					]}
 				>
@@ -262,7 +313,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							}),
 						]}
 					>
-						{FOOTER_GRID.map((cell) =>
+						{footerGrid.map((cell) =>
 							cell.kind === "column" ? (
 								<div key={cell.column.title}>
 									<p
@@ -270,9 +321,8 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 											css({
 												fontSize: "0.875rem",
 												fontWeight: 600,
-												color: neutral[900],
+												color: "var(--ui-neutral-fg-emphasis)",
 												marginBottom: 16,
-												"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 											}),
 										]}
 									>
@@ -286,14 +336,10 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 												css({
 													display: "block",
 													fontSize: "0.875rem",
-													color: neutral[600],
+													color: "var(--ui-neutral-fg)",
 													textDecoration: "none",
 													marginBottom: 8,
-													"&:hover": { color: primary[600] },
-													"@media (prefers-color-scheme: dark)": {
-														color: neutral[400],
-														"&:hover": { color: primary[400] },
-													},
+													"&:hover": { color: "var(--ui-primary-fg)" },
 												}),
 											]}
 										>
@@ -314,9 +360,8 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 													css({
 														fontSize: "0.875rem",
 														fontWeight: 600,
-														color: neutral[900],
+														color: "var(--ui-neutral-fg-emphasis)",
 														marginBottom: 16,
-														"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 													}),
 												]}
 											>
@@ -330,14 +375,10 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 														css({
 															display: "block",
 															fontSize: "0.875rem",
-															color: neutral[600],
+															color: "var(--ui-neutral-fg)",
 															textDecoration: "none",
 															marginBottom: 8,
-															"&:hover": { color: primary[600] },
-															"@media (prefers-color-scheme: dark)": {
-																color: neutral[400],
-																"&:hover": { color: primary[400] },
-															},
+															"&:hover": { color: "var(--ui-primary-fg)" },
 														}),
 													]}
 												>
@@ -359,12 +400,11 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 								marginTop: 24,
 								textAlign: "center",
 								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+								color: "var(--ui-neutral-fg-muted)",
 							}),
 						]}
 					>
-						© {new Date().getFullYear()} Uptime by Sergio Xalambrí. All rights reserved.
+						{copyrightLine}
 					</div>
 				</footer>
 			</div>

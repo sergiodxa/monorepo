@@ -1,8 +1,9 @@
 /**
  * Root HTML document layout for the r3-uptime app. It renders the outer html/head/body
- * shell with charset and viewport meta tags, an optional page title, and the client
- * entry script, switching between the dev source and the built asset path. It exists
- * as the shared document wrapper every server-rendered page is composed into.
+ * shell with charset and viewport meta tags, an optional page title, the @pkg/r3-ui
+ * design-system stylesheets, and the client entry script, switching between the dev
+ * source and the built asset path. It exists as the shared document wrapper every
+ * server-rendered page is composed into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,8 +11,11 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import resetStyles from "@pkg/r3-ui/reset.css?url";
+import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { css } from "remix/ui";
 
+import colorStyles from "~/resources/css/colors.css?url";
 import { fontMono, neutral } from "~/resources/theme";
 
 /**
@@ -39,21 +43,31 @@ namespace DocumentLayout {
 	export interface Props {
 		children: RemixNode;
 		title?: string;
+		/** The request's detected language (`ctx.locale`), set as `<html lang>`. Defaults to `"en"` for the few call sites that don't have it in scope yet. */
+		locale?: string;
 	}
 }
 
 /** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`, with an optional `<title>` and the client entry script. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { title, children } = handle.props;
+		let { title, locale = "en", children } = handle.props;
 
 		return (
-			<html lang="en">
+			<html lang={locale} class="system">
 				<head>
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
+					{/* Order matters: reset first, then semantic theme tokens, then this
+					app's own --color-* scales those tokens read through `var()` — CSS
+					custom properties resolve at used-value time, so declaration order
+					between these three doesn't actually affect which value wins, but
+					reading them least-specific-to-most mirrors the token layering. */}
+					<link rel="stylesheet" href={resetStyles} />
+					<link rel="stylesheet" href={colorStyles} />
+					<link rel="stylesheet" href={themeStyles} />
 					<style>{fontFaceCss}</style>
 				</head>
 				<body

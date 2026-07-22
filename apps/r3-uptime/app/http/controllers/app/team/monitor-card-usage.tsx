@@ -75,7 +75,7 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 						{usage.consumed === null ? "—" : usage.consumed.toLocaleString()}
 						<Subtitle>
 							{usage.estimated === null
-								? "Estimate unavailable"
+								? ctx.i18next.t("page.monitor.stats.monitors.estimateUnavailable")
 								: ctx.i18next.t("page.monitor.stats.monitors.description", {
 										estimated: usage.estimated.toLocaleString(),
 									})}

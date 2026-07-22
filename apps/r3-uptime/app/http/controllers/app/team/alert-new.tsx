@@ -51,7 +51,7 @@ export default createAction(routes.app.team.alerts.new, {
 				>
 					<FormPage>
 						<form method="post" action={routes.actions.alert.create.href({ team: ctx.team.slug })}>
-							<AlertFormFields monitors={monitors} />
+							<AlertFormFields monitors={monitors} i18next={ctx.i18next} />
 							<Button type="submit">{ctx.i18next.t("page.alerts.form.cta")}</Button>
 						</form>
 					</FormPage>

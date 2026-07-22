@@ -2,11 +2,17 @@
  * Edit alert page controller. Requires `requireUser` + `requireTeam`; 404s when the
  * alert doesn't belong to the current team.
  *
+ * The danger-zone delete confirmation is `@pkg/r3-ui`'s `AlertDialog` composed
+ * directly rather than through the `Confirm` convenience wrapper, since the
+ * confirming control is a real `<form method="post">` submit button rather than a
+ * `command="close"` action — matching `monitor-edit.tsx`'s own delete dialogs.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -23,9 +29,13 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import AlertFormFields from "~/resources/views/alerts/form";
 import routes from "~/routes/web";
+
+const DELETE_ALERT_DIALOG_ID = "delete-alert";
+const DELETE_ALERT_TITLE_ID = "delete-alert-title";
+const DELETE_ALERT_DESCRIPTION_ID = "delete-alert-description";
 
 /** GET /app/:team/alerts/:alertId/edit — an alert's edit form. */
 export default createAction(routes.app.team.alerts.edit, {
@@ -49,7 +59,7 @@ export default createAction(routes.app.team.alerts.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Edit Alert"
+					heading={ctx.i18next.t("page.editAlert.header.title")}
 					breadcrumbs={[
 						{
 							label: ctx.i18next.t("app.layout.sidebar.navigation.items.alerts"),
@@ -61,8 +71,8 @@ export default createAction(routes.app.team.alerts.edit, {
 					<FormPage>
 						<form method="post" action={routes.actions.alert.update.href({ team: ctx.team.slug })}>
 							<input type="hidden" name="alert_id" value={alert.id} />
-							<AlertFormFields alert={alert} monitors={monitors} />
-							<Button type="submit">Save changes</Button>
+							<AlertFormFields alert={alert} monitors={monitors} i18next={ctx.i18next} />
+							<Button type="submit">{ctx.i18next.t("page.editAlert.form.cta")}</Button>
 						</form>
 
 						<a
@@ -74,54 +84,47 @@ export default createAction(routes.app.team.alerts.edit, {
 								"@media (prefers-color-scheme: dark)": { color: primary[400] },
 							})}
 						>
-							Cancel
+							{ctx.i18next.t("page.editAlert.form.cancel")}
 						</a>
 
-						<h2>Danger zone</h2>
-						<Button type="button" color="danger" commandfor="delete-alert" command="show-modal">
-							Delete alert
-						</Button>
-						<dialog
-							id="delete-alert"
-							mix={css({
-								padding: 24,
-								borderRadius: 8,
-								border: `1px solid ${neutral[300]}`,
-								maxWidth: 400,
-								"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-									color: neutral[50],
-								},
-							})}
+						<h2>{ctx.i18next.t("page.editAlert.danger.title")}</h2>
+						<Button
+							type="button"
+							color="danger"
+							commandfor={DELETE_ALERT_DIALOG_ID}
+							command="show-modal"
 						>
-							<h3>Delete this alert?</h3>
-							<p
-								mix={css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								})}
-							>
-								This can't be undone.
-							</p>
+							{ctx.i18next.t("page.editAlert.danger.delete.trigger")}
+						</Button>
+						<AlertDialog
+							id={DELETE_ALERT_DIALOG_ID}
+							aria-labelledby={DELETE_ALERT_TITLE_ID}
+							aria-describedby={DELETE_ALERT_DESCRIPTION_ID}
+						>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={DELETE_ALERT_TITLE_ID}>
+									{ctx.i18next.t("page.editAlert.danger.delete.confirmTitle")}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={DELETE_ALERT_DESCRIPTION_ID}>
+									{ctx.i18next.t("page.editAlert.danger.delete.confirmDescription")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
 							<form
 								method="post"
 								action={routes.actions.alert.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="alert_id" value={alert.id} />
-								<div mix={css({ display: "flex", gap: 8, justifyContent: "flex-end" })}>
-									<Button type="button" variant="outline" commandfor="delete-alert" command="close">
-										Cancel
-									</Button>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel type="button" commandfor={DELETE_ALERT_DIALOG_ID}>
+										{ctx.i18next.t("page.editAlert.form.cancel")}
+									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
-										Delete
+										{ctx.i18next.t("page.editAlert.danger.delete.confirm")}
 									</Button>
-								</div>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

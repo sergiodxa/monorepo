@@ -8,6 +8,25 @@
  * settings are a separate form/action. It exists so the two pages don't duplicate
  * the field markup.
  *
+ * Name/URL render through `@pkg/r3-ui`'s `TextField` convenience wrapper directly
+ * (its own composed label/description covers them, so the local `Field` wrapper
+ * isn't needed for either); status/region render through `@pkg/r3-ui`'s `Select`
+ * still wrapped in `Field`, since `Select` has no composed label/description part
+ * of its own the way `TextField` does. `i18next.getFixedT(...)` — a valid,
+ * already-working i18n approach — is unchanged; only the underlying markup moved
+ * to r3-ui.
+ *
+ * The `EXPECTED_STATUS_CODES` option labels ("200 OK", "201 Created", …) stay
+ * hardcoded English on purpose: an HTTP status code and its standard reason
+ * phrase is a fixed, protocol-defined pairing — closer to a technical, enum-like
+ * label than to translatable prose — so it's left untranslated the same way a
+ * unit symbol or a country code would be. The region hints, by contrast, ARE
+ * ordinary prose describing a place, and this app's own locale files already
+ * carry the matching `page.<page>.form.fields.region.options.*` keys (with a
+ * `{{emoji}}` placeholder) — previously unused here — so `LOCATION_HINTS` now
+ * renders through those keys instead of the hardcoded English labels it had
+ * before.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -15,28 +34,35 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Select, TextField } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
 import RangeSlider from "~/resources/components/range-slider";
-import { mixForSelect } from "~/resources/mix-for-select";
-import { neutral } from "~/resources/theme";
 
-const LOCATION_HINTS = [
-	{ value: "wnam", label: "Western North America" },
-	{ value: "enam", label: "Eastern North America" },
-	{ value: "sam", label: "South America" },
-	{ value: "weur", label: "Western Europe" },
-	{ value: "eeur", label: "Eastern Europe" },
-	{ value: "apac", label: "Asia-Pacific" },
-	{ value: "oc", label: "Oceania" },
-	{ value: "afr", label: "Africa" },
-	{ value: "me", label: "Middle East" },
-] as const;
+/** Cloudflare Durable Object location hints this app offers as monitoring regions. */
+const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
-/** Common HTTP status codes a healthy endpoint might return. */
+/**
+ * Compact, representative animal emoji for each {@link LOCATION_HINTS} region hint,
+ * spliced into its translated label — kept local to this module since no shared
+ * copy of this mapping exists elsewhere in this app yet.
+ */
+const LOCATION_HINT_EMOJI: Record<(typeof LOCATION_HINTS)[number], string> = {
+	wnam: "🦬",
+	enam: "🦅",
+	sam: "🦙",
+	weur: "🦊",
+	eeur: "🐻",
+	apac: "🐉",
+	oc: "🐨",
+	afr: "🦁",
+	me: "🐫",
+};
+
+/** Common HTTP status codes a healthy endpoint might return. Left untranslated — see this module's own doc comment for why. */
 const EXPECTED_STATUS_CODES = [
 	{ value: 200, label: "200 OK" },
 	{ value: 201, label: "201 Created" },
@@ -81,55 +107,27 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 
 		return (
 			<>
-				<Field label={t("name.label")} description={t("name.description")}>
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={monitor?.name}
-						placeholder={t("name.placeholder")}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("name.label")}
+					description={t("name.description")}
+					type="text"
+					name="name"
+					required
+					defaultValue={monitor?.name}
+					placeholder={t("name.placeholder")}
+					mix={[css({ marginBottom: 28 })]}
+				/>
 
-				<Field label={t("url.label")} description={t("url.description")}>
-					<input
-						type="url"
-						name="url"
-						required
-						defaultValue={monitor?.url}
-						placeholder={t("url.placeholder")}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("url.label")}
+					description={t("url.description")}
+					type="url"
+					name="url"
+					required
+					defaultValue={monitor?.url}
+					placeholder={t("url.placeholder")}
+					mix={[css({ marginBottom: 28 })]}
+				/>
 
 				<RangeSlider
 					label={t("interval.label")}
@@ -144,78 +142,32 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 				/>
 
 				<Field label={t("status.label")} description={t("status.description")}>
-					<select
-						name="expected_status"
-						mix={[
-							mixForSelect(
-								css({
-									padding: "8px 12px",
-									// Chromium/Safari both give a native <select> a taller intrinsic
-									// content box than a same-padding <input> (room reserved for the
-									// dropdown affordance), so an explicit height is needed to keep it
-									// the same size as the text inputs above.
-									height: 34,
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							),
-						]}
-					>
+					<Select name="expected_status">
 						{EXPECTED_STATUS_CODES.map((status) => (
-							<option
+							<Select.Option
 								key={status.value}
 								value={status.value}
 								selected={status.value === expectedStatus}
 							>
 								{status.label}
-							</option>
+							</Select.Option>
 						))}
-					</select>
+					</Select>
 				</Field>
 
 				<Field label={t("region.label")} description={t("region.description")}>
-					<select
-						name="location_hint"
-						required
-						defaultValue={locationHint ?? ""}
-						mix={[
-							mixForSelect(
-								css({
-									padding: "8px 12px",
-									height: 34,
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							),
-						]}
-					>
+					<Select name="location_hint" required defaultValue={locationHint ?? ""}>
 						{!locationHint && (
-							<option value="" disabled selected>
+							<Select.Option value="" disabled selected>
 								{t("region.placeholder")}
-							</option>
+							</Select.Option>
 						)}
 						{LOCATION_HINTS.map((hint) => (
-							<option key={hint.value} value={hint.value} selected={hint.value === locationHint}>
-								{hint.label}
-							</option>
+							<Select.Option key={hint} value={hint} selected={hint === locationHint}>
+								{t(`region.options.${hint}`, { emoji: LOCATION_HINT_EMOJI[hint] })}
+							</Select.Option>
 						))}
-					</select>
+					</Select>
 				</Field>
 			</>
 		);

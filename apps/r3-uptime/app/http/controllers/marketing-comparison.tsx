@@ -11,6 +11,7 @@
  */
 
 import { CheckIcon } from "@pkg/lucide-remix";
+import { Table } from "@pkg/r3-ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 import { css } from "remix/ui";
@@ -23,7 +24,7 @@ import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingStep from "~/resources/components/marketing/step";
 import { comparisons } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
-import MarketingLayout from "~/resources/layouts/marketing";
+import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -54,16 +55,17 @@ const primary = {
 export default createAction(routes.marketing.comparison, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
+	let chrome = buildMarketingChrome(ctx.i18next.t);
 
 	let content = comparisons[slug];
 	if (!content) {
 		let props = {
-			title: "Page Not Found",
-			description: "The page you're looking for doesn't exist or may have moved.",
+			title: ctx.i18next.t("notFound.title"),
+			description: ctx.i18next.t("notFound.description"),
 		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
-				<NotFoundView {...props} />
+				<NotFoundView {...props} goBackHomeLabel={ctx.i18next.t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
 		);
@@ -85,7 +87,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout title={`${content.metaTitle}`}>
-			<MarketingLayout isSignedIn={isSignedIn}>
+			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<section
 					mix={[
 						css({
@@ -220,7 +222,11 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 								}),
 							]}
 						>
-							<AuthCta isSignedIn={isSignedIn} />
+							<AuthCta
+								isSignedIn={isSignedIn}
+								startLabel={chrome.startLabel}
+								dashboardLabel={chrome.dashboardLabel}
+							/>
 						</div>
 					</div>
 				</section>
@@ -247,43 +253,30 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					>
 						<SectionHeader title={`Uptime vs ${competitor}`} description={summary} />
 
-						<div mix={[css({ overflowX: "auto" })]}>
-							<table
-								mix={[
-									css({
-										width: "100%",
-										borderCollapse: "collapse",
-										fontSize: "0.9375rem",
-										"& th, & td": {
-											textAlign: "center",
-											padding: "10px 12px",
-											borderBottom: `1px solid ${neutral[200]}`,
-										},
-										"& th:first-child, & td:first-child": { textAlign: "left" },
-										"@media (prefers-color-scheme: dark)": {
-											"& th, & td": { borderColor: neutral[800] },
-										},
-									}),
-								]}
-							>
-								<thead>
-									<tr>
-										<th>Category</th>
-										<th>Uptime</th>
-										<th>{competitor}</th>
-									</tr>
-								</thead>
-								<tbody>
+						<Table.Container>
+							<Table aria-label={`Uptime vs ${competitor}`}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>
+											{ctx.i18next.t("landing.comparison.tableCategoryHeader")}
+										</Table.Column>
+										<Table.Column align="center">
+											{ctx.i18next.t("landing.comparison.tableProductHeader")}
+										</Table.Column>
+										<Table.Column align="center">{competitor}</Table.Column>
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
 									{rows.map((row) => (
-										<tr key={row.label}>
-											<td>{row.label}</td>
-											<td>{row.us}</td>
-											<td>{row.them}</td>
-										</tr>
+										<Table.Row key={row.label}>
+											<Table.Cell>{row.label}</Table.Cell>
+											<Table.Cell align="center">{row.us}</Table.Cell>
+											<Table.Cell align="center">{row.them}</Table.Cell>
+										</Table.Row>
 									))}
-								</tbody>
-							</table>
-						</div>
+								</Table.Body>
+							</Table>
+						</Table.Container>
 					</div>
 				</section>
 
@@ -309,7 +302,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							}),
 						]}
 					>
-						<SectionHeader title="Why teams switch to Uptime" />
+						<SectionHeader title={ctx.i18next.t("landing.comparison.whyTeamsSwitchTitle")} />
 
 						<div
 							mix={[
@@ -353,7 +346,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							}),
 						]}
 					>
-						<SectionHeader title="Getting started" />
+						<SectionHeader title={ctx.i18next.t("landing.comparison.gettingStartedTitle")} />
 
 						<div
 							mix={[
@@ -415,8 +408,8 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						}),
 					]}
 				>
-					<h2>Switch to Uptime</h2>
-					<p>Create your first monitor in under 2 minutes. No credit card required to start.</p>
+					<h2>{ctx.i18next.t("landing.comparison.finalCtaTitle")}</h2>
+					<p>{ctx.i18next.t("landing.finalCta.body")}</p>
 
 					<div
 						mix={[
@@ -430,7 +423,11 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							}),
 						]}
 					>
-						<AuthCta isSignedIn={isSignedIn} />
+						<AuthCta
+							isSignedIn={isSignedIn}
+							startLabel={chrome.startLabel}
+							dashboardLabel={chrome.dashboardLabel}
+						/>
 					</div>
 				</section>
 			</MarketingLayout>

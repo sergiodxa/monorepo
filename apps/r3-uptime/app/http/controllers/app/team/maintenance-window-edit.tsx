@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -23,9 +24,12 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import MaintenanceWindowFormFields from "~/resources/views/maintenance-windows/form";
 import routes from "~/routes/web";
+
+/** `id` shared by the delete-confirmation trigger and its {@link AlertDialog}. */
+const DELETE_DIALOG_ID = "delete-maintenance-window";
 
 /** GET /app/:team/maintenance/:windowId/edit — a maintenance window's edit form. */
 export default createAction(routes.app.team.maintenanceWindows.edit, {
@@ -42,16 +46,17 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 		let isActive =
 			window.ended_early_at === null && MaintenanceWindow.isActiveAt(window, Date.now());
+		let heading = ctx.i18next.t("page.editMaintenance.header.title", { name: window.name });
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Edit ${window.name}`}>
+			<DocumentLayout title={`${ctx.team.name} · ${heading}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading={`Edit ${window.name}`}
+					heading={heading}
 					breadcrumbs={[
 						{
 							label: ctx.i18next.t("app.layout.sidebar.navigation.items.maintenance"),
@@ -66,8 +71,12 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							action={routes.actions.maintenanceWindow.update.href({ team: ctx.team.slug })}
 						>
 							<input type="hidden" name="window_id" value={window.id} />
-							<MaintenanceWindowFormFields window={window} monitors={monitors} />
-							<Button type="submit">Save changes</Button>
+							<MaintenanceWindowFormFields
+								window={window}
+								monitors={monitors}
+								i18next={ctx.i18next}
+							/>
+							<Button type="submit">{ctx.i18next.t("page.editMaintenance.form.cta")}</Button>
 						</form>
 
 						<a
@@ -79,7 +88,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 								"@media (prefers-color-scheme: dark)": { color: primary[400] },
 							})}
 						>
-							Cancel
+							{ctx.i18next.t("page.editMaintenance.form.cancel")}
 						</a>
 
 						{isActive && (
@@ -89,66 +98,45 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							>
 								<input type="hidden" name="window_id" value={window.id} />
 								<Button type="submit" variant="outline">
-									End maintenance now
+									{ctx.i18next.t("page.editMaintenance.endNow.cta")}
 								</Button>
 							</form>
 						)}
 
-						<h2>Danger zone</h2>
-						<Button
-							type="button"
-							color="danger"
-							commandfor="delete-maintenance-window"
-							command="show-modal"
-						>
-							Delete maintenance window
+						<h2>{ctx.i18next.t("page.editMaintenance.danger.title")}</h2>
+						<Button type="button" color="danger" commandfor={DELETE_DIALOG_ID} command="show-modal">
+							{ctx.i18next.t("page.editMaintenance.danger.delete.trigger")}
 						</Button>
-						<dialog
-							id="delete-maintenance-window"
-							mix={css({
-								padding: 24,
-								borderRadius: 8,
-								border: `1px solid ${neutral[300]}`,
-								maxWidth: 400,
-								"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-									color: neutral[50],
-								},
-							})}
+
+						<AlertDialog
+							id={DELETE_DIALOG_ID}
+							aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+							aria-describedby={`${DELETE_DIALOG_ID}-description`}
 						>
-							<h3>Delete this maintenance window?</h3>
-							<p
-								mix={css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								})}
-							>
-								This can't be undone.
-							</p>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+									{ctx.i18next.t("page.editMaintenance.danger.delete.confirmTitle")}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+									{ctx.i18next.t("page.editMaintenance.danger.delete.confirmDescription")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
 							<form
 								method="post"
 								action={routes.actions.maintenanceWindow.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="window_id" value={window.id} />
-								<div mix={css({ display: "flex", gap: 8, justifyContent: "flex-end" })}>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="delete-maintenance-window"
-										command="close"
-									>
-										Cancel
-									</Button>
-									<Button type="submit" color="danger">
-										Delete
-									</Button>
-								</div>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel commandfor={DELETE_DIALOG_ID}>
+										{ctx.i18next.t("page.editMaintenance.form.cancel")}
+									</AlertDialog.Cancel>
+									<AlertDialog.Action commandfor={DELETE_DIALOG_ID} type="submit">
+										{ctx.i18next.t("page.editMaintenance.danger.delete.confirm")}
+									</AlertDialog.Action>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

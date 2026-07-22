@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -22,9 +23,12 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import CronJobFormFields from "~/resources/views/cron-jobs/form";
 import routes from "~/routes/web";
+
+/** Stable id for the delete-confirmation `AlertDialog`, wired to its trigger's `commandfor`. */
+const DELETE_DIALOG_ID = "delete-cron-job";
 
 /** GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form. */
 export default createAction(routes.app.team.cronJobs.edit, {
@@ -73,7 +77,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 							action={routes.actions.cronJob.update.href({ team: ctx.team.slug })}
 						>
 							<input type="hidden" name="monitor_id" value={monitor.id} />
-							<CronJobFormFields monitor={monitor} />
+							<CronJobFormFields monitor={monitor} i18next={ctx.i18next} page="editCronJob" />
 							<Button type="submit">{ctx.i18next.t("page.editCronJob.form.cta")}</Button>
 						</form>
 
@@ -92,56 +96,39 @@ export default createAction(routes.app.team.cronJobs.edit, {
 							{ctx.i18next.t("page.editCronJob.form.cancel")}
 						</a>
 
-						<h2>Danger zone</h2>
-						<Button type="button" color="danger" commandfor="delete-cron-job" command="show-modal">
-							Delete monitor
+						<h2>{ctx.i18next.t("page.editCronJob.danger.title")}</h2>
+						<Button type="button" color="danger" commandfor={DELETE_DIALOG_ID} command="show-modal">
+							{ctx.i18next.t("page.editCronJob.danger.delete.trigger")}
 						</Button>
-						<dialog
-							id="delete-cron-job"
-							mix={css({
-								padding: 24,
-								borderRadius: 8,
-								border: `1px solid ${neutral[300]}`,
-								maxWidth: 400,
-								"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-									color: neutral[50],
-								},
-							})}
+						<AlertDialog
+							id={DELETE_DIALOG_ID}
+							aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+							aria-describedby={`${DELETE_DIALOG_ID}-description`}
 						>
-							<h3>Delete this cron job monitor?</h3>
-							<p
-								mix={css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								})}
-							>
-								This also deletes its ping history. This can't be undone.
-							</p>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+									{ctx.i18next.t("page.editCronJob.danger.delete.confirmTitle")}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+									{ctx.i18next.t("page.editCronJob.danger.delete.confirmDescription")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
 							<form
 								method="post"
 								action={routes.actions.cronJob.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<div mix={css({ display: "flex", gap: 8, justifyContent: "flex-end" })}>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="delete-cron-job"
-										command="close"
-									>
-										Cancel
-									</Button>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel commandfor={DELETE_DIALOG_ID}>
+										{ctx.i18next.t("page.editCronJob.form.cancel")}
+									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
-										Delete
+										{ctx.i18next.t("page.editCronJob.danger.delete.confirm")}
 									</Button>
-								</div>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

@@ -4,6 +4,12 @@
  * form. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong
  * to the current team.
  *
+ * The content-checks table is `@pkg/r3-ui`'s `Table` compound, and every delete
+ * confirmation (a content check's own, and the monitor's own danger-zone one) is
+ * `@pkg/r3-ui`'s `AlertDialog` composed directly rather than through the `Confirm`
+ * convenience wrapper, since the confirming control in each case is a real
+ * `<form method="post">` submit button rather than a `command="close"` action.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -11,6 +17,7 @@
 import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -30,7 +37,6 @@ import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { mixForSelect } from "~/resources/mix-for-select";
 import { neutral, primary } from "~/resources/theme";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
@@ -74,95 +80,75 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 				</p>
 
 				{contentChecks.length > 0 && (
-					<div mix={[css({ overflowX: "auto" })]}>
-						<table
-							mix={[
-								css({
-									width: "100%",
-									borderCollapse: "collapse",
-									fontSize: "0.875rem",
-									"& th, & td": {
-										textAlign: "left",
-										padding: "12px 16px",
-										borderBottom: `1px solid ${neutral[200]}`,
-									},
-									"@media (prefers-color-scheme: dark)": {
-										"& th, & td": { borderColor: neutral[800] },
-									},
-								}),
-							]}
-						>
-							<thead>
-								<tr>
-									<th>Type</th>
-									<th>{i18next.t("contentMonitoring.form.value.label")}</th>
-									<th>{i18next.t("contentMonitoring.item.caseSensitive")}</th>
-									<th>Status</th>
-									<th></th>
-								</tr>
-							</thead>
-							<tbody>
-								{contentChecks.map((check) => (
-									<tr key={check.id}>
-										<td>{contentCheckTypeLabel(i18next, check.type)}</td>
-										<td>
-											<code>{check.value}</code>
-										</td>
-										<td>{check.case_sensitive ? "Yes" : "No"}</td>
-										<td>{check.is_enabled ? "Enabled" : "Disabled"}</td>
-										<td>
-											<Button
-												type="button"
-												color="danger"
-												commandfor={`delete-content-check-${check.id}`}
-												command="show-modal"
-											>
-												{i18next.t("contentMonitoring.item.delete")}
-											</Button>
+					<Table.Container>
+						<Table aria-label={i18next.t("contentMonitoring.title")}>
+							<Table.Header>
+								<Table.Row>
+									<Table.Column>{i18next.t("contentMonitoring.item.type")}</Table.Column>
+									<Table.Column>{i18next.t("contentMonitoring.form.value.label")}</Table.Column>
+									<Table.Column>{i18next.t("contentMonitoring.item.caseSensitive")}</Table.Column>
+									<Table.Column>{i18next.t("contentMonitoring.item.status")}</Table.Column>
+									<Table.Column></Table.Column>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{contentChecks.map((check) => {
+									let dialogId = `delete-content-check-${check.id}`;
+									let titleId = `${dialogId}-title`;
 
-											<dialog
-												id={`delete-content-check-${check.id}`}
-												mix={[
-													css({
-														padding: 24,
-														borderRadius: 8,
-														border: `1px solid ${neutral[300]}`,
-														maxWidth: 400,
-														"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-														"@media (prefers-color-scheme: dark)": {
-															borderColor: neutral[700],
-															background: neutral[900],
-															color: neutral[50],
-														},
-													}),
-												]}
-											>
-												<h3>Delete this content check?</h3>
-												<form method="post" action={deleteAction}>
-													<input type="hidden" name="_method" value="DELETE" />
-													<input type="hidden" name="content_check_id" value={check.id} />
-													<input type="hidden" name="monitor_id" value={monitorId} />
-													<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
-														<Button
-															type="button"
-															variant="outline"
-															commandfor={`delete-content-check-${check.id}`}
-															command="close"
-														>
-															{i18next.t("contentMonitoring.form.cancel")}
-														</Button>
-														<Button type="submit" color="danger">
-															{i18next.t("contentMonitoring.item.delete")}
-														</Button>
-													</div>
-												</form>
-											</dialog>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
+									return (
+										<Table.Row key={check.id}>
+											<Table.Cell>{contentCheckTypeLabel(i18next, check.type)}</Table.Cell>
+											<Table.Cell>
+												<code>{check.value}</code>
+											</Table.Cell>
+											<Table.Cell>
+												{check.case_sensitive
+													? i18next.t("contentMonitoring.item.yes")
+													: i18next.t("contentMonitoring.item.no")}
+											</Table.Cell>
+											<Table.Cell>
+												{check.is_enabled
+													? i18next.t("contentMonitoring.item.enabled")
+													: i18next.t("contentMonitoring.item.disabled")}
+											</Table.Cell>
+											<Table.Cell>
+												<Button
+													type="button"
+													color="danger"
+													commandfor={dialogId}
+													command="show-modal"
+												>
+													{i18next.t("contentMonitoring.item.delete")}
+												</Button>
+
+												<AlertDialog id={dialogId} aria-labelledby={titleId}>
+													<AlertDialog.Header>
+														<AlertDialog.Title id={titleId}>
+															{i18next.t("contentMonitoring.item.deleteConfirmTitle")}
+														</AlertDialog.Title>
+													</AlertDialog.Header>
+													<form method="post" action={deleteAction}>
+														<input type="hidden" name="_method" value="DELETE" />
+														<input type="hidden" name="content_check_id" value={check.id} />
+														<input type="hidden" name="monitor_id" value={monitorId} />
+														<AlertDialog.Footer>
+															<AlertDialog.Cancel type="button" commandfor={dialogId}>
+																{i18next.t("contentMonitoring.form.cancel")}
+															</AlertDialog.Cancel>
+															<Button type="submit" color="danger">
+																{i18next.t("contentMonitoring.item.delete")}
+															</Button>
+														</AlertDialog.Footer>
+													</form>
+												</AlertDialog>
+											</Table.Cell>
+										</Table.Row>
+									);
+								})}
+							</Table.Body>
+						</Table>
+					</Table.Container>
 				)}
 
 				<form
@@ -172,37 +158,17 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 					<input type="hidden" name="monitor_id" value={monitorId} />
 
 					<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
-						<select
-							name="type"
-							defaultValue="contains"
-							mix={[
-								mixForSelect(
-									css({
-										padding: "8px 12px",
-										borderRadius: 6,
-										border: `1px solid ${neutral[200]}`,
-										fontSize: "0.875rem",
-										fontFamily: "inherit",
-										background: neutral[50],
-										color: "inherit",
-										"@media (prefers-color-scheme: dark)": {
-											borderColor: neutral[700],
-											background: neutral[900],
-										},
-									}),
-								),
-							]}
-						>
-							<option value="contains">
+						<Select name="type" defaultValue="contains">
+							<Select.Option value="contains">
 								{i18next.t("contentMonitoring.form.checkType.options.contains")}
-							</option>
-							<option value="not_contains">
+							</Select.Option>
+							<Select.Option value="not_contains">
 								{i18next.t("contentMonitoring.form.checkType.options.notContains")}
-							</option>
-							<option value="regex">
+							</Select.Option>
+							<Select.Option value="regex">
 								{i18next.t("contentMonitoring.form.checkType.options.regex")}
-							</option>
-						</select>
+							</Select.Option>
+						</Select>
 					</Field>
 
 					<Field label={i18next.t("contentMonitoring.form.value.label")}>
@@ -270,7 +236,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 
 		return (
 			<div>
-				<h2>SSL certificate monitoring</h2>
+				<h2>{i18next.t("page.editMonitor.ssl.title")}</h2>
 				<form
 					method="post"
 					action={routes.actions.monitor.http.updateSsl.href({ team: team.slug })}
@@ -368,7 +334,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 						/>
 					</Field>
 
-					<Button type="submit">Save SSL settings</Button>
+					<Button type="submit">{i18next.t("page.editMonitor.ssl.cta")}</Button>
 				</form>
 			</div>
 		);
@@ -388,6 +354,9 @@ export default createAction(routes.app.team.monitors.edit, {
 		if (!monitor) return notFound("Not Found");
 
 		let contentChecks = await ContentCheck.listByMonitor(db, monitor.id);
+
+		let deleteMonitorTitleId = "delete-monitor-title";
+		let deleteMonitorDescriptionId = "delete-monitor-description";
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
@@ -448,64 +417,41 @@ export default createAction(routes.app.team.monitors.edit, {
 
 						<SslSettingsSection team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
 
-						<h2>Danger zone</h2>
+						<h2>{ctx.i18next.t("page.editMonitor.dangerZone.title")}</h2>
 						<Button type="button" color="danger" commandfor="delete-monitor" command="show-modal">
-							Delete monitor
+							{ctx.i18next.t("page.editMonitor.dangerZone.delete")}
 						</Button>
-						<dialog
+						<AlertDialog
 							id="delete-monitor"
-							mix={[
-								css({
-									padding: 24,
-									borderRadius: 8,
-									border: `1px solid ${neutral[300]}`,
-									maxWidth: 400,
-									"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-										color: neutral[50],
-									},
-								}),
-							]}
+							aria-labelledby={deleteMonitorTitleId}
+							aria-describedby={deleteMonitorDescriptionId}
 						>
-							<h3>
-								{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
-									name: monitor.name,
-								})}
-							</h3>
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
-								]}
-							>
-								This also deletes its content checks and check-result history. This can't be undone.
-							</p>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={deleteMonitorTitleId}>
+									{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
+										name: monitor.name,
+									})}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={deleteMonitorDescriptionId}>
+									{ctx.i18next.t("page.httpMonitors.table.confirmation.deleteDescription")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
 							<form
 								method="post"
 								action={routes.actions.monitor.http.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="delete-monitor"
-										command="close"
-									>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel type="button" commandfor="delete-monitor">
 										{ctx.i18next.t("page.editMonitor.form.cancel")}
-									</Button>
+									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
 										{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
 									</Button>
-								</div>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

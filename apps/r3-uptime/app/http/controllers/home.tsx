@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Trans } from "@pkg/i18n/ui";
 import { CheckIcon } from "@pkg/lucide-remix";
 import { createAction } from "remix/fetch-router";
 import { css } from "remix/ui";
@@ -20,7 +21,7 @@ import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import DocumentLayout from "~/resources/layouts/document";
-import MarketingLayout from "~/resources/layouts/marketing";
+import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import { fontMono } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -52,6 +53,7 @@ const primary = {
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
+	let chrome = buildMarketingChrome(ctx.i18next.t);
 
 	let TRUST_INDICATORS = [
 		{ value: "99.9%", label: ctx.i18next.t("landing.trustIndicators.uptimeSla") },
@@ -238,8 +240,8 @@ export default createAction(routes.home, async (ctx) => {
 	];
 
 	return ctx.render(
-		<DocumentLayout title="Uptime — Simple & reliable uptime monitoring for developers">
-			<MarketingLayout isSignedIn={isSignedIn}>
+		<DocumentLayout title={ctx.i18next.t("landing.meta.title")}>
+			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<section
 					mix={[
 						css({
@@ -304,17 +306,22 @@ export default createAction(routes.home, async (ctx) => {
 								}),
 							]}
 						>
-							Monitor your services{" "}
-							<span
-								mix={[
-									css({
-										color: primary[600],
-										"@media (prefers-color-scheme: dark)": { color: primary[400] },
-									}),
-								]}
-							>
-								with confidence
-							</span>
+							<Trans
+								i18n={ctx.i18next}
+								i18nKey="landing.hero.title"
+								components={{
+									strong: (
+										<span
+											mix={[
+												css({
+													color: primary[600],
+													"@media (prefers-color-scheme: dark)": { color: primary[400] },
+												}),
+											]}
+										/>
+									),
+								}}
+							/>
 						</h1>
 						<p
 							mix={[
@@ -346,6 +353,7 @@ export default createAction(routes.home, async (ctx) => {
 							<AuthCta
 								isSignedIn={isSignedIn}
 								dashboardLabel={ctx.i18next.t("landing.hero.cta.in")}
+								startLabel={ctx.i18next.t("landing.hero.cta.out")}
 							/>
 							<a
 								href="#pricing"

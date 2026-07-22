@@ -6,6 +6,7 @@
  */
 
 import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -17,7 +18,6 @@ import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -78,7 +78,7 @@ export default createAction(routes.app.team.alerts.index, {
 									}),
 								]}
 							>
-								This team has reached the limit of {MAX_ALERTS_PER_TEAM} alerts.
+								{ctx.i18next.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
 							</p>
 						)}
 
@@ -99,55 +99,50 @@ export default createAction(routes.app.team.alerts.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.alerts.table.columns.name")}</th>
-											<th>Scope</th>
-											<th>{ctx.i18next.t("page.alerts.table.columns.strategy")}</th>
-											<th>{ctx.i18next.t("page.alerts.table.columns.notifyOnRecovery")}</th>
-											<th>{ctx.i18next.t("page.alerts.table.columns.cooldown")}</th>
-											<th></th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.alerts.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>{ctx.i18next.t("page.alerts.table.columns.name")}</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alerts.table.columns.scope")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alerts.table.columns.strategy")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alerts.table.columns.notifyOnRecovery")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.alerts.table.columns.cooldown")}
+											</Table.Column>
+											<Table.Column></Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{alerts.map((alert) => (
-											<tr key={alert.id}>
-												<td>{alert.name}</td>
-												<td>
+											<Table.Row key={alert.id}>
+												<Table.Cell>{alert.name}</Table.Cell>
+												<Table.Cell>
 													{alert.monitor_id
-														? (monitorsById.get(alert.monitor_id)?.name ?? "Unknown monitor")
-														: "Team-wide"}
-												</td>
-												<td>{ctx.i18next.t(`page.alerts.table.types.${alert.config.strategy}`)}</td>
-												<td>
+														? (monitorsById.get(alert.monitor_id)?.name ??
+															ctx.i18next.t("page.alerts.table.scope.unknownMonitor"))
+														: ctx.i18next.t("page.alerts.table.scope.teamWide")}
+												</Table.Cell>
+												<Table.Cell>
+													{ctx.i18next.t(`page.alerts.table.types.${alert.config.strategy}`)}
+												</Table.Cell>
+												<Table.Cell>
 													{alert.notify_on_recovery
 														? ctx.i18next.t("page.alerts.table.notifyOnRecovery.enabled")
 														: ctx.i18next.t("page.alerts.table.notifyOnRecovery.disabled")}
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													{alert.cooldown_minutes === 0
 														? ctx.i18next.t("page.alerts.table.cooldown.none")
 														: `${alert.cooldown_minutes}m`}
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<a
 														href={routes.app.team.alerts.edit.href({
 															team: ctx.team.slug,
@@ -162,14 +157,14 @@ export default createAction(routes.app.team.alerts.index, {
 															}),
 														]}
 													>
-														Edit
+														{ctx.i18next.t("page.alerts.table.actions.edit")}
 													</a>
-												</td>
-											</tr>
+												</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

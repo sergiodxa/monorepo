@@ -1,7 +1,12 @@
 /**
  * Terms of Service controller. Renders the static Terms of Service prose — covering
  * accounts, acceptable use, billing, data retention, service availability, liability,
- * and termination — inside the shared `MarketingLayout` chrome.
+ * and termination — inside the shared `MarketingLayout` chrome. Every section's copy
+ * comes from `legal.terms.sections.*` in the locale files; the sibling `apps/uptime`
+ * app only ever translated this page's SEO `meta.title`/`meta.description` (never its
+ * body prose), so these `sections.*` keys are new and — like every other freshly
+ * added key in this pass — only populated in `en.ts` for now, falling back to English
+ * in every other locale until translated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,17 +17,18 @@ import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";
-import MarketingLayout from "~/resources/layouts/marketing";
+import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /terms — the Terms of Service page. */
 export default createAction(routes.legal.terms, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
+	let chrome = buildMarketingChrome(ctx.i18next.t);
 
 	return ctx.render(
-		<DocumentLayout title="Terms of Service | Uptime">
-			<MarketingLayout isSignedIn={isSignedIn}>
+		<DocumentLayout title={ctx.i18next.t("legal.terms.meta.title")}>
+			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<article
 					mix={[
 						css({
@@ -74,159 +80,90 @@ export default createAction(routes.legal.terms, async (ctx) => {
 							}),
 						]}
 					>
-						Last updated: February 11, 2026
+						{ctx.i18next.t("legal.terms.lastUpdated")}
 					</p>
 
-					<h1>Terms of Service</h1>
+					<h1>{ctx.i18next.t("legal.terms.title")}</h1>
 
-					<h2>1. Introduction</h2>
+					<h2>{ctx.i18next.t("legal.terms.sections.introduction.title")}</h2>
+					<p>{ctx.i18next.t("legal.terms.sections.introduction.body")}</p>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.serviceDescription.title")}</h2>
+					<p>{ctx.i18next.t("legal.terms.sections.serviceDescription.body")}</p>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.accountTerms.title")}</h2>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.third")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.fourth")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.acceptableUse.title")}</h2>
+					<p>{ctx.i18next.t("legal.terms.sections.acceptableUse.intro")}</p>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.third")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fourth")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fifth")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.sixth")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.seventh")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.paymentTerms.title")}</h2>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.third")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.fourth")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
+					<ul>
+						<li>
+							{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
+							<a href={routes.legal.privacy.href()}>
+								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+							</a>
+							{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
+						</li>
+						<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.third")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.serviceAvailability.title")}</h2>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.third")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.title")}</h2>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.third")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.termination.title")}</h2>
+					<ul>
+						<li>{ctx.i18next.t("legal.terms.sections.termination.first")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.termination.second")}</li>
+						<li>{ctx.i18next.t("legal.terms.sections.termination.third")}</li>
+					</ul>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.changesToTerms.title")}</h2>
+					<p>{ctx.i18next.t("legal.terms.sections.changesToTerms.body")}</p>
+
+					<h2>{ctx.i18next.t("legal.terms.sections.contact.title")}</h2>
 					<p>
-						Welcome to Uptime. These Terms of Service govern your use of our uptime monitoring
-						service operated by Sergio Xalambrí. By accessing or using Uptime, you agree to be bound
-						by these terms.
-					</p>
-
-					<h2>2. Service Description</h2>
-					<p>
-						Uptime provides uptime and scheduled task monitoring services, including HTTP endpoint
-						monitoring, DNS monitoring, TCP port monitoring, SSL certificate monitoring, and cron
-						job monitoring. These services help you track the health of your services and scheduled
-						tasks. We monitor your endpoints from multiple global regions and notify you when issues
-						are detected.
-					</p>
-
-					<h2>3. Account Terms</h2>
-					<ul>
-						<li>You must provide accurate and complete information when creating an account.</li>
-						<li>
-							You are responsible for maintaining the security of your account credentials and for
-							all activities that occur under your account.
-						</li>
-						<li>
-							You must be at least 18 years old or have the legal authority to enter into this
-							agreement on behalf of an organization.
-						</li>
-						<li>You must notify us immediately of any unauthorized use of your account.</li>
-					</ul>
-
-					<h2>4. Acceptable Use</h2>
-					<p>When using Uptime, you agree not to:</p>
-					<ul>
-						<li>
-							Abuse, overload, or interfere with our service or attempt to circumvent any usage
-							limits.
-						</li>
-						<li>Monitor URLs or endpoints that you do not own or have authorization to monitor.</li>
-						<li>
-							Monitor cron jobs or scheduled tasks that you do not own or have authorization to
-							monitor.
-						</li>
-						<li>
-							Use cron job ping endpoints for purposes other than legitimate scheduled task
-							monitoring.
-						</li>
-						<li>Use the service for any illegal or unauthorized purpose.</li>
-						<li>Attempt to gain unauthorized access to our systems or other users' accounts.</li>
-						<li>Resell or redistribute the service without our written consent.</li>
-					</ul>
-
-					<h2>5. Payment Terms</h2>
-					<ul>
-						<li>
-							Uptime operates on a usage-based billing model. You pay based on the number of
-							monitors and check frequency you configure.
-						</li>
-						<li>Subscriptions are managed and processed through Polar.</li>
-						<li>
-							Refunds are provided on a prorated basis for the unused portion of your subscription
-							if you cancel.
-						</li>
-						<li>
-							We reserve the right to change pricing with 30 days notice. Continued use after price
-							changes constitutes acceptance.
-						</li>
-					</ul>
-
-					<h2>6. Data and Privacy</h2>
-					<ul>
-						<li>
-							Your use of Uptime is also governed by our <a href="/privacy">Privacy Policy</a>,
-							which describes how we collect, use, and protect your data.
-						</li>
-						<li>
-							Monitoring data is retained for 365 days. After this period, historical data is
-							automatically deleted.
-						</li>
-						<li>
-							You may request deletion of your data at any time by contacting us. Upon account
-							termination, your data will be deleted within 30 days.
-						</li>
-					</ul>
-
-					<h2>7. Service Availability</h2>
-					<ul>
-						<li>
-							We target 99.9% service availability, but this is a goal, not a guarantee. We do not
-							offer service level agreements (SLAs) with financial remedies.
-						</li>
-						<li>
-							We may perform scheduled maintenance with reasonable advance notice when possible.
-							Emergency maintenance may occur without notice.
-						</li>
-						<li>
-							We are not liable for any downtime, data loss, or damages resulting from service
-							interruptions, whether planned or unplanned.
-						</li>
-					</ul>
-
-					<h2>8. Limitation of Liability</h2>
-					<ul>
-						<li>
-							Uptime is provided "as is" and "as available" without warranties of any kind, either
-							express or implied.
-						</li>
-						<li>
-							We do not guarantee that our service will detect all downtime events affecting your
-							monitored endpoints. Monitoring is subject to network conditions and other factors
-							outside our control.
-						</li>
-						<li>
-							Our total liability to you for any claims arising from your use of the service is
-							limited to the amount you paid us in the 12 months preceding the claim.
-						</li>
-						<li>
-							We are not liable for any indirect, incidental, special, consequential, or punitive
-							damages.
-						</li>
-					</ul>
-
-					<h2>9. Termination</h2>
-					<ul>
-						<li>
-							You may terminate your account at any time through your account settings or by
-							contacting us.
-						</li>
-						<li>
-							We may suspend or terminate your account if you violate these terms or for any other
-							reason with reasonable notice.
-						</li>
-						<li>
-							Upon termination, your access to the service will end and your data will be deleted
-							within 30 days.
-						</li>
-					</ul>
-
-					<h2>10. Changes to Terms</h2>
-					<p>
-						We may update these Terms of Service from time to time. We will notify you of
-						significant changes by email or through the service. Your continued use of Uptime after
-						changes take effect constitutes acceptance of the revised terms.
-					</p>
-
-					<h2>11. Contact</h2>
-					<p>
-						If you have questions about these Terms of Service, please contact us at{" "}
-						<a href="mailto:hello@sergiodxa.com">hello@sergiodxa.com</a>.
+						{ctx.i18next.t("legal.terms.sections.contact.prefix")}
+						<a href={`mailto:${ctx.i18next.t("legal.terms.sections.contact.email")}`}>
+							{ctx.i18next.t("legal.terms.sections.contact.email")}
+						</a>
+						.
 					</p>
 				</article>
 			</MarketingLayout>

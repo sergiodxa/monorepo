@@ -7,105 +7,112 @@
  * {@link LinkButton} for an `<a>` styled the same way; leave tabs, popover
  * triggers, and other non-submit affordances alone.
  *
+ * Internally composes `@pkg/r3-ui`'s own `Button`, restricted to this app's
+ * three-color palette (`primary`/`neutral`/`danger` — no `success`/`warning`)
+ * so every call site keeps its existing prop shape while picking up r3-ui's
+ * `data-color`/`data-variant`/`data-size` styling, focus ring, and (unused
+ * here, but now available for free) `isPending` busy state.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as ElementProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/ui";
 
+import { Button as UIButton } from "@pkg/r3-ui";
 import { css } from "remix/ui";
-
-import { danger, neutral, primary } from "~/resources/theme";
 
 export type ButtonColor = "primary" | "neutral" | "danger";
 export type ButtonVariant = "solid" | "outline" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
 namespace Button {
-	export interface Props extends ElementProps<"button"> {
+	export interface Props extends TagProps<"button"> {
 		color?: ButtonColor;
 		variant?: ButtonVariant;
 		size?: ButtonSize;
 	}
 }
 
-/** Shared box model every variant/size builds on; kept separate so `LinkButton` reuses it verbatim. */
+/**
+ * Shared box model for a plain `<button>` styled like {@link Button} without
+ * going through the component itself — kept only for
+ * `resources/components/run-monitor-button.tsx`'s hand-rolled submit button,
+ * which composes `buttonBase`/`buttonSizeMix`/`buttonVariantMix` directly onto
+ * its own `<button>` instead of rendering {@link Button}. Reimplemented on
+ * `@pkg/r3-ui`'s `--ui-*` custom properties so its look stays in sync with
+ * {@link Button}'s own r3-ui-backed styling even though the two no longer
+ * share an implementation.
+ */
 export const buttonBase = css({
-	/**
-	 * Without this, a `<button>` keeps the browser's native control chrome
-	 * (`appearance: auto`) layered underneath our own border/background, which
-	 * on Chromium/macOS renders as a thick embossed ring around the button —
-	 * exactly the oversized border (and buttons visually fusing together with
-	 * no apparent gap) reported live.
-	 */
 	appearance: "none",
 	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
-	gap: 6,
-	borderRadius: 6,
+	gap: "0.5rem",
+	borderRadius: "var(--ui-radius-md, 0.375rem)",
 	fontFamily: "inherit",
 	fontWeight: 500,
 	textDecoration: "none",
 	cursor: "pointer",
 	"&:disabled": { cursor: "not-allowed", opacity: 0.5 },
-	"&:focus-visible": { outline: `2px solid ${primary[600]}`, outlineOffset: 2 },
+	"&:focus-visible": {
+		outline: "2px solid var(--ui-primary-ring)",
+		outlineOffset: 2,
+	},
 });
 
 export const buttonSizeMix: Record<ButtonSize, ReturnType<typeof css>> = {
-	sm: css({ padding: "6px 12px", fontSize: "0.75rem" }),
-	md: css({ padding: "8px 16px", fontSize: "0.875rem" }),
-	lg: css({ padding: "10px 20px", fontSize: "1rem" }),
+	sm: css({ paddingInline: "0.75rem", paddingBlock: "0.375rem", fontSize: "0.75rem" }),
+	md: css({ paddingInline: "1rem", paddingBlock: "0.5rem", fontSize: "0.875rem" }),
+	lg: css({ paddingInline: "1.25rem", paddingBlock: "0.625rem", fontSize: "1rem" }),
 };
 
 const solid: Record<ButtonColor, ReturnType<typeof css>> = {
 	primary: css({
 		border: "1px solid transparent",
-		background: primary[600],
-		color: "#ffffff",
-		"&:hover": { background: `color-mix(in srgb, ${primary[600]} 85%, black)` },
+		background: "var(--ui-primary-bg-solid)",
+		color: "var(--ui-primary-fg-on-solid)",
+		"&:hover": { background: "var(--ui-primary-bg-solid-hover)" },
+		"&:active": { background: "var(--ui-primary-bg-solid-pressed)" },
 	}),
 	neutral: css({
 		border: "1px solid transparent",
-		background: neutral[900],
-		color: "#ffffff",
-		"&:hover": { background: neutral[800] },
+		background: "var(--ui-neutral-bg-solid)",
+		color: "var(--ui-neutral-fg-on-solid)",
+		"&:hover": { background: "var(--ui-neutral-bg-solid-hover)" },
+		"&:active": { background: "var(--ui-neutral-bg-solid-pressed)" },
 	}),
 	danger: css({
 		border: "1px solid transparent",
-		background: danger[600],
-		color: "#ffffff",
-		"&:hover": { background: danger[700] },
+		background: "var(--ui-danger-bg-solid)",
+		color: "var(--ui-danger-fg-on-solid)",
+		"&:hover": { background: "var(--ui-danger-bg-solid-hover)" },
+		"&:active": { background: "var(--ui-danger-bg-solid-pressed)" },
 	}),
 };
 
 const outline: Record<ButtonColor, ReturnType<typeof css>> = {
 	primary: css({
-		border: `2px solid ${primary[600]}`,
+		border: "2px solid var(--ui-primary-border-strong)",
 		background: "transparent",
-		color: primary[600],
-		"&:hover": { background: `color-mix(in srgb, ${primary[600]} 10%, transparent)` },
-		"@media (prefers-color-scheme: dark)": {
-			color: primary[400],
-			"&:hover": { background: `color-mix(in srgb, ${primary[600]} 16%, transparent)` },
-		},
+		color: "var(--ui-primary-fg)",
+		"&:hover": { background: "var(--ui-primary-bg-tint)" },
+		"&:active": { background: "var(--ui-primary-bg-tint-hover)" },
 	}),
 	neutral: css({
-		border: `2px solid ${neutral[600]}`,
+		border: "2px solid var(--ui-neutral-border-strong)",
 		background: "transparent",
-		color: neutral[600],
-		"&:hover": { background: neutral[50] },
-		"@media (prefers-color-scheme: dark)": {
-			borderColor: neutral[400],
-			color: neutral[400],
-			"&:hover": { background: neutral[950] },
-		},
+		color: "var(--ui-neutral-fg)",
+		"&:hover": { background: "var(--ui-neutral-bg-tint)" },
+		"&:active": { background: "var(--ui-neutral-bg-tint-hover)" },
 	}),
 	danger: css({
-		border: `2px solid ${danger[600]}`,
+		border: "2px solid var(--ui-danger-border-strong)",
 		background: "transparent",
-		color: danger[600],
-		"&:hover": { background: `color-mix(in srgb, ${danger[600]} 10%, transparent)` },
+		color: "var(--ui-danger-fg)",
+		"&:hover": { background: "var(--ui-danger-bg-tint)" },
+		"&:active": { background: "var(--ui-danger-bg-tint-hover)" },
 	}),
 };
 
@@ -113,28 +120,23 @@ const ghost: Record<ButtonColor, ReturnType<typeof css>> = {
 	primary: css({
 		border: "1px solid transparent",
 		background: "transparent",
-		color: primary[600],
-		"&:hover": { background: `color-mix(in srgb, ${primary[600]} 10%, transparent)` },
-		"@media (prefers-color-scheme: dark)": {
-			color: primary[400],
-			"&:hover": { background: `color-mix(in srgb, ${primary[400]} 16%, transparent)` },
-		},
+		color: "var(--ui-primary-fg)",
+		"&:hover": { background: "var(--ui-primary-bg-tint)" },
+		"&:active": { background: "var(--ui-primary-bg-tint-hover)" },
 	}),
 	neutral: css({
 		border: "1px solid transparent",
 		background: "transparent",
-		color: neutral[500],
-		"&:hover": { background: neutral[100] },
-		"@media (prefers-color-scheme: dark)": {
-			color: neutral[400],
-			"&:hover": { background: neutral[800] },
-		},
+		color: "var(--ui-neutral-fg)",
+		"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
+		"&:active": { background: "var(--ui-neutral-bg-tint-pressed)" },
 	}),
 	danger: css({
 		border: "1px solid transparent",
 		background: "transparent",
-		color: danger[600],
-		"&:hover": { background: `color-mix(in srgb, ${danger[600]} 10%, transparent)` },
+		color: "var(--ui-danger-fg)",
+		"&:hover": { background: "var(--ui-danger-bg-tint)" },
+		"&:active": { background: "var(--ui-danger-bg-tint-hover)" },
 	}),
 };
 
@@ -147,16 +149,11 @@ export const buttonVariantMix: Record<
 	ghost,
 };
 
-/** Renders a `<button>` in one of nine color/variant combinations, at one of three sizes. */
+/** Renders a `<button>` in one of nine color/variant combinations, at one of three sizes, through `@pkg/r3-ui`'s `Button`. */
 export default function Button(handle: Handle<Button.Props>) {
 	return () => {
-		let { color = "neutral", variant = "solid", size = "md", mix = [], ...rest } = handle.props;
+		let { color, variant, size, mix, ...rest } = handle.props;
 
-		return (
-			<button
-				{...rest}
-				mix={[buttonBase, buttonSizeMix[size], buttonVariantMix[variant][color], ...mix]}
-			/>
-		);
+		return <UIButton {...rest} color={color} variant={variant} size={size} mix={mix} />;
 	};
 }

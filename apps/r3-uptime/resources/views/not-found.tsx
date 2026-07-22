@@ -12,6 +12,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { Empty } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import routes from "~/routes/web";
@@ -20,63 +21,43 @@ namespace NotFoundView {
 	export interface Setup {
 		title: string;
 		description: string;
+		/** Link text for the link back to the homepage. */
+		goBackHomeLabel: string;
 	}
 }
 
-/** Renders the 404 body using the `title`/`description` the caller supplies via `Setup`. */
+/** Renders the 404 body using the `title`/`description`/`goBackHomeLabel` the caller supplies via `Setup`. */
 export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 	return () => {
-		let { title, description } = handle.props;
+		let { title, description, goBackHomeLabel } = handle.props;
 
 		return (
 			<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
-				<div
+				<Empty
 					mix={[
 						css({
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							textAlign: "center",
-							gap: 12,
-							padding: "64px 32px",
-							border: "1px dashed oklch(0.83 0.01 145)",
-							borderRadius: 12,
-							"@media (prefers-color-scheme: dark)": {
-								borderColor: "oklch(0.42 0.008 145)",
-							},
+							margin: "auto",
+							maxWidth: 480,
 						}),
 					]}
 				>
-					<h1 mix={[css({ margin: 0 })]}>{title}</h1>
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: "oklch(0.62 0.01 145)",
-								"@media (prefers-color-scheme: dark)": {
-									color: "oklch(0.73 0.01 145)",
-								},
-							}),
-						]}
-					>
-						{description}
-					</p>
-					<a
-						href={routes.home.href()}
-						mix={[
-							css({
-								color: "oklch(0.6 0.16 142)",
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": {
-									color: "oklch(0.78 0.16 142)",
-								},
-							}),
-						]}
-					>
-						Go back home
-					</a>
-				</div>
+					<Empty.Title>{title}</Empty.Title>
+					<Empty.Description>{description}</Empty.Description>
+					<Empty.Action>
+						<a
+							href={routes.home.href()}
+							mix={[
+								css({
+									color: "var(--ui-primary-fg)",
+									textDecoration: "none",
+									"&:hover": { textDecoration: "underline" },
+								}),
+							]}
+						>
+							{goBackHomeLabel}
+						</a>
+					</Empty.Action>
+				</Empty>
 			</main>
 		);
 	};

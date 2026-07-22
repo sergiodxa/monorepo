@@ -6,6 +6,7 @@
  */
 
 import { FileTextIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -17,11 +18,10 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages — the team's status pages list. */
@@ -86,38 +86,30 @@ export default createAction(routes.app.team.statusPages.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.statusPages.table.columns.name")}</th>
-											<th>{ctx.i18next.t("page.statusPages.table.columns.slug")}</th>
-											<th>Services</th>
-											<th>{ctx.i18next.t("page.statusPages.table.columns.visibility")}</th>
-											<th></th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.statusPages.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.statusPages.table.columns.name")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.statusPages.table.columns.slug")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.statusPages.table.columns.services")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.statusPages.table.columns.visibility")}
+											</Table.Column>
+											<Table.Column></Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{pages.map((page) => (
-											<tr key={page.id}>
-												<td>{page.name}</td>
-												<td>
+											<Table.Row key={page.id}>
+												<Table.Cell>{page.name}</Table.Cell>
+												<Table.Cell>
 													<a
 														href={routes.statusPage.href({ slug: page.slug })}
 														target="_blank"
@@ -133,16 +125,16 @@ export default createAction(routes.app.team.statusPages.index, {
 													>
 														/status/{page.slug}
 													</a>
-												</td>
-												<td>{countsByPageId.get(page.id) ?? 0}</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>{countsByPageId.get(page.id) ?? 0}</Table.Cell>
+												<Table.Cell>
 													<Badge tone={page.is_public ? "up" : "neutral"}>
 														{page.is_public
 															? ctx.i18next.t("page.statusPages.table.visibility.public")
 															: ctx.i18next.t("page.statusPages.table.visibility.private")}
 													</Badge>
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<a
 														href={routes.app.team.statusPages.edit.href({
 															team: ctx.team.slug,
@@ -159,12 +151,12 @@ export default createAction(routes.app.team.statusPages.index, {
 													>
 														{ctx.i18next.t("page.statusPages.table.actions.edit")}
 													</a>
-												</td>
-											</tr>
+												</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

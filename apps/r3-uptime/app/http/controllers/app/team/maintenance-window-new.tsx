@@ -54,7 +54,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							method="post"
 							action={routes.actions.maintenanceWindow.create.href({ team: ctx.team.slug })}
 						>
-							<MaintenanceWindowFormFields monitors={monitors} />
+							<MaintenanceWindowFormFields monitors={monitors} i18next={ctx.i18next} />
 							<Button type="submit">{ctx.i18next.t("page.createMaintenance.form.cta")}</Button>
 						</form>
 					</FormPage>

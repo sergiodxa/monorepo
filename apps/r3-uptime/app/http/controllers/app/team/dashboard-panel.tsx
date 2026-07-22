@@ -15,6 +15,7 @@
 import type { Handle } from "remix/ui";
 
 import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -40,10 +41,9 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { Tab, TabList } from "~/resources/components/tabs";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import routes from "~/routes/web";
 
@@ -89,6 +89,10 @@ namespace DashboardPanel {
 	interface Common {
 		team: { slug: string };
 		tabLabels: Record<DashboardTab, string>;
+		/** Accessible label for the tab list, e.g. "Monitor type". */
+		tabsListLabel: string;
+		/** Accessible label for the active tab's panel, e.g. "HTTP monitors". */
+		panelLabel: string;
 	}
 
 	export type Props = Common &
@@ -104,6 +108,7 @@ namespace DashboardPanel {
 						emptyTitle: string;
 						emptyDescription: string;
 						emptyCta: string;
+						tableLabel: string;
 						columns: { name: string; latencyChart: string; status: string };
 						statusLabels: Record<MonitorHealth, string>;
 					};
@@ -115,6 +120,7 @@ namespace DashboardPanel {
 						emptyTitle: string;
 						emptyDescription: string;
 						emptyCta: string;
+						tableLabel: string;
 						columns: { name: string; domain: string; status: string };
 					};
 			  }
@@ -125,6 +131,7 @@ namespace DashboardPanel {
 						emptyTitle: string;
 						emptyDescription: string;
 						emptyCta: string;
+						tableLabel: string;
 						columns: { name: string; endpoint: string; status: string };
 						statusLabels: Record<string, string>;
 					};
@@ -136,6 +143,7 @@ namespace DashboardPanel {
 						emptyTitle: string;
 						emptyDescription: string;
 						emptyCta: string;
+						tableLabel: string;
 						columns: { name: string; schedule: string; status: string };
 						statusLabels: Record<string, string>;
 					};
@@ -166,7 +174,7 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 				))}
 
 				<TabList
-					aria-label="Monitor type"
+					aria-label={props.tabsListLabel}
 					activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
 				>
 					{DASHBOARD_TABS.map((tab) => (
@@ -183,7 +191,7 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 					))}
 				</TabList>
 
-				<div id="dashboard-panel-content" role="tabpanel" aria-label={`${props.tab} monitors`}>
+				<div id="dashboard-panel-content" role="tabpanel" aria-label={props.panelLabel}>
 					{props.tab === "http" && (
 						<HttpTable team={props.team} rows={props.httpRows} copy={props.copy} />
 					)}
@@ -214,6 +222,7 @@ namespace HttpTable {
 			emptyTitle: string;
 			emptyDescription: string;
 			emptyCta: string;
+			tableLabel: string;
 			columns: { name: string; latencyChart: string; status: string };
 			statusLabels: Record<MonitorHealth, string>;
 		};
@@ -243,33 +252,19 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 		}
 
 		return (
-			<div mix={css({ overflowX: "auto" })}>
-				<table
-					mix={css({
-						width: "100%",
-						borderCollapse: "collapse",
-						fontSize: "0.875rem",
-						"& th, & td": {
-							textAlign: "left",
-							padding: "12px 16px",
-							borderBottom: `1px solid ${neutral[200]}`,
-						},
-						"@media (prefers-color-scheme: dark)": {
-							"& th, & td": { borderColor: neutral[800] },
-						},
-					})}
-				>
-					<thead>
-						<tr>
-							<th>{copy.columns.name}</th>
-							<th>{copy.columns.latencyChart}</th>
-							<th>{copy.columns.status}</th>
-						</tr>
-					</thead>
-					<tbody>
+			<Table.Container>
+				<Table aria-label={copy.tableLabel}>
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>{copy.columns.name}</Table.Column>
+							<Table.Column>{copy.columns.latencyChart}</Table.Column>
+							<Table.Column>{copy.columns.status}</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
 						{rows.map(({ monitor, health, sparklinePoints }) => (
-							<tr key={monitor.id}>
-								<td>
+							<Table.Row key={monitor.id}>
+								<Table.Cell>
 									<a
 										href={routes.app.team.monitors.show.href({
 											team: team.slug,
@@ -284,20 +279,20 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 									>
 										{monitor.name}
 									</a>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<div mix={css({ color: primary[600] })}>
 										<Sparkline points={sparklinePoints} />
 									</div>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<Badge tone={HEALTH_BADGE_TONE[health]}>{copy.statusLabels[health]}</Badge>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						))}
-					</tbody>
-				</table>
-			</div>
+					</Table.Body>
+				</Table>
+			</Table.Container>
 		);
 	};
 }
@@ -310,6 +305,7 @@ namespace DnsTable {
 			emptyTitle: string;
 			emptyDescription: string;
 			emptyCta: string;
+			tableLabel: string;
 			columns: { name: string; domain: string; status: string };
 		};
 	}
@@ -338,33 +334,19 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 		}
 
 		return (
-			<div mix={css({ overflowX: "auto" })}>
-				<table
-					mix={css({
-						width: "100%",
-						borderCollapse: "collapse",
-						fontSize: "0.875rem",
-						"& th, & td": {
-							textAlign: "left",
-							padding: "12px 16px",
-							borderBottom: `1px solid ${neutral[200]}`,
-						},
-						"@media (prefers-color-scheme: dark)": {
-							"& th, & td": { borderColor: neutral[800] },
-						},
-					})}
-				>
-					<thead>
-						<tr>
-							<th>{copy.columns.name}</th>
-							<th>{copy.columns.domain}</th>
-							<th>{copy.columns.status}</th>
-						</tr>
-					</thead>
-					<tbody>
+			<Table.Container>
+				<Table aria-label={copy.tableLabel}>
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>{copy.columns.name}</Table.Column>
+							<Table.Column>{copy.columns.domain}</Table.Column>
+							<Table.Column>{copy.columns.status}</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
 						{monitors.map((monitor) => (
-							<tr key={monitor.id}>
-								<td>
+							<Table.Row key={monitor.id}>
+								<Table.Cell>
 									<a
 										href={routes.app.team.dnsMonitors.show.href({
 											team: team.slug,
@@ -379,20 +361,20 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 									>
 										{monitor.name}
 									</a>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<code>{monitor.domain}</code>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<Badge tone={DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 										{monitor.last_status ?? "not checked"}
 									</Badge>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						))}
-					</tbody>
-				</table>
-			</div>
+					</Table.Body>
+				</Table>
+			</Table.Container>
 		);
 	};
 }
@@ -405,6 +387,7 @@ namespace TcpTable {
 			emptyTitle: string;
 			emptyDescription: string;
 			emptyCta: string;
+			tableLabel: string;
 			columns: { name: string; endpoint: string; status: string };
 			statusLabels: Record<string, string>;
 		};
@@ -434,33 +417,19 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 		}
 
 		return (
-			<div mix={css({ overflowX: "auto" })}>
-				<table
-					mix={css({
-						width: "100%",
-						borderCollapse: "collapse",
-						fontSize: "0.875rem",
-						"& th, & td": {
-							textAlign: "left",
-							padding: "12px 16px",
-							borderBottom: `1px solid ${neutral[200]}`,
-						},
-						"@media (prefers-color-scheme: dark)": {
-							"& th, & td": { borderColor: neutral[800] },
-						},
-					})}
-				>
-					<thead>
-						<tr>
-							<th>{copy.columns.name}</th>
-							<th>{copy.columns.endpoint}</th>
-							<th>{copy.columns.status}</th>
-						</tr>
-					</thead>
-					<tbody>
+			<Table.Container>
+				<Table aria-label={copy.tableLabel}>
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>{copy.columns.name}</Table.Column>
+							<Table.Column>{copy.columns.endpoint}</Table.Column>
+							<Table.Column>{copy.columns.status}</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
 						{monitors.map((monitor) => (
-							<tr key={monitor.id}>
-								<td>
+							<Table.Row key={monitor.id}>
+								<Table.Cell>
 									<a
 										href={routes.app.team.tcpMonitors.show.href({
 											team: team.slug,
@@ -475,22 +444,22 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 									>
 										{monitor.name}
 									</a>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<code>
 										{monitor.host}:{monitor.port}
 									</code>
-								</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
 									<Badge tone={TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 										{copy.statusLabels[monitor.last_status ?? "pending"] ?? monitor.last_status}
 									</Badge>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						))}
-					</tbody>
-				</table>
-			</div>
+					</Table.Body>
+				</Table>
+			</Table.Container>
 		);
 	};
 }
@@ -503,6 +472,7 @@ namespace CronJobsTable {
 			emptyTitle: string;
 			emptyDescription: string;
 			emptyCta: string;
+			tableLabel: string;
 			columns: { name: string; schedule: string; status: string };
 			statusLabels: Record<string, string>;
 		};
@@ -532,33 +502,19 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 		}
 
 		return (
-			<div mix={css({ overflowX: "auto" })}>
-				<table
-					mix={css({
-						width: "100%",
-						borderCollapse: "collapse",
-						fontSize: "0.875rem",
-						"& th, & td": {
-							textAlign: "left",
-							padding: "12px 16px",
-							borderBottom: `1px solid ${neutral[200]}`,
-						},
-						"@media (prefers-color-scheme: dark)": {
-							"& th, & td": { borderColor: neutral[800] },
-						},
-					})}
-				>
-					<thead>
-						<tr>
-							<th>{copy.columns.name}</th>
-							<th>{copy.columns.schedule}</th>
-							<th>{copy.columns.status}</th>
-						</tr>
-					</thead>
-					<tbody>
+			<Table.Container>
+				<Table aria-label={copy.tableLabel}>
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>{copy.columns.name}</Table.Column>
+							<Table.Column>{copy.columns.schedule}</Table.Column>
+							<Table.Column>{copy.columns.status}</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
 						{monitors.map((monitor) => (
-							<tr key={monitor.id}>
-								<td>
+							<Table.Row key={monitor.id}>
+								<Table.Cell>
 									<a
 										href={routes.app.team.cronJobs.show.href({
 											team: team.slug,
@@ -573,18 +529,20 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 									>
 										{monitor.name}
 									</a>
-								</td>
-								<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
-								<td>
+								</Table.Cell>
+								<Table.Cell>
+									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
+								</Table.Cell>
+								<Table.Cell>
 									<Badge tone={CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
 										{copy.statusLabels[monitor.status] ?? monitor.status}
 									</Badge>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						))}
-					</tbody>
-				</table>
-			</div>
+					</Table.Body>
+				</Table>
+			</Table.Container>
 		);
 	};
 }
@@ -603,6 +561,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 			tcp: ctx.i18next.t("page.dashboard.tabs.tcp"),
 			"cron-jobs": ctx.i18next.t("page.dashboard.tabs.cronJobs"),
 		};
+		let tabsListLabel = ctx.i18next.t("page.dashboard.panel.tabsLabel");
+		let panelLabel = ctx.i18next.t("page.dashboard.panel.tabPanelLabel", { tab: tabLabels[type] });
 
 		if (type === "dns") {
 			let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
@@ -612,10 +572,13 @@ export default createAction(routes.app.team.dashboard.panel, {
 					team={ctx.team}
 					dnsMonitors={dnsMonitors}
 					tabLabels={tabLabels}
+					tabsListLabel={tabsListLabel}
+					panelLabel={panelLabel}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.dnsMonitors.empty.title"),
 						emptyDescription: ctx.i18next.t("page.dnsMonitors.empty.description"),
 						emptyCta: ctx.i18next.t("page.dnsMonitors.empty.cta"),
+						tableLabel: ctx.i18next.t("page.dnsMonitors.table.label"),
 						columns: {
 							name: ctx.i18next.t("page.dnsMonitors.table.columns.name"),
 							domain: ctx.i18next.t("page.dnsMonitors.table.columns.domain"),
@@ -635,10 +598,13 @@ export default createAction(routes.app.team.dashboard.panel, {
 					team={ctx.team}
 					tcpMonitors={tcpMonitors}
 					tabLabels={tabLabels}
+					tabsListLabel={tabsListLabel}
+					panelLabel={panelLabel}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.tcpMonitors.empty.title"),
 						emptyDescription: ctx.i18next.t("page.tcpMonitors.empty.description"),
 						emptyCta: ctx.i18next.t("page.tcpMonitors.empty.cta"),
+						tableLabel: ctx.i18next.t("page.tcpMonitors.table.label"),
 						columns: {
 							name: ctx.i18next.t("page.tcpMonitors.table.columns.name"),
 							endpoint: ctx.i18next.t("page.tcpMonitors.table.columns.endpoint"),
@@ -664,10 +630,13 @@ export default createAction(routes.app.team.dashboard.panel, {
 					team={ctx.team}
 					cronJobMonitors={cronJobMonitors}
 					tabLabels={tabLabels}
+					tabsListLabel={tabsListLabel}
+					panelLabel={panelLabel}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.cronJobs.empty.title"),
 						emptyDescription: ctx.i18next.t("page.cronJobs.empty.description"),
 						emptyCta: ctx.i18next.t("page.cronJobs.empty.cta"),
+						tableLabel: ctx.i18next.t("page.cronJobs.table.label"),
 						columns: {
 							name: ctx.i18next.t("page.cronJobs.table.columns.name"),
 							schedule: ctx.i18next.t("page.cronJobs.table.columns.schedule"),
@@ -709,10 +678,13 @@ export default createAction(routes.app.team.dashboard.panel, {
 				team={ctx.team}
 				httpRows={httpRows}
 				tabLabels={tabLabels}
+				tabsListLabel={tabsListLabel}
+				panelLabel={panelLabel}
 				copy={{
 					emptyTitle: ctx.i18next.t("page.dashboard.empty.title"),
 					emptyDescription: ctx.i18next.t("page.dashboard.empty.description"),
 					emptyCta: ctx.i18next.t("page.dashboard.empty.cta"),
+					tableLabel: ctx.i18next.t("page.dashboard.table.label"),
 					columns: {
 						name: ctx.i18next.t("page.dashboard.table.columns.name"),
 						latencyChart: ctx.i18next.t("page.dashboard.table.columns.latencyChart"),

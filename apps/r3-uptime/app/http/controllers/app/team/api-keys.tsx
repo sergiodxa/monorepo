@@ -10,7 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { IntlProvider } from "@pkg/i18n/ui";
 import { KeyIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -26,7 +28,6 @@ import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
 import CopyButton from "~/resources/components/copy-button";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -88,7 +89,17 @@ export default createAction(routes.app.team.apiKeys.index, {
 								<p>{ctx.i18next.t("page.apiKeys.newKey.description")}</p>
 								<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 									<code>{newApiKey.key}</code>
-									<CopyButton value={newApiKey.key} label="Copy key" />
+									{/* CopyButton is a `clientEntry` island: its render function runs
+									server-side too (for the initial HTML), where `intl(handle)` has no
+									module-scoped `setIntl()` fallback to read (that's only ever
+									registered client-side in bootstrap/browser.ts) — it needs an
+									`IntlProvider` ancestor for `intl(handle)` to resolve at all. */}
+									<IntlProvider i18n={ctx.i18next}>
+										<CopyButton
+											value={newApiKey.key}
+											label={ctx.i18next.t("page.apiKeys.newKey.copyLabel")}
+										/>
+									</IntlProvider>
 								</div>
 							</div>
 						)}
@@ -110,57 +121,51 @@ export default createAction(routes.app.team.apiKeys.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.apiKeys.table.columns.name")}</th>
-											<th>{ctx.i18next.t("page.apiKeys.table.columns.prefix")}</th>
-											<th>{ctx.i18next.t("page.apiKeys.table.columns.scopes")}</th>
-											<th>{ctx.i18next.t("page.apiKeys.table.columns.lastUsed")}</th>
-											<th>{ctx.i18next.t("page.apiKeys.table.columns.expires")}</th>
-											<th></th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.apiKeys.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.apiKeys.table.columns.name")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.apiKeys.table.columns.prefix")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.apiKeys.table.columns.scopes")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.apiKeys.table.columns.lastUsed")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.apiKeys.table.columns.expires")}
+											</Table.Column>
+											<Table.Column></Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{apiKeys.map((apiKey) => {
 											let isExpired = apiKey.expires_at !== null && apiKey.expires_at < Date.now();
 
 											return (
-												<tr key={apiKey.id}>
-													<td>{apiKey.name}</td>
-													<td>
+												<Table.Row key={apiKey.id}>
+													<Table.Cell>{apiKey.name}</Table.Cell>
+													<Table.Cell>
 														<code>{apiKey.key_prefix}...</code>
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														{apiKey.scopes.map((scope) => (
 															<Badge key={scope} tone="neutral">
 																{scope}
 															</Badge>
 														))}
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														{apiKey.last_used_at
 															? new Date(apiKey.last_used_at).toLocaleString()
 															: ctx.i18next.t("page.apiKeys.table.lastUsed.never")}
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														{apiKey.expires_at ? (
 															<Badge tone={isExpired ? "down" : "neutral"}>
 																{new Date(apiKey.expires_at).toLocaleDateString()}
@@ -168,8 +173,8 @@ export default createAction(routes.app.team.apiKeys.index, {
 														) : (
 															ctx.i18next.t("page.apiKeys.table.expires.never")
 														)}
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														<form
 															method="post"
 															action={routes.teamAdminActions.apiKey.delete.href({
@@ -182,13 +187,13 @@ export default createAction(routes.app.team.apiKeys.index, {
 																{ctx.i18next.t("page.apiKeys.table.actions.delete")}
 															</Button>
 														</form>
-													</td>
-												</tr>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

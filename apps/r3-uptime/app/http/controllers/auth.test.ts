@@ -25,6 +25,8 @@ import { renderWith } from "remix/render-middleware";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 
+import auth from "~/app/http/middleware/auth";
+import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
@@ -118,6 +120,8 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 			asyncContext(),
 			logger as Middleware,
 			seedSession(session),
+			auth as Middleware,
+			i18n as Middleware,
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

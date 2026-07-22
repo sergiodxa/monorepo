@@ -5,23 +5,27 @@
  * not a raw `onerror` HTML string — that's not a typed `<img>` prop here). Per the
  * approved-islands list.
  *
+ * Composes `@pkg/r3-ui`'s compound `Avatar` internally: `Avatar.Fallback` renders
+ * first (so it paints underneath), and `Avatar.Image` renders on top of it when
+ * `src` is given, hiding itself on the same `error` listener the original markup
+ * used to reveal the fallback beneath. `@pkg/r3-ui`'s own `size` prop is a
+ * `"sm"/"md"/"lg"` variant rather than this component's arbitrary pixel `size`,
+ * so the host's dimensions and the fallback's inherited font size are overridden
+ * directly through `mix` instead, keeping this component's numeric `size` API
+ * exact for every value callers already pass (24, 40, 48, …), not just the three
+ * built-in buckets.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle } from "remix/ui";
 
+import { Avatar as UIAvatar } from "@pkg/r3-ui";
 import { clientEntry, css, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type AvatarProps = { src: string | null; name: string; size?: number };
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-};
 
 /** First letter of up to the first two words of `name`, uppercased. */
 function getInitials(name: string): string {
@@ -43,47 +47,23 @@ export const Avatar = clientEntry(
 			let initials = getInitials(name);
 
 			return (
-				<span
+				<UIAvatar
 					mix={[
 						css({
-							position: "relative",
-							display: "inline-flex",
-							width: size,
-							height: size,
-							flexShrink: 0,
+							inlineSize: size,
+							blockSize: size,
+							fontSize: `${Math.round(size * 0.42)}px`,
 						}),
 					]}
 				>
-					<span
-						mix={[
-							css({
-								position: "absolute",
-								inset: 0,
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								borderRadius: 999,
-								background: neutral[200],
-								color: neutral[900],
-								fontSize: `${Math.round(size * 0.42)}px`,
-								fontWeight: 700,
-								"@media (prefers-color-scheme: dark)": {
-									background: neutral[800],
-									color: neutral[50],
-								},
-							}),
-						]}
-					>
-						{initials}
-					</span>
+					<UIAvatar.Fallback>{initials}</UIAvatar.Fallback>
 					{src && (
-						<img
+						<UIAvatar.Image
 							src={src}
 							alt={name}
 							width={size}
 							height={size}
 							mix={[
-								css({ position: "absolute", inset: 0, borderRadius: 999, objectFit: "cover" }),
 								on<HTMLImageElement>("error", (event) => {
 									let img = event.currentTarget as HTMLImageElement;
 									img.style.display = "none";
@@ -91,7 +71,7 @@ export const Avatar = clientEntry(
 							]}
 						/>
 					)}
-				</span>
+				</UIAvatar>
 			);
 		};
 	},

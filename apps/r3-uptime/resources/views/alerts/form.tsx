@@ -5,20 +5,24 @@
  * individually targeted — the `alerts` table has no `monitor_type` column, so scoping
  * to a DNS/TCP/cron-job monitor could never be resolved back to the right table.
  *
+ * Reads its copy from `page.alerts.form.fields.*`, shared by the create and edit
+ * pages alike — unlike `resources/views/monitors/form.tsx`'s per-page namespace,
+ * there's only ever one alert form layout to describe.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
+import { Input, Select, TextField } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
 import Switch from "~/resources/components/switch";
-import { mixForSelect } from "~/resources/mix-for-select";
-import { neutral } from "~/resources/theme";
 
 namespace AlertFormFields {
 	export interface Props {
@@ -26,315 +30,143 @@ namespace AlertFormFields {
 		monitors: SelectMonitor[];
 		/** Existing alert values when editing; omitted when creating. */
 		alert?: SelectAlert;
+		/** The request's i18next instance, used to read this form's `page.alerts.form.fields.*` copy. */
+		i18next: ReturnType<typeof getContext>["i18next"];
 	}
+}
+
+/** Splits a translated string containing exactly one `<code>...</code>` span into plain text plus a `<code>` node. */
+function renderInlineCode(text: string) {
+	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
+	if (!match) return text;
+	let [, before, code, after] = match;
+	return (
+		<>
+			{before}
+			<code>{code}</code>
+			{after}
+		</>
+	);
 }
 
 /** Renders the name/scope/channel fields plus all four channel-specific fieldsets, pre-filled from `alert` when editing. */
 export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 	return () => {
-		let { monitors, alert } = handle.props;
+		let { monitors, alert, i18next } = handle.props;
+		let t = i18next.getFixedT(null, "translation", "page.alerts.form.fields");
 		let config = alert?.config;
 
 		return (
 			<>
-				<Field label="Name">
-					<input
-						type="text"
-						name="name"
-						required
-						defaultValue={alert?.name}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
-					/>
-				</Field>
+				<TextField
+					label={t("name.label")}
+					name="name"
+					required
+					defaultValue={alert?.name}
+					mix={[css({ marginBottom: 28 })]}
+				/>
 
-				<Field label="Scope">
-					<select
-						name="monitor_id"
-						defaultValue={alert?.monitor_id ?? ""}
-						mix={[
-							mixForSelect(
-								css({
-									padding: "8px 12px",
-									// Matches the text inputs' rendered height: a native <select> is
-									// intrinsically taller than a same-padding <input> unless pinned
-									// to an explicit height.
-									height: 34,
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							),
-						]}
-					>
-						<option value="">Team-wide (every monitor)</option>
+				<Field label={t("scope.label")}>
+					<Select name="monitor_id" defaultValue={alert?.monitor_id ?? ""}>
+						<Select.Option value="">{t("scope.teamWide")}</Select.Option>
 						{monitors.map((monitor) => (
-							<option key={monitor.id} value={monitor.id}>
+							<Select.Option key={monitor.id} value={monitor.id}>
 								{monitor.name} (HTTP)
-							</option>
+							</Select.Option>
 						))}
-					</select>
+					</Select>
 				</Field>
 
-				<Field label="Channel">
-					<select
-						name="strategy"
-						defaultValue={config?.strategy ?? "email"}
-						mix={[
-							mixForSelect(
-								css({
-									padding: "8px 12px",
-									height: 34,
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							),
-						]}
-					>
-						<option value="email">Email</option>
-						<option value="webhook">Webhook</option>
-						<option value="slack">Slack</option>
-						<option value="discord">Discord</option>
-					</select>
+				<Field label={t("channel.label")}>
+					<Select name="strategy" defaultValue={config?.strategy ?? "email"}>
+						<Select.Option value="email">{t("channel.options.email")}</Select.Option>
+						<Select.Option value="webhook">{t("channel.options.webhook")}</Select.Option>
+						<Select.Option value="slack">{t("channel.options.slack")}</Select.Option>
+						<Select.Option value="discord">{t("channel.options.discord")}</Select.Option>
+					</Select>
 				</Field>
 
 				<fieldset mix={[css({ marginBottom: 28 })]}>
-					<legend>Email settings</legend>
-					<Field label="Recipient">
-						<input
-							type="email"
-							name="email_to"
-							defaultValue={config?.strategy === "email" ? config.config.to : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
-					<Field label="Subject prefix (optional)">
-						<input
-							type="text"
-							name="email_subject_prefix"
-							defaultValue={config?.strategy === "email" ? config.config.subjectPrefix : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
+					<legend>{t("legends.email")}</legend>
+					<TextField
+						label={t("config.email.to.label")}
+						type="email"
+						name="email_to"
+						defaultValue={config?.strategy === "email" ? config.config.to : ""}
+						mix={[css({ marginBottom: 28 })]}
+					/>
+					<TextField
+						label={t("config.email.subjectPrefix.label")}
+						name="email_subject_prefix"
+						defaultValue={config?.strategy === "email" ? config.config.subjectPrefix : ""}
+					/>
 				</fieldset>
 
 				<fieldset mix={[css({ marginBottom: 28 })]}>
-					<legend>Webhook settings</legend>
-					<Field label="URL">
-						<input
-							type="url"
-							name="webhook_url"
-							defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
-					<Field label="Signing secret (optional)">
-						<input
-							type="text"
-							name="webhook_secret"
-							defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
+					<legend>{t("legends.webhook")}</legend>
+					<TextField
+						label={t("config.webhook.url.label")}
+						type="url"
+						name="webhook_url"
+						defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
+						mix={[css({ marginBottom: 28 })]}
+					/>
+					<TextField
+						label={t("config.webhook.secret.label")}
+						name="webhook_secret"
+						defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
+						mix={[css({ marginBottom: 28 })]}
+					/>
 					<p
 						mix={[
 							css({
 								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+								color: "var(--ui-neutral-fg-muted)",
 							}),
 						]}
 					>
-						When set, requests carry a <code>Webhook-Signature: sha256=&lt;hex&gt;</code> header —
-						an HMAC-SHA256 of the raw JSON body using this secret.
+						{renderInlineCode(t("config.webhook.signatureNote"))}
 					</p>
 				</fieldset>
 
 				<fieldset mix={[css({ marginBottom: 28 })]}>
-					<legend>Slack settings</legend>
-					<Field label="Webhook URL">
-						<input
-							type="url"
-							name="slack_webhook_url"
-							defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
-					<Field label="Channel override (optional)">
-						<input
-							type="text"
-							name="slack_channel"
-							defaultValue={config?.strategy === "slack" ? (config.config.channel ?? "") : ""}
-							placeholder="#incidents"
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
+					<legend>{t("legends.slack")}</legend>
+					<TextField
+						label={t("config.slack.webhookUrl.label")}
+						type="url"
+						name="slack_webhook_url"
+						defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
+						mix={[css({ marginBottom: 28 })]}
+					/>
+					<TextField
+						label={t("config.slack.channel.label")}
+						name="slack_channel"
+						placeholder="#incidents"
+						defaultValue={config?.strategy === "slack" ? (config.config.channel ?? "") : ""}
+					/>
 				</fieldset>
 
 				<fieldset mix={[css({ marginBottom: 28 })]}>
-					<legend>Discord settings</legend>
-					<Field label="Webhook URL">
-						<input
-							type="url"
-							name="discord_webhook_url"
-							defaultValue={config?.strategy === "discord" ? config.config.webhookUrl : ""}
-							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
-							]}
-						/>
-					</Field>
+					<legend>{t("legends.discord")}</legend>
+					<TextField
+						label={t("config.discord.webhookUrl.label")}
+						type="url"
+						name="discord_webhook_url"
+						defaultValue={config?.strategy === "discord" ? config.config.webhookUrl : ""}
+					/>
 				</fieldset>
 
 				<Switch name="notify_on_recovery" defaultChecked={alert?.notify_on_recovery ?? true}>
-					Notify on recovery
+					{t("notifyOnRecovery.label")}
 				</Switch>
 
-				<Field label="Cooldown (minutes, 0 = no cooldown)">
-					<input
+				<Field label={t("cooldownMinutes.label")}>
+					<Input
 						type="number"
 						name="cooldown_minutes"
 						min={0}
 						max={1440}
 						defaultValue={alert?.cooldown_minutes ?? 0}
-						mix={[
-							css({
-								padding: "8px 12px",
-								borderRadius: 6,
-								border: `1px solid ${neutral[200]}`,
-								fontSize: "0.875rem",
-								fontFamily: "inherit",
-								background: neutral[50],
-								color: "inherit",
-								"@media (prefers-color-scheme: dark)": {
-									borderColor: neutral[700],
-									background: neutral[900],
-								},
-							}),
-						]}
 					/>
 				</Field>
 			</>

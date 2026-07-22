@@ -8,6 +8,7 @@
  */
 
 import { NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -21,11 +22,10 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
@@ -84,36 +84,28 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.tcpMonitors.table.columns.name")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitors.table.columns.endpoint")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitors.table.columns.status")}</th>
-											<th>{ctx.i18next.t("page.tcpMonitors.table.columns.responseTime")}</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.tcpMonitors.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitors.table.columns.name")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitors.table.columns.endpoint")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitors.table.columns.status")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.tcpMonitors.table.columns.responseTime")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{monitors.map((monitor) => (
-											<tr key={monitor.id}>
-												<td>
+											<Table.Row key={monitor.id}>
+												<Table.Cell>
 													<a
 														href={routes.app.team.tcpMonitors.show.href({
 															team: ctx.team.slug,
@@ -135,29 +127,29 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 															{ctx.i18next.t("page.tcpMonitors.table.status.disabled")}
 														</Badge>
 													)}
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<code>
 														{monitor.host}:{monitor.port}
 													</code>
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 														{ctx.i18next.t(
 															`page.tcpMonitors.table.status.${monitor.last_status ?? "pending"}`,
 														)}
 													</Badge>
-												</td>
-												<td>
+												</Table.Cell>
+												<Table.Cell>
 													{monitor.last_response_time_ms === null
 														? "—"
 														: `${monitor.last_response_time_ms}ms`}
-												</td>
-											</tr>
+												</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

@@ -8,6 +8,7 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
+import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -23,7 +24,6 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Badge from "~/resources/components/badge";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
@@ -159,7 +159,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								label={ctx.i18next.t("page.cronJobDetail.stats.lastPing.label")}
 								value={
 									monitor.last_ping_at === null
-										? "Never"
+										? ctx.i18next.t("page.cronJobDetail.stats.lastPing.never")
 										: new Date(monitor.last_ping_at).toLocaleString()
 								}
 							/>
@@ -181,7 +181,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 							/>
 						</div>
 
-						<h2>Ping this monitor</h2>
+						<h2>{ctx.i18next.t("page.cronJobDetail.ping.title")}</h2>
 						<p
 							mix={[
 								css({
@@ -191,8 +191,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								}),
 							]}
 						>
-							Have your job send a POST request here after it finishes. No authentication required —
-							treat this URL as a secret.
+							{ctx.i18next.t("page.cronJobDetail.ping.description")}
 						</p>
 						<pre
 							mix={[
@@ -228,7 +227,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 							<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>
 						</pre>
 
-						<h2>Uptime history</h2>
+						<h2>{ctx.i18next.t("page.cronJobDetail.uptimeHistory")}</h2>
 						<Heatmap days={dailyStats} />
 
 						<h2>{ctx.i18next.t("page.cronJobDetail.pings.title")}</h2>
@@ -239,48 +238,38 @@ export default createAction(routes.app.team.cronJobs.show, {
 								</Empty.Description>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.cronJobDetail.pings.columns.time")}</th>
-											<th>{ctx.i18next.t("page.cronJobDetail.pings.columns.status")}</th>
-											<th>{ctx.i18next.t("page.cronJobDetail.pings.columns.sourceIp")}</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.cronJobDetail.pings.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobDetail.pings.columns.time")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobDetail.pings.columns.status")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.cronJobDetail.pings.columns.sourceIp")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{pings.map((ping) => (
-											<tr key={ping.id}>
-												<td>{new Date(ping.created_at).toLocaleString()}</td>
-												<td>
+											<Table.Row key={ping.id}>
+												<Table.Cell>{new Date(ping.created_at).toLocaleString()}</Table.Cell>
+												<Table.Cell>
 													<Badge tone={ping.was_on_time ? "up" : "degraded"}>
 														{ping.was_on_time
 															? ctx.i18next.t("page.cronJobDetail.pings.status.onTime")
 															: ctx.i18next.t("page.cronJobDetail.pings.status.late")}
 													</Badge>
-												</td>
-												<td>{ping.source_ip ?? "—"}</td>
-											</tr>
+												</Table.Cell>
+												<Table.Cell>{ping.source_ip ?? "—"}</Table.Cell>
+											</Table.Row>
 										))}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

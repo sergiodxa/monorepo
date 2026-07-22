@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Empty } from "@pkg/r3-ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -24,7 +25,6 @@ import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
@@ -146,7 +146,7 @@ export default createAction(routes.app.team.dashboard.index, {
 							src={routes.app.team.dashboard.panel.href({ team: ctx.team.slug, type: tab })}
 							fallback={
 								<Empty>
-									<Empty.Description>Loading…</Empty.Description>
+									<Empty.Description>{ctx.i18next.t("page.dashboard.loading")}</Empty.Description>
 								</Empty>
 							}
 						/>

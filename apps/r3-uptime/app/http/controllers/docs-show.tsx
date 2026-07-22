@@ -108,7 +108,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 				toggleNavLabel={toggleNavLabel}
 			>
 				<article>
-					<header mix={[css({ display: "flex", flexDirection: "column", gap: 2 })]}>
+					<header
+						mix={[css({ display: "flex", flexDirection: "column", gap: 2, marginBottom: "2rem" })]}
+					>
 						<h1 mix={[css({ margin: 0 })]}>{frontmatter.title}</h1>
 						<p
 							mix={[

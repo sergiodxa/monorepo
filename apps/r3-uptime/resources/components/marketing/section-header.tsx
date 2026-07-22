@@ -1,7 +1,9 @@
 /**
  * Centered eyebrow badge + heading + lead paragraph at the top of a marketing page
  * section. Every marketing page/section repeats this same three-part shape, so it's
- * centralized here instead of composing it by hand at each call site.
+ * centralized here instead of composing it by hand at each call site. Its heading
+ * renders through `@pkg/r3-ui`'s `Heading` (fixed at `level={2}` — every marketing
+ * page nests its sections below its own `<h1>` hero) instead of a bare `<h2>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +11,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { Heading } from "@pkg/r3-ui";
 import { css } from "remix/ui";
 
 namespace SectionHeader {
@@ -19,34 +22,28 @@ namespace SectionHeader {
 	}
 }
 
-/**
- * Centered heading block at the top of a marketing section. Styles its bare
- * `<h2>` directly (rather than requiring a separate heading mixin at each call
- * site): bold, 30px by default and 36px at ≥640px, with tight `-0.025em`
- * tracking throughout.
- */
+/** Centered wrapper capping the badge/heading/lead paragraph at 640px wide. */
 const marketingSectionHeader = css({
 	textAlign: "center",
 	maxWidth: 640,
 	margin: "0 auto 40px",
-	"& h2": {
-		fontSize: "1.875rem",
-		fontWeight: 700,
-		lineHeight: "2.25rem",
-		letterSpacing: "-0.025em",
-		margin: "0 0 16px",
-		color: "oklch(0.24 0.005 145)",
-	},
-	"@media (min-width: 640px)": {
-		"& h2": { fontSize: "2.25rem", lineHeight: "2.5rem" },
-	},
-	"@media (prefers-color-scheme: dark)": {
-		"& h2": { color: "oklch(0.98 0.005 145)" },
-	},
 });
 
 /**
- * Small pill badge used above hero/section headings: a brand-green outline
+ * The section's own heading size: bold, 30px by default and 36px at ≥640px,
+ * with tight `-0.025em` tracking throughout — layered on top of `Heading`'s
+ * own fixed emphasis size, which this section wants larger.
+ */
+const marketingSectionTitle = css({
+	fontSize: "1.875rem",
+	lineHeight: "2.25rem",
+	letterSpacing: "-0.025em",
+	margin: "0 0 16px",
+	"@media (min-width: 640px)": { fontSize: "2.25rem", lineHeight: "2.5rem" },
+});
+
+/**
+ * Small pill badge used above hero/section headings: a brand-tinted outline
  * chip, padding `2px 10px`.
  */
 const marketingBadge = css({
@@ -56,15 +53,10 @@ const marketingBadge = css({
 	borderRadius: 999,
 	fontSize: "0.75rem",
 	fontWeight: 600,
-	border: "1px solid oklch(0.92 0.08 142)",
-	background: "oklch(0.98 0.02 142)",
-	color: "oklch(0.6 0.16 142)",
+	border: "1px solid var(--ui-primary-border)",
+	background: "var(--ui-primary-bg-tint)",
+	color: "var(--ui-primary-fg)",
 	marginBottom: 16,
-	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.42 0.12 142)",
-		background: "oklch(0.24 0.06 142)",
-		color: "oklch(0.78 0.16 142)",
-	},
 });
 
 /**
@@ -73,19 +65,20 @@ const marketingBadge = css({
  */
 const marketingLead = css({
 	fontSize: "1.125rem",
-	color: "oklch(0.52 0.01 145)",
+	color: "var(--ui-neutral-fg)",
 	margin: "0 auto 24px",
 	maxWidth: 576,
 	lineHeight: 1.625,
-	"@media (prefers-color-scheme: dark)": { color: "oklch(0.73 0.01 145)" },
 });
 
-/** Renders an optional {@link SectionHeader.Props.badge}, an `<h2>` title, and an optional lead paragraph. */
+/** Renders an optional {@link SectionHeader.Props.badge}, an `<h2>` title (through `Heading`), and an optional lead paragraph. */
 export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 	return () => (
 		<div mix={[marketingSectionHeader]}>
 			{handle.props.badge && <span mix={[marketingBadge]}>{handle.props.badge}</span>}
-			<h2>{handle.props.title}</h2>
+			<Heading level={2} mix={[marketingSectionTitle]}>
+				{handle.props.title}
+			</Heading>
 			{handle.props.description && <p mix={[marketingLead]}>{handle.props.description}</p>}
 		</div>
 	);

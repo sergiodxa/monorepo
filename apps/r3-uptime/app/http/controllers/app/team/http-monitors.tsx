@@ -7,20 +7,29 @@
  * per-monitor status (up/degraded/down/unknown) is derived via `calculateMonitorStatus`.
  * Requires `requireUser` + `requireTeam`.
  *
- * The row actions menu is `~/resources/components/monitor-row-actions.tsx`, a client
- * island built on CSS anchor positioning rather than a hand-rolled `commandfor`/
- * `[popover]` pair: a plain `position: absolute` popover panel can't anchor to its own
- * row once promoted to the top layer (its containing block becomes the viewport, not
- * any DOM ancestor, so every row's panel would resolve to the same spot), but anchor
- * positioning computes the panel's position per-instance in the browser's own layout
- * engine, so N independently-positioned triggers (one per table row) each get a
- * correctly-placed panel with zero JS.
+ * The table is `@pkg/r3-ui`'s `Table` compound, and each row's delete confirmation is
+ * `@pkg/r3-ui`'s `AlertDialog` (composed directly rather than through the `Confirm`
+ * convenience wrapper, since the confirming control here is a real `<form method="post">`
+ * submit button rather than a `command="close"` action — the delete needs to actually
+ * post to the delete action, not just dismiss the dialog). Each row's kebab-icon
+ * actions menu is `@pkg/r3-ui`'s `Menu`, anchored to its own trigger via the Popover
+ * API's implicit-anchor behavior, plus `menuKeys()` for the WAI-ARIA menu keyboard
+ * pattern — inlined here rather than a shared component, since this is its only use.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MonitorIcon, PlusIcon } from "@pkg/lucide-remix";
+import {
+	EllipsisVerticalIcon,
+	EyeIcon,
+	MonitorIcon,
+	PencilIcon,
+	PlusIcon,
+	TrashIcon,
+} from "@pkg/lucide-remix";
+import { AlertDialog, Empty, Menu, Table } from "@pkg/r3-ui";
+import { menuKeys } from "@pkg/r3-ui/mixins";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -39,9 +48,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { calculateMonitorStatus, getLatestHttpResult } from "~/app/services/analytics";
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
-import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
-import MonitorRowActions from "~/resources/components/monitor-row-actions";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import { neutral, primary } from "~/resources/theme";
@@ -127,32 +134,26 @@ export default createAction(routes.app.team.monitors.index, {
 								</Empty.Action>
 							</Empty>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[
-										css({
-											width: "100%",
-											borderCollapse: "collapse",
-											fontSize: "0.875rem",
-											"& th, & td": {
-												textAlign: "left",
-												padding: "12px 16px",
-												borderBottom: `1px solid ${neutral[200]}`,
-											},
-											"@media (prefers-color-scheme: dark)": {
-												"& th, & td": { borderColor: neutral[800] },
-											},
-										}),
-									]}
-								>
-									<thead>
-										<tr>
-											<th>{ctx.i18next.t("page.httpMonitors.table.columns.name")}</th>
-											<th>{ctx.i18next.t("page.httpMonitors.table.columns.url")}</th>
-											<th>{ctx.i18next.t("page.httpMonitors.table.columns.status")}</th>
-											<th>{ctx.i18next.t("page.httpMonitors.table.columns.responseTime")}</th>
-											<th>{ctx.i18next.t("page.httpMonitors.table.columns.lastChecked")}</th>
-											<th mix={[css({ textAlign: "right" })]}>
+							<Table.Container>
+								<Table aria-label={ctx.i18next.t("page.httpMonitors.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{ctx.i18next.t("page.httpMonitors.table.columns.name")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.httpMonitors.table.columns.url")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.httpMonitors.table.columns.status")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.httpMonitors.table.columns.responseTime")}
+											</Table.Column>
+											<Table.Column>
+												{ctx.i18next.t("page.httpMonitors.table.columns.lastChecked")}
+											</Table.Column>
+											<Table.Column align="end">
 												<span
 													mix={[
 														css({
@@ -170,16 +171,19 @@ export default createAction(routes.app.team.monitors.index, {
 												>
 													{ctx.i18next.t("page.httpMonitors.table.columns.actions")}
 												</span>
-											</th>
-										</tr>
-									</thead>
-									<tbody>
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{rows.map(({ monitor, status, responseTimeMs, lastCheckedAt }) => {
 											let deleteDialogId = `delete-monitor-${monitor.id}`;
+											let titleId = `${deleteDialogId}-title`;
+											let descriptionId = `${deleteDialogId}-description`;
+											let menuId = `row-menu-${deleteDialogId}`;
 
 											return (
-												<tr key={monitor.id}>
-													<td>
+												<Table.Row key={monitor.id}>
+													<Table.Cell>
 														<a
 															href={routes.app.team.monitors.show.href({
 																team: ctx.team.slug,
@@ -202,16 +206,16 @@ export default createAction(routes.app.team.monitors.index, {
 																{ctx.i18next.t("page.httpMonitors.table.disabled")}
 															</Badge>
 														)}
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														<code>{monitor.url}</code>
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														<Badge tone={STATUS_BADGE_TONE[status]}>
 															{ctx.i18next.t(`page.httpMonitors.table.status.${status}`)}
 														</Badge>
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														{responseTimeMs !== null ? (
 															<span>{responseTimeMs}ms</span>
 														) : (
@@ -226,8 +230,8 @@ export default createAction(routes.app.team.monitors.index, {
 																-
 															</span>
 														)}
-													</td>
-													<td>
+													</Table.Cell>
+													<Table.Cell>
 														{lastCheckedAt !== null ? (
 															new Date(lastCheckedAt).toLocaleString()
 														) : (
@@ -242,55 +246,67 @@ export default createAction(routes.app.team.monitors.index, {
 																{ctx.i18next.t("page.httpMonitors.table.neverChecked")}
 															</span>
 														)}
-													</td>
-													<td>
-														<MonitorRowActions
-															monitorName={monitor.name}
-															viewHref={routes.app.team.monitors.show.href({
-																team: ctx.team.slug,
-																monitorId: monitor.id,
-															})}
-															editHref={routes.app.team.monitors.edit.href({
-																team: ctx.team.slug,
-																monitorId: monitor.id,
-															})}
-															deleteDialogId={deleteDialogId}
-														/>
-
-														<dialog
-															id={deleteDialogId}
-															mix={[
-																css({
-																	padding: 24,
-																	borderRadius: 8,
-																	border: `1px solid ${neutral[300]}`,
-																	maxWidth: 400,
-																	"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-																	"@media (prefers-color-scheme: dark)": {
-																		borderColor: neutral[700],
-																		background: neutral[900],
-																		color: neutral[50],
-																	},
-																}),
-															]}
+													</Table.Cell>
+													<Table.Cell>
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															commandfor={menuId}
+															command="toggle-popover"
+															aria-label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
 														>
-															<h3>
-																{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
-																	name: monitor.name,
+															<EllipsisVerticalIcon size={16} strokeWidth={1.5} />
+														</Button>
+
+														<Menu
+															id={menuId}
+															placement="bottom-end"
+															aria-label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
+															mix={[menuKeys()]}
+														>
+															<Menu.Item
+																href={routes.app.team.monitors.show.href({
+																	team: ctx.team.slug,
+																	monitorId: monitor.id,
 																})}
-															</h3>
-															<p
-																mix={[
-																	css({
-																		fontSize: "0.8125rem",
-																		color: neutral[500],
-																		"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-																	}),
-																]}
 															>
-																This also deletes its content checks and check-result history. This
-																can't be undone.
-															</p>
+																<EyeIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.httpMonitors.table.actions.view")}
+															</Menu.Item>
+															<Menu.Item
+																href={routes.app.team.monitors.edit.href({
+																	team: ctx.team.slug,
+																	monitorId: monitor.id,
+																})}
+															>
+																<PencilIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.httpMonitors.table.actions.edit")}
+															</Menu.Item>
+															<Menu.Separator />
+															<Menu.Item danger commandfor={deleteDialogId} command="show-modal">
+																<TrashIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
+															</Menu.Item>
+														</Menu>
+
+														<AlertDialog
+															id={deleteDialogId}
+															aria-labelledby={titleId}
+															aria-describedby={descriptionId}
+														>
+															<AlertDialog.Header>
+																<AlertDialog.Title id={titleId}>
+																	{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
+																		name: monitor.name,
+																	})}
+																</AlertDialog.Title>
+																<AlertDialog.Description id={descriptionId}>
+																	{ctx.i18next.t(
+																		"page.httpMonitors.table.confirmation.deleteDescription",
+																	)}
+																</AlertDialog.Description>
+															</AlertDialog.Header>
 															<form
 																method="post"
 																action={routes.actions.monitor.http.delete.href({
@@ -299,32 +315,23 @@ export default createAction(routes.app.team.monitors.index, {
 															>
 																<input type="hidden" name="_method" value="DELETE" />
 																<input type="hidden" name="monitor_id" value={monitor.id} />
-																<div
-																	mix={[
-																		css({ display: "flex", gap: 8, justifyContent: "flex-end" }),
-																	]}
-																>
-																	<Button
-																		type="button"
-																		variant="outline"
-																		commandfor={deleteDialogId}
-																		command="close"
-																	>
+																<AlertDialog.Footer>
+																	<AlertDialog.Cancel type="button" commandfor={deleteDialogId}>
 																		{ctx.i18next.t("page.editMonitor.form.cancel")}
-																	</Button>
+																	</AlertDialog.Cancel>
 																	<Button type="submit" color="danger">
 																		{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
 																	</Button>
-																</div>
+																</AlertDialog.Footer>
 															</form>
-														</dialog>
-													</td>
-												</tr>
+														</AlertDialog>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</div>
 				</AppShell>

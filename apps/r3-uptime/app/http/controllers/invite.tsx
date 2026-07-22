@@ -35,7 +35,7 @@ export default createAction(routes.invite, {
 
 		let renderError = (message: string) =>
 			ctx.render(
-				<DocumentLayout title="Invite unavailable">
+				<DocumentLayout title={ctx.i18next.t("page.acceptInvite.errors.pageTitle")}>
 					<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
 						<div
 							mix={[
@@ -54,7 +54,9 @@ export default createAction(routes.invite, {
 								}),
 							]}
 						>
-							<h1 mix={[css({ margin: 0 })]}>Invite unavailable</h1>
+							<h1 mix={[css({ margin: 0 })]}>
+								{ctx.i18next.t("page.acceptInvite.errors.pageTitle")}
+							</h1>
 							<p
 								mix={[
 									css({
@@ -81,7 +83,7 @@ export default createAction(routes.invite, {
 									}),
 								]}
 							>
-								Back home
+								{ctx.i18next.t("errors.backHome")}
 							</a>
 						</div>
 					</main>
@@ -95,7 +97,7 @@ export default createAction(routes.invite, {
 		}
 		if (invite.email !== viewer.email) {
 			return renderError(
-				`This invite was sent to ${invite.email}. Sign in with that email to accept it.`,
+				ctx.i18next.t("page.acceptInvite.errors.wrongEmail", { email: invite.email }),
 			);
 		}
 

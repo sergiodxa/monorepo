@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -16,7 +17,6 @@ import { createAction } from "remix/fetch-router";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
-import Empty from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
@@ -33,7 +33,7 @@ export default createAction(routes.app.team.dashboard.cards.uptime, {
 			return ctx.render(
 				<Empty>
 					<Empty.Description>
-						Analytics data temporarily unavailable. Please retry later.
+						{ctx.i18next.t("page.dashboard.error.analytics.message")}
 					</Empty.Description>
 				</Empty>,
 			);
@@ -46,11 +46,11 @@ export default createAction(routes.app.team.dashboard.cards.uptime, {
 
 		return ctx.render(
 			<StatCard
-				label="Uptime percentage"
+				label={ctx.i18next.t("page.dashboard.stats.uptime.label")}
 				value={
 					<>
 						{uptimePercent === null ? "—" : `${uptimePercent}%`}
-						<Subtitle>Overall system uptime</Subtitle>
+						<Subtitle>{ctx.i18next.t("page.dashboard.stats.uptime.description")}</Subtitle>
 					</>
 				}
 			/>,

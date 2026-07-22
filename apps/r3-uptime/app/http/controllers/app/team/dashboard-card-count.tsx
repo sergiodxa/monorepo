@@ -48,12 +48,16 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label="DNS Monitors"
+					label={ctx.i18next.t("page.dashboard.stats.dnsMonitors.label")}
 					value={
 						<>
 							{dnsCounts.total}
 							<Subtitle>
-								{dnsCounts.ok} ok / {dnsCounts.changed} changed / {dnsCounts.error} error
+								{ctx.i18next.t("page.dashboard.stats.dnsMonitors.description", {
+									ok: dnsCounts.ok,
+									changed: dnsCounts.changed,
+									error: dnsCounts.error,
+								})}
 							</Subtitle>
 						</>
 					}
@@ -73,12 +77,15 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label="TCP Monitors"
+					label={ctx.i18next.t("page.dashboard.stats.tcpMonitors.label")}
 					value={
 						<>
 							{tcpCounts.total}
 							<Subtitle>
-								{tcpCounts.up} up / {tcpCounts.down} down
+								{ctx.i18next.t("page.dashboard.stats.tcpMonitors.description", {
+									up: tcpCounts.up,
+									down: tcpCounts.down,
+								})}
 							</Subtitle>
 						</>
 					}
@@ -97,12 +104,16 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label="Cron Jobs"
+					label={ctx.i18next.t("page.dashboard.stats.cronJobs.label")}
 					value={
 						<>
 							{cronCounts.total}
 							<Subtitle>
-								{cronCounts.healthy} healthy / {cronCounts.late} late / {cronCounts.missed} missed
+								{ctx.i18next.t("page.dashboard.stats.cronJobs.description", {
+									healthy: cronCounts.healthy,
+									late: cronCounts.late,
+									missed: cronCounts.missed,
+								})}
 							</Subtitle>
 						</>
 					}
@@ -122,12 +133,16 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 			return ctx.render(
 				<StatCard
-					label="SSL Monitors"
+					label={ctx.i18next.t("page.dashboard.stats.sslMonitors.label")}
 					value={
 						<>
 							{sslCounts.total}
 							<Subtitle>
-								{sslCounts.valid} valid, {sslCounts.expiring} expiring, {sslCounts.expired} expired
+								{ctx.i18next.t("page.dashboard.stats.sslMonitors.description", {
+									valid: sslCounts.valid,
+									expiring: sslCounts.expiring,
+									expired: sslCounts.expired,
+								})}
 							</Subtitle>
 						</>
 					}
@@ -152,12 +167,15 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 
 		return ctx.render(
 			<StatCard
-				label="HTTP Monitors"
+				label={ctx.i18next.t("page.dashboard.stats.httpMonitors.label")}
 				value={
 					<>
 						{httpCounts.total}
 						<Subtitle>
-							{httpCounts.up} up / {httpCounts.down} down
+							{ctx.i18next.t("page.dashboard.stats.httpMonitors.description", {
+								up: httpCounts.up,
+								down: httpCounts.down,
+							})}
 						</Subtitle>
 					</>
 				}

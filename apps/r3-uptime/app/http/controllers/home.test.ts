@@ -79,10 +79,9 @@ describe("GET /", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain(
-			"<title>Uptime — Simple &amp; reliable uptime monitoring for developers</title>",
-		);
+		expect(body).toContain("<title>Uptime by Sergio Xalambrí</title>");
 		expect(body).toContain("Monitor your services");
+		expect(body).toContain("with confidence");
 		expect(body).toContain("Start Monitoring");
 	});
 

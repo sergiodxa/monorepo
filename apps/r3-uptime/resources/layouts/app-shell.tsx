@@ -18,6 +18,14 @@
  * picker lines up with the divider below the header): the grid's default
  * `align-items: stretch` gives every cell in a row the row's full height for free,
  * with no hardcoded pixel height to keep in sync between two unrelated elements.
+ * This exact three-row/two-column grid-area layout, and the single-DOM-tree
+ * `display: contents` off-canvas trick below, has no equivalent in `@pkg/r3-ui`'s own
+ * `Sidebar` (which assumes a persistent `<aside>` beside an `Inset`, plus a *separate*
+ * `Dialog`-based `MobileNav` tree for narrow viewports) — so this file keeps that
+ * outer composition as its own layout and only swaps in the pieces `@pkg/r3-ui` does
+ * have a real component for: `Menu` (the team/user dropdowns), `Breadcrumbs` (the
+ * trail), `Sidebar.Item` (the nav rows themselves), and `Toast`/`Toast.Region` (the
+ * bottom notification).
  *
  * The sidebar's three sections (team picker / nav list / user menu) are DOM children
  * of one `<nav popover>` element (so the mobile off-canvas drawer can show/hide them
@@ -54,23 +62,14 @@ import {
 	SettingsIcon,
 	WrenchIcon,
 } from "@pkg/lucide-remix";
-import { css, Fragment } from "remix/ui";
+import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/r3-ui";
+import { easings } from "@pkg/r3-ui/animations";
+import { menuKeys } from "@pkg/r3-ui/mixins";
+import { css } from "remix/ui";
 
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	100: "oklch(0.96 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-};
 
 /**
  * The page shell. Below 768px, a plain flex column — the sidebar `<nav>` is either
@@ -112,9 +111,8 @@ const sidebarToggle = css({
 	color: "inherit",
 	cursor: "pointer",
 	flexShrink: 0,
-	"&:hover": { background: neutral[100] },
+	"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
 	"@media (min-width: 768px)": { display: "none" },
-	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
 });
 
 /**
@@ -130,10 +128,9 @@ const header = css({
 	height: 64,
 	boxSizing: "border-box",
 	padding: "0 20px",
-	borderBottom: `1px solid ${neutral[200]}`,
+	borderBottom: "1px solid var(--ui-neutral-border)",
 	flexShrink: 0,
 	"@media (min-width: 768px)": { gridArea: "header" },
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
 /** The current page/section name, replacing what used to be each page's own `<h1>`. */
@@ -143,13 +140,12 @@ const breadcrumbText = css({
 	overflow: "hidden",
 	textOverflow: "ellipsis",
 	whiteSpace: "nowrap",
-	color: neutral[900],
-	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+	color: "var(--ui-neutral-fg-emphasis)",
 });
 
 /**
- * Wraps the small breadcrumb trail and the bold {@link breadcrumbText} heading in a
- * single column so both sit stacked, vertically centered within the fixed-height
+ * Wraps the small `Breadcrumbs` trail and the bold {@link breadcrumbText} heading in
+ * a single column so both sit stacked, vertically centered within the fixed-height
  * {@link header} row.
  */
 const headingColumn = css({
@@ -159,28 +155,6 @@ const headingColumn = css({
 	gap: 2,
 	minWidth: 0,
 });
-
-/** The small, muted trail of parent pages shown above the bold heading. */
-const breadcrumbTrail = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 4,
-	fontSize: "0.75rem",
-	color: neutral[500],
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-});
-
-/** A linked (non-current) breadcrumb segment. */
-const breadcrumbLink = css({
-	color: "inherit",
-	textDecoration: "none",
-	"&:hover": { textDecoration: "underline" },
-});
-
-/** The `›` glyph separating breadcrumb segments. */
-const breadcrumbSeparator = css({ flexShrink: 0 });
 
 /**
  * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
@@ -212,17 +186,13 @@ const sidebarNav = css({
 	maxHeight: "100vh",
 	padding: 0,
 	border: "none",
-	borderRight: `1px solid ${neutral[200]}`,
-	background: "#ffffff",
+	borderRight: "1px solid var(--ui-neutral-border)",
+	background: "var(--ui-neutral-bg-tint)",
 	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
 	"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
 	"&:popover-open": { display: "flex !important" },
 	"@media (min-width: 768px)": {
 		display: "contents !important",
-	},
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[950],
-		borderColor: neutral[800],
 	},
 });
 
@@ -240,10 +210,9 @@ const teamPickerCell = css({
 	"@media (min-width: 768px)": {
 		gridArea: "teampicker",
 		padding: "0 16px",
-		borderBottom: `1px solid ${neutral[200]}`,
-		borderRight: `1px solid ${neutral[200]}`,
+		borderBottom: "1px solid var(--ui-neutral-border)",
+		borderRight: "1px solid var(--ui-neutral-border)",
 	},
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
 /**
@@ -261,23 +230,21 @@ const navCell = css({
 	padding: "16px 12px",
 	"@media (min-width: 768px)": {
 		gridArea: "nav",
-		borderRight: `1px solid ${neutral[200]}`,
+		borderRight: "1px solid var(--ui-neutral-border)",
 	},
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
 /** Bottom sidebar cell: the user menu. */
 const userMenuCell = css({
 	padding: 16,
-	borderTop: `1px solid ${neutral[200]}`,
+	borderTop: "1px solid var(--ui-neutral-border)",
 	flexShrink: 0,
 	"@media (min-width: 768px)": {
 		gridArea: "usermenu",
 		padding: 16,
-		borderTop: `1px solid ${neutral[200]}`,
-		borderRight: `1px solid ${neutral[200]}`,
+		borderTop: "1px solid var(--ui-neutral-border)",
+		borderRight: "1px solid var(--ui-neutral-border)",
 	},
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
 /**
@@ -296,8 +263,11 @@ const teamPickerRow = css({
 
 /**
  * Interactive team/user-menu trigger button, styled to look like the plain row
- * above. `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right
- * edges flush with its parent cell's own padding on both sides equally — the cell's
+ * above and opened via the same `commandfor`/`command="toggle-popover"` Invoker
+ * Commands relationship a `Menu` documents — that same invoker relationship is also
+ * what gives the `Menu` its implicit CSS anchor, with no extra wiring on this button.
+ * `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right edges
+ * flush with its parent cell's own padding on both sides equally — the cell's
  * padding IS the button's margin from the sidebar's edge.
  */
 const menuTriggerButton = css({
@@ -314,8 +284,7 @@ const menuTriggerButton = css({
 	textAlign: "left",
 	cursor: "pointer",
 	color: "inherit",
-	"&:hover": { background: neutral[100] },
-	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
+	"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
 });
 
 /** Truncated name/label text next to a logo/avatar in the team picker and user menu. */
@@ -327,8 +296,7 @@ const truncatedLabel = css({
 	whiteSpace: "nowrap",
 	fontSize: "0.875rem",
 	fontWeight: 500,
-	color: neutral[900],
-	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+	color: "var(--ui-neutral-fg-emphasis)",
 });
 
 /**
@@ -339,63 +307,7 @@ const truncatedLabel = css({
  */
 const menuChevronIcon = css({
 	flexShrink: 0,
-	color: neutral[900],
-	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-});
-
-/**
- * Fixed, viewport-relative dropdown panel for the team-picker/user-menu popovers.
- * Native `popover` elements are promoted to the top layer and, unless positioned
- * ourselves, default to `position: fixed` centered in the viewport — they aren't
- * anchored to their trigger (no nearest-positioned-ancestor relationship, since
- * top-layer rendering escapes normal containing-block rules). Since this app is
- * platform-only (no floating-ui/JS positioning), we place the panel near the
- * sidebar's left edge (always at viewport x=0, in both mobile-drawer and
- * desktop-grid modes) with a fixed `top`/`bottom` offset instead.
- */
-function dropdownPanel(edge: { top: number } | { bottom: number }) {
-	return css({
-		position: "fixed",
-		/**
-		 * The UA popover stylesheet defaults [popover] elements to `inset: 0` (plus
-		 * `margin: auto` for auto-centering). Both `top` and `bottom` must be given
-		 * explicit values here (one of them "auto") — otherwise the UA's own `top: 0`/
-		 * `bottom: 0` wins the over-constrained vertical box model against whichever
-		 * side we didn't set, and our offset is silently ignored.
-		 */
-		top: "top" in edge ? edge.top : "auto",
-		bottom: "bottom" in edge ? edge.bottom : "auto",
-		left: 12,
-		width: 200,
-		margin: 0,
-		padding: 6,
-		borderRadius: 8,
-		border: `1px solid ${neutral[200]}`,
-		background: "#ffffff",
-		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
-		"&::backdrop": { background: "rgba(0, 0, 0, 0.2)" },
-		"@media (prefers-color-scheme: dark)": {
-			background: neutral[950],
-			borderColor: neutral[800],
-		},
-	});
-}
-
-/** Single link/row inside a dropdown panel (team-picker or user-menu). */
-const dropdownItem = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	padding: "6px 8px",
-	borderRadius: 6,
-	fontSize: "0.875rem",
-	color: neutral[900],
-	textDecoration: "none",
-	"&:hover": { background: neutral[100] },
-	"@media (prefers-color-scheme: dark)": {
-		color: neutral[50],
-		"&:hover": { background: neutral[800] },
-	},
+	color: "var(--ui-neutral-fg-emphasis)",
 });
 
 /** A nav-list `<ul>` (used for both the primary and admin-only groups). */
@@ -408,35 +320,6 @@ const navList = css({
 	gap: 4,
 });
 
-/** A single nav link, icon + label laid out in a row. */
-const navLink = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	padding: "8px 12px",
-	borderRadius: 8,
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	color: neutral[500],
-	textDecoration: "none",
-	"&:hover": { background: neutral[100], color: neutral[900] },
-	"@media (prefers-color-scheme: dark)": {
-		color: neutral[400],
-		"&:hover": { background: neutral[800], color: neutral[50] },
-	},
-});
-
-/**
- * Applied on top of {@link navLink} for whichever item's `href` matches the current
- * page, so the "you are here" state reads as a persistent selection rather than the
- * same transient background {@link navLink}'s `&:hover` uses.
- */
-const navLinkActive = css({
-	background: neutral[200],
-	color: neutral[900],
-	"@media (prefers-color-scheme: dark)": { background: neutral[800], color: neutral[50] },
-});
-
 /** The page's main content area (grid area "content", spanning both content-side rows at ≥768px). */
 const main = css({
 	minWidth: 0,
@@ -444,6 +327,39 @@ const main = css({
 	overflow: "auto",
 	"@media (min-width: 768px)": { gridArea: "content", padding: 48 },
 });
+
+/**
+ * Total time, in ms, the toast stays visible before fading out — matches
+ * `@pkg/r3-ui`'s own `Toaster` behavior's default auto-dismiss delay, even though
+ * this toast is a single SSR-rendered prop rather than a JS-driven queue, so there's
+ * no `Toaster` instance here to actually read that default from.
+ */
+const TOAST_VISIBLE_MS = 5000;
+
+/**
+ * One-shot fade for the server-rendered toast: holds full opacity, then fades to
+ * fully transparent over the tail of `TOAST_VISIBLE_MS`, with no JS driving its
+ * removal — the toast simply becomes invisible in place once the animation ends.
+ * `@pkg/r3-ui/animations`'s `fade()`/`enterExit()` factories are state-driven
+ * (`[open]`/`:popover-open`, or a custom attribute a script would need to flip), which
+ * doesn't fit a toast with no open/close state of its own — this reuses their
+ * `easings.standard` curve instead of the plain `"ease"` keyword the previous
+ * hand-rolled `@keyframes` used, so the motion still settles into the same rhythm as
+ * every other transition in the catalog.
+ */
+function toastAutoFade() {
+	return css({
+		animationName: "uptime-toast-fade",
+		animationDuration: `${TOAST_VISIBLE_MS}ms`,
+		animationTimingFunction: easings.standard,
+		animationFillMode: "forwards",
+		"@keyframes uptime-toast-fade": {
+			"0%": { opacity: 1 },
+			"85%": { opacity: 1 },
+			"100%": { opacity: 0, visibility: "hidden" },
+		},
+	});
+}
 
 namespace AppShell {
 	export interface Props {
@@ -594,22 +510,18 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									<span mix={[truncatedLabel]}>{team.name}</span>
 									<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 								</button>
-								<div id="team-picker-menu" popover="auto" mix={[dropdownPanel({ top: 47 })]}>
-									<ul mix={[navList]}>
-										{teams.map((t) => (
-											<li key={t.id}>
-												<a
-													href={routes.app.team.dashboard.index.href({ team: t.slug })}
-													mix={[dropdownItem]}
-												>
-													<Logo src={t.logo} name={t.name} />
-													<span mix={[truncatedLabel]}>{t.name}</span>
-													{t.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
-												</a>
-											</li>
-										))}
-									</ul>
-								</div>
+								<Menu id="team-picker-menu" aria-label="Switch team" mix={[menuKeys()]}>
+									{teams.map((t) => (
+										<Menu.Item
+											key={t.id}
+											href={routes.app.team.dashboard.index.href({ team: t.slug })}
+										>
+											<Logo src={t.logo} name={t.name} />
+											<span mix={[truncatedLabel]}>{t.name}</span>
+											{t.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
+										</Menu.Item>
+									))}
+								</Menu>
 							</>
 						)}
 					</div>
@@ -618,14 +530,10 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						<ul mix={[navList]}>
 							{primaryNavItems.map((item) => (
 								<li key={item.href}>
-									<a
-										href={item.href}
-										aria-current={isNavItemActive(item.href) ? "page" : undefined}
-										mix={isNavItemActive(item.href) ? [navLink, navLinkActive] : [navLink]}
-									>
+									<Sidebar.Item href={item.href} current={isNavItemActive(item.href)}>
 										{item.icon}
 										<span>{item.label}</span>
-									</a>
+									</Sidebar.Item>
 								</li>
 							))}
 						</ul>
@@ -634,16 +542,15 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							<ul mix={[navList, css({ marginTop: "auto" })]}>
 								{adminNavItems.map((item) => (
 									<li key={item.href}>
-										<a
+										<Sidebar.Item
 											href={item.href}
 											target={item.target}
 											rel={item.target ? "noreferrer" : undefined}
-											aria-current={isNavItemActive(item.href) ? "page" : undefined}
-											mix={isNavItemActive(item.href) ? [navLink, navLinkActive] : [navLink]}
+											current={isNavItemActive(item.href)}
 										>
 											{item.icon}
 											<span>{item.label}</span>
-										</a>
+										</Sidebar.Item>
 									</li>
 								))}
 							</ul>
@@ -662,14 +569,12 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							<span mix={[truncatedLabel]}>{viewer.name}</span>
 							<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 						</button>
-						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 58 })]}>
-							<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
+						<Menu id="user-menu" placement="top-start" aria-label="Account menu" mix={[menuKeys()]}>
+							<Menu.Item href={routes.app.team.account.href({ team: team.slug })}>
 								Account
-							</a>
-							<a href={routes.logout.index.href()} mix={[dropdownItem]}>
-								Sign out
-							</a>
-						</div>
+							</Menu.Item>
+							<Menu.Item href={routes.logout.index.href()}>Sign out</Menu.Item>
+						</Menu>
 					</div>
 				</nav>
 
@@ -686,24 +591,19 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						</button>
 						<div mix={[headingColumn]}>
 							{breadcrumbs && breadcrumbs.length > 0 && (
-								<div mix={[breadcrumbTrail]}>
-									{breadcrumbs.map((crumb, index) => (
-										<Fragment key={`${crumb.label}-${index}`}>
-											{index > 0 && (
-												<span mix={[breadcrumbSeparator]} aria-hidden="true">
-													›
-												</span>
-											)}
-											{crumb.href ? (
-												<a href={crumb.href} mix={[breadcrumbLink]}>
-													{crumb.label}
-												</a>
-											) : (
-												<span>{crumb.label}</span>
-											)}
-										</Fragment>
-									))}
-								</div>
+								<Breadcrumbs aria-label="Breadcrumb">
+									<Breadcrumbs.List>
+										{breadcrumbs.map((crumb, index) => (
+											<Breadcrumbs.Item key={`${crumb.label}-${index}`}>
+												{crumb.href ? (
+													<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
+												) : (
+													<span>{crumb.label}</span>
+												)}
+											</Breadcrumbs.Item>
+										))}
+									</Breadcrumbs.List>
+								</Breadcrumbs>
 							)}
 							<span mix={[breadcrumbText]}>{heading}</span>
 						</div>
@@ -714,28 +614,16 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				<main mix={[main]}>{children}</main>
 
 				{toast && (
-					<p
-						mix={[
-							css({
-								position: "fixed",
-								bottom: 16,
-								right: 16,
-								padding: "10px 16px",
-								borderRadius: 6,
-								background: neutral[800],
-								color: "#ffffff",
-								fontSize: "0.875rem",
-								animation: "uptime-toast-fade 5s ease forwards",
-								"@keyframes uptime-toast-fade": {
-									"0%": { opacity: 1 },
-									"85%": { opacity: 1 },
-									"100%": { opacity: 0, visibility: "hidden" },
-								},
-							}),
-						]}
-					>
-						{toast.message}
-					</p>
+					<Toast.Region aria-label="Notifications">
+						<Toast
+							color={toast.intent === "success" ? "success" : "danger"}
+							mix={[toastAutoFade()]}
+						>
+							<Toast.Content>
+								<Toast.Description>{toast.message}</Toast.Description>
+							</Toast.Content>
+						</Toast>
+					</Toast.Region>
 				)}
 			</div>
 		);

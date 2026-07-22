@@ -3,6 +3,16 @@
  * section, a topbar with a breadcrumb trail and a dashboard call to action, and the
  * article content column. Every doc page composes its content into this layout.
  *
+ * Mirrors `resources/layouts/app-shell.tsx`'s own migration: the mobile drawer's
+ * popover-attributed `<aside>` and its hamburger toggle stay a custom composition
+ * (like `app-shell.tsx`'s `<nav popover>`, `@pkg/r3-ui`'s own `Sidebar` assumes a
+ * persistent `<aside>` beside an `Inset` plus a separate `Dialog`-based
+ * `MobileNav` tree for narrow viewports, which doesn't fit this single-drawer
+ * layout) — but the pieces `@pkg/r3-ui` does have real, Provider-free components
+ * for are swapped in: `Sidebar.Header`/`Sidebar.Content` for the drawer's own
+ * structure, `Breadcrumbs` for the trail, and `Typeset` for the article's
+ * typography.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -10,7 +20,8 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { ArrowRightIcon, MenuIcon } from "@pkg/lucide-remix";
-import { css, Fragment } from "remix/ui";
+import { Breadcrumbs, Sidebar, Typeset } from "@pkg/r3-ui";
+import { css } from "remix/ui";
 
 import type { DocSection } from "~/app/services/docs";
 
@@ -44,7 +55,7 @@ const sidebarToggle = css({
 const sidebarTitleCss = css({
 	fontWeight: 600,
 	fontSize: "1.125rem",
-	margin: "0 20px",
+	margin: 0,
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
@@ -52,7 +63,7 @@ const sidebarTitleCss = css({
 /** The sidebar's subtitle, e.g. "Guides and reference". */
 const sidebarDescriptionCss = css({
 	fontSize: "0.8125rem",
-	margin: "4px 20px 20px",
+	margin: "4px 0 0",
 	color: neutral[500],
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
@@ -73,60 +84,6 @@ const topbar = css({
 });
 
 const topbarLeft = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
-
-/** The small, muted `docs > overview`-style breadcrumb trail. */
-const breadcrumbTrail = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 4,
-	fontSize: "0.8125rem",
-	color: neutral[500],
-	minWidth: 0,
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-});
-
-/**
- * A linked (non-current) breadcrumb segment. Allowed to shrink and truncate
- * with its own ellipsis so the trailing, current segment never loses space to
- * it on narrow viewports.
- */
-const breadcrumbLink = css({
-	color: "inherit",
-	textDecoration: "none",
-	minWidth: 0,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-	"&:hover": { textDecoration: "underline" },
-});
-
-/**
- * A middle segment that has no page of its own to link to (e.g. an `api` or
- * `resources` grouping crumb). Rendered as plain, non-linked text, but still
- * allowed to shrink and truncate like {@link breadcrumbLink} — only the
- * trailing, current segment is exempt from shrinking.
- */
-const breadcrumbMuted = css({
-	minWidth: 0,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-});
-
-/** The current, non-linked breadcrumb segment. Never shrinks, so it stays visible. */
-const breadcrumbCurrent = css({
-	color: neutral[900],
-	fontWeight: 500,
-	flexShrink: 0,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-	maxWidth: "40vw",
-	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-});
-
-/** The `›` glyph separating breadcrumb segments. */
-const breadcrumbSeparator = css({ flexShrink: 0 });
 
 namespace DocsLayout {
 	export interface Props {
@@ -207,23 +164,34 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								margin: 0,
 								width: "min(80vw, 288px)",
 								maxHeight: "100vh",
-								padding: "24px 0",
+								padding: 0,
 								border: "none",
 								borderRight: `1px solid ${neutral[200]}`,
 								background: "#ffffff",
 								boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
 								"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+								display: "flex",
+								flexDirection: "column",
+								minHeight: 0,
 								"@media (min-width: 768px)": {
-									display: "block !important",
+									display: "flex !important",
 									position: "static",
 									top: "auto",
 									left: "auto",
 									bottom: "auto",
 									width: 256,
+									/**
+									 * The native Popover API's UA stylesheet sets `height:
+									 * fit-content` on every `[popover]` element regardless of open
+									 * state (only `display` is gated behind `:popover-open`) — an
+									 * explicit, author-stylesheet `height` is required to beat it,
+									 * since stretch alignment from the flex row above only takes
+									 * over once `height` itself resolves to `auto`.
+									 */
+									height: "auto",
 									maxHeight: "none",
 									flexShrink: 0,
 									boxShadow: "none",
-									overflowY: "auto",
 								},
 								"@media (prefers-color-scheme: dark)": {
 									background: neutral[900],
@@ -232,14 +200,27 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							}),
 						]}
 					>
-						<p mix={[sidebarTitleCss]}>{sidebarTitle}</p>
-						<p mix={[sidebarDescriptionCss]}>{sidebarDescription}</p>
+						<Sidebar.Header
+							mix={[
+								css({
+									flexDirection: "column",
+									alignItems: "flex-start",
+									blockSize: "auto",
+									paddingBlock: "1.25rem",
+								}),
+							]}
+						>
+							<p mix={[sidebarTitleCss]}>{sidebarTitle}</p>
+							<p mix={[sidebarDescriptionCss]}>{sidebarDescription}</p>
+						</Sidebar.Header>
 
-						<DocsNav
-							sections={navSections}
-							activePath={activePath}
-							searchPlaceholder={searchPlaceholder}
-						/>
+						<Sidebar.Content>
+							<DocsNav
+								sections={navSections}
+								activePath={activePath}
+								searchPlaceholder={searchPlaceholder}
+							/>
+						</Sidebar.Content>
 					</aside>
 
 					<div
@@ -260,28 +241,19 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								</button>
 
 								{breadcrumbs.length > 0 && (
-									<div mix={[breadcrumbTrail]}>
-										{breadcrumbs.map((crumb, index) => (
-											<Fragment key={`${crumb.label}-${index}`}>
-												{index > 0 && (
-													<span mix={[breadcrumbSeparator]} aria-hidden="true">
-														›
-													</span>
-												)}
-												{crumb.href ? (
-													<a href={crumb.href} mix={[breadcrumbLink]}>
-														{crumb.label}
-													</a>
-												) : index === breadcrumbs.length - 1 ? (
-													<span aria-current="page" mix={[breadcrumbCurrent]}>
-														{crumb.label}
-													</span>
-												) : (
-													<span mix={[breadcrumbMuted]}>{crumb.label}</span>
-												)}
-											</Fragment>
-										))}
-									</div>
+									<Breadcrumbs aria-label="Breadcrumb">
+										<Breadcrumbs.List>
+											{breadcrumbs.map((crumb, index) => (
+												<Breadcrumbs.Item key={`${crumb.label}-${index}`}>
+													{crumb.href ? (
+														<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
+													) : (
+														<span>{crumb.label}</span>
+													)}
+												</Breadcrumbs.Item>
+											))}
+										</Breadcrumbs.List>
+									</Breadcrumbs>
 								)}
 							</div>
 
@@ -305,41 +277,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								}),
 							]}
 						>
-							<div
-								mix={[
-									css({
-										maxWidth: "896px",
-										margin: "0 auto",
-										lineHeight: 1.75,
-										"& h1": {
-											fontSize: "1.875rem",
-											fontWeight: 700,
-											letterSpacing: "-0.025em",
-											lineHeight: 1,
-											margin: "0 0 16px",
-											color: neutral[900],
-										},
-										"& h2": {
-											fontSize: "1.5rem",
-											fontWeight: 700,
-											margin: "48px 0 24px",
-											color: neutral[900],
-										},
-										"& h3": {
-											fontSize: "1.25rem",
-											fontWeight: 600,
-											margin: "0 0 12px",
-											color: neutral[900],
-										},
-										"& p": { margin: "20px 0" },
-										"@media (prefers-color-scheme: dark)": {
-											"& h1, & h2, & h3": { color: neutral[50] },
-										},
-									}),
-								]}
-							>
-								{children}
-							</div>
+							<Typeset mix={[css({ maxWidth: "896px", margin: "0 auto" })]}>{children}</Typeset>
 						</div>
 					</div>
 				</div>

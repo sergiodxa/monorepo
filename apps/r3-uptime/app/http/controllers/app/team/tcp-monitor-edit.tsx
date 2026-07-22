@@ -8,6 +8,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -23,7 +24,7 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import TcpMonitorFormFields from "~/resources/views/tcp-monitors/form";
 import routes from "~/routes/web";
 
@@ -72,7 +73,7 @@ export default createAction(routes.app.team.tcpMonitors.edit, {
 							action={routes.actions.monitor.tcp.update.href({ team: ctx.team.slug })}
 						>
 							<input type="hidden" name="monitor_id" value={monitor.id} />
-							<TcpMonitorFormFields monitor={monitor} />
+							<TcpMonitorFormFields monitor={monitor} i18next={ctx.i18next} page="editTcpMonitor" />
 							<Button type="submit">{ctx.i18next.t("page.editTcpMonitor.form.cta")}</Button>
 						</form>
 
@@ -93,69 +94,46 @@ export default createAction(routes.app.team.tcpMonitors.edit, {
 							{ctx.i18next.t("page.editTcpMonitor.form.cancel")}
 						</a>
 
-						<h2>Danger zone</h2>
+						<h2>{ctx.i18next.t("page.editTcpMonitor.danger.title")}</h2>
 						<Button
 							type="button"
 							color="danger"
 							commandfor="delete-tcp-monitor"
 							command="show-modal"
 						>
-							Delete monitor
+							{ctx.i18next.t("page.editTcpMonitor.danger.cta")}
 						</Button>
-						<dialog
+						<AlertDialog
 							id="delete-tcp-monitor"
-							mix={[
-								css({
-									padding: 24,
-									borderRadius: 8,
-									border: `1px solid ${neutral[300]}`,
-									maxWidth: 400,
-									"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-										color: neutral[50],
-									},
-								}),
-							]}
+							aria-labelledby="delete-tcp-monitor-title"
+							aria-describedby="delete-tcp-monitor-description"
 						>
-							<h3>
-								{ctx.i18next.t("page.tcpMonitors.table.actions.confirmation.delete", {
-									name: monitor.name,
-								})}
-							</h3>
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
-								]}
-							>
-								This also deletes its check-result history. This can't be undone.
-							</p>
+							<AlertDialog.Header>
+								<AlertDialog.Title id="delete-tcp-monitor-title">
+									{ctx.i18next.t("page.tcpMonitors.table.actions.confirmation.delete", {
+										name: monitor.name,
+									})}
+								</AlertDialog.Title>
+								<AlertDialog.Description id="delete-tcp-monitor-description">
+									{ctx.i18next.t("page.editTcpMonitor.danger.description")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
 							<form
 								method="post"
 								action={routes.actions.monitor.tcp.delete.href({ team: ctx.team.slug })}
 							>
 								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="delete-tcp-monitor"
-										command="close"
-									>
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel type="button" commandfor="delete-tcp-monitor">
 										{ctx.i18next.t("page.editTcpMonitor.form.cancel")}
-									</Button>
+									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
 										{ctx.i18next.t("page.tcpMonitors.table.actions.delete")}
 									</Button>
-								</div>
+								</AlertDialog.Footer>
 							</form>
-						</dialog>
+						</AlertDialog>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

@@ -15,7 +15,7 @@ import { createAction } from "remix/fetch-router";
 import { getViewer } from "~/app/http/middleware/auth";
 import { useCases } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
-import MarketingLayout from "~/resources/layouts/marketing";
+import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import MarketingPageView from "~/resources/views/marketing/page";
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
@@ -24,16 +24,17 @@ import routes from "~/routes/web";
 export default createAction(routes.marketing.useCase, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
+	let chrome = buildMarketingChrome(ctx.i18next.t);
 
 	let content = useCases[slug];
 	if (!content) {
 		let props = {
-			title: "Page Not Found",
-			description: "The page you're looking for doesn't exist or may have moved.",
+			title: ctx.i18next.t("notFound.title"),
+			description: ctx.i18next.t("notFound.description"),
 		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
-				<NotFoundView {...props} />
+				<NotFoundView {...props} goBackHomeLabel={ctx.i18next.t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
 		);
@@ -41,8 +42,18 @@ export default createAction(routes.marketing.useCase, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout title={`${content.metaTitle}`}>
-			<MarketingLayout isSignedIn={isSignedIn}>
-				<MarketingPageView {...content} isSignedIn={isSignedIn} />
+			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
+				<MarketingPageView
+					{...content}
+					isSignedIn={isSignedIn}
+					startLabel={chrome.startLabel}
+					dashboardLabel={chrome.dashboardLabel}
+					everythingTitle={ctx.i18next.t("landing.marketingPage.everythingTitle")}
+					howItWorksTitle={ctx.i18next.t("landing.marketingPage.howItWorksTitle")}
+					faqTitle={ctx.i18next.t("landing.marketingPage.faqTitle")}
+					finalCtaTitle={ctx.i18next.t("landing.marketingPage.finalCtaTitle")}
+					finalCtaBody={ctx.i18next.t("landing.finalCta.body")}
+				/>
 			</MarketingLayout>
 		</DocumentLayout>,
 	);

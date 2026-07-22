@@ -6,17 +6,21 @@
  * grouped by `frontmatter.section.title`. The link matching `activePath` renders
  * with a solid active background so visitors can tell which page they're on.
  *
+ * Composes `@pkg/r3-ui`'s `SearchField`/`SearchField.Input` for the search box, and
+ * `NavLink` (styled with the same `--ui-neutral-bg-tint-hover`/`--ui-radius-lg`
+ * tokens `Sidebar.Item` uses for its own rows) for the nav-list links, instead of
+ * hand-rolled equivalents of both.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle } from "remix/ui";
 
-import { SearchIcon } from "@pkg/lucide-remix";
+import { NavLink, SearchField } from "@pkg/r3-ui";
 import { clientEntry, css, on } from "remix/ui";
-import input from "remix/ui/input";
 
-import { neutral, primary } from "~/resources/theme";
+import { neutral } from "~/resources/theme";
 
 /** One doc link, reduced to the fields the sidebar actually renders. */
 type DocsNavDoc = { path: string; title: string };
@@ -43,32 +47,23 @@ const sectionTitle = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
+/**
+ * A doc nav row: `NavLink` styled with the same tokens `Sidebar.Item` uses for
+ * its own rows (row padding, radius, hover/current tint) instead of an inline
+ * text link's underline treatment — `hasBackground` drops that underline.
+ */
 const navLink = css({
 	display: "block",
 	padding: "6px 20px",
 	margin: "0 8px",
-	borderRadius: 6,
+	borderRadius: "var(--ui-radius-lg, 0.5rem)",
 	fontSize: "0.875rem",
-	color: neutral[700],
-	textDecoration: "none",
-	"&:hover": { background: neutral[100] },
-	"@media (prefers-color-scheme: dark)": {
-		color: neutral[400],
-		"&:hover": { background: neutral[800] },
-	},
-});
 
-const navLinkActive = css({
-	background: primary[100],
-	color: primary[600],
-	fontWeight: 500,
-	padding: "6px 8px",
-	margin: "0 16px",
-	"&:hover": { background: primary[100] },
-	"@media (prefers-color-scheme: dark)": {
-		background: "oklch(0.3 0.06 142)",
-		color: neutral[50],
-		"&:hover": { background: "oklch(0.3 0.06 142)" },
+	"&:hover": { backgroundColor: "var(--ui-neutral-bg-tint-hover)" },
+
+	'&[aria-current]:not([aria-current="false"])': {
+		backgroundColor: "var(--ui-neutral-bg-tint-hover)",
+		color: "var(--ui-neutral-fg-emphasis)",
 	},
 });
 
@@ -90,63 +85,29 @@ export const DocsNav = clientEntry(
 
 			return (
 				<div>
-					<div
-						mix={[
-							input.root(),
-							css({
-								position: "relative",
-								width: "auto",
-								height: 40,
-								margin: "0 20px 8px",
-								padding: "8px 32px 8px 36px",
-								borderRadius: 6,
-								color: neutral[500],
-								background: neutral[50],
-								border: `1px solid ${neutral[200]}`,
-								boxShadow: "none",
-								textShadow: "none",
-								"& input": { color: "inherit" },
-								"@media (prefers-color-scheme: dark)": {
-									color: neutral[400],
-									background: neutral[950],
-									borderColor: neutral[800],
-								},
-							}),
-						]}
-					>
-						<SearchIcon
-							size={16}
-							strokeWidth={1.5}
-							mix={css({
-								position: "absolute",
-								left: 12,
-								top: "50%",
-								transform: "translateY(-50%)",
-							})}
-						/>
-						<input
-							type="search"
+					<SearchField aria-label={searchPlaceholder} mix={[css({ margin: "0 20px 8px" })]}>
+						<SearchField.Input
 							value={search}
 							placeholder={searchPlaceholder}
 							mix={[
-								input.field(),
 								on("input", (event) => {
 									search = event.currentTarget.value;
 									handle.update();
 								}),
 							]}
 						/>
-					</div>
+					</SearchField>
 
 					<nav>
 						{results ? (
 							<ul mix={[navList]}>
 								{results.map((doc) => (
 									<li key={doc.path}>
-										<a
+										<NavLink
 											href={doc.path}
+											hasBackground
 											aria-current={doc.path === activePath ? "page" : undefined}
-											mix={doc.path === activePath ? [navLink, navLinkActive] : [navLink]}
+											mix={[navLink]}
 										>
 											{doc.title}
 											<span
@@ -159,7 +120,7 @@ export const DocsNav = clientEntry(
 											>
 												{doc.section}
 											</span>
-										</a>
+										</NavLink>
 									</li>
 								))}
 							</ul>
@@ -170,13 +131,14 @@ export const DocsNav = clientEntry(
 									<ul mix={[navList]}>
 										{section.docs.map((doc) => (
 											<li key={doc.path}>
-												<a
+												<NavLink
 													href={doc.path}
+													hasBackground
 													aria-current={doc.path === activePath ? "page" : undefined}
-													mix={doc.path === activePath ? [navLink, navLinkActive] : [navLink]}
+													mix={[navLink]}
 												>
 													{doc.title}
-												</a>
+												</NavLink>
 											</li>
 										))}
 									</ul>
