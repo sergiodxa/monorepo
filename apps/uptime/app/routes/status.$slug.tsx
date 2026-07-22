@@ -31,15 +31,16 @@ import getCellColor from "~/utils/get-cell-color";
 
 import type { Route } from "./+types/status.$slug";
 
-export const meta: Route.MetaFunction = ({ data }) => {
-	if (!data) {
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	if (!loaderData) {
 		return [{ title: "Status Page Not Found" }];
 	}
 	return [
-		{ title: `${data.statusPage.title} - Status` },
+		{ title: `${loaderData.statusPage.title} - Status` },
 		{
 			name: "description",
-			content: data.statusPage.description ?? `Status page for ${data.statusPage.title}`,
+			content:
+				loaderData.statusPage.description ?? `Status page for ${loaderData.statusPage.title}`,
 		},
 	];
 };

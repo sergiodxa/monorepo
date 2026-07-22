@@ -1,9 +1,10 @@
 /**
  * React Router build configuration for the uptime app. Enables Subresource
- * Integrity and opts every app-relevant future flag (v8 middleware, split route
- * modules, the Vite environment API, and more) into their unstable/preview forms.
- * It exists to pin the framework's behaviour so the app builds against the newest
- * React Router capabilities it relies on.
+ * Integrity and opts into route module splitting. Middleware, the Vite
+ * environment API, pass-through requests, trailing-slash-aware data requests,
+ * and server prerendering via the Vite environment API are all always-on in
+ * this version of React Router, so they no longer need (or accept) future
+ * flags.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,13 +14,8 @@ import type { Config } from "@react-router/dev/config";
 
 export default {
 	subResourceIntegrity: true,
+	splitRouteModules: true,
 	future: {
 		unstable_optimizeDeps: true,
-		unstable_previewServerPrerendering: true,
-		v8_middleware: true,
-		v8_passThroughRequests: true,
-		v8_splitRouteModules: true,
-		v8_trailingSlashAwareDataRequests: true,
-		v8_viteEnvironmentApi: true,
 	},
 } satisfies Config;

@@ -42,7 +42,10 @@ export async function listDocs(): Promise<DocSection[]> {
 		if (/\.\w{2}\.md$/.test(filePath)) continue;
 
 		let content = await loadContent();
-		let result = Markdown.frontmatter(content, frontmatterSchema);
+		let result = Markdown.frontmatter<DocFrontmatter, typeof frontmatterSchema>(
+			content,
+			frontmatterSchema,
+		);
 		if (isSuccess(result)) {
 			let urlPath = filePath.replace("../../docs/", "/docs/").replace(/\.md$/, "");
 			docs.push({ path: urlPath, frontmatter: result.data.frontmatter });

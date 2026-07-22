@@ -15,7 +15,7 @@ import { getSession } from "~/middleware/session";
 
 import type { Route } from "./+types/privacy";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let session = getSession();

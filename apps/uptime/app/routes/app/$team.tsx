@@ -30,7 +30,7 @@ import { Cache } from "~/modules/cache";
 
 import type { Route } from "./+types/$team";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export const middleware: Route.MiddlewareFunction[] = [
 	// Read subject from session and ensure it's authenticated

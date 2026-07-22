@@ -36,7 +36,7 @@ import { i18next } from "~/middleware/i18next";
 import type { Route } from "./+types/_landing.for.solo-devs";
 import type { loader as landingLoader } from "./_landing";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let { t } = i18next(context);
