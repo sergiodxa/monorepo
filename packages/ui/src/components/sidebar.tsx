@@ -14,7 +14,9 @@ import {
 
 import { type Color, ColorProvider, useColor } from "./color-context";
 
-type SidebarTriggerPressEvent = Parameters<NonNullable<ComponentProps<typeof AriaButton>["onPress"]>>[0];
+type SidebarTriggerPressEvent = Parameters<
+	NonNullable<ComponentProps<typeof AriaButton>["onPress"]>
+>[0];
 
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_COOKIE_NAME = "sidebar:state";

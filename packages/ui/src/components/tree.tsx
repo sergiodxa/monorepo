@@ -1,8 +1,8 @@
 import type { ComponentProps, ReactElement } from "react";
 
 import { cn } from "@pkg/cn";
-import { createElement } from "react";
 import { ChevronRightIcon } from "lucide-react";
+import { createElement } from "react";
 import {
 	Tree as AriaTree,
 	TreeItem as AriaTreeItem,
