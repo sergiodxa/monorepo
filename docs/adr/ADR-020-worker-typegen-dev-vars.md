@@ -17,11 +17,18 @@ The repo convention is to store local Worker variables and secret placeholders i
 `--env-file .dev.vars` duplicates the default behavior and makes future agents
 look for extra configuration that should not exist.
 
+CI runs in an ephemeral checkout and can derive `.dev.vars` from committed
+`.env.example` files before type generation. Local commands must not overwrite a
+developer's existing `.dev.vars` file.
+
 ## Decision
 
 Worker typegen scripts should run plain `wrangler types` and rely on Wrangler's
 default `.dev.vars` loading. Do not create app-specific `.dev.args` files or add
 redundant `--env-file .dev.vars` flags for this purpose.
+
+CI should copy each app's `.env.example` to `.dev.vars` inside the CI workspace
+before running typegen. This copy step belongs in CI only, not in local scripts.
 
 ## Consequences
 
