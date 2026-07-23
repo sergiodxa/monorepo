@@ -49,6 +49,7 @@ Smart Placement and Observability (with 10% trace sampling) are enabled. No stor
 | `cf:typegen` | Generate Cloudflare types   |
 | `rr:routes`  | List React Router routes    |
 | `rr:typegen` | Generate React Router types |
+| `typecheck`  | TypeScript type checking    |
 
 ## Deployment
 

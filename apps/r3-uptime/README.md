@@ -6,16 +6,14 @@ Engine dataset. Full plan and decision log: `docs/adr/r3-uptime/ADR-001-port-upt
 
 ## Status
 
-All ten phases are code-complete: auth/teams, HTTP/DNS/TCP/cron-job monitoring,
+The port is code-complete for auth/teams, HTTP/DNS/TCP/cron-job monitoring,
 alerts, maintenance windows, SSL monitoring, analytics aggregation, status pages,
-team & access management, API v1, and the marketing site/docs/sitemap. Full test
-suite (795 tests), typecheck, lint, format, build, and `wrangler deploy --dry-run`
-are green as of this writing — see the ADR's "Current Progress" section for the
-per-phase detail and any open live-verification items.
+team and access management, API v1, and the marketing site/docs/sitemap.
 
-**Not yet done: the actual cutover.** This app has not been deployed to receive
-real traffic, and the OLD APP (`apps/uptime`) is still the one running in
-production. See "Cutover" below before taking that step.
+The current `wrangler.jsonc` is configured with the production `uptime.sergiodxa.com`
+route, queue consumer, cron triggers, D1 database, KV namespace, Durable Object,
+Workflow, and Analytics Engine dataset. Re-run verification before each deploy;
+the historical phase notes live in the ADR linked above.
 
 ## Development
 
@@ -27,19 +25,16 @@ bun run --cwd apps/r3-uptime dev
 
 From the repo root: `bun run typecheck`, `bun run lint`, `bun test --isolate`, `bun run format:fix`.
 
-## Cutover
+## Deployment
 
-This is the runbook for whoever actually cuts traffic over — none of these steps
-have been run yet. Follow the ADR's "Phase 10: Verification and cutover" section
-for full context; this is the condensed checklist.
+Before deploying, run the full verification suite from the repo root: `bun typecheck`,
+`bun lint`, `bun test --isolate`, `bun format`, `bun run --cwd apps/r3-uptime build`,
+and a Cloudflare dry run with `bunx wrangler deploy --dry-run` from this app.
 
-1. **Deploy side-by-side.** `bun run --cwd apps/r3-uptime build && bun run --cwd apps/r3-uptime cf:deploy`. This app still has no queue consumer or custom domain bound (deliberately — see the ADR's Decision §11), so this deploy is safe to run without affecting production traffic. Browse the resulting `workers.dev` URL and compare every page against the live OLD APP.
-2. **Cut over, in this exact order** (each step is reversible by reversing it):
-   1. Deploy the OLD APP with its crons and queue consumer removed.
-   2. Add `queues.consumers` and crons to this app's `wrangler.jsonc`, then deploy.
-   3. Move the `uptime.sergiodxa.com` route to this app.
-   4. Verify checks resume and the queue backlog drains.
-3. **Soak for a week** with the OLD APP dormant but not deleted. Rollback = reverse the three steps above.
-4. **After the soak**, delete the OLD APP worker and archive `apps/uptime` in a follow-up decision. Only then mark ADR-001 **Implemented**.
+```sh
+bun run --cwd apps/r3-uptime build
+bun run --cwd apps/r3-uptime cf:deploy
+```
 
-**Before starting step 1**, re-run the full verification suite (typecheck/lint/test/build/`wrangler deploy --dry-run`) to confirm nothing regressed since this README was last updated, and read `docs/adr/r3-uptime/AUTONOMOUS-SESSION-DECISIONS.md` for context on judgment calls made without the app's owner present — in particular the two critical bugs found and fixed during test-writing (form validation, monitor scheduling), which are worth independently confirming before trusting this app with real traffic.
+Read `docs/adr/r3-uptime/AUTONOMOUS-SESSION-DECISIONS.md` before production work;
+it records judgment calls and critical bugs found during the port.

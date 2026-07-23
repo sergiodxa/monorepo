@@ -74,8 +74,11 @@ Each tenant's own OIDC schema is owned and migrated by `@pkg/oidc-provider` insi
 | ------------------- | --------------------------------------- |
 | `dev`               | Start the development server            |
 | `build`             | Build for production                    |
+| `build:client`      | Build browser and client bundles        |
+| `start`             | Preview the production build            |
 | `cf:deploy`         | Deploy to Cloudflare Workers            |
 | `cf:typegen`        | Generate Cloudflare binding types       |
+| `db:local:drop`     | Drop the local database                 |
 | `db:local:migrate`  | Apply control-plane migrations locally  |
 | `db:remote:migrate` | Apply control-plane migrations remotely |
 | `typecheck`         | Type-check                              |

@@ -16,6 +16,7 @@ Production URL: https://auth.sergiodxa.com
 | D1 Database   | `DB`    | Stores users, OAuth clients, sessions, tokens, and credentials |
 | KV            | `KV`    | Caching for sessions and tokens                                |
 | R2            | `R2`    | File storage for user profile images                           |
+| Queue         | `QUEUE` | Async authentication and cleanup jobs                          |
 | Cron Triggers | -       | Daily at midnight for cleanup of expired sessions and tokens   |
 
 Observability is enabled.
@@ -78,6 +79,7 @@ bun run orm:generate       # Generate Drizzle migrations
 | `db:local:migrate`  | Apply local migrations      |
 | `db:remote:migrate` | Apply remote migrations     |
 | `orm:generate`      | Generate Drizzle migrations |
+| `typecheck`         | TypeScript type checking    |
 
 ## Deployment
 

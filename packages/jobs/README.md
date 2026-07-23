@@ -259,7 +259,7 @@ class CleanupJob extends Job {
 
 - [`@pkg/logger`](/packages/logger) - Batched logging for Cloudflare Workers
 - [`@pkg/result`](/packages/result) - Result type for explicit error handling
-- [`@pkg/validate`](/packages/validate) - Input validation with Zod
+- [`@pkg/validate`](/packages/validate) - Standard Schema validation utilities
 - [`@pkg/types`](/packages/types) - Shared TypeScript types including `JSONValue`
 
 ## Tips

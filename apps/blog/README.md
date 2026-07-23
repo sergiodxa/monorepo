@@ -82,7 +82,7 @@ bun run db:remote:migrate  # Apply migrations to production
 | `cf:typegen`        | Generate Cloudflare types   |
 | `rr:routes`         | List React Router routes    |
 | `rr:typegen`        | Generate React Router types |
-| `check:types`       | TypeScript type checking    |
+| `typecheck`         | TypeScript type checking    |
 | `db:local:migrate`  | Apply local migrations      |
 | `db:remote:migrate` | Apply remote migrations     |
 

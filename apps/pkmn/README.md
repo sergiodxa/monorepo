@@ -52,7 +52,7 @@ Specifications for the mechanics live in `docs/` (`battle.md`, `breeding.md`) an
 
 ```sh
 bun start          # run the browser demo (src/index.html)
-bun test           # run the engine test suite
+bun test apps/pkmn # run the engine test suite from the repo root
 bun run typecheck  # tsc --noEmit
 bun run download:pokeapi  # refresh the local PokeAPI snapshot used to author content
 ```

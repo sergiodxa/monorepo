@@ -76,6 +76,7 @@ Each blog's own content schema is owned and migrated by `@pkg/blog-engine` insid
 | ------------------- | --------------------------------------- |
 | `dev`               | Start the development server            |
 | `build`             | Build for production                    |
+| `start`             | Preview the production build            |
 | `cf:deploy`         | Deploy to Cloudflare Workers            |
 | `cf:typegen`        | Generate Cloudflare binding types       |
 | `db:local:migrate`  | Apply control-plane migrations locally  |

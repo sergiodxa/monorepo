@@ -85,7 +85,7 @@ bun run orm:generate       # Generate Drizzle migrations
 | `cf:typegen`        | Generate Cloudflare types   |
 | `rr:routes`         | List React Router routes    |
 | `rr:typegen`        | Generate React Router types |
-| `check:types`       | TypeScript type checking    |
+| `typecheck`         | TypeScript type checking    |
 | `db:local:drop`     | Drop local database         |
 | `db:local:migrate`  | Apply local migrations      |
 | `db:remote:migrate` | Apply remote migrations     |
@@ -99,11 +99,7 @@ bun run cf:deploy
 
 ## Documentation
 
-Detailed documentation is available in the `docs/` folder:
-
-- `docs/overview.md` - Getting started guide
-- `docs/api/` - API reference
-- `docs/concepts/` - Core concepts explained
+Architecture decisions for this app are available in `../../docs/adr/uptime/`.
 
 ## Environment Variables
 
