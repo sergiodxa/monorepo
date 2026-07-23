@@ -144,7 +144,7 @@ describe("monitor-card-heatmap", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Today");
+		expect(body).toContain(`${today}: 100% success (10/10)`);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

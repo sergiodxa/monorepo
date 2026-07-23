@@ -50,11 +50,9 @@ let notifyTcpResultMock = mock(
 	},
 );
 
-let realTcpCheckModule = await import("~/app/services/tcp-check");
 let realAlertsModule = await import("~/app/services/alerts");
 
 mock.module("~/app/services/tcp-check", () => ({
-	...realTcpCheckModule,
 	checkTcpConnection: checkTcpConnectionMock,
 }));
 /**
