@@ -34,6 +34,9 @@ async function processWebhook(request: Request, log: Logger) {
 			if (!event.data.product) {
 				return failure(new Error("Product is required"));
 			}
+			if (!event.data.customer.email) {
+				return failure(new Error("Customer email is required"));
+			}
 
 			let productId = event.data.product.id;
 			let productName = event.data.product.name;
