@@ -17,7 +17,6 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
 		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
-		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {
 			"~/config/*": ["./config/*"],

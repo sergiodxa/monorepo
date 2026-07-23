@@ -9,7 +9,6 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
 		"types": ["bun", "node"],
-		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {
 			"~/*": ["./src/*"]
