@@ -16,12 +16,16 @@ jobs:
         include:
           - name: Format
             command: bun format
+            typegen: false
           - name: Lint
             command: bun lint
+            typegen: false
           - name: Typecheck
             command: bun typecheck
+            typegen: true
           - name: Test
             command: bun run test
+            typegen: true
 
     steps:
       - name: Checkout
@@ -32,6 +36,28 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate framework types
+        if: matrix.typegen
+        run: |
+          for file in apps/*/.env.example; do
+            cp "$file" "${file%/.env.example}/.dev.vars"
+          done
+
+          bun --filter @apps/uptime rr:typegen
+          bun --filter @apps/blog rr:typegen
+          bun --filter @apps/auth rr:typegen
+          bun --filter @apps/books rr:typegen
+
+          bun --filter @apps/uptime cf:typegen
+          bun --filter @apps/blog cf:typegen
+          bun --filter @apps/auth cf:typegen
+          bun --filter @apps/r3-uptime cf:typegen
+          bun --filter @apps/r3-gallery cf:typegen
+          bun --filter @apps/r3-blog cf:typegen
+          bun --filter @apps/books cf:typegen
+          bun --filter @apps/blog-saas cf:typegen
+          bun --filter @apps/auth-saas cf:typegen
 
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.command }}
