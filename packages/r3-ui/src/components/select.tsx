@@ -163,131 +163,133 @@ export function Select(handle: Handle<Select.Props>) {
 			);
 		}
 
+		let fieldMix = [
+			css({
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				cursor: "default",
+				fontSize: "0.875rem",
+				lineHeight: "calc(1.25 / 0.875)",
+
+				"&:focus": {
+					outline: "none",
+				},
+				"&:focus-visible": {
+					outlineWidth: "2px",
+					outlineStyle: "solid",
+					outlineOffset: "0px",
+					borderColor: "var(--ui-neutral-border-strong)",
+					outlineColor: "var(--ui-neutral-ring)",
+					'&[data-color="primary"]': {
+						borderColor: "var(--ui-primary-border-strong)",
+						outlineColor: "var(--ui-primary-ring)",
+					},
+					'&[data-color="neutral"]': {
+						borderColor: "var(--ui-neutral-border-strong)",
+						outlineColor: "var(--ui-neutral-ring)",
+					},
+					'&[data-color="success"]': {
+						borderColor: "var(--ui-success-border-strong)",
+						outlineColor: "var(--ui-success-ring)",
+					},
+					'&[data-color="warning"]': {
+						borderColor: "var(--ui-warning-border-strong)",
+						outlineColor: "var(--ui-warning-ring)",
+					},
+					'&[data-color="danger"]': {
+						borderColor: "var(--ui-danger-border-strong)",
+						outlineColor: "var(--ui-danger-ring)",
+					},
+				},
+				'&[aria-invalid="true"], &:user-invalid': {
+					outlineWidth: "2px",
+					outlineStyle: "solid",
+					outlineOffset: "0px",
+				},
+				"&:disabled": {
+					cursor: "not-allowed",
+					opacity: "0.5",
+				},
+
+				"&::picker(select)": {
+					margin: "0",
+					inset: "auto",
+					boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+					maxBlockSize: "15rem",
+					overflow: "auto",
+					padding: "0.25rem",
+					outline: "none",
+					opacity: "0",
+					transitionProperty: "opacity, display, overlay",
+					transitionDuration: "150ms",
+					transitionBehavior: "allow-discrete",
+					"@starting-style": {
+						opacity: "0",
+					},
+				},
+				"&:open": {
+					"&::picker(select)": {
+						opacity: "1",
+					},
+					'& [data-slot="icon"]': {
+						transform: "rotate(180deg)",
+					},
+				},
+				"&:has(option:checked:disabled)": {
+					"& selectedcontent": {
+						color: "var(--ui-neutral-fg-muted)",
+					},
+				},
+
+				"@media (prefers-reduced-motion: reduce)": {
+					"&::picker(select)": {
+						transitionDuration: "0s",
+					},
+				},
+			}),
+			gap("0.5rem"),
+			is("full"),
+			bs("2.5rem"),
+			rounded("md"),
+			border({ color: "neutral", width: 1 }),
+			bg("neutral.tint"),
+			fg("neutral.emphasis"),
+			pi("0.75rem"),
+			pb("0.5rem"),
+			appearance("base-select"),
+			transition(
+				"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+			),
+			hover(border("neutral.strong")),
+			when("&:focus", border("neutral.strong")),
+			when('&[aria-invalid="true"], &:user-invalid', [
+				border("danger.strong"),
+				outline({ color: "danger.ring", offset: 0 }),
+			]),
+			when("&:disabled", bg("neutral.bg-tint-hover")),
+			css({
+				"&::picker(select)": {
+					borderRadius: "var(--ui-radius-lg, 0.5rem)",
+					borderWidth: "1px",
+					borderStyle: "solid",
+					borderColor: "var(--ui-neutral-border)",
+					backgroundColor: "var(--ui-neutral-bg-tint)",
+				},
+				"&::picker-icon": {
+					color: "var(--ui-neutral-fg-muted)",
+				},
+			}),
+			mix,
+		] as Select.Props["mix"];
+
 		return (
 			<select
 				multiple={multiple}
 				size={size}
 				data-color={resolvedColor}
 				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						cursor: "default",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						"&:focus": {
-							outline: "none",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-neutral-border-strong)",
-							outlineColor: "var(--ui-neutral-ring)",
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border-strong)",
-								outlineColor: "var(--ui-primary-ring)",
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-border-strong)",
-								outlineColor: "var(--ui-neutral-ring)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border-strong)",
-								outlineColor: "var(--ui-success-ring)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border-strong)",
-								outlineColor: "var(--ui-warning-ring)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border-strong)",
-								outlineColor: "var(--ui-danger-ring)",
-							},
-						},
-						'&[aria-invalid="true"], &:user-invalid': {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-
-						"&::picker(select)": {
-							margin: "0",
-							inset: "auto",
-							boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-							maxBlockSize: "15rem",
-							overflow: "auto",
-							padding: "0.25rem",
-							outline: "none",
-							opacity: "0",
-							transitionProperty: "opacity, display, overlay",
-							transitionDuration: "150ms",
-							transitionBehavior: "allow-discrete",
-							"@starting-style": {
-								opacity: "0",
-							},
-						},
-						"&:open": {
-							"&::picker(select)": {
-								opacity: "1",
-							},
-							'& [data-slot="icon"]': {
-								transform: "rotate(180deg)",
-							},
-						},
-						"&:has(option:checked:disabled)": {
-							"& selectedcontent": {
-								color: "var(--ui-neutral-fg-muted)",
-							},
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							"&::picker(select)": {
-								transitionDuration: "0s",
-							},
-						},
-					}),
-					gap("0.5rem"),
-					is("full"),
-					bs("2.5rem"),
-					rounded("md"),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					pi("0.75rem"),
-					pb("0.5rem"),
-					appearance("base-select"),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-					),
-					hover(border("neutral.strong")),
-					when("&:focus", border("neutral.strong")),
-					when('&[aria-invalid="true"], &:user-invalid', [
-						border("danger.strong"),
-						outline({ color: "danger.ring", offset: 0 }),
-					]),
-					when("&:disabled", bg("neutral.bg-tint-hover")),
-					css({
-						"&::picker(select)": {
-							borderRadius: "var(--ui-radius-lg, 0.5rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-						},
-						"&::picker-icon": {
-							color: "var(--ui-neutral-fg-muted)",
-						},
-					}),
-					mix,
-				]}
+				mix={fieldMix}
 			/>
 		);
 	};

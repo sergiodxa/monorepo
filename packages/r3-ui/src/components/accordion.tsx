@@ -19,7 +19,7 @@ import { justify, shrink } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, pb, pbe, pi } from "@pkg/u/size";
 import { hover, open, when } from "@pkg/u/state";
-import { rotate } from "packages/u/src/transform/rotate";
+import { rotate } from "@pkg/u/transform";
 import { css } from "remix/ui";
 
 import { Disclosure } from "./disclosure";

@@ -168,7 +168,7 @@ function mirrorValidity(field: ValidatableField, message: string): void {
  * <input name="email" type="email" required aria-describedby="email-error" mix={[validate(EmailSchema)]} />
  * <p id="email-error" data-field-error hidden />
  */
-export const validate = createMixin<ValidatableField, [schema: Schema<string, unknown>]>(
+export const validate = createMixin<HTMLElement, [schema: Schema<string, unknown>]>(
 	(handle) => {
 		let hasReported = false;
 
@@ -179,8 +179,8 @@ export const validate = createMixin<ValidatableField, [schema: Schema<string, un
 		return (schema) => {
 			return createElement(handle.element, {
 				mix: [
-					on<ValidatableField, "input">("input", (event) => {
-						let field = event.currentTarget;
+					on("input", (event) => {
+						let field = event.currentTarget as ValidatableField;
 						let message = applySchema(field, schema);
 
 						if (!hasReported) return;
@@ -188,12 +188,12 @@ export const validate = createMixin<ValidatableField, [schema: Schema<string, un
 						mirrorValidity(field, message);
 						field.dispatchEvent(new ValidateChangeEvent({ valid: message === "", message }));
 					}),
-					on<ValidatableField, "invalid">(
+					on(
 						"invalid",
 						(event) => {
 							event.preventDefault();
 
-							let field = event.currentTarget;
+							let field = event.currentTarget as ValidatableField;
 							hasReported = true;
 
 							let message = field.validationMessage;
