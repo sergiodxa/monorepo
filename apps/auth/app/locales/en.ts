@@ -47,10 +47,10 @@ export default {
 			credentials: {
 				cta: "Login",
 				fields: {
-					name: { placeholder: "Display name" },
-					username: { placeholder: "Username" },
-					email: { placeholder: "Email" },
-					password: { placeholder: "Password" },
+					name: { label: "Display name", placeholder: "Display name" },
+					username: { label: "Username", placeholder: "Username" },
+					email: { label: "Email", placeholder: "Email" },
+					password: { label: "Password", placeholder: "Password" },
 				},
 			},
 
