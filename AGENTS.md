@@ -79,6 +79,8 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`)
 - MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the r3-blog app")
 - MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
+- MUST keep public blog content package-agnostic: articles and tutorials must not mention internal package names, `@pkg/*` imports, or `packages/*` paths; use public APIs or local example modules instead
+- MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/ui`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
 
 ### Documentation
 
