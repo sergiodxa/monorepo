@@ -11,7 +11,8 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { combine, raw } from "@pkg/u/general";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -37,12 +38,8 @@ import type { CSSStyles } from "../utils/css-styles";
 export function rtlAwareGradientDirection<Node extends Element = Element>(
 	propertyName: string,
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
-	let rtl: CSSStyles = {};
-	rtl[propertyName] = "left";
-
-	let declarations: CSSStyles = {};
-	declarations[propertyName] = "right";
-	declarations["&:dir(rtl)"] = rtl;
-
-	return css<Node>(declarations);
+	return combine<Node>([
+		raw({ [propertyName]: "right" }),
+		when<Node>("&:dir(rtl)", raw({ [propertyName]: "left" })),
+	]);
 }

@@ -12,6 +12,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { border } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, flexCol, items } from "@pkg/u/layout";
+import { p, pbe, pi } from "@pkg/u/size";
+import { tracking, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -108,10 +113,9 @@ export function Card(handle: Handle<Card.Props>) {
 				{...rest}
 				mix={[
 					semanticColorPanel(),
+					rounded("lg"),
+					border({ width: 1 }),
 					css({
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
 						boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 					}),
 					mix,
@@ -141,12 +145,11 @@ Card.Header = function CardHeader(handle: Handle<Card.HeaderProps>) {
 			<header
 				{...rest}
 				mix={[
+					flex(),
+					flexCol(),
+					p(6, 6),
 					css({
-						display: "flex",
-						flexDirection: "column",
 						gap: "0.375rem",
-						paddingBlock: "1.5rem",
-						paddingInline: "1.5rem",
 					}),
 					mix,
 				]}
@@ -180,10 +183,10 @@ Card.Title = function CardTitle(handle: Handle<Card.TitleProps>) {
 				mix={[
 					css({
 						fontSize: "1.5rem",
-						fontWeight: 600,
 						lineHeight: "1",
-						letterSpacing: "-0.025em",
 					}),
+					weight("semibold"),
+					tracking("tight"),
 					mix,
 				]}
 			>
@@ -212,8 +215,8 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 				mix={[
 					css({
 						fontSize: "0.875rem",
-						opacity: 0.7,
 					}),
+					opacity(70),
 					mix,
 				]}
 			/>
@@ -241,9 +244,9 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 				mix={[
 					css({
 						paddingBlockStart: "0",
-						paddingBlockEnd: "1.5rem",
-						paddingInline: "1.5rem",
 					}),
+					pbe(6),
+					pi(6),
 					mix,
 				]}
 			/>
@@ -271,13 +274,13 @@ Card.Footer = function CardFooter(handle: Handle<Card.FooterProps>) {
 			<footer
 				{...rest}
 				mix={[
+					flex(),
+					items("center"),
 					css({
-						display: "flex",
-						alignItems: "center",
 						paddingBlockStart: "0",
-						paddingBlockEnd: "1.5rem",
-						paddingInline: "1.5rem",
 					}),
+					pbe(6),
+					pi(6),
 					mix,
 				]}
 			/>

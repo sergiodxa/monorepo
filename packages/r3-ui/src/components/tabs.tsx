@@ -13,6 +13,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { opacity } from "@pkg/u/effects";
+import { flexRow, hstack, relative, vstack } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -135,17 +141,7 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-
-						'&[data-orientation="vertical"]': {
-							flexDirection: "row",
-						},
-					}),
-					mix,
-				]}
+				mix={[vstack(), when('&[data-orientation="vertical"]', flexRow()), mix]}
 			/>
 		);
 	};
@@ -182,10 +178,9 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_LIST_ROLE }),
+					relative(),
+					hstack({ gap: 1 }),
 					css({
-						position: "relative",
-						display: "flex",
-						gap: "0.25rem",
 						borderBlockEndWidth: "1px",
 						borderBlockEndStyle: "solid",
 						borderColor: "var(--ui-neutral-border)",
@@ -261,28 +256,24 @@ Tabs.Tab = function TabsTab(handle: Handle<Tabs.TabProps>) {
 					interactiveTransition(),
 					attrs({ role: DEFAULT_TAB_ROLE }),
 					focusRingPrimary(),
+					pi(4),
+					pb(2),
+					weight(500),
+					fg("neutral"),
+					when("&:hover", fg("neutral.emphasis")),
+					when('&[aria-selected="true"]', fg("primary")),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
 						marginBlockEnd: "-0.0625rem",
 						cursor: "default",
-						paddingInline: "1rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
 						borderBlockEndWidth: "2px",
 						borderBlockEndStyle: "solid",
 						borderColor: "transparent",
-						color: "var(--ui-neutral-fg)",
 
-						"&:hover": {
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&[aria-selected="true"]': {
-							color: "var(--ui-primary-fg)",
-						},
 						'&[aria-disabled="true"]': {
 							cursor: "not-allowed",
-							opacity: "0.5",
 						},
 
 						'&[data-orientation="vertical"]': {
@@ -341,11 +332,9 @@ Tabs.Panel = function TabsPanel(handle: Handle<Tabs.PanelProps>) {
 				mix={[
 					attrs({ role: DEFAULT_PANEL_ROLE, tabIndex: DEFAULT_PANEL_TAB_INDEX }),
 					focusRingPrimary(),
-					css({
-						paddingBlock: "1rem",
-						paddingInline: "1rem",
-						outlineStyle: "none",
-					}),
+					pb(4),
+					pi(4),
+					css({ outlineStyle: "none" }),
 					mix,
 				]}
 			/>

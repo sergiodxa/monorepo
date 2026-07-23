@@ -20,7 +20,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { css } from "remix/ui";
+import { spacer, hstack } from "@pkg/u/layout";
+import { minIs } from "@pkg/u/size";
 
 import type { FieldPartsProps } from "../utils/field-parts";
 
@@ -240,17 +241,7 @@ export function ColorField(handle: Handle<ColorField.Props>) {
 				<Label htmlFor={handle.id} mix={parts?.label}>
 					{label}
 				</Label>
-				<div
-					data-slot="control"
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							gap: "0.5rem",
-						}),
-						parts?.control,
-					]}
-				>
+				<div data-slot="control" mix={[hstack({ gap: 2, align: "center" }), parts?.control]}>
 					<Input
 						id={handle.id}
 						type="text"
@@ -266,13 +257,7 @@ export function ColorField(handle: Handle<ColorField.Props>) {
 						aria-invalid={resolvedInvalid}
 						aria-describedby={describedBy}
 						color={resolvedColor}
-						mix={[
-							css({
-								flex: "1 1 auto",
-								minInlineSize: "0",
-							}),
-							parts?.input,
-						]}
+						mix={[spacer(), minIs(0), parts?.input]}
 					/>
 					<ColorSwatch value={resolvedSwatchValue} size="lg" mix={parts?.swatch} />
 				</div>

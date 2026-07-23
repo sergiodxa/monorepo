@@ -10,12 +10,12 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { combine } from "@pkg/u/general";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 import type { SemanticColor } from "../utils/semantic-color";
-
-import { semanticColorPanelStyle } from "../utils/semantic-color-panel";
 
 /**
  * Every {@link SemanticColor}, in the order {@link semanticColorPanel} emits
@@ -31,9 +31,10 @@ const SEMANTIC_COLORS: readonly SemanticColor[] = [
 
 /**
  * Composes every `&[data-color="..."]` branch a tinted panel keys its
- * border, background, and foreground on, one branch per {@link SemanticColor}
- * built by {@link semanticColorPanelStyle}, as its own `css()` mixin. Compose
- * the call directly in a host's `mix` array, alongside a `css()` call for
+ * border, background, and foreground on, one branch per {@link SemanticColor},
+ * as its own mixin built from `@pkg/u`'s `border()`/`bg()`/`fg()` color
+ * utilities nested under `when()`. Compose the call directly in a host's
+ * `mix` array, alongside a `css()` call for
  * whatever border radius, layout, or other declarations are genuinely local
  * to that panel, rather than folding its properties into another `css()`
  * call.
@@ -58,11 +59,13 @@ export function semanticColorPanel<Node extends Element = Element>(): MixinDescr
 	[styles: CSSStyles],
 	ElementProps
 > {
-	let branches: CSSStyles = {};
-
-	for (let color of SEMANTIC_COLORS) {
-		branches[`&[data-color="${color}"]`] = { ...semanticColorPanelStyle(color) };
-	}
-
-	return css<Node>(branches);
+	return combine<Node>(
+		SEMANTIC_COLORS.map((color) =>
+			when<Node>(`&[data-color="${color}"]`, [
+				border<Node>(`${color}.border`),
+				bg<Node>(`${color}.tint`),
+				fg<Node>(`${color}.emphasis`),
+			]),
+		),
+	);
 }

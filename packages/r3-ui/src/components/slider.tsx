@@ -12,6 +12,24 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import {
+	absolute,
+	appearance,
+	bg,
+	bs,
+	inset,
+	is,
+	items,
+	m,
+	minBs,
+	minIs,
+	overflow,
+	relative,
+	rounded,
+	vstack,
+	when,
+	z,
+} from "@pkg/u";
 import { css } from "remix/ui";
 
 import { outputCaptionText } from "../styles/output-caption-text";
@@ -147,20 +165,9 @@ export function Slider(handle: Handle<Slider.Props, Slider.Context>) {
 				data-orientation={resolvedOrientation}
 				{...rest}
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.5rem",
-
-						'&[data-orientation="horizontal"]': {
-							inlineSize: "100%",
-							minInlineSize: "10rem",
-						},
-						'&[data-orientation="vertical"]': {
-							blockSize: "10rem",
-							alignItems: "center",
-						},
-					}),
+					vstack({ gap: "0.5rem" }),
+					when('&[data-orientation="horizontal"]', [is("100%"), minIs("10rem")]),
+					when('&[data-orientation="vertical"]', [bs("10rem"), items("center")]),
 					mix,
 				]}
 			/>
@@ -201,31 +208,28 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 				{...rest}
 				style={resolvedStyle}
 				mix={[
+					relative(),
+					when('[data-orientation="horizontal"] &', [
+						is("100%"),
+						bs("var(--ui-slider-thumb-size, 1.25rem)"),
+					]),
+					when('[data-orientation="vertical"] &', [
+						is("var(--ui-slider-thumb-size, 1.25rem)"),
+						minBs("0"),
+						overflow("hidden"),
+					]),
+					when("&::before", [absolute(), rounded("full"), bg("neutral.border")]),
+					when("&::after", [absolute(), rounded("full"), bg("primary.solid")]),
 					css({
-						position: "relative",
-
-						'[data-orientation="horizontal"] &': {
-							inlineSize: "100%",
-							blockSize: "var(--ui-slider-thumb-size, 1.25rem)",
-						},
 						'[data-orientation="vertical"] &': {
-							inlineSize: "var(--ui-slider-thumb-size, 1.25rem)",
-							minBlockSize: "0",
 							flex: "1 1 0%",
-							overflow: "hidden",
 						},
 
 						"&::before": {
 							content: '""',
-							position: "absolute",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundColor: "var(--ui-neutral-border)",
 						},
 						"&::after": {
 							content: '""',
-							position: "absolute",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundColor: "var(--ui-primary-bg-solid)",
 						},
 
 						'[data-orientation="horizontal"] &::before': {
@@ -310,13 +314,12 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 				aria-orientation={context.orientation === "vertical" ? "vertical" : undefined}
 				mix={[
 					rangeThumbAppearance("--ui-slider-thumb-size", "--ui-slider-thumb-border-width"),
+					absolute(),
+					inset("0"),
+					z(10),
+					m("0"),
+					appearance(),
 					css({
-						position: "absolute",
-						inset: "0",
-						zIndex: 10,
-						margin: "0",
-						appearance: "none",
-						WebkitAppearance: "none",
 						backgroundColor: "transparent",
 						cursor: "pointer",
 						outlineStyle: "none",

@@ -11,6 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
 import { css } from "remix/ui";
 
 /**
@@ -51,10 +52,10 @@ export function Description(handle: Handle<Description.Props>) {
 			<p
 				{...rest}
 				mix={[
+					fg("neutral.muted"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}

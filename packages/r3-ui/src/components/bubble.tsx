@@ -17,7 +17,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { block, container, flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
+import { maxIs, mbs, mie, mis, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /**
  * Named container {@link Bubble} declares on its own host, so
@@ -161,64 +167,53 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 				data-variant={resolvedVariant}
 				data-align={resolvedAlign}
 				mix={[
-					css({
-						container: `${CONTAINER_NAME} / inline-size`,
-						display: "block",
-						width: "fit-content",
-						maxInlineSize: "80%",
-						borderRadius: "var(--ui-radius-xl, 0.75rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "transparent",
+					container(CONTAINER_NAME),
+					block(),
+					maxIs("80%"),
+					rounded("xl"),
+					border({ width: 1 }),
+					raw({ width: "fit-content", borderColor: "transparent" }),
 
-						'&[data-align="start"]': {
-							marginInlineEnd: "auto",
+					when('&[data-align="start"]', [
+						mie("auto"),
+						raw({
 							borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)",
 							"--ui-bubble-reactions-justify": "flex-start",
-						},
-						'&[data-align="end"]': {
-							marginInlineStart: "auto",
+						}),
+					]),
+					when('&[data-align="end"]', [
+						mis("auto"),
+						raw({
 							borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)",
 							"--ui-bubble-reactions-justify": "flex-end",
-						},
+						}),
+					]),
 
-						'&[data-variant="default"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						'&[data-variant="secondary"]': {
-							backgroundColor: "var(--ui-neutral-bg-solid)",
-							color: "var(--ui-neutral-fg-on-solid)",
-						},
-						'&[data-variant="muted"]': {
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							color: "var(--ui-neutral-fg-emphasis)",
-							borderColor: "var(--ui-neutral-border)",
-						},
-						'&[data-variant="tinted"]': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-							color: "var(--ui-primary-fg-emphasis)",
-							borderColor: "var(--ui-primary-border)",
-						},
-						'&[data-variant="outline"]': {
-							backgroundColor: "transparent",
-							color: "var(--ui-neutral-fg-emphasis)",
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
-						'&[data-variant="ghost"]': {
-							backgroundColor: "transparent",
-							color: "var(--ui-neutral-fg-emphasis)",
-							borderColor: "transparent",
-							width: "100%",
-							maxInlineSize: "none",
-							marginInlineStart: "0",
-							marginInlineEnd: "0",
-						},
-						'&[data-variant="destructive"]': {
-							backgroundColor: "var(--ui-danger-bg-solid)",
-							color: "var(--ui-danger-fg-on-solid)",
-						},
-					}),
+					when('&[data-variant="default"]', [bg("primary.solid"), fg("primary.onSolid")]),
+					when('&[data-variant="secondary"]', [bg("neutral.solid"), fg("neutral.onSolid")]),
+					when('&[data-variant="muted"]', [
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						border("neutral"),
+					]),
+					when('&[data-variant="tinted"]', [
+						bg("primary.tint"),
+						fg("primary.emphasis"),
+						border("primary"),
+					]),
+					when('&[data-variant="outline"]', [
+						fg("neutral.emphasis"),
+						border("neutral.strong"),
+						raw({ backgroundColor: "transparent" }),
+					]),
+					when('&[data-variant="ghost"]', [
+						fg("neutral.emphasis"),
+						maxIs("none"),
+						mis(0),
+						mie(0),
+						raw({ backgroundColor: "transparent", borderColor: "transparent", width: "100%" }),
+					]),
+					when('&[data-variant="destructive"]', [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,
 				]}
 			>
@@ -274,9 +269,9 @@ Bubble.Content = function BubbleContent(handle: Handle<Bubble.ContentProps>) {
 				{...rest}
 				data-slot="content"
 				mix={[
-					css({
-						paddingBlock: "0.625rem",
-						paddingInline: "0.875rem",
+					pb(2.5),
+					pi(3.5),
+					raw({
 						fontSize: "0.9375rem",
 						lineHeight: "1.5",
 						overflowWrap: "break-word",
@@ -342,13 +337,13 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 				data-slot="reactions"
 				mix={[
 					attrs({ role: DEFAULT_REACTIONS_ROLE }),
-					css({
-						display: "flex",
-						flexWrap: "wrap",
-						alignItems: "center",
-						gap: "0.25rem",
-						paddingInline: "0.125rem",
-						marginBlockStart: "-0.5rem",
+					flex(),
+					flexWrap("wrap"),
+					items("center"),
+					gap(1),
+					pi(0.5),
+					mbs(-2),
+					raw({
 						justifyContent: "var(--ui-bubble-reactions-justify, flex-start)",
 
 						[`@container ${CONTAINER_NAME} (max-width: 16rem)`]: {
@@ -391,20 +386,19 @@ Bubble.Group = function BubbleGroup(handle: Handle<Bubble.GroupProps>) {
 				{...rest}
 				data-slot="group"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.125rem",
-
-						'& > [data-slot="bubble"]:not(:first-child)': {
+					vstack({ gap: 0.5 }),
+					when('& > [data-slot="bubble"]:not(:first-child)', [
+						raw({
 							borderStartStartRadius: "var(--ui-radius-xs, 0.125rem)",
 							borderStartEndRadius: "var(--ui-radius-xs, 0.125rem)",
-						},
-						'& > [data-slot="bubble"]:not(:last-child)': {
+						}),
+					]),
+					when('& > [data-slot="bubble"]:not(:last-child)', [
+						raw({
 							borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)",
 							borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)",
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			>

@@ -13,6 +13,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
+import { minBs, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { textAlign } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { easings } from "../animations/tokens";
@@ -126,32 +132,25 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 				data-slot="zone"
 				mix={[
 					focusRingPrimary({ when: "&:has(input:focus-visible)" }),
+					flex(),
+					flexCol(),
+					items("center"),
+					justify("center"),
+					gap(2),
+					minBs("6rem"),
+					rounded("lg"),
+					border({ color: "neutral", width: "2px", style: "dashed" }),
+					pi(6),
+					pb(6),
+					textAlign("center"),
+					bg("neutral.tint"),
+					fg("neutral"),
+					when("&[data-drop-target]", [border("primary.ring"), bg("primary.tint")]),
 					css({
-						display: "flex",
-						flexDirection: "column",
-						alignItems: "center",
-						justifyContent: "center",
-						gap: "0.5rem",
-						minBlockSize: "6rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "2px",
-						borderStyle: "dashed",
-						paddingInline: "1.5rem",
-						paddingBlock: "1.5rem",
-						textAlign: "center",
 						transitionProperty:
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 						transitionTimingFunction: easings.standard,
 						transitionDuration: "150ms",
-
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg)",
-
-						"&[data-drop-target]": {
-							borderColor: "var(--ui-primary-ring)",
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
 					}),
 					mix,
 				]}

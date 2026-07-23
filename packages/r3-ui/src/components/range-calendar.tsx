@@ -13,6 +13,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { gap } from "@pkg/u/layout";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { Calendar } from "./calendar";
@@ -245,8 +248,8 @@ export function RangeCalendar(handle: Handle<RangeCalendar.Props>) {
 							css({
 								display: "flex",
 								alignItems: "center",
-								gap: "0.5rem",
 							}),
+							gap("0.5rem"),
 						]}
 					>
 						<Input
@@ -445,24 +448,24 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 						"&[data-selection-start]": {
 							borderStartEndRadius: "0",
 							borderEndEndRadius: "0",
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
 						},
 						"&[data-selection-end]": {
 							borderStartStartRadius: "0",
 							borderEndStartRadius: "0",
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
 						},
 						'&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])': {
 							borderStartStartRadius: "0",
 							borderStartEndRadius: "0",
 							borderEndStartRadius: "0",
 							borderEndEndRadius: "0",
-							backgroundColor: "var(--ui-primary-bg-tint)",
-							color: "var(--ui-primary-fg-emphasis)",
 						},
 					}),
+					when("&[data-selection-start]", [bg("primary.solid"), fg("primary.onSolid")]),
+					when("&[data-selection-end]", [bg("primary.solid"), fg("primary.onSolid")]),
+					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
+						bg("primary.tint"),
+						fg("primary.emphasis"),
+					]),
 					mix,
 				]}
 			/>

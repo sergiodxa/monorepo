@@ -10,6 +10,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
+import { bs, is, mbs, p } from "@pkg/u/size";
+import { textAlign, tracking, weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -117,18 +122,15 @@ export function Empty(handle: Handle<Empty.Props>) {
 				data-slot="empty"
 				mix={[
 					semanticColorPanel(),
-					css({
-						display: "flex",
-						inlineSize: "100%",
-						flexDirection: "column",
-						alignItems: "center",
-						gap: "0.75rem",
-						borderRadius: "var(--ui-radius-xl, 0.75rem)",
-						borderWidth: "1px",
-						borderStyle: "dashed",
-						padding: "2rem",
-						textAlign: "center",
-					}),
+					flex(),
+					flexCol(),
+					is("full"),
+					items("center"),
+					gap(3),
+					rounded("xl"),
+					border({ width: "1px", style: "dashed" }),
+					p(8),
+					textAlign("center"),
 					mix,
 				]}
 			>
@@ -158,15 +160,14 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 				data-slot="icon"
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
+					flex(),
+					bs("3rem"),
+					is("3rem"),
+					items("center"),
+					justify("center"),
+					rounded("full"),
+					border({ width: "1px", style: "solid" }),
 					css({
-						display: "flex",
-						blockSize: "3rem",
-						inlineSize: "3rem",
-						alignItems: "center",
-						justifyContent: "center",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						borderWidth: "1px",
-						borderStyle: "solid",
 						borderColor: "color-mix(in oklab, currentcolor 20%, transparent)",
 						backgroundColor: "color-mix(in oklab, currentcolor 10%, transparent)",
 						color: "currentcolor",
@@ -201,11 +202,11 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 				{...rest}
 				data-slot="title"
 				mix={[
+					weight("semibold"),
+					tracking("tight"),
 					css({
 						fontSize: "1rem",
 						lineHeight: "1.375",
-						fontWeight: "600",
-						letterSpacing: "-0.025em",
 					}),
 					mix,
 				]}
@@ -259,16 +260,7 @@ Empty.Action = function EmptyAction(handle: Handle<Empty.ActionProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div
-				{...rest}
-				data-slot="action"
-				mix={[
-					css({
-						marginBlockStart: "0.25rem",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="action" mix={[mbs(1), mix]}>
 				{children}
 			</div>
 		);

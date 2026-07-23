@@ -12,6 +12,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { flex, gap, justify, vstack } from "@pkg/u/layout";
+import { maxIs, mbs } from "@pkg/u/size";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { Button } from "./button";
@@ -126,17 +130,7 @@ export function AlertDialog(handle: Handle<AlertDialog.Props>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<Dialog
-				{...rest}
-				role="alertdialog"
-				closedby="closerequest"
-				mix={[
-					css({
-						maxInlineSize: "32rem",
-					}),
-					mix,
-				]}
-			>
+			<Dialog {...rest} role="alertdialog" closedby="closerequest" mix={[maxIs("32rem"), mix]}>
 				{children}
 			</Dialog>
 		);
@@ -160,20 +154,7 @@ AlertDialog.Header = function AlertDialogHeader(handle: Handle<AlertDialog.Heade
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="header"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.5rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="header" mix={[vstack({ gap: 2 }), mix]} />;
 	};
 };
 
@@ -200,11 +181,11 @@ AlertDialog.Title = function AlertDialogTitle(handle: Handle<AlertDialog.TitlePr
 				{...rest}
 				data-slot="title"
 				mix={[
+					fg("neutral.emphasis"),
+					weight("semibold"),
 					css({
 						fontSize: "1.125rem",
 						lineHeight: "calc(1.75 / 1.125)",
-						fontWeight: "600",
-						color: "var(--ui-neutral-fg-emphasis)",
 					}),
 					mix,
 				]}
@@ -236,10 +217,10 @@ AlertDialog.Description = function AlertDialogDescription(
 				{...rest}
 				data-slot="description"
 				mix={[
+					fg("neutral.muted"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}
@@ -269,21 +250,7 @@ AlertDialog.Footer = function AlertDialogFooter(handle: Handle<AlertDialog.Foote
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="footer"
-				mix={[
-					css({
-						display: "flex",
-						justifyContent: "flex-end",
-						gap: "0.5rem",
-						marginBlockStart: "1.5rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="footer" mix={[gap(2), mbs(6), flex(), justify("end"), mix]} />;
 	};
 };
 

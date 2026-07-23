@@ -16,6 +16,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { pb, pi, pis } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { leading, textAlign, tracking, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { easings } from "../animations/tokens";
@@ -163,10 +168,10 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 				data-preset={resolvedPreset}
 				data-slot="typeset"
 				mix={[
+					fg("neutral.emphasis"),
 					css({
 						fontSize: "var(--ui-typeset-size, 1rem)",
 						lineHeight: "var(--ui-typeset-leading, 1.75)",
-						color: "var(--ui-neutral-fg-emphasis)",
 						container: `${CONTAINER_NAME} / inline-size`,
 
 						'&[data-preset="docs"]': {
@@ -197,13 +202,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
 						},
 
-						// Headings
-						"& :where(h1, h2, h3, h4, h5, h6)": {
-							fontWeight: 600,
-							lineHeight: "1.25",
-							letterSpacing: "-0.025em",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 						"& :where(h1)": {
 							fontSize: "calc(var(--ui-typeset-size, 1rem) * 2)",
 						},
@@ -221,13 +219,9 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						},
 						"& :where(h6)": {
 							fontSize: "calc(var(--ui-typeset-size, 1rem) * 0.875)",
-							color: "var(--ui-neutral-fg)",
 						},
 
 						// Lists
-						"& :where(ul, ol)": {
-							paddingInlineStart: "1.5em",
-						},
 						"& :where(ul)": {
 							listStyleType: "disc",
 						},
@@ -236,9 +230,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						},
 						"& :where(ul, ol) :where(ul)": {
 							listStyleType: "circle",
-						},
-						"& :where(li)::marker": {
-							color: "var(--ui-neutral-fg-muted)",
 						},
 
 						// Blockquote
@@ -260,26 +251,14 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 
 						// Links
 						"& :where(a)": {
-							color: "var(--ui-primary-fg)",
 							textDecorationLine: "underline",
 							textUnderlineOffset: "0.15em",
 						},
 						"& :where(a):hover": {
 							textDecorationThickness: "2px",
 						},
-						"& :where(a):focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-							borderRadius: "var(--ui-radius-xs, 0.125rem)",
-						},
 
 						// Emphasis
-						"& :where(strong, b)": {
-							fontWeight: 600,
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 						"& :where(em, i)": {
 							fontStyle: "italic",
 						},
@@ -287,24 +266,11 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						// Code
 						"& :where(code)": {
 							fontSize: "0.875em",
-							paddingInline: "0.3em",
-							paddingBlock: "0.15em",
-							borderRadius: "var(--ui-radius-sm, 0.25rem)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							color: "var(--ui-neutral-fg-emphasis)",
 						},
 						"& :where(pre)": {
 							overflow: "auto",
-							borderRadius: "var(--ui-radius-md, 0.375rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							paddingInline: "1em",
-							paddingBlock: "0.875em",
 							fontSize: "0.875em",
 							lineHeight: "1.6",
-							color: "var(--ui-neutral-fg-emphasis)",
 						},
 						"& :where(pre code)": {
 							backgroundColor: "transparent",
@@ -394,19 +360,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							borderBlockEndStyle: "solid",
 							borderBlockEndColor: "var(--ui-neutral-border)",
 						},
-						// Left unaligned so a pre-existing `align` attribute — the
-						// alignment a markdown-to-HTML pipeline typically bakes into a
-						// GFM table's cells — keeps working: the browser's own
-						// presentational hint for `align` sits beneath any author
-						// declaration, so an unconditional `text-align` here would
-						// silently override it.
-						"& :where(th, td):not([align])": {
-							textAlign: "start",
-						},
-						"& :where(th)": {
-							fontWeight: 600,
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 
 						// Once there's enough room, cells and code blocks read better
 						// with roomier padding than the narrow default above.
@@ -428,6 +381,51 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							all: "revert-layer",
 						},
 					}),
+
+					// Headings
+					when("& :where(h1, h2, h3, h4, h5, h6)", [
+						weight("semibold"),
+						leading(1.25),
+						tracking("tight"),
+						fg("neutral.emphasis"),
+					]),
+					when("& :where(h6)", fg("neutral")),
+
+					// Lists
+					when("& :where(ul, ol)", pis("1.5em")),
+					when("& :where(li)::marker", fg("neutral.muted")),
+
+					// Links
+					when("& :where(a)", fg("primary")),
+					when("& :where(a):focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						rounded("xs"),
+					]),
+
+					// Emphasis
+					when("& :where(strong, b)", [weight("semibold"), fg("neutral.emphasis")]),
+
+					// Code
+					when("& :where(code)", [
+						rounded("sm"),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						pi("0.3em"),
+						pb("0.15em"),
+					]),
+					when("& :where(pre)", [
+						rounded("md"),
+						border({ color: "neutral.border", width: 1 }),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						pi("1em"),
+						pb("0.875em"),
+					]),
+
+					// Tables
+					when("& :where(th, td):not([align])", textAlign("start")),
+					when("& :where(th)", [weight("semibold"), fg("neutral.emphasis")]),
+
 					mix,
 				]}
 			/>

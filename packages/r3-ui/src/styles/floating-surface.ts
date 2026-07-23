@@ -10,7 +10,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { bg, border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { combine, raw } from "@pkg/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -41,13 +43,16 @@ export function floatingSurface<Node extends Element = Element>(): MixinDescript
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return css<Node>({
-		borderRadius: "var(--ui-radius-lg, 0.5rem)",
-		borderWidth: "1px",
-		borderStyle: "solid",
-		borderColor: "var(--ui-neutral-border)",
-		backgroundColor: "var(--ui-neutral-bg-tint)",
-		boxShadow:
-			"var(--ui-shadow-md, 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1))",
-	});
+	return combine<Node>([
+		rounded("lg"),
+		border({ color: "neutral", width: 1 }),
+		bg("neutral.tint"),
+		// No `@pkg/u` shadow scale entry matches this exact value — the
+		// `--ui-shadow-md` variable name paired with a fallback shaped like
+		// the `lg` step, not `md` — so its literal stays here unmigrated.
+		raw({
+			boxShadow:
+				"var(--ui-shadow-md, 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1))",
+		}),
+	]);
 }

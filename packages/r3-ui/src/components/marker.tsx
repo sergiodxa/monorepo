@@ -11,6 +11,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { center } from "@pkg/u/layout";
+import { is, minIs, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 /** Visual shape {@link Marker} falls back to when `variant` is omitted. */
@@ -140,56 +146,50 @@ export function Marker(handle: Handle<Marker.Props>) {
 								"aria-orientation": DEFAULT_SEPARATOR_ORIENTATION,
 							})
 						: undefined,
+					center(),
+					is("full"),
+					weight("medium"),
+					when('&[data-color="primary"]', fg("primary.muted")),
+					when('&[data-color="neutral"]', fg("neutral.muted")),
+					when('&[data-color="success"]', fg("success.muted")),
+					when('&[data-color="warning"]', fg("warning.muted")),
+					when('&[data-color="danger"]', fg("danger.muted")),
+					when('&[data-variant="border"]', [
+						rounded("md"),
+						border({ width: 1 }),
+						pb(2),
+						pi(3.5),
+						when('&[data-color="primary"]', [
+							border("primary"),
+							bg("primary.tint"),
+							fg("primary.emphasis"),
+						]),
+						when('&[data-color="neutral"]', [
+							border("neutral"),
+							bg("neutral.tint"),
+							fg("neutral.emphasis"),
+						]),
+						when('&[data-color="success"]', [
+							border("success"),
+							bg("success.tint"),
+							fg("success.emphasis"),
+						]),
+						when('&[data-color="warning"]', [
+							border("warning"),
+							bg("warning.tint"),
+							fg("warning.emphasis"),
+						]),
+						when('&[data-color="danger"]', [
+							border("danger"),
+							bg("danger.tint"),
+							fg("danger.emphasis"),
+						]),
+					]),
 					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
 						gap: "var(--ui-marker-gap, 0.375rem)",
-						inlineSize: "100%",
 						paddingBlock: "0.375rem",
 						fontSize: "0.8125rem",
 						lineHeight: "calc(1.25 / 0.8125)",
-						fontWeight: "500",
-
-						'&[data-color="primary"]': { color: "var(--ui-primary-fg-muted)" },
-						'&[data-color="neutral"]': { color: "var(--ui-neutral-fg-muted)" },
-						'&[data-color="success"]': { color: "var(--ui-success-fg-muted)" },
-						'&[data-color="warning"]': { color: "var(--ui-warning-fg-muted)" },
-						'&[data-color="danger"]': { color: "var(--ui-danger-fg-muted)" },
-
-						'&[data-variant="border"]': {
-							borderRadius: "var(--ui-radius-md, 0.375rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							paddingBlock: "0.5rem",
-							paddingInline: "0.875rem",
-
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border)",
-								backgroundColor: "var(--ui-primary-bg-tint)",
-								color: "var(--ui-primary-fg-emphasis)",
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-border)",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								color: "var(--ui-neutral-fg-emphasis)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border)",
-								backgroundColor: "var(--ui-success-bg-tint)",
-								color: "var(--ui-success-fg-emphasis)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border)",
-								backgroundColor: "var(--ui-warning-bg-tint)",
-								color: "var(--ui-warning-fg-emphasis)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border)",
-								backgroundColor: "var(--ui-danger-bg-tint)",
-								color: "var(--ui-danger-fg-emphasis)",
-							},
-						},
 
 						'&[data-variant="separator"]': {
 							"&::before, &::after": {
@@ -283,6 +283,6 @@ Marker.Content = function MarkerContent(handle: Handle<Marker.ContentProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[css({ minInlineSize: "0" }), mix]} />;
+		return <span {...rest} mix={[minIs(0), mix]} />;
 	};
 };

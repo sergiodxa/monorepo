@@ -16,9 +16,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { visuallyHidden } from "@pkg/u/a11y";
+import { border, outline } from "@pkg/u/color";
+import { opacity, transition } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { flexWrap, hstack, inlineFlex } from "@pkg/u/layout";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
-
-import { visuallyHidden } from "../styles/visually-hidden-input";
 
 import { ColorSwatch } from "./color-swatch";
 
@@ -144,18 +148,7 @@ export function ColorSwatchPicker(
 		handle.context.set({ name: resolvedName });
 
 		return (
-			<div
-				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "flex",
-						flexWrap: "wrap",
-						gap: "0.5rem",
-					}),
-					mix,
-				]}
-			/>
+			<div {...rest} mix={[attrs({ role: DEFAULT_ROLE }), hstack({ gap: 2 }), flexWrap(), mix]} />
 		);
 	};
 }
@@ -211,15 +204,9 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 			<label
 				{...rest}
 				mix={[
-					css({
-						display: "inline-flex",
-						cursor: "default",
-
-						"&:has(input:disabled)": {
-							cursor: "not-allowed",
-							opacity: 0.5,
-						},
-					}),
+					inlineFlex(),
+					cursor("default"),
+					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
 					mix,
 				]}
 			>
@@ -240,20 +227,12 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 					shape={shape}
 					size={size}
 					mix={[
+						transition("border-color, box-shadow"),
+						when("input:checked ~ &", border("primary.solid")),
+						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
 						css({
-							transitionProperty: "border-color, box-shadow",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
-
 							"input:checked ~ &": {
-								borderColor: "var(--ui-primary-bg-solid)",
 								boxShadow: "0 0 0 2px var(--ui-primary-bg-solid)",
-							},
-							"input:focus-visible ~ &": {
-								outlineWidth: "2px",
-								outlineStyle: "solid",
-								outlineOffset: "2px",
-								outlineColor: "var(--ui-primary-ring)",
 							},
 						}),
 						parts?.indicator,

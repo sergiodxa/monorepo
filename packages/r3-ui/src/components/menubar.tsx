@@ -15,8 +15,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { flex, gap, inlineFlex, items } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { active, disabled, hover, when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
+import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import {
 	warnIfNoAccessibleLabel,
@@ -116,18 +124,14 @@ export function Menubar(handle: Handle<Menubar.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.125rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						paddingBlock: "0.25rem",
-						paddingInline: "0.25rem",
-					}),
+					flex(),
+					items("center"),
+					gap("0.125rem"),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.tint"),
+					pb(1),
+					pi(1),
 					mix,
 				]}
 			/>
@@ -185,41 +189,24 @@ Menubar.Trigger = function MenubarTrigger(handle: Handle<Menubar.TriggerProps>) 
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_TRIGGER_ROLE, "aria-haspopup": "menu" }),
+					inlineFlex(),
+					items("center"),
+					gap(2),
+					rounded("sm"),
+					pi(3),
+					pb("0.375rem"),
+					fg("neutral"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					active(bg("neutral.bg-tint-pressed")),
+					when('&[aria-expanded="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
+					focusRingPrimary(),
+					disabled([opacity(50), cursor("not-allowed")]),
+					cursor("default"),
+					weight(500),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						cursor: "default",
 						userSelect: "none",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.375rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						'&[aria-expanded="true"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-						"&:disabled, &[aria-disabled='true']": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}

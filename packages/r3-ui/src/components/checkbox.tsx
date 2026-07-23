@@ -11,8 +11,15 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { CheckIcon, MinusIcon } from "@pkg/lucide-remix";
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { block, center, hidden, hstack, relative } from "@pkg/u/layout";
+import { bs, is } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
+import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
 /** Semantic color role {@link Checkbox} falls back to when `color` is omitted. */
@@ -103,16 +110,7 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 		);
 
 		return (
-			<label
-				mix={[
-					css({
-						position: "relative",
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
-					}),
-				]}
-			>
+			<label mix={[relative(), hstack({ gap: 2, align: "center" })]}>
 				{/*
 				 * The box comes before the input in source order so its own
 				 * `:has(~ input:…)` rules can read the input's state through the
@@ -125,81 +123,69 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 					data-slot="box"
 					data-color={resolvedColor}
 					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							inlineSize: "1.25rem",
-							blockSize: "1.25rem",
-							borderRadius: "var(--ui-radius-sm, 0.25rem)",
-							borderWidth: "2px",
-							borderColor: "var(--ui-neutral-border-strong)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							transitionProperty:
-								"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
+						center(),
+						is("1.25rem"),
+						bs("1.25rem"),
+						rounded("sm"),
+						border({ width: 2, color: "neutral.strong" }),
+						bg("neutral.tint"),
+						interactiveTransition(),
 
-							"& > svg": {
-								display: "none",
-								inlineSize: "0.75rem",
-								blockSize: "0.75rem",
-							},
-							"&:has(~ input:checked) > svg:first-child": { display: "block" },
-							"&:has(~ input:indeterminate) > svg:last-child": { display: "block" },
+						when("& > svg", [hidden(), is("0.75rem"), bs("0.75rem")]),
+						when("&:has(~ input:checked) > svg:first-child", block()),
+						when("&:has(~ input:indeterminate) > svg:last-child", block()),
 
-							'&[data-color="primary"]': {
-								"&:has(~ input:checked), &:has(~ input:indeterminate)": {
-									borderColor: "var(--ui-primary-bg-solid)",
-									backgroundColor: "var(--ui-primary-bg-solid)",
-									color: "var(--ui-primary-fg-on-solid)",
-								},
-							},
-							'&[data-color="neutral"]': {
-								"&:has(~ input:checked), &:has(~ input:indeterminate)": {
-									borderColor: "var(--ui-neutral-bg-solid)",
-									backgroundColor: "var(--ui-neutral-bg-solid)",
-									color: "var(--ui-neutral-fg-on-solid)",
-								},
-							},
-							'&[data-color="success"]': {
-								"&:has(~ input:checked), &:has(~ input:indeterminate)": {
-									borderColor: "var(--ui-success-bg-solid)",
-									backgroundColor: "var(--ui-success-bg-solid)",
-									color: "var(--ui-success-fg-on-solid)",
-								},
-							},
-							'&[data-color="warning"]': {
-								"&:has(~ input:checked), &:has(~ input:indeterminate)": {
-									borderColor: "var(--ui-warning-bg-solid)",
-									backgroundColor: "var(--ui-warning-bg-solid)",
-									color: "var(--ui-warning-fg-on-solid)",
-								},
-							},
-							'&[data-color="danger"]': {
-								"&:has(~ input:checked), &:has(~ input:indeterminate)": {
-									borderColor: "var(--ui-danger-bg-solid)",
-									backgroundColor: "var(--ui-danger-bg-solid)",
-									color: "var(--ui-danger-fg-on-solid)",
-								},
-							},
+						when(
+							'&[data-color="primary"]',
+							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
+								border("primary.solid"),
+								bg("primary.solid"),
+								fg("primary.onSolid"),
+							]),
+						),
+						when(
+							'&[data-color="neutral"]',
+							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
+								border("neutral.solid"),
+								bg("neutral.solid"),
+								fg("neutral.onSolid"),
+							]),
+						),
+						when(
+							'&[data-color="success"]',
+							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
+								border("success.solid"),
+								bg("success.solid"),
+								fg("success.onSolid"),
+							]),
+						),
+						when(
+							'&[data-color="warning"]',
+							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
+								border("warning.solid"),
+								bg("warning.solid"),
+								fg("warning.onSolid"),
+							]),
+						),
+						when(
+							'&[data-color="danger"]',
+							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
+								border("danger.solid"),
+								bg("danger.solid"),
+								fg("danger.onSolid"),
+							]),
+						),
 
-							"&:has(~ input:focus-visible)": {
-								outlineWidth: "2px",
-								outlineStyle: "solid",
-								outlineOffset: "2px",
-								outlineColor: "var(--ui-primary-ring)",
-								'&[data-color="neutral"]': { outlineColor: "var(--ui-neutral-ring)" },
-								'&[data-color="success"]': { outlineColor: "var(--ui-success-ring)" },
-								'&[data-color="warning"]': { outlineColor: "var(--ui-warning-ring)" },
-								'&[data-color="danger"]': { outlineColor: "var(--ui-danger-ring)" },
-							},
+						when("&:has(~ input:focus-visible)", [
+							outline({ color: "primary.ring", offset: 2 }),
+							when('&[data-color="neutral"]', outline("neutral.ring")),
+							when('&[data-color="success"]', outline("success.ring")),
+							when('&[data-color="warning"]', outline("warning.ring")),
+							when('&[data-color="danger"]', outline("danger.ring")),
+						]),
 
-							"&:has(~ input:disabled)": {
-								cursor: "not-allowed",
-								opacity: "0.5",
-							},
-						}),
+						when("&:has(~ input:disabled)", [cursor("not-allowed"), opacity(50)]),
+
 						parts?.box,
 					]}
 				>

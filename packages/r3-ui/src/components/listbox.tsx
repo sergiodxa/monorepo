@@ -13,6 +13,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, gap, items } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { maxBs, p, pb, pi } from "@pkg/u/size";
+import { active, hover, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -152,10 +159,10 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 				{...rest}
 				mix={[
 					attrs({ role: resolvedMultiple ? "group" : "radiogroup" }),
+					maxBs(60),
+					overflow("auto"),
+					p(1),
 					css({
-						maxBlockSize: "15rem",
-						overflow: "auto",
-						padding: "0.25rem",
 						outline: "none",
 					}),
 					mix,
@@ -219,35 +226,26 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 				{...rest}
 				mix={[
 					interactiveTransition(),
+					flex(),
+					items("center"),
+					gap(2),
+					rounded("md"),
+					pi(3),
+					pb(2),
+					fg("neutral.emphasis"),
+					hover(bg("neutral.bg-tint-hover")),
+					active(bg("neutral.bg-tint-pressed")),
+					when("&:has(input:focus)", bg("primary.tint")),
+					when('&:has(input:checked), &[aria-selected="true"]', [
+						bg("primary.solid"),
+						fg("primary.onSolid"),
+					]),
+					when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
 						cursor: "default",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 						outline: "none",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:has(input:focus)": {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-						'&:has(input:checked), &[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						'&:has(input:disabled), &[aria-disabled="true"]': {
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}
@@ -260,20 +258,7 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 					defaultChecked={defaultChecked}
 					disabled={disabled}
 					required={required}
-					mix={[
-						css({
-							position: "absolute",
-							inlineSize: "1px",
-							blockSize: "1px",
-							padding: "0",
-							margin: "-1px",
-							overflow: "hidden",
-							clip: "rect(0, 0, 0, 0)",
-							whiteSpace: "nowrap",
-							borderWidth: "0",
-						}),
-						parts?.input,
-					]}
+					mix={[visuallyHidden(), parts?.input]}
 				/>
 				{children}
 			</label>

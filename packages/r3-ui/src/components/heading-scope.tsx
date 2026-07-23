@@ -16,7 +16,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { contents } from "@pkg/u/layout";
 
 /**
  * Semantic depth, from `1` (`<h1>`) through `6` (`<h6>`), shared by every
@@ -157,8 +157,6 @@ export function HeadingScope(handle: Handle<HeadingScope.Props, HeadingScope.Con
 
 		handle.context.set({ level: resolved });
 
-		return (
-			<div {...rest} data-heading-level={resolved} mix={[css({ display: "contents" }), mix]} />
-		);
+		return <div {...rest} data-heading-level={resolved} mix={[contents(), mix]} />;
 	};
 }

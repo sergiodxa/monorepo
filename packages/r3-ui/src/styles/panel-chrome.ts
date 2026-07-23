@@ -9,7 +9,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { combine } from "@pkg/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -22,7 +24,7 @@ import type { CSSStyles } from "../utils/css-styles";
  * genuinely local to that host, rather than folding its properties into
  * another `css()` call.
  *
- * @returns A `css()` mixin ready for a host element's `mix` prop.
+ * @returns A mixin ready for a host element's `mix` prop.
  * @example
  * <div
  * 	mix={[
@@ -42,10 +44,5 @@ export function panelChrome<Node extends Element = Element>(): MixinDescriptor<
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return css<Node>({
-		borderRadius: "var(--ui-radius-lg, 0.5rem)",
-		borderWidth: "1px",
-		borderStyle: "solid",
-		borderColor: "var(--ui-neutral-border)",
-	});
+	return combine<Node>([rounded("lg"), border({ color: "neutral", width: 1 })]);
 }

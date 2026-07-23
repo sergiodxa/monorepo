@@ -12,6 +12,13 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
+import { bg, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { absolute, flex, flexCol, gap, inset, relative } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { is, maxBs, maxIs, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { textAlign, tracking, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -144,27 +151,24 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 				id={id}
 				data-slot="dialog"
 				mix={[
+					relative(),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					rounded("lg"),
+					is("full"),
+					maxIs("28rem"),
+					maxBs("90vh"),
+					gap(6),
+					p(6),
+					overflow("auto"),
+					/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
+					when("&[open]", flex()),
 					css({
-						position: "relative",
 						flexDirection: "column",
-						gap: "1.5rem",
-						padding: "1.5rem",
 						outline: "none",
 						container: `${CONTAINER_NAME} / inline-size`,
-						inlineSize: "100%",
-						maxInlineSize: "28rem",
-						maxBlockSize: "90vh",
-						overflow: "auto",
 						overscrollBehavior: "contain",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
 						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
-						"&[open]": {
-							display: "flex",
-						},
 
 						"&::backdrop": {
 							backgroundColor: "rgb(0 0 0 / 0.5)",
@@ -222,12 +226,11 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 				{...rest}
 				data-slot="header"
 				mix={[
+					flex(),
+					flexCol(),
+					gap(1.5),
+					textAlign("center"),
 					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.375rem",
-						textAlign: "center",
-
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 							textAlign: "start",
 						},
@@ -261,12 +264,12 @@ Dialog.Title = function DialogTitle(handle: Handle<Dialog.TitleProps>) {
 				{...rest}
 				data-slot="title"
 				mix={[
+					fg("neutral.emphasis"),
+					weight("semibold"),
+					tracking("tight"),
 					css({
 						fontSize: "1.125rem",
-						fontWeight: "600",
 						lineHeight: "1",
-						letterSpacing: "-0.025em",
-						color: "var(--ui-neutral-fg-emphasis)",
 					}),
 					mix,
 				]}
@@ -296,9 +299,9 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 				{...rest}
 				data-slot="description"
 				mix={[
+					fg("neutral.muted"),
 					css({
 						fontSize: "0.875rem",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}
@@ -332,10 +335,10 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 				{...rest}
 				data-slot="footer"
 				mix={[
+					flex(),
+					gap(2),
 					css({
-						display: "flex",
 						flexDirection: "column-reverse",
-						gap: "0.5rem",
 
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 							flexDirection: "row",
@@ -376,14 +379,7 @@ Dialog.Close = function DialogClose(handle: Handle<Dialog.CloseProps>) {
 				commandfor={commandfor}
 				command={resolvedCommand}
 				data-slot="close"
-				mix={[
-					css({
-						position: "absolute",
-						insetBlockStart: "1rem",
-						insetInlineEnd: "1rem",
-					}),
-					mix,
-				]}
+				mix={[absolute(), inset(4, 4, "auto", "auto"), mix]}
 			>
 				<XIcon aria-hidden size={16} />
 			</Button>

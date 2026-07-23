@@ -15,6 +15,11 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronDownIcon } from "@pkg/lucide-remix";
+import { bg, fg, outline } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { center, hstack, spacer, vstack } from "@pkg/u/layout";
+import { bs, is, pie } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -95,20 +100,7 @@ export function ComboBox(handle: Handle<ComboBox.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="combobox"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="combobox" mix={[vstack({ gap: 1 }), mix]} />;
 	};
 }
 
@@ -130,19 +122,7 @@ ComboBox.Group = function ComboBoxGroup(handle: Handle<ComboBox.GroupProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="combobox-group"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="combobox-group" mix={[hstack({ align: "center" }), mix]} />;
 	};
 };
 
@@ -167,18 +147,7 @@ ComboBox.Input = function ComboBoxInput(handle: Handle<ComboBox.InputProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<Input
-				{...rest}
-				mix={[
-					css({
-						flex: "1 1 auto",
-						paddingInlineEnd: "2.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <Input {...rest} mix={[spacer(), pie(9), mix]} />;
 	};
 };
 
@@ -214,31 +183,16 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 				{...rest}
 				mix={[
 					interactiveTransition(),
+					center(),
+					is("1.75rem"),
+					bs("1.75rem"),
+					rounded("sm"),
+					fg("neutral"),
+					when("& svg", [is("1rem"), bs("1rem")]),
+					when("&:hover", bg("neutral.bg-tint-hover")),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 0 })),
 					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
 						marginInlineStart: "-2rem",
-						inlineSize: "1.75rem",
-						blockSize: "1.75rem",
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						color: "var(--ui-neutral-fg)",
-
-						"& svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:focus-visible": {
-							outline: "none",
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 					}),
 					mix,
 				]}

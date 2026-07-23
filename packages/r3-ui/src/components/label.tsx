@@ -10,6 +10,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 /**
@@ -52,11 +54,11 @@ export function Label(handle: Handle<Label.Props>) {
 			<label
 				{...rest}
 				mix={[
+					weight("medium"),
+					fg("neutral.emphasis"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "1",
-						fontWeight: 500,
-						color: "var(--ui-neutral-fg-emphasis)",
 					}),
 					mix,
 				]}

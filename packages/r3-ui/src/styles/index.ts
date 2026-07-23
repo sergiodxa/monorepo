@@ -21,4 +21,3 @@ export * from "./panel-chrome";
 export * from "./range-thumb-appearance";
 export * from "./rtl-aware-gradient-direction";
 export * from "./semantic-color-panel";
-export * from "./visually-hidden-input";

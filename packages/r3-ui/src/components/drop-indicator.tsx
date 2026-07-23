@@ -11,7 +11,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { bg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { bs, is } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /**
  * Default {@link DropIndicator.Props.isDropTarget}, rendering the bar in
@@ -76,16 +80,11 @@ export function DropIndicator(handle: Handle<DropIndicator.Props>) {
 				data-drop-target={resolvedIsDropTarget ? "" : undefined}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					css({
-						inlineSize: "100%",
-						blockSize: "0.125rem",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						backgroundColor: "var(--ui-primary-ring)",
-
-						"&[data-drop-target]": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-						},
-					}),
+					is("full"),
+					bs("0.125rem"),
+					rounded("full"),
+					bg("primary.ring"),
+					when("&[data-drop-target]", bg("primary.solid")),
 					mix,
 				]}
 			/>

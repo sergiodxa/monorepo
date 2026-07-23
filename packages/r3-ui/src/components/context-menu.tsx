@@ -14,6 +14,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { mis, pb, pi, pie } from "@pkg/u/size";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { Menu } from "./menu";
@@ -27,14 +30,6 @@ import { Section } from "./section";
  * default.
  */
 const DEFAULT_SUB_PLACEMENT: NonNullable<Menu.Props["placement"]> = "right-start";
-
-/**
- * Inline-end padding {@link ContextMenu.SubTrigger} adds on top of
- * {@link Menu.Item}'s own row padding, leaving room for a trailing
- * indicator (a chevron icon, most often) signaling that the row opens a
- * nested surface rather than acting immediately.
- */
-const SUB_TRIGGER_PADDING_INLINE_END = "2rem";
 
 /**
  * Prop types for {@link ContextMenu} and its compound parts.
@@ -227,13 +222,13 @@ ContextMenu.Label = function ContextMenuLabel(handle: Handle<ContextMenu.LabelPr
 			<header
 				{...rest}
 				mix={[
+					pi(2),
+					pb(1),
+					weight("semibold"),
+					fg("neutral.muted"),
 					css({
-						paddingInline: "0.5rem",
-						paddingBlock: "0.25rem",
 						fontSize: "0.75rem",
 						lineHeight: "1rem",
-						fontWeight: 600,
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}
@@ -280,9 +275,7 @@ ContextMenu.SubTrigger = function ContextMenuSubTrigger(handle: Handle<ContextMe
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<Menu.Item {...rest} mix={[css({ paddingInlineEnd: SUB_TRIGGER_PADDING_INLINE_END }), mix]} />
-		);
+		return <Menu.Item {...rest} mix={[pie(8), mix]} />;
 	};
 };
 
@@ -365,11 +358,11 @@ ContextMenu.Shortcut = function ContextMenuShortcut(handle: Handle<ContextMenu.S
 			<span
 				{...rest}
 				mix={[
+					mis("auto"),
+					fg("neutral.muted"),
 					css({
-						marginInlineStart: "auto",
 						fontSize: "0.75rem",
 						lineHeight: "1rem",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}

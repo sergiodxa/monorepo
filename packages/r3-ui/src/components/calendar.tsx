@@ -13,7 +13,14 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
-import { attrs, css } from "remix/ui";
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { flex, inlineBlock, items, justify } from "@pkg/u/layout";
+import { bs, is, mbe, p, pbe } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { textAlign, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -241,15 +248,7 @@ export function Calendar(handle: Handle<Calendar.Props>) {
 			<div
 				{...rest}
 				data-slot="calendar"
-				mix={[
-					css({
-						display: "inline-block",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						padding: "0.75rem",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-					}),
-					mix,
-				]}
+				mix={[inlineBlock(), rounded("lg"), p(3), bg("neutral.tint"), mix]}
 			>
 				{children ?? (
 					<Input
@@ -297,15 +296,7 @@ Calendar.Header = function CalendarHeader(handle: Handle<Calendar.HeaderProps>) 
 			<header
 				{...rest}
 				data-slot="header"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						marginBlockEnd: "1rem",
-					}),
-					mix,
-				]}
+				mix={[flex(), items("center"), justify("between"), mbe(4), mix]}
 			/>
 		);
 	};
@@ -353,30 +344,17 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 				mix={[
 					interactiveTransition(),
 					focusRingPrimary(),
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						inlineSize: "2rem",
-						blockSize: "2rem",
-						borderRadius: "9999px",
-						color: "var(--ui-neutral-fg)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-						"& svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-						"&:dir(rtl) svg": {
-							transform: "scaleX(-1)",
-						},
-					}),
+					flex(),
+					items("center"),
+					justify("center"),
+					is(8),
+					bs(8),
+					rounded("full"),
+					fg("neutral"),
+					hover(bg("neutral.bg-tint-hover")),
+					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+					when("& svg", [is(4), bs(4)]),
+					raw({ "&:dir(rtl) svg": { transform: "scaleX(-1)" } }),
 					mix,
 				]}
 			>
@@ -416,30 +394,17 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 				mix={[
 					interactiveTransition(),
 					focusRingPrimary(),
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						inlineSize: "2rem",
-						blockSize: "2rem",
-						borderRadius: "9999px",
-						color: "var(--ui-neutral-fg)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-						"& svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-						"&:dir(rtl) svg": {
-							transform: "scaleX(-1)",
-						},
-					}),
+					flex(),
+					items("center"),
+					justify("center"),
+					is(8),
+					bs(8),
+					rounded("full"),
+					fg("neutral"),
+					hover(bg("neutral.bg-tint-hover")),
+					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+					when("& svg", [is(4), bs(4)]),
+					raw({ "&:dir(rtl) svg": { transform: "scaleX(-1)" } }),
 					mix,
 				]}
 			>
@@ -476,14 +441,11 @@ Calendar.Heading = function CalendarHeading(handle: Handle<Calendar.HeadingProps
 				{...rest}
 				data-slot="heading"
 				mix={[
-					css({
-						flex: "1 1 0%",
-						textAlign: "center",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: 600,
-						color: "var(--ui-neutral-fg-emphasis)",
-					}),
+					raw({ flex: "1 1 0%" }),
+					textAlign("center"),
+					weight("semibold"),
+					fg("neutral.emphasis"),
+					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
 					mix,
 				]}
 			/>
@@ -522,13 +484,7 @@ Calendar.Grid = function CalendarGrid(handle: Handle<Calendar.GridProps>) {
 			<table
 				{...rest}
 				data-slot="grid"
-				mix={[
-					css({
-						borderCollapse: "separate",
-						borderSpacing: "0.25rem",
-					}),
-					mix,
-				]}
+				mix={[raw({ borderCollapse: "separate", borderSpacing: "0.25rem" }), mix]}
 			/>
 		);
 	};
@@ -595,13 +551,10 @@ Calendar.HeaderCell = function CalendarHeaderCell(handle: Handle<Calendar.Header
 				data-slot="header-cell"
 				mix={[
 					attrs({ scope: "col" }),
-					css({
-						paddingBlockEnd: "0.5rem",
-						fontSize: "0.75rem",
-						lineHeight: "calc(1 / 0.75)",
-						fontWeight: 500,
-						color: "var(--ui-neutral-fg-muted)",
-					}),
+					pbe(2),
+					weight("medium"),
+					fg("neutral.muted"),
+					raw({ fontSize: "0.75rem", lineHeight: "calc(1 / 0.75)" }),
 					mix,
 				]}
 			/>
@@ -668,41 +621,24 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 				mix={[
 					interactiveTransition(),
 					focusRingPrimary(),
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						inlineSize: "2.25rem",
-						blockSize: "2.25rem",
-						cursor: "default",
-						borderRadius: "9999px",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							opacity: "0.3",
-						},
-						"&[data-unavailable]": {
-							textDecoration: "line-through",
-							color: "var(--ui-neutral-fg-muted)",
-						},
-						"&[data-outside-month]": {
-							color: "var(--ui-neutral-fg-muted)",
-						},
-						'&[aria-invalid="true"]': {
-							backgroundColor: "var(--ui-danger-bg-solid)",
-							color: "var(--ui-danger-fg-on-solid)",
-						},
-					}),
+					flex(),
+					items("center"),
+					justify("center"),
+					is(9),
+					bs(9),
+					cursor("default"),
+					rounded("full"),
+					fg("neutral.emphasis"),
+					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+					hover(bg("neutral.bg-tint-hover")),
+					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),
+					when("&[data-unavailable]", [
+						fg("neutral.muted"),
+						raw({ textDecoration: "line-through" }),
+					]),
+					when("&[data-outside-month]", fg("neutral.muted")),
+					when('&[aria-invalid="true"]', [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,
 				]}
 			/>

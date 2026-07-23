@@ -12,6 +12,25 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@pkg/lucide-remix";
+import {
+	bg,
+	center,
+	fg,
+	gap,
+	hover,
+	inlineFlex,
+	is,
+	items,
+	opacity,
+	overflow,
+	p,
+	pb,
+	pi,
+	relative,
+	textAlign,
+	weight,
+	when,
+} from "@pkg/u";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -176,8 +195,8 @@ export function Table(handle: Handle<Table.Props>) {
 				{...rest}
 				data-slot="table"
 				mix={[
+					is("100%"),
 					css({
-						inlineSize: "100%",
 						borderCollapse: "collapse",
 						fontSize: "0.875rem",
 					}),
@@ -212,10 +231,10 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 				{...rest}
 				data-slot="container"
 				mix={[
+					relative(),
+					is("100%"),
+					overflow("auto"),
 					css({
-						position: "relative",
-						inlineSize: "100%",
-						overflow: "auto",
 						container: `${CONTAINER_NAME} / inline-size`,
 					}),
 					mix,
@@ -338,27 +357,18 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 				data-slot="column"
 				mix={[
 					attrs({ scope: "col" }),
+					pi("1rem"),
+					pb("0.75rem"),
+					textAlign("start"),
+					weight(500),
+					fg("neutral"),
+					when('&[data-align="center"]', textAlign("center")),
+					when('&[data-align="end"]', textAlign("end")),
+					when("&[aria-sort]", when("&:hover", bg("neutral.tint"))),
 					css({
-						paddingInline: "1rem",
-						paddingBlock: "0.75rem",
-						textAlign: "start",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg)",
-
-						'&[data-align="center"]': {
-							textAlign: "center",
-						},
-						'&[data-align="end"]': {
-							textAlign: "end",
-						},
-
 						"&[aria-sort]": {
 							cursor: "pointer",
 							userSelect: "none",
-
-							"&:hover": {
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-							},
 						},
 					}),
 					mix,
@@ -369,10 +379,10 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 						href={href}
 						mix={[
 							focusRingPrimary(),
+							inlineFlex(),
+							items("center"),
+							gap("0.25rem"),
 							css({
-								display: "inline-flex",
-								alignItems: "center",
-								gap: "0.25rem",
 								color: "inherit",
 								textDecoration: "none",
 
@@ -386,9 +396,7 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 						{children}
 						{sortDirection === "ascending" && <ArrowUpIcon aria-hidden size={14} />}
 						{sortDirection === "descending" && <ArrowDownIcon aria-hidden size={14} />}
-						{!sortDirection && (
-							<ArrowUpDownIcon aria-hidden size={14} mix={[css({ opacity: "0.4" })]} />
-						)}
+						{!sortDirection && <ArrowUpDownIcon aria-hidden size={14} mix={[opacity(40)]} />}
 					</a>
 				) : (
 					children
@@ -426,14 +434,8 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 				data-slot="row"
 				mix={[
 					interactiveTransition(),
-					css({
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-						},
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-					}),
+					hover(bg("neutral.tint")),
+					when('&[aria-selected="true"]', bg("primary.tint")),
 					mix,
 				]}
 			/>
@@ -458,14 +460,7 @@ Table.Cell = function TableCell(handle: Handle<Table.CellProps>) {
 			<td
 				{...rest}
 				data-slot="cell"
-				mix={[
-					css({
-						paddingInline: "1rem",
-						paddingBlock: "0.75rem",
-						color: "var(--ui-neutral-fg-emphasis)",
-					}),
-					mix,
-				]}
+				mix={[pi("1rem"), pb("0.75rem"), fg("neutral.emphasis"), mix]}
 			/>
 		);
 	};
@@ -492,31 +487,18 @@ Table.LoadMore = function TableLoadMore(handle: Handle<Table.LoadMoreProps>) {
 
 		return (
 			<tr {...rest} data-slot="load-more" mix={[mix]}>
-				<td
-					colSpan={colSpan}
-					mix={[
-						css({
-							padding: "0",
-						}),
-						parts?.cell,
-					]}
-				>
+				<td colSpan={colSpan} mix={[p("0"), parts?.cell]}>
 					<a
 						href={href}
 						mix={[
 							focusRingPrimary(),
+							center(),
+							pb("1rem"),
+							fg("neutral.muted"),
+							hover(fg("neutral")),
 							css({
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								paddingBlock: "1rem",
 								fontSize: "0.875rem",
-								color: "var(--ui-neutral-fg-muted)",
 								textDecoration: "none",
-
-								"&:hover": {
-									color: "var(--ui-neutral-fg)",
-								},
 							}),
 							parts?.link,
 						]}

@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { pb } from "@pkg/u/size";
 
 /**
  * Props accepted by {@link Section}.
@@ -46,16 +46,6 @@ export function Section(handle: Handle<Section.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<section
-				{...rest}
-				mix={[
-					css({
-						paddingBlock: "0.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <section {...rest} mix={[pb("0.25rem"), mix]} />;
 	};
 }

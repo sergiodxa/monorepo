@@ -12,6 +12,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, interpolateSize, items } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { is, m, pb, pi } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { textAlign, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -107,9 +114,8 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 				{...rest}
 				mix={[
 					panelChrome(),
+					interpolateSize(),
 					css({
-						interpolateSize: "allow-keywords",
-
 						"&::details-content": {
 							overflow: "clip",
 							blockSize: "0",
@@ -160,7 +166,7 @@ Disclosure.Header = function DisclosureHeader(handle: Handle<Disclosure.HeaderPr
 		let Tag = TAG_BY_LEVEL[resolved];
 
 		return (
-			<Tag {...rest} data-heading-level={resolved} mix={[css({ margin: "0" }), mix]}>
+			<Tag {...rest} data-heading-level={resolved} mix={[m(0), mix]}>
 				{children}
 			</Tag>
 		);
@@ -194,19 +200,21 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 				{...rest}
 				mix={[
 					focusRingPrimary(),
+					flex(),
+					is("full"),
+					items("center"),
+					gap(2),
+					rounded("lg"),
+					pb(3),
+					pi(3),
+					textAlign("start"),
+					weight("medium"),
+					fg("neutral.emphasis"),
+					hover(bg("neutral.tint")),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "flex",
-						inlineSize: "100%",
-						alignItems: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						paddingBlock: "0.75rem",
-						paddingInline: "0.75rem",
-						textAlign: "start",
-						fontWeight: "500",
 						cursor: "pointer",
 						listStyle: "none",
-						color: "var(--ui-neutral-fg-emphasis)",
 						transitionProperty:
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
 						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -219,12 +227,8 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 							content: '""',
 						},
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-						},
 						'&[aria-disabled="true"]': {
 							cursor: "not-allowed",
-							opacity: 0.5,
 						},
 					}),
 					mix,
@@ -257,7 +261,7 @@ Disclosure.Panel = function DisclosurePanel(handle: Handle<Disclosure.PanelProps
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[css({ overflow: "hidden" }), mix]}>
+			<div {...rest} mix={[overflow(), mix]}>
 				{children}
 			</div>
 		);
@@ -299,10 +303,9 @@ Disclosure.Group = function DisclosureGroup(handle: Handle<Disclosure.GroupProps
 			<div
 				{...rest}
 				mix={[
+					flex(),
+					flexCol(),
 					css({
-						display: "flex",
-						flexDirection: "column",
-
 						"& > details": {
 							borderRadius: "0",
 							borderInlineWidth: "0",

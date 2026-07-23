@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { tabularNums, textAlign, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { Input } from "./input";
@@ -118,12 +119,12 @@ export function OtpField(handle: Handle<OtpField.Props>) {
 				maxLength={resolvedLength}
 				data-slot="otp-field"
 				mix={[
+					textAlign("center"),
+					weight(500),
+					tabularNums(),
 					css({
-						textAlign: "center",
 						fontSize: "1rem",
 						lineHeight: "1.5",
-						fontWeight: "500",
-						fontVariantNumeric: "tabular-nums",
 					}),
 					mix,
 				]}

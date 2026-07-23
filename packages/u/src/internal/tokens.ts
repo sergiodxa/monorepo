@@ -43,6 +43,10 @@ const COLOR_PROPERTY_ALIASES: Record<string, string> = {
  * @example color("brand", "border") // "var(--ui-brand-border)"
  */
 export function color(value: ColorValue | (string & {}), defaultProperty?: string): string {
+	if (value === "transparent") return "transparent";
+	if (value === "inherit") return "inherit";
+	if (value === "currentColor") return "currentColor";
+
 	if (value.startsWith("color.")) {
 		let [, name, shade] = value.split(".");
 		return varUtility(`ui-color-${name}-${shade}`);

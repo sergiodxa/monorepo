@@ -12,6 +12,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { block } from "@pkg/u/layout";
+import { bs, is, pb, pi } from "@pkg/u/size";
+import { focusVisible, hover, invalid, when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -98,67 +103,46 @@ export function Input(handle: Handle<Input.Props>) {
 				data-color={resolvedColor}
 				mix={[
 					interactiveTransition(),
+					block(),
+					is("full"),
+					bs(10),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					pi(3),
+					pb(2),
+					when("&::placeholder", fg("neutral.muted")),
+					hover(border("neutral.strong")),
+					when("&:focus", border("neutral.strong")),
+					css({ "&:focus": { outline: "none" } }),
+					focusVisible([
+						border("neutral.strong"),
+						outline({ color: "neutral.ring", offset: 0 }),
+						when('&[data-color="primary"]', [
+							border("primary.strong"),
+							outline({ color: "primary.ring", offset: 0 }),
+						]),
+						when('&[data-color="success"]', [
+							border("success.strong"),
+							outline({ color: "success.ring", offset: 0 }),
+						]),
+						when('&[data-color="warning"]', [
+							border("warning.strong"),
+							outline({ color: "warning.ring", offset: 0 }),
+						]),
+						when('&[data-color="danger"]', [
+							border("danger.strong"),
+							outline({ color: "danger.ring", offset: 0 }),
+						]),
+					]),
+					invalid([border("danger.strong"), outline({ color: "danger.ring", offset: 0 })]),
+					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover")]),
 					css({
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "2.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 
-						"&::placeholder": {
-							color: "var(--ui-neutral-fg-muted)",
-						},
-
-						"&:hover": {
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
-						"&:focus": {
-							outline: "none",
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-neutral-border-strong)",
-							outlineColor: "var(--ui-neutral-ring)",
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border-strong)",
-								outlineColor: "var(--ui-primary-ring)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border-strong)",
-								outlineColor: "var(--ui-success-ring)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border-strong)",
-								outlineColor: "var(--ui-warning-ring)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border-strong)",
-								outlineColor: "var(--ui-danger-ring)",
-							},
-						},
-						'&[aria-invalid="true"], &:user-invalid': {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-danger-border-strong)",
-							outlineColor: "var(--ui-danger-ring)",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
+						"&:disabled": { cursor: "not-allowed" },
 					}),
 					mix,
 				]}

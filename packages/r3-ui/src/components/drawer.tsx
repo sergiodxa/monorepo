@@ -13,6 +13,9 @@
 
 import type { Handle } from "remix/ui";
 
+import { rounded } from "@pkg/u/effects";
+import { fixed } from "@pkg/u/layout";
+import { m } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -117,10 +120,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 				{...rest}
 				data-placement={resolvedPlacement}
 				mix={[
+					fixed(),
+					m(0),
+					rounded("none"),
 					css({
-						position: "fixed",
-						margin: "0",
-						borderRadius: "0",
 						willChange: "transform",
 						transitionProperty: "transform, display, overlay",
 						transitionDuration: `${durations.slow}ms`,

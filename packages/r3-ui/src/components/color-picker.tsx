@@ -25,6 +25,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { hstack, inlineFlex, relative, vstack } from "@pkg/u/layout";
+import { bs, is, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -258,18 +263,7 @@ export function ColorPicker(handle: Handle<ColorPicker.Props>) {
 		}
 
 		return (
-			<div
-				{...rest}
-				data-slot="color-picker"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="color-picker" mix={[vstack({ gap: 1 }), mix]}>
 				{children}
 			</div>
 		);
@@ -307,11 +301,7 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 				data-slot="group"
 				mix={[
 					focusRingPrimary({ when: "&:focus-within" }),
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
-					}),
+					hstack({ gap: 2, align: "center" }),
 					mix,
 				]}
 			/>
@@ -367,32 +357,25 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 				data-shape={resolvedShape}
 				mix={[
 					focusRingPrimary(),
+					relative(),
+					inlineFlex(),
+					is("var(--ui-color-picker-trigger-size, 2.25rem)"),
+					bs("var(--ui-color-picker-trigger-size, 2.25rem)"),
+					rounded("md"),
+					cursor("pointer"),
+					transition("box-shadow"),
+					when('&[data-shape="circle"]', rounded("full")),
+					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 					css({
-						position: "relative",
-						display: "inline-flex",
 						flexShrink: 0,
 						padding: "0",
-						inlineSize: "var(--ui-color-picker-trigger-size, 2.25rem)",
-						blockSize: "var(--ui-color-picker-trigger-size, 2.25rem)",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						cursor: "pointer",
-						transitionProperty: "box-shadow",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
 
 						'&[data-shape="square"]': {
 							borderRadius: "0",
 						},
-						'&[data-shape="circle"]': {
-							borderRadius: "var(--ui-radius-full, 9999px)",
-						},
 
 						"&:hover": {
 							boxShadow: "0 0 0 2px var(--ui-neutral-border)",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: 0.5,
 						},
 
 						"@media (prefers-reduced-motion: reduce)": {
@@ -402,14 +385,7 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 					mix,
 				]}
 			>
-				<ColorSwatch
-					value={value}
-					shape={resolvedShape}
-					mix={css({
-						inlineSize: "100%",
-						blockSize: "100%",
-					})}
-				/>
+				<ColorSwatch value={value} shape={resolvedShape} mix={[is("full"), bs("full")]} />
 			</button>
 		);
 	};
@@ -473,13 +449,9 @@ ColorPicker.Dialog = function ColorPickerDialog(handle: Handle<ColorPicker.Dialo
 				placement={resolvedPlacement}
 				mix={[
 					attrs({ role: DEFAULT_DIALOG_ROLE }),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "1rem",
-						padding: "1rem",
-						outline: "none",
-					}),
+					vstack({ gap: 4 }),
+					p(4),
+					css({ outline: "none" }),
 					mix,
 				]}
 			>

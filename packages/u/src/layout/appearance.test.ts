@@ -1,5 +1,6 @@
 /**
- * Unit tests for `appearance()`'s default and explicit `appearance` value.
+ * Unit tests for `appearance()`'s default and explicit `appearance` value,
+ * mirrored onto both vendor-prefixed properties.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,11 +17,19 @@ function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
 }
 
 describe("appearance", () => {
-	test("defaults to none", () => {
-		expect(styles(appearance())).toEqual({ appearance: "none" });
+	test("defaults to none across the standard property and both vendor prefixes", () => {
+		expect(styles(appearance())).toEqual({
+			WebkitAppearance: "none",
+			MozAppearance: "none",
+			appearance: "none",
+		});
 	});
 
-	test("accepts an explicit value", () => {
-		expect(styles(appearance("auto"))).toEqual({ appearance: "auto" });
+	test("accepts an explicit value, mirrored the same way", () => {
+		expect(styles(appearance("auto"))).toEqual({
+			WebkitAppearance: "auto",
+			MozAppearance: "auto",
+			appearance: "auto",
+		});
 	});
 });

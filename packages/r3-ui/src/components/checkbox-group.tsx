@@ -13,7 +13,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { flexRow, gap, vstack } from "@pkg/u/layout";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -107,19 +110,9 @@ export function CheckboxGroup(handle: Handle<CheckboxGroup.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.5rem",
-
-						'&[data-orientation="horizontal"]': {
-							flexDirection: "row",
-							gap: "1rem",
-						},
-						'&[aria-invalid="true"]': {
-							color: "var(--ui-danger-fg)",
-						},
-					}),
+					vstack({ gap: 2 }),
+					when('&[data-orientation="horizontal"]', [flexRow(), gap(4)]),
+					when('&[aria-invalid="true"]', fg("danger")),
 					mix,
 				]}
 			/>

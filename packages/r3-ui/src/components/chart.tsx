@@ -36,6 +36,23 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg, outline } from "@pkg/u/color";
+import { opacity, rounded, shadow } from "@pkg/u/effects";
+import {
+	absolute,
+	block,
+	flex,
+	flexWrap,
+	gap,
+	inlineBlock,
+	inlineFlex,
+	items,
+	relative,
+} from "@pkg/u/layout";
+import { bs, is, pi } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { focusVisible, hover, when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import type { Point } from "../utils/chart-path";
@@ -175,12 +192,10 @@ function ChartLegend(handle: Handle<Chart.LegendProps>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_LEGEND_ROLE }),
-					css({
-						display: "flex",
-						flexWrap: "wrap",
-						alignItems: "center",
-						gap: "1rem",
-					}),
+					flex(),
+					flexWrap(),
+					items("center"),
+					gap(4),
 					mix,
 				]}
 			/>
@@ -224,26 +239,21 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 			<label
 				data-slot="legend-item"
 				mix={[
+					relative(),
+					inlineFlex(),
+					items("center"),
+					fg("neutral"),
+					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
 					css({
-						position: "relative",
-						display: "inline-flex",
-						alignItems: "center",
 						gap: "0.5rem",
 						cursor: "default",
 						userSelect: "none",
 						fontSize: "0.875rem",
 						lineHeight: "1.25",
-						color: "var(--ui-neutral-fg)",
 						transitionProperty: "opacity, color",
 						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
 						transitionDuration: "150ms",
 
-						"&:has(input:focus-visible)": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 						"&:has(input:not(:checked))": {
 							opacity: "0.5",
 							textDecorationLine: "line-through",
@@ -264,12 +274,12 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					data-color={String(color)}
 					mix={[
 						chartPalette("color"),
+						inlineBlock(),
+						is(2.5),
+						bs(2.5),
+						rounded("full"),
 						css({
-							display: "inline-block",
 							flexShrink: 0,
-							inlineSize: "0.625rem",
-							blockSize: "0.625rem",
-							borderRadius: "var(--ui-radius-full, 9999px)",
 							backgroundColor: "currentColor",
 						}),
 						parts?.swatch,
@@ -808,11 +818,9 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 					// itself. Any further chart root sharing this same
 					// `data-color` contract needs this identical mixin.
 					legendToggle(),
-					css({
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "auto",
-					}),
+					block(),
+					is("full"),
+					bs("auto"),
 					mix,
 				]}
 			/>
@@ -855,17 +863,11 @@ function renderChartMarkers(
 				tabIndex={0}
 				role="img"
 				mix={[
+					focusVisible(outline({ color: "primary.ring", offset: 2 })),
 					css({
 						fill: "currentColor",
 						r: "var(--ui-chart-point-radius, 0.1875rem)",
 						cursor: "default",
-
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 					}),
 					markerMix,
 				]}
@@ -994,24 +996,24 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_TOOLTIP_ARIA_HIDDEN }),
+					absolute(),
+					flex(),
+					items("center"),
+					rounded("md"),
+					pi(2),
+					fg("neutral.onSolid"),
+					bg("neutral.solid"),
+					shadow("md"),
+					z(10),
 					css({
-						position: "absolute",
 						left: "var(--ui-chart-tooltip-x, 0px)",
 						top: "var(--ui-chart-tooltip-y, 0px)",
 						translate: "-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))",
-						zIndex: 10,
-						display: "flex",
-						alignItems: "center",
 						gap: "0.375rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.5rem",
 						paddingBlock: "0.375rem",
 						fontSize: "0.8125rem",
 						lineHeight: "1.2",
 						whiteSpace: "nowrap",
-						backgroundColor: "var(--ui-neutral-bg-solid)",
-						color: "var(--ui-neutral-fg-on-solid)",
-						boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
 						pointerEvents: "none",
 
 						opacity: "0",
@@ -1062,12 +1064,12 @@ ChartTooltip.Swatch = function ChartTooltipSwatch(handle: Handle<Chart.Tooltip.S
 				data-color={String(resolvedColor)}
 				mix={[
 					chartPalette("backgroundColor"),
+					inlineBlock(),
+					is(2),
+					bs(2),
+					rounded("full"),
 					css({
-						display: "inline-block",
 						flexShrink: "0",
-						inlineSize: "0.5rem",
-						blockSize: "0.5rem",
-						borderRadius: "var(--ui-radius-full, 9999px)",
 					}),
 					mix,
 				]}
@@ -1090,7 +1092,7 @@ ChartTooltip.Label = function ChartTooltipLabel(handle: Handle<Chart.Tooltip.Lab
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} data-slot="label" mix={[css({ opacity: "0.75" }), mix]} />;
+		return <span {...rest} data-slot="label" mix={[opacity(75), mix]} />;
 	};
 };
 
@@ -1109,7 +1111,7 @@ ChartTooltip.Value = function ChartTooltipValue(handle: Handle<Chart.Tooltip.Val
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} data-slot="value" mix={[css({ fontWeight: "600" }), mix]} />;
+		return <span {...rest} data-slot="value" mix={[weight("semibold"), mix]} />;
 	};
 };
 
@@ -1265,11 +1267,9 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 					// every further independent chart root sharing this
 					// `data-color` contract needs the same mixin.
 					legendToggle(),
-					css({
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "auto",
-					}),
+					block(),
+					is("full"),
+					bs("auto"),
 					mix,
 				]}
 			>
@@ -1298,15 +1298,9 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 							tabIndex={0}
 							role="img"
 							mix={[
+								focusVisible(outline({ color: "primary.ring", offset: 2 })),
 								css({
 									cursor: "default",
-
-									"&:focus-visible": {
-										outlineWidth: "2px",
-										outlineStyle: "solid",
-										outlineOffset: "2px",
-										outlineColor: "var(--ui-primary-ring)",
-									},
 								}),
 								parts?.segment,
 							]}
@@ -1442,11 +1436,9 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 					// every further independent chart root sharing this
 					// `data-color` contract needs the same mixin.
 					legendToggle(),
-					css({
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "auto",
-					}),
+					block(),
+					is("full"),
+					bs("auto"),
 					mix,
 				]}
 			>
@@ -1495,21 +1487,13 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 								tabIndex={0}
 								role="img"
 								mix={[
+									hover(opacity(85)),
+									focusVisible(outline({ color: "primary.ring", offset: 2 })),
 									css({
 										cursor: "default",
 										transitionProperty: "opacity",
 										transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
 										transitionDuration: "150ms",
-
-										"&:hover": {
-											opacity: "0.85",
-										},
-										"&:focus-visible": {
-											outlineWidth: "2px",
-											outlineStyle: "solid",
-											outlineOffset: "2px",
-											outlineColor: "var(--ui-primary-ring)",
-										},
 
 										"@media (prefers-reduced-motion: reduce)": {
 											transitionDuration: "0s",

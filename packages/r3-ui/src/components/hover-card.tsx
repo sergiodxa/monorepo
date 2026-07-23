@@ -16,6 +16,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { absolute, contents, inlineBlock, relative } from "@pkg/u/layout";
+import { p } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import type { AnchorPlacement } from "../utils/placement";
@@ -108,10 +111,9 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 				data-slot="hover-card"
 				{...rest}
 				mix={[
+					relative(),
+					inlineBlock(),
 					css({
-						position: "relative",
-						display: "inline-block",
-
 						"@media (hover: hover)": {
 							'&:hover [data-slot="hover-card-content"]': {
 								visibility: "visible",
@@ -155,7 +157,7 @@ HoverCard.Trigger = function HoverCardTrigger(handle: Handle<HoverCard.TriggerPr
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<span data-slot="hover-card-trigger" {...rest} mix={[css({ display: "contents" }), mix]}>
+			<span data-slot="hover-card-trigger" {...rest} mix={[contents(), mix]}>
 				{children}
 			</span>
 		);
@@ -215,16 +217,15 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 				{...rest}
 				mix={[
 					floatingSurface(),
+					absolute(),
+					p(4),
+					fg("neutral.emphasis"),
 					css({
-						position: "absolute",
 						zIndex: "var(--ui-hover-card-z, 50)",
 
 						inlineSize: "18rem",
-						paddingBlock: "1rem",
-						paddingInline: "1rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-emphasis)",
 
 						visibility: "hidden",
 						opacity: "0",

@@ -12,6 +12,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { flex, items } from "@pkg/u/layout";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -76,10 +77,9 @@ export function Group(handle: Handle<Group.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
 					focusRingPrimary({ when: "&:has(:focus-visible)" }),
+					flex(),
+					items("center"),
 					css({
-						display: "flex",
-						alignItems: "center",
-
 						'&[aria-invalid="true"]': {
 							outlineColor: "var(--ui-danger-ring)",
 						},

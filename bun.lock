@@ -328,6 +328,7 @@
         "@pkg/r3-ui": "workspace:*",
         "@pkg/r3-ui-router": "workspace:*",
         "@pkg/result": "workspace:*",
+        "@pkg/u": "workspace:*",
         "remix": "3.0.0-beta.5",
       },
       "devDependencies": {
@@ -767,6 +768,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@pkg/lucide-remix": "workspace:*",
+        "@pkg/u": "workspace:*",
         "remix": "3.0.0-beta.5",
       },
       "devDependencies": {

@@ -10,7 +10,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { gap, inlineFlex, items, shrink } from "@pkg/u/layout";
+import { bs, is, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { leading, nowrap, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -91,105 +98,62 @@ export function Badge(handle: Handle<Badge.Props>) {
 				data-variant={resolvedVariant}
 				{...rest}
 				mix={[
-					css({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.25rem",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						borderStyle: "solid",
-						borderWidth: "1px",
-						paddingInline: "0.625rem",
-						paddingBlock: "0.125rem",
-						fontSize: "0.75rem",
-						lineHeight: "1",
-						fontWeight: "600",
-						whiteSpace: "nowrap",
-						userSelect: "none",
-						transitionProperty:
-							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
-
-						'&[data-variant="default"]': {
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-bg-solid)",
-								backgroundColor: "var(--ui-primary-bg-solid)",
-								color: "var(--ui-primary-fg-on-solid)",
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-bg-solid)",
-								backgroundColor: "var(--ui-neutral-bg-solid)",
-								color: "var(--ui-neutral-fg-on-solid)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-bg-solid)",
-								backgroundColor: "var(--ui-success-bg-solid)",
-								color: "var(--ui-success-fg-on-solid)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-bg-solid)",
-								backgroundColor: "var(--ui-warning-bg-solid)",
-								color: "var(--ui-warning-fg-on-solid)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-bg-solid)",
-								backgroundColor: "var(--ui-danger-bg-solid)",
-								color: "var(--ui-danger-fg-on-solid)",
-							},
-						},
-
-						'&[data-variant="secondary"]': {
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border)",
-								backgroundColor: "var(--ui-primary-bg-tint)",
-								color: "var(--ui-primary-fg)",
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-border)",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								color: "var(--ui-neutral-fg)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border)",
-								backgroundColor: "var(--ui-success-bg-tint)",
-								color: "var(--ui-success-fg)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border)",
-								backgroundColor: "var(--ui-warning-bg-tint)",
-								color: "var(--ui-warning-fg)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border)",
-								backgroundColor: "var(--ui-danger-bg-tint)",
-								color: "var(--ui-danger-fg)",
-							},
-						},
-
-						'&[data-variant="outline"]': {
-							backgroundColor: "transparent",
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border-strong)",
-								color: "var(--ui-primary-fg)",
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-border)",
-								color: "var(--ui-neutral-fg)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border-strong)",
-								color: "var(--ui-success-fg)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border-strong)",
-								color: "var(--ui-warning-fg)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border-strong)",
-								color: "var(--ui-danger-fg)",
-							},
-						},
-					}),
+					inlineFlex(),
+					items("center"),
+					gap(1),
+					rounded("full"),
+					border({ width: 1 }),
+					pi(2.5),
+					pb(0.5),
+					leading(1),
+					weight("semibold"),
+					nowrap(),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					raw({ fontSize: "0.75rem", userSelect: "none" }),
+					when('&[data-variant="default"]', [
+						when('&[data-color="primary"]', [
+							bg("primary.solid"),
+							fg("primary.onSolid"),
+							border("primary.solid"),
+						]),
+						when('&[data-color="neutral"]', [
+							bg("neutral.solid"),
+							fg("neutral.onSolid"),
+							border("neutral.solid"),
+						]),
+						when('&[data-color="success"]', [
+							bg("success.solid"),
+							fg("success.onSolid"),
+							border("success.solid"),
+						]),
+						when('&[data-color="warning"]', [
+							bg("warning.solid"),
+							fg("warning.onSolid"),
+							border("warning.solid"),
+						]),
+						when('&[data-color="danger"]', [
+							bg("danger.solid"),
+							fg("danger.onSolid"),
+							border("danger.solid"),
+						]),
+					]),
+					when('&[data-variant="secondary"]', [
+						when('&[data-color="primary"]', [bg("primary.tint"), fg("primary"), border("primary")]),
+						when('&[data-color="neutral"]', [bg("neutral.tint"), fg("neutral"), border("neutral")]),
+						when('&[data-color="success"]', [bg("success.tint"), fg("success"), border("success")]),
+						when('&[data-color="warning"]', [bg("warning.tint"), fg("warning"), border("warning")]),
+						when('&[data-color="danger"]', [bg("danger.tint"), fg("danger"), border("danger")]),
+					]),
+					when('&[data-variant="outline"]', [
+						raw({ backgroundColor: "transparent" }),
+						when('&[data-color="primary"]', [border("primary.strong"), fg("primary")]),
+						when('&[data-color="neutral"]', [border("neutral"), fg("neutral")]),
+						when('&[data-color="success"]', [border("success.strong"), fg("success")]),
+						when('&[data-color="warning"]', [border("warning.strong"), fg("warning")]),
+						when('&[data-color="danger"]', [border("danger.strong"), fg("danger")]),
+					]),
 					mix,
 				]}
 			/>
@@ -217,17 +181,9 @@ Badge.Icon = function BadgeIcon(handle: Handle<Badge.IconProps>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					css({
-						display: "inline-flex",
-						flexShrink: 0,
-
-						"& > svg": {
-							inlineSize: "0.75rem",
-							blockSize: "0.75rem",
-							flexShrink: 0,
-							color: "currentColor",
-						},
-					}),
+					inlineFlex(),
+					shrink(0),
+					when("& > svg", [is(3), bs(3), shrink(0), raw({ color: "currentColor" })]),
 					mix,
 				]}
 			/>
@@ -248,6 +204,6 @@ Badge.Text = function BadgeText(handle: Handle<Badge.TextProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[css({ lineHeight: "1" }), mix]} />;
+		return <span {...rest} mix={[leading(1), mix]} />;
 	};
 };

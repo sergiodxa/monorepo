@@ -17,7 +17,8 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@pkg/r3-ui/mixins";
-import { focusRingByColor, panelChrome, visuallyHidden } from "@pkg/r3-ui/styles";
+import { focusRingByColor, panelChrome } from "@pkg/r3-ui/styles";
+import { visuallyHidden } from "@pkg/u/a11y";
 import { css, on } from "remix/ui";
 
 import type { Album } from "../data/types";

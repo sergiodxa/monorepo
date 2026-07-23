@@ -13,6 +13,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { pb } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 /**
@@ -38,11 +40,11 @@ export function SentinelRow(handle: Handle<TagProps<"div">>) {
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
+					pb("0.5rem"),
+					fg("neutral.muted"),
 					mix,
 				]}
 			/>

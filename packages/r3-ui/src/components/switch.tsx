@@ -11,6 +11,21 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import {
+	absolute,
+	appearance,
+	bg,
+	bs,
+	focusVisible,
+	inlineBlock,
+	is,
+	m,
+	opacity,
+	outline,
+	relative,
+	rounded,
+	when,
+} from "@pkg/u";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -79,18 +94,29 @@ export function Switch(handle: Handle<Switch.Props>) {
 				aria-checked={resolvedChecked}
 				mix={[
 					attrs({ switch: DEFAULT_SWITCH_ATTRIBUTE }),
+					appearance(),
+					relative(),
+					inlineBlock(),
+					m("0"),
+					is("var(--ui-switch-track-inline-size, 2.75rem)"),
+					bs("var(--ui-switch-track-block-size, 1.5rem)"),
+					rounded("full"),
+					bg("neutral.border"),
+					when("&::before", [
+						absolute(),
+						is("var(--ui-switch-thumb-size, 1.25rem)"),
+						bs("var(--ui-switch-thumb-size, 1.25rem)"),
+						rounded("full"),
+						bg("primary.onSolid"),
+					]),
+					when("&:checked", bg("primary.solid")),
+					when("&:active", bg("neutral.strong")),
+					when("&:checked:active", bg("primary.bg-solid-hover")),
+					focusVisible(outline({ color: "primary.ring", offset: 2 })),
+					when("&:disabled", opacity(50)),
 					css({
-						WebkitAppearance: "none",
-						appearance: "none",
-						position: "relative",
-						display: "inline-block",
 						verticalAlign: "middle",
 						flexShrink: 0,
-						margin: "0",
-						inlineSize: "var(--ui-switch-track-inline-size, 2.75rem)",
-						blockSize: "var(--ui-switch-track-block-size, 1.5rem)",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						backgroundColor: "var(--ui-neutral-border)",
 						cursor: "pointer",
 						transitionProperty: "background-color",
 						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -98,13 +124,8 @@ export function Switch(handle: Handle<Switch.Props>) {
 
 						"&::before": {
 							content: '""',
-							position: "absolute",
 							insetBlockStart: "var(--ui-switch-thumb-inset, 0.125rem)",
 							insetInlineStart: "var(--ui-switch-thumb-inset, 0.125rem)",
-							inlineSize: "var(--ui-switch-thumb-size, 1.25rem)",
-							blockSize: "var(--ui-switch-thumb-size, 1.25rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundColor: "var(--ui-primary-fg-on-solid)",
 							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 							transitionProperty: "inset-inline-start, scale",
 							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -112,8 +133,6 @@ export function Switch(handle: Handle<Switch.Props>) {
 						},
 
 						"&:checked": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-
 							"&::before": {
 								insetInlineStart:
 									"calc(var(--ui-switch-track-inline-size, 2.75rem) - var(--ui-switch-thumb-size, 1.25rem) - var(--ui-switch-thumb-inset, 0.125rem))",
@@ -121,27 +140,13 @@ export function Switch(handle: Handle<Switch.Props>) {
 						},
 
 						"&:active": {
-							backgroundColor: "var(--ui-neutral-border-strong)",
-
 							"&::before": {
 								scale: "0.95",
 							},
 						},
 
-						"&:checked:active": {
-							backgroundColor: "var(--ui-primary-bg-solid-hover)",
-						},
-
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-
 						"&:disabled": {
 							cursor: "not-allowed",
-							opacity: 0.5,
 						},
 
 						"@media (prefers-reduced-motion: reduce)": {

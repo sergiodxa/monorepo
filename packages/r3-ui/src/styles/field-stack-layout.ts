@@ -10,7 +10,7 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { vstack } from "@pkg/u/layout";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -36,9 +36,5 @@ export function fieldStackLayout<Node extends Element = Element>(): MixinDescrip
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return css<Node>({
-		display: "flex",
-		flexDirection: "column",
-		gap: "0.25rem",
-	});
+	return vstack<Node>({ gap: "0.25rem" });
 }

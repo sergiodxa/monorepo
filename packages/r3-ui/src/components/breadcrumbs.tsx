@@ -14,7 +14,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
+import { flex, gap, items } from "@pkg/u/layout";
+import { m, mi, p } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -86,19 +91,7 @@ export function Breadcrumbs(handle: Handle<Breadcrumbs.Props>) {
 			'Breadcrumbs: needs an "aria-label" or "aria-labelledby" identifying this navigation landmark for assistive technology.',
 		);
 
-		return (
-			<nav
-				{...rest}
-				data-slot="breadcrumbs"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <nav {...rest} data-slot="breadcrumbs" mix={[flex(), items("center"), mix]} />;
 	};
 }
 
@@ -124,17 +117,7 @@ Breadcrumbs.List = function BreadcrumbsList(handle: Handle<Breadcrumbs.ListProps
 			<ol
 				{...rest}
 				data-slot="list"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.25rem",
-						listStyle: "none",
-						margin: "0",
-						padding: "0",
-					}),
-					mix,
-				]}
+				mix={[flex(), items("center"), gap(1), m(0), p(0), raw({ listStyle: "none" }), mix]}
 			/>
 		);
 	};
@@ -162,18 +145,14 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
 				{...rest}
 				data-slot="item"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.25rem",
-
-						"&:not(:last-child)::after": {
-							content: '"›"',
-							marginInline: "0.25rem",
-							fontSize: "0.875rem",
-							color: "var(--ui-neutral-fg-muted)",
-						},
-					}),
+					flex(),
+					items("center"),
+					gap(1),
+					when("&:not(:last-child)::after", [
+						mi(1),
+						fg("neutral.muted"),
+						raw({ content: '"›"', fontSize: "0.875rem" }),
+					]),
 					mix,
 				]}
 			/>
@@ -216,24 +195,13 @@ Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps
 				{...rest}
 				data-slot="link"
 				mix={[
-					css({
-						fontSize: "0.875rem",
-						textDecorationLine: "none",
-
-						"&:hover": {
-							textDecorationLine: "none",
-						},
-
-						'&[data-color="neutral"]': {
-							color: "var(--ui-neutral-fg-muted)",
-							"&:hover": { color: "var(--ui-neutral-fg)" },
-						},
-
-						'&[aria-current]:not([aria-current="false"])': {
-							fontWeight: "500",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-					}),
+					raw({ fontSize: "0.875rem", textDecorationLine: "none" }),
+					hover(raw({ textDecorationLine: "none" })),
+					when('&[data-color="neutral"]', [fg("neutral.muted"), when("&:hover", fg("neutral"))]),
+					when('&[aria-current]:not([aria-current="false"])', [
+						weight("medium"),
+						fg("neutral.emphasis"),
+					]),
 					mix,
 				]}
 			/>

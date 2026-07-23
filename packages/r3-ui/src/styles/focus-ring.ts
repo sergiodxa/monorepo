@@ -4,15 +4,17 @@
  * ring, and {@link focusRingByColor} for a ring that reads a host's own
  * `data-color` attribute and rings in that same semantic color. Each
  * declares a `2px` solid outline offset `2px` from the host under a `when`
- * selector defaulting to `"&:focus-visible"`, alongside whatever `css()`
- * call carries that host's own remaining styling.
+ * selector defaulting to `"&:focus-visible"`, built from `@pkg/u`'s own
+ * `outline()` recipe and `when()` selector wrapper rather than a hand-rolled
+ * declaration object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { outline } from "@pkg/u/color";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -63,17 +65,9 @@ const DEFAULT_WHEN = "&:focus-visible";
 export function focusRingPrimary<Node extends Element = Element>(
 	options: FocusRingPrimary.Options = {},
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
-	let when = options.when ?? DEFAULT_WHEN;
+	let whenSelector = options.when ?? DEFAULT_WHEN;
 
-	let declarations: CSSStyles = {};
-	declarations[when] = {
-		outlineWidth: "2px",
-		outlineStyle: "solid",
-		outlineOffset: "2px",
-		outlineColor: "var(--ui-primary-ring)",
-	};
-
-	return css<Node>(declarations);
+	return when<Node>(whenSelector, outline<Node>({ color: "primary.ring", offset: 2 }));
 }
 
 /**
@@ -128,19 +122,13 @@ export namespace FocusRingByColor {
 export function focusRingByColor<Node extends Element = Element>(
 	options: FocusRingByColor.Options = {},
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
-	let when = options.when ?? DEFAULT_WHEN;
+	let whenSelector = options.when ?? DEFAULT_WHEN;
 
-	let declarations: CSSStyles = {};
-	declarations[when] = {
-		outlineWidth: "2px",
-		outlineStyle: "solid",
-		outlineOffset: "2px",
-		outlineColor: "var(--ui-primary-ring)",
-		'&[data-color="neutral"]': { outlineColor: "var(--ui-neutral-ring)" },
-		'&[data-color="success"]': { outlineColor: "var(--ui-success-ring)" },
-		'&[data-color="warning"]': { outlineColor: "var(--ui-warning-ring)" },
-		'&[data-color="danger"]': { outlineColor: "var(--ui-danger-ring)" },
-	};
-
-	return css<Node>(declarations);
+	return when<Node>(whenSelector, [
+		outline<Node>({ color: "primary.ring", offset: 2 }),
+		when<Node>('&[data-color="neutral"]', outline<Node>("neutral.ring")),
+		when<Node>('&[data-color="success"]', outline<Node>("success.ring")),
+		when<Node>('&[data-color="warning"]', outline<Node>("warning.ring")),
+		when<Node>('&[data-color="danger"]', outline<Node>("danger.ring")),
+	]);
 }

@@ -15,6 +15,11 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { CalendarIcon } from "@pkg/lucide-remix";
+import { bg, fg, outline } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
+import { bs, is, mis, p } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -241,18 +246,7 @@ export function DatePicker(handle: Handle<DatePicker.Props>) {
 		}
 
 		return (
-			<div
-				{...rest}
-				data-slot="date-picker"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="date-picker" mix={[flex(), flexCol(), gap(1), mix]}>
 				{children}
 			</div>
 		);
@@ -284,17 +278,9 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 				{...rest}
 				data-slot="group"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-
-						"&:focus-within": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-					}),
+					flex(),
+					items("center"),
+					when("&:focus-within", outline({ color: "primary.ring", offset: 2 })),
 					mix,
 				]}
 			/>
@@ -339,31 +325,17 @@ DatePicker.Button = function DatePickerButton(handle: Handle<DatePicker.ButtonPr
 				data-slot="button"
 				mix={[
 					interactiveTransition(),
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						marginInlineStart: "-2.25rem",
-						inlineSize: "2rem",
-						blockSize: "2rem",
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						color: "var(--ui-neutral-fg)",
-
-						"& svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-					}),
+					flex(),
+					items("center"),
+					justify("center"),
+					mis("-2.25rem"),
+					is("2rem"),
+					bs("2rem"),
+					rounded("sm"),
+					fg("neutral"),
+					when("& svg", [is("1rem"), bs("1rem")]),
+					hover(bg("neutral.bg-tint-hover")),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 0 })),
 					mix,
 				]}
 			>
@@ -413,8 +385,8 @@ DatePicker.Dialog = function DatePickerDialog(handle: Handle<DatePicker.DialogPr
 				placement={resolvedPlacement}
 				mix={[
 					attrs({ role: DEFAULT_DIALOG_ROLE }),
+					p(4),
 					css({
-						padding: "1rem",
 						outline: "none",
 					}),
 					mix,

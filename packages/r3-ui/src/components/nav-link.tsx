@@ -11,10 +11,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
+import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Semantic color role {@link NavLink} falls back to when `color` is omitted. */
@@ -84,9 +90,10 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 				data-has-background={hasBackground || undefined}
 				mix={[
 					interactiveTransition(),
+					rounded("sm"),
+					focusRingPrimary(),
+					cursor("pointer"),
 					css({
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						cursor: "pointer",
 						textDecorationLine: "underline",
 						textDecorationColor: "color-mix(in oklab, currentcolor 60%, transparent)",
 						textUnderlineOffset: "4px",
@@ -94,64 +101,51 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 						"&:hover": {
 							textDecorationColor: "currentcolor",
 						},
-
-						'&[data-color="primary"]': {
-							color: "var(--ui-primary-fg)",
-							'&[aria-current]:not([aria-current="false"])': {
-								fontWeight: "500",
-								color: "var(--ui-primary-fg-emphasis)",
-							},
-						},
-						'&[data-color="neutral"]': {
-							color: "var(--ui-neutral-fg)",
-							'&[aria-current]:not([aria-current="false"])': {
-								fontWeight: "500",
-								color: "var(--ui-neutral-fg-emphasis)",
-							},
-						},
-						'&[data-color="success"]': {
-							color: "var(--ui-success-fg)",
-							'&[aria-current]:not([aria-current="false"])': {
-								fontWeight: "500",
-								color: "var(--ui-success-fg-emphasis)",
-							},
-						},
-						'&[data-color="warning"]': {
-							color: "var(--ui-warning-fg)",
-							'&[aria-current]:not([aria-current="false"])': {
-								fontWeight: "500",
-								color: "var(--ui-warning-fg-emphasis)",
-							},
-						},
-						'&[data-color="danger"]': {
-							color: "var(--ui-danger-fg)",
-							'&[aria-current]:not([aria-current="false"])': {
-								fontWeight: "500",
-								color: "var(--ui-danger-fg-emphasis)",
-							},
-						},
-
-						'&[aria-current]:not([aria-current="false"])': {
-							fontWeight: "500",
-							textDecorationThickness: "2px",
-							textDecorationColor: "currentcolor",
-						},
-
-						"&[data-has-background]": {
-							textDecorationLine: "none",
-						},
-						'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])':
-							{
-								textDecorationLine: "none",
-							},
-
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 					}),
+					when('&[data-color="primary"]', [
+						fg("primary"),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							fg("primary.emphasis"),
+						]),
+					]),
+					when('&[data-color="neutral"]', [
+						fg("neutral"),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							fg("neutral.emphasis"),
+						]),
+					]),
+					when('&[data-color="success"]', [
+						fg("success"),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							fg("success.emphasis"),
+						]),
+					]),
+					when('&[data-color="warning"]', [
+						fg("warning"),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							fg("warning.emphasis"),
+						]),
+					]),
+					when('&[data-color="danger"]', [
+						fg("danger"),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							fg("danger.emphasis"),
+						]),
+					]),
+					when('&[aria-current]:not([aria-current="false"])', [
+						weight(500),
+						raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
+					]),
+					when("&[data-has-background]", raw({ textDecorationLine: "none" })),
+					when(
+						'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
+						raw({ textDecorationLine: "none" }),
+					),
 					mix,
 				]}
 			/>

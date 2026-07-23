@@ -11,6 +11,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { appearance, vstack } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is, m, p } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -90,19 +95,7 @@ export function Meter(handle: Handle<Meter.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} mix={[vstack({ gap: "0.25rem" }), mix]} />;
 	};
 }
 
@@ -157,19 +150,17 @@ Meter.Indicator = function MeterIndicator(handle: Handle<Meter.IndicatorProps>) 
 				max={resolvedMax}
 				{...rest}
 				mix={[
+					appearance(),
+					is("full"),
+					bs("var(--ui-meter-track-block-size, 0.5rem)"),
+					m("0"),
+					p("0"),
+					overflow("hidden"),
+					rounded("full"),
+					bg("neutral.border"),
 					css({
-						WebkitAppearance: "none",
-						MozAppearance: "none",
-						appearance: "none",
 						display: "block",
-						inlineSize: "100%",
-						blockSize: "var(--ui-meter-track-block-size, 0.5rem)",
 						border: "none",
-						margin: "0",
-						padding: "0",
-						overflow: "hidden",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						backgroundColor: "var(--ui-neutral-border)",
 
 						"&::-webkit-meter-bar": {
 							backgroundColor: "var(--ui-neutral-border)",

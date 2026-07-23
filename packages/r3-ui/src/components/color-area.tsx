@@ -16,6 +16,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border, outline } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { absolute, inlineBlock, relative } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -180,16 +188,14 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 				style={resolvedStyle}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
+					relative(),
+					inlineBlock(),
+					is("var(--ui-color-area-size, 16rem)"),
+					bs("var(--ui-color-area-size, 16rem)"),
+					rounded("md"),
+					border({ width: 1, color: "neutral" }),
+					overflow(),
 					css({
-						position: "relative",
-						display: "inline-block",
-						inlineSize: "var(--ui-color-area-size, 16rem)",
-						blockSize: "var(--ui-color-area-size, 16rem)",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						overflow: "hidden",
 						// Black/white here are the fixed brightness/saturation
 						// primaries the picking math is defined against, not a
 						// themed surface color — see the doc comment above.
@@ -258,13 +264,36 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 				step={resolvedStep}
 				defaultValue={resolvedValue}
 				mix={[
+					absolute(),
+					z(10),
+					is("full"),
+					bs("full"),
+
+					when("&::-webkit-slider-thumb", [
+						rounded("full"),
+						border({ width: 2, color: "neutral.tint" }),
+						bg("neutral.tint"),
+						cursor("pointer"),
+						transition("scale"),
+					]),
+					when("&::-moz-range-thumb", [
+						rounded("full"),
+						border({ width: 2, color: "neutral.tint" }),
+						bg("neutral.tint"),
+						cursor("pointer"),
+						transition("scale"),
+					]),
+					when(
+						"&:focus-visible::-webkit-slider-thumb",
+						outline({ color: "primary.ring", offset: 2 }),
+					),
+					when("&:focus-visible::-moz-range-thumb", outline({ color: "primary.ring", offset: 2 })),
+					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
+					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
+
 					css({
-						position: "absolute",
 						inset: "0",
-						zIndex: 10,
 						margin: "0",
-						inlineSize: "100%",
-						blockSize: "100%",
 						appearance: "none",
 						WebkitAppearance: "none",
 						backgroundColor: "transparent",
@@ -291,53 +320,19 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 							WebkitAppearance: "none",
 							appearance: "none",
 							pointerEvents: "auto",
-							cursor: "pointer",
 							inlineSize: "var(--ui-color-area-thumb-thickness, 0.1875rem)",
 							blockSize: "var(--ui-color-area-size, 16rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-bg-tint)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-							transitionProperty: "scale",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 						},
 						"&::-moz-range-thumb": {
 							pointerEvents: "auto",
-							cursor: "pointer",
 							inlineSize: "var(--ui-color-area-thumb-thickness, 0.1875rem)",
 							blockSize: "var(--ui-color-area-size, 16rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-bg-tint)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-							transitionProperty: "scale",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 						},
 
 						"&:active::-webkit-slider-thumb": { scale: "1.2" },
 						"&:active::-moz-range-thumb": { scale: "1.2" },
-
-						"&:focus-visible::-webkit-slider-thumb": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-						"&:focus-visible::-moz-range-thumb": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-
-						"&:disabled::-webkit-slider-thumb": { cursor: "not-allowed", opacity: 0.5 },
-						"&:disabled::-moz-range-thumb": { cursor: "not-allowed", opacity: 0.5 },
 
 						"@media (prefers-reduced-motion: reduce)": {
 							"&::-webkit-slider-thumb": { transitionDuration: "0s" },
@@ -406,13 +401,36 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 				defaultValue={resolvedValue}
 				aria-orientation="vertical"
 				mix={[
+					absolute(),
+					z(10),
+					is("full"),
+					bs("full"),
+
+					when("&::-webkit-slider-thumb", [
+						rounded("full"),
+						border({ width: 2, color: "neutral.tint" }),
+						bg("neutral.tint"),
+						cursor("pointer"),
+						transition("scale"),
+					]),
+					when("&::-moz-range-thumb", [
+						rounded("full"),
+						border({ width: 2, color: "neutral.tint" }),
+						bg("neutral.tint"),
+						cursor("pointer"),
+						transition("scale"),
+					]),
+					when(
+						"&:focus-visible::-webkit-slider-thumb",
+						outline({ color: "primary.ring", offset: 2 }),
+					),
+					when("&:focus-visible::-moz-range-thumb", outline({ color: "primary.ring", offset: 2 })),
+					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
+					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
+
 					css({
-						position: "absolute",
 						inset: "0",
-						zIndex: 10,
 						margin: "0",
-						inlineSize: "100%",
-						blockSize: "100%",
 						appearance: "none",
 						WebkitAppearance: "none",
 						backgroundColor: "transparent",
@@ -440,53 +458,19 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 							WebkitAppearance: "none",
 							appearance: "none",
 							pointerEvents: "auto",
-							cursor: "pointer",
 							inlineSize: "var(--ui-color-area-thumb-thickness, 0.1875rem)",
 							blockSize: "var(--ui-color-area-size, 16rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-bg-tint)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-							transitionProperty: "scale",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 						},
 						"&::-moz-range-thumb": {
 							pointerEvents: "auto",
-							cursor: "pointer",
 							inlineSize: "var(--ui-color-area-thumb-thickness, 0.1875rem)",
 							blockSize: "var(--ui-color-area-size, 16rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-bg-tint)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-							transitionProperty: "scale",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 						},
 
 						"&:active::-webkit-slider-thumb": { scale: "1.2" },
 						"&:active::-moz-range-thumb": { scale: "1.2" },
-
-						"&:focus-visible::-webkit-slider-thumb": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-						"&:focus-visible::-moz-range-thumb": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-
-						"&:disabled::-webkit-slider-thumb": { cursor: "not-allowed", opacity: 0.5 },
-						"&:disabled::-moz-range-thumb": { cursor: "not-allowed", opacity: 0.5 },
 
 						"@media (prefers-reduced-motion: reduce)": {
 							"&::-webkit-slider-thumb": { transitionDuration: "0s" },

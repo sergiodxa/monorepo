@@ -12,9 +12,34 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { bg, border, outline } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { combine, raw } from "@pkg/u/general";
+import { media } from "@pkg/u/responsive";
+import { bs, is } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
+
+/** The declarations shared by both engines' thumb pseudo-elements, minus the webkit-only appearance reset. */
+function thumbBase<Node extends Element = Element>(size: string, borderWidth: string) {
+	return combine<Node>([
+		is<Node>(size),
+		bs<Node>(size),
+		rounded<Node>("full"),
+		border<Node>({ color: "primary.solid", width: borderWidth }),
+		bg<Node>("neutral.tint"),
+		// No `@pkg/u` shadow scale entry matches this exact value, so it stays raw.
+		raw<Node>({
+			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+			cursor: "pointer",
+		}),
+		transition<Node>("box-shadow, scale", {
+			duration: 150,
+			easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+		}),
+	]);
+}
 
 /**
  * Composes the circular range-thumb painting recipe every single-channel
@@ -35,7 +60,7 @@ import type { CSSStyles } from "../utils/css-styles";
  *
  * @param sizeVariable Custom property (with its leading `--`) the thumb reads its own inline and block size from, falling back to `1.25rem`.
  * @param borderWidthVariable Custom property (with its leading `--`) the thumb reads its own border width from, falling back to `2px`.
- * @returns A `css()` mixin ready for a host element's `mix` prop.
+ * @returns A mixin ready for a host element's `mix` prop.
  * @example
  * <input
  * 	type="range"
@@ -56,68 +81,36 @@ export function rangeThumbAppearance<Node extends Element = Element>(
 	let size = `var(${sizeVariable}, 1.25rem)`;
 	let borderWidth = `var(${borderWidthVariable}, 2px)`;
 
-	let webkitThumb: CSSStyles = {
-		WebkitAppearance: "none",
-		appearance: "none",
-		inlineSize: size,
-		blockSize: size,
-		borderRadius: "var(--ui-radius-full, 9999px)",
-		borderWidth,
-		borderStyle: "solid",
-		borderColor: "var(--ui-primary-bg-solid)",
-		backgroundColor: "var(--ui-neutral-bg-tint)",
-		boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-		cursor: "pointer",
-		transitionProperty: "box-shadow, scale",
-		transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-		transitionDuration: "150ms",
-	};
-
-	let mozThumb: CSSStyles = {
-		inlineSize: size,
-		blockSize: size,
-		borderRadius: "var(--ui-radius-full, 9999px)",
-		borderWidth,
-		borderStyle: "solid",
-		borderColor: "var(--ui-primary-bg-solid)",
-		backgroundColor: "var(--ui-neutral-bg-tint)",
-		boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-		cursor: "pointer",
-		transitionProperty: "box-shadow, scale",
-		transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-		transitionDuration: "150ms",
-	};
-
-	return css<Node>({
-		"&::-webkit-slider-thumb": webkitThumb,
-		"&::-moz-range-thumb": mozThumb,
-		"&:active::-webkit-slider-thumb": { scale: "1.1" },
-		"&:active::-moz-range-thumb": { scale: "1.1" },
-		"&:focus-visible::-webkit-slider-thumb": {
-			outlineWidth: "2px",
-			outlineStyle: "solid",
-			outlineOffset: "2px",
-			outlineColor: "var(--ui-primary-ring)",
-		},
-		"&:focus-visible::-moz-range-thumb": {
-			outlineWidth: "2px",
-			outlineStyle: "solid",
-			outlineOffset: "2px",
-			outlineColor: "var(--ui-primary-ring)",
-		},
-		"&:disabled::-webkit-slider-thumb": {
-			cursor: "not-allowed",
-			boxShadow: "none",
-			borderColor: "var(--ui-neutral-border)",
-		},
-		"&:disabled::-moz-range-thumb": {
-			cursor: "not-allowed",
-			boxShadow: "none",
-			borderColor: "var(--ui-neutral-border)",
-		},
-		"@media (prefers-reduced-motion: reduce)": {
-			"&::-webkit-slider-thumb": { transitionDuration: "0s" },
-			"&::-moz-range-thumb": { transitionDuration: "0s" },
-		},
-	});
+	return combine<Node>([
+		when<Node>(
+			"&::-webkit-slider-thumb",
+			combine<Node>([
+				raw<Node>({ WebkitAppearance: "none", appearance: "none" }),
+				thumbBase<Node>(size, borderWidth),
+			]),
+		),
+		when<Node>("&::-moz-range-thumb", thumbBase<Node>(size, borderWidth)),
+		when<Node>("&:active::-webkit-slider-thumb", raw<Node>({ scale: "1.1" })),
+		when<Node>("&:active::-moz-range-thumb", raw<Node>({ scale: "1.1" })),
+		when<Node>(
+			"&:focus-visible::-webkit-slider-thumb",
+			outline<Node>({ color: "primary.ring", offset: 2 }),
+		),
+		when<Node>(
+			"&:focus-visible::-moz-range-thumb",
+			outline<Node>({ color: "primary.ring", offset: 2 }),
+		),
+		when<Node>("&:disabled::-webkit-slider-thumb", [
+			raw<Node>({ cursor: "not-allowed", boxShadow: "none" }),
+			border<Node>("neutral"),
+		]),
+		when<Node>("&:disabled::-moz-range-thumb", [
+			raw<Node>({ cursor: "not-allowed", boxShadow: "none" }),
+			border<Node>("neutral"),
+		]),
+		media<Node>("(prefers-reduced-motion: reduce)", [
+			when<Node>("&::-webkit-slider-thumb", raw<Node>({ transitionDuration: "0s" })),
+			when<Node>("&::-moz-range-thumb", raw<Node>({ transitionDuration: "0s" })),
+		]),
+	]);
 }

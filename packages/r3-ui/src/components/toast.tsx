@@ -16,6 +16,22 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import {
+	absolute,
+	fixed,
+	flex,
+	flexCol,
+	gap,
+	inlineFlex,
+	items,
+	justify,
+	relative,
+} from "@pkg/u/layout";
+import { is, bs, maxIs, pb, pi, pie } from "@pkg/u/size";
+import { when, hover, active } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { graphicHostStyle } from "../styles/graphic-host";
@@ -260,58 +276,50 @@ export function Toast(handle: Handle<Toast.Props>) {
 				data-slot="toast"
 				mix={[
 					attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
+					relative(),
+					flex(),
+					is("full"),
+					gap("0.75rem"),
+					rounded("lg"),
+					border("neutral"),
+					fg("neutral.fg-emphasis"),
+					pb("1rem"),
+					pi("1rem"),
+					when('&:has(> [data-slot="close"])', pie("2.5rem")),
+					when('&[data-color="primary"]', [border("primary"), fg("primary.fg-emphasis")]),
+					when('&[data-color="neutral"]', [border("neutral"), fg("neutral.fg-emphasis")]),
+					when('&[data-color="success"]', [border("success"), fg("success.fg-emphasis")]),
+					when('&[data-color="warning"]', [border("warning"), fg("warning.fg-emphasis")]),
+					when('&[data-color="danger"]', [border("danger"), fg("danger.fg-emphasis")]),
 					css({
-						position: "relative",
-						display: "flex",
-						inlineSize: "100%",
 						alignItems: "flex-start",
-						gap: "0.75rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
 						borderWidth: "1px",
 						borderStyle: "solid",
-						paddingBlock: "1rem",
-						paddingInline: "1rem",
 						boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 						pointerEvents: "auto",
 
 						"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
-						borderColor: "var(--ui-neutral-border)",
 						backgroundColor: "var(--ui-toast-bg)",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						'&:has(> [data-slot="close"])': {
-							paddingInlineEnd: "2.5rem",
-						},
 
 						'&[data-color="primary"]': {
 							"--ui-toast-bg": "var(--ui-primary-bg-tint)",
-							borderColor: "var(--ui-primary-border)",
 							backgroundColor: "var(--ui-toast-bg)",
-							color: "var(--ui-primary-fg-emphasis)",
 						},
 						'&[data-color="neutral"]': {
 							"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
-							borderColor: "var(--ui-neutral-border)",
 							backgroundColor: "var(--ui-toast-bg)",
-							color: "var(--ui-neutral-fg-emphasis)",
 						},
 						'&[data-color="success"]': {
 							"--ui-toast-bg": "var(--ui-success-bg-tint)",
-							borderColor: "var(--ui-success-border)",
 							backgroundColor: "var(--ui-toast-bg)",
-							color: "var(--ui-success-fg-emphasis)",
 						},
 						'&[data-color="warning"]': {
 							"--ui-toast-bg": "var(--ui-warning-bg-tint)",
-							borderColor: "var(--ui-warning-border)",
 							backgroundColor: "var(--ui-toast-bg)",
-							color: "var(--ui-warning-fg-emphasis)",
 						},
 						'&[data-color="danger"]': {
 							"--ui-toast-bg": "var(--ui-danger-bg-tint)",
-							borderColor: "var(--ui-danger-border)",
 							backgroundColor: "var(--ui-toast-bg)",
-							color: "var(--ui-danger-fg-emphasis)",
 						},
 
 						"@supports (backdrop-filter: blur(0))": {
@@ -401,12 +409,12 @@ Toast.Content = function ToastContent(handle: Handle<Toast.ContentProps>) {
 				{...rest}
 				data-slot="content"
 				mix={[
+					flex(),
+					flexCol(),
+					gap("0.25rem"),
 					css({
-						display: "flex",
 						minInlineSize: "0",
 						flex: "1 1 0%",
-						flexDirection: "column",
-						gap: "0.25rem",
 					}),
 					mix,
 				]}
@@ -434,9 +442,9 @@ Toast.Title = function ToastTitle(handle: Handle<Toast.TitleProps>) {
 				{...rest}
 				data-slot="title"
 				mix={[
+					weight(500),
 					css({
 						fontSize: "0.875rem",
-						fontWeight: "500",
 						lineHeight: "1",
 					}),
 					mix,
@@ -502,19 +510,18 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 				type={resolvedType}
 				data-slot="action"
 				mix={[
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					rounded("md"),
+					border({ width: 1 }),
+					pi("0.75rem"),
+					pb("0.25rem"),
+					weight(500),
 					css({
-						display: "inline-flex",
 						flexShrink: "0",
-						alignItems: "center",
-						justifyContent: "center",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
 						borderColor: "color-mix(in oklab, currentcolor 30%, transparent)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.25rem",
 						fontSize: "0.75rem",
-						fontWeight: "500",
 						color: "currentcolor",
 						transitionProperty:
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
@@ -561,32 +568,24 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 				type={resolvedType}
 				data-slot="cancel"
 				mix={[
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					pi("0.75rem"),
+					pb("0.25rem"),
+					weight(500),
+					fg("neutral.fg"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
+					active(bg("neutral.bg-tint-pressed")),
 					css({
-						display: "inline-flex",
 						flexShrink: "0",
-						alignItems: "center",
-						justifyContent: "center",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.25rem",
 						fontSize: "0.75rem",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg)",
 						transitionProperty:
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
 						transitionDuration: "150ms",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
 					}),
 					mix,
 				]}
@@ -620,26 +619,22 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 				type="button"
 				data-slot="close"
 				mix={[
+					absolute(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					is("1.5rem"),
+					bs("1.5rem"),
+					rounded("md"),
+					fg("neutral.fg-muted"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
 					css({
-						position: "absolute",
 						insetBlockStart: "0.5rem",
 						insetInlineEnd: "0.5rem",
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						inlineSize: "1.5rem",
-						blockSize: "1.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						color: "var(--ui-neutral-fg-muted)",
 						transitionProperty:
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
 						transitionDuration: "150ms",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 					}),
 					mix,
 				]}
@@ -701,17 +696,17 @@ Toast.Region = function ToastRegion(handle: Handle<Toast.RegionProps>) {
 				data-slot="region"
 				mix={[
 					attrs({ role: DEFAULT_REGION_ROLE }),
+					fixed(),
+					flex(),
+					flexCol(),
+					gap("0.75rem"),
+					is("full"),
+					maxIs("24rem"),
+					pb("1rem"),
+					pi("1rem"),
 					css({
-						position: "fixed",
 						zIndex: "var(--ui-toast-z, 50)",
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.75rem",
 						pointerEvents: "none",
-						inlineSize: "100%",
-						maxInlineSize: "24rem",
-						paddingBlock: "1rem",
-						paddingInline: "1rem",
 
 						'&[data-placement^="top"]': {
 							insetBlockStart: "0",

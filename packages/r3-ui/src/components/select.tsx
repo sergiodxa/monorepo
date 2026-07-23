@@ -14,6 +14,12 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronDownIcon } from "@pkg/lucide-remix";
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { appearance, gap } from "@pkg/u/layout";
+import { bs, is, pb, pi } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { textAlign, truncate } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -168,32 +174,12 @@ export function Select(handle: Handle<Select.Props>) {
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "space-between",
-						gap: "0.5rem",
-						inlineSize: "100%",
-						blockSize: "2.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
+						cursor: "default",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						cursor: "default",
-						appearance: "base-select",
-						transitionProperty:
-							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
 
-						"&:hover": {
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
 						"&:focus": {
 							outline: "none",
-							borderColor: "var(--ui-neutral-border-strong)",
 						},
 						"&:focus-visible": {
 							outlineWidth: "2px",
@@ -226,23 +212,15 @@ export function Select(handle: Handle<Select.Props>) {
 							outlineWidth: "2px",
 							outlineStyle: "solid",
 							outlineOffset: "0px",
-							borderColor: "var(--ui-danger-border-strong)",
-							outlineColor: "var(--ui-danger-ring)",
 						},
 						"&:disabled": {
 							cursor: "not-allowed",
 							opacity: "0.5",
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
 						},
 
 						"&::picker(select)": {
 							margin: "0",
 							inset: "auto",
-							borderRadius: "var(--ui-radius-lg, 0.5rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 							maxBlockSize: "15rem",
 							overflow: "auto",
@@ -255,9 +233,6 @@ export function Select(handle: Handle<Select.Props>) {
 							"@starting-style": {
 								opacity: "0",
 							},
-						},
-						"&::picker-icon": {
-							color: "var(--ui-neutral-fg-muted)",
 						},
 						"&:open": {
 							"&::picker(select)": {
@@ -277,6 +252,38 @@ export function Select(handle: Handle<Select.Props>) {
 							"&::picker(select)": {
 								transitionDuration: "0s",
 							},
+						},
+					}),
+					gap("0.5rem"),
+					is("full"),
+					bs("2.5rem"),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					pi("0.75rem"),
+					pb("0.5rem"),
+					appearance("base-select"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+					),
+					hover(border("neutral.strong")),
+					when("&:focus", border("neutral.strong")),
+					when('&[aria-invalid="true"], &:user-invalid', [
+						border("danger.strong"),
+						outline({ color: "danger.ring", offset: 0 }),
+					]),
+					when("&:disabled", bg("neutral.bg-tint-hover")),
+					css({
+						"&::picker(select)": {
+							borderRadius: "var(--ui-radius-lg, 0.5rem)",
+							borderWidth: "1px",
+							borderStyle: "solid",
+							borderColor: "var(--ui-neutral-border)",
+							backgroundColor: "var(--ui-neutral-bg-tint)",
+						},
+						"&::picker-icon": {
+							color: "var(--ui-neutral-fg-muted)",
 						},
 					}),
 					mix,
@@ -344,7 +351,6 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 								css({
 									display: "inline-flex",
 									flexShrink: 0,
-									color: "var(--ui-neutral-fg-muted)",
 									transitionProperty: "transform",
 									transitionDuration: "150ms",
 
@@ -357,6 +363,7 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 										transitionDuration: "0s",
 									},
 								}),
+								fg("neutral.muted"),
 							]}
 						>
 							<ChevronDownIcon aria-hidden />
@@ -394,11 +401,9 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 				mix={[
 					css({
 						flex: "1",
-						overflow: "hidden",
-						whiteSpace: "nowrap",
-						textOverflow: "ellipsis",
-						textAlign: "start",
 					}),
+					truncate(),
+					textAlign("start"),
 					mix,
 				]}
 			/>
@@ -432,31 +437,12 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 				mix={[
 					css({
 						cursor: "default",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
 						paddingInline: "0.75rem",
 						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 						outline: "none",
-						color: "var(--ui-neutral-fg-emphasis)",
-						transitionProperty:
-							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus": {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-						"&:checked": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
 						"&:disabled": {
 							opacity: "0.5",
 						},
@@ -464,6 +450,15 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 							color: "currentColor",
 						},
 					}),
+					rounded("md"),
+					fg("neutral.emphasis"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					when("&:hover", bg("neutral.bg-tint-hover")),
+					when("&:active", bg("neutral.bg-tint-pressed")),
+					when("&:focus", bg("primary.tint")),
+					when("&:checked", [bg("primary.solid"), fg("primary.onSolid")]),
 					mix,
 				]}
 			/>
@@ -504,14 +499,13 @@ Select.Group = function SelectGroup(handle: Handle<Select.GroupProps>) {
 				{...rest}
 				mix={[
 					css({
-						paddingBlock: "0.25rem",
-
 						"&:not(:first-child)": {
 							borderBlockStartWidth: "1px",
 							borderBlockStartStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
 						},
 					}),
+					pb("0.25rem"),
+					when("&:not(:first-child)", border("neutral")),
 					mix,
 				]}
 			/>

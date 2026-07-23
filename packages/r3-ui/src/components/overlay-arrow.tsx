@@ -11,6 +11,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fill } from "@pkg/u/color";
+import { absolute } from "@pkg/u/layout";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -102,10 +104,10 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+					absolute(),
+					fill("neutral.tint"),
 					css({
-						position: "absolute",
 						pointerEvents: "none",
-						fill: "var(--ui-neutral-bg-tint)",
 
 						'&[data-placement^="bottom"]': {
 							insetBlockStart: "calc(var(--ui-overlay-arrow-offset, 0.5rem) * -1)",

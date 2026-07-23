@@ -44,6 +44,52 @@ describe("animation", () => {
 				animationDuration: "150ms",
 			});
 		});
+
+		test("sets animationIterationCount, animationDirection, and animationFillMode when given", () => {
+			let mixin = animation("spin", {
+				keyframes: { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } },
+				duration: "1s",
+				easing: "linear",
+				iterationCount: "infinite",
+				direction: "alternate",
+				fillMode: "both",
+			});
+
+			expect(styles(mixin)).toEqual({
+				"@keyframes spin": {
+					from: { transform: "rotate(0deg)" },
+					to: { transform: "rotate(360deg)" },
+				},
+				animationName: "spin",
+				animationDuration: "1s",
+				animationTimingFunction: "linear",
+				animationIterationCount: "infinite",
+				animationDirection: "alternate",
+				animationFillMode: "both",
+			});
+		});
+
+		test("accepts a numeric iterationCount", () => {
+			let mixin = animation("bounce", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "300ms",
+				iterationCount: 2,
+			});
+
+			expect(styles(mixin).animationIterationCount).toBe(2);
+		});
+
+		test("omits iterationCount, direction, and fillMode entirely when not given", () => {
+			let mixin = animation("fade-in", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "150ms",
+			});
+			let result = styles(mixin);
+
+			expect("animationIterationCount" in result).toBe(false);
+			expect("animationDirection" in result).toBe(false);
+			expect("animationFillMode" in result).toBe(false);
+		});
 	});
 
 	describe("unnamed form", () => {

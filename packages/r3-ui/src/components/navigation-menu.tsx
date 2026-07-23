@@ -12,6 +12,25 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import {
+	container,
+	flex,
+	flexCol,
+	gap,
+	grid,
+	inlineFlex,
+	items,
+	justify,
+	relative,
+} from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { disabled, hover, when } from "@pkg/u/state";
+import { leading, weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -218,7 +237,7 @@ export function NavigationMenu(handle: Handle<NavigationMenu.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <nav {...rest} mix={[css({ position: "relative" }), mix]} />;
+		return <nav {...rest} mix={[relative(), mix]} />;
 	};
 }
 
@@ -256,16 +275,10 @@ NavigationMenu.List = function NavigationMenuList(handle: Handle<NavigationMenu.
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_LIST_ROLE }),
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.25rem",
-
-						'&[data-orientation="vertical"]': {
-							flexDirection: "column",
-							alignItems: "start",
-						},
-					}),
+					flex(),
+					items("center"),
+					gap(1),
+					when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
 					mix,
 				]}
 			/>
@@ -302,12 +315,7 @@ NavigationMenu.Item = function NavigationMenuItem(
 
 		handle.context.set({ contentId: handle.id });
 
-		return (
-			<li
-				{...rest}
-				mix={[css({ position: "relative", display: "flex", alignItems: "center" }), mix]}
-			/>
-		);
+		return <li {...rest} mix={[relative(), flex(), items("center"), mix]} />;
 	};
 };
 
@@ -347,30 +355,21 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 				mix={[
 					interactiveTransition(),
 					focusRingPrimary(),
+					inlineFlex(),
+					items("center"),
+					gap(2),
+					rounded("md"),
+					pi(3),
+					pb(2),
+					weight("medium"),
+					fg("neutral"),
+					disabled(opacity(50)),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					when('&[aria-expanded="true"]', [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					disabled(cursor("not-allowed")),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&[aria-expanded="true"]': {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&:disabled, &[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}
@@ -436,19 +435,22 @@ NavigationMenu.Content = function NavigationMenuContent(
 				{...rest}
 				mix={[
 					focusRingPrimary(),
+					is("max-content"),
+					minIs("11rem"),
+					p(2),
+					z(50),
+					opacity(0),
+					when('& [data-slot="link"]', [is("full"), justify("start")]),
+					when('&[data-size="wide"]', [is("28rem"), maxIs("calc(100vw - 2rem)")]),
+					container(CONTAINER_NAME),
+					transition("opacity, scale, display, overlay", {
+						duration: durations.fast,
+						easing: easings.standard,
+					}),
 					css({
-						container: `${CONTAINER_NAME} / inline-size`,
-						inlineSize: "max-content",
-						minInlineSize: "11rem",
-						padding: "0.5rem",
 						outlineStyle: "none",
-						zIndex: 50,
 
-						opacity: "0",
 						scale: "0.95",
-						transitionProperty: "opacity, scale, display, overlay",
-						transitionDuration: `${durations.fast}ms`,
-						transitionTimingFunction: easings.standard,
 						transitionBehavior: "allow-discrete",
 
 						"&:popover-open": {
@@ -464,16 +466,6 @@ NavigationMenu.Content = function NavigationMenuContent(
 						"@media (prefers-reduced-motion: reduce)": {
 							scale: "none",
 							transitionProperty: "opacity, display, overlay",
-						},
-
-						'& [data-slot="link"]': {
-							inlineSize: "100%",
-							justifyContent: "start",
-						},
-
-						'&[data-size="wide"]': {
-							inlineSize: "28rem",
-							maxInlineSize: "calc(100vw - 2rem)",
 						},
 					}),
 					mix,
@@ -516,32 +508,25 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 				mix={[
 					interactiveTransition(),
 					focusRingPrimary(),
+					inlineFlex(),
+					items("center"),
+					gap(2),
+					rounded("md"),
+					pi(3),
+					pb(2),
+					leading(1),
+					weight("medium"),
+					fg("neutral"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					when('&[aria-current]:not([aria-current="false"])', [
+						bg("neutral.bg-tint-hover"),
+						fg("neutral.emphasis"),
+					]),
+					when('&[aria-disabled="true"]', [opacity(50), cursor("not-allowed")]),
 					css({
-						display: "inline-flex",
 						userSelect: "none",
-						alignItems: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
-						lineHeight: "1",
-						fontWeight: "500",
 						textDecorationLine: "none",
-						color: "var(--ui-neutral-fg)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&[aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}
@@ -578,18 +563,18 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 				{...rest}
 				mix={[
 					floatingSurface(),
+					relative(),
+					mbs(2),
+					overflow(),
+					is("var(--ui-navigation-menu-viewport-inline-size, auto)"),
+					bs("var(--ui-navigation-menu-viewport-block-size, auto)"),
+					opacity(0),
+					transition("inline-size, block-size, opacity, scale", {
+						duration: durations.normal,
+						easing: easings.decelerate,
+					}),
 					css({
-						position: "relative",
-						marginBlockStart: "0.5rem",
-						overflow: "hidden",
-						inlineSize: "var(--ui-navigation-menu-viewport-inline-size, auto)",
-						blockSize: "var(--ui-navigation-menu-viewport-block-size, auto)",
-
-						opacity: "0",
 						scale: "0.95",
-						transitionProperty: "inline-size, block-size, opacity, scale",
-						transitionDuration: `${durations.normal}ms`,
-						transitionTimingFunction: easings.decelerate,
 
 						"&[data-visible]": {
 							opacity: "1",
@@ -633,7 +618,7 @@ NavigationMenu.ContentList = function NavigationMenuContentList(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[css({ display: "grid", gap: "0.25rem" }), mix]} />;
+		return <div {...rest} mix={[grid(), gap(1), mix]} />;
 	};
 };
 
@@ -668,10 +653,9 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 			<div
 				{...rest}
 				mix={[
+					grid(),
+					gap(4),
 					css({
-						display: "grid",
-						gap: "1rem",
-
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 							gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 						},
@@ -701,6 +685,6 @@ NavigationMenu.ContentColumn = function NavigationMenuContentColumn(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[css({ display: "grid", gap: "0.25rem" }), mix]} />;
+		return <div {...rest} mix={[grid(), gap(1), mix]} />;
 	};
 };

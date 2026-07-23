@@ -117,4 +117,7 @@ export type PaletteShade = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 
 export type ColorValue =
 	| `color.${ColorPaletteName}.${PaletteShade}`
 	| `${SemanticToneName}.${string}`
-	| SemanticToneName;
+	| SemanticToneName
+	| "inherit"
+	| "currentColor"
+	| "transparent";

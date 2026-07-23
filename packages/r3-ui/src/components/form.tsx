@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { flex, flexCol, gap } from "@pkg/u/layout";
 
 /** {@link Form.Props.issues} fallback for a first, not-yet-submitted render. */
 const DEFAULT_ISSUES: ReadonlyArray<Form.Issue> = [];
@@ -158,18 +158,6 @@ export function Form(handle: Handle<Form.Props, Form.Context>) {
 			},
 		});
 
-		return (
-			<form
-				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "1rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <form {...rest} mix={[flex(), flexCol(), gap(4), mix]} />;
 	};
 }

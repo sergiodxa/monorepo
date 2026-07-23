@@ -13,6 +13,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { absolute, container, flex, flexCol, gap, relative } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
 import { attrs, css } from "remix/ui";
 
 import { Button } from "./button";
@@ -178,14 +183,10 @@ export function MessageScroller(handle: Handle<MessageScroller.Props>) {
 				{...rest}
 				data-slot="message-scroller"
 				mix={[
-					css({
-						position: "relative",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						container: `${CONTAINER_NAME} / inline-size`,
-					}),
+					rounded("lg"),
+					border({ color: "neutral", width: 1 }),
+					relative(),
+					container(CONTAINER_NAME),
 					mix,
 				]}
 			>
@@ -247,13 +248,11 @@ MessageScroller.Content = function MessageScrollerContent(
 				data-slot="content"
 				mix={[
 					attrs({ role: DEFAULT_CONTENT_ROLE, "aria-relevant": DEFAULT_CONTENT_ARIA_RELEVANT }),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "1rem",
-						paddingBlock: "1rem",
-						paddingInline: "1rem",
-					}),
+					flex(),
+					flexCol(),
+					gap(4),
+					pb(4),
+					pi(4),
 					mix,
 				]}
 			>
@@ -346,12 +345,12 @@ MessageScroller.Button = function MessageScrollerButton(
 				hidden={hidden ?? DEFAULT_BUTTON_HIDDEN}
 				data-slot="jump-button"
 				mix={[
+					z(1),
+					absolute(),
 					css({
-						position: "absolute",
 						insetBlockEnd: "1rem",
 						insetInlineStart: "50%",
 						translate: "-50% 0",
-						zIndex: "1",
 						boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 
 						[BUTTON_NARROW_QUERY]: {

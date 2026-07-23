@@ -11,7 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { raw } from "@pkg/u/general";
+import { block } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { is } from "@pkg/u/size";
 
 /**
  * Ratio {@link AspectRatio} falls back to when `ratio` is omitted: a
@@ -69,12 +72,10 @@ export function AspectRatio(handle: Handle<AspectRatio.Props>) {
 				{...rest}
 				style={resolvedStyle}
 				mix={[
-					css({
-						display: "block",
-						inlineSize: "100%",
-						overflow: "hidden",
-						aspectRatio: "var(--ui-aspect-ratio, 1)",
-					}),
+					block(),
+					is("full"),
+					overflow(),
+					raw({ aspectRatio: "var(--ui-aspect-ratio, 1)" }),
 					mix,
 				]}
 			/>

@@ -10,6 +10,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg } from "@pkg/u/color";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -64,8 +65,6 @@ export function Separator(handle: Handle<Separator.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
 					css({
-						backgroundColor: "var(--ui-neutral-border)",
-
 						'&[aria-orientation="horizontal"]': {
 							blockSize: "var(--ui-separator-thickness, 1px)",
 							inlineSize: "100%",
@@ -76,6 +75,7 @@ export function Separator(handle: Handle<Separator.Props>) {
 							inlineSize: "var(--ui-separator-thickness, 1px)",
 						},
 					}),
+					bg("neutral.border"),
 					mix,
 				]}
 			/>

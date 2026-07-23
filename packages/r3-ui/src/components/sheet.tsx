@@ -12,6 +12,10 @@
 
 import type { Handle } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { transition } from "@pkg/u/effects";
+import { gap, vstack } from "@pkg/u/layout";
+import { pbe, pbs } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -131,19 +135,13 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 					css({
 						position: "fixed",
 						margin: "0",
-						gap: "1rem",
 						borderRadius: "0",
 						insetBlockStart: "0",
 						insetBlockEnd: "0",
 						maxBlockSize: "none",
 						maxInlineSize: "none",
 						inlineSize: "min(90vw, var(--ui-sheet-size, 24rem))",
-						paddingBlockStart: "calc(1.5rem + env(safe-area-inset-top, 0px))",
-						paddingBlockEnd: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
 						willChange: "transform",
-						transitionProperty: "transform, display, overlay",
-						transitionDuration: `${durations.slow}ms`,
-						transitionTimingFunction: easings.decelerate,
 						transitionBehavior: "allow-discrete",
 
 						'&[data-side="right"]': {
@@ -183,6 +181,13 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 							transitionProperty: "none",
 						},
 					}),
+					gap("1rem"),
+					pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
+					pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),
+					transition("transform, display, overlay", {
+						duration: durations.slow,
+						easing: easings.decelerate,
+					}),
 					mix,
 				]}
 			/>
@@ -208,20 +213,7 @@ Sheet.Header = function SheetHeader(handle: Handle<Sheet.HeaderProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="header"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="header" mix={[vstack({ gap: "0.25rem" }), mix]} />;
 	};
 };
 
@@ -258,8 +250,8 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 				mix={[
 					css({
 						fontSize: "0.875rem",
-						color: "var(--ui-neutral-fg)",
 					}),
+					fg("neutral"),
 					mix,
 				]}
 			>
@@ -297,8 +289,8 @@ Sheet.Footer = function SheetFooter(handle: Handle<Sheet.FooterProps>) {
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "flex-end",
-						gap: "0.5rem",
 					}),
+					gap("0.5rem"),
 					mix,
 				]}
 			/>

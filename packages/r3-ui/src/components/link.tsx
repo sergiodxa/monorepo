@@ -9,6 +9,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -72,33 +75,34 @@ export function Link(handle: Handle<Link.Props>) {
 				mix={[
 					focusRingByColor(),
 					interactiveTransition(),
+					rounded("sm"),
+					when('&[data-color="primary"]', fg("primary")),
+					when('&[data-color="neutral"]', fg("neutral")),
+					when('&[data-color="success"]', fg("success")),
+					when('&[data-color="danger"]', fg("danger")),
+					when('&[data-color="warning"]', fg("warning")),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
 						textDecoration: "underline",
 						cursor: "pointer",
 
 						'&[data-color="primary"]': {
-							color: "var(--ui-primary-fg)",
 							textDecorationColor: "color-mix(in srgb, var(--ui-primary-fg) 60%, transparent)",
 							"&:hover": { textDecorationColor: "var(--ui-primary-fg)" },
 						},
 						'&[data-color="neutral"]': {
-							color: "var(--ui-neutral-fg)",
 							textDecorationColor: "color-mix(in srgb, var(--ui-neutral-fg) 50%, transparent)",
 							"&:hover": { textDecorationColor: "var(--ui-neutral-fg)" },
 						},
 						'&[data-color="success"]': {
-							color: "var(--ui-success-fg)",
 							textDecorationColor: "color-mix(in srgb, var(--ui-success-fg) 60%, transparent)",
 							"&:hover": { textDecorationColor: "var(--ui-success-fg)" },
 						},
 						'&[data-color="danger"]': {
-							color: "var(--ui-danger-fg)",
 							textDecorationColor: "color-mix(in srgb, var(--ui-danger-fg) 60%, transparent)",
 							"&:hover": { textDecorationColor: "var(--ui-danger-fg)" },
 						},
 						'&[data-color="warning"]': {
-							color: "var(--ui-warning-fg)",
 							textDecorationColor: "color-mix(in srgb, var(--ui-warning-fg) 60%, transparent)",
 							"&:hover": { textDecorationColor: "var(--ui-warning-fg)" },
 						},
@@ -106,7 +110,6 @@ export function Link(handle: Handle<Link.Props>) {
 						'&[aria-disabled="true"]': {
 							cursor: "not-allowed",
 							textDecoration: "none",
-							opacity: "0.5",
 						},
 					}),
 					mix,

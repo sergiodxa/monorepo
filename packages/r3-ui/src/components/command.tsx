@@ -13,6 +13,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg, outline } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { hstack, vstack } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is, maxBs, p, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { textAlign } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { floatingSurface } from "../styles/floating-surface";
@@ -99,16 +107,7 @@ export function Command(handle: Handle<Command.Props>) {
 			<div
 				{...rest}
 				data-slot="command"
-				mix={[
-					floatingSurface(),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						color: "var(--ui-neutral-fg-emphasis)",
-					}),
-					mix,
-				]}
+				mix={[floatingSurface(), vstack(), overflow("hidden"), fg("neutral.emphasis"), mix]}
 			>
 				{children}
 			</div>
@@ -154,29 +153,18 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 					data-slot="input"
 					data-command-input
 					mix={[
+						is("full"),
+						bs("3.5rem"),
+						pi(3),
+						fg("neutral.emphasis"),
+						when("&::placeholder", fg("neutral.muted")),
+						when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 						css({
-							inlineSize: "100%",
-							blockSize: "3.5rem",
-							paddingInline: "0.75rem",
 							backgroundColor: "transparent",
 							fontSize: "0.875rem",
 							lineHeight: "calc(1.25 / 0.875)",
 							outlineStyle: "none",
-							color: "var(--ui-neutral-fg-emphasis)",
-
-							"&::placeholder": {
-								color: "var(--ui-neutral-fg-muted)",
-							},
-							"&:focus-visible": {
-								outlineWidth: "2px",
-								outlineStyle: "solid",
-								outlineOffset: "2px",
-								outlineColor: "var(--ui-primary-ring)",
-							},
-							"&:disabled": {
-								cursor: "not-allowed",
-								opacity: "0.5",
-							},
 						}),
 						mix,
 					]}
@@ -214,12 +202,10 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 				data-slot="list"
 				mix={[
 					attrs({ role: DEFAULT_LIST_ROLE }),
-					css({
-						maxBlockSize: "18rem",
-						overflow: "auto",
-						padding: "0.5rem 0.25rem",
-						outlineStyle: "none",
-					}),
+					maxBs("18rem"),
+					overflow("auto"),
+					p(2, 1),
+					css({ outlineStyle: "none" }),
 					mix,
 				]}
 			/>
@@ -266,35 +252,21 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_ITEM_ROLE }),
+					hstack({ gap: 2, align: "center" }),
+					cursor("default"),
+					rounded("md"),
+					pi(2),
+					pb(2),
+					fg("neutral.emphasis"),
+					when("&:hover", bg("neutral.bg-tint-hover")),
+					when("&:active", bg("neutral.bg-tint-pressed")),
+					when("&:focus", bg("primary.tint")),
+					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
-						cursor: "default",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.5rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 						outlineStyle: "none",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus": {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						'&[aria-disabled="true"]': {
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}
@@ -328,13 +300,13 @@ Command.Empty = function CommandEmpty(handle: Handle<Command.EmptyProps>) {
 				data-slot="empty"
 				data-command-empty
 				mix={[
+					pi(3),
+					pb(6),
+					textAlign("center"),
+					fg("neutral.muted"),
 					css({
-						paddingInline: "0.75rem",
-						paddingBlock: "1.5rem",
-						textAlign: "center",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}

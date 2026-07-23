@@ -22,6 +22,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { rounded } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { appearance } from "@pkg/u/layout";
+import { absolute, relative, vstack } from "@pkg/u/layout";
+import { bs, is, minIs } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { outputCaptionText } from "../styles/output-caption-text";
@@ -208,16 +215,7 @@ export function ColorSlider(handle: Handle<ColorSlider.Props, ColorSlider.Contex
 			<div
 				data-channel={channel}
 				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.5rem",
-						inlineSize: "100%",
-						minInlineSize: "10rem",
-					}),
-					mix,
-				]}
+				mix={[vstack({ gap: 2 }), is("full"), minIs("10rem"), mix]}
 			/>
 		);
 	};
@@ -266,12 +264,11 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 				style={resolvedStyle}
 				mix={[
 					rtlAwareGradientDirection(TRACK_DIRECTION_PROPERTY),
+					relative(),
+					is("full"),
+					bs("var(--ui-color-slider-thumb-size, 1.25rem)"),
+					rounded("full"),
 					css({
-						position: "relative",
-						inlineSize: "100%",
-						blockSize: "var(--ui-color-slider-thumb-size, 1.25rem)",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-
 						"&::before": {
 							content: '""',
 							position: "absolute",
@@ -347,15 +344,15 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 						"--ui-color-slider-thumb-size",
 						"--ui-color-slider-thumb-border-width",
 					),
+					absolute(),
+					z(10),
+					appearance(),
+					cursor("pointer"),
+					when("&:disabled", cursor("not-allowed")),
 					css({
-						position: "absolute",
 						inset: "0",
-						zIndex: 10,
 						margin: "0",
-						appearance: "none",
-						WebkitAppearance: "none",
 						backgroundColor: "transparent",
-						cursor: "pointer",
 						outlineStyle: "none",
 
 						"&::-webkit-slider-runnable-track": {
@@ -369,10 +366,6 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 							blockSize: "100%",
 							backgroundColor: "transparent",
 							borderStyle: "none",
-						},
-
-						"&:disabled": {
-							cursor: "not-allowed",
 						},
 					}),
 					mix,

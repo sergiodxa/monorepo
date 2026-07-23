@@ -12,6 +12,18 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import {
+	container,
+	flex,
+	flexWrap,
+	gap,
+	grid,
+	hstack,
+	items,
+	relative,
+	vstack,
+} from "@pkg/u/layout";
+import { maxIs, minIs } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 /**
@@ -136,14 +148,13 @@ export function Message(handle: Handle<Message.Props>) {
 				{...rest}
 				data-slot="message"
 				mix={[
+					relative(),
+					grid(),
+					gap("var(--ui-message-row-gap, 0.25rem)", "var(--ui-message-gap, 0.75rem)"),
+					container(CONTAINER_NAME),
 					css({
-						position: "relative",
-						display: "grid",
 						gridTemplateColumns: "auto 1fr",
 						gridTemplateAreas: `"avatar header" "avatar content" ". footer"`,
-						columnGap: "var(--ui-message-gap, 0.75rem)",
-						rowGap: "var(--ui-message-row-gap, 0.25rem)",
-						container: `${CONTAINER_NAME} / inline-size`,
 
 						'& > [data-slot="avatar"]': {
 							gridArea: "avatar",
@@ -190,16 +201,7 @@ Message.Avatar = function MessageAvatar(handle: Handle<Message.AvatarProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div
-				{...rest}
-				data-slot="avatar"
-				mix={[
-					css({
-						display: "flex",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="avatar" mix={[flex(), mix]}>
 				{children}
 			</div>
 		);
@@ -234,13 +236,11 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 				{...rest}
 				data-slot="header"
 				mix={[
+					flex(),
+					flexWrap("wrap"),
+					items("baseline"),
+					gap("0.125rem", "0.5rem"),
 					css({
-						display: "flex",
-						flexWrap: "wrap",
-						alignItems: "baseline",
-						columnGap: "0.5rem",
-						rowGap: "0.125rem",
-
 						"& > :first-child": {
 							fontSize: "0.875rem",
 							fontWeight: "600",
@@ -288,13 +288,9 @@ Message.Content = function MessageContent(handle: Handle<Message.ContentProps>) 
 				{...rest}
 				data-slot="content"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						minInlineSize: "0",
-						maxInlineSize: "var(--ui-message-content-max-size, 36rem)",
-						gap: "0.375rem",
-					}),
+					vstack({ gap: "0.375rem" }),
+					minIs("0"),
+					maxIs("var(--ui-message-content-max-size, 36rem)"),
 					mix,
 				]}
 			>
@@ -335,18 +331,7 @@ Message.Footer = function MessageFooter(handle: Handle<Message.FooterProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<footer
-				{...rest}
-				data-slot="footer"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			>
+			<footer {...rest} data-slot="footer" mix={[hstack({ align: "center", gap: "0.25rem" }), mix]}>
 				{children}
 			</footer>
 		);
@@ -387,14 +372,7 @@ Message.Group = function MessageGroup(handle: Handle<Message.GroupProps>) {
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "var(--ui-message-group-gap, 0.125rem)",
-					}),
-					mix,
-				]}
+				mix={[vstack({ gap: "var(--ui-message-group-gap, 0.125rem)" }), mix]}
 			>
 				{children}
 			</div>

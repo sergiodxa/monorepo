@@ -13,6 +13,9 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { bs, is, minIs } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -142,11 +145,10 @@ export function Carousel(handle: Handle<Carousel.Props>) {
 				{...rest}
 				data-slot="carousel"
 				mix={[
+					flex(),
+					flexCol(),
+					gap(3),
 					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.75rem",
-
 						"--ui-carousel-gap": "1rem",
 						"--ui-carousel-slide-size": "18rem",
 						"--ui-carousel-padding": "0px",
@@ -229,8 +231,8 @@ Carousel.Track = function CarouselTrack(handle: Handle<Carousel.TrackProps>) {
 				{...rest}
 				data-slot="track"
 				mix={[
+					flex(),
 					css({
-						display: "flex",
 						gap: "var(--ui-carousel-gap, 1rem)",
 						paddingInline: "var(--ui-carousel-padding, 0px)",
 					}),
@@ -296,11 +298,11 @@ Carousel.Controls = function CarouselControls(handle: Handle<Carousel.ControlsPr
 				{...rest}
 				data-slot="controls"
 				mix={[
+					flex(),
+					items("center"),
+					gap(2),
 					css({
-						display: "flex",
-						alignItems: "center",
 						justifyContent: "flex-end",
-						gap: "0.5rem",
 					}),
 					mix,
 				]}
@@ -344,16 +346,7 @@ Carousel.Previous = function CarouselPrevious(handle: Handle<Carousel.PreviousPr
 				size={resolvedSize}
 				command={resolvedCommand}
 				data-slot="previous"
-				mix={[
-					css({
-						minInlineSize: "0",
-						"& > svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-					}),
-					mix,
-				]}
+				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
 			>
 				{children ?? <ChevronLeftIcon aria-hidden />}
 			</Button>
@@ -396,16 +389,7 @@ Carousel.Next = function CarouselNext(handle: Handle<Carousel.NextProps>) {
 				size={resolvedSize}
 				command={resolvedCommand}
 				data-slot="next"
-				mix={[
-					css({
-						minInlineSize: "0",
-						"& > svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-					}),
-					mix,
-				]}
+				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
 			>
 				{children ?? <ChevronRightIcon aria-hidden />}
 			</Button>

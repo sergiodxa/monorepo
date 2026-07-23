@@ -13,9 +13,12 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { gap } from "@pkg/u/layout";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
-
-import { visuallyHidden } from "../styles/visually-hidden-input";
 
 /**
  * `role="radiogroup"` applied through {@link attrs} unless a consumer
@@ -142,13 +145,13 @@ export function RadioGroup(handle: Handle<RadioGroup.Props, RadioGroup.Context>)
 					css({
 						display: "flex",
 						flexDirection: "column",
-						gap: "0.5rem",
 
 						'&[data-orientation="horizontal"]': {
 							flexDirection: "row",
-							gap: "1rem",
 						},
 					}),
+					gap("0.5rem"),
+					when('&[data-orientation="horizontal"]', gap("1rem")),
 					mix,
 				]}
 			/>
@@ -200,16 +203,16 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 						display: "flex",
 						cursor: "default",
 						alignItems: "center",
-						gap: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-emphasis)",
 
 						"&:has(input:disabled)": {
 							cursor: "not-allowed",
 							opacity: 0.5,
 						},
 					}),
+					gap("0.5rem"),
+					fg("neutral.emphasis"),
 					mix,
 				]}
 			>
@@ -235,41 +238,25 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 							justifyContent: "center",
 							inlineSize: "var(--ui-radio-size, 1.25rem)",
 							blockSize: "var(--ui-radio-size, 1.25rem)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border-strong)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							transitionProperty: "background-color, border-color",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 
 							"&::after": {
 								content: '""',
 								inlineSize: "var(--ui-radio-mark-size, 0.625rem)",
 								blockSize: "var(--ui-radio-mark-size, 0.625rem)",
-								borderRadius: "var(--ui-radius-full, 9999px)",
-								backgroundColor: "var(--ui-primary-fg-on-solid)",
 								transform: "scale(0)",
-								transitionProperty: "transform",
-								transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-								transitionDuration: "150ms",
 							},
 
-							"input:checked ~ &": {
-								borderColor: "var(--ui-primary-bg-solid)",
-								backgroundColor: "var(--ui-primary-bg-solid)",
-							},
 							"input:checked ~ &::after": {
 								transform: "scale(1)",
 							},
-							"input:focus-visible ~ &": {
-								outlineWidth: "2px",
-								outlineStyle: "solid",
-								outlineOffset: "2px",
-								outlineColor: "var(--ui-primary-ring)",
-							},
 						}),
+						rounded("full"),
+						border({ color: "neutral.strong", width: 2 }),
+						bg("neutral.tint"),
+						transition("background-color, border-color"),
+						when("&::after", [rounded("full"), bg("primary.onSolid"), transition("transform")]),
+						when("input:checked ~ &", [border("primary.solid"), bg("primary.solid")]),
+						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
 						parts?.indicator,
 					]}
 				/>

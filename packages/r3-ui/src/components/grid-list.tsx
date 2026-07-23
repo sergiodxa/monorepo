@@ -15,6 +15,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { GripVerticalIcon } from "@pkg/lucide-remix";
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { mbs, pb, pbs, pi } from "@pkg/u/size";
+import { active, hover, not, when } from "@pkg/u/state";
+import { tracking, weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -194,9 +200,9 @@ export function GridList(handle: Handle<GridList.Props>) {
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
 					focusRingPrimary(),
+					pb(2),
+					pi(2),
 					css({
-						paddingBlock: "0.5rem",
-						paddingInline: "0.5rem",
 						outline: "none",
 						container: `${CONTAINER_NAME} / inline-size`,
 					}),
@@ -207,10 +213,10 @@ export function GridList(handle: Handle<GridList.Props>) {
 					data-slot="list"
 					data-layout={resolvedLayout}
 					mix={[
+						flex(),
+						flexCol(),
+						gap(1),
 						css({
-							display: "flex",
-							flexDirection: "column",
-							gap: "0.25rem",
 							contentVisibility: "auto",
 							containIntrinsicSize: "auto var(--ui-grid-list-intrinsic-size, 32rem)",
 
@@ -268,32 +274,21 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_ITEM_ROLE, tabIndex: DEFAULT_ITEM_TAB_INDEX }),
+					flex(),
+					items("center"),
+					gap(2),
+					rounded("md"),
+					pb(2),
+					pi(2),
+					fg("neutral.emphasis"),
+					hover(bg("neutral.bg-tint-hover")),
+					active(bg("neutral.bg-tint-pressed")),
+					when("&:focus", bg("neutral.bg-tint-hover")),
+					when('&[aria-selected="true"]', bg("primary.tint")),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
 						cursor: "default",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingBlock: "0.5rem",
-						paddingInline: "0.5rem",
 						outline: "none",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-						'&[aria-disabled="true"]': {
-							opacity: "0.5",
-						},
 					}),
 					mix,
 				]}
@@ -326,17 +321,15 @@ GridList.Section = function GridListSection(handle: Handle<GridList.SectionProps
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_SECTION_ROLE }),
+					flex(),
+					flexCol(),
+					gap(1),
+					not(":first-child", [mbs(2), pbs(2)]),
 					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-
 						"&:not(:first-child)": {
-							marginBlockStart: "0.5rem",
 							borderBlockStartWidth: "1px",
 							borderBlockStartStyle: "solid",
 							borderBlockStartColor: "var(--ui-neutral-border)",
-							paddingBlockStart: "0.5rem",
 						},
 					}),
 					mix,
@@ -366,15 +359,15 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 			<header
 				{...rest}
 				mix={[
+					pb(1),
+					pi(2),
+					weight("semibold"),
+					tracking("wider"),
+					fg("neutral.muted"),
 					css({
-						paddingBlock: "0.25rem",
-						paddingInline: "0.5rem",
 						fontSize: "0.75rem",
 						lineHeight: "1rem",
-						fontWeight: 600,
 						textTransform: "uppercase",
-						letterSpacing: "0.05em",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}
@@ -423,9 +416,9 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 				type="button"
 				mix={[
 					attrs({ role: DEFAULT_DRAG_HANDLE_ROLE, "data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER }),
+					fg("neutral.muted"),
 					css({
 						cursor: "grab",
-						color: "var(--ui-neutral-fg-muted)",
 
 						"&:active": {
 							cursor: "grabbing",

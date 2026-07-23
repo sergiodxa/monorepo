@@ -17,18 +17,25 @@ import { compose, utility } from "../internal/descriptor";
 import { keyframes } from "./keyframes";
 
 /**
- * The keyframes, duration, and optional easing shared by both `animation()`
- * call shapes.
+ * The keyframes, duration, and optional easing/iteration/direction/fill-mode
+ * shared by both `animation()` call shapes.
  */
 export interface AnimationConfig {
 	keyframes: Record<string, CSSStyles>;
 	duration: string;
 	easing?: string;
+	/** Sets `animationIterationCount` (e.g. `"infinite"`, `2`). Omitted (platform default `1`) when not given. */
+	iterationCount?: string | number;
+	/** Sets `animationDirection` (e.g. `"alternate"`, `"reverse"`). Omitted (platform default `"normal"`) when not given. */
+	direction?: string;
+	/** Sets `animationFillMode` (e.g. `"both"`, `"forwards"`). Omitted (platform default `"none"`) when not given. */
+	fillMode?: string;
 }
 
 /**
  * Emits an `@keyframes` rule under `name` plus host `animationName`,
- * `animationDuration`, and (when given) `animationTimingFunction`
+ * `animationDuration`, and (when given) `animationTimingFunction`,
+ * `animationIterationCount`, `animationDirection`, and `animationFillMode`
  * declarations that reference it. Use the named form when the animation
  * name is useful for debugging in devtools.
  *
@@ -81,11 +88,14 @@ export function animation<Node extends Element = Element>(
 }
 
 function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
-	let styles: Record<string, string> = {
+	let styles: Record<string, string | number> = {
 		animationName: name,
 		animationDuration: config.duration,
 	};
 	if (config.easing) styles.animationTimingFunction = config.easing;
+	if (config.iterationCount !== undefined) styles.animationIterationCount = config.iterationCount;
+	if (config.direction) styles.animationDirection = config.direction;
+	if (config.fillMode) styles.animationFillMode = config.fillMode;
 	return styles as CSSStyles;
 }
 

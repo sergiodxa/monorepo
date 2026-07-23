@@ -11,6 +11,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { absolute, gap, inset, relative, shrink, vstack } from "@pkg/u/layout";
+import { bs, is, mbe, minIs, p, pis } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { leading, tracking, weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -171,20 +178,14 @@ export function Alert(handle: Handle<Alert.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
 					semanticColorPanel(),
-					css({
-						position: "relative",
-						display: "flex",
-						inlineSize: "100%",
-						alignItems: "flex-start",
-						gap: "0.75rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						padding: "1rem",
-						'&:has(> [data-slot="icon"])': {
-							paddingInlineStart: "2.5rem",
-						},
-					}),
+					relative(),
+					vstack({ align: "start" }),
+					is("full"),
+					gap(3),
+					rounded("lg"),
+					border({ width: 1 }),
+					p(4),
+					when('&:has(> [data-slot="icon"])', pis(10)),
 					mix,
 				]}
 			>
@@ -214,16 +215,10 @@ Alert.Icon = function AlertIcon(handle: Handle<Alert.IconProps>) {
 				data-slot="icon"
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					css({
-						position: "absolute",
-						insetBlockStart: "1rem",
-						insetInlineStart: "1rem",
-						color: "currentcolor",
-						"& > svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-					}),
+					absolute(),
+					inset(4, "auto", "auto", 4),
+					when("& > svg", [is(4), bs(4)]),
+					raw({ color: "currentcolor" }),
 					mix,
 				]}
 			>
@@ -249,16 +244,7 @@ Alert.Content = function AlertContent(handle: Handle<Alert.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					css({
-						display: "flex",
-						minInlineSize: "0",
-						flex: "1 1 0%",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
+				mix={[vstack({ gap: 1 }), minIs(0), raw({ flex: "1 1 0%" }), mix]}
 			>
 				{children}
 			</div>
@@ -288,13 +274,11 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 				data-heading-level={resolved}
 				data-slot="title"
 				mix={[
-					css({
-						marginBlockEnd: "0.25rem",
-						fontSize: "0.875rem",
-						fontWeight: "500",
-						lineHeight: "1",
-						letterSpacing: "-0.025em",
-					}),
+					mbe(1),
+					weight("medium"),
+					leading(1),
+					tracking("tight"),
+					raw({ fontSize: "0.875rem" }),
 					mix,
 				]}
 			>
@@ -322,13 +306,11 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 				{...rest}
 				data-slot="description"
 				mix={[
-					css({
+					leading("relaxed"),
+					when("& p", leading("relaxed")),
+					raw({
 						fontSize: "0.875rem",
-						lineHeight: "1.625",
 						color: "color-mix(in oklab, currentcolor 70%, transparent)",
-						"& p": {
-							lineHeight: "1.625",
-						},
 					}),
 					mix,
 				]}
@@ -352,17 +334,7 @@ Alert.Action = function AlertAction(handle: Handle<Alert.ActionProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div
-				{...rest}
-				data-slot="action"
-				mix={[
-					css({
-						flexShrink: "0",
-						alignSelf: "flex-start",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="action" mix={[shrink(), css({ alignSelf: "flex-start" }), mix]}>
 				{children}
 			</div>
 		);

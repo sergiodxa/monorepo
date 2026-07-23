@@ -12,7 +12,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
+import { opacity, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { media } from "@pkg/u/responsive";
+import { when } from "@pkg/u/state";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -98,29 +101,18 @@ export function Modal(handle: Handle<Modal.Props>) {
 			<Dialog
 				{...rest}
 				mix={[
-					css({
-						scale: PANEL_EXIT_SCALE,
-						opacity: "0",
-						transitionProperty: "opacity, scale, display, overlay",
-						transitionDuration: `${durations.normal}ms`,
-						transitionTimingFunction: easings.standard,
-						transitionBehavior: "allow-discrete",
-
-						"&[open]": {
-							scale: PANEL_ENTERED_SCALE,
-							opacity: "1",
-						},
-						"@starting-style": {
-							"&[open]": {
-								scale: PANEL_EXIT_SCALE,
-								opacity: "0",
-							},
-						},
-						"@media (prefers-reduced-motion: reduce)": {
-							scale: PANEL_ENTERED_SCALE,
-							transitionProperty: "opacity, display, overlay",
-						},
+					raw({ scale: PANEL_EXIT_SCALE, transitionBehavior: "allow-discrete" }),
+					opacity(0),
+					transition("opacity, scale, display, overlay", {
+						duration: durations.normal,
+						easing: easings.standard,
 					}),
+					when("&[open]", [raw({ scale: PANEL_ENTERED_SCALE }), opacity(100)]),
+					when("@starting-style", when("&[open]", [raw({ scale: PANEL_EXIT_SCALE }), opacity(0)])),
+					media("(prefers-reduced-motion: reduce)", [
+						raw({ scale: PANEL_ENTERED_SCALE }),
+						raw({ transitionProperty: "opacity, display, overlay" }),
+					]),
 					mix,
 				]}
 			/>

@@ -14,6 +14,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -71,11 +73,11 @@ export function FieldError(handle: Handle<FieldError.Props>) {
 				{...rest}
 				mix={[
 					attrs({ "data-field-error": DEFAULT_FIELD_ERROR_ATTRIBUTE }),
+					fg("danger"),
+					weight("medium"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
-						color: "var(--ui-danger-fg)",
 					}),
 					mix,
 				]}

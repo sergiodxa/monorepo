@@ -11,6 +11,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { appearance, block, flex, flexCol, gap } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is, m, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -65,19 +71,7 @@ export function ProgressBar(handle: Handle<ProgressBar.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} mix={[flex(), flexCol(), gap("0.25rem"), mix]} />;
 	};
 }
 
@@ -120,40 +114,24 @@ ProgressBar.Indicator = function ProgressBarIndicator(handle: Handle<ProgressBar
 				max={resolvedMax}
 				{...rest}
 				mix={[
+					appearance(),
+					block(),
+					is("full"),
+					bs("var(--ui-progress-bar-block-size, 0.5rem)"),
+					m("0"),
+					p("0"),
+					overflow("hidden"),
+					rounded("full"),
+					bg("neutral.border"),
+					when("&::-webkit-progress-bar", [bg("neutral.border"), rounded("full")]),
+					when("&::-webkit-progress-value", [
+						bg("primary.solid"),
+						rounded("full"),
+						transition("all"),
+					]),
+					when("&::-moz-progress-bar", [bg("primary.solid"), rounded("full"), transition("all")]),
 					css({
-						WebkitAppearance: "none",
-						MozAppearance: "none",
-						appearance: "none",
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "var(--ui-progress-bar-block-size, 0.5rem)",
 						border: "none",
-						margin: "0",
-						padding: "0",
-						overflow: "hidden",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						backgroundColor: "var(--ui-neutral-border)",
-
-						"&::-webkit-progress-bar": {
-							backgroundColor: "var(--ui-neutral-border)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-						},
-
-						"&::-webkit-progress-value": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							transitionProperty: "all",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
-						},
-
-						"&::-moz-progress-bar": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							transitionProperty: "all",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
-						},
 
 						"@media (prefers-reduced-motion: reduce)": {
 							"&::-webkit-progress-value": { transitionDuration: "0s" },
@@ -187,10 +165,10 @@ ProgressBar.ValueLabel = function ProgressBarValueLabel(
 			<span
 				{...rest}
 				mix={[
+					fg("neutral"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg)",
 					}),
 					mix,
 				]}

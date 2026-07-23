@@ -11,6 +11,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { pb, pi } from "@pkg/u/size";
+import { tracking, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 /**
@@ -44,15 +47,15 @@ export function Header(handle: Handle<Header.Props>) {
 			<header
 				{...rest}
 				mix={[
+					pi(3),
+					pb(1.5),
+					weight("semibold"),
+					tracking("wider"),
+					fg("neutral.muted"),
 					css({
-						paddingInline: "0.75rem",
-						paddingBlock: "0.375rem",
 						fontSize: "0.75rem",
 						lineHeight: "1rem",
-						fontWeight: 600,
 						textTransform: "uppercase",
-						letterSpacing: "0.05em",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}

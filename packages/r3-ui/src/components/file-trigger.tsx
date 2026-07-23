@@ -12,8 +12,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { opacity, rounded } from "@pkg/u/effects";
+import { absolute, gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { bs, is, m } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
+import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { hasAccessibleText } from "../utils/has-accessible-text";
 
@@ -159,13 +165,15 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 				data-size={resolvedSize}
 				mix={[
 					interactiveTransition(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					gap(2),
+					rounded("md"),
+					weight("medium"),
+					focusRingByColor({ when: "&:has(input:focus-visible)" }),
+					when("&:has(input:disabled)", opacity(50)),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						fontWeight: "500",
 						cursor: "default",
 						userSelect: "none",
 
@@ -284,20 +292,8 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 							},
 						},
 
-						"&:has(input:focus-visible)": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-							'&[data-color="neutral"]': { outlineColor: "var(--ui-neutral-ring)" },
-							'&[data-color="success"]': { outlineColor: "var(--ui-success-ring)" },
-							'&[data-color="warning"]': { outlineColor: "var(--ui-warning-ring)" },
-							'&[data-color="danger"]': { outlineColor: "var(--ui-danger-ring)" },
-						},
-
 						"&:has(input:disabled)": {
 							cursor: "not-allowed",
-							opacity: "0.5",
 						},
 					}),
 					parts?.trigger,
@@ -309,11 +305,11 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					{...rest}
 					mix={[
 						acceptDirectory && attrs({ webkitdirectory: true }),
+						absolute(),
+						is("1px"),
+						bs("1px"),
+						m(0),
 						css({
-							position: "absolute",
-							inlineSize: "1px",
-							blockSize: "1px",
-							margin: 0,
 							overflow: "hidden",
 							clipPath: "inset(50%)",
 							whiteSpace: "nowrap",

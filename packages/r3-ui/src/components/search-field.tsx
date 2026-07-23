@@ -13,6 +13,8 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { SearchIcon } from "@pkg/lucide-remix";
+import { fg } from "@pkg/u/color";
+import { pis } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import { fieldStackLayout } from "../styles/field-stack-layout";
@@ -107,23 +109,16 @@ SearchField.Input = function SearchFieldInput(handle: Handle<SearchField.InputPr
 					aria-hidden
 					size={16}
 					data-slot="icon"
-					mix={css({
-						position: "absolute",
-						insetInlineStart: "0.75rem",
-						pointerEvents: "none",
-						color: "var(--ui-neutral-fg-muted)",
-					})}
-				/>
-				<Input
-					type="search"
-					{...rest}
 					mix={[
 						css({
-							paddingInlineStart: "2.25rem",
+							position: "absolute",
+							insetInlineStart: "0.75rem",
+							pointerEvents: "none",
 						}),
-						mix,
+						fg("neutral.muted"),
 					]}
 				/>
+				<Input type="search" {...rest} mix={[pis("2.25rem"), mix]} />
 			</div>
 		);
 	};

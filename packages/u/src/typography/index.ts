@@ -4,6 +4,7 @@ export { leading } from "./leading";
 export { lineClamp } from "./line-clamp";
 export { nowrap } from "./nowrap";
 export { pretty } from "./pretty";
+export { tabularNums } from "./tabular-nums";
 export { text } from "./text";
 export { textAlign } from "./text-align";
 export { tracking } from "./tracking";

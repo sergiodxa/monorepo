@@ -91,7 +91,9 @@ export function flatten<Node extends Element = Element>(
 	input: UtilityInput<Node>,
 ): UtilityMixin<Node>[] {
 	if (!input) return [];
-	if (Array.isArray(input)) return input.flatMap((item) => flatten<Node>(item));
+	if (Array.isArray(input)) {
+		return (input as ReadonlyArray<UtilityInput<Node>>).flatMap((item) => flatten<Node>(item));
+	}
 	return [input as UtilityMixin<Node>];
 }
 

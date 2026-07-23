@@ -15,7 +15,8 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { combine, raw } from "@pkg/u/general";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -51,11 +52,14 @@ export function chartPalette<Node extends Element = Element>(
 	property: "color" | "fill" | "backgroundColor",
 	combinator = "",
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
-	let rules: CSSStyles = {};
+	let slots = Array.from({ length: CHART_COLOR_SLOT_COUNT }, (_, index) => index + 1);
 
-	for (let slot = 1; slot <= CHART_COLOR_SLOT_COUNT; slot++) {
-		rules[`&${combinator}[data-color="${slot}"]`] = { [property]: `var(--ui-chart-${slot})` };
-	}
-
-	return css<Node>(rules);
+	return combine<Node>(
+		slots.map((slot) =>
+			when<Node>(
+				`&${combinator}[data-color="${slot}"]`,
+				raw({ [property]: `var(--ui-chart-${slot})` }),
+			),
+		),
+	);
 }

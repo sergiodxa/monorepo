@@ -10,6 +10,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { mis } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 /**
@@ -45,11 +47,11 @@ export function Keyboard(handle: Handle<Keyboard.Props>) {
 			<kbd
 				{...rest}
 				mix={[
+					mis("auto"),
+					fg("neutral.muted"),
 					css({
-						marginInlineStart: "auto",
 						fontSize: "0.75rem",
 						lineHeight: "1rem",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
 					mix,
 				]}

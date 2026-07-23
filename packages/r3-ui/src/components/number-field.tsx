@@ -12,9 +12,17 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { MinusIcon, PlusIcon } from "@pkg/lucide-remix";
+import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { flex, inlineFlex, items, justify } from "@pkg/u/layout";
+import { is } from "@pkg/u/size";
+import { active, focusVisible, hover, invalid, when } from "@pkg/u/state";
+import { textAlign } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import { fieldStackLayout } from "../styles/field-stack-layout";
+import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 import { Input } from "./input";
@@ -45,46 +53,28 @@ const DEFAULT_BUTTON_TYPE: NonNullable<NumberField.DecrementButtonProps["type"]>
  * @returns The mixins shared by both stepper buttons.
  */
 function stepperButtonMix(dividerEdge: "start" | "end") {
-	let dividerStyles =
-		dividerEdge === "start"
-			? { borderInlineStartWidth: "1px", borderInlineStartStyle: "solid" }
-			: { borderInlineEndWidth: "1px", borderInlineEndStyle: "solid" };
-
 	return [
 		interactiveTransition(),
+		flex(),
+		items("center"),
+		justify("center"),
+		is("2.5rem"),
+		fg("neutral"),
+		border("neutral"),
+		borderEdge(dividerEdge === "start" ? "inline-start" : "inline-end", { width: 1 }),
+		hover(bg("neutral.bg-tint-hover")),
+		active(bg("neutral.bg-tint-pressed")),
+		focusRingPrimary(),
 		css({
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-			inlineSize: "2.5rem",
 			borderRadius: "0",
 			backgroundColor: "transparent",
-			color: "var(--ui-neutral-fg)",
-			borderColor: "var(--ui-neutral-border)",
-			...dividerStyles,
 
 			"& svg": {
 				inlineSize: "1rem",
 				blockSize: "1rem",
 			},
-
-			"&:hover": {
-				backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-			},
-			"&:active": {
-				backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-			},
-			"&:focus-visible": {
-				outlineWidth: "2px",
-				outlineStyle: "solid",
-				outlineOffset: "2px",
-				outlineColor: "var(--ui-primary-ring)",
-			},
-			"&:disabled": {
-				cursor: "not-allowed",
-				opacity: "0.5",
-			},
 		}),
+		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 	];
 }
 
@@ -189,28 +179,18 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 				data-slot="group"
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "inline-flex",
-						alignItems: "stretch",
-						inlineSize: "100%",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-
-						"&:hover": {
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
-						"&:focus-within": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-primary-ring)",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-					}),
+					inlineFlex(),
+					items("stretch"),
+					is("full"),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					hover(border("neutral.strong")),
+					when("&:focus-within", [
+						outline({ color: "primary.ring", offset: 0 }),
+						border("primary.ring"),
+					]),
 					mix,
 				]}
 			/>
@@ -260,30 +240,25 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 				type="number"
 				{...rest}
 				mix={[
+					textAlign("center"),
 					css({
 						flex: "1 1 0%",
 						borderWidth: "0",
 						borderRadius: "0",
 						backgroundColor: "transparent",
 						color: "inherit",
-						textAlign: "center",
 						"-moz-appearance": "textfield",
 
 						"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
 							"-webkit-appearance": "none",
 							margin: "0",
 						},
-						"&:focus-visible": {
-							outlineWidth: "0",
-						},
-						'&[aria-invalid="true"], &:user-invalid': {
-							outlineWidth: "0",
-							color: "var(--ui-danger-fg)",
-						},
 						"&:disabled": {
 							backgroundColor: "transparent",
 						},
 					}),
+					focusVisible(raw({ outlineWidth: "0" })),
+					invalid([raw({ outlineWidth: "0" }), fg("danger")]),
 					mix,
 				]}
 			/>

@@ -10,6 +10,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flexCol, hstack } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -75,20 +80,15 @@ export function Toolbar(handle: Handle<Toolbar.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
+					hstack({ gap: 2, align: "center" }),
+					rounded("lg"),
+					border({ color: "neutral.border", width: 1 }),
+					bg("neutral.tint"),
+					pb(2),
+					pi(2),
+					when('&[aria-orientation="vertical"]', flexCol()),
 					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						paddingBlock: "0.5rem",
-						paddingInline: "0.5rem",
-
 						'&[aria-orientation="vertical"]': {
-							flexDirection: "column",
 							alignItems: "flex-start",
 						},
 					}),

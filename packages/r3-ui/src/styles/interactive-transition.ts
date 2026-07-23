@@ -13,7 +13,7 @@
 
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { transition } from "@pkg/u/effects";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -52,10 +52,8 @@ export function interactiveTransition<Node extends Element = Element>(): MixinDe
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return css<Node>({
-		transitionProperty:
-			"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-		transitionTimingFunction: easings.standard,
-		transitionDuration: `${durations.fast}ms`,
-	});
+	return transition<Node>(
+		"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+		{ duration: durations.fast, easing: easings.standard },
+	);
 }

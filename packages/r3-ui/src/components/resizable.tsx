@@ -14,6 +14,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { focusVisible, hover, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 /** Default {@link Resizable.Props} orientation, applied when `orientation` is omitted. */
@@ -136,11 +139,6 @@ export function Resizable(handle: Handle<Resizable.Props, Resizable.Context>) {
 						flexDirection: "row",
 						inlineSize: "100%",
 						overflow: "hidden",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
 
 						'&[data-orientation="vertical"]': {
 							flexDirection: "column",
@@ -149,6 +147,9 @@ export function Resizable(handle: Handle<Resizable.Props, Resizable.Context>) {
 							opacity: 0.7,
 						},
 					}),
+					rounded("lg"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.tint"),
 					mix,
 				]}
 			/>
@@ -270,7 +271,6 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 						alignItems: "center",
 						justifyContent: "center",
 						backgroundColor: "transparent",
-						color: "var(--ui-neutral-fg-muted)",
 						userSelect: "none",
 						touchAction: "none",
 						outlineStyle: "none",
@@ -284,8 +284,6 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 
 						"&::before": {
 							content: '""',
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundColor: "var(--ui-neutral-border)",
 						},
 						'&[data-orientation="horizontal"]::before': {
 							blockSize: "2.5rem",
@@ -295,22 +293,16 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 							blockSize: "0.125rem",
 							inlineSize: "2.5rem",
 						},
-						"&:hover::before": {
-							backgroundColor: "var(--ui-neutral-border-strong)",
-						},
-						"&[data-resizing]::before": {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-						},
 						'&[aria-disabled="true"]': {
 							cursor: "not-allowed",
 							opacity: 0.5,
 						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 					}),
+					fg("neutral.muted"),
+					when("&::before", [rounded("full"), bg("neutral.border")]),
+					hover(when("&::before", bg("neutral.strong"))),
+					when("&[data-resizing]::before", bg("primary.solid")),
+					focusVisible(outline({ color: "primary.ring" })),
 					mix,
 				]}
 			/>

@@ -14,6 +14,12 @@
 import type { Handle, Props as ElementProps } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@pkg/u/layout";
+import { bs, is, m, mie, p, pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -121,15 +127,7 @@ export function TagGroup(handle: Handle<TagGroup.Props>) {
 			<div
 				{...rest}
 				data-slot="tag-group"
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
+				mix={[attrs({ role: DEFAULT_ROLE }), vstack({ gap: 1 }), mix]}
 			/>
 		);
 	};
@@ -156,17 +154,7 @@ TagGroup.List = function TagGroupList(handle: Handle<TagGroup.ListProps>) {
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[
-					css({
-						display: "flex",
-						flexWrap: "wrap",
-						gap: "0.5rem",
-						listStyle: "none",
-						margin: "0",
-						padding: "0",
-					}),
-					mix,
-				]}
+				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), css({ listStyle: "none" }), mix]}
 			/>
 		);
 	};
@@ -211,20 +199,29 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 				mix={[
 					focusRingByColor(),
 					interactiveTransition(),
+					inlineFlex(),
+					items("center"),
+					gap(1),
+					rounded("full"),
+					pi(3),
+					pb(1),
+					when('&[data-size="sm"]', [pi(2), pb(0.5)]),
+					when('&[data-color="primary"]', [bg("primary.tint"), fg("primary")]),
+					when('&[data-color="success"]', [bg("success.tint"), fg("success")]),
+					when('&[data-color="warning"]', [bg("warning.tint"), fg("warning")]),
+					when('&[data-color="danger"]', [bg("danger.tint"), fg("danger")]),
+					when('&[aria-selected="true"]', [
+						bg("primary.solid"),
+						fg("primary.onSolid"),
+						weight(600),
+					]),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "0.25rem",
 						cursor: "default",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.25rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 
 						'&[data-size="sm"]': {
-							paddingInline: "0.5rem",
-							paddingBlock: "0.125rem",
 							fontSize: "0.75rem",
 							lineHeight: "calc(1 / 0.75)",
 						},
@@ -232,32 +229,6 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 						'&[data-color="neutral"]': {
 							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
 							color: "var(--ui-neutral-fg)",
-						},
-						'&[data-color="primary"]': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-							color: "var(--ui-primary-fg)",
-						},
-						'&[data-color="success"]': {
-							backgroundColor: "var(--ui-success-bg-tint)",
-							color: "var(--ui-success-fg)",
-						},
-						'&[data-color="warning"]': {
-							backgroundColor: "var(--ui-warning-bg-tint)",
-							color: "var(--ui-warning-fg)",
-						},
-						'&[data-color="danger"]': {
-							backgroundColor: "var(--ui-danger-bg-tint)",
-							color: "var(--ui-danger-fg)",
-						},
-
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-							fontWeight: "600",
-						},
-
-						'&[aria-disabled="true"]': {
-							opacity: "0.5",
 						},
 					}),
 					mix,
@@ -301,17 +272,13 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 				variant="ghost"
 				data-slot="remove"
 				mix={[
+					mie(-1),
+					pb(0.5),
+					pi(0.5),
+					rounded("full"),
+					when("& svg", [is(3), bs(3)]),
 					css({
 						color: "currentColor",
-						marginInlineEnd: "-0.25rem",
-						paddingBlock: "0.125rem",
-						paddingInline: "0.125rem",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-
-						"& svg": {
-							inlineSize: "0.75rem",
-							blockSize: "0.75rem",
-						},
 
 						"&:hover": { backgroundColor: "var(--ui-primary-bg-tint-hover)" },
 						'[data-color="neutral"] &:hover': {

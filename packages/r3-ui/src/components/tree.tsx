@@ -14,6 +14,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { ChevronRightIcon } from "@pkg/lucide-remix";
+import { bg, fg, outline } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { center, hstack, interpolateSize, vstack } from "@pkg/u/layout";
+import { clip } from "@pkg/u/overflow";
+import { bs, is, pb, pie, pi } from "@pkg/u/size";
+import { detailsContent, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -177,20 +183,11 @@ export function Tree(handle: Handle<Tree.Props>) {
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
 					focusRingPrimary(),
-					css({
-						display: "flex",
-						flexDirection: "column",
-						paddingBlock: "0.25rem",
-						paddingInline: "0.25rem",
-						outline: "none",
-
-						"&[data-empty]": {
-							alignItems: "center",
-							justifyContent: "center",
-							paddingBlock: "2rem",
-							color: "var(--ui-neutral-fg-muted)",
-						},
-					}),
+					vstack(),
+					pb(1),
+					pi(1),
+					css({ outline: "none" }),
+					when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
 					mix,
 				]}
 			>
@@ -254,19 +251,17 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 				data-key={id}
 				mix={[
 					attrs({ role: DEFAULT_ITEM_ROLE }),
+					interpolateSize(),
+					detailsContent([clip(), bs(0)]),
 					css({
-						interpolateSize: "allow-keywords",
-
 						"&::details-content": {
-							overflow: "clip",
-							blockSize: "0",
 							transitionProperty: "block-size, content-visibility",
 							transitionDuration: "200ms",
 							transitionBehavior: "allow-discrete",
 						},
-						"&[open]::details-content": {
-							blockSize: "auto",
-						},
+					}),
+					when("&[open]::details-content", bs("auto")),
+					css({
 						[`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`]: {
 							transform: "rotate(90deg)",
 						},
@@ -326,20 +321,18 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_CONTENT_ROLE, "aria-level": depth + 1 }),
+					hstack({ gap: 2, align: "center" }),
+					rounded("md"),
+					pb(1.5),
+					pie(3),
+					fg("neutral.emphasis"),
 					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.5rem",
 						cursor: "default",
 						listStyle: "none",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingBlock: "0.375rem",
 						paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
-						paddingInlineEnd: "0.75rem",
 						outline: "none",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-emphasis)",
 
 						"&::-webkit-details-marker": {
 							display: "none",
@@ -347,26 +340,16 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 						"&::marker": {
 							content: '""',
 						},
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						'&[aria-selected="true"]': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-						},
-						'&[aria-disabled="true"]': {
-							opacity: "0.5",
-						},
 
 						"@media (prefers-reduced-motion: reduce)": {
 							transitionDuration: "0s",
 						},
 					}),
+					when("&:hover", bg("neutral.bg-tint-hover")),
+					when("&:active", bg("neutral.bg-tint-pressed")),
+					when("&:focus", bg("neutral.bg-tint-hover")),
+					when('&[aria-selected="true"]', bg("primary.tint")),
+					when('&[aria-disabled="true"]', opacity(50)),
 					mix,
 				]}
 			>
@@ -419,32 +402,21 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 				type="button"
 				mix={[
 					attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT }),
+					center(),
+					is(5),
+					bs(5),
+					rounded("sm"),
+					fg("neutral.muted"),
+					transition("transform, background-color"),
 					css({
-						display: "flex",
 						flexShrink: "0",
-						inlineSize: "1.25rem",
-						blockSize: "1.25rem",
-						alignItems: "center",
-						justifyContent: "center",
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						color: "var(--ui-neutral-fg-muted)",
-						transitionProperty: "transform, background-color",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 
 						"@media (prefers-reduced-motion: reduce)": {
 							transitionDuration: "0s",
 						},
 					}),
+					when("&:hover", bg("neutral.bg-tint-pressed")),
+					when("&:focus-visible", outline("primary.ring")),
 					mix,
 				]}
 			>

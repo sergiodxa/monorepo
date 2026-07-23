@@ -1,0 +1,24 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { describe, expect, test } from "bun:test";
+
+import type { CSSMixinDescriptor } from "remix/ui";
+
+import { shrink } from "./shrink";
+
+/** Unwraps a utility mixin back to the style tree it was built from. */
+function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
+	return descriptor.args[0] as Record<string, unknown>;
+}
+
+describe("shrink", () => {
+	test("no-arg defaults to 0", () => {
+		expect(styles(shrink())).toEqual({ flexShrink: "0" });
+	});
+
+	test("an explicit number", () => {
+		expect(styles(shrink(1))).toEqual({ flexShrink: "1" });
+	});
+});

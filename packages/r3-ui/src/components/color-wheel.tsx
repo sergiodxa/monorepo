@@ -22,6 +22,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { outline } from "@pkg/u/color";
+import { cursor } from "@pkg/u/general";
+import { block, relative } from "@pkg/u/layout";
+import { is, minIs } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
@@ -202,12 +207,15 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 				data-slot="color-wheel"
 				style={resolvedStyle}
 				mix={[
+					relative(),
+					block(),
+					is("full"),
+					minIs("10rem"),
+					when(
+						'&[data-shape="circular"]',
+						when("&:has(> input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					),
 					css({
-						position: "relative",
-						display: "block",
-						inlineSize: "100%",
-						minInlineSize: "10rem",
-
 						'&[data-shape="circular"]': {
 							display: "inline-block",
 							inlineSize: "var(--ui-color-wheel-size, 12rem)",
@@ -241,12 +249,6 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 									"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
 							},
 
-							"&:has(> input:focus-visible)": {
-								outlineWidth: "2px",
-								outlineStyle: "solid",
-								outlineOffset: "2px",
-								outlineColor: "var(--ui-primary-ring)",
-							},
 							"&:has(> input:disabled)": {
 								opacity: "0.5",
 
@@ -291,15 +293,16 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 							"--ui-color-wheel-thumb-size",
 							"--ui-color-wheel-thumb-border-width",
 						),
+						block(),
+						is("full"),
+						cursor("pointer"),
+						when("&:disabled", cursor("not-allowed")),
 						css({
 							WebkitAppearance: "none",
 							appearance: "none",
-							display: "block",
-							inlineSize: "100%",
 							blockSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
 							margin: "0",
 							backgroundColor: "transparent",
-							cursor: "pointer",
 							outlineStyle: "none",
 
 							"&::-webkit-slider-runnable-track": {
@@ -315,10 +318,6 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 								borderRadius: "var(--ui-radius-full, 9999px)",
 								borderStyle: "none",
 								backgroundImage: HUE_TRACK_GRADIENT,
-							},
-
-							"&:disabled": {
-								cursor: "not-allowed",
 							},
 
 							'[data-shape="circular"] &': {

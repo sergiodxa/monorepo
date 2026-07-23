@@ -12,6 +12,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { justify, shrink } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { bs, is, pb, pbe, pi } from "@pkg/u/size";
+import { hover, open, when } from "@pkg/u/state";
+import { rotate } from "packages/u/src/transform/rotate";
 import { css } from "remix/ui";
 
 import { Disclosure } from "./disclosure";
@@ -98,7 +106,7 @@ export function Accordion(handle: Handle<Accordion.Props>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[css({ inlineSize: "100%" }), mix]}>
+			<div {...rest} mix={[is("full"), mix]}>
 				{children}
 			</div>
 		);
@@ -151,23 +159,14 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 			<Disclosure
 				{...rest}
 				mix={[
+					rounded("none"),
 					css({
-						borderRadius: "0",
 						borderInlineWidth: "0",
 						borderBlockStartWidth: "0",
-
-						"&:first-child": {
-							borderBlockStartWidth: "1px",
-						},
-						'&:has(> summary[aria-disabled="true"])': {
-							opacity: "0.5",
-						},
-						"&[open]": {
-							'& summary [data-slot="icon"]': {
-								transform: "rotate(180deg)",
-							},
-						},
 					}),
+					open(when('& summary [data-slot="icon"]', rotate(180))),
+					when("&:first-child", raw({ borderBlockStartWidth: "1px" })),
+					when('&:has(> summary[aria-disabled="true"])', opacity(50)),
 					mix,
 				]}
 			/>
@@ -207,31 +206,25 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 			<Disclosure.Trigger
 				{...rest}
 				mix={[
-					css({
-						justifyContent: "space-between",
-						borderRadius: "0",
-						paddingBlock: "1rem",
-						paddingInline: "0",
-
-						"&:hover": {
-							backgroundColor: "transparent",
-							textDecorationLine: "underline",
-						},
-
-						'& [data-slot="icon"]': {
+					justify("between"),
+					pb(4),
+					pi(0),
+					rounded("none"),
+					hover([bg("transparent"), raw({ textDecorationLine: "underline" })]),
+					when('& [data-slot="icon"]', [
+						is(4),
+						bs(4),
+						shrink(),
+						raw({
 							flexShrink: "0",
-							inlineSize: "1rem",
-							blockSize: "1rem",
 							transitionProperty: "transform",
 							transitionDuration: "200ms",
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							'& [data-slot="icon"]': {
-								transitionDuration: "0s",
-							},
-						},
-					}),
+						}),
+					]),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						when('& [data-slot="icon"]', raw({ transitionDuration: "0s" })),
+					),
 					mix,
 				]}
 			/>
@@ -261,11 +254,11 @@ Accordion.Content = function AccordionContent(handle: Handle<Accordion.ContentPr
 			<Disclosure.Panel
 				{...rest}
 				mix={[
+					pbe(4),
+					fg("neutral"),
 					css({
-						paddingBlockEnd: "1rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg)",
 					}),
 					mix,
 				]}

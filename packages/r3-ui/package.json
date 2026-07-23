@@ -19,6 +19,7 @@
 	},
 	"dependencies": {
 		"@pkg/lucide-remix": "workspace:*",
+		"@pkg/u": "workspace:*",
 		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {

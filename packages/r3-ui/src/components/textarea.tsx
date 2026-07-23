@@ -11,6 +11,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { border, bg, fg, outline } from "@pkg/u/color";
+import { rounded, opacity } from "@pkg/u/effects";
+import { block } from "@pkg/u/layout";
+import { is, bs, minBs, pi, pb } from "@pkg/u/size";
+import { when, hover, invalid } from "@pkg/u/state";
 import { css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -99,69 +104,52 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 				data-color={resolvedColor}
 				mix={[
 					interactiveTransition(),
+					block(),
+					is("full"),
+					bs("auto"),
+					minBs("6rem"),
+					rounded("md"),
+					border({ color: "neutral", width: 1 }),
+					bg("neutral.bg-tint"),
+					fg("neutral.fg-emphasis"),
+					pi("0.75rem"),
+					pb("0.5rem"),
+					when("&::placeholder", fg("neutral.fg-muted")),
+					hover(border("neutral.border-strong")),
+					when("&:focus", border("neutral.border-strong")),
+					when("&:focus-visible", [
+						outline({ color: "neutral.ring", offset: 0 }),
+						border("neutral.border-strong"),
+						when('&[data-color="primary"]', [
+							border("primary.border-strong"),
+							outline({ color: "primary.ring", offset: 0 }),
+						]),
+						when('&[data-color="success"]', [
+							border("success.border-strong"),
+							outline({ color: "success.ring", offset: 0 }),
+						]),
+						when('&[data-color="warning"]', [
+							border("warning.border-strong"),
+							outline({ color: "warning.ring", offset: 0 }),
+						]),
+						when('&[data-color="danger"]', [
+							border("danger.border-strong"),
+							outline({ color: "danger.ring", offset: 0 }),
+						]),
+					]),
+					invalid([outline({ color: "danger.ring", offset: 0 }), border("danger.border-strong")]),
+					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover")]),
 					css({
-						display: "block",
-						inlineSize: "100%",
-						blockSize: "auto",
-						minBlockSize: "6rem",
 						resize: "block",
 						fieldSizing: "content",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
 
-						"&::placeholder": {
-							color: "var(--ui-neutral-fg-muted)",
-						},
-
-						"&:hover": {
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
 						"&:focus": {
 							outline: "none",
-							borderColor: "var(--ui-neutral-border-strong)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-neutral-border-strong)",
-							outlineColor: "var(--ui-neutral-ring)",
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border-strong)",
-								outlineColor: "var(--ui-primary-ring)",
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border-strong)",
-								outlineColor: "var(--ui-success-ring)",
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border-strong)",
-								outlineColor: "var(--ui-warning-ring)",
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border-strong)",
-								outlineColor: "var(--ui-danger-ring)",
-							},
-						},
-						'&[aria-invalid="true"], &:user-invalid': {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "0px",
-							borderColor: "var(--ui-danger-border-strong)",
-							outlineColor: "var(--ui-danger-ring)",
 						},
 						"&:disabled": {
 							cursor: "not-allowed",
-							opacity: "0.5",
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
 						},
 					}),
 					mix,

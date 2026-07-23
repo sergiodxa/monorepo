@@ -11,6 +11,9 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { hover, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -162,21 +165,21 @@ ScrollArea.Viewport = function ScrollAreaViewport(handle: Handle<ScrollArea.View
 							backgroundColor: "transparent",
 						},
 						"&::-webkit-scrollbar-thumb": {
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundColor: "var(--ui-neutral-border)",
 							borderWidth: "3px",
 							borderStyle: "solid",
 							borderColor: "transparent",
 							backgroundClip: "content-box",
-						},
-						"&::-webkit-scrollbar-thumb:hover": {
-							backgroundColor: "var(--ui-neutral-border-strong)",
 						},
 
 						"@media (prefers-reduced-motion: reduce)": {
 							scrollBehavior: "auto",
 						},
 					}),
+					when("&::-webkit-scrollbar-thumb", [
+						rounded("full"),
+						bg("neutral.border"),
+						hover(bg("neutral.strong")),
+					]),
 					mix,
 				]}
 			/>

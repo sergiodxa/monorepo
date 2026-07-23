@@ -13,7 +13,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { css } from "remix/ui";
+import { block } from "@pkg/u/layout";
 
 /**
  * Stylesheet text {@link SharedElement} renders into a `<style>` element
@@ -109,17 +109,7 @@ export function SharedElement(handle: Handle<SharedElement.Props>) {
 		return (
 			<>
 				<style>{CROSS_DOCUMENT_TRANSITION_STYLESHEET}</style>
-				<div
-					{...rest}
-					id={id}
-					style={resolvedStyle}
-					mix={[
-						css({
-							display: "block",
-						}),
-						mix,
-					]}
-				/>
+				<div {...rest} id={id} style={resolvedStyle} mix={[block(), mix]} />
 			</>
 		);
 	};

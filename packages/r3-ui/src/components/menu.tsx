@@ -12,8 +12,16 @@
 
 import type { ElementProps, Handle, MixinDescriptor, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, fg, outline } from "@pkg/u/color";
+import { rounded, opacity } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { flex, gap, items } from "@pkg/u/layout";
+import { is, minIs, mb, pb, pi, p } from "@pkg/u/size";
+import { active, disabled, focusVisible, hover, when } from "@pkg/u/state";
+import { textAlign, weight } from "@pkg/u/typography";
 import { attrs, css } from "remix/ui";
 
+import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
@@ -150,15 +158,7 @@ export function Menu(handle: Handle<Menu.Props>) {
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					css({
-						minInlineSize: "10rem",
-						padding: "0.25rem",
-						outline: "none",
-					}),
-					mix,
-				]}
+				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), css({ outline: "none" }), mix]}
 			>
 				{children}
 			</Popover>
@@ -214,54 +214,34 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 		let itemMix = [
 			interactiveTransition(),
 			attrs({ role: DEFAULT_ITEM_ROLE }),
+			flex(),
+			is("full"),
+			items("center"),
+			gap(2),
+			rounded("md"),
+			pi(3),
+			pb(2),
+			fg("neutral.emphasis"),
+			hover(bg("neutral.bg-tint-hover")),
+			active(bg("neutral.bg-tint-pressed")),
+			when("&:focus", bg("primary.tint")),
+			focusRingPrimary(),
+			when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid"), weight(500)]),
+			disabled([opacity(50), cursor("not-allowed")]),
+			when("&[data-danger]", [
+				fg("danger"),
+				hover(bg("danger.tint")),
+				active(bg("danger.bg-tint-pressed")),
+				when("&:focus", bg("danger.tint")),
+				focusVisible(outline("danger.ring")),
+			]),
+			cursor("default"),
 			css({
-				display: "flex",
-				inlineSize: "100%",
-				alignItems: "center",
-				gap: "0.5rem",
-				cursor: "default",
-				textAlign: "start",
 				textDecorationLine: "none",
-				borderRadius: "var(--ui-radius-md, 0.375rem)",
-				paddingInline: "0.75rem",
-				paddingBlock: "0.5rem",
 				fontSize: "0.875rem",
 				lineHeight: "calc(1.25 / 0.875)",
-				color: "var(--ui-neutral-fg-emphasis)",
-
-				"&:hover": {
-					backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-				},
-				"&:active": {
-					backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-				},
-				"&:focus": {
-					backgroundColor: "var(--ui-primary-bg-tint)",
-				},
-				"&:focus-visible": {
-					outlineWidth: "2px",
-					outlineStyle: "solid",
-					outlineOffset: "2px",
-					outlineColor: "var(--ui-primary-ring)",
-				},
-				'&[aria-selected="true"]': {
-					backgroundColor: "var(--ui-primary-bg-solid)",
-					color: "var(--ui-primary-fg-on-solid)",
-					fontWeight: "500",
-				},
-				"&:disabled, &[aria-disabled='true']": {
-					opacity: "0.5",
-					cursor: "not-allowed",
-				},
-
-				"&[data-danger]": {
-					color: "var(--ui-danger-fg)",
-					"&:hover": { backgroundColor: "var(--ui-danger-bg-tint)" },
-					"&:active": { backgroundColor: "var(--ui-danger-bg-tint-pressed)" },
-					"&:focus": { backgroundColor: "var(--ui-danger-bg-tint)" },
-					"&:focus-visible": { outlineColor: "var(--ui-danger-ring)" },
-				},
 			}),
+			textAlign("start"),
 			mix,
 		];
 
@@ -319,6 +299,6 @@ Menu.Separator = function MenuSeparator(handle: Handle<Menu.SeparatorProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Separator {...rest} mix={[css({ marginBlock: "0.25rem" }), mix]} />;
+		return <Separator {...rest} mix={[mb(1), mix]} />;
 	};
 };

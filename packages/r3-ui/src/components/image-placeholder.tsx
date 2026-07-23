@@ -11,6 +11,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { absolute, center, flex, inlineFlex, items, justify, relative } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, fit, is, mis } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { focusRingPrimary } from "../styles/focus-ring";
@@ -143,19 +150,19 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 				data-shape={resolvedShape}
 				mix={[
 					focusRingPrimary(),
+					relative(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral.emphasis"),
 					css({
-						position: "relative",
-						display: "inline-flex",
 						flexShrink: 0,
-						alignItems: "center",
-						justifyContent: "center",
 						userSelect: "none",
 						inlineSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
 						blockSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						color: "var(--ui-neutral-fg-emphasis)",
 
 						'&[data-size="sm"]': {
 							inlineSize: "var(--ui-image-placeholder-size-sm, 2rem)",
@@ -222,16 +229,16 @@ ImagePlaceholder.Image = function ImagePlaceholderImage(
 				{...rest}
 				data-slot="image"
 				mix={[
+					absolute(),
+					is("full"),
+					bs("full"),
+					fit("cover"),
 					css({
-						position: "absolute",
 						insetBlockStart: "0",
 						insetBlockEnd: "0",
 						insetInlineStart: "0",
 						insetInlineEnd: "0",
-						inlineSize: "100%",
-						blockSize: "100%",
 						overflow: "hidden",
-						objectFit: "cover",
 					}),
 					mix,
 				]}
@@ -265,20 +272,18 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 				{...rest}
 				data-slot="fallback"
 				mix={[
+					absolute(),
+					center(),
+					weight("medium"),
+					bg("neutral.bg-tint-pressed"),
+					fg("neutral"),
 					css({
-						position: "absolute",
 						insetBlockStart: "0",
 						insetBlockEnd: "0",
 						insetInlineStart: "0",
 						insetInlineEnd: "0",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
 						overflow: "hidden",
-						fontWeight: "500",
 						textTransform: "uppercase",
-						backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						color: "var(--ui-neutral-fg)",
 					}),
 					mix,
 				]}
@@ -313,17 +318,15 @@ ImagePlaceholder.Badge = function ImagePlaceholderBadge(
 				{...rest}
 				data-slot="badge"
 				mix={[
+					absolute(),
+					is(3),
+					bs(3),
+					rounded("full"),
+					border({ color: "neutral.tint", width: 2 }),
+					bg("neutral.strong"),
 					css({
-						position: "absolute",
 						insetBlockEnd: "0",
 						insetInlineEnd: "0",
-						inlineSize: "0.75rem",
-						blockSize: "0.75rem",
-						borderRadius: "var(--ui-radius-full, 9999px)",
-						borderWidth: "2px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-bg-tint)",
-						backgroundColor: "var(--ui-neutral-border-strong)",
 					}),
 					mix,
 				]}
@@ -360,12 +363,9 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 				{...rest}
 				data-slot="group"
 				mix={[
+					flex(),
+					when("& > * + *", mis(-3)),
 					css({
-						display: "flex",
-
-						"& > * + *": {
-							marginInlineStart: "-0.75rem",
-						},
 						'& > [data-slot="image-placeholder"]': {
 							boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)",
 						},
@@ -404,29 +404,24 @@ ImagePlaceholder.GroupCount = function ImagePlaceholderGroupCount(
 				data-slot="group-count"
 				data-shape={resolvedShape}
 				mix={[
+					relative(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					overflow("hidden"),
+					weight("medium"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral"),
+					when('&[data-shape="circle"]', rounded("full")),
+					when('&[data-shape="square"]', rounded("lg")),
 					css({
-						position: "relative",
-						display: "inline-flex",
 						flexShrink: 0,
-						alignItems: "center",
-						justifyContent: "center",
 						userSelect: "none",
-						overflow: "hidden",
 						inlineSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
 						blockSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
 						boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)",
-						backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						color: "var(--ui-neutral-fg)",
-
-						'&[data-shape="circle"]': {
-							borderRadius: "var(--ui-radius-full, 9999px)",
-						},
-						'&[data-shape="square"]': {
-							borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						},
 					}),
 					mix,
 				]}

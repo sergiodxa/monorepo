@@ -14,6 +14,12 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { inlineFlex, items, justify, relative } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 /** Shape variant {@link ColorSwatch} falls back to when `shape` is omitted. */
@@ -113,38 +119,31 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 				style={resolvedStyle}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+					relative(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					overflow("hidden"),
+					border({ width: 1, color: "neutral" }),
+					is("var(--ui-color-swatch-size-md, 1.75rem)"),
+					bs("var(--ui-color-swatch-size-md, 1.75rem)"),
+					rounded("md"),
+					when('&[data-size="sm"]', [
+						is("var(--ui-color-swatch-size-sm, 1.25rem)"),
+						bs("var(--ui-color-swatch-size-sm, 1.25rem)"),
+					]),
+					when('&[data-size="lg"]', [
+						is("var(--ui-color-swatch-size-lg, 2.5rem)"),
+						bs("var(--ui-color-swatch-size-lg, 2.5rem)"),
+					]),
+					when('&[data-shape="circle"]', rounded("full")),
 					css({
-						position: "relative",
-						display: "inline-flex",
 						flexShrink: 0,
-						alignItems: "center",
-						justifyContent: "center",
 						verticalAlign: "middle",
-						overflow: "hidden",
 						userSelect: "none",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						inlineSize: "var(--ui-color-swatch-size-md, 1.75rem)",
-						blockSize: "var(--ui-color-swatch-size-md, 1.75rem)",
-
-						'&[data-size="sm"]': {
-							inlineSize: "var(--ui-color-swatch-size-sm, 1.25rem)",
-							blockSize: "var(--ui-color-swatch-size-sm, 1.25rem)",
-						},
-						'&[data-size="lg"]': {
-							inlineSize: "var(--ui-color-swatch-size-lg, 2.5rem)",
-							blockSize: "var(--ui-color-swatch-size-lg, 2.5rem)",
-						},
 
 						'&[data-shape="square"]': {
 							borderRadius: "0",
-						},
-						'&[data-shape="rounded"]': {
-							borderRadius: "var(--ui-radius-md, 0.375rem)",
-						},
-						'&[data-shape="circle"]': {
-							borderRadius: "var(--ui-radius-full, 9999px)",
 						},
 
 						"&::before": {

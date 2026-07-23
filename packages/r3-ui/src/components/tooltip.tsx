@@ -12,6 +12,9 @@
 
 import type { Handle } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { rounded, shadow } from "@pkg/u/effects";
+import { pb, pi } from "@pkg/u/size";
 import { css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -124,15 +127,15 @@ export function Tooltip(handle: Handle<Tooltip.Props>) {
 				role="tooltip"
 				placement={resolvedPlacement}
 				mix={[
+					rounded("md"),
+					pi(2),
+					pb(1),
+					shadow("md"),
+					bg("neutral.solid"),
+					fg("neutral.onSolid"),
 					css({
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.5rem",
-						paddingBlock: "0.25rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-						backgroundColor: "var(--ui-neutral-bg-solid)",
-						color: "var(--ui-neutral-fg-on-solid)",
 
 						opacity: "0",
 						scale: "0.95",

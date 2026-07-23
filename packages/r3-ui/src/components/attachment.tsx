@@ -12,7 +12,27 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import {
+	block,
+	container,
+	flex,
+	gap,
+	hstack,
+	items,
+	justify,
+	relative,
+	shrink,
+	vstack,
+} from "@pkg/u/layout";
+import { overflow, overflowX } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { bs, fit, is, minIs, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { truncate, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { shimmer } from "../animations/keyframes";
 import { scrollFade } from "../animations/scroll";
@@ -222,38 +242,28 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 				data-state={resolvedState}
 				aria-busy={isBusy || undefined}
 				mix={[
-					css({
-						position: "relative",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
-						padding: "0.75rem",
-						transitionProperty: "border-color, background-color",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
-						container: `${CONTAINER_NAME} / inline-size`,
-
-						'&[data-state="error"]': {
-							borderColor: "var(--ui-danger-border)",
-							backgroundColor: "var(--ui-danger-bg-tint)",
-							color: "var(--ui-danger-fg-emphasis)",
-						},
-					}),
+					relative(),
+					rounded("lg"),
+					border({ width: 1 }),
+					border("neutral"),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					p(3),
+					transition("border-color, background-color"),
+					container(CONTAINER_NAME),
+					when('&[data-state="error"]', [
+						border("danger"),
+						bg("danger.tint"),
+						fg("danger.emphasis"),
+					]),
 					mix,
 				]}
 			>
 				<div
 					data-slot="body"
 					mix={[
-						css({
-							display: "flex",
-							flexDirection: "row",
-							alignItems: "center",
-							gap: "0.75rem",
-
+						hstack({ gap: 3, align: "center" }),
+						raw({
 							[NARROW_CONTAINER_QUERY]: {
 								flexDirection: "column",
 								alignItems: "stretch",
@@ -293,28 +303,19 @@ Attachment.Media = function AttachmentMedia(handle: Handle<Attachment.MediaProps
 				{...rest}
 				data-slot="media"
 				mix={[
-					css({
-						display: "flex",
-						flexShrink: 0,
-						alignItems: "center",
-						justifyContent: "center",
-						overflow: "hidden",
-						inlineSize: "2.5rem",
-						blockSize: "2.5rem",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						color: "var(--ui-neutral-fg)",
-
-						"& > svg": {
-							inlineSize: "1.25rem",
-							blockSize: "1.25rem",
-						},
-						"& > img": {
-							inlineSize: "100%",
-							blockSize: "100%",
-							objectFit: "cover",
-						},
-
+					flex(),
+					shrink(0),
+					items("center"),
+					justify("center"),
+					overflow(),
+					is(10),
+					bs(10),
+					rounded("md"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral"),
+					when("& > svg", [is(5), bs(5)]),
+					when("& > img", [is("full"), bs("full"), fit("cover")]),
+					raw({
 						[NARROW_CONTAINER_QUERY]: {
 							inlineSize: "100%",
 							blockSize: "auto",
@@ -358,13 +359,10 @@ Attachment.Content = function AttachmentContent(handle: Handle<Attachment.Conten
 				{...rest}
 				data-slot="content"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						flex: "1",
-						minInlineSize: "0",
-						gap: "0.125rem",
-
+					vstack({ gap: 0.5 }),
+					minIs(0),
+					raw({ flex: "1" }),
+					raw({
 						[NARROW_CONTAINER_QUERY]: {
 							textAlign: "center",
 						},
@@ -404,14 +402,9 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 				data-slot="title"
 				data-state={state}
 				mix={[
-					css({
-						fontSize: "0.875rem",
-						fontWeight: "600",
-						lineHeight: "calc(1.25 / 0.875)",
-						whiteSpace: "nowrap",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-					}),
+					weight("semibold"),
+					truncate(),
+					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
 					shimmer({ when: TITLE_SHIMMER_WHEN }),
 					mix,
 				]}
@@ -447,14 +440,9 @@ Attachment.Description = function AttachmentDescription(
 				{...rest}
 				data-slot="description"
 				mix={[
-					css({
-						fontSize: "0.75rem",
-						lineHeight: "calc(1 / 0.75)",
-						color: "var(--ui-neutral-fg-muted)",
-						whiteSpace: "nowrap",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-					}),
+					truncate(),
+					fg("neutral.muted"),
+					raw({ fontSize: "0.75rem", lineHeight: "calc(1 / 0.75)" }),
 					mix,
 				]}
 			>
@@ -483,19 +471,7 @@ Attachment.Actions = function AttachmentActions(handle: Handle<Attachment.Action
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div
-				{...rest}
-				data-slot="actions"
-				mix={[
-					css({
-						display: "flex",
-						flexShrink: 0,
-						alignItems: "center",
-						gap: "0.25rem",
-					}),
-					mix,
-				]}
-			>
+			<div {...rest} data-slot="actions" mix={[flex(), shrink(0), items("center"), gap(1), mix]}>
 				{children}
 			</div>
 		);
@@ -532,7 +508,7 @@ Attachment.Action = function AttachmentAction(handle: Handle<Attachment.ActionPr
 				size={size ?? DEFAULT_ACTION_SIZE}
 				{...rest}
 				data-slot="action"
-				mix={[css({ flexShrink: "0" }), mix]}
+				mix={[shrink(0), mix]}
 			/>
 		);
 	};
@@ -598,21 +574,11 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 				data-slot="trigger"
 				mix={[
 					attrs({ href, commandfor, command, target }),
-					css({
-						position: "relative",
-						display: "block",
-						borderRadius: "inherit",
-
-						"&[role]:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						"&[role]:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
-					}),
+					relative(),
+					block(),
+					raw({ borderRadius: "inherit" }),
+					when("&[role]:hover", bg("neutral.bg-tint-hover")),
+					when("&[role]:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					mix,
 				]}
 			>
@@ -649,24 +615,17 @@ Attachment.Group = function AttachmentGroup(handle: Handle<Attachment.GroupProps
 				data-slot="group"
 				mix={[
 					attrs({ tabIndex: DEFAULT_GROUP_TAB_INDEX }),
-					css({
-						display: "flex",
-						gap: "0.75rem",
-						overflowX: "auto",
+					flex(),
+					gap(3),
+					overflowX("auto"),
+					raw({
 						overscrollBehaviorInline: "contain",
 						scrollSnapType: "inline mandatory",
 						scrollPaddingInline: "0.75rem",
 						scrollBehavior: "auto",
-
-						"& > *": {
-							flexShrink: "0",
-							scrollSnapAlign: "start",
-						},
-
-						"@media (prefers-reduced-motion: no-preference)": {
-							scrollBehavior: "smooth",
-						},
 					}),
+					when("& > *", [shrink(0), raw({ scrollSnapAlign: "start" })]),
+					media("(prefers-reduced-motion: no-preference)", raw({ scrollBehavior: "smooth" })),
 					scrollFade({ axis: "inline", size: GROUP_SCROLL_FADE_SIZE }),
 					mix,
 				]}

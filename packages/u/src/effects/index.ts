@@ -4,3 +4,4 @@ export { blur } from "./blur";
 export { opacity } from "./opacity";
 export { rounded } from "./rounded";
 export { shadow } from "./shadow";
+export { transition } from "./transition";

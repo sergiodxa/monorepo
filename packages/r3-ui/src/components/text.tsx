@@ -11,6 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
 import { css } from "remix/ui";
 
 /**
@@ -48,10 +49,10 @@ export function Text(handle: Handle<Text.Props>) {
 			<span
 				{...rest}
 				mix={[
+					fg("neutral"),
 					css({
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg)",
 					}),
 					mix,
 				]}

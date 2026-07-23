@@ -13,6 +13,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { center, flex, flexCol, gap, items } from "@pkg/u/layout";
+import { bs, is, mis, minIs } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { truncate, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 /**
@@ -126,9 +131,9 @@ export function Item(handle: Handle<Item.Props>) {
 				{...rest}
 				data-slot="item"
 				mix={[
+					flex(),
+					items("center"),
 					css({
-						display: "flex",
-						alignItems: "center",
 						gap: "var(--ui-item-gap, 0.75rem)",
 						paddingBlock: "var(--ui-item-padding-block, 0.625rem)",
 						paddingInline: "var(--ui-item-padding-inline, 0.75rem)",
@@ -178,19 +183,13 @@ Item.Media = function ItemMedia(handle: Handle<Item.MediaProps>) {
 				{...rest}
 				data-slot="media"
 				mix={[
+					center(),
+					fg("neutral"),
+					when("& > svg", [is(5), bs(5)]),
 					css({
-						display: "flex",
 						flexShrink: "0",
-						alignItems: "center",
-						justifyContent: "center",
 						inlineSize: "var(--ui-item-media-size, 2rem)",
 						blockSize: "var(--ui-item-media-size, 2rem)",
-						color: "var(--ui-neutral-fg)",
-
-						"& > svg": {
-							inlineSize: "1.25rem",
-							blockSize: "1.25rem",
-						},
 					}),
 					mix,
 				]}
@@ -226,12 +225,12 @@ Item.Content = function ItemContent(handle: Handle<Item.ContentProps>) {
 				{...rest}
 				data-slot="content"
 				mix={[
+					flex(),
+					flexCol(),
+					minIs(0),
+					gap(0.5),
 					css({
-						display: "flex",
-						flexDirection: "column",
 						flex: "1 1 0%",
-						minInlineSize: "0",
-						gap: "0.125rem",
 					}),
 					mix,
 				]}
@@ -264,14 +263,12 @@ Item.Title = function ItemTitle(handle: Handle<Item.TitleProps>) {
 				{...rest}
 				data-slot="title"
 				mix={[
+					weight("medium"),
+					fg("neutral.emphasis"),
+					truncate(),
 					css({
 						fontSize: "0.875rem",
-						fontWeight: "500",
 						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg-emphasis)",
-						whiteSpace: "nowrap",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
 					}),
 					mix,
 				]}
@@ -303,13 +300,11 @@ Item.Description = function ItemDescription(handle: Handle<Item.DescriptionProps
 				{...rest}
 				data-slot="description"
 				mix={[
+					fg("neutral.muted"),
+					truncate(),
 					css({
 						fontSize: "0.8125rem",
 						lineHeight: "calc(1.125 / 0.8125)",
-						color: "var(--ui-neutral-fg-muted)",
-						whiteSpace: "nowrap",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
 					}),
 					mix,
 				]}
@@ -348,12 +343,12 @@ Item.Actions = function ItemActions(handle: Handle<Item.ActionsProps>) {
 				{...rest}
 				data-slot="actions"
 				mix={[
+					flex(),
+					items("center"),
+					mis("auto"),
 					css({
-						display: "flex",
 						flexShrink: "0",
-						alignItems: "center",
 						gap: "var(--ui-item-actions-gap, 0.5rem)",
-						marginInlineStart: "auto",
 
 						[NARROW_CONTAINER_QUERY]: {
 							flexBasis: "100%",

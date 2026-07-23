@@ -12,7 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { LoaderCircleIcon } from "@pkg/lucide-remix";
-import { css } from "remix/ui";
+import { bs, fg, inlineFlex, is, items, justify, when } from "@pkg/u";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -84,30 +84,28 @@ export function Spinner(handle: Handle<Spinner.Props>) {
 				data-size={resolvedSize}
 				{...rest}
 				mix={[
-					css({
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
+					inlineFlex(),
+					items("center"),
+					justify("center"),
 
-						'&[data-color="primary"]': { color: "var(--ui-primary-fg)" },
-						'&[data-color="neutral"]': { color: "var(--ui-neutral-fg)" },
-						'&[data-color="success"]': { color: "var(--ui-success-fg)" },
-						'&[data-color="warning"]': { color: "var(--ui-warning-fg)" },
-						'&[data-color="danger"]': { color: "var(--ui-danger-fg)" },
+					when('&[data-color="primary"]', fg("primary")),
+					when('&[data-color="neutral"]', fg("neutral")),
+					when('&[data-color="success"]', fg("success")),
+					when('&[data-color="warning"]', fg("warning")),
+					when('&[data-color="danger"]', fg("danger")),
 
-						"& svg": {
-							inlineSize: "var(--ui-spinner-icon-size-md, 1.25rem)",
-							blockSize: "var(--ui-spinner-icon-size-md, 1.25rem)",
-						},
-						'&[data-size="sm"] svg': {
-							inlineSize: "var(--ui-spinner-icon-size-sm, 1rem)",
-							blockSize: "var(--ui-spinner-icon-size-sm, 1rem)",
-						},
-						'&[data-size="lg"] svg': {
-							inlineSize: "var(--ui-spinner-icon-size-lg, 1.75rem)",
-							blockSize: "var(--ui-spinner-icon-size-lg, 1.75rem)",
-						},
-					}),
+					when("& svg", [
+						is("var(--ui-spinner-icon-size-md, 1.25rem)"),
+						bs("var(--ui-spinner-icon-size-md, 1.25rem)"),
+					]),
+					when('&[data-size="sm"] svg', [
+						is("var(--ui-spinner-icon-size-sm, 1rem)"),
+						bs("var(--ui-spinner-icon-size-sm, 1rem)"),
+					]),
+					when('&[data-size="lg"] svg', [
+						is("var(--ui-spinner-icon-size-lg, 1.75rem)"),
+						bs("var(--ui-spinner-icon-size-lg, 1.75rem)"),
+					]),
 					mix,
 				]}
 			>

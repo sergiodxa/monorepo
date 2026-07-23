@@ -13,8 +13,15 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { bs, m, minIs, p, pi } from "@pkg/u/size";
+import { active, hover, when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
+import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import {
 	warnIfNoAccessibleLabel,
@@ -89,19 +96,7 @@ export function Pagination(handle: Handle<Pagination.Props>) {
 			'Pagination: needs an "aria-label" or "aria-labelledby" identifying which set of results it paginates for assistive technology.',
 		);
 
-		return (
-			<nav
-				{...rest}
-				data-slot="pagination"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <nav {...rest} data-slot="pagination" mix={[flex(), items("center"), mix]} />;
 	};
 }
 
@@ -131,14 +126,12 @@ Pagination.List = function PaginationList(handle: Handle<Pagination.ListProps>) 
 				{...rest}
 				data-slot="list"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: "0.25rem",
-						listStyle: "none",
-						margin: "0",
-						padding: "0",
-					}),
+					flex(),
+					items("center"),
+					gap("0.25rem"),
+					m("0"),
+					p("0"),
+					css({ listStyle: "none" }),
 					mix,
 				]}
 			/>
@@ -162,19 +155,7 @@ Pagination.Item = function PaginationItem(handle: Handle<Pagination.ItemProps>) 
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<li
-				{...rest}
-				data-slot="item"
-				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <li {...rest} data-slot="item" mix={[flex(), items("center"), mix]} />;
 	};
 };
 
@@ -209,38 +190,30 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 				data-slot="link"
 				mix={[
 					interactiveTransition(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					bs("var(--ui-pagination-control-size, 2.25rem)"),
+					minIs("var(--ui-pagination-control-size, 2.25rem)"),
+					rounded("md"),
+					pi("0.75rem"),
+					weight(500),
+					fg("neutral"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					when('&[aria-current]:not([aria-current="false"])', [
+						bg("primary.solid"),
+						fg("primary.onSolid"),
+					]),
+					focusRingPrimary(),
+					when('&[aria-disabled="true"]', opacity(50)),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						blockSize: "var(--ui-pagination-control-size, 2.25rem)",
-						minInlineSize: "var(--ui-pagination-control-size, 2.25rem)",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.75rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
 						textDecoration: "none",
-						color: "var(--ui-neutral-fg)",
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						'&[aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-primary-bg-solid)",
-							color: "var(--ui-primary-fg-on-solid)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 						'&[aria-disabled="true"]': {
 							cursor: "not-allowed",
 							pointerEvents: "none",
-							opacity: "0.5",
 						},
 					}),
 					mix,
@@ -289,35 +262,25 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 				data-slot="button"
 				mix={[
 					interactiveTransition(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					bs("var(--ui-pagination-control-size, 2.25rem)"),
+					minIs("var(--ui-pagination-control-size, 2.25rem)"),
+					rounded("md"),
+					pi("0.75rem"),
+					weight(500),
+					fg("neutral"),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					active(bg("neutral.bg-tint-pressed")),
+					focusRingPrimary(),
+					when("&:disabled", opacity(50)),
 					css({
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						blockSize: "var(--ui-pagination-control-size, 2.25rem)",
-						minInlineSize: "var(--ui-pagination-control-size, 2.25rem)",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.75rem",
 						fontSize: "0.875rem",
 						lineHeight: "calc(1.25 / 0.875)",
-						fontWeight: "500",
-						color: "var(--ui-neutral-fg)",
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						"&:active": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						"&:focus-visible": {
-							outlineWidth: "2px",
-							outlineStyle: "solid",
-							outlineOffset: "2px",
-							outlineColor: "var(--ui-primary-ring)",
-						},
 						"&:disabled": {
 							cursor: "not-allowed",
-							opacity: "0.5",
 						},
 					}),
 					mix,

@@ -172,7 +172,8 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 
 ## Tooling
 
-- The only allowed dependencies are `remix` and `@pkg/lucide-remix`.
+- The only allowed dependencies are `remix`, `@pkg/lucide-remix`, and `@pkg/u`.
+- Reach for a `@pkg/u` utility mixin instead of hand-rolling a recipe it already covers exactly (a parameter-free clipping or layout recipe, for instance). Where a recipe depends on this package's own semantic color or spacing vocabulary — `--ui-primary-ring` rather than `@pkg/u`'s own token names, or a runtime `data-color` switch a build-time utility call can't express — keep it a local `src/styles/` factory instead of forcing a mismatched abstraction.
 - Use `remix/ui`'s first-party behavior primitives (`remix/ui/popover`, `menu`, `listbox`, `select`, `combobox`, `accordion`, `tabs`, `checkbox`, `radio`, `toggle`, `input`, `anchor`, `breadcrumbs`, `button`) from inside mixins instead of hand-rolling keyboard/selection behavior that already exists.
 - Use `bun:test` for everything under this package, not `remix/test` — it's the repo's runner, and it's also what exercises the component-purity import check.
 - Use the `agent-browser` CLI for interaction, accessibility, and visual-parity verification against `apps/ui-docs` — never Playwright.

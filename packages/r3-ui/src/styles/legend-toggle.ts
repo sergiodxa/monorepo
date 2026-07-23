@@ -14,7 +14,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { combine } from "@pkg/u/general";
+import { hidden } from "@pkg/u/layout";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -52,13 +54,14 @@ export function legendToggle<Node extends Element = Element>(): MixinDescriptor<
 	[styles: CSSStyles],
 	ElementProps
 > {
-	let rules: CSSStyles = {};
+	let slots = Array.from({ length: CHART_COLOR_SLOT_COUNT }, (_, index) => index + 1);
 
-	for (let slot = 1; slot <= CHART_COLOR_SLOT_COUNT; slot++) {
-		rules[
-			`&:has(~ [data-slot='legend'] label:nth-of-type(${slot}):not(:has(input:checked))) [data-color='${slot}']`
-		] = { display: "none" };
-	}
-
-	return css<Node>(rules);
+	return combine<Node>(
+		slots.map((slot) =>
+			when<Node>(
+				`&:has(~ [data-slot='legend'] label:nth-of-type(${slot}):not(:has(input:checked))) [data-color='${slot}']`,
+				hidden(),
+			),
+		),
+	);
 }

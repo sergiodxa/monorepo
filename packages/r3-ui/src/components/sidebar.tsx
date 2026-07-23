@@ -16,6 +16,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { PanelLeftIcon } from "@pkg/lucide-remix";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { var as varUtility } from "@pkg/u/general/var";
+import { container, gap, vstack } from "@pkg/u/layout";
+import { m, pb, pbe, pbs, pi } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
 import { attrs, css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -95,14 +101,6 @@ const VISUALLY_HIDDEN = {
 	overflow: "hidden",
 	clipPath: "inset(50%)",
 	whiteSpace: "nowrap",
-} as const;
-
-/** Shared color-mixed transition every interactive nav part in this module animates through. */
-const COLOR_TRANSITION = {
-	transitionProperty:
-		"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-	transitionTimingFunction: easings.standard,
-	transitionDuration: "150ms",
 } as const;
 
 /**
@@ -434,13 +432,8 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 						flexDirection: "column",
 						flexShrink: 0,
 						blockSize: "100%",
-						inlineSize: "var(--ui-sidebar-width, 16rem)",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						color: "var(--ui-neutral-fg-emphasis)",
+						inlineSize: varUtility("sidebar-width", "16rem"),
 						willChange: "transform",
-						transitionProperty: "inline-size, transform",
-						transitionDuration: `${durations.normal}ms`,
-						transitionTimingFunction: easings.standard,
 
 						'&[data-side="left"]': {
 							borderRightWidth: "1px",
@@ -457,11 +450,6 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 
 						'&[data-variant="floating"]': {
 							margin: "0.5rem",
-							borderRadius: "var(--ui-radius-xl, 0.75rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 
 							"@supports (backdrop-filter: blur(0))": {
@@ -476,11 +464,6 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 						},
 
 						'&[data-variant="inset"]': {
-							borderRadius: "var(--ui-radius-xl, 0.75rem)",
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "var(--ui-neutral-border)",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
 							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 						},
 
@@ -494,6 +477,17 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 							transitionProperty: "none",
 						},
 					}),
+					bg("neutral.tint"),
+					fg("neutral.emphasis"),
+					transition("inline-size, transform", {
+						duration: durations.normal,
+						easing: easings.standard,
+					}),
+					when('&[data-variant="floating"]', [
+						rounded("xl"),
+						border({ color: "neutral", width: 1 }),
+					]),
+					when('&[data-variant="inset"]', [rounded("xl"), border({ color: "neutral", width: 1 })]),
 					mix,
 				]}
 			/>
@@ -553,11 +547,10 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 						alignItems: "stretch",
 						minBlockSize: "100dvh",
 						inlineSize: "100%",
-						container: `${PROVIDER_CONTAINER_NAME} / inline-size`,
 
 						[`&:has(${TOGGLE_CHECKED_SELECTOR})`]: {
 							'[data-slot="sidebar"][data-collapsible="icon"]': {
-								inlineSize: "var(--ui-sidebar-width-icon, 3rem)",
+								inlineSize: varUtility("sidebar-width-icon", "3rem"),
 
 								"[data-sidebar-collapsed-hide]": VISUALLY_HIDDEN,
 								'[data-slot="group-label"]': VISUALLY_HIDDEN,
@@ -582,6 +575,7 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 							},
 						},
 					}),
+					container(PROVIDER_CONTAINER_NAME),
 					mix,
 				]}
 			/>
@@ -631,17 +625,12 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 						padding: "0",
 						maxBlockSize: "none",
 						blockSize: "100%",
-						inlineSize: "var(--ui-sidebar-width-mobile, 18rem)",
+						inlineSize: varUtility("sidebar-width-mobile", "18rem"),
 						maxInlineSize: "90vw",
 						display: "flex",
 						flexDirection: "column",
 						overflow: "hidden",
 						willChange: "transform",
-						paddingBlockStart: "env(safe-area-inset-top, 0px)",
-						paddingBlockEnd: "env(safe-area-inset-bottom, 0px)",
-						transitionProperty: "transform, display, overlay",
-						transitionDuration: `${durations.slow}ms`,
-						transitionTimingFunction: easings.decelerate,
 						transitionBehavior: "allow-discrete",
 
 						'&[data-side="left"]': {
@@ -666,6 +655,12 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 						"@media (prefers-reduced-motion: reduce)": {
 							transitionProperty: "none",
 						},
+					}),
+					pbs("env(safe-area-inset-top, 0px)"),
+					pbe("env(safe-area-inset-bottom, 0px)"),
+					transition("transform, display, overlay", {
+						duration: durations.slow,
+						easing: easings.decelerate,
 					}),
 					mix,
 				]}
@@ -703,14 +698,14 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 						blockSize: "4rem",
 						flexShrink: 0,
 						alignItems: "center",
-						gap: "0.5rem",
-						paddingInline: "1rem",
-						paddingBlockStart: "calc(0.5rem + env(safe-area-inset-top, 0px))",
-						paddingBlockEnd: "0.5rem",
 						borderBlockEndWidth: "1px",
 						borderBlockEndStyle: "solid",
 						borderBlockEndColor: "color-mix(in oklab, var(--ui-neutral-border) 80%, transparent)",
 					}),
+					gap("0.5rem"),
+					pi("1rem"),
+					pbs("calc(0.5rem + env(safe-area-inset-top, 0px))"),
+					pbe("0.5rem"),
 					mix,
 				]}
 			/>
@@ -750,10 +745,10 @@ Sidebar.Content = function SidebarContent(handle: Handle<Sidebar.ContentProps>) 
 						flexGrow: 1,
 						minBlockSize: "0",
 						blockSize: "auto",
-						gap: "1rem",
-						paddingInline: "0.75rem",
-						paddingBlock: "1rem",
 					}),
+					gap("1rem"),
+					pi("0.75rem"),
+					pb("1rem"),
 					mix,
 				]}
 			/>
@@ -788,14 +783,14 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 						display: "flex",
 						flexShrink: 0,
 						alignItems: "center",
-						gap: "0.5rem",
-						paddingInline: "1rem",
-						paddingBlockStart: "1rem",
-						paddingBlockEnd: "calc(1rem + env(safe-area-inset-bottom, 0px))",
 						borderBlockStartWidth: "1px",
 						borderBlockStartStyle: "solid",
 						borderBlockStartColor: "color-mix(in oklab, var(--ui-neutral-border) 80%, transparent)",
 					}),
+					gap("0.5rem"),
+					pi("1rem"),
+					pbs("1rem"),
+					pbe("calc(1rem + env(safe-area-inset-bottom, 0px))"),
 					mix,
 				]}
 			/>
@@ -821,13 +816,7 @@ Sidebar.Nav = function SidebarNav(handle: Handle<Sidebar.NavProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<nav
-				{...rest}
-				data-slot="nav"
-				mix={[css({ display: "flex", flexDirection: "column", gap: "0.25rem" }), mix]}
-			/>
-		);
+		return <nav {...rest} data-slot="nav" mix={[vstack({ gap: "0.25rem" }), mix]} />;
 	};
 };
 
@@ -871,57 +860,18 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 						display: "flex",
 						minBlockSize: "2.25rem",
 						alignItems: "center",
-						gap: "0.75rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
 						fontSize: "0.875rem",
 						fontWeight: "500",
 						textDecorationLine: "none",
-						color: "var(--ui-neutral-fg)",
-						...COLOR_TRANSITION,
-
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 
 						"& > svg, & > [data-slot='icon']": {
 							inlineSize: "1rem",
 							blockSize: "1rem",
 							flexShrink: 0,
-							color: "var(--ui-neutral-fg-muted)",
-						},
-
-						'&[aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-							"& > svg, & > [data-slot='icon']": { color: "var(--ui-neutral-fg-emphasis)" },
-						},
-						'&[data-color="primary"][aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-primary-bg-tint)",
-							color: "var(--ui-primary-fg)",
-							"& > svg, & > [data-slot='icon']": { color: "var(--ui-primary-fg)" },
-						},
-						'&[data-color="success"][aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-success-bg-tint)",
-							color: "var(--ui-success-fg)",
-							"& > svg, & > [data-slot='icon']": { color: "var(--ui-success-fg)" },
-						},
-						'&[data-color="warning"][aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-warning-bg-tint)",
-							color: "var(--ui-warning-fg)",
-							"& > svg, & > [data-slot='icon']": { color: "var(--ui-warning-fg)" },
-						},
-						'&[data-color="danger"][aria-current]:not([aria-current="false"])': {
-							backgroundColor: "var(--ui-danger-bg-tint)",
-							color: "var(--ui-danger-fg)",
-							"& > svg, & > [data-slot='icon']": { color: "var(--ui-danger-fg)" },
 						},
 
 						"&:active": {
 							scale: "0.98",
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
 						},
 
 						'&[aria-disabled="true"]': {
@@ -929,6 +879,42 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 							opacity: "0.5",
 						},
 					}),
+					gap("0.75rem"),
+					rounded("lg"),
+					pi("0.75rem"),
+					pb("0.5rem"),
+					fg("neutral"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					when("&:hover", [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+					when("& > svg, & > [data-slot='icon']", fg("neutral.muted")),
+					when('&[aria-current]:not([aria-current="false"])', [
+						bg("neutral.bg-tint-hover"),
+						fg("neutral.emphasis"),
+						when("& > svg, & > [data-slot='icon']", fg("neutral.emphasis")),
+					]),
+					when('&[data-color="primary"][aria-current]:not([aria-current="false"])', [
+						bg("primary.tint"),
+						fg("primary"),
+						when("& > svg, & > [data-slot='icon']", fg("primary")),
+					]),
+					when('&[data-color="success"][aria-current]:not([aria-current="false"])', [
+						bg("success.tint"),
+						fg("success"),
+						when("& > svg, & > [data-slot='icon']", fg("success")),
+					]),
+					when('&[data-color="warning"][aria-current]:not([aria-current="false"])', [
+						bg("warning.tint"),
+						fg("warning"),
+						when("& > svg, & > [data-slot='icon']", fg("warning")),
+					]),
+					when('&[data-color="danger"][aria-current]:not([aria-current="false"])', [
+						bg("danger.tint"),
+						fg("danger"),
+						when("& > svg, & > [data-slot='icon']", fg("danger")),
+					]),
+					when("&:active", bg("neutral.bg-tint-pressed")),
 					mix,
 				]}
 			/>
@@ -965,17 +951,17 @@ Sidebar.Group = function SidebarGroup(handle: Handle<Sidebar.GroupProps>) {
 					css({
 						display: "flex",
 						flexDirection: "column",
-						gap: "0.25rem",
 
 						"& + &": {
 							marginBlockStart: "0.5rem",
-							paddingBlockStart: "1rem",
 							borderBlockStartWidth: "1px",
 							borderBlockStartStyle: "solid",
 							borderBlockStartColor:
 								"color-mix(in oklab, var(--ui-neutral-border) 60%, transparent)",
 						},
 					}),
+					gap("0.25rem"),
+					when("& + &", pbs("1rem")),
 					mix,
 				]}
 			/>
@@ -1011,15 +997,15 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 						alignItems: "center",
 						justifyContent: "space-between",
 						marginBlockEnd: "0.25rem",
-						paddingInline: "0.5rem",
-						paddingBlock: "0.375rem",
 						fontSize: "0.6875rem",
 						fontWeight: "600",
 						textTransform: "uppercase",
 						letterSpacing: "0.05em",
 						userSelect: "none",
-						color: "var(--ui-neutral-fg-muted)",
 					}),
+					pi("0.5rem"),
+					pb("0.375rem"),
+					fg("neutral.muted"),
 					mix,
 				]}
 			/>
@@ -1067,19 +1053,18 @@ Sidebar.GroupAction = function SidebarGroupAction(handle: Handle<Sidebar.GroupAc
 						blockSize: "1.25rem",
 						alignItems: "center",
 						justifyContent: "center",
-						borderRadius: "var(--ui-radius-sm, 0.25rem)",
-						color: "var(--ui-neutral-fg-muted)",
-						...COLOR_TRANSITION,
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg)",
-						},
 						"&:disabled": {
 							cursor: "not-allowed",
 							opacity: "0.5",
 						},
 					}),
+					rounded("sm"),
+					fg("neutral.muted"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral")]),
 					mix,
 				]}
 			>
@@ -1104,13 +1089,7 @@ Sidebar.GroupContent = function SidebarGroupContent(handle: Handle<Sidebar.Group
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="group-content"
-				mix={[css({ display: "flex", flexDirection: "column", gap: "0.125rem" }), mix]}
-			/>
-		);
+		return <div {...rest} data-slot="group-content" mix={[vstack({ gap: "0.125rem" }), mix]} />;
 	};
 };
 
@@ -1137,12 +1116,10 @@ Sidebar.Menu = function SidebarMenu(handle: Handle<Sidebar.MenuProps>) {
 				data-slot="menu"
 				mix={[
 					css({
-						display: "flex",
 						inlineSize: "100%",
 						minInlineSize: "0",
-						flexDirection: "column",
-						gap: "0.125rem",
 					}),
+					vstack({ gap: "0.125rem" }),
 					mix,
 				]}
 			/>
@@ -1219,7 +1196,7 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 				data-slot="menu-button"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuRowStyle()), mix]}
+				mix={[focusRingPrimary(), css(menuRowStyle()), ...menuRowMixins(), mix]}
 			/>
 		);
 	};
@@ -1253,7 +1230,7 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 				data-slot="menu-link"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuRowStyle()), mix]}
+				mix={[focusRingPrimary(), css(menuRowStyle()), ...menuRowMixins(), mix]}
 			/>
 		);
 	};
@@ -1270,29 +1247,17 @@ function menuRowStyle() {
 		inlineSize: "100%",
 		minInlineSize: "0",
 		alignItems: "center",
-		gap: "0.75rem",
 		overflow: "hidden",
-		borderRadius: "var(--ui-radius-lg, 0.5rem)",
-		paddingInline: "0.75rem",
-		paddingBlock: "0.5rem",
 		textAlign: "start",
 		textDecorationLine: "none",
 		fontSize: "0.875rem",
 		fontWeight: "500",
 		outlineStyle: "none",
-		color: "var(--ui-neutral-fg)",
-		...COLOR_TRANSITION,
-
-		"&:hover": {
-			backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-			color: "var(--ui-neutral-fg-emphasis)",
-		},
 
 		"& > svg:first-child, & > [data-slot='icon']:first-child": {
 			inlineSize: "1rem",
 			blockSize: "1rem",
 			flexShrink: 0,
-			color: "var(--ui-neutral-fg-muted)",
 		},
 		"& > span": {
 			overflow: "hidden",
@@ -1326,18 +1291,8 @@ function menuRowStyle() {
 			},
 		},
 
-		'&[data-active], &[aria-current]:not([aria-current="false"])': {
-			backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-			color: "var(--ui-neutral-fg-emphasis)",
-
-			"& > svg:first-child, & > [data-slot='icon']:first-child": {
-				color: "var(--ui-neutral-fg-emphasis)",
-			},
-		},
-
 		"&:active": {
 			scale: "0.98",
-			backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
 		},
 		"&:disabled": {
 			cursor: "not-allowed",
@@ -1348,6 +1303,28 @@ function menuRowStyle() {
 			opacity: "0.5",
 		},
 	} as const;
+}
+
+/** Shared `@pkg/u` mixins layered alongside {@link menuRowStyle} at each of its call sites. */
+function menuRowMixins() {
+	return [
+		gap("0.75rem"),
+		rounded("lg"),
+		pi("0.75rem"),
+		pb("0.5rem"),
+		fg("neutral"),
+		transition(
+			"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+		),
+		hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+		when("& > svg:first-child, & > [data-slot='icon']:first-child", fg("neutral.muted")),
+		when('&[data-active], &[aria-current]:not([aria-current="false"])', [
+			bg("neutral.bg-tint-hover"),
+			fg("neutral.emphasis"),
+			when("& > svg:first-child, & > [data-slot='icon']:first-child", fg("neutral.emphasis")),
+		]),
+		when("&:active", bg("neutral.bg-tint-pressed")),
+	];
 }
 
 /**
@@ -1397,15 +1374,8 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 						blockSize: "1.5rem",
 						alignItems: "center",
 						justifyContent: "center",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
 						opacity: "0",
-						color: "var(--ui-neutral-fg-muted)",
-						...COLOR_TRANSITION,
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-							color: "var(--ui-neutral-fg)",
-						},
 						"&:focus-visible": {
 							opacity: "1",
 						},
@@ -1417,6 +1387,12 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 							opacity: "1",
 						},
 					}),
+					rounded("md"),
+					fg("neutral.muted"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					hover([bg("neutral.bg-tint-pressed"), fg("neutral")]),
 					mix,
 				]}
 			>
@@ -1452,15 +1428,15 @@ Sidebar.MenuBadge = function SidebarMenuBadge(handle: Handle<Sidebar.MenuBadgePr
 					css({
 						marginInlineStart: "auto",
 						flexShrink: 0,
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						paddingInline: "0.375rem",
-						paddingBlock: "0.125rem",
 						fontSize: "0.625rem",
 						fontWeight: "600",
 						fontVariantNumeric: "tabular-nums",
-						backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						color: "var(--ui-neutral-fg)",
 					}),
+					rounded("md"),
+					pi("0.375rem"),
+					pb("0.125rem"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral"),
 					mix,
 				]}
 			/>
@@ -1497,11 +1473,11 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 					css({
 						display: "flex",
 						alignItems: "center",
-						gap: "0.75rem",
 						blockSize: "2.25rem",
-						paddingInline: "0.75rem",
-						borderRadius: "var(--ui-radius-lg, 0.5rem)",
 					}),
+					gap("0.75rem"),
+					pi("0.75rem"),
+					rounded("lg"),
 					mix,
 				]}
 			>
@@ -1514,9 +1490,9 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 								inlineSize: "1rem",
 								blockSize: "1rem",
 								flexShrink: 0,
-								borderRadius: "var(--ui-radius-sm, 0.25rem)",
-								backgroundColor: "var(--ui-neutral-border)",
 							}),
+							rounded("sm"),
+							bg("neutral.border"),
 						]}
 					/>
 				)}
@@ -1528,9 +1504,9 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 							blockSize: "1rem",
 							flexGrow: 1,
 							inlineSize: "60%",
-							borderRadius: "var(--ui-radius-md, 0.375rem)",
-							backgroundColor: "var(--ui-neutral-border)",
 						}),
+						rounded("md"),
+						bg("neutral.border"),
 					]}
 				/>
 			</div>
@@ -1567,12 +1543,12 @@ Sidebar.MenuSub = function SidebarMenuSub(handle: Handle<Sidebar.MenuSubProps>) 
 						marginInlineStart: "0.875rem",
 						display: "flex",
 						flexDirection: "column",
-						gap: "0.125rem",
 						borderInlineStartWidth: "1px",
 						borderInlineStartStyle: "solid",
-						borderInlineStartColor: "var(--ui-neutral-border)",
 						paddingInlineStart: "0.875rem",
 					}),
+					gap("0.125rem"),
+					border("neutral"),
 					mix,
 				]}
 			/>
@@ -1625,7 +1601,7 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
 				{...rest}
 				data-slot="menu-sub-button"
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuSubRowStyle()), mix]}
+				mix={[focusRingPrimary(), css(menuSubRowStyle()), ...menuSubRowMixins(), mix]}
 			/>
 		);
 	};
@@ -1652,7 +1628,7 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 				aria-current={resolvedAriaCurrent}
 				data-slot="menu-sub-link"
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuSubRowStyle()), mix]}
+				mix={[focusRingPrimary(), css(menuSubRowStyle()), ...menuSubRowMixins(), mix]}
 			/>
 		);
 	};
@@ -1668,30 +1644,16 @@ function menuSubRowStyle() {
 		minBlockSize: "2rem",
 		inlineSize: "100%",
 		alignItems: "center",
-		gap: "0.5rem",
-		borderRadius: "var(--ui-radius-lg, 0.5rem)",
-		paddingInline: "0.625rem",
-		paddingBlock: "0.375rem",
 		textAlign: "start",
 		textDecorationLine: "none",
 		fontSize: "0.875rem",
-		color: "var(--ui-neutral-fg-muted)",
-		...COLOR_TRANSITION,
-
-		"&:hover": {
-			backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-			color: "var(--ui-neutral-fg-emphasis)",
-		},
 
 		'&[data-active], &[aria-current]:not([aria-current="false"])': {
 			fontWeight: "500",
-			backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-			color: "var(--ui-neutral-fg-emphasis)",
 		},
 
 		"&:active": {
 			scale: "0.98",
-			backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
 		},
 		"&:disabled": {
 			cursor: "not-allowed",
@@ -1702,6 +1664,26 @@ function menuSubRowStyle() {
 			opacity: "0.5",
 		},
 	} as const;
+}
+
+/** Shared `@pkg/u` mixins layered alongside {@link menuSubRowStyle} at each of its call sites. */
+function menuSubRowMixins() {
+	return [
+		gap("0.5rem"),
+		rounded("lg"),
+		pi("0.625rem"),
+		pb("0.375rem"),
+		fg("neutral.muted"),
+		transition(
+			"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+		),
+		hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+		when('&[data-active], &[aria-current]:not([aria-current="false"])', [
+			bg("neutral.bg-tint-hover"),
+			fg("neutral.emphasis"),
+		]),
+		when("&:active", bg("neutral.bg-tint-pressed")),
+	];
 }
 
 /**
@@ -1758,12 +1740,6 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 							transitionProperty: "background-color",
 							transitionDuration: "150ms",
 						},
-						"&:hover::after": {
-							backgroundColor: "var(--ui-neutral-border)",
-						},
-						"&:active::after": {
-							backgroundColor: "var(--ui-primary-ring)",
-						},
 
 						[WIDE_SHELL_QUERY]: {
 							display: "flex",
@@ -1771,6 +1747,8 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 							justifyContent: "center",
 						},
 					}),
+					hover(when("&::after", bg("neutral.border"))),
+					when("&:active", when("&::after", bg("primary.ring"))),
 					mix,
 				]}
 			/>
@@ -1812,15 +1790,8 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 						blockSize: "2rem",
 						alignItems: "center",
 						justifyContent: "center",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
 						cursor: "pointer",
-						color: "var(--ui-neutral-fg-muted)",
-						...COLOR_TRANSITION,
 
-						"&:hover": {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
 						"& > svg": {
 							inlineSize: "1rem",
 							blockSize: "1rem",
@@ -1830,6 +1801,12 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 							opacity: "0.5",
 						},
 					}),
+					rounded("md"),
+					fg("neutral.muted"),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 				]}
 			>
 				<PanelLeftIcon aria-hidden />
@@ -1867,15 +1844,15 @@ Sidebar.Inset = function SidebarInset(handle: Handle<Sidebar.InsetProps>) {
 				data-slot="inset"
 				mix={[
 					css({
-						container: `${INSET_CONTAINER_NAME} / inline-size`,
 						display: "flex",
 						flexDirection: "column",
 						flexGrow: 1,
 						minInlineSize: "0",
 						minBlockSize: "0",
 						blockSize: "auto",
-						backgroundColor: "var(--ui-neutral-bg-tint)",
 					}),
+					container(INSET_CONTAINER_NAME),
+					bg("neutral.tint"),
 					mix,
 				]}
 			/>
@@ -1899,12 +1876,6 @@ Sidebar.Separator = function SidebarSeparator(handle: Handle<Sidebar.SeparatorPr
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<Separator
-				{...rest}
-				data-slot="separator"
-				mix={[css({ marginInline: "0.5rem", marginBlock: "0.5rem" }), mix]}
-			/>
-		);
+		return <Separator {...rest} data-slot="separator" mix={[m("0.5rem"), mix]} />;
 	};
 };

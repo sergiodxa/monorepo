@@ -10,6 +10,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
 import { attrs, css } from "remix/ui";
 
 /**
@@ -63,9 +65,9 @@ export function Skeleton(handle: Handle<Skeleton.Props>) {
 					css({
 						blockSize: "var(--ui-skeleton-block-size, 1rem)",
 						inlineSize: "100%",
-						borderRadius: "var(--ui-radius-md, 0.375rem)",
-						backgroundColor: "var(--ui-neutral-border)",
 					}),
+					rounded("md"),
+					bg("neutral.border"),
 					mix,
 				]}
 			/>

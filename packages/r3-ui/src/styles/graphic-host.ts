@@ -9,7 +9,9 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { combine, raw } from "@pkg/u/general";
+import { shrink } from "@pkg/u/layout";
+import { mbs } from "@pkg/u/size";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -31,9 +33,12 @@ export function graphicHostStyle<Node extends Element = Element>(): MixinDescrip
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return css<Node>({
-		flexShrink: "0",
-		marginBlockStart: "0.125rem",
-		color: "currentcolor",
-	});
+	return combine<Node>([
+		shrink(),
+		mbs("0.125rem"),
+		// No `@pkg/u` color utility models the `currentcolor` keyword — every
+		// `fg()`/`color()` call resolves a semantic tone, never a bare CSS
+		// keyword — so this stays a raw declaration.
+		raw({ color: "currentcolor" }),
+	]);
 }
