@@ -14,6 +14,5 @@ import "react-router";
 export default {
 	future: {
 		unstable_optimizeDeps: true,
-		v8_splitRouteModules: true,
 	},
 } satisfies Config;
