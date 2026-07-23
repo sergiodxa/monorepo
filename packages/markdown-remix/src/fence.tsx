@@ -1,4 +1,4 @@
-/** @jsxImportSource remix/ui */
+/* @jsxImportSource remix/ui */
 
 import type { Handle } from "remix/ui";
 

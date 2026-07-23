@@ -1,4 +1,4 @@
-/** @jsxImportSource react */
+/* @jsxImportSource react */
 
 import { useClipboard } from "@pkg/hooks";
 import { Button } from "@pkg/ui";

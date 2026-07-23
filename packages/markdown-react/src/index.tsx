@@ -1,4 +1,4 @@
-/** @jsxImportSource react */
+/* @jsxImportSource react */
 
 import type { RenderableTreeNodes } from "@markdoc/markdoc";
 

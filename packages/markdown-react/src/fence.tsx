@@ -1,4 +1,4 @@
-/** @jsxImportSource react */
+/* @jsxImportSource react */
 
 import { cn } from "@pkg/cn";
 
