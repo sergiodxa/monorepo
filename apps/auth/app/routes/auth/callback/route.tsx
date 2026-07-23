@@ -60,7 +60,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			type: "authorization_code",
 			code,
 			redirectUri: authz.redirectUri,
-		})) as { access_token: string; refresh_token: string; expires_in: number };
+		})) as unknown as { access_token: string; refresh_token: string; expires_in: number };
 
 		session().unset("authz");
 		session().set("accessToken", tokens.access_token);

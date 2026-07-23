@@ -35,8 +35,8 @@ import Subject from "~/models/subject";
 
 import type { Route } from "./+types/route";
 
-export function meta({ data }: Route.MetaArgs) {
-	let title = data?.subject?.displayName ?? "User";
+export function meta({ loaderData }: Route.MetaArgs) {
+	let title = loaderData?.subject?.displayName ?? "User";
 	return [{ title: `Edit ${title} | Auth` }];
 }
 

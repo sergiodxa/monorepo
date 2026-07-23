@@ -19,8 +19,8 @@ import Grant from "~/models/grant";
 
 import type { Route } from "./+types/route";
 
-export function meta({ data }: Route.MetaArgs) {
-	let title = data?.client?.name ?? "Client";
+export function meta({ loaderData }: Route.MetaArgs) {
+	let title = loaderData?.client?.name ?? "Client";
 	return [{ title: `${title} | Auth` }];
 }
 

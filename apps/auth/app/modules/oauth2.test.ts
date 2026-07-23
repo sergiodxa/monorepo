@@ -77,7 +77,7 @@ function createMockRepository(): OIDCProvider.Repository {
 		deleteSessionBySubjectId: mock(async () => {}),
 		deleteSessionById: mock(async () => {}),
 		touchSession: mock(async () => {}),
-	};
+	} as unknown as OIDCProvider.Repository;
 }
 
 beforeAll(async () => {

@@ -35,7 +35,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 				let tokens = (await oidc.token({
 					type: "refresh_token",
 					refreshToken,
-				})) as { access_token: string; refresh_token: string; expires_in: number };
+				})) as unknown as { access_token: string; refresh_token: string; expires_in: number };
 
 				session().set("accessToken", tokens.access_token);
 				session().set("refreshToken", tokens.refresh_token);
