@@ -26,4 +26,5 @@ needed to keep the project healthy.
 
 ## Reporting
 
-Report conduct concerns privately by emailing hello+security@sergiodxa.com.
+Report conduct concerns privately by emailing hello+security@sergiodxa.com or by
+sending me a Discord DM at @sergiodxa.
