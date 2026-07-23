@@ -28,7 +28,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? 
 
 export default function Component() {
 	return (
-		<main className="mx-auto max-w-screen-xl">
+		<main className="mx-auto max-w-7xl">
 			<Editor key="editor" />
 		</main>
 	);
