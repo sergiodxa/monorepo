@@ -3,6 +3,6 @@
 	"include": ["src/**/*"],
 	"exclude": ["src/**/*.test.ts"],
 	"compilerOptions": {
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types", "bun"]
 	}
 }

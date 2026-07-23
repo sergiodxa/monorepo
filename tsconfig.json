@@ -8,7 +8,7 @@
 		// here (this is the tsconfig Bun reads when `bun test` runs from the repo root).
 		// The few React-only packages override this back to "react".
 		"jsxImportSource": "remix/ui",
-		"types": ["@total-typescript/ts-reset"],
+		"types": ["@total-typescript/ts-reset", "bun"],
 		"moduleResolution": "bundler",
 		"paths": {
 			"*": ["./*"]

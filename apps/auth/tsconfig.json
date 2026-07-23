@@ -14,7 +14,7 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "react",
-		"types": ["@total-typescript/ts-reset", "vite/client"],
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun"],
 		"rootDirs": [".", "./.react-router/types"],
 		"paths": {
 			"~/*": ["./app/*"],
