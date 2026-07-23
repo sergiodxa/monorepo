@@ -22,13 +22,7 @@ import {
 } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
 
-import {
-	clampZoom,
-	DEFAULT_ZOOM,
-	MapEditor,
-	MAX_ZOOM,
-	MIN_ZOOM,
-} from "./map-editor";
+import { clampZoom, DEFAULT_ZOOM, MapEditor, MAX_ZOOM, MIN_ZOOM } from "./map-editor";
 
 /** Serialized key for conditional-branch commands' successful command list. */
 const THEN_BRANCH_KEY = ("th" + "en") as "then";
