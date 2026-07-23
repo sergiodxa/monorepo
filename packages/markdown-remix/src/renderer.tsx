@@ -1,3 +1,5 @@
+/** @jsxImportSource remix/ui */
+
 import type { RemixNode } from "remix/ui";
 
 import { createElement, css } from "remix/ui";

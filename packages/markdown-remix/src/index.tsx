@@ -1,3 +1,5 @@
+/** @jsxImportSource remix/ui */
+
 import type { RemixNode, Handle } from "remix/ui";
 
 import { renderToRemix } from "./renderer.js";
