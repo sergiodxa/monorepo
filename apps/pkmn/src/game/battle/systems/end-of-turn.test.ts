@@ -62,11 +62,10 @@ test("Leftovers restores floor(maxHP / 16) at the end of the turn", () => {
 	});
 });
 
-test("Leftovers never overheals past maximum HP", () => {
-	let scenario = createEndOfTurnScenario("LEFTOVERS");
-	let maxHP = getCreatureStat(GAME_DATA, scenario.combatant.creature, Stat.HP);
-	// One point of damage: a full 1/16 heal would overshoot, so it must clamp to 0.
-	scenario.combatant.creature.status.damage = 1;
+	test("Leftovers never overheals past maximum HP", () => {
+		let scenario = createEndOfTurnScenario("LEFTOVERS");
+		// One point of damage: a full 1/16 heal would overshoot, so it must clamp to 0.
+		scenario.combatant.creature.status.damage = 1;
 
 	applyEndOfTurnEffects(scenario.context);
 

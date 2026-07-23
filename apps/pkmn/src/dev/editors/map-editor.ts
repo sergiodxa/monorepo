@@ -1142,12 +1142,12 @@ function clampTileSize(value: number): number {
 
 /** Builds a fresh `width * height` layer filled with {@link EMPTY_CELL}. */
 function emptyLayer(width: number, height: number): number[] {
-	return new Array<number>(width * height).fill(EMPTY_CELL);
+	return Array.from({ length: width * height }, () => EMPTY_CELL);
 }
 
 /** Builds a fresh `width * height` collision grid, all walkable. */
 function walkableGrid(width: number, height: number): number[] {
-	return new Array<number>(width * height).fill(Collision.Walkable);
+	return Array.from({ length: width * height }, () => Collision.Walkable);
 }
 
 /**
@@ -1170,7 +1170,7 @@ function resizeGrid(
 	newHeight: number,
 	fillValue: number,
 ): number[] {
-	let next = new Array<number>(newWidth * newHeight).fill(fillValue);
+	let next = Array.from({ length: newWidth * newHeight }, () => fillValue);
 	let rows = Math.min(oldHeight, newHeight);
 	let columns = Math.min(oldWidth, newWidth);
 	for (let y = 0; y < rows; y++) {

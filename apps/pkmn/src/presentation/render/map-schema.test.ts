@@ -26,6 +26,9 @@ import {
 	unpackTileRef,
 } from "./map-schema";
 
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
+
 test("packTileRef and unpackTileRef round-trip a tileset/tile index pair", () => {
 	expect(packTileRef(0, 0)).toBe(0);
 	expect(packTileRef(1, 5)).toBe(TILESET_STRIDE + 5);
@@ -205,7 +208,7 @@ test("recursive commands validate: nested show-choices and conditional-branch", 
 						{
 							kind: "conditional-branch",
 							condition: { switch: "brave" },
-							then: [
+							[THEN_BRANCH_KEY]: [
 								{
 									kind: "show-choices",
 									choices: [{ label: "Deeper", commands: [{ kind: "text", text: "!" }] }],

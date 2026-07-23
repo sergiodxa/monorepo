@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
+import { bg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { appearance, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";

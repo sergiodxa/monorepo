@@ -14,7 +14,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 mock.module("cloudflare:workers", () => ({
 	env: {},
 	DurableObject: class {
-		constructor(...args: unknown[]) {}
+		constructor() {}
 	},
 }));
 

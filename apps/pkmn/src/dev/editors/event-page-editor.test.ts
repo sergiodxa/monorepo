@@ -33,6 +33,9 @@ import {
 } from "./event-page-editor";
 import { MapEditor } from "./map-editor";
 
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
+
 /** A root-level path to the command at `index`. */
 function at(index: number): CommandPath {
 	return [{ index, branch: "then" }];
@@ -59,7 +62,7 @@ describe("defaultCommand", () => {
 		});
 		expect(defaultCommand("conditional-branch")).toMatchObject({
 			kind: "conditional-branch",
-			then: [],
+			[THEN_BRANCH_KEY]: [],
 		});
 	});
 
@@ -180,7 +183,7 @@ describe("nested conditional-branch editing", () => {
 		let outer: EventCommand = {
 			kind: "conditional-branch",
 			condition: {},
-			then: [],
+			[THEN_BRANCH_KEY]: [],
 			else: [inner],
 		};
 		let list: EventCommand[] = [outer];

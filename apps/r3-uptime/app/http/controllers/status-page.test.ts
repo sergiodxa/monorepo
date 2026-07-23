@@ -27,8 +27,6 @@ import { createRouter } from "remix/fetch-router";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
-import type { SelectTeam } from "~/database/schema";
-
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";

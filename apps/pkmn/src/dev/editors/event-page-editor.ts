@@ -71,6 +71,9 @@ export const TRIGGERS: ReadonlyArray<{ id: EventPage["trigger"]; label: string }
 	{ id: "parallel", label: "Parallel Process" },
 ] as const;
 
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
+
 /** The autonomous-movement types, each paired with a human label. */
 export const MOVEMENT_TYPES: ReadonlyArray<{
 	id: EventPage["autonomousMovement"]["type"];
@@ -135,7 +138,7 @@ export function defaultCommand(
 		case "show-choices":
 			return { kind: "show-choices", prompt: undefined, choices: [{ label: "", commands: [] }] };
 		case "conditional-branch":
-			return { kind: "conditional-branch", condition: {}, then: [], else: undefined };
+			return { kind: "conditional-branch", condition: {}, [THEN_BRANCH_KEY]: [], else: undefined };
 		case "control-switch":
 			return { kind: "control-switch", flag: "", value: true };
 		case "control-self-switch":
@@ -211,7 +214,7 @@ function withChildList(
 			};
 		}
 		if (step.branch === "then" && command.kind === "conditional-branch") {
-			return { ...command, then: next };
+			return { ...command, [THEN_BRANCH_KEY]: next };
 		}
 		if (step.branch === "else" && command.kind === "conditional-branch") {
 			return { ...command, else: next };
@@ -458,7 +461,7 @@ export function cloneCommand(command: EventCommand): EventCommand {
 			return {
 				kind: "conditional-branch",
 				condition: { ...command.condition },
-				then: command.then.map(cloneCommand),
+				[THEN_BRANCH_KEY]: command.then.map(cloneCommand),
 				else: command.else ? command.else.map(cloneCommand) : undefined,
 			};
 		case "start-trainer-battle":

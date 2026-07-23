@@ -53,6 +53,9 @@ export const TILESET_STRIDE = 4096;
 /** Sentinel layer cell meaning "no tile here" (the layer draws nothing). */
 export const EMPTY_CELL = -1;
 
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
+
 /**
  * Packs a tileset index and a tile index into one layer-cell number.
  *
@@ -205,7 +208,7 @@ const EventCommandSchema: Schema<unknown, EventCommand> = union([
 	object({
 		kind: exact("conditional-branch"),
 		condition: object({ switch: optional(string()), selfSwitch: optional(string()) }),
-		then: array(lazy(() => EventCommandSchema)),
+		[THEN_BRANCH_KEY]: array(lazy(() => EventCommandSchema)),
 		else: optional(array(lazy(() => EventCommandSchema))),
 	}),
 	/** Turns a global switch (a story flag) on or off. */

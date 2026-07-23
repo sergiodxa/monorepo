@@ -13,7 +13,7 @@ import { expect, test } from "bun:test";
 
 import { createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
-import { getPlayerBestiary, type World } from "../world/world";
+import { type World } from "../world/world";
 
 import { markSpeciesCaught, markSpeciesSeen } from "./bestiary-system";
 

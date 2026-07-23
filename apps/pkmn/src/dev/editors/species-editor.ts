@@ -257,7 +257,7 @@ export class SpeciesEditor {
 	 */
 	setEvYield(stat: Stat, value: number): Species {
 		let whole = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
-		let next: Partial<StatSet> = { ...(this.#species.evYield ?? {}) };
+		let next: Partial<StatSet> = { ...this.#species.evYield };
 		if (whole === 0) delete next[stat];
 		else next[stat] = whole;
 		this.#species.evYield = next;

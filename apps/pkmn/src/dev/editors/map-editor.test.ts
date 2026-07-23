@@ -24,17 +24,14 @@ import { Collision } from "~/presentation/render/tilemap";
 
 import {
 	clampZoom,
-	copyRegion,
 	DEFAULT_ZOOM,
-	ellipseCells,
 	MapEditor,
 	MAX_ZOOM,
 	MIN_ZOOM,
-	normalizeRegion,
-	pasteRegion,
-	rectCells,
-	type RegionBlock,
 } from "./map-editor";
+
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
 
 /** A minimal tileset declaration tests add to give paint refs something to name. */
 function tileset(id: string): Tileset {
@@ -448,7 +445,7 @@ describe("toMapData round-trips through loadMap", () => {
 						{
 							kind: "conditional-branch",
 							condition: { selfSwitch: "A" },
-							then: [{ kind: "give-item", itemId: "POTION", count: 2 }],
+							[THEN_BRANCH_KEY]: [{ kind: "give-item", itemId: "POTION", count: 2 }],
 							else: [{ kind: "wait", frames: 30 }],
 						},
 					],

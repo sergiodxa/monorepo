@@ -17,6 +17,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+// oxlint-disable-next-line typescript/triple-slash-reference -- TS only loads this local ambient module via a reference.
 /// <reference path="./html-parse-stringify.d.ts" />
 
 import type { HtmlAstNode } from "html-parse-stringify";

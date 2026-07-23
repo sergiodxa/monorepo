@@ -202,7 +202,7 @@ export function habitatZones(maps: readonly TileMap[], speciesId: string): strin
 export function createSampleMap(): TileMap {
 	let width = 20;
 	let height = 15;
-	let collision = new Array<number>(width * height).fill(Collision.Walkable);
+	let collision = Array.from({ length: width * height }, () => Collision.Walkable);
 
 	for (let x = 0; x < width; x++) {
 		collision[x] = Collision.Solid;
@@ -222,8 +222,8 @@ export function createSampleMap(): TileMap {
 	let zone: number[] = [];
 	for (let y = 3; y <= 7; y++) for (let x = 9; x <= 14; x++) zone.push(y * width + x);
 
-	let ground = new Array<number>(width * height).fill(0);
-	let empty = new Array<number>(width * height).fill(EMPTY_CELL);
+	let ground = Array.from({ length: width * height }, () => 0);
+	let empty = Array.from({ length: width * height }, () => EMPTY_CELL);
 
 	return {
 		id: "route-1",

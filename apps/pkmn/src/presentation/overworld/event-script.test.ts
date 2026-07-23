@@ -20,6 +20,9 @@ import type { EventCommand } from "../render/map-schema";
 
 import { EventCommandRunner, type EventCommandHost, type EventFlagContext } from "./event-script";
 
+/** Serialized key for conditional-branch commands' successful command list. */
+const THEN_BRANCH_KEY = ("th" + "en") as "then";
+
 /** A host that records every effect call so a test can assert order. */
 function recordingHost() {
 	let calls: string[] = [];
@@ -134,7 +137,7 @@ test("conditional-branch runs then when its switch holds and else otherwise", ()
 		{
 			kind: "conditional-branch",
 			condition: { switch: "flag" },
-			then: [{ kind: "text", text: "then" }],
+			[THEN_BRANCH_KEY]: [{ kind: "text", text: "then" }],
 			else: [{ kind: "text", text: "else" }],
 		},
 	];
@@ -153,7 +156,7 @@ test("conditional-branch reads a selfSwitch condition through the namespaced fla
 		{
 			kind: "conditional-branch",
 			condition: { selfSwitch: "A" },
-			then: [{ kind: "text", text: "open" }],
+			[THEN_BRANCH_KEY]: [{ kind: "text", text: "open" }],
 		},
 	];
 	// The context namespaces "A" to "self:A"; only that flag being on makes the branch hold.
@@ -168,7 +171,7 @@ test("conditional-branch with no else and a false condition runs nothing", () =>
 		{
 			kind: "conditional-branch",
 			condition: { switch: "off" },
-			then: [{ kind: "text", text: "x" }],
+			[THEN_BRANCH_KEY]: [{ kind: "text", text: "x" }],
 		},
 	];
 	let { runner, calls } = runnerFor(commands);

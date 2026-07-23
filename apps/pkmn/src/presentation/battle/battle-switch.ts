@@ -20,7 +20,6 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
-import { Window } from "../render/window";
 
 import type { SfxPlayer } from "./battle-sfx";
 
