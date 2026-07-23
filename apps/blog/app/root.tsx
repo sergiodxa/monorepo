@@ -46,7 +46,7 @@ import { rollingCookieMiddleware } from "./middleware/rolling-cookie";
 import { serverTimingMiddleware } from "./middleware/server-timing";
 import { getUser, sessionMiddleware } from "./middleware/session";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export const middleware = [
 	noWWWMiddleware,

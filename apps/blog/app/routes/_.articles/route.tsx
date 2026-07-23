@@ -21,7 +21,7 @@ import type { Route } from "./+types/route";
 
 import { queryArticles } from "./queries";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);

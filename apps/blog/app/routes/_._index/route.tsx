@@ -22,7 +22,7 @@ import type { Route } from "./+types/route";
 import { FeedList } from "./feed";
 import { queryFeed } from "./queries";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let headers = new Headers({

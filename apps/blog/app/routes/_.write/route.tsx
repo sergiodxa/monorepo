@@ -24,7 +24,7 @@ export async function loader(_: Route.LoaderArgs) {
 	return ok({ meta });
 }
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export default function Component() {
 	return (

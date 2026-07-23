@@ -20,7 +20,7 @@ import type { Route } from "./+types/route";
 
 import { queryGlossary } from "./query";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export const meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? [];
 
 export async function loader({ request }: Route.LoaderArgs) {
 	return ok({
