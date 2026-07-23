@@ -1,8 +1,7 @@
 /**
  * React Router build-time configuration for the blog app. Enables a set of v8
- * future flags (middleware, split route modules, the Vite environment API,
- * dependency optimization, and trailing-slash-aware data requests) so the app
- * opts into the framework's newer behavior ahead of the stable release.
+ * build-time options so the app opts into newer behavior ahead of the stable
+ * release without carrying removed future flags.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,13 +10,8 @@
 import type { Config } from "@react-router/dev/config";
 
 export default {
+	splitRouteModules: true,
 	future: {
 		unstable_optimizeDeps: true,
-		unstable_previewServerPrerendering: true,
-		v8_middleware: true,
-		v8_passThroughRequests: true,
-		v8_splitRouteModules: true,
-		v8_trailingSlashAwareDataRequests: true,
-		v8_viteEnvironmentApi: true,
 	},
 } satisfies Config;
