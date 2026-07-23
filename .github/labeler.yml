@@ -1,0 +1,43 @@
+app:apps:
+  - changed-files:
+      - any-glob-to-any-file: "apps/**"
+
+package:packages:
+  - changed-files:
+      - any-glob-to-any-file: "packages/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+
+content:
+  - changed-files:
+      - any-glob-to-any-file: "content/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.json"
+          - "*.jsonc"
+          - "*.config.*"
+          - "tsconfig.json"
+          - "apps/**/tsconfig.json"
+          - "packages/**/tsconfig.json"
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/**/db/**"
+          - "apps/**/database/**"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.test.ts"
+          - "**/*.test.tsx"
