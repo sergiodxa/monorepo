@@ -975,9 +975,11 @@ function getHistoryRenderURL(state: unknown): string | undefined {
 	return state.__r3UIRouter?.renderURL;
 }
 
-/** Reads `PopStateEvent.state` after narrowing a generic event listener payload. */
+/** Reads history state without requiring every runtime to define `PopStateEvent`. */
 function getPopStateEventState(event: Event): unknown {
-	return event instanceof PopStateEvent ? event.state : undefined;
+	if (!("state" in event)) return undefined;
+
+	return event.state;
 }
 
 /** Reads router metadata from Navigation API destination state. */
