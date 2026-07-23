@@ -31,7 +31,7 @@ export default {
 
 		try {
 			// Call the handler with the request and context
-			let response = await handler(request, context);
+			let response = await handler(request, context as never);
 			// Set the response metadata in the logger
 			logger.response = response;
 			return response;
