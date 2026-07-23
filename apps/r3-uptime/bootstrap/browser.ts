@@ -17,7 +17,6 @@
  */
 
 import { setIntl } from "@pkg/i18n/ui";
-import { createInstance } from "i18next";
 import { run } from "remix/ui";
 
 import de from "~/app/locales/de";
@@ -29,6 +28,8 @@ import ja from "~/app/locales/ja";
 
 const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"];
 const DEFAULT_LANGUAGE = "en";
+
+let { createInstance } = await import("i18next");
 
 let i18n = createInstance();
 await i18n.init({
