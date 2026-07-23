@@ -4,9 +4,6 @@
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
-		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"],
-		// The package uses relative imports only (no ~/ alias): a consumer resolves
-		// these .ts sources against its own tsconfig, so a path alias would not apply there.
-		"ignoreDeprecations": "6.0"
+		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"]
 	}
 }
