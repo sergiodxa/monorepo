@@ -179,18 +179,21 @@ export const validate = createMixin<HTMLElement, [schema: Schema<string, unknown
 		return (schema) => {
 			return createElement(handle.element, {
 				mix: [
-					on("input", (event) => {
-						let field = event.currentTarget as ValidatableField;
-						let message = applySchema(field, schema);
+						on(
+						"input" as never,
+						(event: Event) => {
+							let field = event.currentTarget as ValidatableField;
+							let message = applySchema(field, schema);
 
-						if (!hasReported) return;
+							if (!hasReported) return;
 
-						mirrorValidity(field, message);
-						field.dispatchEvent(new ValidateChangeEvent({ valid: message === "", message }));
-					}),
+							mirrorValidity(field, message);
+							field.dispatchEvent(new ValidateChangeEvent({ valid: message === "", message }));
+						},
+					),
 					on(
-						"invalid",
-						(event) => {
+						"invalid" as never,
+						(event: Event) => {
 							event.preventDefault();
 
 							let field = event.currentTarget as ValidatableField;

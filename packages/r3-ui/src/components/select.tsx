@@ -281,7 +281,7 @@ export function Select(handle: Handle<Select.Props>) {
 				},
 			}),
 			mix,
-		] as Select.Props["mix"];
+		] as unknown as Select.Props["mix"];
 
 		return (
 			<select
