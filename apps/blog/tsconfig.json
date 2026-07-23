@@ -12,6 +12,7 @@
 	"compilerOptions": {
 		"noEmit": true,
 		"jsx": "react-jsx",
+		"jsxImportSource": "react",
 		"types": ["@total-typescript/ts-reset", "vite/client"],
 		"rootDirs": [".", "./.react-router/types"],
 		"paths": {
