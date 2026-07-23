@@ -86,6 +86,9 @@ export namespace Command {
 		className?: cn.ClassName;
 		inputClassName?: cn.ClassName;
 		inputProps?: Omit<ComponentProps<typeof AriaInput>, "className">;
+		value?: string;
+		defaultValue?: string;
+		onChange?: (value: string) => void;
 	}
 
 	export interface ListProps<T extends object> extends Omit<
@@ -119,32 +122,37 @@ Command.Input = function CommandInput({
 	className,
 	inputClassName,
 	inputProps,
+	value,
+	defaultValue,
+	onChange,
 	children,
 	...props
 }: Command.InputProps) {
 	const context = useContext(CommandContext);
-	const isControlled = props.value !== undefined;
+	const isControlled = value !== undefined;
 
 	// Sync controlled value to context for filtering
 	useEffect(() => {
 		if (!context || !isControlled) return;
-		context.setFilterValue(String(props.value));
-	}, [context, isControlled, props.value]);
+		context.setFilterValue(String(value));
+	}, [context, isControlled, value]);
 
-	const handleChange: ComponentProps<typeof AriaTextField>["onChange"] = (value) => {
-		context?.setFilterValue(value ?? "");
-		props.onChange?.(value);
+	const handleChange: ComponentProps<typeof AriaInput>["onChange"] = (event) => {
+		let nextValue = event.currentTarget.value;
+		context?.setFilterValue(nextValue);
+		onChange?.(nextValue);
+		inputProps?.onChange?.(event);
 	};
 
 	// Only pass value prop when controlled to allow AriaTextField to manage its own state
 	const textFieldProps = isControlled
-		? { ...props, value: props.value, onChange: handleChange }
-		: { ...props, defaultValue: props.defaultValue ?? "", onChange: handleChange };
+		? { ...inputProps, value, onChange: handleChange }
+		: { ...inputProps, defaultValue: defaultValue ?? "", onChange: handleChange };
 
 	return (
-		<AriaTextField {...textFieldProps} className={cn("ui-command-input", className)}>
+		<AriaTextField {...props} className={cn("ui-command-input", className)}>
 			{children ?? (
-				<AriaInput {...inputProps} className={cn("ui-command-input-field", inputClassName)} />
+				<AriaInput {...textFieldProps} className={cn("ui-command-input-field", inputClassName)} />
 			)}
 		</AriaTextField>
 	);

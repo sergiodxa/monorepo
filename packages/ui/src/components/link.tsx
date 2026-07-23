@@ -8,6 +8,9 @@ import { PrefetchPageLinks } from "react-router";
 
 import { type Color, ColorProvider, useColor } from "./color-context";
 
+type LinkHoverStartEvent = Parameters<NonNullable<Link.Props["onHoverStart"]>>[0];
+type LinkHoverEndEvent = Parameters<NonNullable<Link.Props["onHoverEnd"]>>[0];
+
 export namespace Link {
 	export interface Props extends Omit<ComponentProps<typeof AriaLink>, "className"> {
 		/** The color scheme of the link */
@@ -41,11 +44,11 @@ export function Link({ className, color: colorProp = "primary", prefetch, ...pro
 				{...props}
 				data-color={color}
 				className={cn("ui-link", className)}
-				onHoverStart={(e) => {
+				onHoverStart={(e: LinkHoverStartEvent) => {
 					setShouldPrefetch(true);
 					props.onHoverStart?.(e);
 				}}
-				onHoverEnd={(e) => {
+				onHoverEnd={(e: LinkHoverEndEvent) => {
 					setShouldPrefetch(false);
 					props.onHoverEnd?.(e);
 				}}

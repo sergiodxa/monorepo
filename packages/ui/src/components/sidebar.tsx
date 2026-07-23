@@ -14,6 +14,8 @@ import {
 
 import { type Color, ColorProvider, useColor } from "./color-context";
 
+type SidebarTriggerPressEvent = Parameters<NonNullable<ComponentProps<typeof AriaButton>["onPress"]>>[0];
+
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -590,7 +592,7 @@ Sidebar.Trigger = function SidebarTrigger({ className, onPress, ...props }: Side
 			data-slot="trigger"
 			data-state={state}
 			className={cn("ui-sidebar-trigger", className)}
-			onPress={(event) => {
+			onPress={(event: SidebarTriggerPressEvent) => {
 				toggleSidebar();
 				onPress?.(event);
 			}}

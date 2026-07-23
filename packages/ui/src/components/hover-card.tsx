@@ -198,6 +198,8 @@ export namespace HoverCard {
 	export interface Props extends Omit<ComponentProps<typeof Popover>, "className"> {
 		className?: cn.ClassName;
 		showArrow?: boolean;
+		onPointerEnter?: (event: PointerEvent<HTMLElement>) => void;
+		onPointerLeave?: (event: PointerEvent<HTMLElement>) => void;
 	}
 }
 
@@ -207,6 +209,8 @@ export function HoverCard({
 	showArrow = true,
 	offset = 8,
 	isNonModal = true,
+	onPointerEnter,
+	onPointerLeave,
 	...props
 }: HoverCard.Props) {
 	let context = useContext(HoverCardContext);
@@ -237,21 +241,24 @@ export function HoverCard({
 			triggerRef={context?.triggerRef ?? props.triggerRef}
 			isOpen={triggerState ? triggerState.isOpen : props.isOpen}
 			onOpenChange={triggerState ? onOpenChange : props.onOpenChange}
-			onPointerEnter={(e) => {
-				props.onPointerEnter?.(e);
-				handlePointerEnter();
-			}}
-			onPointerLeave={(e) => {
-				props.onPointerLeave?.(e);
-				handlePointerLeave();
-			}}
 			offset={offset}
 			isNonModal={isNonModal}
 			trigger="HoverCard"
 			className={cn("ui-hover-card", className)}
 		>
 			{(renderProps) => (
-				<div onFocusCapture={handleFocus} onBlurCapture={handleBlur}>
+				<div
+					onPointerEnter={(event) => {
+						onPointerEnter?.(event);
+						handlePointerEnter();
+					}}
+					onPointerLeave={(event) => {
+						onPointerLeave?.(event);
+						handlePointerLeave();
+					}}
+					onFocusCapture={handleFocus}
+					onBlurCapture={handleBlur}
+				>
 					{showArrow && (
 						<OverlayArrow className="ui-hover-card-arrow">
 							<svg width={12} height={12} viewBox="0 0 12 12">

@@ -81,6 +81,11 @@ export namespace OtpField {
 		autoComplete?: string;
 		allowedCharacters?: RegExp;
 		placeholder?: string;
+		isDisabled?: boolean;
+		isInvalid?: boolean;
+		isReadOnly?: boolean;
+		isRequired?: boolean;
+		"aria-label"?: string;
 	}
 
 	export interface SlotsProps extends Omit<ComponentProps<"div">, "className" | "children"> {
@@ -247,10 +252,7 @@ export function OtpField({
 		<AriaTextField
 			{...props}
 			aria-label={ariaLabel}
-			isDisabled={isDisabled}
 			isInvalid={isInvalid}
-			isReadOnly={isReadOnly}
-			isRequired={isRequired}
 			className={cn("ui-otp", className)}
 		>
 			{(renderProps) => (

@@ -1,6 +1,7 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactElement } from "react";
 
 import { cn } from "@pkg/cn";
+import { createElement } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import {
 	Tree as AriaTree,
@@ -47,7 +48,10 @@ export function Tree<T extends object>({ className, ...props }: Tree.Props<T>) {
 }
 
 Tree.Item = function TreeItem<T extends object>({ className, ...props }: Tree.ItemProps<T>) {
-	return <AriaTreeItem {...props} className={cn("ui-tree-item", className)} />;
+	return createElement(AriaTreeItem as never, {
+		...props,
+		className: cn("ui-tree-item", className),
+	}) as ReactElement;
 };
 
 /**

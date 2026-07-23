@@ -19,9 +19,9 @@ export namespace Radio {
 	}
 }
 
-export function Radio({ className, children, ...props }: Radio.Props) {
+export function Radio({ className, children, value, ...props }: Radio.Props) {
 	return (
-		<AriaRadio {...props} className={cn("ui-radio", className)}>
+		<AriaRadio {...props} value={value} className={cn("ui-radio", className)}>
 			{(renderProps) => (
 				<>
 					<span className="ui-radio-indicator" />
