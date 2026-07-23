@@ -199,7 +199,7 @@ export interface FetcherEvents {
 /**
  * Router and current match data provided through Remix UI context.
  */
-export interface RouterProviderValue extends UIRouter {
+export interface RouterProviderValue extends Omit<UIRouter, "match"> {
 	/** Route context used to render the current UI tree. */
 	context: Context | NotFoundContext;
 	/** Current route match, or `null` when rendering the default element. */
@@ -329,7 +329,7 @@ export interface RouterNavigationOptions {
 /** Result returned by the browser Navigation API. */
 export interface RouterNavigationResult {
 	/** Resolves after the new entry is committed. */
-	committed: Promise<unknown>;
+	committed?: Promise<unknown>;
 	/** Resolves after intercepted navigation work finishes. */
 	finished: Promise<unknown>;
 }
@@ -414,7 +414,9 @@ export interface UIRouter {
 	/** Re-run mounted roots for the latest rendered URL. */
 	revalidate(): Promise<void>;
 	/** Mixin that makes a form submit through router navigation submissions. */
-	form(options?: FormMixinOptions): MixinDescriptor<HTMLFormElement>;
+	form(
+		options?: FormMixinOptions,
+	): MixinDescriptor<HTMLFormElement, [router: UIRouter, options: FormMixinOptions]>;
 	/** Mount the router into a DOM container using Remix UI. */
 	mount(container: HTMLElement): MountedRouter;
 }
@@ -501,7 +503,9 @@ export class Fetcher<data = unknown> extends TypedEventTarget<FetcherEvents> {
 	}
 
 	/** Returns a mixin that submits forms through this fetcher. */
-	form(options: FormMixinOptions = {}): MixinDescriptor<HTMLFormElement> {
+	form(
+		options: FormMixinOptions = {},
+	): MixinDescriptor<HTMLFormElement, [fetcher: Fetcher<unknown>, options: FormMixinOptions]> {
 		return fetcherFormMixin(this, options);
 	}
 
@@ -751,8 +755,8 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 				},
 			};
 
-			function handlePopState(event: PopStateEvent) {
-				void mounted.render(getHistoryRenderURL(event.state) ?? undefined);
+			function handlePopState(event: Event) {
+				void mounted.render(getHistoryRenderURL(getPopStateEventState(event)) ?? undefined);
 			}
 
 			function handleNavigation(event: Event) {
@@ -770,7 +774,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 
 				event.intercept({
 					async handler() {
-						await renderMountedRoots(state?.__r3UIRouter.renderURL ?? url);
+						await renderMountedRoots(state?.__r3UIRouter?.renderURL ?? url);
 					},
 				});
 			}
@@ -838,7 +842,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			route: match.data.route,
 			params: match.params,
 		};
-		let context = createContext({
+		let context: Context = createContext({
 			request,
 			url: routeMatch.url,
 			method: request.method,
@@ -878,7 +882,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 
 		if (!match) return null;
 
-		let context = createContext({
+		let context: Context = createContext({
 			request,
 			url: match.url,
 			method: request.method,
@@ -971,6 +975,11 @@ function getHistoryRenderURL(state: unknown): string | undefined {
 	return state.__r3UIRouter?.renderURL;
 }
 
+/** Reads `PopStateEvent.state` after narrowing a generic event listener payload. */
+function getPopStateEventState(event: Event): unknown {
+	return event instanceof PopStateEvent ? event.state : undefined;
+}
+
 /** Reads router metadata from Navigation API destination state. */
 function readRouterState(state: unknown): RouterHistoryState | undefined {
 	if (!isRouterHistoryState(state)) return undefined;
@@ -1053,9 +1062,9 @@ function normalizeAction<route extends RouteTarget>(
 	action: Action<route>,
 	controllerMiddleware: readonly Middleware[],
 ): { handler: ViewHandler<route>; middleware: readonly Middleware[] } {
-	if (isActionObject(action)) {
+	if (typeof action !== "function") {
 		return {
-			handler: action.handler as ViewHandler<route>,
+			handler: action.handler,
 			middleware: [...controllerMiddleware, ...(action.middleware ?? [])],
 		};
 	}
@@ -1090,7 +1099,7 @@ function createContext<context extends Context | NotFoundContext>(
 /** Runs middleware in order and falls through when middleware returns undefined. */
 async function runMiddleware(
 	middleware: readonly Middleware[],
-	context: Context,
+	context: Context | NotFoundContext,
 	handler: () => Awaitable<unknown>,
 ): Promise<unknown> {
 	let index = -1;
@@ -1106,7 +1115,7 @@ async function runMiddleware(
 
 		let nextCalled = false;
 		let nextResult: unknown;
-		let result = await current(context, async () => {
+		let result = await current(context as Context, async () => {
 			nextCalled = true;
 			nextResult = await dispatch(nextIndex + 1);
 			return nextResult;
@@ -1475,7 +1484,7 @@ function registerRoute<route extends RouteTarget>(
 
 	matcher.add(getRoutePattern(route), {
 		route,
-		handler: normalized.handler,
+		handler: normalized.handler as ViewHandler,
 		method: getRouteMethod(route),
 		middleware: normalized.middleware,
 	});
@@ -1514,7 +1523,7 @@ function getCurrentLocation(options: RouterOptions, baseURL: URL): RouterInput {
 function getRouterWindow(options: RouterOptions): RouterWindow | undefined {
 	if (options.window) return options.window;
 
-	if (typeof window !== "undefined") return window;
+	if (typeof window !== "undefined") return window as unknown as RouterWindow;
 
 	return undefined;
 }
