@@ -1,3 +1,5 @@
+/** @jsxImportSource react */
+
 import { useClipboard } from "@pkg/hooks";
 import { Button } from "@pkg/ui";
 import { CheckIcon, CopyIcon } from "lucide-react";

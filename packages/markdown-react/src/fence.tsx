@@ -1,3 +1,5 @@
+/** @jsxImportSource react */
+
 import { cn } from "@pkg/cn";
 
 import { CopyButton } from "./copy-button.js";
