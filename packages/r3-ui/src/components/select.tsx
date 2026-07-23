@@ -284,13 +284,7 @@ export function Select(handle: Handle<Select.Props>) {
 		] as unknown as Select.Props["mix"];
 
 		return (
-			<select
-				multiple={multiple}
-				size={size}
-				data-color={resolvedColor}
-				{...rest}
-				mix={fieldMix}
-			/>
+			<select multiple={multiple} size={size} data-color={resolvedColor} {...rest} mix={fieldMix} />
 		);
 	};
 }
