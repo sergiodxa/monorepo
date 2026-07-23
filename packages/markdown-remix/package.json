@@ -15,7 +15,7 @@
 		"@pkg/cn": "workspace:*",
 		"@pkg/markdown-server": "workspace:*",
 		"@pkg/ui": "workspace:*",
-		"lucide-react": "^1.21.0",
+		"lucide-react": "^1.26.0",
 		"remix": "^3.0.0-beta.5"
 	},
 	"devDependencies": {

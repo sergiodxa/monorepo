@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@markdoc/markdoc": "^0.5.7",
+		"@markdoc/markdoc": "^0.5.8",
 		"@pkg/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
 		"prismjs": "^1.30.0",
