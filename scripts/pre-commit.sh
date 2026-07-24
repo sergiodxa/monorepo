@@ -2,7 +2,7 @@
 
 set -e
 
-bunx oxfmt --check || {
+bun format || {
   echo "❌ Formatting issues found. Run 'bun format:fix' to fix."
   exit 1
 }
