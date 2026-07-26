@@ -1,4 +1,4 @@
-# ADR-021: README Package Description Source of Truth
+# ADR-017: README Package Description Source of Truth
 
 ## Status
 
