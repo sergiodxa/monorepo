@@ -10,12 +10,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { border, colorMix, fg } from "@pkg/u/color";
+import { bg, border, colorMix, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { bs, is, mbs, p } from "@pkg/u/size";
-import { leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -169,14 +168,8 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 					rounded("full"),
 					border({ width: "1px", style: "solid" }),
 					fg("currentcolor"),
-					raw({
-						borderColor: colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent"),
-						backgroundColor: colorMix(
-							"oklab",
-							{ color: "currentcolor", weight: 10 },
-							"transparent",
-						),
-					}),
+					border(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent")),
+					bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent")),
 					mix,
 				]}
 			>
@@ -206,13 +199,7 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[
-					weight("semibold"),
-					tracking("tight"),
-					raw({ fontSize: "1rem" }),
-					leading("snug"),
-					mix,
-				]}
+				mix={[weight("semibold"), tracking("tight"), fontSize("base"), leading("snug"), mix]}
 			>
 				{children}
 			</Tag>
@@ -237,7 +224,7 @@ Empty.Description = function EmptyDescription(handle: Handle<Empty.DescriptionPr
 				{...rest}
 				data-slot="description"
 				mix={[
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					leading("relaxed"),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,

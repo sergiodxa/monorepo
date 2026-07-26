@@ -23,13 +23,15 @@ import {
 	gridArea,
 	hstack,
 	items,
+	justify,
 	relative,
 	self,
 	vstack,
 } from "@pkg/u/layout";
+import { atQuery } from "@pkg/u/responsive";
 import { maxIs, minIs } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
+import { fontSize, weight } from "@pkg/u/typography";
 
 /**
  * Named container {@link Message} declares on its own host, so
@@ -235,18 +237,9 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 					flexWrap("wrap"),
 					items("baseline"),
 					gap("0.125rem", "0.5rem"),
-					when("& > :first-child", [
-						raw({ fontSize: "0.875rem" }),
-						weight("semibold"),
-						fg("neutral.emphasis"),
-					]),
-					when("& > :not(:first-child)", [raw({ fontSize: "0.75rem" }), fg("neutral.muted")]),
-					raw({
-						[`@container ${CONTAINER_NAME} (min-width: 26rem)`]: {
-							flexWrap: "nowrap",
-							justifyContent: "space-between",
-						},
-					}),
+					when("& > :first-child", [fontSize("sm"), weight("semibold"), fg("neutral.emphasis")]),
+					when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted")]),
+					atQuery(`${CONTAINER_NAME} (min-width: 26rem)`, [flexWrap("nowrap"), justify("between")]),
 					mix,
 				]}
 			>

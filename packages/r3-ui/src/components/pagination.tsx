@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor, listStyle, pointerEvents } from "@pkg/u/general";
 import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { bs, m, minIs, p, pi } from "@pkg/u/size";
 import { active, hover, when } from "@pkg/u/state";
@@ -124,15 +124,7 @@ Pagination.List = function PaginationList(handle: Handle<Pagination.ListProps>) 
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[
-					flex(),
-					items("center"),
-					gap("0.25rem"),
-					m("0"),
-					p("0"),
-					raw({ listStyle: "none" }),
-					mix,
-				]}
+				mix={[flex(), items("center"), gap("0.25rem"), m("0"), p("0"), listStyle(), mix]}
 			/>
 		);
 	};
@@ -207,7 +199,7 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 					when('&[aria-disabled="true"]', opacity(50)),
 					text("sm"),
 					textDecoration("none"),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), raw({ pointerEvents: "none" })]),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
 					mix,
 				]}
 			/>

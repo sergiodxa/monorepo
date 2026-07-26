@@ -17,11 +17,20 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { opacity, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { absolute, contents, inlineBlock, relative } from "@pkg/u/layout";
+import { opacity, transition, transitionDuration, visibility } from "@pkg/u/effects";
+import { pointerEvents, raw } from "@pkg/u/general";
+import {
+	absolute,
+	contents,
+	inlineBlock,
+	insBe,
+	insBs,
+	insIe,
+	insIs,
+	relative,
+} from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
-import { is, mb, mbe, mbs, mi, p } from "@pkg/u/size";
+import { is, mb, mbe, mbs, marginLeft, marginRight, mi, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text } from "@pkg/u/typography";
 
@@ -121,18 +130,18 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 						"(hover: hover)",
 						when('&:hover [data-slot="hover-card-content"]', [
 							opacity(100),
+							visibility(),
+							pointerEvents("auto"),
 							raw({
-								visibility: "visible",
-								pointerEvents: "auto",
 								transitionDelay: "var(--ui-hover-card-open-delay, 0.4s)",
 							}),
 						]),
 					),
 					when('&:focus-within [data-slot="hover-card-content"]', [
 						opacity(100),
+						visibility(),
+						pointerEvents("auto"),
 						raw({
-							visibility: "visible",
-							pointerEvents: "auto",
 							transitionDelay: "0s",
 						}),
 					]),
@@ -231,60 +240,50 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 					text("sm"),
 					opacity(0),
 					transition("opacity, visibility, pointer-events"),
+					visibility("hidden"),
+					pointerEvents(),
 					raw({
 						zIndex: "var(--ui-hover-card-z, 50)",
-						visibility: "hidden",
-						pointerEvents: "none",
 						transitionBehavior: "allow-discrete",
 						transitionDelay: "var(--ui-hover-card-close-delay, 0.2s)",
 					}),
 
 					when('&[data-placement^="bottom"]', [
 						mbs("var(--ui-popover-offset, 0.5rem)"),
-						raw({ insetBlockStart: "100%" }),
+						insBs("100%"),
 					]),
 					when('&[data-placement^="top"]', [
 						mbe("var(--ui-popover-offset, 0.5rem)"),
-						raw({ insetBlockEnd: "100%" }),
+						insBe("100%"),
 					]),
-					when(
-						'&[data-placement^="left"]',
-						raw({ right: "100%", marginRight: "var(--ui-popover-offset, 0.5rem)" }),
-					),
-					when(
-						'&[data-placement^="right"]',
-						raw({ left: "100%", marginLeft: "var(--ui-popover-offset, 0.5rem)" }),
-					),
+					when('&[data-placement^="left"]', [
+						marginRight("var(--ui-popover-offset, 0.5rem)"),
+						raw({ right: "100%" }),
+					]),
+					when('&[data-placement^="right"]', [
+						marginLeft("var(--ui-popover-offset, 0.5rem)"),
+						raw({ left: "100%" }),
+					]),
 
 					when('&[data-placement="bottom"], &[data-placement="top"]', [
 						mi("auto"),
-						raw({ insetInlineStart: "0", insetInlineEnd: "0" }),
+						insIs("0"),
+						insIe("0"),
 					]),
-					when(
-						'&[data-placement="bottom-start"], &[data-placement="top-start"]',
-						raw({ insetInlineStart: "0" }),
-					),
-					when(
-						'&[data-placement="bottom-end"], &[data-placement="top-end"]',
-						raw({ insetInlineEnd: "0" }),
-					),
+					when('&[data-placement="bottom-start"], &[data-placement="top-start"]', insIs("0")),
+					when('&[data-placement="bottom-end"], &[data-placement="top-end"]', insIe("0")),
 					when('&[data-placement="left"], &[data-placement="right"]', [
 						mb("auto"),
-						raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+						insBs("0"),
+						insBe("0"),
 					]),
-					when(
-						'&[data-placement="left-start"], &[data-placement="right-start"]',
-						raw({ insetBlockStart: "0" }),
-					),
-					when(
-						'&[data-placement="left-end"], &[data-placement="right-end"]',
-						raw({ insetBlockEnd: "0" }),
-					),
+					when('&[data-placement="left-start"], &[data-placement="right-start"]', insBs("0")),
+					when('&[data-placement="left-end"], &[data-placement="right-end"]', insBe("0")),
 
-					media(
-						"(prefers-reduced-motion: reduce)",
-						raw({ transitionDuration: "0s", transitionDelay: "0s" }),
-					),
+					media("(prefers-reduced-motion: reduce)", [
+						transitionDuration("0s"),
+						raw({ transitionDelay: "0s" }),
+					]),
 					mix,
 				]}
 			>

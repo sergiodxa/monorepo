@@ -14,7 +14,7 @@ import type { ElementProps, Handle, MixinDescriptor, Props as TagProps, RemixNod
 
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded, opacity } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { is, minIs, mb, pb, pi, p } from "@pkg/u/size";
 import { active, disabled, focusVisible, hover, when } from "@pkg/u/state";
@@ -157,7 +157,7 @@ export function Menu(handle: Handle<Menu.Props>) {
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), raw({ outline: "none" }), mix]}
+				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), outline("none"), mix]}
 			>
 				{children}
 			</Popover>

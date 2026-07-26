@@ -14,7 +14,7 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { roundedCorner } from "@pkg/u/effects";
 import { flex, gap, items } from "@pkg/u/layout";
 import { data, when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
@@ -438,28 +438,25 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 			<Calendar.Cell
 				{...rest}
 				mix={[
-					// No `@pkg/u` utility covers the individual logical corner-radius
-					// properties (`borderStartEndRadius` etc.) — only the full
-					// `borderRadius` shorthand `u.rounded()` sets.
 					data("selection-start", [
 						bg("primary.solid"),
 						fg("primary.onSolid"),
-						raw({ borderStartEndRadius: "0", borderEndEndRadius: "0" }),
+						roundedCorner("start-end", "none"),
+						roundedCorner("end-end", "none"),
 					]),
 					data("selection-end", [
 						bg("primary.solid"),
 						fg("primary.onSolid"),
-						raw({ borderStartStartRadius: "0", borderEndStartRadius: "0" }),
+						roundedCorner("start-start", "none"),
+						roundedCorner("end-start", "none"),
 					]),
 					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
 						bg("primary.tint"),
 						fg("primary.emphasis"),
-						raw({
-							borderStartStartRadius: "0",
-							borderStartEndRadius: "0",
-							borderEndStartRadius: "0",
-							borderEndEndRadius: "0",
-						}),
+						roundedCorner("start-start", "none"),
+						roundedCorner("start-end", "none"),
+						roundedCorner("end-start", "none"),
+						roundedCorner("end-end", "none"),
 					]),
 					mix,
 				]}

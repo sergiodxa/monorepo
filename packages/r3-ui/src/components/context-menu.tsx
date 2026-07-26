@@ -14,8 +14,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { borderEdge, fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { borderEdge, fg, outline } from "@pkg/u/color";
 import { mis, pb, pi, pie } from "@pkg/u/size";
 import { not } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
@@ -146,7 +145,7 @@ ContextMenu.Trigger = function ContextMenuTrigger(handle: Handle<ContextMenu.Tri
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[raw({ outline: "none" }), mix]}>
+			<div {...rest} mix={[outline("none"), mix]}>
 				{children}
 			</div>
 		);

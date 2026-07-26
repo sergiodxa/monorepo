@@ -12,13 +12,15 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { raw, userSelect } from "@pkg/u/general";
+import { ringShadow, rounded } from "@pkg/u/effects";
+import { userSelect } from "@pkg/u/general";
 import {
 	absolute,
 	center,
 	flex,
 	inlineFlex,
+	insBe,
+	insIe,
 	inset,
 	items,
 	justify,
@@ -28,7 +30,7 @@ import {
 import { overflow } from "@pkg/u/overflow";
 import { bs, fit, is, mis } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
-import { text, weight } from "@pkg/u/typography";
+import { text, textTransform, weight } from "@pkg/u/typography";
 
 /** Size variant {@link ImagePlaceholder} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: ImagePlaceholder.Size = "md";
@@ -267,7 +269,7 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 					fg("neutral"),
 					inset(0, 0, 0, 0),
 					overflow("hidden"),
-					raw({ textTransform: "uppercase" }),
+					textTransform("uppercase"),
 					mix,
 				]}
 			>
@@ -307,10 +309,8 @@ ImagePlaceholder.Badge = function ImagePlaceholderBadge(
 					rounded("full"),
 					border({ color: "neutral.tint", width: 2 }),
 					bg("neutral.strong"),
-					raw({
-						insetBlockEnd: "0",
-						insetInlineEnd: "0",
-					}),
+					insBe("0"),
+					insIe("0"),
 					mix,
 				]}
 			/>
@@ -348,10 +348,7 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 				mix={[
 					flex(),
 					when("& > * + *", mis(-3)),
-					when(
-						'& > [data-slot="image-placeholder"]',
-						raw({ boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)" }),
-					),
+					when('& > [data-slot="image-placeholder"]', ringShadow("neutral.tint")),
 					mix,
 				]}
 			>
@@ -401,7 +398,7 @@ ImagePlaceholder.GroupCount = function ImagePlaceholderGroupCount(
 					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
 					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
 					text("sm"),
-					raw({ boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)" }),
+					ringShadow("neutral.tint"),
 					mix,
 				]}
 			>

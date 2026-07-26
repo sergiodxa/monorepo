@@ -12,15 +12,25 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { backdropBlur, backdropSaturate, opacity, rounded, transition } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
-import { absolute, container, flex, flexCol, gap, inset, relative } from "@pkg/u/layout";
+import {
+	absolute,
+	container,
+	flex,
+	flexCol,
+	flexRow,
+	gap,
+	inset,
+	justify,
+	relative,
+} from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { media, supports } from "@pkg/u/responsive";
+import { atQuery, media, startingStyle, supports } from "@pkg/u/responsive";
 import { is, maxBs, maxIs, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { textAlign, tracking, weight } from "@pkg/u/typography";
+import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -167,7 +177,8 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					flexCol(),
 					container(CONTAINER_NAME, "inline-size"),
 					when("&::backdrop", [
-						raw({ backgroundColor: "rgb(0 0 0 / 0.5)", transitionBehavior: "allow-discrete" }),
+						bg("rgb(0 0 0 / 0.5)"),
+						raw({ transitionBehavior: "allow-discrete" }),
 						opacity(0),
 						transition("opacity, display, overlay", {
 							duration: durations.normal,
@@ -182,19 +193,10 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 							when("&::backdrop", [backdropBlur("md"), backdropSaturate(1.4)]),
 						),
 					),
-					/**
-					 * `@starting-style` has no `@pkg/u` wrapper (only `media()`/
-					 * `supports()`/`at()` exist for at-rules) — genuinely
-					 * irreducible until one's added.
-					 */
+					startingStyle(when("&[open]::backdrop", opacity(0))),
+					outline("none"),
+					/** `overscrollBehavior` has no matching utility; this shadow value doesn't match the `shadow()` scale (`sm`/`base`/`md`/`lg`). */
 					raw({
-						"@starting-style": {
-							"&[open]::backdrop": { opacity: "0" },
-						},
-					}),
-					/** `outline: "none"` and `overscrollBehavior` have no matching utility; this shadow value doesn't match the `shadow()` scale (`sm`/`md`/`lg`). */
-					raw({
-						outline: "none",
 						overscrollBehavior: "contain",
 						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
 					}),
@@ -235,11 +237,7 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 					flexCol(),
 					gap(1.5),
 					textAlign("center"),
-					raw({
-						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
-							textAlign: "start",
-						},
-					}),
+					atQuery(`${CONTAINER_NAME} (min-width: 40rem)`, textAlign("start")),
 					mix,
 				]}
 			/>
@@ -272,10 +270,8 @@ Dialog.Title = function DialogTitle(handle: Handle<Dialog.TitleProps>) {
 					fg("neutral.emphasis"),
 					weight("semibold"),
 					tracking("tight"),
-					raw({
-						fontSize: "1.125rem",
-						lineHeight: "1",
-					}),
+					fontSize("lg"),
+					leading(1),
 					mix,
 				]}
 			>
@@ -300,17 +296,7 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p
-				{...rest}
-				data-slot="description"
-				mix={[
-					fg("neutral.muted"),
-					raw({
-						fontSize: "0.875rem",
-					}),
-					mix,
-				]}
-			>
+			<p {...rest} data-slot="description" mix={[fg("neutral.muted"), fontSize("sm"), mix]}>
 				{rest.children}
 			</p>
 		);
@@ -342,14 +328,8 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 				mix={[
 					flex(),
 					gap(2),
-					raw({
-						flexDirection: "column-reverse",
-
-						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
-							flexDirection: "row",
-							justifyContent: "flex-end",
-						},
-					}),
+					raw({ flexDirection: "column-reverse" }),
+					atQuery(`${CONTAINER_NAME} (min-width: 40rem)`, [flexRow(), justify("end")]),
 					mix,
 				]}
 			/>

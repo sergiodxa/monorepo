@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
-import { center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
+import { basis, center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
 import { bs, is, minIs, pb, pi } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
 import { weight } from "@pkg/u/typography";
@@ -192,7 +192,7 @@ export function Marker(handle: Handle<Marker.Props>) {
 							raw({ content: '""' }),
 							grow(),
 							shrink(1),
-							raw({ flexBasis: "0%" }),
+							basis("0%"),
 							minIs("1.5rem"),
 							bs("var(--ui-separator-thickness, 1px)"),
 							bg("neutral.border"),

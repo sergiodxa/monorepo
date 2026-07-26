@@ -12,11 +12,11 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded, transition } from "@pkg/u/effects";
-import { raw, userSelect } from "@pkg/u/general";
+import { userSelect } from "@pkg/u/general";
 import { gap, inlineFlex, items, shrink } from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
-import { leading, nowrap, weight } from "@pkg/u/typography";
+import { fontSize, leading, nowrap, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -111,7 +111,7 @@ export function Badge(handle: Handle<Badge.Props>) {
 					transition(
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
 					),
-					raw({ fontSize: "0.75rem" }),
+					fontSize("xs"),
 					userSelect(),
 					data("variant", "default", [
 						data("color", "primary", [

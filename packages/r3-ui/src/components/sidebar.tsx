@@ -16,7 +16,8 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { PanelLeftIcon } from "@pkg/lucide-remix";
-import { bg, border, borderEdge, colorMix, fg, outline } from "@pkg/u/color";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, borderEdge, colorMix, fg, outline, outlineStyle } from "@pkg/u/color";
 import {
 	backdropBlur,
 	backdropSaturate,
@@ -37,6 +38,10 @@ import {
 	grow,
 	hidden,
 	inlineFlex,
+	insBe,
+	insBs,
+	insIe,
+	insIs,
 	items,
 	justify,
 	relative,
@@ -66,11 +71,13 @@ import {
 } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { after, data, focusVisible, hover, when } from "@pkg/u/state";
-import { translateX } from "@pkg/u/transform";
+import { scaleProperty, translateProperty, translateX } from "@pkg/u/transform";
 import {
+	fontSize,
 	tabularNums,
 	textAlign,
 	textDecoration,
+	textTransform,
 	tracking,
 	truncate,
 	weight,
@@ -138,25 +145,6 @@ const WIDE_SHELL_QUERY = `@container ${PROVIDER_CONTAINER_NAME} (min-width: 48re
  * truth every collapse-driven rule in {@link Sidebar.Provider} reads from.
  */
 const TOGGLE_CHECKED_SELECTOR = '[data-slot="toggle"]:checked';
-
-/**
- * Shared visually-hidden treatment: clips an element to nothing while
- * leaving it in place and in the accessibility tree, unlike `display: none`,
- * which would strip it from both. Applied to text {@link Sidebar} collapses
- * to an icon-only rail, so the accessible name a screen reader announces for
- * a link or button never disappears along with its visible label.
- */
-const VISUALLY_HIDDEN = {
-	position: "absolute",
-	inlineSize: "1px",
-	blockSize: "1px",
-	padding: "0",
-	margin: "-1px",
-	overflow: "hidden",
-	clip: "rect(0, 0, 0, 0)",
-	whiteSpace: "nowrap",
-	borderWidth: "0",
-} as const;
 
 /**
  * Resolves the `aria-current` value an anchor-based nav part renders with:
@@ -502,30 +490,26 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 						supports(
 							"(backdrop-filter: blur(0))",
 							media("(prefers-reduced-transparency: no-preference)", [
-								raw({
-									borderColor: colorMix(
+								border(
+									colorMix(
 										"oklab",
 										{ color: "var(--ui-neutral-border)", weight: 80 },
 										"transparent",
 									),
-									backgroundColor: colorMix(
+								),
+								bg(
+									colorMix(
 										"oklab",
 										{ color: "var(--ui-neutral-bg-tint)", weight: 95 },
 										"transparent",
 									),
-								}),
+								),
 								backdropBlur("md"),
 								backdropSaturate(1.4),
 							]),
 						),
 					]),
-					data(
-						"variant",
-						"inset",
-						raw({
-							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-						}),
-					),
+					data("variant", "inset", shadow("base")),
 					when(
 						`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`,
 						when('&[data-collapsible="icon"], &[data-collapsible="offcanvas"]', hidden()),
@@ -600,8 +584,8 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 					when(`&:has(${TOGGLE_CHECKED_SELECTOR})`, [
 						when('[data-slot="sidebar"][data-collapsible="icon"]', [
 							is(varUtility("sidebar-width-icon", "3rem")),
-							when("[data-sidebar-collapsed-hide]", raw(VISUALLY_HIDDEN)),
-							when('[data-slot="group-label"]', raw(VISUALLY_HIDDEN)),
+							when("[data-sidebar-collapsed-hide]", visuallyHidden()),
+							when('[data-slot="group-label"]', visuallyHidden()),
 							when('[data-slot="menu-badge"]', hidden()),
 							when('[data-slot="menu-sub"]', hidden()),
 							when('[data-slot="menu-button"], [data-slot="menu-link"]', [
@@ -613,13 +597,13 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 							translateX("-100%"),
 							is("0"),
 							overflow("hidden"),
-							raw({ borderWidth: "0" }),
+							border({ width: "0", noStyleDefault: true }),
 						]),
 						when('[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="right"]', [
 							translateX("100%"),
 							is("0"),
 							overflow("hidden"),
-							raw({ borderWidth: "0" }),
+							border({ width: "0", noStyleDefault: true }),
 						]),
 					]),
 					container(PROVIDER_CONTAINER_NAME),
@@ -664,7 +648,8 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 				data-side={resolvedSide}
 				mix={[
 					fixed(),
-					raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+					insBs("0"),
+					insBe("0"),
 					m("0"),
 					rounded("none"),
 					p("0"),
@@ -677,13 +662,11 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 					overflow("hidden"),
 					willChange("transform"),
 					raw({ transitionBehavior: "allow-discrete" }),
-					data("side", "left", [
-						raw({ left: "0", paddingLeft: "env(safe-area-inset-left, 0px)" }),
-						translateX("-100%"),
-					]),
+					data("side", "left", [raw({ left: "0" }), safeAreaPadding("left"), translateX("-100%")]),
 					when('&[data-side="left"][open]', translateX("0")),
 					data("side", "right", [
-						raw({ right: "0", paddingRight: "env(safe-area-inset-right, 0px)" }),
+						raw({ right: "0" }),
+						safeAreaPadding("right"),
 						translateX("100%"),
 					]),
 					when('&[data-side="right"][open]', translateX("0")),
@@ -733,9 +716,10 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 					bs("4rem"),
 					shrink(),
 					items("center"),
-					borderEdge("block-end", { width: 1, style: "solid" }),
-					raw({
-						borderBlockEndColor: colorMix(
+					borderEdge("block-end", {
+						width: 1,
+						style: "solid",
+						color: colorMix(
 							"oklab",
 							{ color: "var(--ui-neutral-border)", weight: 80 },
 							"transparent",
@@ -819,9 +803,10 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 					flex(),
 					shrink(),
 					items("center"),
-					borderEdge("block-start", { width: 1, style: "solid" }),
-					raw({
-						borderBlockStartColor: colorMix(
+					borderEdge("block-start", {
+						width: 1,
+						style: "solid",
+						color: colorMix(
 							"oklab",
 							{ color: "var(--ui-neutral-border)", weight: 80 },
 							"transparent",
@@ -905,11 +890,11 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 					flex(),
 					minBs("2.25rem"),
 					items("center"),
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					weight(500),
 					textDecoration("none"),
 					when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
-					when("&:active", raw({ scale: "0.98" })),
+					when("&:active", scaleProperty(0.98)),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 					gap("0.75rem"),
 					rounded("lg"),
@@ -1000,9 +985,10 @@ Sidebar.Group = function SidebarGroup(handle: Handle<Sidebar.GroupProps>) {
 					flexCol(),
 					when("& + &", [
 						mbs("0.5rem"),
-						borderEdge("block-start", { width: 1, style: "solid" }),
-						raw({
-							borderBlockStartColor: colorMix(
+						borderEdge("block-start", {
+							width: 1,
+							style: "solid",
+							color: colorMix(
 								"oklab",
 								{ color: "var(--ui-neutral-border)", weight: 60 },
 								"transparent",
@@ -1046,7 +1032,8 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 					justify("between"),
 					mbe("0.25rem"),
 					weight(600),
-					raw({ fontSize: "0.6875rem", textTransform: "uppercase" }),
+					raw({ fontSize: "0.6875rem" }),
+					textTransform("uppercase"),
 					tracking("wider"),
 					userSelect(),
 					pi("0.5rem"),
@@ -1290,7 +1277,8 @@ function menuRowMixins() {
 		textAlign("start"),
 		weight(500),
 		textDecoration("none"),
-		raw({ fontSize: "0.875rem", outlineStyle: "none" }),
+		fontSize("sm"),
+		outlineStyle("none"),
 		when("& > svg:first-child, & > [data-slot='icon']:first-child", [
 			is("1rem"),
 			bs("1rem"),
@@ -1301,7 +1289,7 @@ function menuRowMixins() {
 			minBs("1.75rem"),
 			pi("0.625rem"),
 			pb("0.375rem"),
-			raw({ fontSize: "0.75rem" }),
+			fontSize("xs"),
 			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
 				is("0.875rem"),
 				bs("0.875rem"),
@@ -1312,13 +1300,13 @@ function menuRowMixins() {
 			minBs("2.75rem"),
 			pi("1rem"),
 			pb("0.625rem"),
-			raw({ fontSize: "1rem" }),
+			fontSize("base"),
 			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
 				is("1.25rem"),
 				bs("1.25rem"),
 			]),
 		]),
-		when("&:active", raw({ scale: "0.98" })),
+		when("&:active", scaleProperty(0.98)),
 		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 		when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 		gap("0.75rem"),
@@ -1378,7 +1366,9 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 				mix={[
 					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					absolute(),
-					raw({ insetInlineEnd: "0.375rem", insetBlockStart: "50%", translate: "0 -50%" }),
+					insIe("0.375rem"),
+					insBs("50%"),
+					translateProperty("0 -50%"),
 					inlineFlex(),
 					is("1.5rem"),
 					bs("1.5rem"),
@@ -1626,9 +1616,9 @@ function menuSubRowMixins() {
 		items("center"),
 		textAlign("start"),
 		textDecoration("none"),
-		raw({ fontSize: "0.875rem" }),
+		fontSize("sm"),
 		when('&[data-active], &[aria-current]:not([aria-current="false"])', weight(500)),
-		when("&:active", raw({ scale: "0.98" })),
+		when("&:active", scaleProperty(0.98)),
 		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 		when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 		gap("0.5rem"),
@@ -1679,7 +1669,8 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 				mix={[
 					attrs({ "aria-hidden": true }),
 					absolute(),
-					raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+					insBs("0"),
+					insBe("0"),
 					is("1rem"),
 					z(20),
 					hidden(),
@@ -1690,12 +1681,12 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 						absolute(),
 						is("2px"),
 						bg("transparent"),
+						insBs("0"),
+						insBe("0"),
+						insIs("50%"),
+						translateProperty("-50% 0"),
 						raw({
 							content: '""',
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							insetInlineStart: "50%",
-							translate: "-50% 0",
 							transitionProperty: "background-color",
 							transitionDuration: "150ms",
 						}),
@@ -1755,7 +1746,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 				]}
 			>
 				<PanelLeftIcon aria-hidden />
-				<input type="checkbox" {...rest} data-slot="toggle" mix={[raw(VISUALLY_HIDDEN), mix]} />
+				<input type="checkbox" {...rest} data-slot="toggle" mix={[visuallyHidden(), mix]} />
 			</label>
 		);
 	};

@@ -12,10 +12,10 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { rounded, transition, transitionDuration } from "@pkg/u/effects";
 import { appearance, block, flex, flexCol, gap } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
 import { bs, is, m, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text } from "@pkg/u/typography";
@@ -132,12 +132,10 @@ ProgressBar.Indicator = function ProgressBarIndicator(handle: Handle<ProgressBar
 					]),
 					when("&::-moz-progress-bar", [bg("primary.solid"), rounded("full"), transition("all")]),
 					border("none"),
-					raw({
-						"@media (prefers-reduced-motion: reduce)": {
-							"&::-webkit-progress-value": { transitionDuration: "0s" },
-							"&::-moz-progress-bar": { transitionDuration: "0s" },
-						},
-					}),
+					media("(prefers-reduced-motion: reduce)", [
+						when("&::-webkit-progress-value", transitionDuration("0s")),
+						when("&::-moz-progress-bar", transitionDuration("0s")),
+					]),
 					mix,
 				]}
 			/>

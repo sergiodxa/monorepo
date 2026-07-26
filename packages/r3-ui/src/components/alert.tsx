@@ -13,11 +13,10 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { border, colorMix, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { absolute, gap, grow, inset, relative, self, shrink, vstack } from "@pkg/u/layout";
+import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } from "@pkg/u/layout";
 import { bs, is, mbe, minIs, p, pis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { leading, tracking, weight } from "@pkg/u/typography";
+import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
@@ -244,15 +243,7 @@ Alert.Content = function AlertContent(handle: Handle<Alert.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					vstack({ gap: 1 }),
-					minIs(0),
-					grow(),
-					shrink(1),
-					/** No `flex-basis`-only utility exists. */
-					raw({ flexBasis: "0%" }),
-					mix,
-				]}
+				mix={[vstack({ gap: 1 }), minIs(0), grow(), shrink(1), basis("0%"), mix]}
 			>
 				{children}
 			</div>
@@ -281,19 +272,7 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 				{...rest}
 				data-heading-level={resolved}
 				data-slot="title"
-				mix={[
-					mbe(1),
-					weight("medium"),
-					leading(1),
-					tracking("tight"),
-					/**
-					 * No bare `fontSize`-only utility exists — `text()` always
-					 * pairs it with a scale `lineHeight`, which would override
-					 * the deliberately collapsed `leading(1)` above.
-					 */
-					raw({ fontSize: "0.875rem" }),
-					mix,
-				]}
+				mix={[mbe(1), weight("medium"), leading(1), tracking("tight"), fontSize("sm"), mix]}
 			>
 				{children}
 			</Tag>
@@ -321,8 +300,7 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 				mix={[
 					leading("relaxed"),
 					when("& p", leading("relaxed")),
-					/** No bare `fontSize`-only utility exists (see {@link Alert.Title}). */
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}

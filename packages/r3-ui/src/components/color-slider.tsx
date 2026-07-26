@@ -22,7 +22,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border } from "@pkg/u/color";
+import { bg, border, outlineStyle } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
 import { absolute, appearance, inset, relative, vstack } from "@pkg/u/layout";
@@ -270,20 +270,15 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 					when("&::before", [
 						absolute(),
 						inset("0"),
-						raw({
-							content: '""',
-							borderRadius: "inherit",
-							backgroundImage:
+						rounded("inherit"),
+						bg({
+							image:
 								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
-							backgroundSize:
-								"var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
+							size: "var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
 						}),
+						raw({ content: '""' }),
 					]),
-					when("&::after", [
-						absolute(),
-						inset("0"),
-						raw({ content: '""', borderRadius: "inherit" }),
-					]),
+					when("&::after", [absolute(), inset("0"), rounded("inherit"), raw({ content: '""' })]),
 
 					when('[data-channel="hue"] &::after', bg({ image: HUE_GRADIENT })),
 					when('[data-channel="saturation"] &::after', bg({ image: SATURATION_GRADIENT })),
@@ -350,7 +345,7 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 					inset("0"),
 					m("0"),
 					bg("transparent"),
-					raw({ outlineStyle: "none" }),
+					outlineStyle("none"),
 
 					when("&::-webkit-slider-runnable-track", [
 						bs("full"),

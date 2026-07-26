@@ -14,10 +14,20 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronDownIcon } from "@pkg/lucide-remix";
-import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
+import { bg, border, borderEdge, fg, outline, outlineStyle, outlineWidth } from "@pkg/u/color";
+import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { appearance, flex, gap, grow, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
+import {
+	appearance,
+	basis,
+	flex,
+	gap,
+	grow,
+	inlineFlex,
+	items,
+	justify,
+	shrink,
+} from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, m, p, pb, pi } from "@pkg/u/size";
 import { data, hover, when } from "@pkg/u/state";
@@ -171,7 +181,7 @@ export function Select(handle: Handle<Select.Props>) {
 			justify("between"),
 			cursor("default"),
 			text("sm"),
-			when("&:focus", raw({ outline: "none" })),
+			when("&:focus", outline("none")),
 			when("&:focus-visible", [
 				border("neutral.strong"),
 				outline({ color: "neutral.ring", offset: 0 }),
@@ -196,13 +206,12 @@ export function Select(handle: Handle<Select.Props>) {
 					outline({ color: "danger.ring", offset: 0 }),
 				]),
 			]),
-			when(
-				'&[aria-invalid="true"], &:user-invalid',
-				// No utility sets outline-width/-style/-offset without also
-				// forcing outline-color (u.outline() always emits a color) —
-				// this width/style/offset-only override stays raw().
-				raw({ outlineWidth: "2px", outlineStyle: "solid", outlineOffset: "0px" }),
-			),
+			when('&[aria-invalid="true"], &:user-invalid', [
+				outlineWidth("2px"),
+				outlineStyle("solid"),
+				// No bare setter exists yet for outline-offset alone.
+				raw({ outlineOffset: "0px" }),
+			]),
 			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
 			// `&::picker(select)`/`&::picker-icon` selector blocks must stay
@@ -345,7 +354,7 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 								shrink(),
 								transition("transform"),
 								when("& svg", [is("1rem"), bs("1rem")]),
-								media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+								media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 								fg("neutral.muted"),
 							]}
 						>
@@ -383,11 +392,11 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 				{...rest}
 				mix={[
 					// `flex: "1"` shorthand decomposes to grow(1) + shrink(1) +
-					// flex-basis: 0% — no single utility covers the shorthand
+					// basis("0%") — no single utility covers the shorthand
 					// itself (see `packages/u/src/layout/grow.ts` docs).
 					grow(),
 					shrink(1),
-					raw({ flexBasis: "0%" }),
+					basis("0%"),
 					truncate(),
 					textAlign("start"),
 					mix,
@@ -425,7 +434,7 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 					pi("0.75rem"),
 					pb("0.5rem"),
 					text("sm"),
-					raw({ outline: "none" }),
+					outline("none"),
 					when("&:disabled", opacity(50)),
 					when("&::checkmark", fg("currentColor")),
 					rounded("md"),

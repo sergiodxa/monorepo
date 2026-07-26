@@ -12,13 +12,15 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
+import { borderEdge, fg } from "@pkg/u/color";
 import { rounded, transition } from "@pkg/u/effects";
 import { raw, willChange } from "@pkg/u/general";
-import { fixed, flex, gap, items, justify, vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
+import { fixed, flex, gap, insBe, insBs, items, justify, vstack } from "@pkg/u/layout";
+import { media, startingStyle } from "@pkg/u/responsive";
 import { is, m, maxBs, maxIs, mbs, pbe, pbs } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
+import { translateX } from "@pkg/u/transform";
+import { fontSize } from "@pkg/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -140,50 +142,38 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 					maxBs("none"),
 					maxIs("none"),
 					is("min(90vw, var(--ui-sheet-size, 24rem))"),
-					raw({
-						insetBlockStart: "0",
-						insetBlockEnd: "0",
-						transitionBehavior: "allow-discrete",
-					}),
+					insBs("0"),
+					insBe("0"),
+					raw({ transitionBehavior: "allow-discrete" }),
 					willChange("transform"),
-					data(
-						"side",
-						"right",
+					data("side", "right", [
+						borderEdge("left", { width: 1, color: "neutral" }),
+						translateX("100%"),
 						raw({
 							right: "0",
 							left: "auto",
-							borderLeftWidth: "1px",
-							borderLeftStyle: "solid",
-							borderLeftColor: "var(--ui-neutral-border)",
 							paddingLeft: "1.5rem",
 							paddingRight: "calc(1.5rem + env(safe-area-inset-right, 0px))",
-							transform: "translateX(100%)",
 						}),
-					),
-					data("side", "right", when("&[open]", raw({ transform: "translateX(0)" }))),
+					]),
+					data("side", "right", when("&[open]", translateX("0"))),
 
-					data(
-						"side",
-						"left",
+					data("side", "left", [
+						borderEdge("right", { width: 1, color: "neutral" }),
+						translateX("-100%"),
 						raw({
 							left: "0",
 							right: "auto",
-							borderRightWidth: "1px",
-							borderRightStyle: "solid",
-							borderRightColor: "var(--ui-neutral-border)",
 							paddingRight: "1.5rem",
 							paddingLeft: "calc(1.5rem + env(safe-area-inset-left, 0px))",
-							transform: "translateX(-100%)",
 						}),
-					),
-					data("side", "left", when("&[open]", raw({ transform: "translateX(0)" }))),
+					]),
+					data("side", "left", when("&[open]", translateX("0"))),
 
-					raw({
-						"@starting-style": {
-							'&[data-side="right"][open]': { transform: "translateX(100%)" },
-							'&[data-side="left"][open]': { transform: "translateX(-100%)" },
-						},
-					}),
+					startingStyle([
+						when('&[data-side="right"][open]', translateX("100%")),
+						when('&[data-side="left"][open]', translateX("-100%")),
+					]),
 
 					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
 					gap("1rem"),
@@ -249,11 +239,7 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p
-				{...rest}
-				data-slot="description"
-				mix={[raw({ fontSize: "0.875rem" }), fg("neutral"), mix]}
-			>
+			<p {...rest} data-slot="description" mix={[fontSize("sm"), fg("neutral"), mix]}>
 				{rest.children}
 			</p>
 		);

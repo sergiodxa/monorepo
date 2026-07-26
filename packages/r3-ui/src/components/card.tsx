@@ -13,11 +13,10 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { border } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { opacity, rounded, shadow } from "@pkg/u/effects";
 import { flex, flexCol, gap, items } from "@pkg/u/layout";
 import { p, pbe, pbs, pi } from "@pkg/u/size";
-import { tracking, weight } from "@pkg/u/typography";
+import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -111,15 +110,7 @@ export function Card(handle: Handle<Card.Props>) {
 			<section
 				data-color={resolvedColor}
 				{...rest}
-				mix={[
-					semanticColorPanel(),
-					rounded("lg"),
-					border({ width: 1 }),
-					raw({
-						boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-					}),
-					mix,
-				]}
+				mix={[semanticColorPanel(), rounded("lg"), border({ width: 1 }), shadow("base"), mix]}
 			/>
 		);
 	};
@@ -167,15 +158,7 @@ Card.Title = function CardTitle(handle: Handle<Card.TitleProps>) {
 			<Tag
 				{...rest}
 				data-heading-level={resolved}
-				mix={[
-					raw({
-						fontSize: "1.5rem",
-						lineHeight: "1",
-					}),
-					weight("semibold"),
-					tracking("tight"),
-					mix,
-				]}
+				mix={[fontSize("2xl"), leading(1), weight("semibold"), tracking("tight"), mix]}
 			>
 				{rest.children}
 			</Tag>
@@ -196,18 +179,7 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<p
-				{...rest}
-				mix={[
-					raw({
-						fontSize: "0.875rem",
-					}),
-					opacity(70),
-					mix,
-				]}
-			/>
-		);
+		return <p {...rest} mix={[fontSize("sm"), opacity(70), mix]} />;
 	};
 };
 

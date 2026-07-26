@@ -12,9 +12,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { bg, borderEdge, fg, outline } from "@pkg/u/color";
+import { opacity, roundedCorner, rounded, transition, transitionDuration } from "@pkg/u/effects";
+import { cursor, listStyle, raw } from "@pkg/u/general";
 import { flex, flexCol, gap, hidden, interpolateSize, items } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
@@ -120,15 +120,12 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 						bs(0),
 						raw({
 							transitionProperty: "block-size, content-visibility",
-							transitionDuration: "200ms",
 							transitionBehavior: "allow-discrete",
 						}),
+						transitionDuration("200ms"),
 					]),
 					when("&[open]::details-content", bs("auto")),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						detailsContent(raw({ transitionDuration: "0s" })),
-					),
+					media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
 					mix,
 				]}
 			>
@@ -210,7 +207,7 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 					hover(bg("neutral.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					cursor("pointer"),
-					raw({ listStyle: "none" }),
+					listStyle(),
 					when("&::-webkit-details-marker", hidden()),
 					when("&::marker", raw({ content: '""' })),
 					transition(
@@ -293,20 +290,18 @@ Disclosure.Group = function DisclosureGroup(handle: Handle<Disclosure.GroupProps
 					flexCol(),
 					when("& > details", [
 						rounded("none"),
-						raw({
-							borderInlineWidth: "0",
-							borderBlockStartWidth: "0",
-
-							"&:first-child": {
-								borderStartStartRadius: "var(--ui-radius-lg, 0.5rem)",
-								borderStartEndRadius: "var(--ui-radius-lg, 0.5rem)",
-								borderBlockStartWidth: "1px",
-							},
-							"&:last-child": {
-								borderEndStartRadius: "var(--ui-radius-lg, 0.5rem)",
-								borderEndEndRadius: "var(--ui-radius-lg, 0.5rem)",
-							},
-						}),
+						borderEdge("inline-start", { width: "0", noStyleDefault: true }),
+						borderEdge("inline-end", { width: "0", noStyleDefault: true }),
+						borderEdge("block-start", { width: "0", noStyleDefault: true }),
+						when("&:first-child", [
+							roundedCorner("start-start", "lg"),
+							roundedCorner("start-end", "lg"),
+							borderEdge("block-start", { width: 1, noStyleDefault: true }),
+						]),
+						when("&:last-child", [
+							roundedCorner("end-start", "lg"),
+							roundedCorner("end-end", "lg"),
+						]),
 					]),
 					mix,
 				]}

@@ -12,8 +12,8 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fill } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { absolute } from "@pkg/u/layout";
+import { calc, pointerEvents, raw, var as varUtility } from "@pkg/u/general";
+import { absolute, insBe, insBs, insIe, insIs } from "@pkg/u/layout";
 import { mb, mi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { rotate } from "@pkg/u/transform";
@@ -110,36 +110,36 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
 					absolute(),
 					fill("neutral.tint"),
-					raw({ pointerEvents: "none" }),
-					// `insetBlockStart`/`insetInlineStart`/`insetInlineEnd`/`left`/`right`
-					// have no `@pkg/u` equivalent — only the full logical `inset()`
-					// shorthand exists, which would also touch the untouched sides here.
+					pointerEvents(),
+					// `left`/`right` (physical inset) have no `@pkg/u` equivalent — only
+					// the full logical `inset()` shorthand exists, which would also
+					// touch the untouched sides here.
 					when('&[data-placement^="bottom"]', [
 						mi("auto"),
 						rotate(180),
-						raw({
-							insetBlockStart: "calc(var(--ui-overlay-arrow-offset, 0.5rem) * -1)",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-						}),
+						insBs(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
+						insIs("0"),
+						insIe("0"),
 					]),
 					when('&[data-placement^="top"]', [
 						mi("auto"),
-						raw({
-							insetBlockEnd: "calc(var(--ui-overlay-arrow-offset, 0.5rem) * -1)",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-						}),
+						insBe(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
+						insIs("0"),
+						insIe("0"),
 					]),
 					when('&[data-placement^="left"]', [
 						mb("auto"),
 						rotate(-90),
-						raw({ left: "100%", insetBlockStart: "0", insetBlockEnd: "0" }),
+						raw({ left: "100%" }),
+						insBs("0"),
+						insBe("0"),
 					]),
 					when('&[data-placement^="right"]', [
 						mb("auto"),
 						rotate(90),
-						raw({ right: "100%", insetBlockStart: "0", insetBlockEnd: "0" }),
+						raw({ right: "100%" }),
+						insBs("0"),
+						insBe("0"),
 					]),
 					mix,
 				]}

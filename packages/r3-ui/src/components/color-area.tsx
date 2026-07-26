@@ -16,15 +16,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, linearGradient, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { bg, border, linearGradient, outline, outlineStyle } from "@pkg/u/color";
+import { opacity, ringShadow, rounded, transition, transitionDuration } from "@pkg/u/effects";
+import { cursor, pointerEvents, raw } from "@pkg/u/general";
 import { absolute, inlineBlock, inset, relative } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
 import { bs, is, m } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { when } from "@pkg/u/state";
+import { scaleProperty } from "@pkg/u/transform";
 import { attrs } from "remix/ui";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -203,11 +204,10 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 						image: `${linearGradient("to top", "black", "transparent")}, ${linearGradient("to right", "white", "transparent")}`,
 					}),
 					// The hue itself is a computed `hsl()` value read off a custom
-					// property, not a resolvable `@pkg/u` color token — `bg()`/`color()`
-					// can't accept an already-formed color string, so it stays raw.
-					raw({
-						backgroundColor: "hsl(var(--ui-color-area-hue, 0) 100% 50%)",
-					}),
+					// property — `bg()`'s token resolver now passes through any value
+					// containing "(" unchanged, so this composes directly instead of
+					// needing `raw()`.
+					bg("hsl(var(--ui-color-area-hue, 0) 100% 50%)"),
 					mix,
 				]}
 			/>
@@ -303,15 +303,15 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 					// would also emit `MozAppearance: "none"` on the host, which isn't
 					// present on the original declaration and is a real (not inert)
 					// change on Firefox's own range input — kept bespoke to avoid
-					// altering rendered output there. `direction`/`pointerEvents`/
-					// `outlineStyle` have no matching utility at all.
+					// altering rendered output there. `direction` has no matching
+					// utility at all.
 					raw({
 						appearance: "none",
 						WebkitAppearance: "none",
 						direction: "ltr",
-						pointerEvents: "none",
-						outlineStyle: "none",
 					}),
+					pointerEvents(),
+					outlineStyle("none"),
 
 					// Runnable track: fully transparent and inert, sized to the square.
 					// The webkit/moz appearance resets here are inert cross-engine (each
@@ -327,34 +327,34 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ appearance: "none", borderStyle: "none" }),
+						raw({ appearance: "none" }),
+						border({ style: "none" }),
 					]),
 
 					// The native thumb itself, reshaped into a thin line spanning the
-					// square — size and pointer-events are its own bespoke recipe, no
-					// `@pkg/u` box-shadow token matches this literal value.
+					// square via a literal size — the vendor appearance reset has no
+					// matching utility, but pointer-events/box-shadow now compose
+					// through `pointerEvents()`/`ringShadow()`.
 					when("&::-webkit-slider-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({
-							WebkitAppearance: "none",
-							appearance: "none",
-							pointerEvents: "auto",
-							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-						}),
+						raw({ WebkitAppearance: "none", appearance: "none" }),
+						pointerEvents("auto"),
+						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),
 					when("&::-moz-range-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({ pointerEvents: "auto", boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)" }),
+						pointerEvents("auto"),
+						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),
 
-					when("&:active::-webkit-slider-thumb", raw({ scale: "1.2" })),
-					when("&:active::-moz-range-thumb", raw({ scale: "1.2" })),
+					when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
+					when("&:active::-moz-range-thumb", scaleProperty(1.2)),
 
 					media("(prefers-reduced-motion: reduce)", [
-						when("&::-webkit-slider-thumb", raw({ transitionDuration: "0s" })),
-						when("&::-moz-range-thumb", raw({ transitionDuration: "0s" })),
+						when("&::-webkit-slider-thumb", transitionDuration("0s")),
+						when("&::-moz-range-thumb", transitionDuration("0s")),
 					]),
 					mix,
 				]}
@@ -456,9 +456,9 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 						WebkitAppearance: "none",
 						writingMode: "vertical-lr",
 						direction: "rtl",
-						pointerEvents: "none",
-						outlineStyle: "none",
 					}),
+					pointerEvents(),
+					outlineStyle("none"),
 
 					when("&::-webkit-slider-runnable-track", [
 						is("full"),
@@ -470,31 +470,30 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ appearance: "none", borderStyle: "none" }),
+						raw({ appearance: "none" }),
+						border({ style: "none" }),
 					]),
 
 					when("&::-webkit-slider-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({
-							WebkitAppearance: "none",
-							appearance: "none",
-							pointerEvents: "auto",
-							boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)",
-						}),
+						raw({ WebkitAppearance: "none", appearance: "none" }),
+						pointerEvents("auto"),
+						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),
 					when("&::-moz-range-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({ pointerEvents: "auto", boxShadow: "0 0 0 1px rgb(0 0 0 / 0.4)" }),
+						pointerEvents("auto"),
+						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),
 
-					when("&:active::-webkit-slider-thumb", raw({ scale: "1.2" })),
-					when("&:active::-moz-range-thumb", raw({ scale: "1.2" })),
+					when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
+					when("&:active::-moz-range-thumb", scaleProperty(1.2)),
 
 					media("(prefers-reduced-motion: reduce)", [
-						when("&::-webkit-slider-thumb", raw({ transitionDuration: "0s" })),
-						when("&::-moz-range-thumb", raw({ transitionDuration: "0s" })),
+						when("&::-webkit-slider-thumb", transitionDuration("0s")),
+						when("&::-moz-range-thumb", transitionDuration("0s")),
 					]),
 					mix,
 				]}

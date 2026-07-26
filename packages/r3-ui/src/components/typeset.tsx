@@ -21,6 +21,7 @@ import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { block, container } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
+import { atQuery } from "@pkg/u/responsive";
 import { is, maxIs, pb, pi, pis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
@@ -330,17 +331,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 								},
 							},
 						},
-						// Once there's enough room, cells and code blocks read better
-						// with roomier padding than the narrow default above.
-						[`@container ${CONTAINER_NAME} (min-width: 30rem)`]: {
-							"& :where(th, td)": {
-								paddingInline: "1em",
-							},
-							"& :where(pre)": {
-								paddingInline: "1.25em",
-							},
-						},
-
 						// Opt-out: anything carrying `data-not-typeset`, and everything
 						// nested inside it, renders with none of the styling above. Every
 						// selector in this layer stays wrapped in `:where(...)` so this
@@ -350,6 +340,20 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							all: "revert-layer",
 						},
 					}),
+
+					// Once there's enough room, cells and code blocks read better
+					// with roomier padding than the narrow default above.
+					atQuery(
+						`${CONTAINER_NAME} (min-width: 30rem)`,
+						raw({
+							"& :where(th, td)": {
+								paddingInline: "1em",
+							},
+							"& :where(pre)": {
+								paddingInline: "1.25em",
+							},
+						}),
+					),
 
 					// Headings
 					when("& :where(h1, h2, h3, h4, h5, h6)", [

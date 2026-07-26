@@ -12,10 +12,10 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { MinusIcon, PlusIcon } from "@pkg/lucide-remix";
-import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
+import { bg, border, borderEdge, fg, outline, outlineWidth } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { flex, inlineFlex, items, justify } from "@pkg/u/layout";
+import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
 import { active, focusVisible, hover, invalid, when } from "@pkg/u/state";
 import { textAlign } from "@pkg/u/typography";
@@ -235,9 +235,11 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 				mix={[
 					textAlign("center"),
 					rounded("none"),
+					grow(),
+					shrink(1),
+					basis("0%"),
+					border({ width: "0", noStyleDefault: true }),
 					raw({
-						flex: "1 1 0%",
-						borderWidth: "0",
 						"-moz-appearance": "textfield",
 
 						"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
@@ -248,8 +250,8 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 					bg("transparent"),
 					fg("inherit"),
 					when("&:disabled", bg("transparent")),
-					focusVisible(raw({ outlineWidth: "0" })),
-					invalid([raw({ outlineWidth: "0" }), fg("danger")]),
+					focusVisible(outlineWidth("0")),
+					invalid([outlineWidth("0"), fg("danger")]),
 					mix,
 				]}
 			/>

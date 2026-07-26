@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { focusVisible, hover, invalid, when } from "@pkg/u/state";
@@ -115,7 +115,7 @@ export function Input(handle: Handle<Input.Props>) {
 					pb(2),
 					when("&::placeholder", fg("neutral.muted")),
 					hover(border("neutral.strong")),
-					when("&:focus", [border("neutral.strong"), raw({ outline: "none" })]),
+					when("&:focus", [border("neutral.strong"), outline("none")]),
 					focusVisible([
 						border("neutral.strong"),
 						outline({ color: "neutral.ring", offset: 0 }),

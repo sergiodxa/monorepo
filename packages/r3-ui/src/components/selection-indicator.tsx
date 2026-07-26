@@ -12,8 +12,9 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { visibility } from "@pkg/u/effects";
 import { bs, is } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
 /**
@@ -83,16 +84,9 @@ export function SelectionIndicator(handle: Handle<SelectionIndicator.Props>) {
 					is("var(--ui-selection-indicator-size, 1rem)"),
 					bs("var(--ui-selection-indicator-size, 1rem)"),
 					fg("currentColor"),
-					raw({
-						visibility: "hidden",
-
-						'&[aria-selected="true"]': {
-							visibility: "visible",
-						},
-						'&[aria-current]:not([aria-current="false"])': {
-							visibility: "visible",
-						},
-					}),
+					visibility("hidden"),
+					when('&[aria-selected="true"]', visibility()),
+					when('&[aria-current]:not([aria-current="false"])', visibility()),
 					mix,
 				]}
 			/>

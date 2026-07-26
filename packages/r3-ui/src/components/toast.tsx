@@ -18,15 +18,20 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { XIcon } from "@pkg/lucide-remix";
 import { bg, border, colorMix, fg } from "@pkg/u/color";
 import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { pointerEvents, raw } from "@pkg/u/general";
 import {
 	absolute,
+	basis,
 	fixed,
 	flex,
 	flexCol,
 	gap,
 	grow,
 	inlineFlex,
+	insBe,
+	insBs,
+	insIe,
+	insIs,
 	items,
 	justify,
 	relative,
@@ -36,7 +41,7 @@ import { media, supports } from "@pkg/u/responsive";
 import { is, bs, maxIs, minIs, pb, pi, pie } from "@pkg/u/size";
 import { active, data, hover, when } from "@pkg/u/state";
 import { translateX } from "@pkg/u/transform";
-import { leading, weight } from "@pkg/u/typography";
+import { fontSize, leading, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import { graphicHostStyle } from "../styles/graphic-host";
@@ -299,8 +304,8 @@ export function Toast(handle: Handle<Toast.Props>) {
 					border({ width: 1 }),
 					shadow("lg"),
 					items("start"),
+					pointerEvents("auto"),
 					raw({
-						pointerEvents: "auto",
 						"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
 						backgroundColor: "var(--ui-toast-bg)",
 					}),
@@ -347,13 +352,7 @@ export function Toast(handle: Handle<Toast.Props>) {
 					supports(
 						"(backdrop-filter: blur(0))",
 						media("(prefers-reduced-transparency: no-preference)", [
-							raw({
-								backgroundColor: colorMix(
-									"oklab",
-									{ color: "var(--ui-toast-bg)", weight: 85 },
-									"transparent",
-								),
-							}),
+							bg(colorMix("oklab", { color: "var(--ui-toast-bg)", weight: 85 }, "transparent")),
 							backdropBlur("md"),
 							backdropSaturate(1.4),
 						]),
@@ -436,16 +435,7 @@ Toast.Content = function ToastContent(handle: Handle<Toast.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					flex(),
-					flexCol(),
-					gap("0.25rem"),
-					minIs(0),
-					grow(),
-					shrink(1),
-					raw({ flexBasis: "0%" }),
-					mix,
-				]}
+				mix={[flex(), flexCol(), gap("0.25rem"), minIs(0), grow(), shrink(1), basis("0%"), mix]}
 			>
 				{children}
 			</div>
@@ -466,11 +456,7 @@ Toast.Title = function ToastTitle(handle: Handle<Toast.TitleProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<h3
-				{...rest}
-				data-slot="title"
-				mix={[weight(500), leading(1), raw({ fontSize: "0.875rem" }), mix]}
-			>
+			<h3 {...rest} data-slot="title" mix={[weight(500), leading(1), fontSize("sm"), mix]}>
 				{children}
 			</h3>
 		);
@@ -494,7 +480,7 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 				{...rest}
 				data-slot="description"
 				mix={[
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}
@@ -542,28 +528,10 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 					),
 					fg("currentcolor"),
-					raw({
-						borderColor: colorMix("oklab", { color: "currentcolor", weight: 30 }, "transparent"),
-						fontSize: "0.75rem",
-					}),
-					hover(
-						raw({
-							backgroundColor: colorMix(
-								"oklab",
-								{ color: "currentcolor", weight: 10 },
-								"transparent",
-							),
-						}),
-					),
-					active(
-						raw({
-							backgroundColor: colorMix(
-								"oklab",
-								{ color: "currentcolor", weight: 20 },
-								"transparent",
-							),
-						}),
-					),
+					border(colorMix("oklab", { color: "currentcolor", weight: 30 }, "transparent")),
+					fontSize("xs"),
+					hover(bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent"))),
+					active(bg(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent"))),
 					mix,
 				]}
 			>
@@ -612,7 +580,7 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 					transition(
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 					),
-					raw({ fontSize: "0.75rem" }),
+					fontSize("xs"),
 					mix,
 				]}
 			>
@@ -657,7 +625,8 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 					transition(
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 					),
-					raw({ insetBlockStart: "0.5rem", insetInlineEnd: "0.5rem" }),
+					insBs("0.5rem"),
+					insIe("0.5rem"),
 					mix,
 				]}
 			>
@@ -726,15 +695,13 @@ Toast.Region = function ToastRegion(handle: Handle<Toast.RegionProps>) {
 					maxIs("24rem"),
 					pb("1rem"),
 					pi("1rem"),
-					raw({ zIndex: "var(--ui-toast-z, 50)", pointerEvents: "none" }),
-					when('&[data-placement^="top"]', raw({ insetBlockStart: "0" })),
-					when('&[data-placement^="bottom"]', raw({ insetBlockEnd: "0" })),
-					when('&[data-placement$="start"]', raw({ insetInlineStart: "0" })),
-					when('&[data-placement$="end"]', raw({ insetInlineEnd: "0" })),
-					when('&[data-placement$="center"]', [
-						raw({ insetInlineStart: "50%" }),
-						translateX("-50%"),
-					]),
+					pointerEvents(),
+					raw({ zIndex: "var(--ui-toast-z, 50)" }),
+					when('&[data-placement^="top"]', insBs("0")),
+					when('&[data-placement^="bottom"]', insBe("0")),
+					when('&[data-placement$="start"]', insIs("0")),
+					when('&[data-placement$="end"]', insIe("0")),
+					when('&[data-placement$="center"]', [insIs("50%"), translateX("-50%")]),
 					mix,
 				]}
 			>

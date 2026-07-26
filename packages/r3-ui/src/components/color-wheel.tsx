@@ -22,10 +22,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { absolute, block, inlineBlock, inset, relative } from "@pkg/u/layout";
+import { bg, border, outline, outlineStyle } from "@pkg/u/color";
+import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
+import { cursor, pointerEvents, raw } from "@pkg/u/general";
+import { absolute, block, inlineBlock, insBs, insIs, inset, relative } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, m, mbs, minIs, mis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
@@ -223,7 +223,7 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						minIs("0"),
 						rounded("full"),
 						bg({ image: WHEEL_CONIC_GRADIENT }),
-						raw({ maskImage: RING_MASK, WebkitMaskImage: RING_MASK }),
+						mask(RING_MASK),
 
 						when("&::after", [
 							absolute(),
@@ -232,16 +232,19 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 							mbs("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
 							mis("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
 							rounded("full"),
-							border({ width: "var(--ui-color-wheel-thumb-border-width, 2px)", style: "solid" }),
+							border({
+								width: "var(--ui-color-wheel-thumb-border-width, 2px)",
+								style: "solid",
+								color: "var(--ui-color-wheel-value, var(--ui-primary-bg-solid))",
+							}),
 							bg("neutral.tint"),
 							transition("transform"),
+							insBs("50%"),
+							insIs("50%"),
+							shadow("base"),
+							pointerEvents(),
 							raw({
 								content: '""',
-								insetBlockStart: "50%",
-								insetInlineStart: "50%",
-								borderColor: "var(--ui-color-wheel-value, var(--ui-primary-bg-solid))",
-								boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-								pointerEvents: "none",
 								transform:
 									"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
 							}),
@@ -254,10 +257,7 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 
 						when("& > input", [absolute(), inset("0"), is("full"), bs("full"), opacity(0)]),
 
-						media(
-							"(prefers-reduced-motion: reduce)",
-							when("&::after", raw({ transitionDuration: "0s" })),
-						),
+						media("(prefers-reduced-motion: reduce)", when("&::after", transitionDuration("0s"))),
 					]),
 					mix,
 				]}
@@ -288,7 +288,8 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
 						m("0"),
 						bg("transparent"),
-						raw({ WebkitAppearance: "none", appearance: "none", outlineStyle: "none" }),
+						raw({ WebkitAppearance: "none", appearance: "none" }),
+						outlineStyle("none"),
 
 						when("&::-webkit-slider-runnable-track", [
 							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
@@ -322,7 +323,7 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 							]),
 							when(
 								"&:focus-visible::-webkit-slider-thumb, &:focus-visible::-moz-range-thumb",
-								raw({ outlineStyle: "none" }),
+								outlineStyle("none"),
 							),
 						]),
 						parts?.input,

@@ -13,10 +13,23 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { borderEdge, fg, outline } from "@pkg/u/color";
+import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, transition } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { absolute, flexCol, flexRow, hstack, inset, relative, vstack } from "@pkg/u/layout";
+import {
+	absolute,
+	basis,
+	flexCol,
+	flexRow,
+	grow,
+	hstack,
+	insBe,
+	insIs,
+	inset,
+	relative,
+	shrink,
+	vstack,
+} from "@pkg/u/layout";
 import { bs, is, mbe, mie, pb, pi } from "@pkg/u/size";
 import { after, data, when } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
@@ -189,12 +202,12 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 							duration: "200ms",
 							easing: "ease-out",
 						}),
+						insIs("var(--ui-tab-indicator-inline-start, 0px)"),
+						insBe("-0.0625rem"),
+						bg("var(--ui-primary-fg)"),
 						raw({
 							content: '""',
-							insetInlineStart: "var(--ui-tab-indicator-inline-start, 0px)",
-							insetBlockEnd: "-0.0625rem",
 							opacity: "var(--ui-tab-indicator-opacity, 0)",
-							backgroundColor: "var(--ui-primary-fg)",
 						}),
 					]),
 					data("orientation", "vertical", [
@@ -288,7 +301,7 @@ Tabs.Panels = function TabsPanels(handle: Handle<Tabs.PanelsProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[raw({ flex: "1 1 0%" }), mix]} />;
+		return <div {...rest} mix={[grow(), shrink(1), basis("0%"), mix]} />;
 	};
 };
 
@@ -315,7 +328,7 @@ Tabs.Panel = function TabsPanel(handle: Handle<Tabs.PanelProps>) {
 					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					pb(4),
 					pi(4),
-					raw({ outlineStyle: "none" }),
+					outlineStyle("none"),
 					mix,
 				]}
 			/>

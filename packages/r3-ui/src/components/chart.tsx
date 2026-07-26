@@ -38,8 +38,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, shadow, transition } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
+import { cursor, pointerEvents, raw, userSelect } from "@pkg/u/general";
 import {
 	absolute,
 	block,
@@ -56,7 +56,8 @@ import { media } from "@pkg/u/responsive";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { focusVisible, hover, when } from "@pkg/u/state";
-import { nowrap, textDecoration, weight } from "@pkg/u/typography";
+import { scaleProperty, translateProperty } from "@pkg/u/transform";
+import { fontSize, leading, nowrap, textDecoration, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import type { Point } from "../utils/chart-path";
@@ -252,7 +253,8 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					cursor("default"),
 					transition("opacity, color"),
 					userSelect(),
-					raw({ fontSize: "0.875rem", lineHeight: "1.25" }),
+					fontSize("sm"),
+					leading(1.25),
 					when("&:has(input:not(:checked))", [opacity(50), textDecoration("line-through")]),
 				]}
 			>
@@ -992,20 +994,20 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 					nowrap(),
 					opacity(0),
 					transition("opacity, scale", { duration: durations.fast, easing: easings.standard }),
-					when("&[data-open]", [opacity(100), raw({ scale: "1" })]),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						raw({ scale: "none", transitionProperty: "opacity" }),
-					),
+					when("&[data-open]", [opacity(100), scaleProperty(1)]),
+					media("(prefers-reduced-motion: reduce)", [
+						scaleProperty("none"),
+						raw({ transitionProperty: "opacity" }),
+					]),
 					raw({
 						left: "var(--ui-chart-tooltip-x, 0px)",
 						top: "var(--ui-chart-tooltip-y, 0px)",
-						translate: "-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))",
 						fontSize: "0.8125rem",
-						lineHeight: "1.2",
-						pointerEvents: "none",
-						scale: "0.95",
 					}),
+					translateProperty("-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))"),
+					leading(1.2),
+					pointerEvents(),
+					scaleProperty(0.95),
 					mix,
 				]}
 			/>
@@ -1461,7 +1463,7 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 									focusVisible(outline({ color: "primary.ring", offset: 2 })),
 									cursor("default"),
 									transition("opacity"),
-									media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+									media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 									parts?.bar,
 								]}
 							>

@@ -12,8 +12,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { outline } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { outline, outlineColor } from "@pkg/u/color";
 import { flex, items } from "@pkg/u/layout";
 import { when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
@@ -80,7 +79,7 @@ export function Group(handle: Handle<Group.Props>) {
 					when("&:has(:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					items("center"),
-					when('&[aria-invalid="true"]', raw({ outlineColor: "var(--ui-danger-ring)" })),
+					when('&[aria-invalid="true"]', outlineColor("danger")),
 					mix,
 				]}
 			/>

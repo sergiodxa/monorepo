@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { cursor, pointerEvents, userSelect } from "@pkg/u/general";
 import { gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { active, data, hover, when } from "@pkg/u/state";
@@ -224,7 +224,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					data("variant", "ghost", bg("transparent")),
 
 					when('&[aria-disabled="true"]', opacity(50)),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), raw({ pointerEvents: "none" })]),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
 
 					cursor("default"),
 					userSelect(),

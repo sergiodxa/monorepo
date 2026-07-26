@@ -13,8 +13,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, borderEdge, fg } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
 import { justify, shrink } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, pb, pbe, pi } from "@pkg/u/size";
@@ -160,10 +159,9 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 				{...rest}
 				mix={[
 					rounded("none"),
-					raw({
-						borderInlineWidth: "0",
-						borderBlockStartWidth: "0",
-					}),
+					borderEdge("inline-start", { width: "0", noStyleDefault: true }),
+					borderEdge("inline-end", { width: "0", noStyleDefault: true }),
+					borderEdge("block-start", { width: "0", noStyleDefault: true }),
 					open(when('& summary [data-slot="icon"]', rotate(180))),
 					when("&:first-child", borderEdge("block-start", { width: 1 })),
 					when('&:has(> summary[aria-disabled="true"])', opacity(50)),
@@ -219,7 +217,7 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 					]),
 					media(
 						"(prefers-reduced-motion: reduce)",
-						when('& [data-slot="icon"]', raw({ transitionDuration: "0s" })),
+						when('& [data-slot="icon"]', transitionDuration("0s")),
 					),
 					mix,
 				]}

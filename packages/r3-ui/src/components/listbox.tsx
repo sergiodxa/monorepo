@@ -14,9 +14,9 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { maxBs, p, pb, pi } from "@pkg/u/size";
@@ -164,7 +164,7 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 					maxBs(60),
 					overflow("auto"),
 					p(1),
-					raw({ outline: "none" }),
+					outline("none"),
 					mix,
 				]}
 			/>
@@ -243,7 +243,7 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 					when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
 					cursor("default"),
 					text("sm"),
-					raw({ outline: "none" }),
+					outline("none"),
 					mix,
 				]}
 			>

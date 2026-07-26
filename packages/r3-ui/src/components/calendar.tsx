@@ -16,7 +16,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { flex, grow, inlineBlock, items, justify, shrink } from "@pkg/u/layout";
+import { basis, flex, grow, inlineBlock, items, justify, shrink } from "@pkg/u/layout";
 import { bs, is, mbe, p, pbe } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { scaleX } from "@pkg/u/transform";
@@ -443,7 +443,7 @@ Calendar.Heading = function CalendarHeading(handle: Handle<Calendar.HeadingProps
 				mix={[
 					grow(),
 					shrink(1),
-					raw({ flexBasis: "0%" }),
+					basis("0%"),
 					textAlign("center"),
 					weight("semibold"),
 					fg("neutral.emphasis"),

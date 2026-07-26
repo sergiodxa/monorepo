@@ -20,15 +20,21 @@ import {
 	cursor,
 	focusVisible,
 	inlineBlock,
+	insBs,
+	insIs,
 	is,
 	m,
+	media,
 	opacity,
 	outline,
 	raw,
 	relative,
 	rounded,
+	scaleProperty,
+	shadow,
 	shrink,
 	transition,
+	transitionDuration,
 	when,
 } from "@pkg/u";
 import { attrs } from "remix/ui";
@@ -126,35 +132,23 @@ export function Switch(handle: Handle<Switch.Props>) {
 					shrink(0),
 					transition("background-color", { duration: durations.fast, easing: easings.standard }),
 					when("&:disabled", cursor("not-allowed")),
-					raw({
-						verticalAlign: "middle",
-
-						"&::before": {
-							content: '""',
-							insetBlockStart: "var(--ui-switch-thumb-inset, 0.125rem)",
-							insetInlineStart: "var(--ui-switch-thumb-inset, 0.125rem)",
-							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-						},
-
-						"&:checked": {
-							"&::before": {
-								insetInlineStart:
-									"calc(var(--ui-switch-track-inline-size, 2.75rem) - var(--ui-switch-thumb-size, 1.25rem) - var(--ui-switch-thumb-inset, 0.125rem))",
-							},
-						},
-
-						"&:active": {
-							"&::before": {
-								scale: "0.95",
-							},
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							"&::before": {
-								transitionDuration: "0s",
-							},
-						},
-					}),
+					raw({ verticalAlign: "middle" }),
+					before([
+						raw({ content: '""' }),
+						insBs("var(--ui-switch-thumb-inset, 0.125rem)"),
+						insIs("var(--ui-switch-thumb-inset, 0.125rem)"),
+						shadow("base"),
+					]),
+					when(
+						"&:checked",
+						before(
+							insIs(
+								"calc(var(--ui-switch-track-inline-size, 2.75rem) - var(--ui-switch-thumb-size, 1.25rem) - var(--ui-switch-thumb-inset, 0.125rem))",
+							),
+						),
+					),
+					when("&:active", before(scaleProperty("0.95"))),
+					media("(prefers-reduced-motion: reduce)", before(transitionDuration("0s"))),
 					mix,
 				]}
 			/>

@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { rounded, opacity } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { cursor, userSelect } from "@pkg/u/general";
 import { flex, flexCol, inlineFlex, items, justify, gap } from "@pkg/u/layout";
 import { pi, pb } from "@pkg/u/size";
 import { when, hover, active, data } from "@pkg/u/state";
@@ -194,12 +194,7 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 						]),
 					]),
 					when('&[data-variant="outline"]', [
-						/**
-						 * No utility sets `border-width` alone without also
-						 * defaulting `border-style` to `"solid"` — `border({ width })`
-						 * would add a `border-style` this component never had here.
-						 */
-						raw({ borderWidth: "2px" }),
+						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
 					]),
 					when('&[data-variant="ghost"]', bg("transparent")),

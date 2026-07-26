@@ -14,10 +14,20 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
+import { bg, border, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
-import { flex, flexCol, flexRow, grow, items, justify, relative, shrink } from "@pkg/u/layout";
+import { cursor, raw, touchAction, userSelect } from "@pkg/u/general";
+import {
+	basis,
+	flex,
+	flexCol,
+	flexRow,
+	grow,
+	items,
+	justify,
+	relative,
+	shrink,
+} from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, is, maxBs, maxIs, minBs, minIs } from "@pkg/u/size";
 import { before, data, focusVisible, hover, when } from "@pkg/u/state";
@@ -203,8 +213,7 @@ Resizable.Panel = function ResizablePanel(handle: Handle<Resizable.PanelProps>) 
 				mix={[
 					grow(),
 					shrink(1),
-					/** No `flex-basis`-only utility exists. */
-					raw({ flexBasis: "var(--ui-resizable-panel-size, 0%)" }),
+					basis("var(--ui-resizable-panel-size, 0%)"),
 					minBs(0),
 					minIs(0),
 					data("orientation", "horizontal", [
@@ -265,14 +274,13 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 					flex(),
 					grow(0),
 					shrink(0),
-					/** No `flex-basis`-only utility exists. */
-					raw({ flexBasis: "var(--ui-resizable-handle-size, 0.75rem)" }),
+					basis("var(--ui-resizable-handle-size, 0.75rem)"),
 					items("center"),
 					justify("center"),
 					bg("transparent"),
 					userSelect(),
-					/** No matching utility for `touch-action` or for unsetting `outline` entirely. */
-					raw({ touchAction: "none", outlineStyle: "none" }),
+					touchAction(),
+					outlineStyle("none"),
 					when('&[data-orientation="horizontal"]', cursor("col-resize")),
 					when('&[data-orientation="vertical"]', cursor("row-resize")),
 					/** No utility sets the bare CSS `content` property. */

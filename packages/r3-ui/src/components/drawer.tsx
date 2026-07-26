@@ -15,8 +15,8 @@ import type { Handle } from "remix/ui";
 
 import { rounded, transition } from "@pkg/u/effects";
 import { raw, willChange } from "@pkg/u/general";
-import { fixed } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
+import { fixed, insBe, insBs, insIe, insIs } from "@pkg/u/layout";
+import { media, startingStyle } from "@pkg/u/responsive";
 import { bs, is, m, maxBs, maxIs } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
 import { translateX, translateY } from "@pkg/u/transform";
@@ -134,7 +134,9 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					raw({ transitionBehavior: "allow-discrete" }),
 
 					data("placement", "top", [
-						raw({ insetBlockStart: "0", insetInlineStart: "0", insetInlineEnd: "0" }),
+						insBs("0"),
+						insIs("0"),
+						insIe("0"),
 						bs("24rem"),
 						maxBs("90vh"),
 						is("full"),
@@ -144,7 +146,9 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					]),
 
 					data("placement", "bottom", [
-						raw({ insetBlockEnd: "0", insetInlineStart: "0", insetInlineEnd: "0" }),
+						insBe("0"),
+						insIs("0"),
+						insIe("0"),
 						bs("24rem"),
 						maxBs("90vh"),
 						is("full"),
@@ -154,7 +158,9 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					]),
 
 					data("placement", "left", [
-						raw({ insetBlockStart: "0", insetBlockEnd: "0", left: "0" }),
+						insBs("0"),
+						insBe("0"),
+						raw({ left: "0" }),
 						is("22rem"),
 						maxIs("90vw"),
 						maxBs("none"),
@@ -163,7 +169,9 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					]),
 
 					data("placement", "right", [
-						raw({ insetBlockStart: "0", insetBlockEnd: "0", right: "0" }),
+						insBs("0"),
+						insBe("0"),
+						raw({ right: "0" }),
 						is("22rem"),
 						maxIs("90vw"),
 						maxBs("none"),
@@ -171,14 +179,12 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						when("&[open]", translateX(0)),
 					]),
 
-					raw({
-						"@starting-style": {
-							'&[data-placement="top"][open]': { transform: "translateY(-100%)" },
-							'&[data-placement="bottom"][open]': { transform: "translateY(100%)" },
-							'&[data-placement="left"][open]': { transform: "translateX(-100%)" },
-							'&[data-placement="right"][open]': { transform: "translateX(100%)" },
-						},
-					}),
+					startingStyle([
+						when('&[data-placement="top"][open]', translateY("-100%")),
+						when('&[data-placement="bottom"][open]', translateY("100%")),
+						when('&[data-placement="left"][open]', translateX("-100%")),
+						when('&[data-placement="right"][open]', translateX("100%")),
+					]),
 
 					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
 

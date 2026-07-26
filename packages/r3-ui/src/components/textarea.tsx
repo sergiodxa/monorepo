@@ -144,11 +144,8 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 					raw({
 						resize: "block",
 						fieldSizing: "content",
-
-						"&:focus": {
-							outline: "none",
-						},
 					}),
+					when("&:focus", outline("none")),
 					mix,
 				]}
 			/>

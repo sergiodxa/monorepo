@@ -14,9 +14,9 @@
 import type { Handle, Props as ElementProps } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
-import { bg, fg, outline } from "@pkg/u/color";
+import { bg, fg, outline, outlineColor } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor, listStyle } from "@pkg/u/general";
 import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@pkg/u/layout";
 import { bs, is, m, mie, p, pb, pi } from "@pkg/u/size";
 import { active, data, hover, when } from "@pkg/u/state";
@@ -154,7 +154,7 @@ TagGroup.List = function TagGroupList(handle: Handle<TagGroup.ListProps>) {
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), raw({ listStyle: "none" }), mix]}
+				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), listStyle(), mix]}
 			/>
 		);
 	};
@@ -283,13 +283,11 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 					when('[data-color="success"] &:active', bg("success.bg-tint-pressed")),
 					when('[data-color="danger"] &:active', bg("danger.bg-tint-pressed")),
 					when('[data-color="warning"] &:active', bg("warning.bg-tint-pressed")),
-					raw({
-						"&:focus-visible": { outlineColor: "var(--ui-primary-ring)" },
-						'[data-color="neutral"] &:focus-visible': { outlineColor: "var(--ui-neutral-ring)" },
-						'[data-color="success"] &:focus-visible': { outlineColor: "var(--ui-success-ring)" },
-						'[data-color="danger"] &:focus-visible': { outlineColor: "var(--ui-danger-ring)" },
-						'[data-color="warning"] &:focus-visible': { outlineColor: "var(--ui-warning-ring)" },
-					}),
+					when("&:focus-visible", outlineColor("primary")),
+					when('[data-color="neutral"] &:focus-visible', outlineColor("neutral")),
+					when('[data-color="success"] &:focus-visible', outlineColor("success")),
+					when('[data-color="danger"] &:focus-visible', outlineColor("danger")),
+					when('[data-color="warning"] &:focus-visible', outlineColor("warning")),
 					mix,
 				]}
 			>

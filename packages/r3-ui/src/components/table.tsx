@@ -19,6 +19,7 @@ import {
 	container,
 	cursor,
 	fg,
+	fontSize,
 	gap,
 	hover,
 	inlineFlex,
@@ -35,6 +36,7 @@ import {
 	textAlign,
 	textDecoration,
 	userSelect,
+	virtualize,
 	weight,
 	when,
 } from "@pkg/u";
@@ -200,14 +202,7 @@ export function Table(handle: Handle<Table.Props>) {
 			<table
 				{...rest}
 				data-slot="table"
-				mix={[
-					is("100%"),
-					raw({
-						borderCollapse: "collapse",
-						fontSize: "0.875rem",
-					}),
-					mix,
-				]}
+				mix={[is("100%"), raw({ borderCollapse: "collapse" }), fontSize("sm"), mix]}
 			/>
 		);
 	};
@@ -297,10 +292,7 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 				{...rest}
 				data-slot="body"
 				mix={[
-					raw({
-						contentVisibility: "auto",
-						containIntrinsicSize: "auto var(--ui-table-body-intrinsic-size, 32rem)",
-					}),
+					virtualize("auto var(--ui-table-body-intrinsic-size, 32rem)"),
 					when(
 						"& > :not([hidden]) ~ :not([hidden])",
 						borderEdge("block-start", { color: "neutral", width: 1 }),
@@ -475,7 +467,7 @@ Table.LoadMore = function TableLoadMore(handle: Handle<Table.LoadMoreProps>) {
 							pb("1rem"),
 							fg("neutral.muted"),
 							hover(fg("neutral")),
-							raw({ fontSize: "0.875rem" }),
+							fontSize("sm"),
 							textDecoration("none"),
 							parts?.link,
 						]}

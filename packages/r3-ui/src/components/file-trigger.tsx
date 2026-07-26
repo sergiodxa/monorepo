@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { cursor, userSelect } from "@pkg/u/general";
 import { gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { active, data, hover, when } from "@pkg/u/state";
@@ -224,7 +224,7 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					]),
 
 					data("variant", "outline", [
-						raw({ borderWidth: "2px" }),
+						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
 						data("color", "primary", [
 							border("primary.strong"),

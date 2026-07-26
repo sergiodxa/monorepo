@@ -155,7 +155,8 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 					after([
 						absolute(),
 						inset(0),
-						raw({ content: '""', backgroundColor: "var(--ui-color-swatch-value, transparent)" }),
+						bg("var(--ui-color-swatch-value, transparent)"),
+						raw({ content: '""' }),
 					]),
 					mix,
 				]}

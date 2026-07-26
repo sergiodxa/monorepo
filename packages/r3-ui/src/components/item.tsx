@@ -15,7 +15,19 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
-import { center, container, flex, flexCol, gap, grow, items, shrink } from "@pkg/u/layout";
+import {
+	basis,
+	center,
+	container,
+	flex,
+	flexCol,
+	flexWrap,
+	gap,
+	grow,
+	items,
+	shrink,
+} from "@pkg/u/layout";
+import { atQuery } from "@pkg/u/responsive";
 import { bs, is, mis, minIs, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text, truncate, weight } from "@pkg/u/typography";
@@ -35,7 +47,7 @@ const CONTAINER_NAME = "ui-item";
  * text out of room; below it {@link Item} wraps and {@link Item.Actions}
  * drops to a second line of its own.
  */
-const NARROW_CONTAINER_QUERY = `@container ${CONTAINER_NAME} (max-width: 20rem)`;
+const NARROW_CONTAINER_QUERY = `${CONTAINER_NAME} (max-width: 20rem)`;
 
 /**
  * Prop types for {@link Item} and its compound parts.
@@ -137,11 +149,7 @@ export function Item(handle: Handle<Item.Props>) {
 					pb("var(--ui-item-padding-block, 0.625rem)"),
 					pi("var(--ui-item-padding-inline, 0.75rem)"),
 					container(CONTAINER_NAME),
-					raw({
-						[NARROW_CONTAINER_QUERY]: {
-							flexWrap: "wrap",
-						},
-					}),
+					atQuery(NARROW_CONTAINER_QUERY, flexWrap("wrap")),
 					mix,
 				]}
 			>
@@ -221,16 +229,7 @@ Item.Content = function ItemContent(handle: Handle<Item.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					flex(),
-					flexCol(),
-					minIs(0),
-					gap(0.5),
-					grow(),
-					shrink(1),
-					raw({ flexBasis: "0%" }),
-					mix,
-				]}
+				mix={[flex(), flexCol(), minIs(0), gap(0.5), grow(), shrink(1), basis("0%"), mix]}
 			>
 				{children}
 			</div>
@@ -333,14 +332,14 @@ Item.Actions = function ItemActions(handle: Handle<Item.ActionsProps>) {
 					mis("auto"),
 					shrink(),
 					gap("var(--ui-item-actions-gap, 0.5rem)"),
-					raw({
-						[NARROW_CONTAINER_QUERY]: {
-							flexBasis: "100%",
+					atQuery(NARROW_CONTAINER_QUERY, [
+						basis("100%"),
+						raw({
 							justifyContent: "flex-end",
 							marginInlineStart:
 								"calc(var(--ui-item-media-size, 2rem) + var(--ui-item-gap, 0.75rem))",
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			>

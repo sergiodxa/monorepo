@@ -13,9 +13,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, borderEdge, fg, outline } from "@pkg/u/color";
+import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor } from "@pkg/u/general";
 import { hstack, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, is, maxBs, p, pb, pi } from "@pkg/u/size";
@@ -155,8 +155,7 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 						bg("transparent"),
 						text("sm"),
-						/** No matching utility unsets `outline` entirely. */
-						raw({ outlineStyle: "none" }),
+						outlineStyle("none"),
 						mix,
 					]}
 				/>
@@ -196,8 +195,7 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 					maxBs("18rem"),
 					overflow("auto"),
 					p(2, 1),
-					/** No matching utility unsets `outline` entirely. */
-					raw({ outlineStyle: "none" }),
+					outlineStyle("none"),
 					mix,
 				]}
 			/>
@@ -256,8 +254,7 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
 					when('&[aria-disabled="true"]', opacity(50)),
 					text("sm"),
-					/** No matching utility unsets `outline` entirely. */
-					raw({ outlineStyle: "none" }),
+					outlineStyle("none"),
 					mix,
 				]}
 			>

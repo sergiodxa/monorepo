@@ -16,11 +16,13 @@ import { bg, border, fg, outline } from "@pkg/u/color";
 import { rounded, transition } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import {
+	basis,
 	block,
 	container,
 	flex,
 	flexCol,
 	gap,
+	grow,
 	hstack,
 	items,
 	justify,
@@ -350,7 +352,9 @@ Attachment.Content = function AttachmentContent(handle: Handle<Attachment.Conten
 				mix={[
 					vstack({ gap: 0.5 }),
 					minIs(0),
-					raw({ flex: "1" }),
+					grow(),
+					shrink(1),
+					basis("0%"),
 					when(NARROW_CONTAINER_QUERY, textAlign("center")),
 					mix,
 				]}
@@ -552,7 +556,7 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 					attrs({ href, commandfor, command, target }),
 					relative(),
 					block(),
-					raw({ borderRadius: "inherit" }),
+					rounded("inherit"),
 					when("&[role]:hover", bg("neutral.bg-tint-hover")),
 					when("&[role]:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					mix,

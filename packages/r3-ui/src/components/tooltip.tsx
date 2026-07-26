@@ -16,9 +16,10 @@ import { bg, fg, fill } from "@pkg/u/color";
 import { opacity, rounded, shadow, transition } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
+import { media, startingStyle } from "@pkg/u/responsive";
 import { pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
+import { scaleProperty } from "@pkg/u/transform";
 import { text } from "@pkg/u/typography";
 
 import { durations, easings } from "../animations/tokens";
@@ -143,33 +144,20 @@ export function Tooltip(handle: Handle<Tooltip.Props>) {
 						easing: easings.standard,
 					}),
 					text("sm"),
-					raw({ scale: "0.95", transitionBehavior: "allow-discrete" }),
-					when(ENTERED_SELECTOR, [block(), opacity(100), raw({ scale: "none" })]),
-					raw({
-						"@starting-style": {
-							[ENTERED_SELECTOR]: {
-								opacity: "0",
-								scale: "0.95",
-							},
-						},
-					}),
+					scaleProperty("0.95"),
+					raw({ transitionBehavior: "allow-discrete" }),
+					when(ENTERED_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
+					startingStyle(when(ENTERED_SELECTOR, [opacity(0), scaleProperty("0.95")])),
 					media("(hover: hover)", [
-						when(HOVERED_TRIGGER_SELECTOR, [block(), opacity(100), raw({ scale: "none" })]),
-						raw({
-							"@starting-style": {
-								[HOVERED_TRIGGER_SELECTOR]: {
-									opacity: "0",
-									scale: "0.95",
-								},
-							},
-						}),
+						when(HOVERED_TRIGGER_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
+						startingStyle(when(HOVERED_TRIGGER_SELECTOR, [opacity(0), scaleProperty("0.95")])),
 					]),
 					media("(prefers-reduced-motion: reduce)", [
 						transition("opacity, display, overlay", {
 							duration: durations.fast,
 							easing: easings.standard,
 						}),
-						raw({ scale: "none" }),
+						scaleProperty("none"),
 					]),
 					mix,
 				]}

@@ -13,8 +13,8 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { LoaderCircleIcon } from "@pkg/lucide-remix";
 import { bg, border, fg, outline } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { opacity, rounded, visibility } from "@pkg/u/effects";
+import { cursor, userSelect } from "@pkg/u/general";
 import { absolute, flex, gap, inlineFlex, inset, items, justify, relative } from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
@@ -204,7 +204,7 @@ export function Button(handle: Handle<Button.Props>) {
 					]),
 
 					when('&[data-variant="outline"]', [
-						raw({ borderWidth: "2px" }),
+						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
 						when('&[data-color="primary"]', [
 							border("primary.strong"),
@@ -299,13 +299,7 @@ export function Button(handle: Handle<Button.Props>) {
 						</span>
 						<span
 							data-slot="content"
-							mix={[
-								raw({ visibility: "hidden" }),
-								inlineFlex(),
-								items("center"),
-								gap(2),
-								parts?.content,
-							]}
+							mix={[visibility("hidden"), inlineFlex(), items("center"), gap(2), parts?.content]}
 						>
 							{children}
 						</span>

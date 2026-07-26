@@ -17,7 +17,6 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { CalendarIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { bs, is, mis, p } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
@@ -384,7 +383,7 @@ DatePicker.Dialog = function DatePickerDialog(handle: Handle<DatePicker.DialogPr
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_DIALOG_ROLE }), p(4), raw({ outline: "none" }), mix]}
+				mix={[attrs({ role: DEFAULT_DIALOG_ROLE }), p(4), outline("none"), mix]}
 			>
 				{children}
 			</Popover>

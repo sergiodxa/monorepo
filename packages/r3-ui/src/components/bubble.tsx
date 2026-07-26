@@ -21,7 +21,7 @@ import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw, vars } from "@pkg/u/general";
 import { block, container, flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
-import { maxIs, mbs, mie, mis, pb, pi } from "@pkg/u/size";
+import { maxIs, mbs, mie, mis, pb, pi, width } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
@@ -173,10 +173,13 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 					rounded("xl"),
 					border({ width: 1 }),
 					border("transparent"),
-					raw({ width: "fit-content" }),
+					width("fit-content"),
 
 					data("align", "start", [
 						mie("auto"),
+						// `roundedCorner()`'s radius scale has no "xs" step, and passing
+						// an arbitrary name falls back to `0px` instead of this
+						// component's own `0.125rem` — see final report for the gap.
 						raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
 						vars({ "ui-bubble-reactions-justify": "flex-start" }),
 					]),
@@ -206,7 +209,7 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 						mie(0),
 						bg("transparent"),
 						border("transparent"),
-						raw({ width: "100%" }),
+						width("full"),
 					]),
 					data("variant", "destructive", [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,

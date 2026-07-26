@@ -20,6 +20,7 @@ import { cursor, raw } from "@pkg/u/general";
 import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
 import { after, when } from "@pkg/u/state";
+import { scale } from "@pkg/u/transform";
 import { text } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
@@ -234,13 +235,14 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 							rounded("full"),
 							bg("primary.onSolid"),
 							transition("transform"),
-							raw({ content: '""', transform: "scale(0)" }),
+							raw({ content: '""' }),
+							scale(0),
 						]),
 						rounded("full"),
 						border({ color: "neutral.strong", width: 2 }),
 						bg("neutral.tint"),
 						transition("background-color, border-color"),
-						when("input:checked ~ &::after", raw({ transform: "scale(1)" })),
+						when("input:checked ~ &::after", scale(1)),
 						when("input:checked ~ &", [border("primary.solid"), bg("primary.solid")]),
 						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
 						parts?.indicator,

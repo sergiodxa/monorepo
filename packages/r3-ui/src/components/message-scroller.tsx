@@ -16,10 +16,22 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { border } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
-import { absolute, container, flex, flexCol, gap, inset, justify, relative } from "@pkg/u/layout";
+import {
+	absolute,
+	container,
+	flex,
+	flexCol,
+	gap,
+	insIe,
+	insIs,
+	inset,
+	justify,
+	relative,
+} from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { when } from "@pkg/u/state";
+import { translateProperty } from "@pkg/u/transform";
 import { attrs } from "remix/ui";
 
 import { Button } from "./button";
@@ -351,14 +363,12 @@ MessageScroller.Button = function MessageScrollerButton(
 					absolute(),
 					inset("auto", "auto", "1rem", "50%"),
 					shadow("lg"),
-					raw({ translate: "-50% 0" }),
+					translateProperty("-50% 0"),
 					when(BUTTON_NARROW_QUERY, [
 						justify("center"),
-						raw({
-							insetInlineStart: "1rem",
-							insetInlineEnd: "1rem",
-							translate: "0 0",
-						}),
+						insIs("1rem"),
+						insIe("1rem"),
+						translateProperty("0 0"),
 					]),
 					mix,
 				]}

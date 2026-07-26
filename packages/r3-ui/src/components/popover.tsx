@@ -17,7 +17,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { raw } from "@pkg/u/general";
 import { inset } from "@pkg/u/layout";
-import { m, mbe, mbs } from "@pkg/u/size";
+import { m, marginLeft, marginRight, mbe, mbs } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 
 import type { AnchorPlacement } from "../utils/placement";
@@ -129,15 +129,10 @@ export function Popover(handle: Handle<Popover.Props>) {
 					inset("auto"),
 					when('&[data-placement^="top"]', mbe("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="bottom"]', mbs("var(--ui-popover-offset, 0.5rem)")),
+					when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
+					when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
 					raw({
 						positionTryFallbacks: "flip-block, flip-inline, flip-block flip-inline",
-
-						'&[data-placement^="left"]': {
-							marginRight: "var(--ui-popover-offset, 0.5rem)",
-						},
-						'&[data-placement^="right"]': {
-							marginLeft: "var(--ui-popover-offset, 0.5rem)",
-						},
 
 						'&[data-placement="top"]': { positionArea: "top" },
 						'&[data-placement="top-start"]': { positionArea: "top left" },

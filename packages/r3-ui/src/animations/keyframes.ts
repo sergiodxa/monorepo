@@ -13,7 +13,7 @@
 import type { CSSMixinDescriptor } from "remix/ui";
 
 import { colorMix, linearGradient } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { calc, raw } from "@pkg/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -234,7 +234,7 @@ export function pulse(options: Pulse.Options = {}): CSSMixinDescriptor {
 		}),
 		"@media (prefers-reduced-motion: reduce)": gate(target, {
 			"--ui-pulse-min-opacity": String(reducedMinOpacity),
-			animationDuration: `calc(var(--ui-pulse-duration, ${duration}) * 1.5)`,
+			animationDuration: calc(`var(--ui-pulse-duration, ${duration}) * 1.5`),
 		}),
 	});
 }
@@ -405,9 +405,9 @@ export function textShimmer(options: TextShimmer.Options = {}): CSSMixinDescript
 				backgroundImage: linearGradient(
 					angleVar,
 					{ color: restTone, position: "0%" },
-					{ color: restTone, position: `calc(50% - (${bandSizeVar} / 2))` },
+					{ color: restTone, position: calc(`50% - (${bandSizeVar} / 2)`) },
 					{ color: colorVar, position: "50%" },
-					{ color: restTone, position: `calc(50% + (${bandSizeVar} / 2))` },
+					{ color: restTone, position: calc(`50% + (${bandSizeVar} / 2)`) },
 					{ color: restTone, position: "100%" },
 				),
 				backgroundSize: "200% 100%",

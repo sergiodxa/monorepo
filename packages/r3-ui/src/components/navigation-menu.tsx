@@ -12,7 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg, outline } from "@pkg/u/color";
+import { bg, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, rounded, transition } from "@pkg/u/effects";
 import { cursor, raw, userSelect } from "@pkg/u/general";
 import {
@@ -27,11 +27,12 @@ import {
 	relative,
 } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { media } from "@pkg/u/responsive";
+import { atQuery, media, startingStyle } from "@pkg/u/responsive";
 import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { data, disabled, hover, when } from "@pkg/u/state";
-import { leading, text, textDecoration, weight } from "@pkg/u/typography";
+import { scaleProperty } from "@pkg/u/transform";
+import { fontSize, leading, text, textDecoration, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
@@ -444,17 +445,15 @@ NavigationMenu.Content = function NavigationMenuContent(
 						duration: durations.fast,
 						easing: easings.standard,
 					}),
-					raw({
-						outlineStyle: "none",
-						scale: "0.95",
-						transitionBehavior: "allow-discrete",
-					}),
-					when("&:popover-open", [opacity(100), raw({ scale: "none" })]),
-					when("@starting-style", when("&:popover-open", [opacity(0), raw({ scale: "0.95" })])),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						raw({ scale: "none", transitionProperty: "opacity, display, overlay" }),
-					),
+					outlineStyle("none"),
+					scaleProperty("0.95"),
+					raw({ transitionBehavior: "allow-discrete" }),
+					when("&:popover-open", [opacity(100), scaleProperty("none")]),
+					startingStyle(when("&:popover-open", [opacity(0), scaleProperty("0.95")])),
+					media("(prefers-reduced-motion: reduce)", [
+						scaleProperty("none"),
+						raw({ transitionProperty: "opacity, display, overlay" }),
+					]),
 					mix,
 				]}
 			/>
@@ -512,7 +511,7 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 					when('&[aria-disabled="true"]', [opacity(50), cursor("not-allowed")]),
 					userSelect(),
 					textDecoration("none"),
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					mix,
 				]}
 			/>
@@ -558,13 +557,13 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 						duration: durations.normal,
 						easing: easings.decelerate,
 					}),
-					raw({ scale: "0.95" }),
-					data("visible", [opacity(100), raw({ scale: "none" })]),
-					when("@starting-style", data("visible", [opacity(0), raw({ scale: "0.95" })])),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						raw({ scale: "none", transitionProperty: "inline-size, block-size, opacity" }),
-					),
+					scaleProperty("0.95"),
+					data("visible", [opacity(100), scaleProperty("none")]),
+					startingStyle(data("visible", [opacity(0), scaleProperty("0.95")])),
+					media("(prefers-reduced-motion: reduce)", [
+						scaleProperty("none"),
+						raw({ transitionProperty: "inline-size, block-size, opacity" }),
+					]),
 					mix,
 				]}
 			/>
@@ -629,11 +628,10 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 				mix={[
 					grid(),
 					gap(4),
-					raw({
-						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
-							gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-						},
-					}),
+					atQuery(
+						`${CONTAINER_NAME} (min-width: 40rem)`,
+						raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }),
+					),
 					mix,
 				]}
 			/>

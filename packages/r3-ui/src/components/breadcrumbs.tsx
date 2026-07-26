@@ -15,11 +15,11 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
+import { listStyle, raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { m, mi, p } from "@pkg/u/size";
 import { data, hover, when } from "@pkg/u/state";
-import { textDecoration, weight } from "@pkg/u/typography";
+import { fontSize, textDecoration, weight } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -117,7 +117,7 @@ Breadcrumbs.List = function BreadcrumbsList(handle: Handle<Breadcrumbs.ListProps
 			<ol
 				{...rest}
 				data-slot="list"
-				mix={[flex(), items("center"), gap(1), m(0), p(0), raw({ listStyle: "none" }), mix]}
+				mix={[flex(), items("center"), gap(1), m(0), p(0), listStyle(), mix]}
 			/>
 		);
 	};
@@ -151,7 +151,8 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
 					when("&:not(:last-child)::after", [
 						mi(1),
 						fg("neutral.muted"),
-						raw({ content: '"›"', fontSize: "0.875rem" }),
+						fontSize("sm"),
+						raw({ content: '"›"' }),
 					]),
 					mix,
 				]}
@@ -195,7 +196,7 @@ Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps
 				{...rest}
 				data-slot="link"
 				mix={[
-					raw({ fontSize: "0.875rem" }),
+					fontSize("sm"),
 					textDecoration("none"),
 					hover(textDecoration("none")),
 					data("color", "neutral", [fg("neutral.muted"), hover(fg("neutral"))]),

@@ -15,8 +15,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { ChevronRightIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { opacity, rounded, transition, transitionDuration } from "@pkg/u/effects";
+import { cursor, listStyle, raw } from "@pkg/u/general";
 import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@pkg/u/layout";
 import { clip } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
@@ -189,7 +189,7 @@ export function Tree(handle: Handle<Tree.Props>) {
 					vstack(),
 					pb(1),
 					pi(1),
-					raw({ outline: "none" }),
+					outline("none"),
 					when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
 					mix,
 				]}
@@ -256,19 +256,16 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 					attrs({ role: DEFAULT_ITEM_ROLE }),
 					interpolateSize(),
 					detailsContent([clip(), bs(0)]),
-					detailsContent(
+					detailsContent([
 						raw({
 							transitionProperty: "block-size, content-visibility",
-							transitionDuration: "200ms",
 							transitionBehavior: "allow-discrete",
 						}),
-					),
+						transitionDuration("200ms"),
+					]),
 					when("&[open]::details-content", bs("auto")),
 					when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						detailsContent(raw({ transitionDuration: "0s" })),
-					),
+					media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
 					mix,
 				]}
 			>
@@ -325,15 +322,15 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 					pie(3),
 					fg("neutral.emphasis"),
 					cursor("default"),
+					listStyle(),
 					raw({
-						listStyle: "none",
 						paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
-						outline: "none",
 					}),
+					outline("none"),
 					text("sm"),
 					when("&::-webkit-details-marker", hidden()),
 					when("&::marker", raw({ content: '""' })),
-					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 					when("&:hover", bg("neutral.bg-tint-hover")),
 					when("&:active", bg("neutral.bg-tint-pressed")),
 					when("&:focus", bg("neutral.bg-tint-hover")),
@@ -398,7 +395,7 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 					fg("neutral.muted"),
 					transition("transform, background-color"),
 					shrink(),
-					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 					when("&:hover", bg("neutral.bg-tint-pressed")),
 					when("&:focus-visible", outline("primary.ring")),
 					mix,

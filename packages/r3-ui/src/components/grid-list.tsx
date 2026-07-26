@@ -18,10 +18,11 @@ import { GripVerticalIcon } from "@pkg/lucide-remix";
 import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { container, flex, flexCol, gap, grid, items } from "@pkg/u/layout";
+import { container, flex, flexCol, gap, grid, items, virtualize } from "@pkg/u/layout";
+import { atQuery } from "@pkg/u/responsive";
 import { mbs, pb, pbs, pi } from "@pkg/u/size";
 import { active, data, hover, not, when } from "@pkg/u/state";
-import { text, tracking, weight } from "@pkg/u/typography";
+import { text, textTransform, tracking, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -202,7 +203,7 @@ export function GridList(handle: Handle<GridList.Props>) {
 					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					pb(2),
 					pi(2),
-					raw({ outline: "none" }),
+					outline("none"),
 					container(CONTAINER_NAME),
 					mix,
 				]}
@@ -214,23 +215,19 @@ export function GridList(handle: Handle<GridList.Props>) {
 						flex(),
 						flexCol(),
 						gap(1),
-						raw({
-							contentVisibility: "auto",
-							containIntrinsicSize: "auto var(--ui-grid-list-intrinsic-size, 32rem)",
-						}),
+						virtualize("auto var(--ui-grid-list-intrinsic-size, 32rem)"),
 						data("layout", "grid", [
 							grid(),
 							gap("0.5rem"),
-							raw({
-								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-
-								[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
-									gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-								},
-								[`@container ${CONTAINER_NAME} (min-width: 48rem)`]: {
-									gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-								},
-							}),
+							raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }),
+							atQuery(
+								`${CONTAINER_NAME} (min-width: 40rem)`,
+								raw({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }),
+							),
+							atQuery(
+								`${CONTAINER_NAME} (min-width: 48rem)`,
+								raw({ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }),
+							),
 						]),
 						parts?.list,
 					]}
@@ -286,7 +283,7 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 					when('&[aria-selected="true"]', bg("primary.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					cursor("default"),
-					raw({ outline: "none" }),
+					outline("none"),
 					mix,
 				]}
 			/>
@@ -359,7 +356,7 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 					tracking("wider"),
 					fg("neutral.muted"),
 					text("xs"),
-					raw({ textTransform: "uppercase" }),
+					textTransform("uppercase"),
 					mix,
 				]}
 			/>
