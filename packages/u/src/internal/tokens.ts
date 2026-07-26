@@ -121,11 +121,17 @@ const RADIUS_FALLBACKS: Record<RadiusName, string> = {
 /**
  * Resolves a {@link RadiusName} to `var(--ui-radius-{name}, fallback)`, with
  * a sensible fallback baked in so the radius scale works before an app ever
- * defines the variable.
+ * defines the variable. A name that isn't a recognized scale step but is
+ * already a raw CSS length (`"3px"`, `"0.125rem"`) passes through literally
+ * instead of being treated as an app-extensible token name — only a
+ * bare-word name (e.g. an app's own `"hero"` step) resolves through the
+ * `var(...)` indirection.
  *
  * @example radius("lg") // "var(--ui-radius-lg, 0.5rem)"
+ * @example radius("3px") // "3px"
  */
 export function radius(name: RadiusName | (string & {})): string {
+	if (isLength(name)) return name;
 	let fallback = RADIUS_FALLBACKS[name as RadiusName] ?? "0px";
 	return varUtility(`ui-radius-${name}`, fallback);
 }
@@ -163,11 +169,15 @@ const TEXT_FALLBACKS: Record<TextSizeName, string> = {
 };
 
 /**
- * Resolves a {@link TextSizeName} to `var(--ui-text-{name}, fallback)`.
+ * Resolves a {@link TextSizeName} to `var(--ui-text-{name}, fallback)`. A
+ * name that isn't a recognized scale step but is already a raw CSS length
+ * passes through literally — see {@link radius} for the same rule.
  *
  * @example text("lg") // "var(--ui-text-lg, 1.125rem)"
+ * @example text("0.9375rem") // "0.9375rem"
  */
 export function text(name: TextSizeName | (string & {})): string {
+	if (isLength(name)) return name;
 	let fallback = TEXT_FALLBACKS[name as TextSizeName] ?? "1rem";
 	return varUtility(`ui-text-${name}`, fallback);
 }
@@ -184,10 +194,17 @@ const CONTAINER_FALLBACKS: Record<ContainerName, string> = {
 /**
  * Resolves a {@link ContainerName} to `var(--ui-container-{name}, fallback)`,
  * the length `u.at()` compares the nearest container's inline size against.
+ * A literal length that isn't a recognized scale step (a one-off breakpoint
+ * like `"40rem"`) passes through unchanged instead of being treated as an
+ * app-extensible token name — see {@link radius} for the same rule. This is
+ * what lets `u.at("40rem", input)` express a one-off `@container` breakpoint
+ * exactly, rather than silently becoming `var(--ui-container-40rem, 36rem)`.
  *
  * @example container("md") // "var(--ui-container-md, 36rem)"
+ * @example container("40rem") // "40rem"
  */
 export function container(name: ContainerName | (string & {})): string {
+	if (isLength(name)) return name;
 	let fallback = CONTAINER_FALLBACKS[name as ContainerName] ?? "36rem";
 	return varUtility(`ui-container-${name}`, fallback);
 }
@@ -197,10 +214,16 @@ const SHADOW_FALLBACKS: Record<ShadowName, string> = {
 	base: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 	md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
 	lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+	xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
 };
 
 /**
- * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`.
+ * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`. A
+ * literal shadow value can't be reliably told apart from an app-extended
+ * token name (both are arbitrary strings with no shape in common with a
+ * length), so unlike {@link radius}/{@link text}/{@link container} this
+ * resolver has no literal-passthrough escape hatch — a genuinely one-off
+ * shadow should compose through `u.raw({ boxShadow: "..." })` instead.
  *
  * @example shadow("md") // 'var(--ui-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))'
  */
@@ -216,11 +239,15 @@ const BLUR_FALLBACKS: Record<BlurName, string> = {
 };
 
 /**
- * Resolves a {@link BlurName} to `var(--ui-blur-{name}, fallback)`.
+ * Resolves a {@link BlurName} to `var(--ui-blur-{name}, fallback)`. A literal
+ * length that isn't a recognized scale step passes through unchanged — see
+ * {@link radius} for the same rule.
  *
  * @example blur("sm") // "var(--ui-blur-sm, 4px)"
+ * @example blur("8px") // "8px"
  */
 export function blur(name: BlurName | (string & {})): string {
+	if (isLength(name)) return name;
 	let fallback = BLUR_FALLBACKS[name as BlurName] ?? BLUR_FALLBACKS.md;
 	return varUtility(`ui-blur-${name}`, fallback);
 }

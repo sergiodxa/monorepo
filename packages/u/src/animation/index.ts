@@ -1,2 +1,2 @@
-export { animation } from "./animation";
+export { animation, animationHost } from "./animation";
 export { keyframes } from "./keyframes";

@@ -92,6 +92,38 @@ export function animation<Node extends Element = Element>(
 	return compose<Node>([keyframesUtility, hostUtility], (styles) => styles);
 }
 
+/**
+ * Emits just the host `animation-*` declarations `animation()` would —
+ * `animationName`/`animationDuration` plus whichever optional fields are
+ * given — with NO accompanying `@keyframes` rule. This is the primitive
+ * `animation()` is sugar over, for call sites that need to compose the
+ * keyframes and the host declarations separately: a loop that gates its
+ * running state behind a selector (`u.when("&[data-busy]", u.animationHost(...))`)
+ * must never pass the keyframes utility itself through `when()` — nesting an
+ * `@keyframes` rule under a selector produces broken CSS, since keyframes
+ * only hoist to the stylesheet root from a mixin's own top level (or from
+ * inside `u.media()`/`u.supports()`, which are safe). Pair this with a
+ * sibling `u.keyframes(name, frames)` call in the same `mix` array instead.
+ *
+ * @example
+ * <div
+ *   mix={[
+ *     u.keyframes("ui-spin-rotate", { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } }),
+ *     u.when("&[data-busy]", u.animationHost("ui-spin-rotate", { duration: "1s", iterationCount: "infinite" })),
+ *   ]}
+ * />
+ * @example css({
+ *   "@keyframes ui-spin-rotate": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } },
+ *   "&[data-busy]": { animationName: "ui-spin-rotate", animationDuration: "1s", animationIterationCount: "infinite" },
+ * })
+ */
+export function animationHost<Node extends Element = Element>(
+	name: string,
+	config: Omit<AnimationConfig, "keyframes">,
+): UtilityMixin<Node> {
+	return utility<Node>(() => hostDeclarations(name, config as AnimationConfig));
+}
+
 function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 	let styles: Record<string, string | number> = {
 		animationName: name,

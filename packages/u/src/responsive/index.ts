@@ -1,4 +1,4 @@
-export { at } from "./at";
+export { at, atMax } from "./at";
 export { atQuery } from "./at-query";
 export { dark } from "./dark";
 export { light } from "./light";

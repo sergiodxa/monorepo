@@ -34,7 +34,7 @@ describe("roundedCorner", () => {
 
 	test("start-end corner with a raw CSS length", () => {
 		expect(styles(roundedCorner("start-end", "3px"))).toEqual({
-			borderStartEndRadius: "var(--ui-radius-3px, 0px)",
+			borderStartEndRadius: "3px",
 		});
 	});
 });

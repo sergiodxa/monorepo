@@ -132,6 +132,11 @@ describe("radius", () => {
 	test("falls back to 0px for an unrecognized name", () => {
 		expect(radius("made-up")).toBe("var(--ui-radius-made-up, 0px)");
 	});
+
+	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
+		expect(radius("3px")).toBe("3px");
+		expect(radius("0.125rem")).toBe("0.125rem");
+	});
 });
 
 describe("font", () => {
@@ -154,6 +159,10 @@ describe("text", () => {
 	test("falls back to 1rem for an unrecognized name", () => {
 		expect(text("made-up")).toBe("var(--ui-text-made-up, 1rem)");
 	});
+
+	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
+		expect(text("0.9375rem")).toBe("0.9375rem");
+	});
 });
 
 describe("container", () => {
@@ -164,6 +173,10 @@ describe("container", () => {
 
 	test("falls back to 36rem for an unrecognized name", () => {
 		expect(container("made-up")).toBe("var(--ui-container-made-up, 36rem)");
+	});
+
+	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
+		expect(container("40rem")).toBe("40rem");
 	});
 });
 
@@ -183,6 +196,12 @@ describe("shadow", () => {
 			"var(--ui-shadow-made-up, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))",
 		);
 	});
+
+	test("resolves the xl shadow with its fallback", () => {
+		expect(shadow("xl")).toBe(
+			"var(--ui-shadow-xl, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1))",
+		);
+	});
 });
 
 describe("blur", () => {
@@ -193,6 +212,10 @@ describe("blur", () => {
 
 	test("falls back to the md blur for an unrecognized name", () => {
 		expect(blur("made-up")).toBe("var(--ui-blur-made-up, 12px)");
+	});
+
+	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
+		expect(blur("8px")).toBe("8px");
 	});
 });
 

@@ -6,7 +6,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
-import { animation } from "./animation";
+import { animation, animationHost } from "./animation";
 
 /** Unwraps a utility mixin back to the style tree it was built from. */
 function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
@@ -170,5 +170,30 @@ describe("animation", () => {
 
 			expect(first.animationName).not.toEqual(second.animationName);
 		});
+	});
+});
+
+describe("animationHost", () => {
+	test("emits only the host animation-* declarations, no @keyframes key", () => {
+		let mixin = animationHost("ui-spin-rotate", {
+			duration: "1s",
+			easing: "linear",
+			iterationCount: "infinite",
+		});
+		let result = styles(mixin);
+
+		expect("@keyframes ui-spin-rotate" in result).toBe(false);
+		expect(result).toEqual({
+			animationName: "ui-spin-rotate",
+			animationDuration: "1s",
+			animationTimingFunction: "linear",
+			animationIterationCount: "infinite",
+		});
+	});
+
+	test("omits every optional field entirely when not given, same as animation()'s host half", () => {
+		let result = styles(animationHost("ui-fade", { duration: "150ms" }));
+
+		expect(result).toEqual({ animationName: "ui-fade", animationDuration: "150ms" });
 	});
 });

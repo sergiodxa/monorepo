@@ -44,3 +44,35 @@ export function at<Node extends Element = Element>(
 	let query = name ? `${name} ${condition}` : condition;
 	return compose(input, (styles) => nest(`@container ${query}`, styles));
 }
+
+/**
+ * The `max-width` counterpart to {@link at}: applies the given utilities
+ * while the nearest container's inline size is at most `size`, instead of
+ * at least. Same named-scale/literal-length resolution and optional
+ * container-name targeting as {@link at}.
+ *
+ * @example u.atMax("md", [u.p(2), u.flexCol()])
+ * @example css({ "@container (max-width: var(--ui-container-md, 36rem))": { padding: "...", flexDirection: "column" } })
+ * @example u.atMax("40rem", "ui-dialog", u.flexCol())
+ * @example css({ "@container ui-dialog (max-width: 40rem)": { flexDirection: "column" } })
+ */
+export function atMax<Node extends Element = Element>(
+	size: ContainerName | (string & {}),
+	input: UtilityInput<Node>,
+): UtilityMixin<Node>;
+export function atMax<Node extends Element = Element>(
+	size: ContainerName | (string & {}),
+	name: string,
+	input: UtilityInput<Node>,
+): UtilityMixin<Node>;
+export function atMax<Node extends Element = Element>(
+	size: ContainerName | (string & {}),
+	nameOrInput: string | UtilityInput<Node>,
+	maybeInput?: UtilityInput<Node>,
+): UtilityMixin<Node> {
+	let name = typeof nameOrInput === "string" ? nameOrInput : undefined;
+	let input = typeof nameOrInput === "string" ? maybeInput : nameOrInput;
+	let condition = `(max-width: ${container(size)})`;
+	let query = name ? `${name} ${condition}` : condition;
+	return compose(input, (styles) => nest(`@container ${query}`, styles));
+}

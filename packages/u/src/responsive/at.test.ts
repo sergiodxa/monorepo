@@ -41,4 +41,20 @@ describe("at", () => {
 			},
 		});
 	});
+
+	test("a literal CSS length is used as-is, not wrapped in a var() token reference", () => {
+		expect(styles(at("40rem", p(4)))).toEqual({
+			"@container (min-width: 40rem)": {
+				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+			},
+		});
+	});
+
+	test("a literal length still composes with a named container target", () => {
+		expect(styles(at("40rem", "ui-dialog", p(4)))).toEqual({
+			"@container ui-dialog (min-width: 40rem)": {
+				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+			},
+		});
+	});
 });

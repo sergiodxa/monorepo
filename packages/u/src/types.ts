@@ -87,6 +87,7 @@ export interface Shadows {
 	base: true;
 	md: true;
 	lg: true;
+	xl: true;
 }
 
 /** Named blur scale, read by `u.blur()`, `u.backdropBlur()`, and `u.translucent()`. */
