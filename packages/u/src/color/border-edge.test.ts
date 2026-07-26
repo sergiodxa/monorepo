@@ -52,4 +52,26 @@ describe("borderEdge", () => {
 			borderRightColor: "var(--ui-neutral-border)",
 		});
 	});
+
+	test("width alone still defaults style to solid when noStyleDefault is absent", () => {
+		expect(styles(borderEdge("inline-start", { width: 2 }))).toEqual({
+			borderInlineStartWidth: "2px",
+			borderInlineStartStyle: "solid",
+		});
+	});
+
+	test("noStyleDefault suppresses the solid default, leaving width-only output", () => {
+		expect(styles(borderEdge("inline-start", { width: 2, noStyleDefault: true }))).toEqual({
+			borderInlineStartWidth: "2px",
+		});
+	});
+
+	test("noStyleDefault has no effect when style is also given explicitly", () => {
+		expect(
+			styles(borderEdge("block-start", { width: 2, style: "dashed", noStyleDefault: true })),
+		).toEqual({
+			borderBlockStartWidth: "2px",
+			borderBlockStartStyle: "dashed",
+		});
+	});
 });

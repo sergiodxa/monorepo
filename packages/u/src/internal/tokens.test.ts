@@ -172,6 +172,12 @@ describe("shadow", () => {
 		expect(shadow("sm")).toBe("var(--ui-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05))");
 	});
 
+	test("resolves the base shadow with its fallback", () => {
+		expect(shadow("base")).toBe(
+			"var(--ui-shadow-base, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1))",
+		);
+	});
+
 	test("falls back to the md shadow for an unrecognized name", () => {
 		expect(shadow("made-up")).toBe(
 			"var(--ui-shadow-made-up, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))",

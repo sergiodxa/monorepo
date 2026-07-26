@@ -27,4 +27,11 @@ describe("shadow", () => {
 				"var(--ui-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1))",
 		});
 	});
+
+	test("the base shadow", () => {
+		expect(styles(shadow("base"))).toEqual({
+			boxShadow:
+				"var(--ui-shadow-base, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1))",
+		});
+	});
 });

@@ -18,6 +18,10 @@ export type {
 	GradientStop,
 } from "./gradient";
 export { outline } from "./outline";
+export type { OutlineStyleValue } from "./outline";
+export { outlineColor } from "./outline-color";
+export { outlineStyle } from "./outline-style";
+export { outlineWidth } from "./outline-width";
 export { ring } from "./ring";
 export { surface } from "./surface";
 export { translucent } from "./translucent";

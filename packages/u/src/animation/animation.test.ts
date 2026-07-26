@@ -90,6 +90,34 @@ describe("animation", () => {
 			expect("animationDirection" in result).toBe(false);
 			expect("animationFillMode" in result).toBe(false);
 		});
+
+		test("sets animationTimeline and animationRange when given", () => {
+			let mixin = animation("reveal", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "auto",
+				timeline: "view()",
+				range: "entry 0% cover 40%",
+			});
+
+			expect(styles(mixin)).toEqual({
+				"@keyframes reveal": { from: { opacity: 0 }, to: { opacity: 1 } },
+				animationName: "reveal",
+				animationDuration: "auto",
+				animationTimeline: "view()",
+				animationRange: "entry 0% cover 40%",
+			});
+		});
+
+		test("omits animationTimeline and animationRange entirely when not given", () => {
+			let mixin = animation("fade-in", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "150ms",
+			});
+			let result = styles(mixin);
+
+			expect("animationTimeline" in result).toBe(false);
+			expect("animationRange" in result).toBe(false);
+		});
 	});
 
 	describe("unnamed form", () => {

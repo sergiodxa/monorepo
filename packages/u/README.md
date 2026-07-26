@@ -1628,7 +1628,7 @@ Applies a box shadow to the host element from the shadow scale.
 
 **Parameters:**
 
-- `name`: A shadow scale token name (e.g. `"sm"`, `"md"`, `"lg"`) or a raw CSS value. Defaults to `"md"`.
+- `name`: A shadow scale token name (e.g. `"sm"`, `"base"`, `"md"`, `"lg"`) or a raw CSS value. Defaults to `"md"`.
 
 **Returns:**
 
@@ -2577,7 +2577,7 @@ Resolves a named shadow to `var(--ui-shadow-{name}, fallback)`.
 
 **Parameters:**
 
-- `name`: A named shadow value (`"sm"`, `"md"`, `"lg"`, or an app-extended name)
+- `name`: A named shadow value (`"sm"`, `"base"`, `"md"`, `"lg"`, or an app-extended name)
 
 **Returns:**
 
@@ -2618,7 +2618,7 @@ Empty interfaces from the package root, each holding token names as keys so an a
 - `TextSizes` — named font-size scale (`xs` through `9xl` by default)
 - `FontFamilies` — named font-family stacks (`sans`, `serif`, `mono` by default)
 - `Containers` — named container-query breakpoints (`xs` through `2xl` by default)
-- `Shadows` — named box-shadow scale (`sm`, `md`, `lg` by default)
+- `Shadows` — named box-shadow scale (`sm`, `base`, `md`, `lg` by default)
 - `Blurs` — named blur scale (`sm`, `md`, `lg` by default)
 
 Derived types built from these interfaces: `ColorPaletteName`, `SemanticToneName`, `RadiusName`, `TextSizeName`, `FontFamilyName`, `ContainerName`, `ShadowName`, `BlurName` (each `keyof` the interface above), `PaletteShade` (`50 | 100 | 200 | ... | 900 | 950`), and `ColorValue` — the union every color-accepting utility (`u.bg()`, `u.fg()`, `u.border()`, `u.ring()`, `u.accent()`, `u.surface()`) is typed against: a raw palette reference (`` `color.${ColorPaletteName}.${PaletteShade}` ``), a semantic tone with an explicit suffix (`` `${SemanticToneName}.${string}` ``), or a bare tone name.

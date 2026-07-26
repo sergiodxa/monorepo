@@ -59,4 +59,24 @@ describe("border", () => {
 			borderStyle: "solid",
 		});
 	});
+
+	test("width alone still defaults style to solid when noStyleDefault is absent", () => {
+		expect(styles(border({ width: 2 }))).toEqual({
+			borderWidth: "2px",
+			borderStyle: "solid",
+		});
+	});
+
+	test("noStyleDefault suppresses the solid default, leaving width-only output", () => {
+		expect(styles(border({ width: 2, noStyleDefault: true }))).toEqual({
+			borderWidth: "2px",
+		});
+	});
+
+	test("noStyleDefault has no effect when style is also given explicitly", () => {
+		expect(styles(border({ width: 2, style: "dashed", noStyleDefault: true }))).toEqual({
+			borderWidth: "2px",
+			borderStyle: "dashed",
+		});
+	});
 });

@@ -33,6 +33,13 @@ export interface BorderOptions {
 	 * since CSS's initial `border-style` is `none`.
 	 */
 	style?: BorderStyleValue;
+	/**
+	 * Suppresses the `"solid"` default that `width` alone would otherwise
+	 * apply. Use this when a separate rule (e.g. a sibling `data-color`
+	 * selector) supplies `border-style`/`border-color`, and this call should
+	 * only ever set `border-width`. Has no effect when `style` is also given.
+	 */
+	noStyleDefault?: boolean;
 }
 
 /**
@@ -49,6 +56,8 @@ export interface BorderOptions {
  * @example css({ borderColor: "var(--ui-brand-border-strong)" })
  * @example u.border({ color: "brand", width: 2 })
  * @example css({ borderColor: "var(--ui-brand-border)", borderWidth: "2px", borderStyle: "solid" })
+ * @example u.border({ width: 2, noStyleDefault: true })
+ * @example css({ borderWidth: "2px" })
  * @example u.border("none")
  * @example css({ border: "none" })
  */
@@ -79,7 +88,7 @@ export function border<Node extends Element = Element>(
 			result.borderWidth = typeof options.width === "number" ? `${options.width}px` : options.width;
 		}
 		if (options.style !== undefined) result.borderStyle = options.style;
-		else if (options.width !== undefined) result.borderStyle = "solid";
+		else if (options.width !== undefined && !options.noStyleDefault) result.borderStyle = "solid";
 		return result as CSSStyles;
 	});
 }

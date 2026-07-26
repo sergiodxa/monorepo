@@ -84,6 +84,7 @@ export interface Containers {
 /** Named box-shadow scale, read by `u.shadow()`. */
 export interface Shadows {
 	sm: true;
+	base: true;
 	md: true;
 	lg: true;
 }

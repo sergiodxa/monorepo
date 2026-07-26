@@ -63,4 +63,8 @@ describe("outline", () => {
 	test("width and offset default to no unit only when given as a raw string", () => {
 		expect(styles(outline({ width: "0.125rem" })).outlineWidth).toBe("0.125rem");
 	});
+
+	test("'none' short-circuits to a bare outline reset, not a color branch", () => {
+		expect(styles(outline("none"))).toEqual({ outline: "none" });
+	});
 });

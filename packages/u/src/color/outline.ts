@@ -53,6 +53,8 @@ export interface OutlineOptions {
  * @example css({ outlineColor: "var(--ui-danger-ring)", outlineWidth: "4px", outlineStyle: "solid" })
  * @example u.outline({ color: "danger", offset: 4 })
  * @example css({ outlineColor: "var(--ui-danger-ring)", outlineWidth: "2px", outlineStyle: "solid", outlineOffset: "4px" })
+ * @example u.outline("none")
+ * @example css({ outline: "none" })
  */
 export function outline<Node extends Element = Element>(): UtilityMixin<Node>;
 export function outline<Node extends Element = Element>(
@@ -70,6 +72,10 @@ export function outline<Node extends Element = Element>(
 	colorOrWidthOrOptions?: ColorValue | (string & {}) | number | OutlineOptions,
 	width?: number,
 ): UtilityMixin<Node> {
+	if (colorOrWidthOrOptions === "none") {
+		return utility<Node>(() => ({ outline: "none" }));
+	}
+
 	let options: OutlineOptions;
 	if (colorOrWidthOrOptions === undefined) {
 		options = {};

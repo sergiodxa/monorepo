@@ -21,4 +21,8 @@ describe("rounded", () => {
 	test("an explicit named radius", () => {
 		expect(styles(rounded("lg"))).toEqual({ borderRadius: "var(--ui-radius-lg, 0.5rem)" });
 	});
+
+	test("the inherit keyword bypasses token resolution", () => {
+		expect(styles(rounded("inherit"))).toEqual({ borderRadius: "inherit" });
+	});
 });

@@ -1,5 +1,6 @@
 export { balance } from "./balance";
 export { font } from "./font";
+export { fontSize } from "./font-size";
 export { leading } from "./leading";
 export { lineClamp } from "./line-clamp";
 export { nowrap } from "./nowrap";
@@ -8,6 +9,7 @@ export { tabularNums } from "./tabular-nums";
 export { text } from "./text";
 export { textAlign } from "./text-align";
 export { textDecoration } from "./text-decoration";
+export { textTransform } from "./text-transform";
 export { tracking } from "./tracking";
 export { truncate } from "./truncate";
 export { type } from "./type";

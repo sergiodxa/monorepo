@@ -30,14 +30,19 @@ export interface AnimationConfig {
 	direction?: string;
 	/** Sets `animationFillMode` (e.g. `"both"`, `"forwards"`). Omitted (platform default `"none"`) when not given. */
 	fillMode?: string;
+	/** Sets `animationTimeline` (e.g. `"scroll()"`, `"view()"`, or a named `--custom-timeline`). Omitted (platform default `"auto"`) when not given. */
+	timeline?: string;
+	/** Sets `animationRange` (e.g. `"entry 0% cover 40%"`). Omitted (platform default `"normal"`) when not given. */
+	range?: string;
 }
 
 /**
  * Emits an `@keyframes` rule under `name` plus host `animationName`,
  * `animationDuration`, and (when given) `animationTimingFunction`,
- * `animationIterationCount`, `animationDirection`, and `animationFillMode`
- * declarations that reference it. Use the named form when the animation
- * name is useful for debugging in devtools.
+ * `animationIterationCount`, `animationDirection`, `animationFillMode`,
+ * `animationTimeline`, and `animationRange` declarations that reference it.
+ * Use the named form when the animation name is useful for debugging in
+ * devtools.
  *
  * @example
  * u.animation("fade-in", {
@@ -96,6 +101,8 @@ function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 	if (config.iterationCount !== undefined) styles.animationIterationCount = config.iterationCount;
 	if (config.direction) styles.animationDirection = config.direction;
 	if (config.fillMode) styles.animationFillMode = config.fillMode;
+	if (config.timeline) styles.animationTimeline = config.timeline;
+	if (config.range) styles.animationRange = config.range;
 	return styles as CSSStyles;
 }
 

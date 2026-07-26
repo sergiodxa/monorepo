@@ -36,4 +36,19 @@ describe("overflow", () => {
 	test("the axis-object overload with only y given leaves x untouched", () => {
 		expect(styles(overflow({ y: "auto" }))).toEqual({ overflowY: "auto" });
 	});
+
+	test("the axis-object overload sets overflow-inline and overflow-block independently", () => {
+		expect(styles(overflow({ inline: "hidden", block: "auto" }))).toEqual({
+			overflowInline: "hidden",
+			overflowBlock: "auto",
+		});
+	});
+
+	test("the axis-object overload with only inline given leaves block untouched", () => {
+		expect(styles(overflow({ inline: "hidden" }))).toEqual({ overflowInline: "hidden" });
+	});
+
+	test("the axis-object overload with only block given leaves inline untouched", () => {
+		expect(styles(overflow({ block: "auto" }))).toEqual({ overflowBlock: "auto" });
+	});
 });
