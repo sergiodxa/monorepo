@@ -14,7 +14,10 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@pkg/lucide-remix";
 import {
 	bg,
+	borderEdge,
 	center,
+	container,
+	cursor,
 	fg,
 	gap,
 	hover,
@@ -22,18 +25,21 @@ import {
 	is,
 	items,
 	opacity,
+	outline,
 	overflow,
 	p,
 	pb,
 	pi,
+	raw,
 	relative,
 	textAlign,
+	textDecoration,
+	userSelect,
 	weight,
 	when,
 } from "@pkg/u";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -196,7 +202,7 @@ export function Table(handle: Handle<Table.Props>) {
 				data-slot="table"
 				mix={[
 					is("100%"),
-					css({
+					raw({
 						borderCollapse: "collapse",
 						fontSize: "0.875rem",
 					}),
@@ -230,15 +236,7 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 			<div
 				{...rest}
 				data-slot="container"
-				mix={[
-					relative(),
-					is("100%"),
-					overflow("auto"),
-					css({
-						container: `${CONTAINER_NAME} / inline-size`,
-					}),
-					mix,
-				]}
+				mix={[relative(), is("100%"), overflow("auto"), container(CONTAINER_NAME), mix]}
 			/>
 		);
 	};
@@ -265,14 +263,7 @@ Table.Header = function TableHeader(handle: Handle<Table.HeaderProps>) {
 			<thead
 				{...rest}
 				data-slot="header"
-				mix={[
-					css({
-						borderBlockEndWidth: "1px",
-						borderBlockEndStyle: "solid",
-						borderBlockEndColor: "var(--ui-neutral-border)",
-					}),
-					mix,
-				]}
+				mix={[borderEdge("block-end", { color: "neutral", width: 1 }), mix]}
 			/>
 		);
 	};
@@ -306,16 +297,14 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 				{...rest}
 				data-slot="body"
 				mix={[
-					css({
+					raw({
 						contentVisibility: "auto",
 						containIntrinsicSize: "auto var(--ui-table-body-intrinsic-size, 32rem)",
-
-						"& > :not([hidden]) ~ :not([hidden])": {
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-							borderBlockStartColor: "var(--ui-neutral-border)",
-						},
 					}),
+					when(
+						"& > :not([hidden]) ~ :not([hidden])",
+						borderEdge("block-start", { color: "neutral", width: 1 }),
+					),
 					mix,
 				]}
 			/>
@@ -365,12 +354,7 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 					when('&[data-align="center"]', textAlign("center")),
 					when('&[data-align="end"]', textAlign("end")),
 					when("&[aria-sort]", when("&:hover", bg("neutral.tint"))),
-					css({
-						"&[aria-sort]": {
-							cursor: "pointer",
-							userSelect: "none",
-						},
-					}),
+					when("&[aria-sort]", [cursor("pointer"), userSelect()]),
 					mix,
 				]}
 			>
@@ -378,18 +362,13 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 					<a
 						href={href}
 						mix={[
-							focusRingPrimary(),
+							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 							inlineFlex(),
 							items("center"),
 							gap("0.25rem"),
-							css({
-								color: "inherit",
-								textDecoration: "none",
-
-								"&:hover": {
-									textDecoration: "underline",
-								},
-							}),
+							fg("inherit"),
+							textDecoration("none"),
+							hover(textDecoration("underline")),
 							parts?.link,
 						]}
 					>
@@ -491,15 +470,13 @@ Table.LoadMore = function TableLoadMore(handle: Handle<Table.LoadMoreProps>) {
 					<a
 						href={href}
 						mix={[
-							focusRingPrimary(),
+							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 							center(),
 							pb("1rem"),
 							fg("neutral.muted"),
 							hover(fg("neutral")),
-							css({
-								fontSize: "0.875rem",
-								textDecoration: "none",
-							}),
+							raw({ fontSize: "0.875rem" }),
+							textDecoration("none"),
 							parts?.link,
 						]}
 					>

@@ -15,10 +15,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { raw } from "@pkg/u/general";
 import { inset } from "@pkg/u/layout";
 import { m, mbe, mbs } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
 
 import type { AnchorPlacement } from "../utils/placement";
 
@@ -129,7 +129,7 @@ export function Popover(handle: Handle<Popover.Props>) {
 					inset("auto"),
 					when('&[data-placement^="top"]', mbe("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="bottom"]', mbs("var(--ui-popover-offset, 0.5rem)")),
-					css({
+					raw({
 						positionTryFallbacks: "flip-block, flip-inline, flip-block flip-inline",
 
 						'&[data-placement^="left"]': {

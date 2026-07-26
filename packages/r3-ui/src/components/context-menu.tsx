@@ -14,10 +14,11 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
+import { borderEdge, fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 import { mis, pb, pi, pie } from "@pkg/u/size";
-import { weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
+import { not } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
 
 import { Menu } from "./menu";
 import { Section } from "./section";
@@ -145,7 +146,7 @@ ContextMenu.Trigger = function ContextMenuTrigger(handle: Handle<ContextMenu.Tri
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[css({ outline: "none" }), mix]}>
+			<div {...rest} mix={[raw({ outline: "none" }), mix]}>
 				{children}
 			</div>
 		);
@@ -188,16 +189,7 @@ ContextMenu.Group = function ContextMenuGroup(handle: Handle<ContextMenu.GroupPr
 		return (
 			<Section
 				{...rest}
-				mix={[
-					css({
-						"&:not(:first-child)": {
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-							borderBlockStartColor: "var(--ui-neutral-border)",
-						},
-					}),
-					mix,
-				]}
+				mix={[not(":first-child", borderEdge("block-start", { color: "neutral", width: 1 })), mix]}
 			/>
 		);
 	};
@@ -221,17 +213,7 @@ ContextMenu.Label = function ContextMenuLabel(handle: Handle<ContextMenu.LabelPr
 		return (
 			<header
 				{...rest}
-				mix={[
-					pi(2),
-					pb(1),
-					weight("semibold"),
-					fg("neutral.muted"),
-					css({
-						fontSize: "0.75rem",
-						lineHeight: "1rem",
-					}),
-					mix,
-				]}
+				mix={[pi(2), pb(1), weight("semibold"), fg("neutral.muted"), text("xs"), mix]}
 			>
 				{children}
 			</header>
@@ -355,18 +337,7 @@ ContextMenu.Shortcut = function ContextMenuShortcut(handle: Handle<ContextMenu.S
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<span
-				{...rest}
-				mix={[
-					mis("auto"),
-					fg("neutral.muted"),
-					css({
-						fontSize: "0.75rem",
-						lineHeight: "1rem",
-					}),
-					mix,
-				]}
-			>
+			<span {...rest} mix={[mis("auto"), fg("neutral.muted"), text("xs"), mix]}>
 				{children}
 			</span>
 		);

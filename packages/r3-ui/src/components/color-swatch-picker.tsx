@@ -19,10 +19,10 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { border, outline } from "@pkg/u/color";
 import { opacity, transition } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { cursor, raw } from "@pkg/u/general";
 import { flexWrap, hstack, inlineFlex } from "@pkg/u/layout";
 import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
 import { ColorSwatch } from "./color-swatch";
 
@@ -230,11 +230,7 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 						transition("border-color, box-shadow"),
 						when("input:checked ~ &", border("primary.solid")),
 						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
-						css({
-							"input:checked ~ &": {
-								boxShadow: "0 0 0 2px var(--ui-primary-bg-solid)",
-							},
-						}),
+						when("input:checked ~ &", raw({ boxShadow: "0 0 0 2px var(--ui-primary-bg-solid)" })),
 						parts?.indicator,
 					]}
 				/>

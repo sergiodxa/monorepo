@@ -12,10 +12,14 @@
 
 import type { Handle } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { rounded, shadow } from "@pkg/u/effects";
+import { bg, fg, fill } from "@pkg/u/color";
+import { opacity, rounded, shadow, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { block } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
 import { pb, pi } from "@pkg/u/size";
-import { css } from "remix/ui";
+import { when } from "@pkg/u/state";
+import { text } from "@pkg/u/typography";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -133,57 +137,46 @@ export function Tooltip(handle: Handle<Tooltip.Props>) {
 					shadow("md"),
 					bg("neutral.solid"),
 					fg("neutral.onSolid"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						opacity: "0",
-						scale: "0.95",
-						transitionProperty: "opacity, scale, display, overlay",
-						transitionDuration: `${durations.fast}ms`,
-						transitionTimingFunction: easings.standard,
-						transitionBehavior: "allow-discrete",
-
-						[ENTERED_SELECTOR]: {
-							display: "block",
-							opacity: "1",
-							scale: "none",
-						},
+					opacity(0),
+					transition("opacity, scale, display, overlay", {
+						duration: durations.fast,
+						easing: easings.standard,
+					}),
+					text("sm"),
+					raw({ scale: "0.95", transitionBehavior: "allow-discrete" }),
+					when(ENTERED_SELECTOR, [block(), opacity(100), raw({ scale: "none" })]),
+					raw({
 						"@starting-style": {
 							[ENTERED_SELECTOR]: {
 								opacity: "0",
 								scale: "0.95",
 							},
 						},
-
-						"@media (hover: hover)": {
-							[HOVERED_TRIGGER_SELECTOR]: {
-								display: "block",
-								opacity: "1",
-								scale: "none",
-							},
+					}),
+					media("(hover: hover)", [
+						when(HOVERED_TRIGGER_SELECTOR, [block(), opacity(100), raw({ scale: "none" })]),
+						raw({
 							"@starting-style": {
 								[HOVERED_TRIGGER_SELECTOR]: {
 									opacity: "0",
 									scale: "0.95",
 								},
 							},
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							scale: "none",
-							transitionProperty: "opacity, display, overlay",
-						},
-					}),
+						}),
+					]),
+					media("(prefers-reduced-motion: reduce)", [
+						transition("opacity, display, overlay", {
+							duration: durations.fast,
+							easing: easings.standard,
+						}),
+						raw({ scale: "none" }),
+					]),
 					mix,
 				]}
 			>
 				{children}
 				{resolvedShowArrow && (
-					<OverlayArrow
-						placement={resolvedPlacement}
-						mix={css({ fill: "var(--ui-neutral-bg-solid)" })}
-					>
+					<OverlayArrow placement={resolvedPlacement} mix={fill("neutral.solid")}>
 						<svg width={8} height={8} viewBox="0 0 8 8">
 							<path d="M0 0 L4 4 L8 0" />
 						</svg>

@@ -14,13 +14,15 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronDownIcon } from "@pkg/lucide-remix";
-import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { appearance, gap } from "@pkg/u/layout";
-import { bs, is, pb, pi } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { textAlign, truncate } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { appearance, flex, gap, grow, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { bs, is, m, p, pb, pi } from "@pkg/u/size";
+import { data, hover, when } from "@pkg/u/state";
+import { text, textAlign, truncate } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 /**
  * The `<selectedcontent>` element mirrors the currently selected
@@ -164,54 +166,52 @@ export function Select(handle: Handle<Select.Props>) {
 		}
 
 		let fieldMix = [
-			css({
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				cursor: "default",
-				fontSize: "0.875rem",
-				lineHeight: "calc(1.25 / 0.875)",
+			flex(),
+			items("center"),
+			justify("between"),
+			cursor("default"),
+			text("sm"),
+			when("&:focus", raw({ outline: "none" })),
+			when("&:focus-visible", [
+				border("neutral.strong"),
+				outline({ color: "neutral.ring", offset: 0 }),
+				data("color", "primary", [
+					border("primary.strong"),
+					outline({ color: "primary.ring", offset: 0 }),
+				]),
+				data("color", "neutral", [
+					border("neutral.strong"),
+					outline({ color: "neutral.ring", offset: 0 }),
+				]),
+				data("color", "success", [
+					border("success.strong"),
+					outline({ color: "success.ring", offset: 0 }),
+				]),
+				data("color", "warning", [
+					border("warning.strong"),
+					outline({ color: "warning.ring", offset: 0 }),
+				]),
+				data("color", "danger", [
+					border("danger.strong"),
+					outline({ color: "danger.ring", offset: 0 }),
+				]),
+			]),
+			when(
+				'&[aria-invalid="true"], &:user-invalid',
+				// No utility sets outline-width/-style/-offset without also
+				// forcing outline-color (u.outline() always emits a color) —
+				// this width/style/offset-only override stays raw().
+				raw({ outlineWidth: "2px", outlineStyle: "solid", outlineOffset: "0px" }),
+			),
+			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
-				"&:focus": {
-					outline: "none",
-				},
-				"&:focus-visible": {
-					outlineWidth: "2px",
-					outlineStyle: "solid",
-					outlineOffset: "0px",
-					borderColor: "var(--ui-neutral-border-strong)",
-					outlineColor: "var(--ui-neutral-ring)",
-					'&[data-color="primary"]': {
-						borderColor: "var(--ui-primary-border-strong)",
-						outlineColor: "var(--ui-primary-ring)",
-					},
-					'&[data-color="neutral"]': {
-						borderColor: "var(--ui-neutral-border-strong)",
-						outlineColor: "var(--ui-neutral-ring)",
-					},
-					'&[data-color="success"]': {
-						borderColor: "var(--ui-success-border-strong)",
-						outlineColor: "var(--ui-success-ring)",
-					},
-					'&[data-color="warning"]': {
-						borderColor: "var(--ui-warning-border-strong)",
-						outlineColor: "var(--ui-warning-ring)",
-					},
-					'&[data-color="danger"]': {
-						borderColor: "var(--ui-danger-border-strong)",
-						outlineColor: "var(--ui-danger-ring)",
-					},
-				},
-				'&[aria-invalid="true"], &:user-invalid': {
-					outlineWidth: "2px",
-					outlineStyle: "solid",
-					outlineOffset: "0px",
-				},
-				"&:disabled": {
-					cursor: "not-allowed",
-					opacity: "0.5",
-				},
-
+			// `&::picker(select)`/`&::picker-icon` selector blocks must stay
+			// wrapped only in `raw()`, never `when()` — nesting either through
+			// `when()` trips a pre-existing remix/ui generic-variance bug
+			// specific to `HTMLSelectElement` (a `remove(): void` vs
+			// `remove(): Element` structural mismatch), which only surfaces in
+			// a consuming app's stricter typecheck.
+			raw({
 				"&::picker(select)": {
 					margin: "0",
 					inset: "auto",
@@ -268,7 +268,7 @@ export function Select(handle: Handle<Select.Props>) {
 				outline({ color: "danger.ring", offset: 0 }),
 			]),
 			when("&:disabled", bg("neutral.bg-tint-hover")),
-			css({
+			raw({
 				"&::picker(select)": {
 					borderRadius: "var(--ui-radius-lg, 0.5rem)",
 					borderWidth: "1px",
@@ -317,23 +317,20 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 				type={type ?? DEFAULT_TRIGGER_TYPE}
 				{...rest}
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						gap: "0.5rem",
-						inlineSize: "100%",
-						blockSize: "100%",
-						margin: "0",
-						padding: "0",
-						borderWidth: "0",
-						borderStyle: "none",
-						backgroundColor: "transparent",
-						color: "inherit",
-						font: "inherit",
-						textAlign: "start",
-						cursor: "inherit",
-					}),
+					flex(),
+					items("center"),
+					justify("between"),
+					gap("0.5rem"),
+					is("full"),
+					bs("full"),
+					m(0),
+					p(0),
+					border({ width: 0, style: "none" }),
+					bg("transparent"),
+					fg("inherit"),
+					raw({ font: "inherit" }),
+					textAlign("start"),
+					cursor("inherit"),
 					mix,
 				]}
 			>
@@ -344,21 +341,11 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 							data-slot="icon"
 							mix={[
 								attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-								css({
-									display: "inline-flex",
-									flexShrink: 0,
-									transitionProperty: "transform",
-									transitionDuration: "150ms",
-
-									"& svg": {
-										inlineSize: "1rem",
-										blockSize: "1rem",
-									},
-
-									"@media (prefers-reduced-motion: reduce)": {
-										transitionDuration: "0s",
-									},
-								}),
+								inlineFlex(),
+								shrink(),
+								transition("transform"),
+								when("& svg", [is("1rem"), bs("1rem")]),
+								media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 								fg("neutral.muted"),
 							]}
 						>
@@ -395,9 +382,12 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 			<selectedcontent
 				{...rest}
 				mix={[
-					css({
-						flex: "1",
-					}),
+					// `flex: "1"` shorthand decomposes to grow(1) + shrink(1) +
+					// flex-basis: 0% — no single utility covers the shorthand
+					// itself (see `packages/u/src/layout/grow.ts` docs).
+					grow(),
+					shrink(1),
+					raw({ flexBasis: "0%" }),
 					truncate(),
 					textAlign("start"),
 					mix,
@@ -431,21 +421,13 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 			<option
 				{...rest}
 				mix={[
-					css({
-						cursor: "default",
-						paddingInline: "0.75rem",
-						paddingBlock: "0.5rem",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						outline: "none",
-
-						"&:disabled": {
-							opacity: "0.5",
-						},
-						"&::checkmark": {
-							color: "currentColor",
-						},
-					}),
+					cursor("default"),
+					pi("0.75rem"),
+					pb("0.5rem"),
+					text("sm"),
+					raw({ outline: "none" }),
+					when("&:disabled", opacity(50)),
+					when("&::checkmark", fg("currentColor")),
 					rounded("md"),
 					fg("neutral.emphasis"),
 					transition(
@@ -494,12 +476,7 @@ Select.Group = function SelectGroup(handle: Handle<Select.GroupProps>) {
 			<optgroup
 				{...rest}
 				mix={[
-					css({
-						"&:not(:first-child)": {
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-						},
-					}),
+					when("&:not(:first-child)", borderEdge("block-start", { width: 1 })),
 					pb("0.25rem"),
 					when("&:not(:first-child)", border("neutral")),
 					mix,

@@ -10,7 +10,10 @@
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { animation, keyframes } from "@pkg/u/animation";
+import { combine, raw } from "@pkg/u/general";
+import { media, supports } from "@pkg/u/responsive";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -83,28 +86,34 @@ export namespace ScrollShadow {
 export function scrollShadow(options: ScrollShadow.Options = {}): CSSMixinDescriptor {
 	let distance = options.distance ?? DEFAULT_SCROLL_SHADOW_DISTANCE;
 
-	return css({
-		"@supports (animation-timeline: scroll())": {
-			animationName: SCROLL_SHADOW_KEYFRAMES_NAME,
-			animationDuration: "auto",
-			animationTimingFunction: easings.linear,
-			animationFillMode: "both",
-			animationTimeline: "scroll(nearest block)",
-			animationRange: `0 ${distance}`,
-			[`@keyframes ${SCROLL_SHADOW_KEYFRAMES_NAME}`]: {
+	return supports("(animation-timeline: scroll())", [
+		animation(SCROLL_SHADOW_KEYFRAMES_NAME, {
+			keyframes: {
 				from: { boxShadow: "0 0 0 0 transparent" },
 				to: { boxShadow: "var(--ui-scroll-shadow, 0 4px 12px -4px rgb(0 0 0 / 0.18))" },
 			},
-			// A shadow ramping in and out has no positional movement to collapse
-			// to opacity — the closest reduced-motion equivalent is to stop
-			// tying its presence to scroll position at all and let it settle
-			// permanently into the state it would otherwise scroll toward.
-			"@media (prefers-reduced-motion: reduce)": {
+			duration: "auto",
+			easing: easings.linear,
+			fillMode: "both",
+		}),
+		// `animationTimeline`/`animationRange` are scroll-timeline-specific —
+		// no `@pkg/u` utility covers them.
+		raw({
+			animationTimeline: "scroll(nearest block)",
+			animationRange: `0 ${distance}`,
+		}),
+		// A shadow ramping in and out has no positional movement to collapse
+		// to opacity — the closest reduced-motion equivalent is to stop
+		// tying its presence to scroll position at all and let it settle
+		// permanently into the state it would otherwise scroll toward.
+		media(
+			"(prefers-reduced-motion: reduce)",
+			raw({
 				animationName: "none",
 				boxShadow: "var(--ui-scroll-shadow, 0 4px 12px -4px rgb(0 0 0 / 0.18))",
-			},
-		},
-	});
+			}),
+		),
+	]);
 }
 
 /**
@@ -145,29 +154,34 @@ export namespace ScrollProgress {
 export function scrollProgress(options: ScrollProgress.Options = {}): CSSMixinDescriptor {
 	let axis = options.axis ?? DEFAULT_SCROLL_PROGRESS_AXIS;
 
-	return css({
-		"@supports (animation-timeline: scroll())": {
-			animationName: SCROLL_PROGRESS_FILL_KEYFRAMES_NAME,
-			animationDuration: "auto",
-			animationTimingFunction: easings.linear,
-			animationFillMode: "both",
-			animationTimeline: `scroll(nearest ${axis})`,
-			[`@keyframes ${SCROLL_PROGRESS_FILL_KEYFRAMES_NAME}`]: {
+	return supports("(animation-timeline: scroll())", [
+		animation(SCROLL_PROGRESS_FILL_KEYFRAMES_NAME, {
+			keyframes: {
 				from: { inlineSize: "0%" },
 				to: { inlineSize: "100%" },
 			},
-			// Collapses the growing fill to a fixed full size and expresses the
-			// same scroll-linked progress as an opacity ramp instead.
-			"@media (prefers-reduced-motion: reduce)": {
+			duration: "auto",
+			easing: easings.linear,
+			fillMode: "both",
+		}),
+		// `animationTimeline` is scroll-timeline-specific — no `@pkg/u` utility
+		// covers it.
+		raw({ animationTimeline: `scroll(nearest ${axis})` }),
+		// Collapses the growing fill to a fixed full size and expresses the
+		// same scroll-linked progress as an opacity ramp instead. Only
+		// `animationName`/`inlineSize` are overridden here — duration, easing,
+		// and fill-mode still cascade from the rule above.
+		media("(prefers-reduced-motion: reduce)", [
+			keyframes(SCROLL_PROGRESS_FADE_KEYFRAMES_NAME, {
+				from: { opacity: 0 },
+				to: { opacity: 1 },
+			}),
+			raw({
 				animationName: SCROLL_PROGRESS_FADE_KEYFRAMES_NAME,
 				inlineSize: "100%",
-				[`@keyframes ${SCROLL_PROGRESS_FADE_KEYFRAMES_NAME}`]: {
-					from: { opacity: 0 },
-					to: { opacity: 1 },
-				},
-			},
-		},
-	});
+			}),
+		]),
+	]);
 }
 
 /**
@@ -272,34 +286,35 @@ export function viewReveal(options: ViewReveal.Options = {}): CSSMixinDescriptor
 			break;
 	}
 
-	return css({
-		"@supports (animation-timeline: scroll())": {
-			[VIEW_REVEAL_TRANSLATE_PROPERTY]: enterTranslate,
-			animationName: VIEW_REVEAL_KEYFRAMES_NAME,
-			animationDuration: "auto",
-			animationTimingFunction: easings.decelerate,
-			animationFillMode: "both",
-			animationTimeline: `view(${axis})`,
-			animationRange: range,
-			[`@keyframes ${VIEW_REVEAL_KEYFRAMES_NAME}`]: {
+	return supports("(animation-timeline: scroll())", [
+		raw({ [VIEW_REVEAL_TRANSLATE_PROPERTY]: enterTranslate }),
+		animation(VIEW_REVEAL_KEYFRAMES_NAME, {
+			keyframes: {
 				from: { opacity: 0, translate: `var(${VIEW_REVEAL_TRANSLATE_PROPERTY}, 0 0)` },
 				to: { opacity: 1, translate: "0 0" },
 			},
-			...(needsMirror
-				? { "&:dir(rtl)": { [VIEW_REVEAL_TRANSLATE_PROPERTY]: enterTranslateMirrored } }
-				: {}),
-			// Collapses the translate to a fixed resting position and keeps
-			// only the opacity fade, per the reduced-motion contract.
-			"@media (prefers-reduced-motion: reduce)": {
+			duration: "auto",
+			easing: easings.decelerate,
+			fillMode: "both",
+		}),
+		// `animationTimeline`/`animationRange` are scroll-timeline-specific —
+		// no `@pkg/u` utility covers them.
+		raw({ animationTimeline: `view(${axis})`, animationRange: range }),
+		needsMirror &&
+			when("&:dir(rtl)", raw({ [VIEW_REVEAL_TRANSLATE_PROPERTY]: enterTranslateMirrored })),
+		// Collapses the translate to a fixed resting position and keeps
+		// only the opacity fade, per the reduced-motion contract.
+		media("(prefers-reduced-motion: reduce)", [
+			keyframes(VIEW_REVEAL_REDUCED_KEYFRAMES_NAME, {
+				from: { opacity: 0 },
+				to: { opacity: 1 },
+			}),
+			raw({
 				animationName: VIEW_REVEAL_REDUCED_KEYFRAMES_NAME,
 				translate: "0 0",
-				[`@keyframes ${VIEW_REVEAL_REDUCED_KEYFRAMES_NAME}`]: {
-					from: { opacity: 0 },
-					to: { opacity: 1 },
-				},
-			},
-		},
-	});
+			}),
+		]),
+	]);
 }
 
 /**
@@ -372,42 +387,48 @@ export function scrollFade<node extends Element = Element>(options: ScrollFade.O
 	let rampPercent = SCROLL_FADE_RAMP_PERCENT;
 
 	// Built as its own statement, with the ramp stop's key assigned after the
-	// literal "0%"/"100%" keys, rather than inline inside the `css()` call:
-	// an object literal mixing a computed key with literal ones widens past
-	// what `css()`'s style type accepts, where an already-typed variable
-	// assigned into afterward does not.
-	let fadeKeyframes: CSSStyles = {
+	// literal "0%"/"100%" keys, rather than inline inside the `animation()`
+	// call: an object literal mixing a computed key with literal ones widens
+	// past what `AnimationConfig["keyframes"]` accepts, where an
+	// already-typed variable assigned into afterward does not.
+	let fadeKeyframes: Record<string, CSSStyles> = {
 		"0%": { maskImage: scrollFadeMask(direction, "0%", settledStop) },
 		"100%": { maskImage: scrollFadeMask(direction, size, "100%") },
 	};
 	fadeKeyframes[`${rampPercent}%, ${100 - rampPercent}%`] = { maskImage: settledMask };
 
-	return css<node>({
+	return combine<node>([
 		// Static two-edge fallback, active unconditionally: both edges read
 		// as permanently faded, so a container without scroll-driven
 		// animation support still hints that its content extends past what
 		// currently fits, even without tracking where the reader has
-		// scrolled to.
-		maskImage: settledMask,
-		"-webkit-mask-image": settledMask,
-		...(axis === "inline" ? { "&:dir(rtl)": { [SCROLL_FADE_DIRECTION_PROPERTY]: "left" } } : {}),
-		"@supports (animation-timeline: scroll())": {
-			animationName: SCROLL_FADE_KEYFRAMES_NAME,
-			animationDuration: "auto",
-			animationTimingFunction: easings.linear,
-			animationFillMode: "both",
-			animationTimeline: `scroll(self ${axis})`,
-			[`@keyframes ${SCROLL_FADE_KEYFRAMES_NAME}`]: fadeKeyframes,
+		// scrolled to. `mask-image` has no `@pkg/u` utility.
+		raw<node>({ maskImage: settledMask, "-webkit-mask-image": settledMask }),
+		axis === "inline" &&
+			when<node>("&:dir(rtl)", raw<node>({ [SCROLL_FADE_DIRECTION_PROPERTY]: "left" })),
+		supports<node>("(animation-timeline: scroll())", [
+			animation<node>(SCROLL_FADE_KEYFRAMES_NAME, {
+				keyframes: fadeKeyframes,
+				duration: "auto",
+				easing: easings.linear,
+				fillMode: "both",
+			}),
+			// `animationTimeline` is scroll-timeline-specific — no `@pkg/u`
+			// utility covers it.
+			raw<node>({ animationTimeline: `scroll(self ${axis})` }),
 			// A mask fade ramping in and out at each edge has no positional
 			// movement to collapse to opacity — the closest reduced-motion
 			// equivalent is to stop tying the fade to scroll position and let
 			// both edges settle permanently into the same faded state the
 			// static fallback above already renders.
-			"@media (prefers-reduced-motion: reduce)": {
-				animationName: "none",
-				maskImage: settledMask,
-				"-webkit-mask-image": settledMask,
-			},
-		},
-	});
+			media<node>(
+				"(prefers-reduced-motion: reduce)",
+				raw<node>({
+					animationName: "none",
+					maskImage: settledMask,
+					"-webkit-mask-image": settledMask,
+				}),
+			),
+		]),
+	]);
 }

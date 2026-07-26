@@ -11,8 +11,22 @@ import { color } from "../internal/tokens";
 
 import type { BorderStyleValue } from "./border";
 
-/** Logical edge a single-sided divider border sits on. */
-export type BorderEdge = "block-start" | "block-end" | "inline-start" | "inline-end";
+/**
+ * Edge a single-sided divider border sits on — either a logical edge
+ * (`"block-start"`, `"block-end"`, `"inline-start"`, `"inline-end"`) or a
+ * physical edge (`"left"`, `"right"`, `"top"`, `"bottom"`) for the rare case
+ * where the border must stay pinned to a physical side regardless of writing
+ * mode.
+ */
+export type BorderEdge =
+	| "block-start"
+	| "block-end"
+	| "inline-start"
+	| "inline-end"
+	| "left"
+	| "right"
+	| "top"
+	| "bottom";
 
 export interface BorderEdgeOptions {
 	/** Sets the edge's border color. Same accepted shapes as `u.border(value)`. */
@@ -31,18 +45,26 @@ const EDGE_PROPERTY: Record<BorderEdge, string> = {
 	"block-end": "borderBlockEnd",
 	"inline-start": "borderInlineStart",
 	"inline-end": "borderInlineEnd",
+	left: "borderLeft",
+	right: "borderRight",
+	top: "borderTop",
+	bottom: "borderBottom",
 };
 
 /**
- * Applies a border to a single logical edge only — a divider between two
- * adjacent elements (e.g. two stepper buttons sharing one frame) rather than
- * a border around all four sides. Only the given keys are set, same as
- * `u.border()`'s options form.
+ * Applies a border to a single edge only — a divider between two adjacent
+ * elements (e.g. two stepper buttons sharing one frame) rather than a border
+ * around all four sides. Accepts either a logical edge (preferred, so the
+ * divider follows writing mode) or a physical edge, for the rare case where
+ * it must stay pinned to a physical side instead. Only the given keys are
+ * set, same as `u.border()`'s options form.
  *
  * @example u.borderEdge("inline-start", { width: 1, style: "solid" })
  * @example css({ borderInlineStartWidth: "1px", borderInlineStartStyle: "solid" })
  * @example u.borderEdge("block-end", { color: "brand", width: 2 })
  * @example css({ borderBlockEndColor: "var(--ui-brand-border)", borderBlockEndWidth: "2px", borderBlockEndStyle: "solid" })
+ * @example u.borderEdge("right", { width: 1, style: "solid", color: "neutral" })
+ * @example css({ borderRightWidth: "1px", borderRightStyle: "solid", borderRightColor: "var(--ui-neutral-border)" })
  */
 export function borderEdge<Node extends Element = Element>(
 	edge: BorderEdge,

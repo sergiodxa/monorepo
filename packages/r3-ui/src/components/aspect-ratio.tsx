@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { raw } from "@pkg/u/general";
+import { var as varUtility, raw } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { is } from "@pkg/u/size";
@@ -75,7 +75,7 @@ export function AspectRatio(handle: Handle<AspectRatio.Props>) {
 					block(),
 					is("full"),
 					overflow(),
-					raw({ aspectRatio: "var(--ui-aspect-ratio, 1)" }),
+					raw({ aspectRatio: varUtility("ui-aspect-ratio", "1") }),
 					mix,
 				]}
 			/>

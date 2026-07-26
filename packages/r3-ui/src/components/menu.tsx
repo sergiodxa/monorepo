@@ -14,14 +14,13 @@ import type { ElementProps, Handle, MixinDescriptor, Props as TagProps, RemixNod
 
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded, opacity } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { cursor, raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { is, minIs, mb, pb, pi, p } from "@pkg/u/size";
 import { active, disabled, focusVisible, hover, when } from "@pkg/u/state";
-import { textAlign, weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { text, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
@@ -158,7 +157,7 @@ export function Menu(handle: Handle<Menu.Props>) {
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), css({ outline: "none" }), mix]}
+				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), raw({ outline: "none" }), mix]}
 			>
 				{children}
 			</Popover>
@@ -225,7 +224,7 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 			hover(bg("neutral.bg-tint-hover")),
 			active(bg("neutral.bg-tint-pressed")),
 			when("&:focus", bg("primary.tint")),
-			focusRingPrimary(),
+			when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 			when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid"), weight(500)]),
 			disabled([opacity(50), cursor("not-allowed")]),
 			when("&[data-danger]", [
@@ -236,11 +235,8 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 				focusVisible(outline("danger.ring")),
 			]),
 			cursor("default"),
-			css({
-				textDecorationLine: "none",
-				fontSize: "0.875rem",
-				lineHeight: "calc(1.25 / 0.875)",
-			}),
+			textDecoration("none"),
+			text("sm"),
 			textAlign("start"),
 			mix,
 		];

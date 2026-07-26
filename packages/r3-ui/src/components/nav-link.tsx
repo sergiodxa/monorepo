@@ -11,16 +11,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
+import { colorMix, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
+import { data, hover, when } from "@pkg/u/state";
+import { textDecoration, weight } from "@pkg/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Semantic color role {@link NavLink} falls back to when `color` is omitted. */
@@ -91,46 +89,47 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 				mix={[
 					interactiveTransition(),
 					rounded("sm"),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					cursor("pointer"),
-					css({
-						textDecorationLine: "underline",
-						textDecorationColor: "color-mix(in oklab, currentcolor 60%, transparent)",
+					textDecoration("underline"),
+					raw({
+						textDecorationColor: colorMix(
+							"oklab",
+							{ color: "currentcolor", weight: 60 },
+							"transparent",
+						),
 						textUnderlineOffset: "4px",
-
-						"&:hover": {
-							textDecorationColor: "currentcolor",
-						},
 					}),
-					when('&[data-color="primary"]', [
+					hover(raw({ textDecorationColor: "currentcolor" })),
+					data("color", "primary", [
 						fg("primary"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
 							fg("primary.emphasis"),
 						]),
 					]),
-					when('&[data-color="neutral"]', [
+					data("color", "neutral", [
 						fg("neutral"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
 							fg("neutral.emphasis"),
 						]),
 					]),
-					when('&[data-color="success"]', [
+					data("color", "success", [
 						fg("success"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
 							fg("success.emphasis"),
 						]),
 					]),
-					when('&[data-color="warning"]', [
+					data("color", "warning", [
 						fg("warning"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
 							fg("warning.emphasis"),
 						]),
 					]),
-					when('&[data-color="danger"]', [
+					data("color", "danger", [
 						fg("danger"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
@@ -141,10 +140,10 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 						weight(500),
 						raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
 					]),
-					when("&[data-has-background]", raw({ textDecorationLine: "none" })),
+					data("has-background", textDecoration("none")),
 					when(
 						'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
-						raw({ textDecorationLine: "none" }),
+						textDecoration("none"),
 					),
 					mix,
 				]}

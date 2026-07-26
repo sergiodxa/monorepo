@@ -14,11 +14,13 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { border } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { absolute, container, flex, flexCol, gap, relative } from "@pkg/u/layout";
+import { rounded, shadow } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { absolute, container, flex, flexCol, gap, inset, justify, relative } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
-import { attrs, css } from "remix/ui";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 import { Button } from "./button";
 import { ScrollArea } from "./scroll-area";
@@ -299,7 +301,7 @@ MessageScroller.Item = function MessageScrollerItem(handle: Handle<MessageScroll
 				data-message-id={messageId}
 				data-scroll-anchor={scrollAnchor || undefined}
 				mix={[
-					css({
+					raw({
 						scrollMarginBlockStart: "var(--ui-message-scroller-anchor-offset, 0px)",
 					}),
 					mix,
@@ -347,19 +349,17 @@ MessageScroller.Button = function MessageScrollerButton(
 				mix={[
 					z(1),
 					absolute(),
-					css({
-						insetBlockEnd: "1rem",
-						insetInlineStart: "50%",
-						translate: "-50% 0",
-						boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-
-						[BUTTON_NARROW_QUERY]: {
+					inset("auto", "auto", "1rem", "50%"),
+					shadow("lg"),
+					raw({ translate: "-50% 0" }),
+					when(BUTTON_NARROW_QUERY, [
+						justify("center"),
+						raw({
 							insetInlineStart: "1rem",
 							insetInlineEnd: "1rem",
 							translate: "0 0",
-							justifyContent: "center",
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			/>

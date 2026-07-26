@@ -10,12 +10,13 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { border } from "@pkg/u/color";
+import { border, colorMix, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { bs, is, mbs, p } from "@pkg/u/size";
-import { textAlign, tracking, weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -167,10 +168,14 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 					justify("center"),
 					rounded("full"),
 					border({ width: "1px", style: "solid" }),
-					css({
-						borderColor: "color-mix(in oklab, currentcolor 20%, transparent)",
-						backgroundColor: "color-mix(in oklab, currentcolor 10%, transparent)",
-						color: "currentcolor",
+					fg("currentcolor"),
+					raw({
+						borderColor: colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent"),
+						backgroundColor: colorMix(
+							"oklab",
+							{ color: "currentcolor", weight: 10 },
+							"transparent",
+						),
 					}),
 					mix,
 				]}
@@ -204,10 +209,8 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 				mix={[
 					weight("semibold"),
 					tracking("tight"),
-					css({
-						fontSize: "1rem",
-						lineHeight: "1.375",
-					}),
+					raw({ fontSize: "1rem" }),
+					leading("snug"),
 					mix,
 				]}
 			>
@@ -234,11 +237,9 @@ Empty.Description = function EmptyDescription(handle: Handle<Empty.DescriptionPr
 				{...rest}
 				data-slot="description"
 				mix={[
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "1.625",
-						color: "color-mix(in oklab, currentcolor 70%, transparent)",
-					}),
+					raw({ fontSize: "0.875rem" }),
+					leading("relaxed"),
+					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}
 			>

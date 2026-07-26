@@ -16,11 +16,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg, outline } from "@pkg/u/color";
+import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { pb, pi, pis } from "@pkg/u/size";
+import { raw } from "@pkg/u/general";
+import { block, container } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { is, maxIs, pb, pi, pis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 import { easings } from "../animations/tokens";
@@ -169,10 +172,10 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 				data-slot="typeset"
 				mix={[
 					fg("neutral.emphasis"),
-					css({
+					container(CONTAINER_NAME),
+					raw({
 						fontSize: "var(--ui-typeset-size, 1rem)",
 						lineHeight: "var(--ui-typeset-leading, 1.75)",
-						container: `${CONTAINER_NAME} / inline-size`,
 
 						'&[data-preset="docs"]': {
 							"--ui-typeset-size": "1rem",
@@ -234,24 +237,11 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 
 						// Blockquote
 						"& :where(blockquote)": {
-							paddingInlineStart: "1em",
-							borderInlineStartWidth: "0.25em",
-							borderInlineStartStyle: "solid",
-							borderInlineStartColor: "var(--ui-neutral-border)",
-							color: "var(--ui-neutral-fg)",
 							fontStyle: "italic",
-						},
-
-						// Rules
-						"& :where(hr)": {
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-							borderBlockStartColor: "var(--ui-neutral-border)",
 						},
 
 						// Links
 						"& :where(a)": {
-							textDecorationLine: "underline",
 							textUnderlineOffset: "0.15em",
 						},
 						"& :where(a):hover": {
@@ -268,16 +258,12 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							fontSize: "0.875em",
 						},
 						"& :where(pre)": {
-							overflow: "auto",
 							fontSize: "0.875em",
 							lineHeight: "1.6",
 						},
 						"& :where(pre code)": {
-							backgroundColor: "transparent",
 							padding: "0",
-							borderRadius: "0",
 							fontSize: "1em",
-							color: "inherit",
 						},
 
 						// Tables — a table wider than its container becomes its own
@@ -285,15 +271,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						// scrollbar treatment and a scroll-linked edge fade rather than
 						// a differently styled scrollbar of its own.
 						"& :where(table)": {
-							display: "block",
-							// Stretches to the full available width when the table's own
-							// content is narrower than that, but still falls back to its
-							// natural (possibly wider) content width otherwise, so the
-							// `maxInlineSize`/`overflow` pair below still turns it into its
-							// own scrolling region instead of overflowing the page.
-							inlineSize: "max(100%, max-content)",
-							maxInlineSize: "100%",
-							overflow: "auto",
 							borderCollapse: "collapse",
 							fontSize: "0.875em",
 							scrollbarWidth: "thin",
@@ -353,14 +330,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 								},
 							},
 						},
-						"& :where(th, td)": {
-							paddingInline: "0.75em",
-							paddingBlock: "0.5em",
-							borderBlockEndWidth: "1px",
-							borderBlockEndStyle: "solid",
-							borderBlockEndColor: "var(--ui-neutral-border)",
-						},
-
 						// Once there's enough room, cells and code blocks read better
 						// with roomier padding than the narrow default above.
 						[`@container ${CONTAINER_NAME} (min-width: 30rem)`]: {
@@ -395,8 +364,18 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 					when("& :where(ul, ol)", pis("1.5em")),
 					when("& :where(li)::marker", fg("neutral.muted")),
 
+					// Blockquote
+					when("& :where(blockquote)", [
+						pis("1em"),
+						fg("neutral"),
+						borderEdge("inline-start", { color: "neutral", width: "0.25em" }),
+					]),
+
+					// Rules
+					when("& :where(hr)", borderEdge("block-start", { color: "neutral", width: "1px" })),
+
 					// Links
-					when("& :where(a)", fg("primary")),
+					when("& :where(a)", [fg("primary"), textDecoration("underline")]),
 					when("& :where(a):focus-visible", [
 						outline({ color: "primary.ring", offset: 2 }),
 						rounded("xs"),
@@ -420,11 +399,36 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						fg("neutral.emphasis"),
 						pi("1em"),
 						pb("0.875em"),
+						// Stretches to the full available width when the pre's own content
+						// is narrower than that, but still falls back to its natural
+						// (possibly wider) content width otherwise, so it becomes its own
+						// scrolling region instead of overflowing the page.
+						overflow("auto"),
 					]),
+					when("& :where(pre code)", [bg("transparent"), fg("inherit"), rounded("none")]),
 
-					// Tables
+					// Tables — a table wider than its container becomes its own
+					// scrolling region, carrying the scroll area viewport's own
+					// scrollbar treatment and a scroll-linked edge fade rather than
+					// a differently styled scrollbar of its own.
+					when("& :where(table)", [
+						block(),
+						// Stretches to the full available width when the table's own
+						// content is narrower than that, but still falls back to its
+						// natural (possibly wider) content width otherwise, so the
+						// `maxIs`/`overflow` pair below still turns it into its own
+						// scrolling region instead of overflowing the page.
+						is("max(100%, max-content)"),
+						maxIs("full"),
+						overflow("auto"),
+					]),
 					when("& :where(th, td):not([align])", textAlign("start")),
 					when("& :where(th)", [weight("semibold"), fg("neutral.emphasis")]),
+					when("& :where(th, td)", [
+						pi("0.75em"),
+						pb("0.5em"),
+						borderEdge("block-end", { color: "neutral", width: "1px" }),
+					]),
 
 					mix,
 				]}

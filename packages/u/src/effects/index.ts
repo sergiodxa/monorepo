@@ -1,4 +1,5 @@
 export { backdropBlur } from "./backdrop-blur";
+export { backdropSaturate } from "./backdrop-saturate";
 export { backfaceVisibility } from "./backface-visibility";
 export { blur } from "./blur";
 export { opacity } from "./opacity";

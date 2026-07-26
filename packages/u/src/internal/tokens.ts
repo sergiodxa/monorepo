@@ -41,11 +41,19 @@ const COLOR_PROPERTY_ALIASES: Record<string, string> = {
  * @example color("brand.tint") // "var(--ui-brand-bg-tint)"
  * @example color("color.neutral.50") // "var(--ui-color-neutral-50)"
  * @example color("brand", "border") // "var(--ui-brand-border)"
+ * @example color("color-mix(in oklab, red 50%, blue)") // "color-mix(in oklab, red 50%, blue)"
  */
 export function color(value: ColorValue | (string & {}), defaultProperty?: string): string {
 	if (value === "transparent") return "transparent";
 	if (value === "inherit") return "inherit";
-	if (value === "currentColor") return "currentColor";
+	if (value.toLowerCase() === "currentcolor") return "currentColor";
+
+	// An already-fully-formed CSS color value — e.g. the output of
+	// `u.colorMix(...)`, or a raw `var(...)` reference — passes through
+	// unchanged instead of being mistaken for a "tone.property" token. Tone
+	// names and their suffixes are always simple identifiers with no
+	// parentheses, so this check is unambiguous.
+	if (value.includes("(")) return value;
 
 	if (value.startsWith("color.")) {
 		let [, name, shade] = value.split(".");

@@ -12,14 +12,16 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { absolute, gap, inlineFlex, items, justify } from "@pkg/u/layout";
-import { bs, is, m } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { cursor, raw, userSelect } from "@pkg/u/general";
+import { gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { active, data, hover, when } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { hasAccessibleText } from "../utils/has-accessible-text";
 
@@ -171,131 +173,120 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					gap(2),
 					rounded("md"),
 					weight("medium"),
-					focusRingByColor({ when: "&:has(input:focus-visible)" }),
-					when("&:has(input:disabled)", opacity(50)),
-					css({
-						cursor: "default",
-						userSelect: "none",
+					when("&:has(input:focus-visible)", [
+						outline({ color: "primary.ring", offset: 2 }),
+						data("color", "neutral", outline("neutral.ring")),
+						data("color", "success", outline("success.ring")),
+						data("color", "warning", outline("warning.ring")),
+						data("color", "danger", outline("danger.ring")),
+					]),
+					when("&:has(input:disabled)", [opacity(50), cursor("not-allowed")]),
+					cursor("default"),
+					userSelect(),
+					pi("1rem"),
+					pb("0.5rem"),
+					text("sm"),
 
-						paddingInline: "1rem",
-						paddingBlock: "0.5rem",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
+					data("size", "sm", [pi("0.75rem"), pb("0.375rem"), text("xs")]),
+					data("size", "lg", [pi("1.25rem"), pb("0.625rem"), text("base")]),
 
-						'&[data-size="sm"]': {
-							paddingInline: "0.75rem",
-							paddingBlock: "0.375rem",
-							fontSize: "0.75rem",
-							lineHeight: "calc(1 / 0.75)",
-						},
-						'&[data-size="lg"]': {
-							paddingInline: "1.25rem",
-							paddingBlock: "0.625rem",
-							fontSize: "1rem",
-							lineHeight: "1.5",
-						},
+					data("variant", "solid", [
+						data("color", "primary", [
+							bg("primary.solid"),
+							fg("primary.onSolid"),
+							hover(bg("primary.bg-solid-hover")),
+							active(bg("primary.bg-solid-pressed")),
+						]),
+						data("color", "neutral", [
+							bg("neutral.solid"),
+							fg("neutral.onSolid"),
+							hover(bg("neutral.bg-solid-hover")),
+							active(bg("neutral.bg-solid-pressed")),
+						]),
+						data("color", "success", [
+							bg("success.solid"),
+							fg("success.onSolid"),
+							hover(bg("success.bg-solid-hover")),
+							active(bg("success.bg-solid-pressed")),
+						]),
+						data("color", "warning", [
+							bg("warning.solid"),
+							fg("warning.onSolid"),
+							hover(bg("warning.bg-solid-hover")),
+							active(bg("warning.bg-solid-pressed")),
+						]),
+						data("color", "danger", [
+							bg("danger.solid"),
+							fg("danger.onSolid"),
+							hover(bg("danger.bg-solid-hover")),
+							active(bg("danger.bg-solid-pressed")),
+						]),
+					]),
 
-						'&[data-variant="solid"]': {
-							'&[data-color="primary"]': {
-								backgroundColor: "var(--ui-primary-bg-solid)",
-								color: "var(--ui-primary-fg-on-solid)",
-								"&:hover": { backgroundColor: "var(--ui-primary-bg-solid-hover)" },
-								"&:active": { backgroundColor: "var(--ui-primary-bg-solid-pressed)" },
-							},
-							'&[data-color="neutral"]': {
-								backgroundColor: "var(--ui-neutral-bg-solid)",
-								color: "var(--ui-neutral-fg-on-solid)",
-								"&:hover": { backgroundColor: "var(--ui-neutral-bg-solid-hover)" },
-								"&:active": { backgroundColor: "var(--ui-neutral-bg-solid-pressed)" },
-							},
-							'&[data-color="success"]': {
-								backgroundColor: "var(--ui-success-bg-solid)",
-								color: "var(--ui-success-fg-on-solid)",
-								"&:hover": { backgroundColor: "var(--ui-success-bg-solid-hover)" },
-								"&:active": { backgroundColor: "var(--ui-success-bg-solid-pressed)" },
-							},
-							'&[data-color="warning"]': {
-								backgroundColor: "var(--ui-warning-bg-solid)",
-								color: "var(--ui-warning-fg-on-solid)",
-								"&:hover": { backgroundColor: "var(--ui-warning-bg-solid-hover)" },
-								"&:active": { backgroundColor: "var(--ui-warning-bg-solid-pressed)" },
-							},
-							'&[data-color="danger"]': {
-								backgroundColor: "var(--ui-danger-bg-solid)",
-								color: "var(--ui-danger-fg-on-solid)",
-								"&:hover": { backgroundColor: "var(--ui-danger-bg-solid-hover)" },
-								"&:active": { backgroundColor: "var(--ui-danger-bg-solid-pressed)" },
-							},
-						},
+					data("variant", "outline", [
+						raw({ borderWidth: "2px" }),
+						bg("transparent"),
+						data("color", "primary", [
+							border("primary.strong"),
+							fg("primary"),
+							hover(bg("primary.tint")),
+							active(bg("primary.bg-tint-hover")),
+						]),
+						data("color", "neutral", [
+							border("neutral.strong"),
+							fg("neutral"),
+							hover(bg("neutral.tint")),
+							active(bg("neutral.bg-tint-hover")),
+						]),
+						data("color", "success", [
+							border("success.strong"),
+							fg("success"),
+							hover(bg("success.tint")),
+							active(bg("success.bg-tint-hover")),
+						]),
+						data("color", "warning", [
+							border("warning.strong"),
+							fg("warning"),
+							hover(bg("warning.tint")),
+							active(bg("warning.bg-tint-hover")),
+						]),
+						data("color", "danger", [
+							border("danger.strong"),
+							fg("danger"),
+							hover(bg("danger.tint")),
+							active(bg("danger.bg-tint-hover")),
+						]),
+					]),
 
-						'&[data-variant="outline"]': {
-							borderWidth: "2px",
-							backgroundColor: "transparent",
-							'&[data-color="primary"]': {
-								borderColor: "var(--ui-primary-border-strong)",
-								color: "var(--ui-primary-fg)",
-								"&:hover": { backgroundColor: "var(--ui-primary-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-primary-bg-tint-hover)" },
-							},
-							'&[data-color="neutral"]': {
-								borderColor: "var(--ui-neutral-border-strong)",
-								color: "var(--ui-neutral-fg)",
-								"&:hover": { backgroundColor: "var(--ui-neutral-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-neutral-bg-tint-hover)" },
-							},
-							'&[data-color="success"]': {
-								borderColor: "var(--ui-success-border-strong)",
-								color: "var(--ui-success-fg)",
-								"&:hover": { backgroundColor: "var(--ui-success-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-success-bg-tint-hover)" },
-							},
-							'&[data-color="warning"]': {
-								borderColor: "var(--ui-warning-border-strong)",
-								color: "var(--ui-warning-fg)",
-								"&:hover": { backgroundColor: "var(--ui-warning-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-warning-bg-tint-hover)" },
-							},
-							'&[data-color="danger"]': {
-								borderColor: "var(--ui-danger-border-strong)",
-								color: "var(--ui-danger-fg)",
-								"&:hover": { backgroundColor: "var(--ui-danger-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-danger-bg-tint-hover)" },
-							},
-						},
+					data("variant", "ghost", [
+						bg("transparent"),
+						data("color", "primary", [
+							fg("primary"),
+							hover(bg("primary.tint")),
+							active(bg("primary.bg-tint-hover")),
+						]),
+						data("color", "neutral", [
+							fg("neutral"),
+							hover(bg("neutral.bg-tint-hover")),
+							active(bg("neutral.bg-tint-pressed")),
+						]),
+						data("color", "success", [
+							fg("success"),
+							hover(bg("success.tint")),
+							active(bg("success.bg-tint-hover")),
+						]),
+						data("color", "warning", [
+							fg("warning"),
+							hover(bg("warning.tint")),
+							active(bg("warning.bg-tint-hover")),
+						]),
+						data("color", "danger", [
+							fg("danger"),
+							hover(bg("danger.tint")),
+							active(bg("danger.bg-tint-hover")),
+						]),
+					]),
 
-						'&[data-variant="ghost"]': {
-							backgroundColor: "transparent",
-							'&[data-color="primary"]': {
-								color: "var(--ui-primary-fg)",
-								"&:hover": { backgroundColor: "var(--ui-primary-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-primary-bg-tint-hover)" },
-							},
-							'&[data-color="neutral"]': {
-								color: "var(--ui-neutral-fg)",
-								"&:hover": { backgroundColor: "var(--ui-neutral-bg-tint-hover)" },
-								"&:active": { backgroundColor: "var(--ui-neutral-bg-tint-pressed)" },
-							},
-							'&[data-color="success"]': {
-								color: "var(--ui-success-fg)",
-								"&:hover": { backgroundColor: "var(--ui-success-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-success-bg-tint-hover)" },
-							},
-							'&[data-color="warning"]': {
-								color: "var(--ui-warning-fg)",
-								"&:hover": { backgroundColor: "var(--ui-warning-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-warning-bg-tint-hover)" },
-							},
-							'&[data-color="danger"]': {
-								color: "var(--ui-danger-fg)",
-								"&:hover": { backgroundColor: "var(--ui-danger-bg-tint)" },
-								"&:active": { backgroundColor: "var(--ui-danger-bg-tint-hover)" },
-							},
-						},
-
-						"&:has(input:disabled)": {
-							cursor: "not-allowed",
-						},
-					}),
 					parts?.trigger,
 				]}
 			>
@@ -303,19 +294,7 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 				<input
 					type="file"
 					{...rest}
-					mix={[
-						acceptDirectory && attrs({ webkitdirectory: true }),
-						absolute(),
-						is("1px"),
-						bs("1px"),
-						m(0),
-						css({
-							overflow: "hidden",
-							clipPath: "inset(50%)",
-							whiteSpace: "nowrap",
-						}),
-						mix,
-					]}
+					mix={[acceptDirectory && attrs({ webkitdirectory: true }), visuallyHidden(), mix]}
 				/>
 			</label>
 		);

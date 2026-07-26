@@ -13,15 +13,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
 import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { bs, m, minIs, p, pi } from "@pkg/u/size";
 import { active, hover, when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
+import { text, textDecoration, weight } from "@pkg/u/typography";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import {
 	warnIfNoAccessibleLabel,
@@ -131,7 +130,7 @@ Pagination.List = function PaginationList(handle: Handle<Pagination.ListProps>) 
 					gap("0.25rem"),
 					m("0"),
 					p("0"),
-					css({ listStyle: "none" }),
+					raw({ listStyle: "none" }),
 					mix,
 				]}
 			/>
@@ -204,18 +203,11 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 						bg("primary.solid"),
 						fg("primary.onSolid"),
 					]),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						textDecoration: "none",
-
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							pointerEvents: "none",
-						},
-					}),
+					text("sm"),
+					textDecoration("none"),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), raw({ pointerEvents: "none" })]),
 					mix,
 				]}
 			/>
@@ -273,16 +265,10 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 					fg("neutral"),
 					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 					active(bg("neutral.bg-tint-pressed")),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					when("&:disabled", opacity(50)),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						"&:disabled": {
-							cursor: "not-allowed",
-						},
-					}),
+					text("sm"),
+					when("&:disabled", cursor("not-allowed")),
 					mix,
 				]}
 			>

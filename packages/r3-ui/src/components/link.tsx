@@ -9,14 +9,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
+import { colorMix, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
+import { cursor, raw, var as varUtility } from "@pkg/u/general";
+import { data, when } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Semantic color role {@link Link} falls back to when `color` is omitted. */
@@ -73,45 +73,78 @@ export function Link(handle: Handle<Link.Props>) {
 				data-color={resolvedColor}
 				{...rest}
 				mix={[
-					focusRingByColor(),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						data("color", "neutral", outline("neutral.ring")),
+						data("color", "success", outline("success.ring")),
+						data("color", "warning", outline("warning.ring")),
+						data("color", "danger", outline("danger.ring")),
+					]),
 					interactiveTransition(),
 					rounded("sm"),
-					when('&[data-color="primary"]', fg("primary")),
-					when('&[data-color="neutral"]', fg("neutral")),
-					when('&[data-color="success"]', fg("success")),
-					when('&[data-color="danger"]', fg("danger")),
-					when('&[data-color="warning"]', fg("warning")),
+					data("color", "primary", fg("primary")),
+					data("color", "neutral", fg("neutral")),
+					data("color", "success", fg("success")),
+					data("color", "danger", fg("danger")),
+					data("color", "warning", fg("warning")),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						textDecoration: "underline",
-						cursor: "pointer",
-
-						'&[data-color="primary"]': {
-							textDecorationColor: "color-mix(in srgb, var(--ui-primary-fg) 60%, transparent)",
-							"&:hover": { textDecorationColor: "var(--ui-primary-fg)" },
-						},
-						'&[data-color="neutral"]': {
-							textDecorationColor: "color-mix(in srgb, var(--ui-neutral-fg) 50%, transparent)",
-							"&:hover": { textDecorationColor: "var(--ui-neutral-fg)" },
-						},
-						'&[data-color="success"]': {
-							textDecorationColor: "color-mix(in srgb, var(--ui-success-fg) 60%, transparent)",
-							"&:hover": { textDecorationColor: "var(--ui-success-fg)" },
-						},
-						'&[data-color="danger"]': {
-							textDecorationColor: "color-mix(in srgb, var(--ui-danger-fg) 60%, transparent)",
-							"&:hover": { textDecorationColor: "var(--ui-danger-fg)" },
-						},
-						'&[data-color="warning"]': {
-							textDecorationColor: "color-mix(in srgb, var(--ui-warning-fg) 60%, transparent)",
-							"&:hover": { textDecorationColor: "var(--ui-warning-fg)" },
-						},
-
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							textDecoration: "none",
-						},
-					}),
+					textDecoration("underline"),
+					cursor("pointer"),
+					data("color", "primary", [
+						// `color-mix()`'s color argument (`var(--ui-primary-fg)`) isn't
+						// a tone string `u.fg()`/`u.color()` can resolve, so the
+						// property itself stays raw() — only the literal string
+						// becomes a builder call.
+						raw({
+							textDecorationColor: colorMix(
+								"srgb",
+								{ color: varUtility("ui-primary-fg"), weight: 60 },
+								"transparent",
+							),
+						}),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-primary-fg") })),
+					]),
+					data("color", "neutral", [
+						raw({
+							textDecorationColor: colorMix(
+								"srgb",
+								{ color: varUtility("ui-neutral-fg"), weight: 50 },
+								"transparent",
+							),
+						}),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-neutral-fg") })),
+					]),
+					data("color", "success", [
+						raw({
+							textDecorationColor: colorMix(
+								"srgb",
+								{ color: varUtility("ui-success-fg"), weight: 60 },
+								"transparent",
+							),
+						}),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-success-fg") })),
+					]),
+					data("color", "danger", [
+						raw({
+							textDecorationColor: colorMix(
+								"srgb",
+								{ color: varUtility("ui-danger-fg"), weight: 60 },
+								"transparent",
+							),
+						}),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-danger-fg") })),
+					]),
+					data("color", "warning", [
+						raw({
+							textDecorationColor: colorMix(
+								"srgb",
+								{ color: varUtility("ui-warning-fg"), weight: 60 },
+								"transparent",
+							),
+						}),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-warning-fg") })),
+					]),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), textDecoration("none")]),
 					mix,
 				]}
 			/>

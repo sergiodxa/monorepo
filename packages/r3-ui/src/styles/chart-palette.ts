@@ -15,7 +15,7 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { combine, raw } from "@pkg/u/general";
+import { combine, raw, var as varUtility } from "@pkg/u/general";
 import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
@@ -58,7 +58,7 @@ export function chartPalette<Node extends Element = Element>(
 		slots.map((slot) =>
 			when<Node>(
 				`&${combinator}[data-color="${slot}"]`,
-				raw({ [property]: `var(--ui-chart-${slot})` }),
+				raw({ [property]: varUtility(`ui-chart-${slot}`) }),
 			),
 		),
 	);

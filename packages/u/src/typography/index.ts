@@ -7,6 +7,7 @@ export { pretty } from "./pretty";
 export { tabularNums } from "./tabular-nums";
 export { text } from "./text";
 export { textAlign } from "./text-align";
+export { textDecoration } from "./text-decoration";
 export { tracking } from "./tracking";
 export { truncate } from "./truncate";
 export { type } from "./type";

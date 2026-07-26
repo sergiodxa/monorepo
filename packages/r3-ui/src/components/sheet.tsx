@@ -13,10 +13,12 @@
 import type { Handle } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { transition } from "@pkg/u/effects";
-import { gap, vstack } from "@pkg/u/layout";
-import { pbe, pbs } from "@pkg/u/size";
-import { css } from "remix/ui";
+import { rounded, transition } from "@pkg/u/effects";
+import { raw, willChange } from "@pkg/u/general";
+import { fixed, flex, gap, items, justify, vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { is, m, maxBs, maxIs, mbs, pbe, pbs } from "@pkg/u/size";
+import { data, when } from "@pkg/u/state";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -132,19 +134,22 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 				{...rest}
 				data-side={resolvedSide}
 				mix={[
-					css({
-						position: "fixed",
-						margin: "0",
-						borderRadius: "0",
+					fixed(),
+					m(0),
+					rounded("none"),
+					maxBs("none"),
+					maxIs("none"),
+					is("min(90vw, var(--ui-sheet-size, 24rem))"),
+					raw({
 						insetBlockStart: "0",
 						insetBlockEnd: "0",
-						maxBlockSize: "none",
-						maxInlineSize: "none",
-						inlineSize: "min(90vw, var(--ui-sheet-size, 24rem))",
-						willChange: "transform",
 						transitionBehavior: "allow-discrete",
-
-						'&[data-side="right"]': {
+					}),
+					willChange("transform"),
+					data(
+						"side",
+						"right",
+						raw({
 							right: "0",
 							left: "auto",
 							borderLeftWidth: "1px",
@@ -153,12 +158,14 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 							paddingLeft: "1.5rem",
 							paddingRight: "calc(1.5rem + env(safe-area-inset-right, 0px))",
 							transform: "translateX(100%)",
-						},
-						'&[data-side="right"][open]': {
-							transform: "translateX(0)",
-						},
+						}),
+					),
+					data("side", "right", when("&[open]", raw({ transform: "translateX(0)" }))),
 
-						'&[data-side="left"]': {
+					data(
+						"side",
+						"left",
+						raw({
 							left: "0",
 							right: "auto",
 							borderRightWidth: "1px",
@@ -167,20 +174,18 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 							paddingRight: "1.5rem",
 							paddingLeft: "calc(1.5rem + env(safe-area-inset-left, 0px))",
 							transform: "translateX(-100%)",
-						},
-						'&[data-side="left"][open]': {
-							transform: "translateX(0)",
-						},
+						}),
+					),
+					data("side", "left", when("&[open]", raw({ transform: "translateX(0)" }))),
 
+					raw({
 						"@starting-style": {
 							'&[data-side="right"][open]': { transform: "translateX(100%)" },
 							'&[data-side="left"][open]': { transform: "translateX(-100%)" },
 						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionProperty: "none",
-						},
 					}),
+
+					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
 					gap("1rem"),
 					pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
 					pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),
@@ -247,13 +252,7 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[
-					css({
-						fontSize: "0.875rem",
-					}),
-					fg("neutral"),
-					mix,
-				]}
+				mix={[raw({ fontSize: "0.875rem" }), fg("neutral"), mix]}
 			>
 				{rest.children}
 			</p>
@@ -283,16 +282,7 @@ Sheet.Footer = function SheetFooter(handle: Handle<Sheet.FooterProps>) {
 			<div
 				{...rest}
 				data-slot="footer"
-				mix={[
-					css({
-						marginBlockStart: "auto",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "flex-end",
-					}),
-					gap("0.5rem"),
-					mix,
-				]}
+				mix={[mbs("auto"), flex(), items("center"), justify("end"), gap("0.5rem"), mix]}
 			/>
 		);
 	};

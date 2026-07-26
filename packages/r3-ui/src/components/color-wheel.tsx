@@ -22,12 +22,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { outline } from "@pkg/u/color";
-import { cursor } from "@pkg/u/general";
-import { block, relative } from "@pkg/u/layout";
-import { is, minIs } from "@pkg/u/size";
+import { bg, border, outline } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { absolute, block, inlineBlock, inset, relative } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { bs, is, m, mbs, minIs, mis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
 
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
 import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";
@@ -215,62 +216,49 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						'&[data-shape="circular"]',
 						when("&:has(> input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
 					),
-					css({
-						'&[data-shape="circular"]': {
-							display: "inline-block",
-							inlineSize: "var(--ui-color-wheel-size, 12rem)",
-							blockSize: "var(--ui-color-wheel-size, 12rem)",
-							minInlineSize: "0",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							backgroundImage: WHEEL_CONIC_GRADIENT,
-							maskImage: RING_MASK,
-							WebkitMaskImage: RING_MASK,
+					when('&[data-shape="circular"]', [
+						inlineBlock(),
+						is("var(--ui-color-wheel-size, 12rem)"),
+						bs("var(--ui-color-wheel-size, 12rem)"),
+						minIs("0"),
+						rounded("full"),
+						bg({ image: WHEEL_CONIC_GRADIENT }),
+						raw({ maskImage: RING_MASK, WebkitMaskImage: RING_MASK }),
 
-							"&::after": {
+						when("&::after", [
+							absolute(),
+							is("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+							mbs("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
+							mis("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
+							rounded("full"),
+							border({ width: "var(--ui-color-wheel-thumb-border-width, 2px)", style: "solid" }),
+							bg("neutral.tint"),
+							transition("transform"),
+							raw({
 								content: '""',
-								position: "absolute",
 								insetBlockStart: "50%",
 								insetInlineStart: "50%",
-								inlineSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
-								blockSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
-								marginBlockStart: "calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)",
-								marginInlineStart: "calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)",
-								borderRadius: "var(--ui-radius-full, 9999px)",
-								borderWidth: "var(--ui-color-wheel-thumb-border-width, 2px)",
-								borderStyle: "solid",
 								borderColor: "var(--ui-color-wheel-value, var(--ui-primary-bg-solid))",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
 								boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 								pointerEvents: "none",
-								transitionProperty: "transform",
-								transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-								transitionDuration: "150ms",
 								transform:
 									"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
-							},
+							}),
+						]),
 
-							"&:has(> input:disabled)": {
-								opacity: "0.5",
+						when("&:has(> input:disabled)", [
+							opacity(50),
+							when("&::after", [border("neutral"), raw({ boxShadow: "none" })]),
+						]),
 
-								"&::after": {
-									borderColor: "var(--ui-neutral-border)",
-									boxShadow: "none",
-								},
-							},
+						when("& > input", [absolute(), inset("0"), is("full"), bs("full"), opacity(0)]),
 
-							"& > input": {
-								position: "absolute",
-								inset: "0",
-								inlineSize: "100%",
-								blockSize: "100%",
-								opacity: "0",
-							},
-
-							"@media (prefers-reduced-motion: reduce)": {
-								"&::after": { transitionDuration: "0s" },
-							},
-						},
-					}),
+						media(
+							"(prefers-reduced-motion: reduce)",
+							when("&::after", raw({ transitionDuration: "0s" })),
+						),
+					]),
 					mix,
 				]}
 			>
@@ -297,57 +285,46 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						is("full"),
 						cursor("pointer"),
 						when("&:disabled", cursor("not-allowed")),
-						css({
-							WebkitAppearance: "none",
-							appearance: "none",
-							blockSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
-							margin: "0",
-							backgroundColor: "transparent",
-							outlineStyle: "none",
+						bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+						m("0"),
+						bg("transparent"),
+						raw({ WebkitAppearance: "none", appearance: "none", outlineStyle: "none" }),
 
-							"&::-webkit-slider-runnable-track": {
-								WebkitAppearance: "none",
-								appearance: "none",
-								blockSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
-								borderRadius: "var(--ui-radius-full, 9999px)",
-								backgroundImage: HUE_TRACK_GRADIENT,
-							},
-							"&::-moz-range-track": {
-								appearance: "none",
-								blockSize: "var(--ui-color-wheel-thumb-size, 1.25rem)",
-								borderRadius: "var(--ui-radius-full, 9999px)",
-								borderStyle: "none",
-								backgroundImage: HUE_TRACK_GRADIENT,
-							},
+						when("&::-webkit-slider-runnable-track", [
+							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+							rounded("full"),
+							bg({ image: HUE_TRACK_GRADIENT }),
+							raw({ WebkitAppearance: "none", appearance: "none" }),
+						]),
+						when("&::-moz-range-track", [
+							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+							rounded("full"),
+							bg({ image: HUE_TRACK_GRADIENT }),
+							border({ style: "none" }),
+							raw({ appearance: "none" }),
+						]),
 
-							'[data-shape="circular"] &': {
-								WebkitAppearance: "none",
-								appearance: "none",
-								cursor: "pointer",
+						when('[data-shape="circular"] &', [
+							cursor("pointer"),
+							raw({ WebkitAppearance: "none", appearance: "none" }),
 
-								"&::-webkit-slider-runnable-track": {
-									backgroundImage: "none",
-									backgroundColor: "transparent",
-								},
-								"&::-moz-range-track": {
-									backgroundImage: "none",
-									backgroundColor: "transparent",
-								},
-								"&::-webkit-slider-thumb": {
-									boxShadow: "none",
-									borderStyle: "none",
-									backgroundColor: "transparent",
-								},
-								"&::-moz-range-thumb": {
-									boxShadow: "none",
-									borderStyle: "none",
-									backgroundColor: "transparent",
-								},
-								"&:focus-visible::-webkit-slider-thumb, &:focus-visible::-moz-range-thumb": {
-									outlineStyle: "none",
-								},
-							},
-						}),
+							when("&::-webkit-slider-runnable-track", bg({ image: "none", color: "transparent" })),
+							when("&::-moz-range-track", bg({ image: "none", color: "transparent" })),
+							when("&::-webkit-slider-thumb", [
+								border({ style: "none" }),
+								bg("transparent"),
+								raw({ boxShadow: "none" }),
+							]),
+							when("&::-moz-range-thumb", [
+								border({ style: "none" }),
+								bg("transparent"),
+								raw({ boxShadow: "none" }),
+							]),
+							when(
+								"&:focus-visible::-webkit-slider-thumb, &:focus-visible::-moz-range-thumb",
+								raw({ outlineStyle: "none" }),
+							),
+						]),
 						parts?.input,
 					]}
 				/>

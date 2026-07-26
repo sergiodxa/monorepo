@@ -11,13 +11,13 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { CheckIcon, MinusIcon } from "@pkg/lucide-remix";
+import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor } from "@pkg/u/general";
 import { block, center, hidden, hstack, relative } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
@@ -192,22 +192,7 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 					<CheckIcon aria-hidden />
 					<MinusIcon aria-hidden />
 				</span>
-				<input
-					type="checkbox"
-					{...rest}
-					mix={[
-						css({
-							position: "absolute",
-							inlineSize: "1px",
-							blockSize: "1px",
-							margin: 0,
-							overflow: "hidden",
-							clipPath: "inset(50%)",
-							whiteSpace: "nowrap",
-						}),
-						mix,
-					]}
-				/>
+				<input type="checkbox" {...rest} mix={[visuallyHidden(), mix]} />
 				{children}
 			</label>
 		);

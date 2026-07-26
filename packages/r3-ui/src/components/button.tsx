@@ -12,17 +12,16 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { LoaderCircleIcon } from "@pkg/lucide-remix";
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor, raw, userSelect } from "@pkg/u/general";
 import { absolute, flex, gap, inlineFlex, inset, items, justify, relative } from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
+import { bs, is, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
@@ -147,7 +146,13 @@ export function Button(handle: Handle<Button.Props>) {
 				data-pending={isPending || undefined}
 				disabled={resolvedDisabled}
 				mix={[
-					focusRingByColor(),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						when('&[data-color="neutral"]', outline("neutral.ring")),
+						when('&[data-color="success"]', outline("success.ring")),
+						when('&[data-color="warning"]', outline("warning.ring")),
+						when('&[data-color="danger"]', outline("danger.ring")),
+					]),
 					interactiveTransition(),
 					inlineFlex(),
 					items("center"),
@@ -156,17 +161,13 @@ export function Button(handle: Handle<Button.Props>) {
 					rounded("md"),
 					weight("medium"),
 					cursor("default"),
-					raw({ userSelect: "none" }),
+					userSelect(),
 
 					pi(4),
 					pb(2),
-					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+					text("sm"),
 
-					when('&[data-size="sm"]', [
-						pi(3),
-						pb(1.5),
-						raw({ fontSize: "0.75rem", lineHeight: "calc(1 / 0.75)" }),
-					]),
+					when('&[data-size="sm"]', [pi(3), pb(1.5), text("xs")]),
 					when('&[data-size="lg"]', [pi(5), pb(2.5), text("base")]),
 
 					when('&[data-variant="solid"]', [
@@ -203,7 +204,8 @@ export function Button(handle: Handle<Button.Props>) {
 					]),
 
 					when('&[data-variant="outline"]', [
-						raw({ borderWidth: "2px", backgroundColor: "transparent" }),
+						raw({ borderWidth: "2px" }),
+						bg("transparent"),
 						when('&[data-color="primary"]', [
 							border("primary.strong"),
 							fg("primary"),
@@ -237,7 +239,7 @@ export function Button(handle: Handle<Button.Props>) {
 					]),
 
 					when('&[data-variant="ghost"]', [
-						raw({ backgroundColor: "transparent" }),
+						bg("transparent"),
 						when('&[data-color="primary"]', [
 							fg("primary"),
 							when("&:hover", bg("primary.tint")),
@@ -282,20 +284,14 @@ export function Button(handle: Handle<Button.Props>) {
 								flex(),
 								items("center"),
 								justify("center"),
-								when(
-									"& svg",
-									raw({
-										inlineSize: "var(--ui-spinner-icon-size-sm, 1rem)",
-										blockSize: "var(--ui-spinner-icon-size-sm, 1rem)",
-									}),
-								),
-								when(
-									'[data-size="lg"] & svg',
-									raw({
-										inlineSize: "var(--ui-spinner-icon-size-md, 1.25rem)",
-										blockSize: "var(--ui-spinner-icon-size-md, 1.25rem)",
-									}),
-								),
+								when("& svg", [
+									is("var(--ui-spinner-icon-size-sm, 1rem)"),
+									bs("var(--ui-spinner-icon-size-sm, 1rem)"),
+								]),
+								when('[data-size="lg"] & svg', [
+									is("var(--ui-spinner-icon-size-md, 1.25rem)"),
+									bs("var(--ui-spinner-icon-size-md, 1.25rem)"),
+								]),
 								parts?.spinner,
 							]}
 						>

@@ -14,13 +14,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { border } from "@pkg/u/color";
+import { bg, border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { inlineFlex, items, justify, relative } from "@pkg/u/layout";
+import { raw, userSelect } from "@pkg/u/general";
+import { absolute, inlineFlex, inset, items, justify, relative, shrink } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, is } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { after, before, data } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /** Shape variant {@link ColorSwatch} falls back to when `shape` is omitted. */
 const DEFAULT_SHAPE: ColorSwatch.Shape = "rounded";
@@ -128,47 +129,34 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 					is("var(--ui-color-swatch-size-md, 1.75rem)"),
 					bs("var(--ui-color-swatch-size-md, 1.75rem)"),
 					rounded("md"),
-					when('&[data-size="sm"]', [
+					data("size", "sm", [
 						is("var(--ui-color-swatch-size-sm, 1.25rem)"),
 						bs("var(--ui-color-swatch-size-sm, 1.25rem)"),
 					]),
-					when('&[data-size="lg"]', [
+					data("size", "lg", [
 						is("var(--ui-color-swatch-size-lg, 2.5rem)"),
 						bs("var(--ui-color-swatch-size-lg, 2.5rem)"),
 					]),
-					when('&[data-shape="circle"]', rounded("full")),
-					css({
-						flexShrink: 0,
-						verticalAlign: "middle",
-						userSelect: "none",
-
-						'&[data-shape="square"]': {
-							borderRadius: "0",
-						},
-
-						"&::before": {
-							content: '""',
-							position: "absolute",
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-							backgroundImage:
+					data("shape", "circle", rounded("full")),
+					shrink(),
+					raw({ verticalAlign: "middle" }),
+					userSelect(),
+					data("shape", "square", rounded("none")),
+					before([
+						absolute(),
+						inset(0),
+						bg({
+							image:
 								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
-							backgroundSize:
-								"var(--ui-color-swatch-checker-size, 0.625rem) var(--ui-color-swatch-checker-size, 0.625rem)",
-						},
-
-						"&::after": {
-							content: '""',
-							position: "absolute",
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-							backgroundColor: "var(--ui-color-swatch-value, transparent)",
-						},
-					}),
+							size: "var(--ui-color-swatch-checker-size, 0.625rem) var(--ui-color-swatch-checker-size, 0.625rem)",
+						}),
+						raw({ content: '""' }),
+					]),
+					after([
+						absolute(),
+						inset(0),
+						raw({ content: '""', backgroundColor: "var(--ui-color-swatch-value, transparent)" }),
+					]),
 					mix,
 				]}
 			/>

@@ -14,19 +14,26 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import {
 	absolute,
 	appearance,
+	before,
 	bg,
 	bs,
+	cursor,
 	focusVisible,
 	inlineBlock,
 	is,
 	m,
 	opacity,
 	outline,
+	raw,
 	relative,
 	rounded,
+	shrink,
+	transition,
 	when,
 } from "@pkg/u";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
+
+import { durations, easings } from "../animations/tokens";
 
 /**
  * Applied through {@link attrs} so the host always carries the platform's
@@ -102,34 +109,31 @@ export function Switch(handle: Handle<Switch.Props>) {
 					bs("var(--ui-switch-track-block-size, 1.5rem)"),
 					rounded("full"),
 					bg("neutral.border"),
-					when("&::before", [
+					before([
 						absolute(),
 						is("var(--ui-switch-thumb-size, 1.25rem)"),
 						bs("var(--ui-switch-thumb-size, 1.25rem)"),
 						rounded("full"),
 						bg("primary.onSolid"),
+						transition("inset-inline-start, scale", { duration: 150 }),
 					]),
 					when("&:checked", bg("primary.solid")),
 					when("&:active", bg("neutral.strong")),
 					when("&:checked:active", bg("primary.bg-solid-hover")),
 					focusVisible(outline({ color: "primary.ring", offset: 2 })),
 					when("&:disabled", opacity(50)),
-					css({
+					cursor("pointer"),
+					shrink(0),
+					transition("background-color", { duration: durations.fast, easing: easings.standard }),
+					when("&:disabled", cursor("not-allowed")),
+					raw({
 						verticalAlign: "middle",
-						flexShrink: 0,
-						cursor: "pointer",
-						transitionProperty: "background-color",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
 
 						"&::before": {
 							content: '""',
 							insetBlockStart: "var(--ui-switch-thumb-inset, 0.125rem)",
 							insetInlineStart: "var(--ui-switch-thumb-inset, 0.125rem)",
 							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-							transitionProperty: "inset-inline-start, scale",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
 						},
 
 						"&:checked": {
@@ -143,10 +147,6 @@ export function Switch(handle: Handle<Switch.Props>) {
 							"&::before": {
 								scale: "0.95",
 							},
-						},
-
-						"&:disabled": {
-							cursor: "not-allowed",
 						},
 
 						"@media (prefers-reduced-motion: reduce)": {

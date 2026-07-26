@@ -1,6 +1,10 @@
+export { calc } from "./calc";
 export { cursor } from "./cursor";
 export { combine } from "./combine";
+export { env } from "./env";
 export { if } from "./if";
 export { raw } from "./raw";
+export { userSelect } from "./user-select";
 export { var } from "./var";
 export { vars } from "./vars";
+export { willChange } from "./will-change";

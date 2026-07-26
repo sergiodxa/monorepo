@@ -16,13 +16,12 @@ import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
 import { flex, inlineFlex, items, justify } from "@pkg/u/layout";
-import { is } from "@pkg/u/size";
+import { bs, is } from "@pkg/u/size";
 import { active, focusVisible, hover, invalid, when } from "@pkg/u/state";
 import { textAlign } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
 import { fieldStackLayout } from "../styles/field-stack-layout";
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 import { Input } from "./input";
@@ -64,16 +63,10 @@ function stepperButtonMix(dividerEdge: "start" | "end") {
 		borderEdge(dividerEdge === "start" ? "inline-start" : "inline-end", { width: 1 }),
 		hover(bg("neutral.bg-tint-hover")),
 		active(bg("neutral.bg-tint-pressed")),
-		focusRingPrimary(),
-		css({
-			borderRadius: "0",
-			backgroundColor: "transparent",
-
-			"& svg": {
-				inlineSize: "1rem",
-				blockSize: "1rem",
-			},
-		}),
+		when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+		rounded("none"),
+		bg("transparent"),
+		when("& svg", [is("1rem"), bs("1rem")]),
 		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 	];
 }
@@ -241,22 +234,20 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 				{...rest}
 				mix={[
 					textAlign("center"),
-					css({
+					rounded("none"),
+					raw({
 						flex: "1 1 0%",
 						borderWidth: "0",
-						borderRadius: "0",
-						backgroundColor: "transparent",
-						color: "inherit",
 						"-moz-appearance": "textfield",
 
 						"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
 							"-webkit-appearance": "none",
 							margin: "0",
 						},
-						"&:disabled": {
-							backgroundColor: "transparent",
-						},
 					}),
+					bg("transparent"),
+					fg("inherit"),
+					when("&:disabled", bg("transparent")),
 					focusVisible(raw({ outlineWidth: "0" })),
 					invalid([raw({ outlineWidth: "0" }), fg("danger")]),
 					mix,

@@ -16,13 +16,16 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { ChevronRightIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, transition } from "@pkg/u/effects";
-import { center, hstack, interpolateSize, vstack } from "@pkg/u/layout";
+import { cursor, raw } from "@pkg/u/general";
+import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@pkg/u/layout";
 import { clip } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
 import { bs, is, pb, pie, pi } from "@pkg/u/size";
 import { detailsContent, when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { rotate } from "@pkg/u/transform";
+import { text } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { panelChrome } from "../styles/panel-chrome";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -182,11 +185,11 @@ export function Tree(handle: Handle<Tree.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					vstack(),
 					pb(1),
 					pi(1),
-					css({ outline: "none" }),
+					raw({ outline: "none" }),
 					when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
 					mix,
 				]}
@@ -253,24 +256,19 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 					attrs({ role: DEFAULT_ITEM_ROLE }),
 					interpolateSize(),
 					detailsContent([clip(), bs(0)]),
-					css({
-						"&::details-content": {
+					detailsContent(
+						raw({
 							transitionProperty: "block-size, content-visibility",
 							transitionDuration: "200ms",
 							transitionBehavior: "allow-discrete",
-						},
-					}),
+						}),
+					),
 					when("&[open]::details-content", bs("auto")),
-					css({
-						[`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`]: {
-							transform: "rotate(90deg)",
-						},
-						"@media (prefers-reduced-motion: reduce)": {
-							"&::details-content": {
-								transitionDuration: "0s",
-							},
-						},
-					}),
+					when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						detailsContent(raw({ transitionDuration: "0s" })),
+					),
 					mix,
 				]}
 			>
@@ -326,25 +324,16 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 					pb(1.5),
 					pie(3),
 					fg("neutral.emphasis"),
-					css({
-						cursor: "default",
+					cursor("default"),
+					raw({
 						listStyle: "none",
 						paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
 						outline: "none",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						"&::-webkit-details-marker": {
-							display: "none",
-						},
-						"&::marker": {
-							content: '""',
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionDuration: "0s",
-						},
 					}),
+					text("sm"),
+					when("&::-webkit-details-marker", hidden()),
+					when("&::marker", raw({ content: '""' })),
+					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 					when("&:hover", bg("neutral.bg-tint-hover")),
 					when("&:active", bg("neutral.bg-tint-pressed")),
 					when("&:focus", bg("neutral.bg-tint-hover")),
@@ -408,13 +397,8 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 					rounded("sm"),
 					fg("neutral.muted"),
 					transition("transform, background-color"),
-					css({
-						flexShrink: "0",
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionDuration: "0s",
-						},
-					}),
+					shrink(),
+					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 					when("&:hover", bg("neutral.bg-tint-pressed")),
 					when("&:focus-visible", outline("primary.ring")),
 					mix,

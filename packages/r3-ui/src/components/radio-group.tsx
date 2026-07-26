@@ -15,10 +15,13 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { gap } from "@pkg/u/layout";
-import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@pkg/u/layout";
+import { bs, is } from "@pkg/u/size";
+import { after, when } from "@pkg/u/state";
+import { text } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 /**
  * `role="radiogroup"` applied through {@link attrs} unless a consumer
@@ -142,14 +145,9 @@ export function RadioGroup(handle: Handle<RadioGroup.Props, RadioGroup.Context>)
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					css({
-						display: "flex",
-						flexDirection: "column",
-
-						'&[data-orientation="horizontal"]': {
-							flexDirection: "row",
-						},
-					}),
+					flex(),
+					flexCol(),
+					when('&[data-orientation="horizontal"]', flexRow()),
 					gap("0.5rem"),
 					when('&[data-orientation="horizontal"]', gap("1rem")),
 					mix,
@@ -199,18 +197,11 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 			<label
 				{...rest}
 				mix={[
-					css({
-						display: "flex",
-						cursor: "default",
-						alignItems: "center",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						"&:has(input:disabled)": {
-							cursor: "not-allowed",
-							opacity: 0.5,
-						},
-					}),
+					flex(),
+					cursor("default"),
+					items("center"),
+					text("sm"),
+					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
 					gap("0.5rem"),
 					fg("neutral.emphasis"),
 					mix,
@@ -230,31 +221,26 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 				<span
 					data-slot="indicator"
 					mix={[
-						css({
-							position: "relative",
-							display: "flex",
-							flexShrink: 0,
-							alignItems: "center",
-							justifyContent: "center",
-							inlineSize: "var(--ui-radio-size, 1.25rem)",
-							blockSize: "var(--ui-radio-size, 1.25rem)",
-
-							"&::after": {
-								content: '""',
-								inlineSize: "var(--ui-radio-mark-size, 0.625rem)",
-								blockSize: "var(--ui-radio-mark-size, 0.625rem)",
-								transform: "scale(0)",
-							},
-
-							"input:checked ~ &::after": {
-								transform: "scale(1)",
-							},
-						}),
+						relative(),
+						flex(),
+						shrink(),
+						items("center"),
+						justify("center"),
+						is("var(--ui-radio-size, 1.25rem)"),
+						bs("var(--ui-radio-size, 1.25rem)"),
+						after([
+							is("var(--ui-radio-mark-size, 0.625rem)"),
+							bs("var(--ui-radio-mark-size, 0.625rem)"),
+							rounded("full"),
+							bg("primary.onSolid"),
+							transition("transform"),
+							raw({ content: '""', transform: "scale(0)" }),
+						]),
 						rounded("full"),
 						border({ color: "neutral.strong", width: 2 }),
 						bg("neutral.tint"),
 						transition("background-color, border-color"),
-						when("&::after", [rounded("full"), bg("primary.onSolid"), transition("transform")]),
+						when("input:checked ~ &::after", raw({ transform: "scale(1)" })),
 						when("input:checked ~ &", [border("primary.solid"), bg("primary.solid")]),
 						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
 						parts?.indicator,

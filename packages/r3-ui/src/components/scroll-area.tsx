@@ -11,12 +11,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg } from "@pkg/u/color";
+import { bg, border, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { hover, when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { raw } from "@pkg/u/general";
+import { relative } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { bs, is } from "@pkg/u/size";
+import { data, hover, when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { panelChrome } from "../styles/panel-chrome";
 
 /**
@@ -83,19 +87,7 @@ export function ScrollArea(handle: Handle<ScrollArea.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				data-slot="scroll-area"
-				mix={[
-					panelChrome(),
-					css({
-						position: "relative",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} data-slot="scroll-area" mix={[panelChrome(), relative(), mix]} />;
 	};
 }
 
@@ -137,49 +129,34 @@ ScrollArea.Viewport = function ScrollAreaViewport(handle: Handle<ScrollArea.View
 				data-slot="viewport"
 				mix={[
 					attrs({ tabIndex: DEFAULT_TAB_INDEX }),
-					focusRingPrimary(),
-					css({
-						inlineSize: "100%",
-						blockSize: "100%",
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					is("full"),
+					bs("full"),
+					raw({
 						scrollBehavior: "smooth",
 						scrollbarWidth: "thin",
 						scrollbarGutter: "stable",
-
-						'&[data-orientation="vertical"]': {
-							overflowBlock: "auto",
-							overflowInline: "hidden",
-						},
-						'&[data-orientation="horizontal"]': {
-							overflowInline: "auto",
-							overflowBlock: "hidden",
-						},
-						'&[data-orientation="both"]': {
-							overflow: "auto",
-						},
-
-						"&::-webkit-scrollbar": {
-							width: "0.75rem",
-							height: "0.75rem",
-						},
-						"&::-webkit-scrollbar-track": {
-							backgroundColor: "transparent",
-						},
-						"&::-webkit-scrollbar-thumb": {
-							borderWidth: "3px",
-							borderStyle: "solid",
-							borderColor: "transparent",
-							backgroundClip: "content-box",
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							scrollBehavior: "auto",
-						},
 					}),
+					// `overflowBlock`/`overflowInline` are logical axis-scoped overflow
+					// properties with no `@pkg/u` equivalent (`u.overflow()` only covers
+					// the physical `overflowX`/`overflowY` pair).
+					data("orientation", "vertical", raw({ overflowBlock: "auto", overflowInline: "hidden" })),
+					data(
+						"orientation",
+						"horizontal",
+						raw({ overflowInline: "auto", overflowBlock: "hidden" }),
+					),
+					data("orientation", "both", overflow("auto")),
+					when("&::-webkit-scrollbar", raw({ width: "0.75rem", height: "0.75rem" })),
+					when("&::-webkit-scrollbar-track", bg("transparent")),
 					when("&::-webkit-scrollbar-thumb", [
 						rounded("full"),
 						bg("neutral.border"),
+						border({ color: "transparent", width: "3px" }),
+						raw({ backgroundClip: "content-box" }),
 						hover(bg("neutral.strong")),
 					]),
+					media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
 					mix,
 				]}
 			/>

@@ -13,15 +13,15 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { opacity } from "@pkg/u/effects";
-import { flexRow, hstack, relative, vstack } from "@pkg/u/layout";
-import { pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { borderEdge, fg, outline } from "@pkg/u/color";
+import { opacity, transition } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { absolute, flexCol, flexRow, hstack, inset, relative, vstack } from "@pkg/u/layout";
+import { bs, is, mbe, mie, pb, pi } from "@pkg/u/size";
+import { after, data, when } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Default {@link Tabs.Props} orientation, applied when `orientation` is omitted. */
@@ -141,7 +141,7 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[vstack(), when('&[data-orientation="vertical"]', flexRow()), mix]}
+				mix={[vstack(), data("orientation", "vertical", flexRow()), mix]}
 			/>
 		);
 	};
@@ -180,42 +180,33 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 					attrs({ role: DEFAULT_LIST_ROLE }),
 					relative(),
 					hstack({ gap: 1 }),
-					css({
-						borderBlockEndWidth: "1px",
-						borderBlockEndStyle: "solid",
-						borderColor: "var(--ui-neutral-border)",
-
-						"&::after": {
+					borderEdge("block-end", { color: "neutral", width: 1 }),
+					after([
+						absolute(),
+						is("var(--ui-tab-indicator-inline-size, 0px)"),
+						bs("0.125rem"),
+						transition("inset-inline-start, inset-block-start, inline-size, block-size, opacity", {
+							duration: "200ms",
+							easing: "ease-out",
+						}),
+						raw({
 							content: '""',
-							position: "absolute",
 							insetInlineStart: "var(--ui-tab-indicator-inline-start, 0px)",
 							insetBlockEnd: "-0.0625rem",
-							inlineSize: "var(--ui-tab-indicator-inline-size, 0px)",
-							blockSize: "0.125rem",
 							opacity: "var(--ui-tab-indicator-opacity, 0)",
 							backgroundColor: "var(--ui-primary-fg)",
-							transitionProperty:
-								"inset-inline-start, inset-block-start, inline-size, block-size, opacity",
-							transitionDuration: "200ms",
-							transitionTimingFunction: "ease-out",
-						},
-
-						'&[data-orientation="vertical"]': {
-							flexDirection: "column",
-							borderBlockEndWidth: "0",
-							borderInlineEndWidth: "1px",
-							borderInlineEndStyle: "solid",
-
-							"&::after": {
-								insetInlineStart: "auto",
-								insetInlineEnd: "0",
-								insetBlockEnd: "auto",
-								insetBlockStart: "var(--ui-tab-indicator-block-start, 0px)",
-								inlineSize: "0.125rem",
-								blockSize: "var(--ui-tab-indicator-block-size, 0px)",
-							},
-						},
-					}),
+						}),
+					]),
+					data("orientation", "vertical", [
+						flexCol(),
+						borderEdge("block-end", { width: "0" }),
+						borderEdge("inline-end", { color: "neutral", width: 1 }),
+						after([
+							inset("var(--ui-tab-indicator-block-start, 0px)", "0", "auto", "auto"),
+							is("0.125rem"),
+							bs("var(--ui-tab-indicator-block-size, 0px)"),
+						]),
+					]),
 					mix,
 				]}
 			/>
@@ -255,7 +246,7 @@ Tabs.Tab = function TabsTab(handle: Handle<Tabs.TabProps>) {
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_TAB_ROLE }),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					pi(4),
 					pb(2),
 					weight(500),
@@ -263,27 +254,17 @@ Tabs.Tab = function TabsTab(handle: Handle<Tabs.TabProps>) {
 					when("&:hover", fg("neutral.emphasis")),
 					when('&[aria-selected="true"]', fg("primary")),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						marginBlockEnd: "-0.0625rem",
-						cursor: "default",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						borderBlockEndWidth: "2px",
-						borderBlockEndStyle: "solid",
-						borderColor: "transparent",
-
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-						},
-
-						'&[data-orientation="vertical"]': {
-							marginBlockEnd: "0",
-							marginInlineEnd: "-0.0625rem",
-							borderBlockEndWidth: "0",
-							borderInlineEndWidth: "2px",
-							borderInlineEndStyle: "solid",
-						},
-					}),
+					mbe("-0.0625rem"),
+					cursor("default"),
+					text("sm"),
+					borderEdge("block-end", { color: "transparent", width: 2 }),
+					when('&[aria-disabled="true"]', cursor("not-allowed")),
+					data("orientation", "vertical", [
+						mbe("0"),
+						mie("-0.0625rem"),
+						borderEdge("block-end", { width: "0" }),
+						borderEdge("inline-end", { color: "transparent", width: 2 }),
+					]),
 					mix,
 				]}
 			/>
@@ -307,7 +288,7 @@ Tabs.Panels = function TabsPanels(handle: Handle<Tabs.PanelsProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[css({ flex: "1 1 0%" }), mix]} />;
+		return <div {...rest} mix={[raw({ flex: "1 1 0%" }), mix]} />;
 	};
 };
 
@@ -331,10 +312,10 @@ Tabs.Panel = function TabsPanel(handle: Handle<Tabs.PanelProps>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_PANEL_ROLE, tabIndex: DEFAULT_PANEL_TAB_INDEX }),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					pb(4),
 					pi(4),
-					css({ outlineStyle: "none" }),
+					raw({ outlineStyle: "none" }),
 					mix,
 				]}
 			/>

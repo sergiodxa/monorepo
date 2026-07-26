@@ -14,9 +14,10 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, fg } from "@pkg/u/color";
-import { gap } from "@pkg/u/layout";
-import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { raw } from "@pkg/u/general";
+import { flex, gap, items } from "@pkg/u/layout";
+import { data, when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 import { Calendar } from "./calendar";
 import { Input } from "./input";
@@ -243,14 +244,7 @@ export function RangeCalendar(handle: Handle<RangeCalendar.Props>) {
 				{children ?? (
 					<div
 						data-slot="fields"
-						mix={[
-							attrs({ role: "group" }),
-							css({
-								display: "flex",
-								alignItems: "center",
-							}),
-							gap("0.5rem"),
-						]}
+						mix={[attrs({ role: "group" }), flex(), items("center"), gap("0.5rem")]}
 					>
 						<Input
 							type="date"
@@ -444,27 +438,28 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 			<Calendar.Cell
 				{...rest}
 				mix={[
-					css({
-						"&[data-selection-start]": {
-							borderStartEndRadius: "0",
-							borderEndEndRadius: "0",
-						},
-						"&[data-selection-end]": {
-							borderStartStartRadius: "0",
-							borderEndStartRadius: "0",
-						},
-						'&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])': {
-							borderStartStartRadius: "0",
-							borderStartEndRadius: "0",
-							borderEndStartRadius: "0",
-							borderEndEndRadius: "0",
-						},
-					}),
-					when("&[data-selection-start]", [bg("primary.solid"), fg("primary.onSolid")]),
-					when("&[data-selection-end]", [bg("primary.solid"), fg("primary.onSolid")]),
+					// No `@pkg/u` utility covers the individual logical corner-radius
+					// properties (`borderStartEndRadius` etc.) — only the full
+					// `borderRadius` shorthand `u.rounded()` sets.
+					data("selection-start", [
+						bg("primary.solid"),
+						fg("primary.onSolid"),
+						raw({ borderStartEndRadius: "0", borderEndEndRadius: "0" }),
+					]),
+					data("selection-end", [
+						bg("primary.solid"),
+						fg("primary.onSolid"),
+						raw({ borderStartStartRadius: "0", borderEndStartRadius: "0" }),
+					]),
 					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
 						bg("primary.tint"),
 						fg("primary.emphasis"),
+						raw({
+							borderStartStartRadius: "0",
+							borderStartEndRadius: "0",
+							borderEndStartRadius: "0",
+							borderEndEndRadius: "0",
+						}),
 					]),
 					mix,
 				]}

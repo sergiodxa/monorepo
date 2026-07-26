@@ -11,8 +11,8 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 import { weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
 /**
  * Prop types for {@link Label}.
@@ -56,10 +56,7 @@ export function Label(handle: Handle<Label.Props>) {
 				mix={[
 					weight("medium"),
 					fg("neutral.emphasis"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "1",
-					}),
+					raw({ fontSize: "0.875rem", lineHeight: "1" }),
 					mix,
 				]}
 			/>

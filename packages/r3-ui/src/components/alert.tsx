@@ -11,14 +11,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { border } from "@pkg/u/color";
+import { border, colorMix, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
-import { absolute, gap, inset, relative, shrink, vstack } from "@pkg/u/layout";
+import { absolute, gap, grow, inset, relative, self, shrink, vstack } from "@pkg/u/layout";
 import { bs, is, mbe, minIs, p, pis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { leading, tracking, weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -218,7 +218,7 @@ Alert.Icon = function AlertIcon(handle: Handle<Alert.IconProps>) {
 					absolute(),
 					inset(4, "auto", "auto", 4),
 					when("& > svg", [is(4), bs(4)]),
-					raw({ color: "currentcolor" }),
+					fg("currentcolor"),
 					mix,
 				]}
 			>
@@ -244,7 +244,15 @@ Alert.Content = function AlertContent(handle: Handle<Alert.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[vstack({ gap: 1 }), minIs(0), raw({ flex: "1 1 0%" }), mix]}
+				mix={[
+					vstack({ gap: 1 }),
+					minIs(0),
+					grow(),
+					shrink(1),
+					/** No `flex-basis`-only utility exists. */
+					raw({ flexBasis: "0%" }),
+					mix,
+				]}
 			>
 				{children}
 			</div>
@@ -278,6 +286,11 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 					weight("medium"),
 					leading(1),
 					tracking("tight"),
+					/**
+					 * No bare `fontSize`-only utility exists — `text()` always
+					 * pairs it with a scale `lineHeight`, which would override
+					 * the deliberately collapsed `leading(1)` above.
+					 */
 					raw({ fontSize: "0.875rem" }),
 					mix,
 				]}
@@ -308,10 +321,9 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 				mix={[
 					leading("relaxed"),
 					when("& p", leading("relaxed")),
-					raw({
-						fontSize: "0.875rem",
-						color: "color-mix(in oklab, currentcolor 70%, transparent)",
-					}),
+					/** No bare `fontSize`-only utility exists (see {@link Alert.Title}). */
+					raw({ fontSize: "0.875rem" }),
+					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}
 			>
@@ -334,7 +346,7 @@ Alert.Action = function AlertAction(handle: Handle<Alert.ActionProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="action" mix={[shrink(), css({ alignSelf: "flex-start" }), mix]}>
+			<div {...rest} data-slot="action" mix={[shrink(), self("start"), mix]}>
 				{children}
 			</div>
 		);

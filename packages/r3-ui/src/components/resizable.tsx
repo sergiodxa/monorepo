@@ -15,9 +15,13 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { focusVisible, hover, when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw, userSelect } from "@pkg/u/general";
+import { flex, flexCol, flexRow, grow, items, justify, relative, shrink } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { bs, is, maxBs, maxIs, minBs, minIs } from "@pkg/u/size";
+import { before, data, focusVisible, hover, when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /** Default {@link Resizable.Props} orientation, applied when `orientation` is omitted. */
 const DEFAULT_ORIENTATION: Resizable.Orientation = "horizontal";
@@ -134,19 +138,12 @@ export function Resizable(handle: Handle<Resizable.Props, Resizable.Context>) {
 				data-orientation={resolvedOrientation}
 				{...rest}
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "row",
-						inlineSize: "100%",
-						overflow: "hidden",
-
-						'&[data-orientation="vertical"]': {
-							flexDirection: "column",
-						},
-						'&[aria-disabled="true"]': {
-							opacity: 0.7,
-						},
-					}),
+					flex(),
+					flexRow(),
+					is("full"),
+					overflow("hidden"),
+					when('&[data-orientation="vertical"]', flexCol()),
+					when('&[aria-disabled="true"]', opacity(70)),
 					rounded("lg"),
 					border({ color: "neutral", width: 1 }),
 					bg("neutral.tint"),
@@ -204,21 +201,21 @@ Resizable.Panel = function ResizablePanel(handle: Handle<Resizable.PanelProps>) 
 				{...rest}
 				style={resolvedStyle}
 				mix={[
-					css({
-						flex: "1 1 var(--ui-resizable-panel-size, 0%)",
-						minBlockSize: 0,
-						minInlineSize: 0,
-						overflow: "auto",
-
-						'&[data-orientation="horizontal"]': {
-							minInlineSize: "var(--ui-resizable-panel-min-size, 0%)",
-							maxInlineSize: "var(--ui-resizable-panel-max-size, 100%)",
-						},
-						'&[data-orientation="vertical"]': {
-							minBlockSize: "var(--ui-resizable-panel-min-size, 0%)",
-							maxBlockSize: "var(--ui-resizable-panel-max-size, 100%)",
-						},
-					}),
+					grow(),
+					shrink(1),
+					/** No `flex-basis`-only utility exists. */
+					raw({ flexBasis: "var(--ui-resizable-panel-size, 0%)" }),
+					minBs(0),
+					minIs(0),
+					data("orientation", "horizontal", [
+						minIs("var(--ui-resizable-panel-min-size, 0%)"),
+						maxIs("var(--ui-resizable-panel-max-size, 100%)"),
+					]),
+					data("orientation", "vertical", [
+						minBs("var(--ui-resizable-panel-min-size, 0%)"),
+						maxBs("var(--ui-resizable-panel-max-size, 100%)"),
+					]),
+					overflow("auto"),
 					mix,
 				]}
 			/>
@@ -264,40 +261,25 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_HANDLE_ROLE, tabIndex: DEFAULT_HANDLE_TAB_INDEX }),
-					css({
-						position: "relative",
-						display: "flex",
-						flex: "0 0 var(--ui-resizable-handle-size, 0.75rem)",
-						alignItems: "center",
-						justifyContent: "center",
-						backgroundColor: "transparent",
-						userSelect: "none",
-						touchAction: "none",
-						outlineStyle: "none",
-
-						'&[data-orientation="horizontal"]': {
-							cursor: "col-resize",
-						},
-						'&[data-orientation="vertical"]': {
-							cursor: "row-resize",
-						},
-
-						"&::before": {
-							content: '""',
-						},
-						'&[data-orientation="horizontal"]::before': {
-							blockSize: "2.5rem",
-							inlineSize: "0.125rem",
-						},
-						'&[data-orientation="vertical"]::before': {
-							blockSize: "0.125rem",
-							inlineSize: "2.5rem",
-						},
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							opacity: 0.5,
-						},
-					}),
+					relative(),
+					flex(),
+					grow(0),
+					shrink(0),
+					/** No `flex-basis`-only utility exists. */
+					raw({ flexBasis: "var(--ui-resizable-handle-size, 0.75rem)" }),
+					items("center"),
+					justify("center"),
+					bg("transparent"),
+					userSelect(),
+					/** No matching utility for `touch-action` or for unsetting `outline` entirely. */
+					raw({ touchAction: "none", outlineStyle: "none" }),
+					when('&[data-orientation="horizontal"]', cursor("col-resize")),
+					when('&[data-orientation="vertical"]', cursor("row-resize")),
+					/** No utility sets the bare CSS `content` property. */
+					before(raw({ content: '""' })),
+					data("orientation", "horizontal", before([bs("2.5rem"), is("0.125rem")])),
+					data("orientation", "vertical", before([bs("0.125rem"), is("2.5rem")])),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 					fg("neutral.muted"),
 					when("&::before", [rounded("full"), bg("neutral.border")]),
 					hover(when("&::before", bg("neutral.strong"))),

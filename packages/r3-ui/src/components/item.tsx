@@ -14,11 +14,11 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { center, flex, flexCol, gap, items } from "@pkg/u/layout";
-import { bs, is, mis, minIs } from "@pkg/u/size";
+import { raw } from "@pkg/u/general";
+import { center, container, flex, flexCol, gap, grow, items, shrink } from "@pkg/u/layout";
+import { bs, is, mis, minIs, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { truncate, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
+import { text, truncate, weight } from "@pkg/u/typography";
 
 /**
  * Named container {@link Item} declares on its own host, so
@@ -133,12 +133,11 @@ export function Item(handle: Handle<Item.Props>) {
 				mix={[
 					flex(),
 					items("center"),
-					css({
-						gap: "var(--ui-item-gap, 0.75rem)",
-						paddingBlock: "var(--ui-item-padding-block, 0.625rem)",
-						paddingInline: "var(--ui-item-padding-inline, 0.75rem)",
-						container: `${CONTAINER_NAME} / inline-size`,
-
+					gap("var(--ui-item-gap, 0.75rem)"),
+					pb("var(--ui-item-padding-block, 0.625rem)"),
+					pi("var(--ui-item-padding-inline, 0.75rem)"),
+					container(CONTAINER_NAME),
+					raw({
 						[NARROW_CONTAINER_QUERY]: {
 							flexWrap: "wrap",
 						},
@@ -186,11 +185,9 @@ Item.Media = function ItemMedia(handle: Handle<Item.MediaProps>) {
 					center(),
 					fg("neutral"),
 					when("& > svg", [is(5), bs(5)]),
-					css({
-						flexShrink: "0",
-						inlineSize: "var(--ui-item-media-size, 2rem)",
-						blockSize: "var(--ui-item-media-size, 2rem)",
-					}),
+					shrink(),
+					is("var(--ui-item-media-size, 2rem)"),
+					bs("var(--ui-item-media-size, 2rem)"),
 					mix,
 				]}
 			>
@@ -229,9 +226,9 @@ Item.Content = function ItemContent(handle: Handle<Item.ContentProps>) {
 					flexCol(),
 					minIs(0),
 					gap(0.5),
-					css({
-						flex: "1 1 0%",
-					}),
+					grow(),
+					shrink(1),
+					raw({ flexBasis: "0%" }),
 					mix,
 				]}
 			>
@@ -262,16 +259,7 @@ Item.Title = function ItemTitle(handle: Handle<Item.TitleProps>) {
 			<div
 				{...rest}
 				data-slot="title"
-				mix={[
-					weight("medium"),
-					fg("neutral.emphasis"),
-					truncate(),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
-					mix,
-				]}
+				mix={[weight("medium"), fg("neutral.emphasis"), truncate(), text("sm"), mix]}
 			>
 				{children}
 			</div>
@@ -302,10 +290,7 @@ Item.Description = function ItemDescription(handle: Handle<Item.DescriptionProps
 				mix={[
 					fg("neutral.muted"),
 					truncate(),
-					css({
-						fontSize: "0.8125rem",
-						lineHeight: "calc(1.125 / 0.8125)",
-					}),
+					raw({ fontSize: "0.8125rem", lineHeight: "calc(1.125 / 0.8125)" }),
 					mix,
 				]}
 			>
@@ -346,10 +331,9 @@ Item.Actions = function ItemActions(handle: Handle<Item.ActionsProps>) {
 					flex(),
 					items("center"),
 					mis("auto"),
-					css({
-						flexShrink: "0",
-						gap: "var(--ui-item-actions-gap, 0.5rem)",
-
+					shrink(),
+					gap("var(--ui-item-actions-gap, 0.5rem)"),
+					raw({
 						[NARROW_CONTAINER_QUERY]: {
 							flexBasis: "100%",
 							justifyContent: "flex-end",

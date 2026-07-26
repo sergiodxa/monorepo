@@ -12,16 +12,16 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, interpolateSize, items } from "@pkg/u/layout";
+import { bg, fg, outline } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { flex, flexCol, gap, hidden, interpolateSize, items } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { is, m, pb, pi } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
+import { media } from "@pkg/u/responsive";
+import { bs, is, m, pb, pi } from "@pkg/u/size";
+import { detailsContent, hover, when } from "@pkg/u/state";
 import { textAlign, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { panelChrome } from "../styles/panel-chrome";
 
 import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
@@ -115,23 +115,20 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 				mix={[
 					panelChrome(),
 					interpolateSize(),
-					css({
-						"&::details-content": {
-							overflow: "clip",
-							blockSize: "0",
+					detailsContent([
+						overflow("clip"),
+						bs(0),
+						raw({
 							transitionProperty: "block-size, content-visibility",
 							transitionDuration: "200ms",
 							transitionBehavior: "allow-discrete",
-						},
-						"&[open]::details-content": {
-							blockSize: "auto",
-						},
-						"@media (prefers-reduced-motion: reduce)": {
-							"&::details-content": {
-								transitionDuration: "0s",
-							},
-						},
-					}),
+						}),
+					]),
+					when("&[open]::details-content", bs("auto")),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						detailsContent(raw({ transitionDuration: "0s" })),
+					),
 					mix,
 				]}
 			>
@@ -199,7 +196,7 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 			<summary
 				{...rest}
 				mix={[
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					is("full"),
 					items("center"),
@@ -212,25 +209,14 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 					fg("neutral.emphasis"),
 					hover(bg("neutral.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						cursor: "pointer",
-						listStyle: "none",
-						transitionProperty:
-							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
-
-						"&::-webkit-details-marker": {
-							display: "none",
-						},
-						"&::marker": {
-							content: '""',
-						},
-
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-						},
-					}),
+					cursor("pointer"),
+					raw({ listStyle: "none" }),
+					when("&::-webkit-details-marker", hidden()),
+					when("&::marker", raw({ content: '""' })),
+					transition(
+						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+					),
+					when('&[aria-disabled="true"]', cursor("not-allowed")),
 					mix,
 				]}
 			>
@@ -305,9 +291,9 @@ Disclosure.Group = function DisclosureGroup(handle: Handle<Disclosure.GroupProps
 				mix={[
 					flex(),
 					flexCol(),
-					css({
-						"& > details": {
-							borderRadius: "0",
+					when("& > details", [
+						rounded("none"),
+						raw({
 							borderInlineWidth: "0",
 							borderBlockStartWidth: "0",
 
@@ -320,8 +306,8 @@ Disclosure.Group = function DisclosureGroup(handle: Handle<Disclosure.GroupProps
 								borderEndStartRadius: "var(--ui-radius-lg, 0.5rem)",
 								borderEndEndRadius: "var(--ui-radius-lg, 0.5rem)",
 							},
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			>

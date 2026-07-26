@@ -9,7 +9,8 @@
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { combine, raw } from "@pkg/u/general";
+import { combine } from "@pkg/u/general";
+import { text } from "@pkg/u/typography";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -31,11 +32,9 @@ export function outputCaptionText<Node extends Element = Element>(): MixinDescri
 	ElementProps
 > {
 	return combine<Node>([
-		// `@pkg/u`'s `text()` size scale always wraps its value in a
-		// `var(--ui-text-*, ...)` reference; this host's literal `0.875rem`
-		// point size and bespoke `calc()` line height carry no such variable,
-		// so both stay raw declarations rather than a mismatched migration.
-		raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+		// `text("sm")`'s font-size/line-height fallback pair matches this
+		// host's `0.875rem`/`calc(1.25 / 0.875)` values exactly.
+		text("sm"),
 		fg("neutral"),
 	]);
 }

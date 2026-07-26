@@ -12,7 +12,8 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { attrs, css } from "remix/ui";
+import { bs, is } from "@pkg/u/size";
+import { attrs } from "remix/ui";
 
 /**
  * Default `aria-hidden` value applied through {@link attrs}, keeping a
@@ -62,10 +63,8 @@ export function Skeleton(handle: Handle<Skeleton.Props>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					css({
-						blockSize: "var(--ui-skeleton-block-size, 1rem)",
-						inlineSize: "100%",
-					}),
+					bs("var(--ui-skeleton-block-size, 1rem)"),
+					is("full"),
 					rounded("md"),
 					bg("neutral.border"),
 					mix,

@@ -19,10 +19,10 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { raw, vars } from "@pkg/u/general";
 import { block, container, flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
 import { maxIs, mbs, mie, mis, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { data, when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
 /**
@@ -172,48 +172,43 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 					maxIs("80%"),
 					rounded("xl"),
 					border({ width: 1 }),
-					raw({ width: "fit-content", borderColor: "transparent" }),
+					border("transparent"),
+					raw({ width: "fit-content" }),
 
-					when('&[data-align="start"]', [
+					data("align", "start", [
 						mie("auto"),
-						raw({
-							borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)",
-							"--ui-bubble-reactions-justify": "flex-start",
-						}),
+						raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
+						vars({ "ui-bubble-reactions-justify": "flex-start" }),
 					]),
-					when('&[data-align="end"]', [
+					data("align", "end", [
 						mis("auto"),
-						raw({
-							borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)",
-							"--ui-bubble-reactions-justify": "flex-end",
-						}),
+						raw({ borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)" }),
+						vars({ "ui-bubble-reactions-justify": "flex-end" }),
 					]),
 
-					when('&[data-variant="default"]', [bg("primary.solid"), fg("primary.onSolid")]),
-					when('&[data-variant="secondary"]', [bg("neutral.solid"), fg("neutral.onSolid")]),
-					when('&[data-variant="muted"]', [
-						bg("neutral.tint"),
-						fg("neutral.emphasis"),
-						border("neutral"),
-					]),
-					when('&[data-variant="tinted"]', [
+					data("variant", "default", [bg("primary.solid"), fg("primary.onSolid")]),
+					data("variant", "secondary", [bg("neutral.solid"), fg("neutral.onSolid")]),
+					data("variant", "muted", [bg("neutral.tint"), fg("neutral.emphasis"), border("neutral")]),
+					data("variant", "tinted", [
 						bg("primary.tint"),
 						fg("primary.emphasis"),
 						border("primary"),
 					]),
-					when('&[data-variant="outline"]', [
+					data("variant", "outline", [
 						fg("neutral.emphasis"),
 						border("neutral.strong"),
-						raw({ backgroundColor: "transparent" }),
+						bg("transparent"),
 					]),
-					when('&[data-variant="ghost"]', [
+					data("variant", "ghost", [
 						fg("neutral.emphasis"),
 						maxIs("none"),
 						mis(0),
 						mie(0),
-						raw({ backgroundColor: "transparent", borderColor: "transparent", width: "100%" }),
+						bg("transparent"),
+						border("transparent"),
+						raw({ width: "100%" }),
 					]),
-					when('&[data-variant="destructive"]', [bg("danger.solid"), fg("danger.onSolid")]),
+					data("variant", "destructive", [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,
 				]}
 			>
@@ -343,13 +338,8 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 					gap(1),
 					pi(0.5),
 					mbs(-2),
-					raw({
-						justifyContent: "var(--ui-bubble-reactions-justify, flex-start)",
-
-						[`@container ${CONTAINER_NAME} (max-width: 16rem)`]: {
-							marginBlockStart: "0.375rem",
-						},
-					}),
+					raw({ justifyContent: "var(--ui-bubble-reactions-justify, flex-start)" }),
+					when(`@container ${CONTAINER_NAME} (max-width: 16rem)`, mbs("0.375rem")),
 					mix,
 				]}
 			>

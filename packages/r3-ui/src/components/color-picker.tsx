@@ -25,14 +25,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { outline } from "@pkg/u/color";
 import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { hstack, inlineFlex, relative, vstack } from "@pkg/u/layout";
+import { cursor, raw } from "@pkg/u/general";
+import { hstack, inlineFlex, relative, shrink, vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
 import { bs, is, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
 import { ColorField } from "./color-field";
@@ -300,7 +301,7 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 				{...rest}
 				data-slot="group"
 				mix={[
-					focusRingPrimary({ when: "&:focus-within" }),
+					when("&:focus-within", outline({ color: "primary.ring", offset: 2 })),
 					hstack({ gap: 2, align: "center" }),
 					mix,
 				]}
@@ -356,7 +357,7 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 				data-slot="trigger"
 				data-shape={resolvedShape}
 				mix={[
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
 					is("var(--ui-color-picker-trigger-size, 2.25rem)"),
@@ -366,22 +367,11 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 					transition("box-shadow"),
 					when('&[data-shape="circle"]', rounded("full")),
 					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					css({
-						flexShrink: 0,
-						padding: "0",
-
-						'&[data-shape="square"]': {
-							borderRadius: "0",
-						},
-
-						"&:hover": {
-							boxShadow: "0 0 0 2px var(--ui-neutral-border)",
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionDuration: "0s",
-						},
-					}),
+					p(0),
+					shrink(),
+					when('&[data-shape="square"]', rounded("none")),
+					when("&:hover", raw({ boxShadow: "0 0 0 2px var(--ui-neutral-border)" })),
+					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 					mix,
 				]}
 			>
@@ -451,7 +441,7 @@ ColorPicker.Dialog = function ColorPickerDialog(handle: Handle<ColorPicker.Dialo
 					attrs({ role: DEFAULT_DIALOG_ROLE }),
 					vstack({ gap: 4 }),
 					p(4),
-					css({ outline: "none" }),
+					raw({ outline: "none" }),
 					mix,
 				]}
 			>

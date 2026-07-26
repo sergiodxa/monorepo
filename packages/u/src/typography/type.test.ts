@@ -18,7 +18,7 @@ describe("type", () => {
 		expect(styles(type("lg"))).toEqual({
 			fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
 			fontSize: "var(--ui-text-lg, 1.125rem)",
-			lineHeight: "var(--ui-leading-lg, 1.5)",
+			lineHeight: "var(--ui-leading-lg, calc(1.75 / 1.125))",
 		});
 	});
 
@@ -26,7 +26,7 @@ describe("type", () => {
 		expect(styles(type("3xl"))).toEqual({
 			fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
 			fontSize: "var(--ui-text-3xl, 1.875rem)",
-			lineHeight: "var(--ui-leading-3xl, 1.5)",
+			lineHeight: "var(--ui-leading-3xl, 1.2)",
 		});
 	});
 });

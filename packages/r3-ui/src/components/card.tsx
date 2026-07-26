@@ -14,10 +14,10 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { border } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { flex, flexCol, items } from "@pkg/u/layout";
-import { p, pbe, pi } from "@pkg/u/size";
+import { raw } from "@pkg/u/general";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { p, pbe, pbs, pi } from "@pkg/u/size";
 import { tracking, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
@@ -115,7 +115,7 @@ export function Card(handle: Handle<Card.Props>) {
 					semanticColorPanel(),
 					rounded("lg"),
 					border({ width: 1 }),
-					css({
+					raw({
 						boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 					}),
 					mix,
@@ -141,20 +141,7 @@ Card.Header = function CardHeader(handle: Handle<Card.HeaderProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<header
-				{...rest}
-				mix={[
-					flex(),
-					flexCol(),
-					p(6, 6),
-					css({
-						gap: "0.375rem",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <header {...rest} mix={[flex(), flexCol(), p(6, 6), gap("0.375rem"), mix]} />;
 	};
 };
 
@@ -181,7 +168,7 @@ Card.Title = function CardTitle(handle: Handle<Card.TitleProps>) {
 				{...rest}
 				data-heading-level={resolved}
 				mix={[
-					css({
+					raw({
 						fontSize: "1.5rem",
 						lineHeight: "1",
 					}),
@@ -213,7 +200,7 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 			<p
 				{...rest}
 				mix={[
-					css({
+					raw({
 						fontSize: "0.875rem",
 					}),
 					opacity(70),
@@ -238,19 +225,7 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<div
-				{...rest}
-				mix={[
-					css({
-						paddingBlockStart: "0",
-					}),
-					pbe(6),
-					pi(6),
-					mix,
-				]}
-			/>
-		);
+		return <div {...rest} mix={[pbs(0), pbe(6), pi(6), mix]} />;
 	};
 };
 
@@ -270,20 +245,6 @@ Card.Footer = function CardFooter(handle: Handle<Card.FooterProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<footer
-				{...rest}
-				mix={[
-					flex(),
-					items("center"),
-					css({
-						paddingBlockStart: "0",
-					}),
-					pbe(6),
-					pi(6),
-					mix,
-				]}
-			/>
-		);
+		return <footer {...rest} mix={[flex(), items("center"), pbs(0), pbe(6), pi(6), mix]} />;
 	};
 };

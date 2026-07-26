@@ -17,9 +17,13 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
+import { opacity, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
 import { absolute, contents, inlineBlock, relative } from "@pkg/u/layout";
-import { p } from "@pkg/u/size";
-import { css } from "remix/ui";
+import { media } from "@pkg/u/responsive";
+import { is, mb, mbe, mbs, mi, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { text } from "@pkg/u/typography";
 
 import type { AnchorPlacement } from "../utils/placement";
 
@@ -113,22 +117,25 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 				mix={[
 					relative(),
 					inlineBlock(),
-					css({
-						"@media (hover: hover)": {
-							'&:hover [data-slot="hover-card-content"]': {
+					media(
+						"(hover: hover)",
+						when('&:hover [data-slot="hover-card-content"]', [
+							opacity(100),
+							raw({
 								visibility: "visible",
-								opacity: "1",
 								pointerEvents: "auto",
 								transitionDelay: "var(--ui-hover-card-open-delay, 0.4s)",
-							},
-						},
-						'&:focus-within [data-slot="hover-card-content"]': {
+							}),
+						]),
+					),
+					when('&:focus-within [data-slot="hover-card-content"]', [
+						opacity(100),
+						raw({
 							visibility: "visible",
-							opacity: "1",
 							pointerEvents: "auto",
 							transitionDelay: "0s",
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			>
@@ -220,67 +227,64 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 					absolute(),
 					p(4),
 					fg("neutral.emphasis"),
-					css({
+					is("18rem"),
+					text("sm"),
+					opacity(0),
+					transition("opacity, visibility, pointer-events"),
+					raw({
 						zIndex: "var(--ui-hover-card-z, 50)",
-
-						inlineSize: "18rem",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
 						visibility: "hidden",
-						opacity: "0",
 						pointerEvents: "none",
-						transitionProperty: "opacity, visibility, pointer-events",
-						transitionDuration: "150ms",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
 						transitionBehavior: "allow-discrete",
 						transitionDelay: "var(--ui-hover-card-close-delay, 0.2s)",
-
-						'&[data-placement^="bottom"]': {
-							insetBlockStart: "100%",
-							marginBlockStart: "var(--ui-popover-offset, 0.5rem)",
-						},
-						'&[data-placement^="top"]': {
-							insetBlockEnd: "100%",
-							marginBlockEnd: "var(--ui-popover-offset, 0.5rem)",
-						},
-						'&[data-placement^="left"]': {
-							right: "100%",
-							marginRight: "var(--ui-popover-offset, 0.5rem)",
-						},
-						'&[data-placement^="right"]': {
-							left: "100%",
-							marginLeft: "var(--ui-popover-offset, 0.5rem)",
-						},
-
-						'&[data-placement="bottom"], &[data-placement="top"]': {
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-							marginInline: "auto",
-						},
-						'&[data-placement="bottom-start"], &[data-placement="top-start"]': {
-							insetInlineStart: "0",
-						},
-						'&[data-placement="bottom-end"], &[data-placement="top-end"]': {
-							insetInlineEnd: "0",
-						},
-						'&[data-placement="left"], &[data-placement="right"]': {
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							marginBlock: "auto",
-						},
-						'&[data-placement="left-start"], &[data-placement="right-start"]': {
-							insetBlockStart: "0",
-						},
-						'&[data-placement="left-end"], &[data-placement="right-end"]': {
-							insetBlockEnd: "0",
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionDuration: "0s",
-							transitionDelay: "0s",
-						},
 					}),
+
+					when('&[data-placement^="bottom"]', [
+						mbs("var(--ui-popover-offset, 0.5rem)"),
+						raw({ insetBlockStart: "100%" }),
+					]),
+					when('&[data-placement^="top"]', [
+						mbe("var(--ui-popover-offset, 0.5rem)"),
+						raw({ insetBlockEnd: "100%" }),
+					]),
+					when(
+						'&[data-placement^="left"]',
+						raw({ right: "100%", marginRight: "var(--ui-popover-offset, 0.5rem)" }),
+					),
+					when(
+						'&[data-placement^="right"]',
+						raw({ left: "100%", marginLeft: "var(--ui-popover-offset, 0.5rem)" }),
+					),
+
+					when('&[data-placement="bottom"], &[data-placement="top"]', [
+						mi("auto"),
+						raw({ insetInlineStart: "0", insetInlineEnd: "0" }),
+					]),
+					when(
+						'&[data-placement="bottom-start"], &[data-placement="top-start"]',
+						raw({ insetInlineStart: "0" }),
+					),
+					when(
+						'&[data-placement="bottom-end"], &[data-placement="top-end"]',
+						raw({ insetInlineEnd: "0" }),
+					),
+					when('&[data-placement="left"], &[data-placement="right"]', [
+						mb("auto"),
+						raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+					]),
+					when(
+						'&[data-placement="left-start"], &[data-placement="right-start"]',
+						raw({ insetBlockStart: "0" }),
+					),
+					when(
+						'&[data-placement="left-end"], &[data-placement="right-end"]',
+						raw({ insetBlockEnd: "0" }),
+					),
+
+					media(
+						"(prefers-reduced-motion: reduce)",
+						raw({ transitionDuration: "0s", transitionDelay: "0s" }),
+					),
 					mix,
 				]}
 			>

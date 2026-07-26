@@ -49,6 +49,8 @@ export interface BorderOptions {
  * @example css({ borderColor: "var(--ui-brand-border-strong)" })
  * @example u.border({ color: "brand", width: 2 })
  * @example css({ borderColor: "var(--ui-brand-border)", borderWidth: "2px", borderStyle: "solid" })
+ * @example u.border("none")
+ * @example css({ border: "none" })
  */
 export function border<Node extends Element = Element>(
 	value?: ColorValue | (string & {}),
@@ -57,6 +59,10 @@ export function border<Node extends Element = Element>(options: BorderOptions): 
 export function border<Node extends Element = Element>(
 	valueOrOptions?: ColorValue | (string & {}) | BorderOptions,
 ): UtilityMixin<Node> {
+	if (valueOrOptions === "none") {
+		return utility<Node>(() => ({ border: "none" }));
+	}
+
 	if (valueOrOptions === undefined || typeof valueOrOptions === "string") {
 		return utility<Node>(() => ({
 			borderColor: valueOrOptions

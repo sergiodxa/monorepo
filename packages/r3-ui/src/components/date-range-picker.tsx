@@ -16,8 +16,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { flex, flexCol, gap } from "@pkg/u/layout";
-import { attrs, css } from "remix/ui";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { attrs } from "remix/ui";
 
 import { DateField } from "./date-field";
 import { DatePicker } from "./date-picker";
@@ -237,15 +237,7 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
 				<div
 					{...rest}
 					data-slot="fields"
-					mix={[
-						attrs({ role: "group" }),
-						flex(),
-						gap(2),
-						css({
-							alignItems: "flex-start",
-						}),
-						mix,
-					]}
+					mix={[attrs({ role: "group" }), flex(), gap(2), items("start"), mix]}
 				>
 					<DateField
 						color={color}

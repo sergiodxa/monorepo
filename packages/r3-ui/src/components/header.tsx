@@ -12,9 +12,9 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 import { pb, pi } from "@pkg/u/size";
-import { tracking, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
+import { text, tracking, weight } from "@pkg/u/typography";
 
 /**
  * Props accepted by {@link Header}.
@@ -52,11 +52,8 @@ export function Header(handle: Handle<Header.Props>) {
 					weight("semibold"),
 					tracking("wider"),
 					fg("neutral.muted"),
-					css({
-						fontSize: "0.75rem",
-						lineHeight: "1rem",
-						textTransform: "uppercase",
-					}),
+					text("xs"),
+					raw({ textTransform: "uppercase" }),
 					mix,
 				]}
 			/>

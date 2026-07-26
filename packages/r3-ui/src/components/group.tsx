@@ -12,10 +12,11 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { outline } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 import { flex, items } from "@pkg/u/layout";
-import { attrs, css } from "remix/ui";
-
-import { focusRingPrimary } from "../styles/focus-ring";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /**
  * ARIA role applied through {@link attrs} unless a consumer supplies its own
@@ -76,14 +77,10 @@ export function Group(handle: Handle<Group.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					focusRingPrimary({ when: "&:has(:focus-visible)" }),
+					when("&:has(:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					items("center"),
-					css({
-						'&[aria-invalid="true"]': {
-							outlineColor: "var(--ui-danger-ring)",
-						},
-					}),
+					when('&[aria-invalid="true"]', raw({ outlineColor: "var(--ui-danger-ring)" })),
 					mix,
 				]}
 			/>

@@ -11,7 +11,10 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { attrs, css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
+import { bs, is } from "@pkg/u/size";
+import { attrs } from "remix/ui";
 
 /**
  * `aria-hidden="true"` applied through {@link attrs} unless a consumer
@@ -77,10 +80,10 @@ export function SelectionIndicator(handle: Handle<SelectionIndicator.Props>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					css({
-						inlineSize: "var(--ui-selection-indicator-size, 1rem)",
-						blockSize: "var(--ui-selection-indicator-size, 1rem)",
-						color: "currentColor",
+					is("var(--ui-selection-indicator-size, 1rem)"),
+					bs("var(--ui-selection-indicator-size, 1rem)"),
+					fg("currentColor"),
+					raw({
 						visibility: "hidden",
 
 						'&[aria-selected="true"]': {

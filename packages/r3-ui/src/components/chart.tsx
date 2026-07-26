@@ -36,8 +36,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, fg, outline } from "@pkg/u/color";
-import { opacity, rounded, shadow } from "@pkg/u/effects";
+import { opacity, rounded, shadow, transition } from "@pkg/u/effects";
+import { cursor, raw, userSelect } from "@pkg/u/general";
 import {
 	absolute,
 	block,
@@ -48,12 +50,14 @@ import {
 	inlineFlex,
 	items,
 	relative,
+	shrink,
 } from "@pkg/u/layout";
-import { bs, is, pi } from "@pkg/u/size";
+import { media } from "@pkg/u/responsive";
+import { bs, is, pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { focusVisible, hover, when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { nowrap, textDecoration, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import type { Point } from "../utils/chart-path";
 import type { PieAngles } from "../utils/chart-scale";
@@ -244,21 +248,12 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					items("center"),
 					fg("neutral"),
 					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
-					css({
-						gap: "0.5rem",
-						cursor: "default",
-						userSelect: "none",
-						fontSize: "0.875rem",
-						lineHeight: "1.25",
-						transitionProperty: "opacity, color",
-						transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-						transitionDuration: "150ms",
-
-						"&:has(input:not(:checked))": {
-							opacity: "0.5",
-							textDecorationLine: "line-through",
-						},
-					}),
+					gap(2),
+					cursor("default"),
+					transition("opacity, color"),
+					userSelect(),
+					raw({ fontSize: "0.875rem", lineHeight: "1.25" }),
+					when("&:has(input:not(:checked))", [opacity(50), textDecoration("line-through")]),
 				]}
 			>
 				{/*
@@ -278,10 +273,8 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 						is(2.5),
 						bs(2.5),
 						rounded("full"),
-						css({
-							flexShrink: 0,
-							backgroundColor: "currentColor",
-						}),
+						shrink(),
+						bg("currentColor"),
 						parts?.swatch,
 					]}
 				/>
@@ -289,18 +282,7 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					type="checkbox"
 					defaultChecked={resolvedChecked}
 					{...rest}
-					mix={[
-						css({
-							position: "absolute",
-							inlineSize: "1px",
-							blockSize: "1px",
-							margin: 0,
-							overflow: "hidden",
-							clipPath: "inset(50%)",
-							whiteSpace: "nowrap",
-						}),
-						mix,
-					]}
+					mix={[visuallyHidden(), mix]}
 				/>
 				{children}
 			</label>
@@ -864,10 +846,10 @@ function renderChartMarkers(
 				role="img"
 				mix={[
 					focusVisible(outline({ color: "primary.ring", offset: 2 })),
-					css({
+					cursor("default"),
+					raw({
 						fill: "currentColor",
 						r: "var(--ui-chart-point-radius, 0.1875rem)",
-						cursor: "default",
 					}),
 					markerMix,
 				]}
@@ -926,7 +908,7 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 					d={d}
 					mix={[
 						attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN }),
-						css({
+						raw({
 							fill: "none",
 							stroke: "currentColor",
 							strokeWidth: "var(--ui-chart-line-width, 2px)",
@@ -1005,32 +987,24 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 					bg("neutral.solid"),
 					shadow("md"),
 					z(10),
-					css({
+					gap(1.5),
+					pb(1.5),
+					nowrap(),
+					opacity(0),
+					transition("opacity, scale", { duration: durations.fast, easing: easings.standard }),
+					when("&[data-open]", [opacity(100), raw({ scale: "1" })]),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						raw({ scale: "none", transitionProperty: "opacity" }),
+					),
+					raw({
 						left: "var(--ui-chart-tooltip-x, 0px)",
 						top: "var(--ui-chart-tooltip-y, 0px)",
 						translate: "-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))",
-						gap: "0.375rem",
-						paddingBlock: "0.375rem",
 						fontSize: "0.8125rem",
 						lineHeight: "1.2",
-						whiteSpace: "nowrap",
 						pointerEvents: "none",
-
-						opacity: "0",
 						scale: "0.95",
-						transitionProperty: "opacity, scale",
-						transitionDuration: `${durations.fast}ms`,
-						transitionTimingFunction: easings.standard,
-
-						"&[data-open]": {
-							opacity: "1",
-							scale: "1",
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							scale: "none",
-							transitionProperty: "opacity",
-						},
 					}),
 					mix,
 				]}
@@ -1068,9 +1042,7 @@ ChartTooltip.Swatch = function ChartTooltipSwatch(handle: Handle<Chart.Tooltip.S
 					is(2),
 					bs(2),
 					rounded("full"),
-					css({
-						flexShrink: "0",
-					}),
+					shrink(),
 					mix,
 				]}
 			/>
@@ -1173,7 +1145,7 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 					d={d}
 					mix={[
 						attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN }),
-						css({
+						raw({
 							fill: "currentColor",
 							fillOpacity: "var(--ui-chart-area-fill-opacity, 0.25)",
 							stroke: "currentColor",
@@ -1299,9 +1271,7 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 							role="img"
 							mix={[
 								focusVisible(outline({ color: "primary.ring", offset: 2 })),
-								css({
-									cursor: "default",
-								}),
+								cursor("default"),
 								parts?.segment,
 							]}
 						>
@@ -1451,7 +1421,7 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 							y1={y(value)}
 							y2={y(value)}
 							mix={[
-								css({
+								raw({
 									stroke: "var(--ui-neutral-border)",
 									strokeWidth: "1",
 									vectorEffect: "non-scaling-stroke",
@@ -1489,16 +1459,9 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 								mix={[
 									hover(opacity(85)),
 									focusVisible(outline({ color: "primary.ring", offset: 2 })),
-									css({
-										cursor: "default",
-										transitionProperty: "opacity",
-										transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-										transitionDuration: "150ms",
-
-										"@media (prefers-reduced-motion: reduce)": {
-											transitionDuration: "0s",
-										},
-									}),
+									cursor("default"),
+									transition("opacity"),
+									media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
 									parts?.bar,
 								]}
 							>

@@ -13,10 +13,11 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { border, bg, fg, outline } from "@pkg/u/color";
 import { rounded, opacity } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
 import { is, bs, minBs, pi, pb } from "@pkg/u/size";
 import { when, hover, invalid } from "@pkg/u/state";
-import { css } from "remix/ui";
+import { text } from "@pkg/u/typography";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 
@@ -138,18 +139,14 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 						]),
 					]),
 					invalid([outline({ color: "danger.ring", offset: 0 }), border("danger.border-strong")]),
-					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover")]),
-					css({
+					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
+					text("sm"),
+					raw({
 						resize: "block",
 						fieldSizing: "content",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
 
 						"&:focus": {
 							outline: "none",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
 						},
 					}),
 					mix,

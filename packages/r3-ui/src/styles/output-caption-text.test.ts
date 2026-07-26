@@ -20,8 +20,8 @@ function styles(mixin: CSSMixinDescriptor): Record<string, unknown> {
 describe("outputCaptionText", () => {
 	test("is a 0.875rem run of text at a 1.25-to-0.875 line height, colored the neutral muted foreground", () => {
 		expect(styles(outputCaptionText())).toEqual({
-			fontSize: "0.875rem",
-			lineHeight: "calc(1.25 / 0.875)",
+			fontSize: "var(--ui-text-sm, 0.875rem)",
+			lineHeight: "var(--ui-leading-sm, calc(1.25 / 0.875))",
 			color: "var(--ui-neutral-fg)",
 		});
 	});

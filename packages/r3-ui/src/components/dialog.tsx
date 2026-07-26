@@ -13,13 +13,14 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
 import { bg, fg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { absolute, flex, flexCol, gap, inset, relative } from "@pkg/u/layout";
+import { backdropBlur, backdropSaturate, opacity, rounded, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { absolute, container, flex, flexCol, gap, inset, relative } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
+import { media, supports } from "@pkg/u/responsive";
 import { is, maxBs, maxIs, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { textAlign, tracking, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
 
@@ -163,35 +164,39 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					overflow("auto"),
 					/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
 					when("&[open]", flex()),
-					css({
-						flexDirection: "column",
-						outline: "none",
-						container: `${CONTAINER_NAME} / inline-size`,
-						overscrollBehavior: "contain",
-						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-
-						"&::backdrop": {
-							backgroundColor: "rgb(0 0 0 / 0.5)",
-							opacity: "0",
-							transitionProperty: "opacity, display, overlay",
-							transitionDuration: `${durations.normal}ms`,
-							transitionTimingFunction: easings.standard,
-							transitionBehavior: "allow-discrete",
-						},
-						"&[open]::backdrop": {
-							opacity: "1",
-						},
+					flexCol(),
+					container(CONTAINER_NAME, "inline-size"),
+					when("&::backdrop", [
+						raw({ backgroundColor: "rgb(0 0 0 / 0.5)", transitionBehavior: "allow-discrete" }),
+						opacity(0),
+						transition("opacity, display, overlay", {
+							duration: durations.normal,
+							easing: easings.standard,
+						}),
+					]),
+					when("&[open]::backdrop", opacity(100)),
+					supports(
+						"(backdrop-filter: blur(0))",
+						media(
+							"(prefers-reduced-transparency: no-preference)",
+							when("&::backdrop", [backdropBlur("md"), backdropSaturate(1.4)]),
+						),
+					),
+					/**
+					 * `@starting-style` has no `@pkg/u` wrapper (only `media()`/
+					 * `supports()`/`at()` exist for at-rules) — genuinely
+					 * irreducible until one's added.
+					 */
+					raw({
 						"@starting-style": {
 							"&[open]::backdrop": { opacity: "0" },
 						},
-						"@supports (backdrop-filter: blur(0))": {
-							"@media (prefers-reduced-transparency: no-preference)": {
-								"&::backdrop": {
-									backdropFilter: "blur(8px) saturate(1.4)",
-									"-webkit-backdrop-filter": "blur(8px) saturate(1.4)",
-								},
-							},
-						},
+					}),
+					/** `outline: "none"` and `overscrollBehavior` have no matching utility; this shadow value doesn't match the `shadow()` scale (`sm`/`md`/`lg`). */
+					raw({
+						outline: "none",
+						overscrollBehavior: "contain",
+						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
 					}),
 					mix,
 				]}
@@ -230,7 +235,7 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 					flexCol(),
 					gap(1.5),
 					textAlign("center"),
-					css({
+					raw({
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 							textAlign: "start",
 						},
@@ -267,7 +272,7 @@ Dialog.Title = function DialogTitle(handle: Handle<Dialog.TitleProps>) {
 					fg("neutral.emphasis"),
 					weight("semibold"),
 					tracking("tight"),
-					css({
+					raw({
 						fontSize: "1.125rem",
 						lineHeight: "1",
 					}),
@@ -300,7 +305,7 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 				data-slot="description"
 				mix={[
 					fg("neutral.muted"),
-					css({
+					raw({
 						fontSize: "0.875rem",
 					}),
 					mix,
@@ -337,7 +342,7 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 				mix={[
 					flex(),
 					gap(2),
-					css({
+					raw({
 						flexDirection: "column-reverse",
 
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {

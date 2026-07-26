@@ -18,9 +18,8 @@ import { ChevronDownIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { center, hstack, spacer, vstack } from "@pkg/u/layout";
-import { bs, is, pie } from "@pkg/u/size";
+import { bs, is, mis, pie } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -191,9 +190,7 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 					when("& svg", [is("1rem"), bs("1rem")]),
 					when("&:hover", bg("neutral.bg-tint-hover")),
 					when("&:focus-visible", outline({ color: "primary.ring", offset: 0 })),
-					css({
-						marginInlineStart: "-2rem",
-					}),
+					mis("-2rem"),
 					mix,
 				]}
 			>

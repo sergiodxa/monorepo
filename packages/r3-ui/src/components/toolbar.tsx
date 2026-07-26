@@ -12,10 +12,10 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { flexCol, hstack } from "@pkg/u/layout";
+import { flexCol, hstack, items } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
 /**
  * `role="toolbar"` applied through {@link attrs} unless a consumer supplies
@@ -86,12 +86,7 @@ export function Toolbar(handle: Handle<Toolbar.Props>) {
 					bg("neutral.tint"),
 					pb(2),
 					pi(2),
-					when('&[aria-orientation="vertical"]', flexCol()),
-					css({
-						'&[aria-orientation="vertical"]': {
-							alignItems: "flex-start",
-						},
-					}),
+					when('&[aria-orientation="vertical"]', [flexCol(), items("start")]),
 					mix,
 				]}
 			/>

@@ -5,6 +5,8 @@ export { border } from "./border";
 export type { BorderStyleValue } from "./border";
 export { borderEdge } from "./border-edge";
 export type { BorderEdge, BorderEdgeOptions } from "./border-edge";
+export { colorMix } from "./color-mix";
+export type { ColorMixStop } from "./color-mix";
 export { fg } from "./fg";
 export { fill } from "./fill";
 export { conicGradient, linearGradient, radialGradient } from "./gradient";

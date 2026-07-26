@@ -13,11 +13,12 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { center } from "@pkg/u/layout";
-import { is, minIs, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { raw } from "@pkg/u/general";
+import { center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
+import { bs, is, minIs, pb, pi } from "@pkg/u/size";
+import { data, when } from "@pkg/u/state";
 import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { attrs } from "remix/ui";
 
 /** Visual shape {@link Marker} falls back to when `variant` is omitted. */
 const DEFAULT_VARIANT: Marker.Variant = "default";
@@ -149,58 +150,54 @@ export function Marker(handle: Handle<Marker.Props>) {
 					center(),
 					is("full"),
 					weight("medium"),
-					when('&[data-color="primary"]', fg("primary.muted")),
-					when('&[data-color="neutral"]', fg("neutral.muted")),
-					when('&[data-color="success"]', fg("success.muted")),
-					when('&[data-color="warning"]', fg("warning.muted")),
-					when('&[data-color="danger"]', fg("danger.muted")),
-					when('&[data-variant="border"]', [
+					data("color", "primary", fg("primary.muted")),
+					data("color", "neutral", fg("neutral.muted")),
+					data("color", "success", fg("success.muted")),
+					data("color", "warning", fg("warning.muted")),
+					data("color", "danger", fg("danger.muted")),
+					data("variant", "border", [
 						rounded("md"),
 						border({ width: 1 }),
 						pb(2),
 						pi(3.5),
-						when('&[data-color="primary"]', [
+						data("color", "primary", [
 							border("primary"),
 							bg("primary.tint"),
 							fg("primary.emphasis"),
 						]),
-						when('&[data-color="neutral"]', [
+						data("color", "neutral", [
 							border("neutral"),
 							bg("neutral.tint"),
 							fg("neutral.emphasis"),
 						]),
-						when('&[data-color="success"]', [
+						data("color", "success", [
 							border("success"),
 							bg("success.tint"),
 							fg("success.emphasis"),
 						]),
-						when('&[data-color="warning"]', [
+						data("color", "warning", [
 							border("warning"),
 							bg("warning.tint"),
 							fg("warning.emphasis"),
 						]),
-						when('&[data-color="danger"]', [
-							border("danger"),
-							bg("danger.tint"),
-							fg("danger.emphasis"),
-						]),
+						data("color", "danger", [border("danger"), bg("danger.tint"), fg("danger.emphasis")]),
 					]),
-					css({
-						gap: "var(--ui-marker-gap, 0.375rem)",
-						paddingBlock: "0.375rem",
-						fontSize: "0.8125rem",
-						lineHeight: "calc(1.25 / 0.8125)",
-
-						'&[data-variant="separator"]': {
-							"&::before, &::after": {
-								content: '""',
-								flex: "1 1 0%",
-								minInlineSize: "1.5rem",
-								blockSize: "var(--ui-separator-thickness, 1px)",
-								backgroundColor: "var(--ui-neutral-border)",
-							},
-						},
-					}),
+					gap("var(--ui-marker-gap, 0.375rem)"),
+					pb("0.375rem"),
+					raw({ fontSize: "0.8125rem", lineHeight: "calc(1.25 / 0.8125)" }),
+					data(
+						"variant",
+						"separator",
+						when("&::before, &::after", [
+							raw({ content: '""' }),
+							grow(),
+							shrink(1),
+							raw({ flexBasis: "0%" }),
+							minIs("1.5rem"),
+							bs("var(--ui-separator-thickness, 1px)"),
+							bg("neutral.border"),
+						]),
+					),
 					mix,
 				]}
 			>
@@ -242,17 +239,11 @@ Marker.Icon = function MarkerIcon(handle: Handle<Marker.IconProps>) {
 				{...rest}
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					css({
-						display: "inline-flex",
-						flexShrink: "0",
-						alignItems: "center",
-						color: "currentcolor",
-
-						"& > svg": {
-							inlineSize: "1em",
-							blockSize: "1em",
-						},
-					}),
+					inlineFlex(),
+					shrink(),
+					items("center"),
+					fg("currentcolor"),
+					when("& > svg", [is("1em"), bs("1em")]),
 					mix,
 				]}
 			>

@@ -15,16 +15,15 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { cursor, userSelect } from "@pkg/u/general";
 import { flex, gap, inlineFlex, items } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { active, disabled, hover, when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { text, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import {
 	warnIfNoAccessibleLabel,
@@ -199,15 +198,12 @@ Menubar.Trigger = function MenubarTrigger(handle: Handle<Menubar.TriggerProps>) 
 					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 					active(bg("neutral.bg-tint-pressed")),
 					when('&[aria-expanded="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					disabled([opacity(50), cursor("not-allowed")]),
 					cursor("default"),
 					weight(500),
-					css({
-						userSelect: "none",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
+					userSelect(),
+					text("sm"),
 					mix,
 				]}
 			>

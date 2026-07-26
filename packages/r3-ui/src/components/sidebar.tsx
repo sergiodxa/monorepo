@@ -16,16 +16,68 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { PanelLeftIcon } from "@pkg/lucide-remix";
-import { bg, border, fg } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
+import { bg, border, borderEdge, colorMix, fg, outline } from "@pkg/u/color";
+import {
+	backdropBlur,
+	backdropSaturate,
+	opacity,
+	rounded,
+	shadow,
+	transition,
+} from "@pkg/u/effects";
+import { cursor, raw, userSelect, willChange } from "@pkg/u/general";
 import { var as varUtility } from "@pkg/u/general/var";
-import { container, gap, vstack } from "@pkg/u/layout";
-import { m, pb, pbe, pbs, pi } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import {
+	absolute,
+	container,
+	fixed,
+	flex,
+	flexCol,
+	gap,
+	grow,
+	hidden,
+	inlineFlex,
+	items,
+	justify,
+	relative,
+	shrink,
+	vstack,
+} from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { media, supports } from "@pkg/u/responsive";
+import {
+	bs,
+	is,
+	m,
+	maxBs,
+	maxIs,
+	mbe,
+	mbs,
+	minBs,
+	minIs,
+	mis,
+	p,
+	pb,
+	pbe,
+	pbs,
+	pi,
+	pis,
+	safeAreaPadding,
+} from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { after, data, focusVisible, hover, when } from "@pkg/u/state";
+import { translateX } from "@pkg/u/transform";
+import {
+	tabularNums,
+	textAlign,
+	textDecoration,
+	tracking,
+	truncate,
+	weight,
+} from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
-import { focusRingByColor, focusRingPrimary } from "../styles/focus-ring";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
 import { Dialog } from "./dialog";
@@ -98,9 +150,12 @@ const VISUALLY_HIDDEN = {
 	position: "absolute",
 	inlineSize: "1px",
 	blockSize: "1px",
+	padding: "0",
+	margin: "-1px",
 	overflow: "hidden",
-	clipPath: "inset(50%)",
+	clip: "rect(0, 0, 0, 0)",
 	whiteSpace: "nowrap",
+	borderWidth: "0",
 } as const;
 
 /**
@@ -426,68 +481,64 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 				data-collapsible={resolvedCollapsible}
 				data-side={resolvedSide}
 				mix={[
-					css({
-						position: "relative",
-						display: "flex",
-						flexDirection: "column",
-						flexShrink: 0,
-						blockSize: "100%",
-						inlineSize: varUtility("sidebar-width", "16rem"),
-						willChange: "transform",
-
-						'&[data-side="left"]': {
-							borderRightWidth: "1px",
-							borderRightStyle: "solid",
-							borderRightColor: "var(--ui-neutral-border)",
-							paddingLeft: "env(safe-area-inset-left, 0px)",
-						},
-						'&[data-side="right"]': {
-							borderLeftWidth: "1px",
-							borderLeftStyle: "solid",
-							borderLeftColor: "var(--ui-neutral-border)",
-							paddingRight: "env(safe-area-inset-right, 0px)",
-						},
-
-						'&[data-variant="floating"]': {
-							margin: "0.5rem",
-							boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-
-							"@supports (backdrop-filter: blur(0))": {
-								"@media (prefers-reduced-transparency: no-preference)": {
-									borderColor: "color-mix(in oklab, var(--ui-neutral-border) 80%, transparent)",
-									backgroundColor:
-										"color-mix(in oklab, var(--ui-neutral-bg-tint) 95%, transparent)",
-									backdropFilter: "blur(8px) saturate(1.4)",
-									"-webkit-backdrop-filter": "blur(8px) saturate(1.4)",
-								},
-							},
-						},
-
-						'&[data-variant="inset"]': {
+					relative(),
+					flex(),
+					flexCol(),
+					shrink(),
+					bs("full"),
+					is(varUtility("sidebar-width", "16rem")),
+					willChange("transform"),
+					data("side", "left", [
+						borderEdge("right", { width: 1, style: "solid", color: "neutral" }),
+						safeAreaPadding("left"),
+					]),
+					data("side", "right", [
+						borderEdge("left", { width: 1, style: "solid", color: "neutral" }),
+						safeAreaPadding("right"),
+					]),
+					data("variant", "floating", [
+						m("0.5rem"),
+						shadow("lg"),
+						supports(
+							"(backdrop-filter: blur(0))",
+							media("(prefers-reduced-transparency: no-preference)", [
+								raw({
+									borderColor: colorMix(
+										"oklab",
+										{ color: "var(--ui-neutral-border)", weight: 80 },
+										"transparent",
+									),
+									backgroundColor: colorMix(
+										"oklab",
+										{ color: "var(--ui-neutral-bg-tint)", weight: 95 },
+										"transparent",
+									),
+								}),
+								backdropBlur("md"),
+								backdropSaturate(1.4),
+							]),
+						),
+					]),
+					data(
+						"variant",
+						"inset",
+						raw({
 							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-						},
-
-						[`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`]: {
-							'&[data-collapsible="icon"], &[data-collapsible="offcanvas"]': {
-								display: "none",
-							},
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionProperty: "none",
-						},
-					}),
+						}),
+					),
+					when(
+						`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`,
+						when('&[data-collapsible="icon"], &[data-collapsible="offcanvas"]', hidden()),
+					),
+					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
 					bg("neutral.tint"),
 					fg("neutral.emphasis"),
 					transition("inline-size, transform", {
 						duration: durations.normal,
 						easing: easings.standard,
 					}),
-					when('&[data-variant="floating"]', [
-						rounded("xl"),
-						border({ color: "neutral", width: 1 }),
-					]),
-					when('&[data-variant="inset"]', [rounded("xl"), border({ color: "neutral", width: 1 })]),
+					data("variant", "floating", [rounded("xl"), border({ color: "neutral", width: 1 })]),
+					data("variant", "inset", [rounded("xl"), border({ color: "neutral", width: 1 })]),
 					mix,
 				]}
 			/>
@@ -542,39 +593,35 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 				{...rest}
 				data-slot="provider"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "stretch",
-						minBlockSize: "100dvh",
-						inlineSize: "100%",
-
-						[`&:has(${TOGGLE_CHECKED_SELECTOR})`]: {
-							'[data-slot="sidebar"][data-collapsible="icon"]': {
-								inlineSize: varUtility("sidebar-width-icon", "3rem"),
-
-								"[data-sidebar-collapsed-hide]": VISUALLY_HIDDEN,
-								'[data-slot="group-label"]': VISUALLY_HIDDEN,
-								'[data-slot="menu-badge"]': { display: "none" },
-								'[data-slot="menu-sub"]': { display: "none" },
-								'[data-slot="menu-button"], [data-slot="menu-link"]': {
-									justifyContent: "center",
-									paddingInline: "0",
-								},
-							},
-							'[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="left"]': {
-								transform: "translateX(-100%)",
-								inlineSize: "0",
-								borderWidth: "0",
-								overflow: "hidden",
-							},
-							'[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="right"]': {
-								transform: "translateX(100%)",
-								inlineSize: "0",
-								borderWidth: "0",
-								overflow: "hidden",
-							},
-						},
-					}),
+					flex(),
+					items("stretch"),
+					minBs("100dvh"),
+					is("full"),
+					when(`&:has(${TOGGLE_CHECKED_SELECTOR})`, [
+						when('[data-slot="sidebar"][data-collapsible="icon"]', [
+							is(varUtility("sidebar-width-icon", "3rem")),
+							when("[data-sidebar-collapsed-hide]", raw(VISUALLY_HIDDEN)),
+							when('[data-slot="group-label"]', raw(VISUALLY_HIDDEN)),
+							when('[data-slot="menu-badge"]', hidden()),
+							when('[data-slot="menu-sub"]', hidden()),
+							when('[data-slot="menu-button"], [data-slot="menu-link"]', [
+								justify("center"),
+								pi("0"),
+							]),
+						]),
+						when('[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="left"]', [
+							translateX("-100%"),
+							is("0"),
+							overflow("hidden"),
+							raw({ borderWidth: "0" }),
+						]),
+						when('[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="right"]', [
+							translateX("100%"),
+							is("0"),
+							overflow("hidden"),
+							raw({ borderWidth: "0" }),
+						]),
+					]),
 					container(PROVIDER_CONTAINER_NAME),
 					mix,
 				]}
@@ -616,46 +663,35 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 				data-slot="mobile-nav"
 				data-side={resolvedSide}
 				mix={[
-					css({
-						position: "fixed",
-						insetBlockStart: "0",
-						insetBlockEnd: "0",
-						margin: "0",
-						borderRadius: "0",
-						padding: "0",
-						maxBlockSize: "none",
-						blockSize: "100%",
-						inlineSize: varUtility("sidebar-width-mobile", "18rem"),
-						maxInlineSize: "90vw",
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						willChange: "transform",
-						transitionBehavior: "allow-discrete",
-
-						'&[data-side="left"]': {
-							left: "0",
-							paddingLeft: "env(safe-area-inset-left, 0px)",
-							transform: "translateX(-100%)",
-						},
-						'&[data-side="left"][open]': { transform: "translateX(0)" },
-
-						'&[data-side="right"]': {
-							right: "0",
-							paddingRight: "env(safe-area-inset-right, 0px)",
-							transform: "translateX(100%)",
-						},
-						'&[data-side="right"][open]': { transform: "translateX(0)" },
-
-						"@starting-style": {
-							'&[data-side="left"][open]': { transform: "translateX(-100%)" },
-							'&[data-side="right"][open]': { transform: "translateX(100%)" },
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							transitionProperty: "none",
-						},
-					}),
+					fixed(),
+					raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+					m("0"),
+					rounded("none"),
+					p("0"),
+					maxBs("none"),
+					bs("full"),
+					is(varUtility("sidebar-width-mobile", "18rem")),
+					maxIs("90vw"),
+					flex(),
+					flexCol(),
+					overflow("hidden"),
+					willChange("transform"),
+					raw({ transitionBehavior: "allow-discrete" }),
+					data("side", "left", [
+						raw({ left: "0", paddingLeft: "env(safe-area-inset-left, 0px)" }),
+						translateX("-100%"),
+					]),
+					when('&[data-side="left"][open]', translateX("0")),
+					data("side", "right", [
+						raw({ right: "0", paddingRight: "env(safe-area-inset-right, 0px)" }),
+						translateX("100%"),
+					]),
+					when('&[data-side="right"][open]', translateX("0")),
+					when("@starting-style", [
+						when('&[data-side="left"][open]', translateX("-100%")),
+						when('&[data-side="right"][open]', translateX("100%")),
+					]),
+					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
 					pbs("env(safe-area-inset-top, 0px)"),
 					pbe("env(safe-area-inset-bottom, 0px)"),
 					transition("transform, display, overlay", {
@@ -693,14 +729,17 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 				{...rest}
 				data-slot="header"
 				mix={[
-					css({
-						display: "flex",
-						blockSize: "4rem",
-						flexShrink: 0,
-						alignItems: "center",
-						borderBlockEndWidth: "1px",
-						borderBlockEndStyle: "solid",
-						borderBlockEndColor: "color-mix(in oklab, var(--ui-neutral-border) 80%, transparent)",
+					flex(),
+					bs("4rem"),
+					shrink(),
+					items("center"),
+					borderEdge("block-end", { width: 1, style: "solid" }),
+					raw({
+						borderBlockEndColor: colorMix(
+							"oklab",
+							{ color: "var(--ui-neutral-border)", weight: 80 },
+							"transparent",
+						),
 					}),
 					gap("0.5rem"),
 					pi("1rem"),
@@ -739,13 +778,11 @@ Sidebar.Content = function SidebarContent(handle: Handle<Sidebar.ContentProps>) 
 				{...rest}
 				data-slot="content"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						flexGrow: 1,
-						minBlockSize: "0",
-						blockSize: "auto",
-					}),
+					flex(),
+					flexCol(),
+					grow(),
+					minBs("0"),
+					bs("auto"),
 					gap("1rem"),
 					pi("0.75rem"),
 					pb("1rem"),
@@ -779,13 +816,16 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 				{...rest}
 				data-slot="footer"
 				mix={[
-					css({
-						display: "flex",
-						flexShrink: 0,
-						alignItems: "center",
-						borderBlockStartWidth: "1px",
-						borderBlockStartStyle: "solid",
-						borderBlockStartColor: "color-mix(in oklab, var(--ui-neutral-border) 80%, transparent)",
+					flex(),
+					shrink(),
+					items("center"),
+					borderEdge("block-start", { width: 1, style: "solid" }),
+					raw({
+						borderBlockStartColor: colorMix(
+							"oklab",
+							{ color: "var(--ui-neutral-border)", weight: 80 },
+							"transparent",
+						),
 					}),
 					gap("0.5rem"),
 					pi("1rem"),
@@ -855,30 +895,22 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 				data-slot="item"
 				data-color={resolvedColor}
 				mix={[
-					focusRingByColor(),
-					css({
-						display: "flex",
-						minBlockSize: "2.25rem",
-						alignItems: "center",
-						fontSize: "0.875rem",
-						fontWeight: "500",
-						textDecorationLine: "none",
-
-						"& > svg, & > [data-slot='icon']": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-							flexShrink: 0,
-						},
-
-						"&:active": {
-							scale: "0.98",
-						},
-
-						'&[aria-disabled="true"]': {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-					}),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						data("color", "neutral", outline("neutral.ring")),
+						data("color", "success", outline("success.ring")),
+						data("color", "warning", outline("warning.ring")),
+						data("color", "danger", outline("danger.ring")),
+					]),
+					flex(),
+					minBs("2.25rem"),
+					items("center"),
+					raw({ fontSize: "0.875rem" }),
+					weight(500),
+					textDecoration("none"),
+					when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
+					when("&:active", raw({ scale: "0.98" })),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 					gap("0.75rem"),
 					rounded("lg"),
 					pi("0.75rem"),
@@ -894,26 +926,42 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 						fg("neutral.emphasis"),
 						when("& > svg, & > [data-slot='icon']", fg("neutral.emphasis")),
 					]),
-					when('&[data-color="primary"][aria-current]:not([aria-current="false"])', [
-						bg("primary.tint"),
-						fg("primary"),
-						when("& > svg, & > [data-slot='icon']", fg("primary")),
-					]),
-					when('&[data-color="success"][aria-current]:not([aria-current="false"])', [
-						bg("success.tint"),
-						fg("success"),
-						when("& > svg, & > [data-slot='icon']", fg("success")),
-					]),
-					when('&[data-color="warning"][aria-current]:not([aria-current="false"])', [
-						bg("warning.tint"),
-						fg("warning"),
-						when("& > svg, & > [data-slot='icon']", fg("warning")),
-					]),
-					when('&[data-color="danger"][aria-current]:not([aria-current="false"])', [
-						bg("danger.tint"),
-						fg("danger"),
-						when("& > svg, & > [data-slot='icon']", fg("danger")),
-					]),
+					data(
+						"color",
+						"primary",
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("primary.tint"),
+							fg("primary"),
+							when("& > svg, & > [data-slot='icon']", fg("primary")),
+						]),
+					),
+					data(
+						"color",
+						"success",
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("success.tint"),
+							fg("success"),
+							when("& > svg, & > [data-slot='icon']", fg("success")),
+						]),
+					),
+					data(
+						"color",
+						"warning",
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("warning.tint"),
+							fg("warning"),
+							when("& > svg, & > [data-slot='icon']", fg("warning")),
+						]),
+					),
+					data(
+						"color",
+						"danger",
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("danger.tint"),
+							fg("danger"),
+							when("& > svg, & > [data-slot='icon']", fg("danger")),
+						]),
+					),
 					when("&:active", bg("neutral.bg-tint-pressed")),
 					mix,
 				]}
@@ -948,18 +996,19 @@ Sidebar.Group = function SidebarGroup(handle: Handle<Sidebar.GroupProps>) {
 				{...rest}
 				data-slot="group"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-
-						"& + &": {
-							marginBlockStart: "0.5rem",
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-							borderBlockStartColor:
-								"color-mix(in oklab, var(--ui-neutral-border) 60%, transparent)",
-						},
-					}),
+					flex(),
+					flexCol(),
+					when("& + &", [
+						mbs("0.5rem"),
+						borderEdge("block-start", { width: 1, style: "solid" }),
+						raw({
+							borderBlockStartColor: colorMix(
+								"oklab",
+								{ color: "var(--ui-neutral-border)", weight: 60 },
+								"transparent",
+							),
+						}),
+					]),
 					gap("0.25rem"),
 					when("& + &", pbs("1rem")),
 					mix,
@@ -992,17 +1041,14 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 				{...rest}
 				data-slot="group-label"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						marginBlockEnd: "0.25rem",
-						fontSize: "0.6875rem",
-						fontWeight: "600",
-						textTransform: "uppercase",
-						letterSpacing: "0.05em",
-						userSelect: "none",
-					}),
+					flex(),
+					items("center"),
+					justify("between"),
+					mbe("0.25rem"),
+					weight(600),
+					raw({ fontSize: "0.6875rem", textTransform: "uppercase" }),
+					tracking("wider"),
+					userSelect(),
 					pi("0.5rem"),
 					pb("0.375rem"),
 					fg("neutral.muted"),
@@ -1046,19 +1092,13 @@ Sidebar.GroupAction = function SidebarGroupAction(handle: Handle<Sidebar.GroupAc
 				{...rest}
 				data-slot="group-action"
 				mix={[
-					focusRingPrimary(),
-					css({
-						display: "inline-flex",
-						inlineSize: "1.25rem",
-						blockSize: "1.25rem",
-						alignItems: "center",
-						justifyContent: "center",
-
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-					}),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					inlineFlex(),
+					is("1.25rem"),
+					bs("1.25rem"),
+					items("center"),
+					justify("center"),
+					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 					rounded("sm"),
 					fg("neutral.muted"),
 					transition(
@@ -1114,14 +1154,7 @@ Sidebar.Menu = function SidebarMenu(handle: Handle<Sidebar.MenuProps>) {
 			<ul
 				{...rest}
 				data-slot="menu"
-				mix={[
-					css({
-						inlineSize: "100%",
-						minInlineSize: "0",
-					}),
-					vstack({ gap: "0.125rem" }),
-					mix,
-				]}
+				mix={[is("full"), minIs("0"), vstack({ gap: "0.125rem" }), mix]}
 			/>
 		);
 	};
@@ -1151,15 +1184,13 @@ Sidebar.MenuItem = function SidebarMenuItem(handle: Handle<Sidebar.MenuItemProps
 				{...rest}
 				data-slot="menu-item"
 				mix={[
-					css({
-						position: "relative",
-						display: "flex",
-						alignItems: "center",
-
-						"&:hover [data-slot='menu-action'], &:focus-within [data-slot='menu-action']": {
-							opacity: "1",
-						},
-					}),
+					relative(),
+					flex(),
+					items("center"),
+					when(
+						"&:hover [data-slot='menu-action'], &:focus-within [data-slot='menu-action']",
+						opacity(100),
+					),
 					mix,
 				]}
 			/>
@@ -1196,7 +1227,11 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 				data-slot="menu-button"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuRowStyle()), ...menuRowMixins(), mix]}
+				mix={[
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					...menuRowMixins(),
+					mix,
+				]}
 			/>
 		);
 	};
@@ -1230,84 +1265,62 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 				data-slot="menu-link"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuRowStyle()), ...menuRowMixins(), mix]}
+				mix={[
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					...menuRowMixins(),
+					mix,
+				]}
 			/>
 		);
 	};
 };
 
 /**
- * Shared visual treatment for {@link Sidebar.MenuButton} and
+ * Shared `@pkg/u` mixins for {@link Sidebar.MenuButton} and
  * {@link Sidebar.MenuLink}, factored out since the two differ only in host
  * element and how their current/active state is expressed.
  */
-function menuRowStyle() {
-	return {
-		display: "flex",
-		inlineSize: "100%",
-		minInlineSize: "0",
-		alignItems: "center",
-		overflow: "hidden",
-		textAlign: "start",
-		textDecorationLine: "none",
-		fontSize: "0.875rem",
-		fontWeight: "500",
-		outlineStyle: "none",
-
-		"& > svg:first-child, & > [data-slot='icon']:first-child": {
-			inlineSize: "1rem",
-			blockSize: "1rem",
-			flexShrink: 0,
-		},
-		"& > span": {
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
-		},
-
-		'&[data-size="sm"]': {
-			minBlockSize: "1.75rem",
-			paddingInline: "0.625rem",
-			paddingBlock: "0.375rem",
-			fontSize: "0.75rem",
-
-			"& > svg:first-child, & > [data-slot='icon']:first-child": {
-				inlineSize: "0.875rem",
-				blockSize: "0.875rem",
-			},
-		},
-		'&[data-size="md"]': {
-			minBlockSize: "2.25rem",
-		},
-		'&[data-size="lg"]': {
-			minBlockSize: "2.75rem",
-			paddingInline: "1rem",
-			paddingBlock: "0.625rem",
-			fontSize: "1rem",
-
-			"& > svg:first-child, & > [data-slot='icon']:first-child": {
-				inlineSize: "1.25rem",
-				blockSize: "1.25rem",
-			},
-		},
-
-		"&:active": {
-			scale: "0.98",
-		},
-		"&:disabled": {
-			cursor: "not-allowed",
-			opacity: "0.5",
-		},
-		'&[aria-disabled="true"]': {
-			cursor: "not-allowed",
-			opacity: "0.5",
-		},
-	} as const;
-}
-
-/** Shared `@pkg/u` mixins layered alongside {@link menuRowStyle} at each of its call sites. */
 function menuRowMixins() {
 	return [
+		flex(),
+		is("full"),
+		minIs("0"),
+		items("center"),
+		overflow("hidden"),
+		textAlign("start"),
+		weight(500),
+		textDecoration("none"),
+		raw({ fontSize: "0.875rem", outlineStyle: "none" }),
+		when("& > svg:first-child, & > [data-slot='icon']:first-child", [
+			is("1rem"),
+			bs("1rem"),
+			shrink(),
+		]),
+		when("& > span", truncate()),
+		data("size", "sm", [
+			minBs("1.75rem"),
+			pi("0.625rem"),
+			pb("0.375rem"),
+			raw({ fontSize: "0.75rem" }),
+			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
+				is("0.875rem"),
+				bs("0.875rem"),
+			]),
+		]),
+		data("size", "md", minBs("2.25rem")),
+		data("size", "lg", [
+			minBs("2.75rem"),
+			pi("1rem"),
+			pb("0.625rem"),
+			raw({ fontSize: "1rem" }),
+			when("& > svg:first-child, & > [data-slot='icon']:first-child", [
+				is("1.25rem"),
+				bs("1.25rem"),
+			]),
+		]),
+		when("&:active", raw({ scale: "0.98" })),
+		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+		when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 		gap("0.75rem"),
 		rounded("lg"),
 		pi("0.75rem"),
@@ -1363,30 +1376,18 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 				data-slot="menu-action"
 				data-show-on-hover={resolvedShowOnHover ? undefined : "false"}
 				mix={[
-					focusRingPrimary(),
-					css({
-						position: "absolute",
-						insetInlineEnd: "0.375rem",
-						insetBlockStart: "50%",
-						translate: "0 -50%",
-						display: "inline-flex",
-						inlineSize: "1.5rem",
-						blockSize: "1.5rem",
-						alignItems: "center",
-						justifyContent: "center",
-						opacity: "0",
-
-						"&:focus-visible": {
-							opacity: "1",
-						},
-						"&:disabled": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-						'&[data-show-on-hover="false"]': {
-							opacity: "1",
-						},
-					}),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					absolute(),
+					raw({ insetInlineEnd: "0.375rem", insetBlockStart: "50%", translate: "0 -50%" }),
+					inlineFlex(),
+					is("1.5rem"),
+					bs("1.5rem"),
+					items("center"),
+					justify("center"),
+					opacity(0),
+					focusVisible(opacity(100)),
+					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+					data("show-on-hover", "false", opacity(100)),
 					rounded("md"),
 					fg("neutral.muted"),
 					transition(
@@ -1425,13 +1426,11 @@ Sidebar.MenuBadge = function SidebarMenuBadge(handle: Handle<Sidebar.MenuBadgePr
 				{...rest}
 				data-slot="menu-badge"
 				mix={[
-					css({
-						marginInlineStart: "auto",
-						flexShrink: 0,
-						fontSize: "0.625rem",
-						fontWeight: "600",
-						fontVariantNumeric: "tabular-nums",
-					}),
+					mis("auto"),
+					shrink(),
+					raw({ fontSize: "0.625rem" }),
+					weight(600),
+					tabularNums(),
 					rounded("md"),
 					pi("0.375rem"),
 					pb("0.125rem"),
@@ -1470,11 +1469,9 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 				{...rest}
 				data-slot="menu-skeleton"
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						blockSize: "2.25rem",
-					}),
+					flex(),
+					items("center"),
+					bs("2.25rem"),
 					gap("0.75rem"),
 					pi("0.75rem"),
 					rounded("lg"),
@@ -1485,29 +1482,13 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 					<span
 						aria-hidden="true"
 						data-slot="menu-skeleton-icon"
-						mix={[
-							css({
-								inlineSize: "1rem",
-								blockSize: "1rem",
-								flexShrink: 0,
-							}),
-							rounded("sm"),
-							bg("neutral.border"),
-						]}
+						mix={[is("1rem"), bs("1rem"), shrink(), rounded("sm"), bg("neutral.border")]}
 					/>
 				)}
 				<span
 					aria-hidden="true"
 					data-slot="menu-skeleton-text"
-					mix={[
-						css({
-							blockSize: "1rem",
-							flexGrow: 1,
-							inlineSize: "60%",
-						}),
-						rounded("md"),
-						bg("neutral.border"),
-					]}
+					mix={[bs("1rem"), grow(), is("60%"), rounded("md"), bg("neutral.border")]}
 				/>
 			</div>
 		);
@@ -1538,15 +1519,12 @@ Sidebar.MenuSub = function SidebarMenuSub(handle: Handle<Sidebar.MenuSubProps>) 
 				{...rest}
 				data-slot="menu-sub"
 				mix={[
-					css({
-						position: "relative",
-						marginInlineStart: "0.875rem",
-						display: "flex",
-						flexDirection: "column",
-						borderInlineStartWidth: "1px",
-						borderInlineStartStyle: "solid",
-						paddingInlineStart: "0.875rem",
-					}),
+					relative(),
+					mis("0.875rem"),
+					flex(),
+					flexCol(),
+					borderEdge("inline-start", { width: 1, style: "solid" }),
+					pis("0.875rem"),
 					gap("0.125rem"),
 					border("neutral"),
 					mix,
@@ -1570,13 +1548,7 @@ Sidebar.MenuSubItem = function SidebarMenuSubItem(handle: Handle<Sidebar.MenuSub
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<li
-				{...rest}
-				data-slot="menu-sub-item"
-				mix={[css({ display: "flex", alignItems: "center" }), mix]}
-			/>
-		);
+		return <li {...rest} data-slot="menu-sub-item" mix={[flex(), items("center"), mix]} />;
 	};
 };
 
@@ -1601,7 +1573,11 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
 				{...rest}
 				data-slot="menu-sub-button"
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuSubRowStyle()), ...menuSubRowMixins(), mix]}
+				mix={[
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					...menuSubRowMixins(),
+					mix,
+				]}
 			/>
 		);
 	};
@@ -1628,47 +1604,33 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 				aria-current={resolvedAriaCurrent}
 				data-slot="menu-sub-link"
 				data-active={active || undefined}
-				mix={[focusRingPrimary(), css(menuSubRowStyle()), ...menuSubRowMixins(), mix]}
+				mix={[
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					...menuSubRowMixins(),
+					mix,
+				]}
 			/>
 		);
 	};
 };
 
 /**
- * Shared visual treatment for {@link Sidebar.MenuSubButton} and
+ * Shared `@pkg/u` mixins for {@link Sidebar.MenuSubButton} and
  * {@link Sidebar.MenuSubLink}.
  */
-function menuSubRowStyle() {
-	return {
-		display: "flex",
-		minBlockSize: "2rem",
-		inlineSize: "100%",
-		alignItems: "center",
-		textAlign: "start",
-		textDecorationLine: "none",
-		fontSize: "0.875rem",
-
-		'&[data-active], &[aria-current]:not([aria-current="false"])': {
-			fontWeight: "500",
-		},
-
-		"&:active": {
-			scale: "0.98",
-		},
-		"&:disabled": {
-			cursor: "not-allowed",
-			opacity: "0.5",
-		},
-		'&[aria-disabled="true"]': {
-			cursor: "not-allowed",
-			opacity: "0.5",
-		},
-	} as const;
-}
-
-/** Shared `@pkg/u` mixins layered alongside {@link menuSubRowStyle} at each of its call sites. */
 function menuSubRowMixins() {
 	return [
+		flex(),
+		minBs("2rem"),
+		is("full"),
+		items("center"),
+		textAlign("start"),
+		textDecoration("none"),
+		raw({ fontSize: "0.875rem" }),
+		when('&[data-active], &[aria-current]:not([aria-current="false"])', weight(500)),
+		when("&:active", raw({ scale: "0.98" })),
+		when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+		when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
 		gap("0.5rem"),
 		rounded("lg"),
 		pi("0.625rem"),
@@ -1716,39 +1678,31 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 				data-slot="rail"
 				mix={[
 					attrs({ "aria-hidden": true }),
-					css({
-						position: "absolute",
-						insetBlockStart: "0",
-						insetBlockEnd: "0",
-						inlineSize: "1rem",
-						zIndex: 20,
-						display: "none",
-						cursor: "col-resize",
-
-						'[data-side="left"] &': { right: "-1rem" },
-						'[data-side="right"] &': { left: "-1rem" },
-
-						"&::after": {
+					absolute(),
+					raw({ insetBlockStart: "0", insetBlockEnd: "0" }),
+					is("1rem"),
+					z(20),
+					hidden(),
+					cursor("col-resize"),
+					when('[data-side="left"] &', raw({ right: "-1rem" })),
+					when('[data-side="right"] &', raw({ left: "-1rem" })),
+					after([
+						absolute(),
+						is("2px"),
+						bg("transparent"),
+						raw({
 							content: '""',
-							position: "absolute",
 							insetBlockStart: "0",
 							insetBlockEnd: "0",
 							insetInlineStart: "50%",
 							translate: "-50% 0",
-							inlineSize: "2px",
-							backgroundColor: "transparent",
 							transitionProperty: "background-color",
 							transitionDuration: "150ms",
-						},
-
-						[WIDE_SHELL_QUERY]: {
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-						},
-					}),
-					hover(when("&::after", bg("neutral.border"))),
-					when("&:active", when("&::after", bg("primary.ring"))),
+						}),
+					]),
+					when(WIDE_SHELL_QUERY, [flex(), items("center"), justify("center")]),
+					hover(after(bg("neutral.border"))),
+					when("&:active", after(bg("primary.ring"))),
 					mix,
 				]}
 			/>
@@ -1782,25 +1736,16 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 			<label
 				data-slot="trigger"
 				mix={[
-					focusRingPrimary({ when: "&:has(input:focus-visible)" }),
-					css({
-						position: "relative",
-						display: "inline-flex",
-						inlineSize: "2rem",
-						blockSize: "2rem",
-						alignItems: "center",
-						justifyContent: "center",
-						cursor: "pointer",
-
-						"& > svg": {
-							inlineSize: "1rem",
-							blockSize: "1rem",
-						},
-						"&:has(input:disabled)": {
-							cursor: "not-allowed",
-							opacity: "0.5",
-						},
-					}),
+					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					relative(),
+					inlineFlex(),
+					is("2rem"),
+					bs("2rem"),
+					items("center"),
+					justify("center"),
+					cursor("pointer"),
+					when("& > svg", [is("1rem"), bs("1rem")]),
+					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
 					rounded("md"),
 					fg("neutral.muted"),
 					transition(
@@ -1810,7 +1755,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 				]}
 			>
 				<PanelLeftIcon aria-hidden />
-				<input type="checkbox" {...rest} data-slot="toggle" mix={[css(VISUALLY_HIDDEN), mix]} />
+				<input type="checkbox" {...rest} data-slot="toggle" mix={[raw(VISUALLY_HIDDEN), mix]} />
 			</label>
 		);
 	};
@@ -1843,14 +1788,12 @@ Sidebar.Inset = function SidebarInset(handle: Handle<Sidebar.InsetProps>) {
 				{...rest}
 				data-slot="inset"
 				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						flexGrow: 1,
-						minInlineSize: "0",
-						minBlockSize: "0",
-						blockSize: "auto",
-					}),
+					flex(),
+					flexCol(),
+					grow(),
+					minIs("0"),
+					minBs("0"),
+					bs("auto"),
 					container(INSET_CONTAINER_NAME),
 					bg("neutral.tint"),
 					mix,

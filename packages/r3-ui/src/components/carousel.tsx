@@ -13,12 +13,13 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { bs, is, minIs } from "@pkg/u/size";
+import { outline } from "@pkg/u/color";
+import { raw, vars } from "@pkg/u/general";
+import { flex, flexCol, gap, grow, items, justify, shrink } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { bs, is, minIs, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
-
-import { focusRingPrimary } from "../styles/focus-ring";
+import { attrs } from "remix/ui";
 
 import { Button } from "./button";
 
@@ -148,10 +149,10 @@ export function Carousel(handle: Handle<Carousel.Props>) {
 					flex(),
 					flexCol(),
 					gap(3),
-					css({
-						"--ui-carousel-gap": "1rem",
-						"--ui-carousel-slide-size": "18rem",
-						"--ui-carousel-padding": "0px",
+					vars({
+						"ui-carousel-gap": "1rem",
+						"ui-carousel-slide-size": "18rem",
+						"ui-carousel-padding": "0px",
 					}),
 					mix,
 				]}
@@ -188,19 +189,20 @@ Carousel.Viewport = function CarouselViewport(handle: Handle<Carousel.ViewportPr
 				data-slot="viewport"
 				mix={[
 					attrs({ role: DEFAULT_VIEWPORT_ROLE, tabIndex: DEFAULT_VIEWPORT_TAB_INDEX }),
-					focusRingPrimary(),
-					css({
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					// `@pkg/u/overflow` only exposes physical `overflowX`/`overflowY` —
+					// no logical-property equivalent — and this viewport deliberately
+					// scrolls along the inline axis regardless of writing direction, so
+					// it stays on the logical `overflowInline`/`overflowBlock` pair here.
+					raw({
 						overflowInline: "auto",
 						overflowBlock: "hidden",
 						scrollBehavior: "smooth",
 						scrollSnapType: "inline mandatory",
 						scrollPaddingInline: "var(--ui-carousel-padding, 0px)",
 						"-webkit-overflow-scrolling": "touch",
-
-						"@media (prefers-reduced-motion: reduce)": {
-							scrollBehavior: "auto",
-						},
 					}),
+					media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
 					mix,
 				]}
 			/>
@@ -232,10 +234,8 @@ Carousel.Track = function CarouselTrack(handle: Handle<Carousel.TrackProps>) {
 				data-slot="track"
 				mix={[
 					flex(),
-					css({
-						gap: "var(--ui-carousel-gap, 1rem)",
-						paddingInline: "var(--ui-carousel-padding, 0px)",
-					}),
+					gap("var(--ui-carousel-gap, 1rem)"),
+					pi("var(--ui-carousel-padding, 0px)"),
 					mix,
 				]}
 			/>
@@ -264,9 +264,10 @@ Carousel.Slide = function CarouselSlide(handle: Handle<Carousel.SlideProps>) {
 				data-slot="slide"
 				mix={[
 					attrs({ role: DEFAULT_SLIDE_ROLE }),
-					css({
-						flexShrink: "0",
-						flex: "0 0 var(--ui-carousel-slide-size, 18rem)",
+					grow(0),
+					shrink(0),
+					raw({
+						flexBasis: "var(--ui-carousel-slide-size, 18rem)",
 						scrollSnapAlign: "start",
 						scrollSnapStop: "always",
 					}),
@@ -301,9 +302,10 @@ Carousel.Controls = function CarouselControls(handle: Handle<Carousel.ControlsPr
 					flex(),
 					items("center"),
 					gap(2),
-					css({
-						justifyContent: "flex-end",
-					}),
+					// `justify("end")` resolves to `justify-content: end`, which CSS Box
+					// Alignment treats as equivalent to `flex-end` in this non-reversed
+					// row flex container.
+					justify("end"),
 					mix,
 				]}
 			/>

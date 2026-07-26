@@ -12,15 +12,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
-import { opacity, rounded } from "@pkg/u/effects";
+import { bg, borderEdge, fg } from "@pkg/u/color";
+import { opacity, rounded, transition } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { justify, shrink } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, pb, pbe, pi } from "@pkg/u/size";
 import { hover, open, when } from "@pkg/u/state";
 import { rotate } from "@pkg/u/transform";
-import { css } from "remix/ui";
+import { text, textDecoration } from "@pkg/u/typography";
 
 import { Disclosure } from "./disclosure";
 
@@ -160,12 +160,12 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 				{...rest}
 				mix={[
 					rounded("none"),
-					css({
+					raw({
 						borderInlineWidth: "0",
 						borderBlockStartWidth: "0",
 					}),
 					open(when('& summary [data-slot="icon"]', rotate(180))),
-					when("&:first-child", raw({ borderBlockStartWidth: "1px" })),
+					when("&:first-child", borderEdge("block-start", { width: 1 })),
 					when('&:has(> summary[aria-disabled="true"])', opacity(50)),
 					mix,
 				]}
@@ -210,16 +210,12 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 					pb(4),
 					pi(0),
 					rounded("none"),
-					hover([bg("transparent"), raw({ textDecorationLine: "underline" })]),
+					hover([bg("transparent"), textDecoration("underline")]),
 					when('& [data-slot="icon"]', [
 						is(4),
 						bs(4),
 						shrink(),
-						raw({
-							flexShrink: "0",
-							transitionProperty: "transform",
-							transitionDuration: "200ms",
-						}),
+						transition("transform", { duration: "200ms" }),
 					]),
 					media(
 						"(prefers-reduced-motion: reduce)",
@@ -250,19 +246,6 @@ Accordion.Content = function AccordionContent(handle: Handle<Accordion.ContentPr
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<Disclosure.Panel
-				{...rest}
-				mix={[
-					pbe(4),
-					fg("neutral"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <Disclosure.Panel {...rest} mix={[pbe(4), fg("neutral"), text("sm"), mix]} />;
 	};
 };

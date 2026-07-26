@@ -11,10 +11,15 @@
  */
 import type { ElementProps, MixinDescriptor } from "remix/ui";
 
-import { combine, raw } from "@pkg/u/general";
+import { combine, vars } from "@pkg/u/general";
 import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
+
+/** Strips a leading `--` from a custom property name, matching `u.vars()`'s own bare-name convention. */
+function stripLeadingDashes(propertyName: string): string {
+	return propertyName.replace(/^--/, "");
+}
 
 /**
  * Composes the custom property pairing a gradient direction's `"right"`
@@ -38,8 +43,9 @@ import type { CSSStyles } from "../utils/css-styles";
 export function rtlAwareGradientDirection<Node extends Element = Element>(
 	propertyName: string,
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
+	let name = stripLeadingDashes(propertyName);
 	return combine<Node>([
-		raw({ [propertyName]: "right" }),
-		when<Node>("&:dir(rtl)", raw({ [propertyName]: "left" })),
+		vars<Node>({ [name]: "right" }),
+		when<Node>("&:dir(rtl)", vars<Node>({ [name]: "left" })),
 	]);
 }

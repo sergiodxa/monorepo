@@ -12,7 +12,8 @@
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
-import { css } from "remix/ui";
+import { colorMix, linearGradient } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 
 import type { CSSStyles } from "../utils/css-styles";
 
@@ -155,7 +156,7 @@ export function spin(options: Spin.Options = {}): CSSMixinDescriptor {
 	let when = options.when;
 	let target = resolveTarget(when);
 
-	return css({
+	return raw({
 		...loopShell(target, when, "--ui-spin-fade-duration", 1),
 		"@keyframes ui-spin-rotate": {
 			from: { transform: "rotate(0deg)" },
@@ -222,7 +223,7 @@ export function pulse(options: Pulse.Options = {}): CSSMixinDescriptor {
 	let target = resolveTarget(when);
 	let reducedMinOpacity = maxOpacity - (maxOpacity - minOpacity) * REDUCED_PULSE_AMPLITUDE_SCALE;
 
-	return css({
+	return raw({
 		...loopShell(target, when, "--ui-pulse-fade-duration", maxOpacity),
 		"@keyframes ui-pulse-breathe": {
 			"0%, 100%": { opacity: `var(--ui-pulse-max-opacity, ${maxOpacity})` },
@@ -287,7 +288,7 @@ export function shimmer<node extends Element = Element>(options: Shimmer.Options
 	let when = options.when ?? DEFAULT_SHIMMER_WHEN;
 	let target = resolveTarget(when);
 
-	return css<node>({
+	return raw<node>({
 		...loopShell(target, when, "--ui-shimmer-fade-duration", 1),
 		"@keyframes ui-shimmer-sweep": {
 			from: { backgroundPosition: "-100% 0" },
@@ -298,8 +299,12 @@ export function shimmer<node extends Element = Element>(options: Shimmer.Options
 			"50%": { opacity: 0.6 },
 		},
 		...gate(target, {
-			backgroundImage:
-				"linear-gradient(90deg, transparent, color-mix(in oklab, currentColor 35%, transparent), transparent)",
+			backgroundImage: linearGradient(
+				90,
+				"transparent",
+				colorMix("oklab", { color: "currentColor", weight: 35 }, "transparent"),
+				"transparent",
+			),
 			backgroundRepeat: "no-repeat",
 			backgroundSize: `var(--ui-shimmer-band-size, ${bandSize}) 100%`,
 			animation: `ui-shimmer-sweep var(--ui-shimmer-duration, ${duration}) var(--ui-shimmer-easing, ${easing}) infinite`,
@@ -379,9 +384,13 @@ export function textShimmer(options: TextShimmer.Options = {}): CSSMixinDescript
 	let angleVar = `var(--ui-text-shimmer-angle, ${angle})`;
 	let bandSizeVar = `var(--ui-text-shimmer-band-size, ${bandSize})`;
 	let colorVar = `var(--ui-text-shimmer-color, ${color})`;
-	let restTone = `color-mix(in oklab, ${colorVar} ${TEXT_SHIMMER_REST_TONE_MIX}%, transparent)`;
+	let restTone = colorMix(
+		"oklab",
+		{ color: colorVar, weight: TEXT_SHIMMER_REST_TONE_MIX },
+		"transparent",
+	);
 
-	return css({
+	return raw({
 		...loopShell(target, when, "--ui-text-shimmer-fade-duration", 1),
 		"@supports (background-clip: text) or (-webkit-background-clip: text)": {
 			"@keyframes ui-text-shimmer-sweep": {
@@ -393,7 +402,14 @@ export function textShimmer(options: TextShimmer.Options = {}): CSSMixinDescript
 				"50%": { opacity: 0.6 },
 			},
 			...gate(target, {
-				backgroundImage: `linear-gradient(${angleVar}, ${restTone} 0%, ${restTone} calc(50% - (${bandSizeVar} / 2)), ${colorVar} 50%, ${restTone} calc(50% + (${bandSizeVar} / 2)), ${restTone} 100%)`,
+				backgroundImage: linearGradient(
+					angleVar,
+					{ color: restTone, position: "0%" },
+					{ color: restTone, position: `calc(50% - (${bandSizeVar} / 2))` },
+					{ color: colorVar, position: "50%" },
+					{ color: restTone, position: `calc(50% + (${bandSizeVar} / 2))` },
+					{ color: restTone, position: "100%" },
+				),
 				backgroundSize: "200% 100%",
 				backgroundRepeat: "no-repeat",
 				WebkitBackgroundClip: "text",

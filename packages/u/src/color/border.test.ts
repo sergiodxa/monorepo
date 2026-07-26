@@ -20,6 +20,10 @@ describe("border", () => {
 		});
 	});
 
+	test("'none' short-circuits to a bare border reset, not a color branch", () => {
+		expect(styles(border("none"))).toEqual({ border: "none" });
+	});
+
 	test("a bare tone defaults to that tone's plain border weight", () => {
 		expect(styles(border("brand"))).toEqual({ borderColor: "var(--ui-brand-border)" });
 	});

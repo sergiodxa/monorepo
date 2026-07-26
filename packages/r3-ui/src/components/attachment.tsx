@@ -19,6 +19,7 @@ import {
 	block,
 	container,
 	flex,
+	flexCol,
 	gap,
 	hstack,
 	items,
@@ -29,9 +30,9 @@ import {
 } from "@pkg/u/layout";
 import { overflow, overflowX } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
-import { bs, fit, is, minIs, p } from "@pkg/u/size";
+import { aspect, bs, fit, is, minIs, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { truncate, weight } from "@pkg/u/typography";
+import { text, textAlign, truncate, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 import { shimmer } from "../animations/keyframes";
@@ -263,12 +264,7 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 					data-slot="body"
 					mix={[
 						hstack({ gap: 3, align: "center" }),
-						raw({
-							[NARROW_CONTAINER_QUERY]: {
-								flexDirection: "column",
-								alignItems: "stretch",
-							},
-						}),
+						when(NARROW_CONTAINER_QUERY, [flexCol(), items("stretch")]),
 					]}
 				>
 					{children}
@@ -315,14 +311,7 @@ Attachment.Media = function AttachmentMedia(handle: Handle<Attachment.MediaProps
 					fg("neutral"),
 					when("& > svg", [is(5), bs(5)]),
 					when("& > img", [is("full"), bs("full"), fit("cover")]),
-					raw({
-						[NARROW_CONTAINER_QUERY]: {
-							inlineSize: "100%",
-							blockSize: "auto",
-							aspectRatio: "4 / 3",
-							borderRadius: "var(--ui-radius-lg, 0.5rem)",
-						},
-					}),
+					when(NARROW_CONTAINER_QUERY, [is("full"), bs("auto"), aspect(4, 3), rounded("lg")]),
 					mix,
 				]}
 			>
@@ -362,11 +351,7 @@ Attachment.Content = function AttachmentContent(handle: Handle<Attachment.Conten
 					vstack({ gap: 0.5 }),
 					minIs(0),
 					raw({ flex: "1" }),
-					raw({
-						[NARROW_CONTAINER_QUERY]: {
-							textAlign: "center",
-						},
-					}),
+					when(NARROW_CONTAINER_QUERY, textAlign("center")),
 					mix,
 				]}
 			>
@@ -404,7 +389,7 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 				mix={[
 					weight("semibold"),
 					truncate(),
-					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+					text("sm"),
 					shimmer({ when: TITLE_SHIMMER_WHEN }),
 					mix,
 				]}
@@ -436,16 +421,7 @@ Attachment.Description = function AttachmentDescription(
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<p
-				{...rest}
-				data-slot="description"
-				mix={[
-					truncate(),
-					fg("neutral.muted"),
-					raw({ fontSize: "0.75rem", lineHeight: "calc(1 / 0.75)" }),
-					mix,
-				]}
-			>
+			<p {...rest} data-slot="description" mix={[truncate(), fg("neutral.muted"), text("xs"), mix]}>
 				{children}
 			</p>
 		);

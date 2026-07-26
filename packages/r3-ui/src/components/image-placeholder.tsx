@@ -11,16 +11,24 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { absolute, center, flex, inlineFlex, items, justify, relative } from "@pkg/u/layout";
+import { raw, userSelect } from "@pkg/u/general";
+import {
+	absolute,
+	center,
+	flex,
+	inlineFlex,
+	inset,
+	items,
+	justify,
+	relative,
+	shrink,
+} from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, fit, is, mis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
-
-import { focusRingPrimary } from "../styles/focus-ring";
+import { data, when } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
 
 /** Size variant {@link ImagePlaceholder} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: ImagePlaceholder.Size = "md";
@@ -149,53 +157,38 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 				data-size={resolvedSize}
 				data-shape={resolvedShape}
 				mix={[
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
 					items("center"),
 					justify("center"),
 					bg("neutral.bg-tint-hover"),
 					fg("neutral.emphasis"),
-					css({
-						flexShrink: 0,
-						userSelect: "none",
-						inlineSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
-						blockSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						'&[data-size="sm"]': {
-							inlineSize: "var(--ui-image-placeholder-size-sm, 2rem)",
-							blockSize: "var(--ui-image-placeholder-size-sm, 2rem)",
-							fontSize: "0.75rem",
-							lineHeight: "calc(1 / 0.75)",
-						},
-						'&[data-size="lg"]': {
-							inlineSize: "var(--ui-image-placeholder-size-lg, 3rem)",
-							blockSize: "var(--ui-image-placeholder-size-lg, 3rem)",
-							fontSize: "1rem",
-							lineHeight: "1.5",
-						},
-
-						'&[data-shape="circle"]': {
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							'& > [data-slot="image"]': {
-								borderRadius: "var(--ui-radius-full, 9999px)",
-							},
-							'& > [data-slot="fallback"]': {
-								borderRadius: "var(--ui-radius-full, 9999px)",
-							},
-						},
-						'&[data-shape="square"]': {
-							borderRadius: "var(--ui-radius-lg, 0.5rem)",
-							'& > [data-slot="image"]': {
-								borderRadius: "var(--ui-radius-lg, 0.5rem)",
-							},
-							'& > [data-slot="fallback"]': {
-								borderRadius: "var(--ui-radius-lg, 0.5rem)",
-							},
-						},
-					}),
+					shrink(),
+					userSelect(),
+					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					text("sm"),
+					data("size", "sm", [
+						is("var(--ui-image-placeholder-size-sm, 2rem)"),
+						bs("var(--ui-image-placeholder-size-sm, 2rem)"),
+						text("xs"),
+					]),
+					data("size", "lg", [
+						is("var(--ui-image-placeholder-size-lg, 3rem)"),
+						bs("var(--ui-image-placeholder-size-lg, 3rem)"),
+						text("base"),
+					]),
+					data("shape", "circle", [
+						rounded("full"),
+						when('& > [data-slot="image"]', rounded("full")),
+						when('& > [data-slot="fallback"]', rounded("full")),
+					]),
+					data("shape", "square", [
+						rounded("lg"),
+						when('& > [data-slot="image"]', rounded("lg")),
+						when('& > [data-slot="fallback"]', rounded("lg")),
+					]),
 					mix,
 				]}
 			>
@@ -233,13 +226,8 @@ ImagePlaceholder.Image = function ImagePlaceholderImage(
 					is("full"),
 					bs("full"),
 					fit("cover"),
-					css({
-						insetBlockStart: "0",
-						insetBlockEnd: "0",
-						insetInlineStart: "0",
-						insetInlineEnd: "0",
-						overflow: "hidden",
-					}),
+					inset(0, 0, 0, 0),
+					overflow("hidden"),
 					mix,
 				]}
 			/>
@@ -277,14 +265,9 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 					weight("medium"),
 					bg("neutral.bg-tint-pressed"),
 					fg("neutral"),
-					css({
-						insetBlockStart: "0",
-						insetBlockEnd: "0",
-						insetInlineStart: "0",
-						insetInlineEnd: "0",
-						overflow: "hidden",
-						textTransform: "uppercase",
-					}),
+					inset(0, 0, 0, 0),
+					overflow("hidden"),
+					raw({ textTransform: "uppercase" }),
 					mix,
 				]}
 			>
@@ -324,7 +307,7 @@ ImagePlaceholder.Badge = function ImagePlaceholderBadge(
 					rounded("full"),
 					border({ color: "neutral.tint", width: 2 }),
 					bg("neutral.strong"),
-					css({
+					raw({
 						insetBlockEnd: "0",
 						insetInlineEnd: "0",
 					}),
@@ -365,11 +348,10 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 				mix={[
 					flex(),
 					when("& > * + *", mis(-3)),
-					css({
-						'& > [data-slot="image-placeholder"]': {
-							boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)",
-						},
-					}),
+					when(
+						'& > [data-slot="image-placeholder"]',
+						raw({ boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)" }),
+					),
 					mix,
 				]}
 			>
@@ -414,15 +396,12 @@ ImagePlaceholder.GroupCount = function ImagePlaceholderGroupCount(
 					fg("neutral"),
 					when('&[data-shape="circle"]', rounded("full")),
 					when('&[data-shape="square"]', rounded("lg")),
-					css({
-						flexShrink: 0,
-						userSelect: "none",
-						inlineSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
-						blockSize: "var(--ui-image-placeholder-size-md, 2.5rem)",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)",
-					}),
+					shrink(),
+					userSelect(),
+					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					text("sm"),
+					raw({ boxShadow: "0 0 0 2px var(--ui-neutral-bg-tint)" }),
 					mix,
 				]}
 			>

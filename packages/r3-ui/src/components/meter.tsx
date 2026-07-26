@@ -11,12 +11,15 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
-import { appearance, vstack } from "@pkg/u/layout";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { appearance, block, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
 import { bs, is, m, p } from "@pkg/u/size";
-import { css } from "remix/ui";
+import { data, when } from "@pkg/u/state";
+import { text } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -158,42 +161,19 @@ Meter.Indicator = function MeterIndicator(handle: Handle<Meter.IndicatorProps>) 
 					overflow("hidden"),
 					rounded("full"),
 					bg("neutral.border"),
-					css({
-						display: "block",
-						border: "none",
-
-						"&::-webkit-meter-bar": {
-							backgroundColor: "var(--ui-neutral-border)",
-							borderRadius: "var(--ui-radius-full, 9999px)",
-						},
-
-						[FILL_PSEUDO_ELEMENTS]: {
-							borderRadius: "var(--ui-radius-full, 9999px)",
-							transitionProperty: "all",
-							transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-							transitionDuration: "150ms",
-						},
-
-						'&[data-color="primary"]': {
-							[FILL_PSEUDO_ELEMENTS]: { backgroundColor: "var(--ui-primary-bg-solid)" },
-						},
-						'&[data-color="neutral"]': {
-							[FILL_PSEUDO_ELEMENTS]: { backgroundColor: "var(--ui-neutral-bg-solid)" },
-						},
-						'&[data-color="success"]': {
-							[FILL_PSEUDO_ELEMENTS]: { backgroundColor: "var(--ui-success-bg-solid)" },
-						},
-						'&[data-color="warning"]': {
-							[FILL_PSEUDO_ELEMENTS]: { backgroundColor: "var(--ui-warning-bg-solid)" },
-						},
-						'&[data-color="danger"]': {
-							[FILL_PSEUDO_ELEMENTS]: { backgroundColor: "var(--ui-danger-bg-solid)" },
-						},
-
-						"@media (prefers-reduced-motion: reduce)": {
-							[FILL_PSEUDO_ELEMENTS]: { transitionDuration: "0s" },
-						},
-					}),
+					block(),
+					border("none"),
+					when("&::-webkit-meter-bar", [bg("neutral.border"), rounded("full")]),
+					when(FILL_PSEUDO_ELEMENTS, [rounded("full"), transition("all")]),
+					data("color", "primary", when(FILL_PSEUDO_ELEMENTS, bg("primary.solid"))),
+					data("color", "neutral", when(FILL_PSEUDO_ELEMENTS, bg("neutral.solid"))),
+					data("color", "success", when(FILL_PSEUDO_ELEMENTS, bg("success.solid"))),
+					data("color", "warning", when(FILL_PSEUDO_ELEMENTS, bg("warning.solid"))),
+					data("color", "danger", when(FILL_PSEUDO_ELEMENTS, bg("danger.solid"))),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						when(FILL_PSEUDO_ELEMENTS, raw({ transitionDuration: "0s" })),
+					),
 					mix,
 				]}
 			/>
@@ -215,18 +195,6 @@ Meter.ValueLabel = function MeterValueLabel(handle: Handle<Meter.ValueLabelProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<span
-				{...rest}
-				mix={[
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						color: "var(--ui-neutral-fg)",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <span {...rest} mix={[text("sm"), fg("neutral"), mix]} />;
 	};
 };

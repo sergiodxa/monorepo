@@ -12,19 +12,24 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
 import {
 	container,
 	flex,
 	flexWrap,
 	gap,
 	grid,
+	gridArea,
 	hstack,
 	items,
 	relative,
+	self,
 	vstack,
 } from "@pkg/u/layout";
 import { maxIs, minIs } from "@pkg/u/size";
-import { css } from "remix/ui";
+import { when } from "@pkg/u/state";
+import { weight } from "@pkg/u/typography";
 
 /**
  * Named container {@link Message} declares on its own host, so
@@ -152,24 +157,14 @@ export function Message(handle: Handle<Message.Props>) {
 					grid(),
 					gap("var(--ui-message-row-gap, 0.25rem)", "var(--ui-message-gap, 0.75rem)"),
 					container(CONTAINER_NAME),
-					css({
+					raw({
 						gridTemplateColumns: "auto 1fr",
 						gridTemplateAreas: `"avatar header" "avatar content" ". footer"`,
-
-						'& > [data-slot="avatar"]': {
-							gridArea: "avatar",
-							alignSelf: "end",
-						},
-						'& > [data-slot="header"]': {
-							gridArea: "header",
-						},
-						'& > [data-slot="content"]': {
-							gridArea: "content",
-						},
-						'& > [data-slot="footer"]': {
-							gridArea: "footer",
-						},
 					}),
+					when('& > [data-slot="avatar"]', [gridArea("avatar"), self("end")]),
+					when('& > [data-slot="header"]', gridArea("header")),
+					when('& > [data-slot="content"]', gridArea("content")),
+					when('& > [data-slot="footer"]', gridArea("footer")),
 					mix,
 				]}
 			>
@@ -240,17 +235,13 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 					flexWrap("wrap"),
 					items("baseline"),
 					gap("0.125rem", "0.5rem"),
-					css({
-						"& > :first-child": {
-							fontSize: "0.875rem",
-							fontWeight: "600",
-							color: "var(--ui-neutral-fg-emphasis)",
-						},
-						"& > :not(:first-child)": {
-							fontSize: "0.75rem",
-							color: "var(--ui-neutral-fg-muted)",
-						},
-
+					when("& > :first-child", [
+						raw({ fontSize: "0.875rem" }),
+						weight("semibold"),
+						fg("neutral.emphasis"),
+					]),
+					when("& > :not(:first-child)", [raw({ fontSize: "0.75rem" }), fg("neutral.muted")]),
+					raw({
 						[`@container ${CONTAINER_NAME} (min-width: 26rem)`]: {
 							flexWrap: "nowrap",
 							justifyContent: "space-between",

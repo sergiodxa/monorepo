@@ -11,13 +11,14 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
+import { bg, border, fg } from "@pkg/u/color";
 import { rounded, transition } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
 import { appearance, block, flex, flexCol, gap } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, is, m, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
+import { text } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -130,9 +131,8 @@ ProgressBar.Indicator = function ProgressBarIndicator(handle: Handle<ProgressBar
 						transition("all"),
 					]),
 					when("&::-moz-progress-bar", [bg("primary.solid"), rounded("full"), transition("all")]),
-					css({
-						border: "none",
-
+					border("none"),
+					raw({
 						"@media (prefers-reduced-motion: reduce)": {
 							"&::-webkit-progress-value": { transitionDuration: "0s" },
 							"&::-moz-progress-bar": { transitionDuration: "0s" },
@@ -161,18 +161,6 @@ ProgressBar.ValueLabel = function ProgressBarValueLabel(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<span
-				{...rest}
-				mix={[
-					fg("neutral"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <span {...rest} mix={[fg("neutral"), text("sm"), mix]} />;
 	};
 };

@@ -44,4 +44,12 @@ describe("borderEdge", () => {
 	test("only sets the given keys", () => {
 		expect(styles(borderEdge("inline-start", {}))).toEqual({});
 	});
+
+	test("accepts a physical edge, pinned regardless of writing mode", () => {
+		expect(styles(borderEdge("right", { width: 1, style: "solid", color: "neutral" }))).toEqual({
+			borderRightWidth: "1px",
+			borderRightStyle: "solid",
+			borderRightColor: "var(--ui-neutral-border)",
+		});
+	});
 });

@@ -94,6 +94,11 @@ describe("color", () => {
 		expect(color("brand.strong")).toBe("var(--ui-brand-border-strong)");
 	});
 
+	test("resolves 'currentcolor' regardless of case", () => {
+		expect(color("currentColor")).toBe("currentColor");
+		expect(color("currentcolor")).toBe("currentColor");
+	});
+
 	test("resolves an explicit suffix that isn't a friendly alias verbatim", () => {
 		expect(color("brand.border")).toBe("var(--ui-brand-border)");
 		expect(color("brand.ring")).toBe("var(--ui-brand-ring)");
@@ -106,6 +111,14 @@ describe("color", () => {
 
 	test("throws when a bare tone has no explicit suffix and no default is given", () => {
 		expect(() => color("brand")).toThrow();
+	});
+
+	test("passes an already-fully-formed CSS color function through unchanged", () => {
+		expect(color("color-mix(in oklab, red 50%, blue)")).toBe("color-mix(in oklab, red 50%, blue)");
+	});
+
+	test("passes a raw var() reference through unchanged", () => {
+		expect(color("var(--some-color)")).toBe("var(--some-color)");
 	});
 });
 

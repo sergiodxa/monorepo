@@ -17,8 +17,10 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@pkg/r3-ui/mixins";
-import { focusRingByColor, panelChrome } from "@pkg/r3-ui/styles";
+import { panelChrome } from "@pkg/r3-ui/styles";
 import { visuallyHidden } from "@pkg/u/a11y";
+import { outline } from "@pkg/u/color";
+import { when } from "@pkg/u/state";
 import { css, on } from "remix/ui";
 
 import type { Album } from "../data/types";
@@ -125,7 +127,13 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 							data-color="primary"
 							mix={[
 								panelChrome(),
-								focusRingByColor(),
+								when("&:focus-visible", [
+									outline({ color: "primary.ring", offset: 2 }),
+									when('&[data-color="neutral"]', outline("neutral.ring")),
+									when('&[data-color="success"]', outline("success.ring")),
+									when('&[data-color="warning"]', outline("warning.ring")),
+									when('&[data-color="danger"]', outline("danger.ring")),
+								]),
 								css({
 									display: "grid",
 									boxSizing: "border-box",

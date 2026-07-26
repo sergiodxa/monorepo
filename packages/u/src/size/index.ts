@@ -23,4 +23,5 @@ export { pbs } from "./pbs";
 export { pi } from "./pi";
 export { pie } from "./pie";
 export { pis } from "./pis";
+export { safeAreaPadding } from "./safe-area-padding";
 export { squircle } from "./squircle";

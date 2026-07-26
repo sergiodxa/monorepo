@@ -12,7 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { css } from "remix/ui";
+import { text } from "@pkg/u/typography";
 
 /**
  * Prop types for {@link Description}.
@@ -48,18 +48,6 @@ export function Description(handle: Handle<Description.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return (
-			<p
-				{...rest}
-				mix={[
-					fg("neutral.muted"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
-					mix,
-				]}
-			/>
-		);
+		return <p {...rest} mix={[fg("neutral.muted"), text("sm"), mix]} />;
 	};
 }

@@ -13,17 +13,17 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { rounded, opacity } from "@pkg/u/effects";
-import { flex, inlineFlex, items, justify, gap } from "@pkg/u/layout";
+import { cursor, raw, userSelect } from "@pkg/u/general";
+import { flex, flexCol, inlineFlex, items, justify, gap } from "@pkg/u/layout";
 import { pi, pb } from "@pkg/u/size";
-import { when, hover, active } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { when, hover, active, data } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
@@ -138,7 +138,13 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
 				mix={[
-					focusRingByColor(),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						when('&[data-color="neutral"]', outline("neutral.ring")),
+						when('&[data-color="success"]', outline("success.ring")),
+						when('&[data-color="warning"]', outline("warning.ring")),
+						when('&[data-color="danger"]', outline("danger.ring")),
+					]),
 					interactiveTransition(),
 					inlineFlex(),
 					items("center"),
@@ -146,24 +152,15 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					gap("0.5rem"),
 					rounded("md"),
 					weight(500),
-					css({ cursor: "default", userSelect: "none" }),
+					cursor("default"),
+					userSelect(),
 					pi("1rem"),
 					pb("0.5rem"),
 					when('&[data-size="sm"]', [pi("0.75rem"), pb("0.375rem")]),
 					when('&[data-size="lg"]', [pi("1.25rem"), pb("0.625rem")]),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						'&[data-size="sm"]': {
-							fontSize: "0.75rem",
-							lineHeight: "calc(1 / 0.75)",
-						},
-						'&[data-size="lg"]': {
-							fontSize: "1rem",
-							lineHeight: "1.5",
-						},
-					}),
+					text("sm"),
+					data("size", "sm", text("xs")),
+					data("size", "lg", text("base")),
 					when('&[data-variant="solid"]', [
 						when('&[data-color="primary"]', [
 							bg("primary.bg-solid"),
@@ -196,15 +193,16 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 							active(bg("danger.bg-solid-pressed")),
 						]),
 					]),
-					css({
-						'&[data-variant="outline"]': {
-							borderWidth: "2px",
-							backgroundColor: "transparent",
-						},
-						'&[data-variant="ghost"]': {
-							backgroundColor: "transparent",
-						},
-					}),
+					when('&[data-variant="outline"]', [
+						/**
+						 * No utility sets `border-width` alone without also
+						 * defaulting `border-style` to `"solid"` — `border({ width })`
+						 * would add a `border-style` this component never had here.
+						 */
+						raw({ borderWidth: "2px" }),
+						bg("transparent"),
+					]),
+					when('&[data-variant="ghost"]', bg("transparent")),
 					when('&[data-variant="outline"]', [
 						when('&[data-color="primary"]', [
 							border("primary.border-strong"),
@@ -287,11 +285,7 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 						),
 					]),
 					when("&:disabled", opacity(50)),
-					css({
-						"&:disabled": {
-							cursor: "not-allowed",
-						},
-					}),
+					when("&:disabled", cursor("not-allowed")),
 					mix,
 				]}
 			>
@@ -367,12 +361,7 @@ export function ToggleButtonGroup(handle: Handle<ToggleButtonGroup.Props>) {
 					flex(),
 					items("center"),
 					gap("0.25rem"),
-					css({
-						'&[data-orientation="vertical"]': {
-							flexDirection: "column",
-							alignItems: "flex-start",
-						},
-					}),
+					when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
 					mix,
 				]}
 			/>

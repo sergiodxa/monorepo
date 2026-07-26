@@ -11,17 +11,16 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw, userSelect } from "@pkg/u/general";
 import { gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
-import { active, hover, when } from "@pkg/u/state";
+import { active, data, hover, when } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Semantic color role {@link LinkButton} falls back to when `color` is omitted. */
@@ -108,7 +107,13 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
 				mix={[
-					focusRingByColor(),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						data("color", "neutral", outline("neutral.ring")),
+						data("color", "success", outline("success.ring")),
+						data("color", "warning", outline("warning.ring")),
+						data("color", "danger", outline("danger.ring")),
+					]),
 					interactiveTransition(),
 					inlineFlex(),
 					items("center"),
@@ -118,35 +123,35 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					weight("medium"),
 					pi(4),
 					pb(2),
-					when('&[data-size="sm"]', [pi(3), pb(1.5)]),
-					when('&[data-size="lg"]', [pi(5), pb(2.5), text("base")]),
+					data("size", "sm", [pi(3), pb(1.5)]),
+					data("size", "lg", [pi(5), pb(2.5), text("base")]),
 
-					when('&[data-variant="solid"]', [
-						when('&[data-color="primary"]', [
+					data("variant", "solid", [
+						data("color", "primary", [
 							bg("primary.solid"),
 							fg("primary.onSolid"),
 							hover(bg("primary.bg-solid-hover")),
 							active(bg("primary.bg-solid-pressed")),
 						]),
-						when('&[data-color="neutral"]', [
+						data("color", "neutral", [
 							bg("neutral.solid"),
 							fg("neutral.onSolid"),
 							hover(bg("neutral.bg-solid-hover")),
 							active(bg("neutral.bg-solid-pressed")),
 						]),
-						when('&[data-color="success"]', [
+						data("color", "success", [
 							bg("success.solid"),
 							fg("success.onSolid"),
 							hover(bg("success.bg-solid-hover")),
 							active(bg("success.bg-solid-pressed")),
 						]),
-						when('&[data-color="warning"]', [
+						data("color", "warning", [
 							bg("warning.solid"),
 							fg("warning.onSolid"),
 							hover(bg("warning.bg-solid-hover")),
 							active(bg("warning.bg-solid-pressed")),
 						]),
-						when('&[data-color="danger"]', [
+						data("color", "danger", [
 							bg("danger.solid"),
 							fg("danger.onSolid"),
 							hover(bg("danger.bg-solid-hover")),
@@ -154,87 +159,79 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 						]),
 					]),
 
-					when('&[data-variant="outline"]', [
+					data("variant", "outline", [
 						border({ width: 2 }),
-						when('&[data-color="primary"]', [
+						data("color", "primary", [
 							border("primary.strong"),
 							fg("primary"),
 							hover(bg("primary.tint")),
 							active(bg("primary.bg-tint-hover")),
 						]),
-						when('&[data-color="neutral"]', [
+						data("color", "neutral", [
 							border("neutral.strong"),
 							fg("neutral"),
 							hover(bg("neutral.tint")),
 							active(bg("neutral.bg-tint-hover")),
 						]),
-						when('&[data-color="success"]', [
+						data("color", "success", [
 							border("success.strong"),
 							fg("success"),
 							hover(bg("success.tint")),
 							active(bg("success.bg-tint-hover")),
 						]),
-						when('&[data-color="warning"]', [
+						data("color", "warning", [
 							border("warning.strong"),
 							fg("warning"),
 							hover(bg("warning.tint")),
 							active(bg("warning.bg-tint-hover")),
 						]),
-						when('&[data-color="danger"]', [
+						data("color", "danger", [
 							border("danger.strong"),
 							fg("danger"),
 							hover(bg("danger.tint")),
 							active(bg("danger.bg-tint-hover")),
 						]),
 					]),
-					css({ '&[data-variant="outline"]': { backgroundColor: "transparent" } }),
+					data("variant", "outline", bg("transparent")),
 
-					when('&[data-variant="ghost"]', [
-						when('&[data-color="primary"]', [
+					data("variant", "ghost", [
+						data("color", "primary", [
 							fg("primary"),
 							hover(bg("primary.tint")),
 							active(bg("primary.bg-tint-hover")),
 						]),
-						when('&[data-color="neutral"]', [
+						data("color", "neutral", [
 							fg("neutral"),
 							hover(bg("neutral.bg-tint-hover")),
 							active(bg("neutral.bg-tint-pressed")),
 						]),
-						when('&[data-color="success"]', [
+						data("color", "success", [
 							fg("success"),
 							hover(bg("success.tint")),
 							active(bg("success.bg-tint-hover")),
 						]),
-						when('&[data-color="warning"]', [
+						data("color", "warning", [
 							fg("warning"),
 							hover(bg("warning.tint")),
 							active(bg("warning.bg-tint-hover")),
 						]),
-						when('&[data-color="danger"]', [
+						data("color", "danger", [
 							fg("danger"),
 							hover(bg("danger.tint")),
 							active(bg("danger.bg-tint-hover")),
 						]),
 					]),
-					css({ '&[data-variant="ghost"]': { backgroundColor: "transparent" } }),
+					data("variant", "ghost", bg("transparent")),
 
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						'&[aria-disabled="true"]': { cursor: "not-allowed", pointerEvents: "none" },
-					}),
+					when('&[aria-disabled="true"]', [cursor("not-allowed"), raw({ pointerEvents: "none" })]),
 
-					css({
-						cursor: "default",
-						userSelect: "none",
+					cursor("default"),
+					userSelect(),
 
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
+					text("sm"),
 
-						'&[data-size="sm"]': {
-							fontSize: "0.75rem",
-							lineHeight: "calc(1 / 0.75)",
-						},
-					}),
+					data("size", "sm", text("xs")),
 					mix,
 				]}
 			/>

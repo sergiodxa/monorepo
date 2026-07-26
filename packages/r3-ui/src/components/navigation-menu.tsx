@@ -12,9 +12,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { cursor, raw, userSelect } from "@pkg/u/general";
 import {
 	container,
 	flex,
@@ -27,15 +27,15 @@ import {
 	relative,
 } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
 import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
-import { disabled, hover, when } from "@pkg/u/state";
-import { leading, weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { data, disabled, hover, when } from "@pkg/u/state";
+import { leading, text, textDecoration, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { durations, easings } from "../animations/tokens";
 import { floatingSurface } from "../styles/floating-surface";
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 import { Popover } from "./popover";
@@ -354,7 +354,7 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 				{...rest}
 				mix={[
 					interactiveTransition(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					inlineFlex(),
 					items("center"),
 					gap(2),
@@ -367,10 +367,7 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 					when('&[aria-expanded="true"]', [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 					disabled(cursor("not-allowed")),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
+					text("sm"),
 					mix,
 				]}
 			/>
@@ -434,7 +431,7 @@ NavigationMenu.Content = function NavigationMenuContent(
 				data-size={resolvedSize}
 				{...rest}
 				mix={[
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					is("max-content"),
 					minIs("11rem"),
 					p(2),
@@ -447,27 +444,17 @@ NavigationMenu.Content = function NavigationMenuContent(
 						duration: durations.fast,
 						easing: easings.standard,
 					}),
-					css({
+					raw({
 						outlineStyle: "none",
-
 						scale: "0.95",
 						transitionBehavior: "allow-discrete",
-
-						"&:popover-open": {
-							opacity: "1",
-							scale: "none",
-						},
-						"@starting-style": {
-							"&:popover-open": {
-								opacity: "0",
-								scale: "0.95",
-							},
-						},
-						"@media (prefers-reduced-motion: reduce)": {
-							scale: "none",
-							transitionProperty: "opacity, display, overlay",
-						},
 					}),
+					when("&:popover-open", [opacity(100), raw({ scale: "none" })]),
+					when("@starting-style", when("&:popover-open", [opacity(0), raw({ scale: "0.95" })])),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						raw({ scale: "none", transitionProperty: "opacity, display, overlay" }),
+					),
 					mix,
 				]}
 			/>
@@ -507,7 +494,7 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 				{...rest}
 				mix={[
 					interactiveTransition(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					inlineFlex(),
 					items("center"),
 					gap(2),
@@ -523,11 +510,9 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 						fg("neutral.emphasis"),
 					]),
 					when('&[aria-disabled="true"]', [opacity(50), cursor("not-allowed")]),
-					css({
-						userSelect: "none",
-						fontSize: "0.875rem",
-						textDecorationLine: "none",
-					}),
+					userSelect(),
+					textDecoration("none"),
+					raw({ fontSize: "0.875rem" }),
 					mix,
 				]}
 			/>
@@ -573,24 +558,13 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 						duration: durations.normal,
 						easing: easings.decelerate,
 					}),
-					css({
-						scale: "0.95",
-
-						"&[data-visible]": {
-							opacity: "1",
-							scale: "none",
-						},
-						"@starting-style": {
-							"&[data-visible]": {
-								opacity: "0",
-								scale: "0.95",
-							},
-						},
-						"@media (prefers-reduced-motion: reduce)": {
-							scale: "none",
-							transitionProperty: "inline-size, block-size, opacity",
-						},
-					}),
+					raw({ scale: "0.95" }),
+					data("visible", [opacity(100), raw({ scale: "none" })]),
+					when("@starting-style", data("visible", [opacity(0), raw({ scale: "0.95" })])),
+					media(
+						"(prefers-reduced-motion: reduce)",
+						raw({ scale: "none", transitionProperty: "inline-size, block-size, opacity" }),
+					),
 					mix,
 				]}
 			/>
@@ -655,7 +629,7 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 				mix={[
 					grid(),
 					gap(4),
-					css({
+					raw({
 						[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 							gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 						},

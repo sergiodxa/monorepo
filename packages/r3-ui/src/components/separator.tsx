@@ -11,7 +11,9 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg } from "@pkg/u/color";
-import { attrs, css } from "remix/ui";
+import { bs, is, minBs } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { attrs } from "remix/ui";
 
 /**
  * ARIA role applied through {@link attrs} so the host `<div>` is announced
@@ -64,17 +66,15 @@ export function Separator(handle: Handle<Separator.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
-					css({
-						'&[aria-orientation="horizontal"]': {
-							blockSize: "var(--ui-separator-thickness, 1px)",
-							inlineSize: "100%",
-						},
-						'&[aria-orientation="vertical"]': {
-							blockSize: "100%",
-							minBlockSize: "var(--ui-separator-min-size, 1rem)",
-							inlineSize: "var(--ui-separator-thickness, 1px)",
-						},
-					}),
+					when('&[aria-orientation="horizontal"]', [
+						bs("var(--ui-separator-thickness, 1px)"),
+						is("100%"),
+					]),
+					when('&[aria-orientation="vertical"]', [
+						bs("100%"),
+						minBs("var(--ui-separator-min-size, 1rem)"),
+						is("var(--ui-separator-thickness, 1px)"),
+					]),
 					bg("neutral.border"),
 					mix,
 				]}

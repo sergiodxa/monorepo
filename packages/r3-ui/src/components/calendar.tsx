@@ -13,16 +13,16 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
-import { flex, inlineBlock, items, justify } from "@pkg/u/layout";
+import { flex, grow, inlineBlock, items, justify, shrink } from "@pkg/u/layout";
 import { bs, is, mbe, p, pbe } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
-import { textAlign, weight } from "@pkg/u/typography";
+import { scaleX } from "@pkg/u/transform";
+import { text, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import {
 	warnIfNoAccessibleLabel,
@@ -343,7 +343,7 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 				data-slot="previous-button"
 				mix={[
 					interactiveTransition(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -354,7 +354,7 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 					hover(bg("neutral.bg-tint-hover")),
 					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 					when("& svg", [is(4), bs(4)]),
-					raw({ "&:dir(rtl) svg": { transform: "scaleX(-1)" } }),
+					when("&:dir(rtl) svg", scaleX(-1)),
 					mix,
 				]}
 			>
@@ -393,7 +393,7 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 				data-slot="next-button"
 				mix={[
 					interactiveTransition(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -404,7 +404,7 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 					hover(bg("neutral.bg-tint-hover")),
 					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 					when("& svg", [is(4), bs(4)]),
-					raw({ "&:dir(rtl) svg": { transform: "scaleX(-1)" } }),
+					when("&:dir(rtl) svg", scaleX(-1)),
 					mix,
 				]}
 			>
@@ -441,11 +441,13 @@ Calendar.Heading = function CalendarHeading(handle: Handle<Calendar.HeadingProps
 				{...rest}
 				data-slot="heading"
 				mix={[
-					raw({ flex: "1 1 0%" }),
+					grow(),
+					shrink(1),
+					raw({ flexBasis: "0%" }),
 					textAlign("center"),
 					weight("semibold"),
 					fg("neutral.emphasis"),
-					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+					text("sm"),
 					mix,
 				]}
 			/>
@@ -554,7 +556,7 @@ Calendar.HeaderCell = function CalendarHeaderCell(handle: Handle<Calendar.Header
 					pbe(2),
 					weight("medium"),
 					fg("neutral.muted"),
-					raw({ fontSize: "0.75rem", lineHeight: "calc(1 / 0.75)" }),
+					text("xs"),
 					mix,
 				]}
 			/>
@@ -620,7 +622,7 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 				data-slot="cell"
 				mix={[
 					interactiveTransition(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -629,14 +631,11 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 					cursor("default"),
 					rounded("full"),
 					fg("neutral.emphasis"),
-					raw({ fontSize: "0.875rem", lineHeight: "calc(1.25 / 0.875)" }),
+					text("sm"),
 					hover(bg("neutral.bg-tint-hover")),
 					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),
-					when("&[data-unavailable]", [
-						fg("neutral.muted"),
-						raw({ textDecoration: "line-through" }),
-					]),
+					when("&[data-unavailable]", [fg("neutral.muted"), textDecoration("line-through")]),
 					when("&[data-outside-month]", fg("neutral.muted")),
 					when('&[aria-invalid="true"]', [bg("danger.solid"), fg("danger.onSolid")]),
 					mix,

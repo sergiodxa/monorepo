@@ -16,11 +16,13 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { maxBs, p, pb, pi } from "@pkg/u/size";
 import { active, hover, when } from "@pkg/u/state";
-import { attrs, css } from "remix/ui";
+import { text } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
@@ -162,9 +164,7 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 					maxBs(60),
 					overflow("auto"),
 					p(1),
-					css({
-						outline: "none",
-					}),
+					raw({ outline: "none" }),
 					mix,
 				]}
 			/>
@@ -241,12 +241,9 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 						fg("primary.onSolid"),
 					]),
 					when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
-					css({
-						cursor: "default",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						outline: "none",
-					}),
+					cursor("default"),
+					text("sm"),
+					raw({ outline: "none" }),
 					mix,
 				]}
 			>

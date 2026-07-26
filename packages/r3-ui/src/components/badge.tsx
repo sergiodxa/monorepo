@@ -12,10 +12,10 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { raw, userSelect } from "@pkg/u/general";
 import { gap, inlineFlex, items, shrink } from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { data, when } from "@pkg/u/state";
 import { leading, nowrap, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
@@ -111,48 +111,49 @@ export function Badge(handle: Handle<Badge.Props>) {
 					transition(
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
 					),
-					raw({ fontSize: "0.75rem", userSelect: "none" }),
-					when('&[data-variant="default"]', [
-						when('&[data-color="primary"]', [
+					raw({ fontSize: "0.75rem" }),
+					userSelect(),
+					data("variant", "default", [
+						data("color", "primary", [
 							bg("primary.solid"),
 							fg("primary.onSolid"),
 							border("primary.solid"),
 						]),
-						when('&[data-color="neutral"]', [
+						data("color", "neutral", [
 							bg("neutral.solid"),
 							fg("neutral.onSolid"),
 							border("neutral.solid"),
 						]),
-						when('&[data-color="success"]', [
+						data("color", "success", [
 							bg("success.solid"),
 							fg("success.onSolid"),
 							border("success.solid"),
 						]),
-						when('&[data-color="warning"]', [
+						data("color", "warning", [
 							bg("warning.solid"),
 							fg("warning.onSolid"),
 							border("warning.solid"),
 						]),
-						when('&[data-color="danger"]', [
+						data("color", "danger", [
 							bg("danger.solid"),
 							fg("danger.onSolid"),
 							border("danger.solid"),
 						]),
 					]),
-					when('&[data-variant="secondary"]', [
-						when('&[data-color="primary"]', [bg("primary.tint"), fg("primary"), border("primary")]),
-						when('&[data-color="neutral"]', [bg("neutral.tint"), fg("neutral"), border("neutral")]),
-						when('&[data-color="success"]', [bg("success.tint"), fg("success"), border("success")]),
-						when('&[data-color="warning"]', [bg("warning.tint"), fg("warning"), border("warning")]),
-						when('&[data-color="danger"]', [bg("danger.tint"), fg("danger"), border("danger")]),
+					data("variant", "secondary", [
+						data("color", "primary", [bg("primary.tint"), fg("primary"), border("primary")]),
+						data("color", "neutral", [bg("neutral.tint"), fg("neutral"), border("neutral")]),
+						data("color", "success", [bg("success.tint"), fg("success"), border("success")]),
+						data("color", "warning", [bg("warning.tint"), fg("warning"), border("warning")]),
+						data("color", "danger", [bg("danger.tint"), fg("danger"), border("danger")]),
 					]),
-					when('&[data-variant="outline"]', [
-						raw({ backgroundColor: "transparent" }),
-						when('&[data-color="primary"]', [border("primary.strong"), fg("primary")]),
-						when('&[data-color="neutral"]', [border("neutral"), fg("neutral")]),
-						when('&[data-color="success"]', [border("success.strong"), fg("success")]),
-						when('&[data-color="warning"]', [border("warning.strong"), fg("warning")]),
-						when('&[data-color="danger"]', [border("danger.strong"), fg("danger")]),
+					data("variant", "outline", [
+						bg("transparent"),
+						data("color", "primary", [border("primary.strong"), fg("primary")]),
+						data("color", "neutral", [border("neutral"), fg("neutral")]),
+						data("color", "success", [border("success.strong"), fg("success")]),
+						data("color", "warning", [border("warning.strong"), fg("warning")]),
+						data("color", "danger", [border("danger.strong"), fg("danger")]),
 					]),
 					mix,
 				]}
@@ -183,7 +184,7 @@ Badge.Icon = function BadgeIcon(handle: Handle<Badge.IconProps>) {
 					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
 					inlineFlex(),
 					shrink(0),
-					when("& > svg", [is(3), bs(3), shrink(0), raw({ color: "currentColor" })]),
+					when("& > svg", [is(3), bs(3), shrink(0), fg("currentColor")]),
 					mix,
 				]}
 			/>

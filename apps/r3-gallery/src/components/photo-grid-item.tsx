@@ -12,7 +12,8 @@ import type { Handle } from "remix/ui";
 
 import { AspectRatio, Badge, Button, Card, Form } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
-import { focusRingPrimary } from "@pkg/r3-ui/styles";
+import { outline } from "@pkg/u/color";
+import { when } from "@pkg/u/state";
 import { addEventListeners, css, on } from "remix/ui";
 
 import type { Photo } from "../data/types";
@@ -78,7 +79,7 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 						href={photoHref}
 						aria-label={title}
 						mix={[
-							focusRingPrimary({ when: "&:focus-visible" }),
+							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 							css({ display: "block", WebkitTapHighlightColor: "transparent" }),
 							on<HTMLAnchorElement, "click">("click", openPhoto),
 						]}

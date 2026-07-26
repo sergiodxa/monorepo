@@ -13,16 +13,14 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { minBs, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { textAlign } from "@pkg/u/typography";
-import { css } from "remix/ui";
 
-import { easings } from "../animations/tokens";
-import { focusRingPrimary } from "../styles/focus-ring";
+import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name";
 
 /**
@@ -131,7 +129,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 				{...rest}
 				data-slot="zone"
 				mix={[
-					focusRingPrimary({ when: "&:has(input:focus-visible)" }),
+					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
 					flex(),
 					flexCol(),
 					items("center"),
@@ -146,12 +144,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 					bg("neutral.tint"),
 					fg("neutral"),
 					when("&[data-drop-target]", [border("primary.ring"), bg("primary.tint")]),
-					css({
-						transitionProperty:
-							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-						transitionTimingFunction: easings.standard,
-						transitionDuration: "150ms",
-					}),
+					interactiveTransition(),
 					mix,
 				]}
 			>

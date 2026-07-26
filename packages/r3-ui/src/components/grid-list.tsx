@@ -15,15 +15,15 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { GripVerticalIcon } from "@pkg/lucide-remix";
-import { bg, fg } from "@pkg/u/color";
+import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { cursor, raw } from "@pkg/u/general";
+import { container, flex, flexCol, gap, grid, items } from "@pkg/u/layout";
 import { mbs, pb, pbs, pi } from "@pkg/u/size";
-import { active, hover, not, when } from "@pkg/u/state";
-import { tracking, weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { active, data, hover, not, when } from "@pkg/u/state";
+import { text, tracking, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
-import { focusRingPrimary } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { panelChrome } from "../styles/panel-chrome";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
@@ -199,13 +199,11 @@ export function GridList(handle: Handle<GridList.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
-					focusRingPrimary(),
+					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 					pb(2),
 					pi(2),
-					css({
-						outline: "none",
-						container: `${CONTAINER_NAME} / inline-size`,
-					}),
+					raw({ outline: "none" }),
+					container(CONTAINER_NAME),
 					mix,
 				]}
 			>
@@ -216,14 +214,15 @@ export function GridList(handle: Handle<GridList.Props>) {
 						flex(),
 						flexCol(),
 						gap(1),
-						css({
+						raw({
 							contentVisibility: "auto",
 							containIntrinsicSize: "auto var(--ui-grid-list-intrinsic-size, 32rem)",
-
-							'&[data-layout="grid"]': {
-								display: "grid",
+						}),
+						data("layout", "grid", [
+							grid(),
+							gap("0.5rem"),
+							raw({
 								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-								gap: "0.5rem",
 
 								[`@container ${CONTAINER_NAME} (min-width: 40rem)`]: {
 									gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -231,8 +230,8 @@ export function GridList(handle: Handle<GridList.Props>) {
 								[`@container ${CONTAINER_NAME} (min-width: 48rem)`]: {
 									gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
 								},
-							},
-						}),
+							}),
+						]),
 						parts?.list,
 					]}
 				>
@@ -286,10 +285,8 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 					when("&:focus", bg("neutral.bg-tint-hover")),
 					when('&[aria-selected="true"]', bg("primary.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						cursor: "default",
-						outline: "none",
-					}),
+					cursor("default"),
+					raw({ outline: "none" }),
 					mix,
 				]}
 			/>
@@ -324,14 +321,11 @@ GridList.Section = function GridListSection(handle: Handle<GridList.SectionProps
 					flex(),
 					flexCol(),
 					gap(1),
-					not(":first-child", [mbs(2), pbs(2)]),
-					css({
-						"&:not(:first-child)": {
-							borderBlockStartWidth: "1px",
-							borderBlockStartStyle: "solid",
-							borderBlockStartColor: "var(--ui-neutral-border)",
-						},
-					}),
+					not(":first-child", [
+						mbs(2),
+						pbs(2),
+						borderEdge("block-start", { color: "neutral", width: 1 }),
+					]),
 					mix,
 				]}
 			/>
@@ -364,11 +358,8 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 					weight("semibold"),
 					tracking("wider"),
 					fg("neutral.muted"),
-					css({
-						fontSize: "0.75rem",
-						lineHeight: "1rem",
-						textTransform: "uppercase",
-					}),
+					text("xs"),
+					raw({ textTransform: "uppercase" }),
 					mix,
 				]}
 			/>
@@ -417,13 +408,8 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 				mix={[
 					attrs({ role: DEFAULT_DRAG_HANDLE_ROLE, "data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER }),
 					fg("neutral.muted"),
-					css({
-						cursor: "grab",
-
-						"&:active": {
-							cursor: "grabbing",
-						},
-					}),
+					cursor("grab"),
+					active(cursor("grabbing")),
 					mix,
 				]}
 			>

@@ -22,14 +22,13 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { bg, border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
-import { appearance } from "@pkg/u/layout";
-import { absolute, relative, vstack } from "@pkg/u/layout";
-import { bs, is, minIs } from "@pkg/u/size";
+import { cursor, raw } from "@pkg/u/general";
+import { absolute, appearance, inset, relative, vstack } from "@pkg/u/layout";
+import { bs, is, m, minIs } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { when } from "@pkg/u/state";
-import { css } from "remix/ui";
 
 import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
@@ -268,29 +267,28 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 					is("full"),
 					bs("var(--ui-color-slider-thumb-size, 1.25rem)"),
 					rounded("full"),
-					css({
-						"&::before": {
+					when("&::before", [
+						absolute(),
+						inset("0"),
+						raw({
 							content: '""',
-							position: "absolute",
-							inset: "0",
 							borderRadius: "inherit",
 							backgroundImage:
 								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
 							backgroundSize:
 								"var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
-						},
-						"&::after": {
-							content: '""',
-							position: "absolute",
-							inset: "0",
-							borderRadius: "inherit",
-						},
+						}),
+					]),
+					when("&::after", [
+						absolute(),
+						inset("0"),
+						raw({ content: '""', borderRadius: "inherit" }),
+					]),
 
-						'[data-channel="hue"] &::after': { backgroundImage: HUE_GRADIENT },
-						'[data-channel="saturation"] &::after': { backgroundImage: SATURATION_GRADIENT },
-						'[data-channel="lightness"] &::after': { backgroundImage: LIGHTNESS_GRADIENT },
-						'[data-channel="alpha"] &::after': { backgroundImage: ALPHA_GRADIENT },
-					}),
+					when('[data-channel="hue"] &::after', bg({ image: HUE_GRADIENT })),
+					when('[data-channel="saturation"] &::after', bg({ image: SATURATION_GRADIENT })),
+					when('[data-channel="lightness"] &::after', bg({ image: LIGHTNESS_GRADIENT })),
+					when('[data-channel="alpha"] &::after', bg({ image: ALPHA_GRADIENT })),
 					mix,
 				]}
 			/>
@@ -349,25 +347,22 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 					appearance(),
 					cursor("pointer"),
 					when("&:disabled", cursor("not-allowed")),
-					css({
-						inset: "0",
-						margin: "0",
-						backgroundColor: "transparent",
-						outlineStyle: "none",
+					inset("0"),
+					m("0"),
+					bg("transparent"),
+					raw({ outlineStyle: "none" }),
 
-						"&::-webkit-slider-runnable-track": {
-							WebkitAppearance: "none",
-							appearance: "none",
-							blockSize: "100%",
-							backgroundColor: "transparent",
-						},
-						"&::-moz-range-track": {
-							appearance: "none",
-							blockSize: "100%",
-							backgroundColor: "transparent",
-							borderStyle: "none",
-						},
-					}),
+					when("&::-webkit-slider-runnable-track", [
+						bs("full"),
+						bg("transparent"),
+						raw({ WebkitAppearance: "none", appearance: "none" }),
+					]),
+					when("&::-moz-range-track", [
+						bs("full"),
+						bg("transparent"),
+						border({ style: "none" }),
+						raw({ appearance: "none" }),
+					]),
 					mix,
 				]}
 			/>

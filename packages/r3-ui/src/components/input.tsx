@@ -14,10 +14,11 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { focusVisible, hover, invalid, when } from "@pkg/u/state";
-import { css } from "remix/ui";
+import { text } from "@pkg/u/typography";
 
 import { interactiveTransition } from "../styles/interactive-transition";
 
@@ -114,8 +115,7 @@ export function Input(handle: Handle<Input.Props>) {
 					pb(2),
 					when("&::placeholder", fg("neutral.muted")),
 					hover(border("neutral.strong")),
-					when("&:focus", border("neutral.strong")),
-					css({ "&:focus": { outline: "none" } }),
+					when("&:focus", [border("neutral.strong"), raw({ outline: "none" })]),
 					focusVisible([
 						border("neutral.strong"),
 						outline({ color: "neutral.ring", offset: 0 }),
@@ -137,13 +137,8 @@ export function Input(handle: Handle<Input.Props>) {
 						]),
 					]),
 					invalid([border("danger.strong"), outline({ color: "danger.ring", offset: 0 })]),
-					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover")]),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						"&:disabled": { cursor: "not-allowed" },
-					}),
+					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
+					text("sm"),
 					mix,
 				]}
 			/>

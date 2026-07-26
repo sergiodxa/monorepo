@@ -12,7 +12,6 @@
 export * from "./chart-palette";
 export * from "./field-stack-layout";
 export * from "./floating-surface";
-export * from "./focus-ring";
 export * from "./graphic-host";
 export * from "./interactive-transition";
 export * from "./legend-toggle";

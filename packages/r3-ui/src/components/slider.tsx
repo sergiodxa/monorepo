@@ -14,9 +14,13 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import {
 	absolute,
+	after,
 	appearance,
+	before,
 	bg,
+	border,
 	bs,
+	cursor,
 	inset,
 	is,
 	items,
@@ -24,13 +28,13 @@ import {
 	minBs,
 	minIs,
 	overflow,
+	raw,
 	relative,
 	rounded,
 	vstack,
 	when,
 	z,
 } from "@pkg/u";
-import { css } from "remix/ui";
 
 import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
@@ -218,49 +222,45 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 						minBs("0"),
 						overflow("hidden"),
 					]),
-					when("&::before", [absolute(), rounded("full"), bg("neutral.border")]),
-					when("&::after", [absolute(), rounded("full"), bg("primary.solid")]),
-					css({
-						'[data-orientation="vertical"] &': {
-							flex: "1 1 0%",
-						},
-
-						"&::before": {
-							content: '""',
-						},
-						"&::after": {
-							content: '""',
-						},
-
-						'[data-orientation="horizontal"] &::before': {
+					before([absolute(), rounded("full"), bg("neutral.border"), raw({ content: '""' })]),
+					after([absolute(), rounded("full"), bg("primary.solid"), raw({ content: '""' })]),
+					when('[data-orientation="vertical"] &', raw({ flex: "1 1 0%" })),
+					when('[data-orientation="horizontal"] &::before', [
+						bs("var(--ui-slider-track-thickness, 0.5rem)"),
+						raw({
 							insetInlineStart: "0",
 							insetInlineEnd: "0",
 							insetBlockStart: "50%",
-							blockSize: "var(--ui-slider-track-thickness, 0.5rem)",
 							transform: "translateY(-50%)",
-						},
-						'[data-orientation="horizontal"] &::after': {
+						}),
+					]),
+					when('[data-orientation="horizontal"] &::after', [
+						bs("var(--ui-slider-track-thickness, 0.5rem)"),
+						is("var(--ui-slider-fill, 0%)"),
+						raw({
 							insetInlineStart: "0",
 							insetBlockStart: "50%",
-							blockSize: "var(--ui-slider-track-thickness, 0.5rem)",
-							inlineSize: "var(--ui-slider-fill, 0%)",
 							transform: "translateY(-50%)",
-						},
-						'[data-orientation="vertical"] &::before': {
+						}),
+					]),
+					when('[data-orientation="vertical"] &::before', [
+						is("var(--ui-slider-track-thickness, 0.5rem)"),
+						bs("100%"),
+						raw({
 							insetBlockStart: "0",
 							insetInlineStart: "50%",
-							inlineSize: "var(--ui-slider-track-thickness, 0.5rem)",
-							blockSize: "100%",
 							transform: "translateX(-50%)",
-						},
-						'[data-orientation="vertical"] &::after': {
+						}),
+					]),
+					when('[data-orientation="vertical"] &::after', [
+						is("var(--ui-slider-track-thickness, 0.5rem)"),
+						bs("var(--ui-slider-fill, 0%)"),
+						raw({
 							insetBlockEnd: "0",
 							insetInlineStart: "50%",
-							inlineSize: "var(--ui-slider-track-thickness, 0.5rem)",
-							blockSize: "var(--ui-slider-fill, 0%)",
 							transform: "translateX(-50%)",
-						},
-					}),
+						}),
+					]),
 					mix,
 				]}
 			/>
@@ -319,33 +319,21 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 					z(10),
 					m("0"),
 					appearance(),
-					css({
-						backgroundColor: "transparent",
-						cursor: "pointer",
-						outlineStyle: "none",
-
-						"&::-webkit-slider-runnable-track": {
-							WebkitAppearance: "none",
-							appearance: "none",
-							blockSize: "100%",
-							backgroundColor: "transparent",
-						},
-						"&::-moz-range-track": {
-							appearance: "none",
-							blockSize: "100%",
-							backgroundColor: "transparent",
-							borderStyle: "none",
-						},
-
-						"&:disabled": {
-							cursor: "not-allowed",
-						},
-
-						'[data-orientation="vertical"] &': {
-							writingMode: "vertical-lr",
-							direction: "rtl",
-						},
-					}),
+					bg("transparent"),
+					cursor("pointer"),
+					when("&:disabled", cursor("not-allowed")),
+					raw({ outlineStyle: "none" }),
+					when("&::-webkit-slider-runnable-track", [appearance(), bs("100%"), bg("transparent")]),
+					when("&::-moz-range-track", [
+						appearance(),
+						bs("100%"),
+						bg("transparent"),
+						border({ style: "none" }),
+					]),
+					when(
+						'[data-orientation="vertical"] &',
+						raw({ writingMode: "vertical-lr", direction: "rtl" }),
+					),
 					mix,
 				]}
 			/>

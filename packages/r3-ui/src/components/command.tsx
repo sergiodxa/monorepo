@@ -13,15 +13,15 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { bg, fg, outline } from "@pkg/u/color";
+import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor } from "@pkg/u/general";
+import { cursor, raw } from "@pkg/u/general";
 import { hstack, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { bs, is, maxBs, p, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { textAlign } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { text, textAlign } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import { floatingSurface } from "../styles/floating-surface";
 import { interactiveTransition } from "../styles/interactive-transition";
@@ -140,14 +140,7 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<div
-				data-slot="input-wrapper"
-				mix={css({
-					borderBlockEndWidth: "1px",
-					borderBlockEndStyle: "solid",
-					borderColor: "var(--ui-neutral-border)",
-				})}
-			>
+			<div data-slot="input-wrapper" mix={borderEdge("block-end", { color: "neutral", width: 1 })}>
 				<input
 					{...rest}
 					data-slot="input"
@@ -160,12 +153,10 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 						when("&::placeholder", fg("neutral.muted")),
 						when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
 						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-						css({
-							backgroundColor: "transparent",
-							fontSize: "0.875rem",
-							lineHeight: "calc(1.25 / 0.875)",
-							outlineStyle: "none",
-						}),
+						bg("transparent"),
+						text("sm"),
+						/** No matching utility unsets `outline` entirely. */
+						raw({ outlineStyle: "none" }),
 						mix,
 					]}
 				/>
@@ -205,7 +196,8 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 					maxBs("18rem"),
 					overflow("auto"),
 					p(2, 1),
-					css({ outlineStyle: "none" }),
+					/** No matching utility unsets `outline` entirely. */
+					raw({ outlineStyle: "none" }),
 					mix,
 				]}
 			/>
@@ -263,11 +255,9 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 					when("&:focus", bg("primary.tint")),
 					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-						outlineStyle: "none",
-					}),
+					text("sm"),
+					/** No matching utility unsets `outline` entirely. */
+					raw({ outlineStyle: "none" }),
 					mix,
 				]}
 			>
@@ -299,17 +289,7 @@ Command.Empty = function CommandEmpty(handle: Handle<Command.EmptyProps>) {
 				{...rest}
 				data-slot="empty"
 				data-command-empty
-				mix={[
-					pi(3),
-					pb(6),
-					textAlign("center"),
-					fg("neutral.muted"),
-					css({
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-					}),
-					mix,
-				]}
+				mix={[pi(3), pb(6), textAlign("center"), fg("neutral.muted"), text("sm"), mix]}
 			/>
 		);
 	};

@@ -21,7 +21,7 @@ describe("graphicHostStyle", () => {
 		expect(styles(graphicHostStyle())).toEqual({
 			flexShrink: "0",
 			marginBlockStart: "0.125rem",
-			color: "currentcolor",
+			color: "currentColor",
 		});
 	});
 

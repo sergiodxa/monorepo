@@ -14,17 +14,17 @@
 import type { Handle, Props as ElementProps } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
-import { bg, fg } from "@pkg/u/color";
+import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
 import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@pkg/u/layout";
 import { bs, is, m, mie, p, pb, pi } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
-import { attrs, css } from "remix/ui";
+import { active, data, hover, when } from "@pkg/u/state";
+import { text, weight } from "@pkg/u/typography";
+import { attrs } from "remix/ui";
 
 import type { SemanticColor } from "../utils/semantic-color";
 
-import { focusRingByColor } from "../styles/focus-ring";
 import { interactiveTransition } from "../styles/interactive-transition";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -154,7 +154,7 @@ TagGroup.List = function TagGroupList(handle: Handle<TagGroup.ListProps>) {
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), css({ listStyle: "none" }), mix]}
+				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), raw({ listStyle: "none" }), mix]}
 			/>
 		);
 	};
@@ -197,7 +197,13 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 				data-size={resolvedSize}
 				data-slot="tag"
 				mix={[
-					focusRingByColor(),
+					when("&:focus-visible", [
+						outline({ color: "primary.ring", offset: 2 }),
+						data("color", "neutral", outline("neutral.ring")),
+						data("color", "success", outline("success.ring")),
+						data("color", "warning", outline("warning.ring")),
+						data("color", "danger", outline("danger.ring")),
+					]),
 					interactiveTransition(),
 					inlineFlex(),
 					items("center"),
@@ -205,32 +211,21 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 					rounded("full"),
 					pi(3),
 					pb(1),
-					when('&[data-size="sm"]', [pi(2), pb(0.5)]),
-					when('&[data-color="primary"]', [bg("primary.tint"), fg("primary")]),
-					when('&[data-color="success"]', [bg("success.tint"), fg("success")]),
-					when('&[data-color="warning"]', [bg("warning.tint"), fg("warning")]),
-					when('&[data-color="danger"]', [bg("danger.tint"), fg("danger")]),
+					data("size", "sm", [pi(2), pb(0.5)]),
+					data("color", "primary", [bg("primary.tint"), fg("primary")]),
+					data("color", "success", [bg("success.tint"), fg("success")]),
+					data("color", "warning", [bg("warning.tint"), fg("warning")]),
+					data("color", "danger", [bg("danger.tint"), fg("danger")]),
 					when('&[aria-selected="true"]', [
 						bg("primary.solid"),
 						fg("primary.onSolid"),
 						weight(600),
 					]),
 					when('&[aria-disabled="true"]', opacity(50)),
-					css({
-						cursor: "default",
-						fontSize: "0.875rem",
-						lineHeight: "calc(1.25 / 0.875)",
-
-						'&[data-size="sm"]': {
-							fontSize: "0.75rem",
-							lineHeight: "calc(1 / 0.75)",
-						},
-
-						'&[data-color="neutral"]': {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-							color: "var(--ui-neutral-fg)",
-						},
-					}),
+					cursor("default"),
+					text("sm"),
+					data("size", "sm", text("xs")),
+					data("color", "neutral", [bg("neutral.bg-tint-hover"), fg("neutral")]),
 					mix,
 				]}
 			/>
@@ -277,35 +272,18 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 					pi(0.5),
 					rounded("full"),
 					when("& svg", [is(3), bs(3)]),
-					css({
-						color: "currentColor",
-
-						"&:hover": { backgroundColor: "var(--ui-primary-bg-tint-hover)" },
-						'[data-color="neutral"] &:hover': {
-							backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-						},
-						'[data-color="success"] &:hover': {
-							backgroundColor: "var(--ui-success-bg-tint-hover)",
-						},
-						'[data-color="danger"] &:hover': { backgroundColor: "var(--ui-danger-bg-tint-hover)" },
-						'[data-color="warning"] &:hover': {
-							backgroundColor: "var(--ui-warning-bg-tint-hover)",
-						},
-
-						"&:active": { backgroundColor: "var(--ui-primary-bg-tint-pressed)" },
-						'[data-color="neutral"] &:active': {
-							backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-						},
-						'[data-color="success"] &:active': {
-							backgroundColor: "var(--ui-success-bg-tint-pressed)",
-						},
-						'[data-color="danger"] &:active': {
-							backgroundColor: "var(--ui-danger-bg-tint-pressed)",
-						},
-						'[data-color="warning"] &:active': {
-							backgroundColor: "var(--ui-warning-bg-tint-pressed)",
-						},
-
+					fg("currentColor"),
+					hover(bg("primary.bg-tint-hover")),
+					when('[data-color="neutral"] &:hover', bg("neutral.bg-tint-hover")),
+					when('[data-color="success"] &:hover', bg("success.bg-tint-hover")),
+					when('[data-color="danger"] &:hover', bg("danger.bg-tint-hover")),
+					when('[data-color="warning"] &:hover', bg("warning.bg-tint-hover")),
+					active(bg("primary.bg-tint-pressed")),
+					when('[data-color="neutral"] &:active', bg("neutral.bg-tint-pressed")),
+					when('[data-color="success"] &:active', bg("success.bg-tint-pressed")),
+					when('[data-color="danger"] &:active', bg("danger.bg-tint-pressed")),
+					when('[data-color="warning"] &:active', bg("warning.bg-tint-pressed")),
+					raw({
 						"&:focus-visible": { outlineColor: "var(--ui-primary-ring)" },
 						'[data-color="neutral"] &:focus-visible': { outlineColor: "var(--ui-neutral-ring)" },
 						'[data-color="success"] &:focus-visible': { outlineColor: "var(--ui-success-ring)" },

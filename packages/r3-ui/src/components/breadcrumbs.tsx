@@ -18,8 +18,8 @@ import { fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { m, mi, p } from "@pkg/u/size";
-import { hover, when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
+import { data, hover, when } from "@pkg/u/state";
+import { textDecoration, weight } from "@pkg/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
@@ -195,9 +195,10 @@ Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps
 				{...rest}
 				data-slot="link"
 				mix={[
-					raw({ fontSize: "0.875rem", textDecorationLine: "none" }),
-					hover(raw({ textDecorationLine: "none" })),
-					when('&[data-color="neutral"]', [fg("neutral.muted"), when("&:hover", fg("neutral"))]),
+					raw({ fontSize: "0.875rem" }),
+					textDecoration("none"),
+					hover(textDecoration("none")),
+					data("color", "neutral", [fg("neutral.muted"), hover(fg("neutral"))]),
 					when('&[aria-current]:not([aria-current="false"])', [
 						weight("medium"),
 						fg("neutral.emphasis"),

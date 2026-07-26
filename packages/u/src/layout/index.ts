@@ -12,6 +12,8 @@ export { flexRow } from "./flex-row";
 export { flexWrap } from "./flex-wrap";
 export { gap } from "./gap";
 export { grid } from "./grid";
+export { gridArea } from "./grid-area";
+export { grow } from "./grow";
 export { hidden } from "./hidden";
 export { hstack } from "./hstack";
 export { inline } from "./inline";
