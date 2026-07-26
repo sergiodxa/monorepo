@@ -1,4 +1,13 @@
 /**
+ * These factories were rewritten to compose `@pkg/u/animation`'s
+ * `keyframes()`/`animationHost()` instead of one hand-written style object.
+ * `animationHost()` emits the longhand `animationName`/`animationDuration`/
+ * `animationTimingFunction`/`animationIterationCount` properties rather than
+ * the single `animation` shorthand the original hand-written version used —
+ * a deliberate, computationally-equivalent design change (not a visual
+ * regression), consistent with every other shorthand-to-longhand conversion
+ * this migration has made elsewhere (e.g. `transition`).
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -30,11 +39,18 @@ describe("spin", () => {
 				"50%": { opacity: 0.4 },
 			},
 			"&": {
-				animation:
-					"ui-spin-rotate var(--ui-spin-duration, 1s) var(--ui-spin-easing, linear) infinite",
+				animationName: "ui-spin-rotate",
+				animationDuration: "var(--ui-spin-duration, 1s)",
+				animationTimingFunction: "var(--ui-spin-easing, linear)",
+				animationIterationCount: "infinite",
 			},
 			"@media (prefers-reduced-motion: reduce)": {
-				"&": { animation: "ui-spin-breathe var(--ui-spin-duration, 1s) ease-in-out infinite" },
+				"&": {
+					animationName: "ui-spin-breathe",
+					animationDuration: "var(--ui-spin-duration, 1s)",
+					animationTimingFunction: "ease-in-out",
+					animationIterationCount: "infinite",
+				},
 			},
 		});
 	});
@@ -56,12 +72,17 @@ describe("spin", () => {
 				"50%": { opacity: 0.4 },
 			},
 			'&[aria-busy="true"]': {
-				animation:
-					"ui-spin-rotate var(--ui-spin-duration, 1s) var(--ui-spin-easing, linear) infinite",
+				animationName: "ui-spin-rotate",
+				animationDuration: "var(--ui-spin-duration, 1s)",
+				animationTimingFunction: "var(--ui-spin-easing, linear)",
+				animationIterationCount: "infinite",
 			},
 			"@media (prefers-reduced-motion: reduce)": {
 				'&[aria-busy="true"]': {
-					animation: "ui-spin-breathe var(--ui-spin-duration, 1s) ease-in-out infinite",
+					animationName: "ui-spin-breathe",
+					animationDuration: "var(--ui-spin-duration, 1s)",
+					animationTimingFunction: "ease-in-out",
+					animationIterationCount: "infinite",
 				},
 			},
 		});
@@ -81,8 +102,10 @@ describe("pulse", () => {
 				"50%": { opacity: "var(--ui-pulse-min-opacity, 0.5)" },
 			},
 			"&": {
-				animation:
-					"ui-pulse-breathe var(--ui-pulse-duration, 1.6s) var(--ui-pulse-easing, ease-in-out) infinite",
+				animationName: "ui-pulse-breathe",
+				animationDuration: "var(--ui-pulse-duration, 1.6s)",
+				animationTimingFunction: "var(--ui-pulse-easing, ease-in-out)",
+				animationIterationCount: "infinite",
 			},
 			"@media (prefers-reduced-motion: reduce)": {
 				"&": {
@@ -116,12 +139,17 @@ describe("shimmer", () => {
 					"linear-gradient(90deg, transparent, color-mix(in oklab, currentColor 35%, transparent), transparent)",
 				backgroundRepeat: "no-repeat",
 				backgroundSize: "var(--ui-shimmer-band-size, 50%) 100%",
-				animation:
-					"ui-shimmer-sweep var(--ui-shimmer-duration, 1.6s) var(--ui-shimmer-easing, ease-in-out) infinite",
+				animationName: "ui-shimmer-sweep",
+				animationDuration: "var(--ui-shimmer-duration, 1.6s)",
+				animationTimingFunction: "var(--ui-shimmer-easing, ease-in-out)",
+				animationIterationCount: "infinite",
 			},
 			"@media (prefers-reduced-motion: reduce)": {
 				"&:indeterminate": {
-					animation: "ui-shimmer-breathe var(--ui-shimmer-duration, 1.6s) ease-in-out infinite",
+					animationName: "ui-shimmer-breathe",
+					animationDuration: "var(--ui-shimmer-duration, 1.6s)",
+					animationTimingFunction: "ease-in-out",
+					animationIterationCount: "infinite",
 				},
 			},
 		});
@@ -153,8 +181,10 @@ describe("textShimmer", () => {
 					WebkitBackgroundClip: "text",
 					backgroundClip: "text",
 					WebkitTextFillColor: "transparent",
-					animation:
-						"ui-text-shimmer-sweep var(--ui-text-shimmer-duration, 2s) var(--ui-text-shimmer-easing, linear) infinite",
+					animationName: "ui-text-shimmer-sweep",
+					animationDuration: "var(--ui-text-shimmer-duration, 2s)",
+					animationTimingFunction: "var(--ui-text-shimmer-easing, linear)",
+					animationIterationCount: "infinite",
 				},
 				"@media (prefers-reduced-motion: reduce)": {
 					"&": {
@@ -162,8 +192,10 @@ describe("textShimmer", () => {
 						WebkitBackgroundClip: "border-box",
 						backgroundClip: "border-box",
 						WebkitTextFillColor: "currentColor",
-						animation:
-							"ui-text-shimmer-breathe var(--ui-text-shimmer-duration, 2s) ease-in-out infinite",
+						animationName: "ui-text-shimmer-breathe",
+						animationDuration: "var(--ui-text-shimmer-duration, 2s)",
+						animationTimingFunction: "ease-in-out",
+						animationIterationCount: "infinite",
 					},
 				},
 			},

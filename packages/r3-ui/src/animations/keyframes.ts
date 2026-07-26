@@ -3,21 +3,39 @@
  * moving for as long as a busy state lasts: a rotating spinner, a breathing
  * skeleton placeholder, a sweeping indeterminate progress fill, and a
  * highlight sweeping through a run of text's own glyphs. Every factory
- * resolves entirely to `css()` output, so the motion runs directly from
- * server-rendered markup.
+ * composes `@pkg/u` utilities — `keyframes()`/`animationHost()` for the
+ * looping animation itself, `when()`/`media()`/`supports()`/`startingStyle()`
+ * for the gating and mount transition — rather than a single hand-written
+ * style object.
+ *
+ * `keyframes()` (and any `@keyframes` block) may only ever sit at a mixin's
+ * own top level, or nested inside `media()`/`supports()` — never inside
+ * `when()`. `remix/ui`'s serializer only hoists `@keyframes` to the
+ * stylesheet root from those two positions; nesting one under a selector
+ * produces broken CSS. `animationHost()` exists precisely so the *host*
+ * `animation-*` declarations can be gated behind `when()` while the
+ * `keyframes()` utility they reference stays an ungated sibling in the same
+ * `mix` array.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/ui";
 
+import { animationHost, keyframes } from "@pkg/u/animation";
 import { colorMix, linearGradient } from "@pkg/u/color";
-import { calc, raw } from "@pkg/u/general";
+import { opacity, transitionBehavior } from "@pkg/u/effects";
+import { calc, combine, raw, var as varUtility } from "@pkg/u/general";
+import { media, startingStyle, supports } from "@pkg/u/responsive";
+import { when } from "@pkg/u/state";
 
 import type { CSSStyles } from "../utils/css-styles";
 
 import { easings } from "./tokens";
+
+/** The `@pkg/u` mixin type every factory in this file returns. */
+type Mixin<Node extends Element> = MixinDescriptor<Node, [styles: CSSStyles], ElementProps>;
 
 /** Resting opacity a loop's mount-in transition fades up from and its exit fades down to. */
 const HIDDEN_OPACITY = 0;
@@ -86,35 +104,40 @@ function resolveTarget(when: string | undefined): string {
 }
 
 /**
- * Wraps a style block behind a single selector, relative to the host. The
- * explicit return type gives the computed key a concrete target to check
- * `styles` against, keeping it typed as {@link CSSStyles} end to end.
- */
-function gate(target: string, styles: CSSStyles): CSSStyles {
-	return { [target]: styles } as CSSStyles;
-}
-
-/**
  * The mount/gate shell every loop factory wraps its keyframe animation in.
  * Fades the host in from {@link HIDDEN_OPACITY} on first render through
  * `@starting-style`, carries a `display`/`opacity` transition marked
  * `allow-discrete` so a discrete show/hide still animates smoothly, and,
  * when `when` is given, drops back to {@link HIDDEN_OPACITY} while the gate
- * does not match so the loop only shows while its state actually holds.
+ * does not match so the loop only shows while its state actually holds. The
+ * mixed-duration transition shorthand (opacity and display each reading
+ * their own custom-property fallback) has no `@pkg/u` equivalent and stays
+ * a small `raw()`; the gating and mount-fade opacity values compose real
+ * utilities.
  */
-function loopShell(
+function loopShell<Node extends Element = Element>(
 	target: string,
 	when: string | undefined,
 	fadeDurationVar: string,
 	restOpacity: number,
-): CSSStyles {
-	return {
-		opacity: restOpacity,
-		transition: `opacity var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease, display var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease-out`,
-		transitionBehavior: "allow-discrete",
-		...(when === undefined ? {} : gate(`&:not(${when})`, { opacity: HIDDEN_OPACITY })),
-		"@starting-style": gate(target, { opacity: HIDDEN_OPACITY }),
-	};
+) {
+	return combine<Node>([
+		raw<Node>({
+			opacity: restOpacity,
+			transition: `opacity var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease, display var(${fadeDurationVar}, ${DEFAULT_FADE_DURATION}) ease-out`,
+		}),
+		transitionBehavior<Node>("allow-discrete"),
+		when === undefined ? undefined : gate<Node>(`&:not(${when})`, opacity<Node>(HIDDEN_OPACITY)),
+		startingStyle<Node>(gate<Node>(target, opacity<Node>(HIDDEN_OPACITY))),
+	]);
+}
+
+/** Sugar for `when(selector, input)`, named to read alongside this file's own gating vocabulary. */
+function gate<Node extends Element = Element>(
+	selector: string,
+	input: Parameters<typeof when<Node>>[1],
+) {
+	return when<Node>(selector, input);
 }
 
 /**
@@ -146,33 +169,46 @@ export namespace Spin {
  * reads as active without the spin itself.
  *
  * @param options Timing and gating for the loop.
- * @returns A `css()` mixin ready for a spinner's host element.
+ * @returns A `@pkg/u` mixin ready for a spinner's host element.
  * @example
  * <Spinner mix={[spin()]} aria-label={t("status.loading")} />
  */
-export function spin(options: Spin.Options = {}): CSSMixinDescriptor {
+export function spin<Node extends Element = Element>(options: Spin.Options = {}): Mixin<Node> {
 	let duration = options.duration ?? DEFAULT_SPIN_DURATION;
 	let easing = options.easing ?? DEFAULT_SPIN_EASING;
 	let when = options.when;
 	let target = resolveTarget(when);
 
-	return raw({
-		...loopShell(target, when, "--ui-spin-fade-duration", 1),
-		"@keyframes ui-spin-rotate": {
+	return combine<Node>([
+		loopShell<Node>(target, when, "--ui-spin-fade-duration", 1),
+		keyframes<Node>("ui-spin-rotate", {
 			from: { transform: "rotate(0deg)" },
 			to: { transform: "rotate(360deg)" },
-		},
-		"@keyframes ui-spin-breathe": {
+		}),
+		keyframes<Node>("ui-spin-breathe", {
 			"0%, 100%": { opacity: 1 },
 			"50%": { opacity: 0.4 },
-		},
-		...gate(target, {
-			animation: `ui-spin-rotate var(--ui-spin-duration, ${duration}) var(--ui-spin-easing, ${easing}) infinite`,
 		}),
-		"@media (prefers-reduced-motion: reduce)": gate(target, {
-			animation: `ui-spin-breathe var(--ui-spin-duration, ${duration}) ease-in-out infinite`,
-		}),
-	});
+		gate<Node>(
+			target,
+			animationHost<Node>("ui-spin-rotate", {
+				duration: varUtility("ui-spin-duration", duration),
+				easing: varUtility("ui-spin-easing", easing),
+				iterationCount: "infinite",
+			}),
+		),
+		media<Node>(
+			"(prefers-reduced-motion: reduce)",
+			gate<Node>(
+				target,
+				animationHost<Node>("ui-spin-breathe", {
+					duration: varUtility("ui-spin-duration", duration),
+					easing: "ease-in-out",
+					iterationCount: "infinite",
+				}),
+			),
+		),
+	]);
 }
 
 /**
@@ -210,11 +246,11 @@ export namespace Pulse {
  * toward {@link Pulse.Options.maxOpacity} rather than stopping outright.
  *
  * @param options Timing, opacity range, and gating for the loop.
- * @returns A `css()` mixin ready for a skeleton placeholder's host element.
+ * @returns A `@pkg/u` mixin ready for a skeleton placeholder's host element.
  * @example
  * <Skeleton mix={[pulse()]} aria-hidden="true" />
  */
-export function pulse(options: Pulse.Options = {}): CSSMixinDescriptor {
+export function pulse<Node extends Element = Element>(options: Pulse.Options = {}): Mixin<Node> {
 	let duration = options.duration ?? DEFAULT_PULSE_DURATION;
 	let easing = options.easing ?? DEFAULT_PULSE_EASING;
 	let minOpacity = options.minOpacity ?? DEFAULT_PULSE_MIN_OPACITY;
@@ -223,20 +259,35 @@ export function pulse(options: Pulse.Options = {}): CSSMixinDescriptor {
 	let target = resolveTarget(when);
 	let reducedMinOpacity = maxOpacity - (maxOpacity - minOpacity) * REDUCED_PULSE_AMPLITUDE_SCALE;
 
-	return raw({
-		...loopShell(target, when, "--ui-pulse-fade-duration", maxOpacity),
-		"@keyframes ui-pulse-breathe": {
+	return combine<Node>([
+		loopShell<Node>(target, when, "--ui-pulse-fade-duration", maxOpacity),
+		keyframes<Node>("ui-pulse-breathe", {
 			"0%, 100%": { opacity: `var(--ui-pulse-max-opacity, ${maxOpacity})` },
 			"50%": { opacity: `var(--ui-pulse-min-opacity, ${minOpacity})` },
-		},
-		...gate(target, {
-			animation: `ui-pulse-breathe var(--ui-pulse-duration, ${duration}) var(--ui-pulse-easing, ${easing}) infinite`,
 		}),
-		"@media (prefers-reduced-motion: reduce)": gate(target, {
-			"--ui-pulse-min-opacity": String(reducedMinOpacity),
-			animationDuration: calc(`var(--ui-pulse-duration, ${duration}) * 1.5`),
-		}),
-	});
+		gate<Node>(
+			target,
+			animationHost<Node>("ui-pulse-breathe", {
+				duration: varUtility("ui-pulse-duration", duration),
+				easing: varUtility("ui-pulse-easing", easing),
+				iterationCount: "infinite",
+			}),
+		),
+		// Only overrides the loop's duration and the keyframes' own min-opacity
+		// custom property under reduced motion — the animation name/timing
+		// function stay whatever the base gate() above already set, so this
+		// can't route through animationHost() (which always re-asserts a name).
+		media<Node>(
+			"(prefers-reduced-motion: reduce)",
+			gate<Node>(
+				target,
+				raw<Node>({
+					"--ui-pulse-min-opacity": String(reducedMinOpacity),
+					animationDuration: calc(`var(--ui-pulse-duration, ${duration}) * 1.5`),
+				}),
+			),
+		),
+	]);
 }
 
 /**
@@ -277,42 +328,61 @@ export namespace Shimmer {
  * moving band.
  *
  * @param options Timing, band width, and gating for the loop.
- * @returns A `css()` mixin ready for a progress indicator's fill element.
+ * @returns A `@pkg/u` mixin ready for a progress indicator's fill element.
  * @example
  * <ProgressBar.Indicator mix={[shimmer()]} />
  */
-export function shimmer<node extends Element = Element>(options: Shimmer.Options = {}) {
+export function shimmer<Node extends Element = Element>(
+	options: Shimmer.Options = {},
+): Mixin<Node> {
 	let duration = options.duration ?? DEFAULT_SHIMMER_DURATION;
 	let easing = options.easing ?? DEFAULT_SHIMMER_EASING;
 	let bandSize = options.bandSize ?? DEFAULT_SHIMMER_BAND_SIZE;
 	let when = options.when ?? DEFAULT_SHIMMER_WHEN;
 	let target = resolveTarget(when);
 
-	return raw<node>({
-		...loopShell(target, when, "--ui-shimmer-fade-duration", 1),
-		"@keyframes ui-shimmer-sweep": {
+	return combine<Node>([
+		loopShell<Node>(target, when, "--ui-shimmer-fade-duration", 1),
+		keyframes<Node>("ui-shimmer-sweep", {
 			from: { backgroundPosition: "-100% 0" },
 			to: { backgroundPosition: "200% 0" },
-		},
-		"@keyframes ui-shimmer-breathe": {
+		}),
+		keyframes<Node>("ui-shimmer-breathe", {
 			"0%, 100%": { opacity: 1 },
 			"50%": { opacity: 0.6 },
-		},
-		...gate(target, {
-			backgroundImage: linearGradient(
-				90,
-				"transparent",
-				colorMix("oklab", { color: "currentColor", weight: 35 }, "transparent"),
-				"transparent",
+		}),
+		gate<Node>(
+			target,
+			combine<Node>([
+				raw<Node>({
+					backgroundImage: linearGradient(
+						90,
+						"transparent",
+						colorMix("oklab", { color: "currentColor", weight: 35 }, "transparent"),
+						"transparent",
+					),
+					backgroundRepeat: "no-repeat",
+					backgroundSize: `var(--ui-shimmer-band-size, ${bandSize}) 100%`,
+				}),
+				animationHost<Node>("ui-shimmer-sweep", {
+					duration: varUtility("ui-shimmer-duration", duration),
+					easing: varUtility("ui-shimmer-easing", easing),
+					iterationCount: "infinite",
+				}),
+			]),
+		),
+		media<Node>(
+			"(prefers-reduced-motion: reduce)",
+			gate<Node>(
+				target,
+				animationHost<Node>("ui-shimmer-breathe", {
+					duration: varUtility("ui-shimmer-duration", duration),
+					easing: "ease-in-out",
+					iterationCount: "infinite",
+				}),
 			),
-			backgroundRepeat: "no-repeat",
-			backgroundSize: `var(--ui-shimmer-band-size, ${bandSize}) 100%`,
-			animation: `ui-shimmer-sweep var(--ui-shimmer-duration, ${duration}) var(--ui-shimmer-easing, ${easing}) infinite`,
-		}),
-		"@media (prefers-reduced-motion: reduce)": gate(target, {
-			animation: `ui-shimmer-breathe var(--ui-shimmer-duration, ${duration}) ease-in-out infinite`,
-		}),
-	});
+		),
+	]);
 }
 
 /**
@@ -364,7 +434,7 @@ export namespace TextShimmer {
  * the highlight travelling across individual glyphs.
  *
  * @param options Timing, band width, angle, color, and gating for the loop.
- * @returns A `css()` mixin ready for a caption's host text element.
+ * @returns A `@pkg/u` mixin ready for a caption's host text element.
  * @example
  * <Text mix={[textShimmer()]}>{t("chat.generating")}</Text>
  * @example
@@ -372,7 +442,9 @@ export namespace TextShimmer {
  * 	{t("chat.generating")}
  * </Text>
  */
-export function textShimmer(options: TextShimmer.Options = {}): CSSMixinDescriptor {
+export function textShimmer<Node extends Element = Element>(
+	options: TextShimmer.Options = {},
+): Mixin<Node> {
 	let duration = options.duration ?? DEFAULT_TEXT_SHIMMER_DURATION;
 	let easing = options.easing ?? DEFAULT_TEXT_SHIMMER_EASING;
 	let bandSize = options.bandSize ?? DEFAULT_TEXT_SHIMMER_BAND_SIZE;
@@ -390,40 +462,61 @@ export function textShimmer(options: TextShimmer.Options = {}): CSSMixinDescript
 		"transparent",
 	);
 
-	return raw({
-		...loopShell(target, when, "--ui-text-shimmer-fade-duration", 1),
-		"@supports (background-clip: text) or (-webkit-background-clip: text)": {
-			"@keyframes ui-text-shimmer-sweep": {
+	return combine<Node>([
+		loopShell<Node>(target, when, "--ui-text-shimmer-fade-duration", 1),
+		supports<Node>("(background-clip: text) or (-webkit-background-clip: text)", [
+			keyframes<Node>("ui-text-shimmer-sweep", {
 				from: { backgroundPosition: "100% 0" },
 				to: { backgroundPosition: "-100% 0" },
-			},
-			"@keyframes ui-text-shimmer-breathe": {
+			}),
+			keyframes<Node>("ui-text-shimmer-breathe", {
 				"0%, 100%": { opacity: 1 },
 				"50%": { opacity: 0.6 },
-			},
-			...gate(target, {
-				backgroundImage: linearGradient(
-					angleVar,
-					{ color: restTone, position: "0%" },
-					{ color: restTone, position: calc(`50% - (${bandSizeVar} / 2)`) },
-					{ color: colorVar, position: "50%" },
-					{ color: restTone, position: calc(`50% + (${bandSizeVar} / 2)`) },
-					{ color: restTone, position: "100%" },
+			}),
+			gate<Node>(
+				target,
+				combine<Node>([
+					raw<Node>({
+						backgroundImage: linearGradient(
+							angleVar,
+							{ color: restTone, position: "0%" },
+							{ color: restTone, position: calc(`50% - (${bandSizeVar} / 2)`) },
+							{ color: colorVar, position: "50%" },
+							{ color: restTone, position: calc(`50% + (${bandSizeVar} / 2)`) },
+							{ color: restTone, position: "100%" },
+						),
+						backgroundSize: "200% 100%",
+						backgroundRepeat: "no-repeat",
+						WebkitBackgroundClip: "text",
+						backgroundClip: "text",
+						WebkitTextFillColor: "transparent",
+					}),
+					animationHost<Node>("ui-text-shimmer-sweep", {
+						duration: varUtility("ui-text-shimmer-duration", duration),
+						easing: varUtility("ui-text-shimmer-easing", easing),
+						iterationCount: "infinite",
+					}),
+				]),
+			),
+			media<Node>(
+				"(prefers-reduced-motion: reduce)",
+				gate<Node>(
+					target,
+					combine<Node>([
+						raw<Node>({
+							backgroundImage: "none",
+							WebkitBackgroundClip: "border-box",
+							backgroundClip: "border-box",
+							WebkitTextFillColor: "currentColor",
+						}),
+						animationHost<Node>("ui-text-shimmer-breathe", {
+							duration: varUtility("ui-text-shimmer-duration", duration),
+							easing: "ease-in-out",
+							iterationCount: "infinite",
+						}),
+					]),
 				),
-				backgroundSize: "200% 100%",
-				backgroundRepeat: "no-repeat",
-				WebkitBackgroundClip: "text",
-				backgroundClip: "text",
-				WebkitTextFillColor: "transparent",
-				animation: `ui-text-shimmer-sweep var(--ui-text-shimmer-duration, ${duration}) var(--ui-text-shimmer-easing, ${easing}) infinite`,
-			}),
-			"@media (prefers-reduced-motion: reduce)": gate(target, {
-				backgroundImage: "none",
-				WebkitBackgroundClip: "border-box",
-				backgroundClip: "border-box",
-				WebkitTextFillColor: "currentColor",
-				animation: `ui-text-shimmer-breathe var(--ui-text-shimmer-duration, ${duration}) ease-in-out infinite`,
-			}),
-		},
-	});
+			),
+		]),
+	]);
 }
