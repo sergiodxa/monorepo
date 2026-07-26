@@ -1,7 +1,7 @@
 ---
 title: How to Access React Router Context with AsyncLocalStorage
 excerpt: Access React Router's context from any function without passing it through every layer.
-technologies: react-router@7.9.0 remix-utils@9.0.0
+technologies: react-router@8.0.0 remix-utils@9.0.0
 ---
 
 React Router's `context` object is available in loaders and actions, and [middleware can populate it](/tutorials/use-middleware-in-react-router) with databases, sessions, and other per-request resources. The problem is that you need to pass this context through every function that needs access to these resources: from loaders to services, from services to repositories, and so on.

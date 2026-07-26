@@ -1,10 +1,10 @@
 ---
 title: How to Cancel `useFetcher().load()` on Unmount in React Router
 excerpt: Abort stale `useFetcher().load()` requests on unmount so loaders and upstream fetches stop early.
-tech: react-router@7.13.0 react@19.0.0
+tech: react-router@8.0.0 react@19.0.0
 ---
 
-`useFetcher().load()` is a good fit for search panels, popovers, and live previews that should not navigate. The tricky part shows up when the component that owns the fetcher unmounts while the request is still in flight. In React Router v7, the UI cleans up, but the fetcher can persist long enough for the HTTP request to keep running.
+`useFetcher().load()` is a good fit for search panels, popovers, and live previews that should not navigate. The tricky part shows up when the component that owns the fetcher unmounts while the request is still in flight. The UI cleans up, but the fetcher can persist long enough for the HTTP request to keep running.
 
 That becomes expensive when your loader acts as a backend for frontend and forwards the request to another upstream service. Let's see how you could propagate `request.signal` through your loader and eagerly cancel the fetcher with `fetcher.reset()` during unmount.
 
@@ -134,11 +134,11 @@ function SearchPreview({ onClose }: SearchPreviewProps) {
 }
 ```
 
-This route module uses `fetcher.load()` for every qualifying query without causing a navigation. Closing the panel unmounts `SearchPreview`, but the request can still stay alive because fetchers persist in v7.
+This route module uses `fetcher.load()` for every qualifying query without causing a navigation. Closing the panel unmounts `SearchPreview`, but the request can still stay alive because fetchers persist after unmount.
 
 ## Reset the Fetcher on Unmount
 
-The missing piece is explicit cleanup when the search panel unmounts. React Router keeps fetchers around in v7, so if you want eager cancellation, you need to reset the fetcher during the effect cleanup.
+The missing piece is explicit cleanup when the search panel unmounts. React Router keeps fetchers around after unmount, so if you want eager cancellation, you need to reset the fetcher during the effect cleanup.
 
 ```tsx {% path="app/routes/product-search.tsx" %}
 import type { ChangeEvent } from "react";
@@ -189,7 +189,7 @@ function SearchPreview({ onClose }: SearchPreviewProps) {
 }
 ```
 
-This cleanup is the missing piece. React Router intentionally keeps fetchers around after unmount in v7, a behavior that previously lived behind `future.v7_fetcherPersist`, so it does not cancel `fetcher.load()` on unmount by default.
+This cleanup is the missing piece. React Router intentionally keeps fetchers around after unmount, so it does not cancel `fetcher.load()` on unmount by default.
 
 Calling `reset()` in the cleanup is a reasonable workaround when you want the request to stop as soon as the hosting component disappears. The important detail is that the `useFetcher()` return value is not stable, but `reset` is, so the cleanup should depend on `reset` instead of the whole fetcher object.
 

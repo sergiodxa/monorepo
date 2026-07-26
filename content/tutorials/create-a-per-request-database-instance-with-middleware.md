@@ -1,7 +1,7 @@
 ---
 title: How to Create a Per-Request Database Instance with Middleware
 excerpt: Manage database lifecycle with React Router middleware, ensuring connections close even when errors occur.
-tech: react-router@7.9.0 @react-router/fs-routes@7.0.0
+tech: react-router@8.0.0 @react-router/fs-routes@8.0.0
 ---
 
 Some database clients need explicit lifecycle management. You might need to open a connection at the start of a request and close it at the end, or you want to wrap all database operations in a transaction that commits on success and rolls back on error.

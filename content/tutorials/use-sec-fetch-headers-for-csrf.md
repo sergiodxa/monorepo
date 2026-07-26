@@ -1,7 +1,7 @@
 ---
 title: How to Use Sec-Fetch Headers for CSRF Protection
 excerpt: Protect your React Router app from CSRF attacks using browser Sec-Fetch headers in middleware.
-technologies: [react-router@7.9.0]
+technologies: [react-router@8.0.0]
 ---
 
 The `Sec-Fetch-*` headers are a set of HTTP headers that browsers send with requests automatically to indicate the context of the request. They are forced by the browser and cannot be spoofed by attackers, making them a powerful tool for defending against Cross-Site Request Forgery (CSRF) attacks.

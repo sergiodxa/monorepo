@@ -1,7 +1,7 @@
 ---
 title: How to Create a Multi-Directory Route Organization in React Router
 excerpt: Organize routes into sub-folders while keeping flat routes inside each folder.
-tech: react-router@7.9.0 @react-router/fs-routes@7.0.0
+tech: react-router@8.0.0 @react-router/fs-routes@8.0.0
 ---
 
 As your application grows, a single `routes/` folder can become overwhelming. You might have public marketing pages, authenticated app routes, API endpoints, and [action routes](/tutorials/use-action-routes-in-react-router) all mixed together. Splitting routes into logical directories helps teams work independently and makes the codebase easier to navigate, while the flat routes convention remains desirable for its simplicity and predictability within each directory.

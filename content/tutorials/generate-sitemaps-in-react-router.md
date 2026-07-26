@@ -1,7 +1,7 @@
 ---
 title: How to Generate Sitemaps in React Router
 excerpt: Build XML sitemaps dynamically using a builder pattern in React Router resource routes.
-technologies: react-router@7.0.0
+technologies: react-router@8.0.0
 ---
 
 Sitemaps help search engines discover and index all the pages on your website. If you have a dynamic site with content that changes frequently, you need to generate sitemaps on the fly rather than maintaining a static XML file.

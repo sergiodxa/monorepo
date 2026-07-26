@@ -1,7 +1,7 @@
 ---
 title: How to Link OAuth Accounts with Local User Profiles
 excerpt: Handle new and existing users in your OAuth callback by linking external identities to local profiles.
-tech: react-router@7.0.0 drizzle-orm@0.30.0
+tech: react-router@8.0.0 drizzle-orm@0.30.0
 ---
 
 When implementing OAuth authentication, you need to handle two scenarios: new users signing up for the first time and existing users who already have a profile in your database. The challenge is linking the external OAuth identity (the subject ID from your [identity provider](/tutorials/build-an-oauth2-oidc-provider-from-scratch)) to your local user profile while keeping profile data in sync.

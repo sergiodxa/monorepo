@@ -1,7 +1,7 @@
 ---
 title: How to Generate RSS Feeds in React Router
 excerpt: Create valid RSS feeds for your blog or content site using a resource route in React Router.
-technologies: react-router@7.0.0
+technologies: react-router@8.0.0
 ---
 
 If you're building a blog, news site, or any content platform with React Router, you'll likely want to provide an RSS feed so readers can subscribe using their favorite feed reader. RSS feeds are XML documents that follow a specific format, and generating them correctly requires handling the channel metadata and individual items.

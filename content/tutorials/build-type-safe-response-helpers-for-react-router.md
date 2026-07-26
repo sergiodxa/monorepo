@@ -1,7 +1,7 @@
 ---
 title: How to Build Type-Safe Response Helpers for React Router
 excerpt: Create response helpers that add an ok property for easy success and error checking in loaders and actions.
-technologies: react-router@7.0.0
+technologies: react-router@8.0.0
 ---
 
 When building React Router applications, you often need to return different HTTP status codes from your loaders and actions. A 200 for success, 400 for validation errors, 404 when a resource is not found, and so on. The challenge is that checking the status code in your components requires accessing the response object, which can be cumbersome. This is especially useful when you [expose routes as API endpoints](/tutorials/expose-remix-routes-as-api-endpoints).
