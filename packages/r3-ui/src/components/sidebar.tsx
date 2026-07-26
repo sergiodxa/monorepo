@@ -1032,7 +1032,7 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 					justify("between"),
 					mbe("0.25rem"),
 					weight(600),
-					raw({ fontSize: "0.6875rem" }),
+					fontSize("xs"),
 					textTransform("uppercase"),
 					tracking("wider"),
 					userSelect(),
@@ -1418,7 +1418,7 @@ Sidebar.MenuBadge = function SidebarMenuBadge(handle: Handle<Sidebar.MenuBadgePr
 				mix={[
 					mis("auto"),
 					shrink(),
-					raw({ fontSize: "0.625rem" }),
+					fontSize("xs"),
 					weight(600),
 					tabularNums(),
 					rounded("md"),

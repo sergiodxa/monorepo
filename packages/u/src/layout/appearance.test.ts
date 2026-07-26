@@ -32,4 +32,22 @@ describe("appearance", () => {
 			appearance: "auto",
 		});
 	});
+
+	test("omits MozAppearance when moz is disabled", () => {
+		let result = styles(appearance("none", { moz: false }));
+		expect(result).toEqual({
+			WebkitAppearance: "none",
+			appearance: "none",
+		});
+		expect(result).not.toHaveProperty("MozAppearance");
+	});
+
+	test("omits WebkitAppearance when webkit is disabled", () => {
+		let result = styles(appearance("none", { webkit: false }));
+		expect(result).toEqual({
+			MozAppearance: "none",
+			appearance: "none",
+		});
+		expect(result).not.toHaveProperty("WebkitAppearance");
+	});
 });

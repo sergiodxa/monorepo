@@ -13,4 +13,6 @@ export { textTransform } from "./text-transform";
 export { tracking } from "./tracking";
 export { truncate } from "./truncate";
 export { type } from "./type";
+export { verticalAlign } from "./vertical-align";
+export type { VerticalAlignValue } from "./vertical-align";
 export { weight } from "./weight";

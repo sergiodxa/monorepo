@@ -5,6 +5,7 @@ export { env } from "./env";
 export { if } from "./if";
 export { listStyle } from "./list-style";
 export { pointerEvents } from "./pointer-events";
+export { pseudoContent } from "./pseudo-content";
 export { raw } from "./raw";
 export { touchAction } from "./touch-action";
 export { userSelect } from "./user-select";

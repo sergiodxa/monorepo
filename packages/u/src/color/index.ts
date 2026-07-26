@@ -9,6 +9,7 @@ export { colorMix } from "./color-mix";
 export type { ColorMixStop } from "./color-mix";
 export { fg } from "./fg";
 export { fill } from "./fill";
+export { fillOpacity } from "./fill-opacity";
 export { conicGradient, linearGradient, radialGradient } from "./gradient";
 export type {
 	GradientColor,
@@ -23,5 +24,10 @@ export { outlineColor } from "./outline-color";
 export { outlineStyle } from "./outline-style";
 export { outlineWidth } from "./outline-width";
 export { ring } from "./ring";
+export { stroke } from "./stroke";
+export { strokeLinecap } from "./stroke-linecap";
+export { strokeLinejoin } from "./stroke-linejoin";
+export { strokeWidth } from "./stroke-width";
 export { surface } from "./surface";
 export { translucent } from "./translucent";
+export { vectorEffect } from "./vector-effect";

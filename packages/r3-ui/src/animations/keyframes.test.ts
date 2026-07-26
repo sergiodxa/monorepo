@@ -1,0 +1,172 @@
+/**
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { describe, expect, test } from "bun:test";
+
+import type { CSSMixinDescriptor } from "remix/ui";
+
+import { pulse, shimmer, spin, textShimmer } from "./keyframes";
+
+/** Unwraps a utility mixin back to the style tree it was built from. */
+function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
+	return descriptor.args[0] as Record<string, unknown>;
+}
+
+describe("spin", () => {
+	test("ungated: default rotation + reduced-motion breathe fallback", () => {
+		expect(styles(spin())).toEqual({
+			opacity: 1,
+			transition:
+				"opacity var(--ui-spin-fade-duration, 150ms) ease, display var(--ui-spin-fade-duration, 150ms) ease-out",
+			transitionBehavior: "allow-discrete",
+			"@starting-style": { "&": { opacity: 0 } },
+			"@keyframes ui-spin-rotate": {
+				from: { transform: "rotate(0deg)" },
+				to: { transform: "rotate(360deg)" },
+			},
+			"@keyframes ui-spin-breathe": {
+				"0%, 100%": { opacity: 1 },
+				"50%": { opacity: 0.4 },
+			},
+			"&": {
+				animation:
+					"ui-spin-rotate var(--ui-spin-duration, 1s) var(--ui-spin-easing, linear) infinite",
+			},
+			"@media (prefers-reduced-motion: reduce)": {
+				"&": { animation: "ui-spin-breathe var(--ui-spin-duration, 1s) ease-in-out infinite" },
+			},
+		});
+	});
+
+	test("gated behind a `when` selector", () => {
+		expect(styles(spin({ when: '[aria-busy="true"]' }))).toEqual({
+			opacity: 1,
+			transition:
+				"opacity var(--ui-spin-fade-duration, 150ms) ease, display var(--ui-spin-fade-duration, 150ms) ease-out",
+			transitionBehavior: "allow-discrete",
+			'&:not([aria-busy="true"])': { opacity: 0 },
+			"@starting-style": { '&[aria-busy="true"]': { opacity: 0 } },
+			"@keyframes ui-spin-rotate": {
+				from: { transform: "rotate(0deg)" },
+				to: { transform: "rotate(360deg)" },
+			},
+			"@keyframes ui-spin-breathe": {
+				"0%, 100%": { opacity: 1 },
+				"50%": { opacity: 0.4 },
+			},
+			'&[aria-busy="true"]': {
+				animation:
+					"ui-spin-rotate var(--ui-spin-duration, 1s) var(--ui-spin-easing, linear) infinite",
+			},
+			"@media (prefers-reduced-motion: reduce)": {
+				'&[aria-busy="true"]': {
+					animation: "ui-spin-breathe var(--ui-spin-duration, 1s) ease-in-out infinite",
+				},
+			},
+		});
+	});
+});
+
+describe("pulse", () => {
+	test("default opacity range + reduced-motion narrowed amplitude", () => {
+		expect(styles(pulse())).toEqual({
+			opacity: 1,
+			transition:
+				"opacity var(--ui-pulse-fade-duration, 150ms) ease, display var(--ui-pulse-fade-duration, 150ms) ease-out",
+			transitionBehavior: "allow-discrete",
+			"@starting-style": { "&": { opacity: 0 } },
+			"@keyframes ui-pulse-breathe": {
+				"0%, 100%": { opacity: "var(--ui-pulse-max-opacity, 1)" },
+				"50%": { opacity: "var(--ui-pulse-min-opacity, 0.5)" },
+			},
+			"&": {
+				animation:
+					"ui-pulse-breathe var(--ui-pulse-duration, 1.6s) var(--ui-pulse-easing, ease-in-out) infinite",
+			},
+			"@media (prefers-reduced-motion: reduce)": {
+				"&": {
+					"--ui-pulse-min-opacity": "0.8",
+					animationDuration: "calc(var(--ui-pulse-duration, 1.6s) * 1.5)",
+				},
+			},
+		});
+	});
+});
+
+describe("shimmer", () => {
+	test("default indeterminate-gated sweep + reduced-motion breathe fallback", () => {
+		expect(styles(shimmer())).toEqual({
+			opacity: 1,
+			transition:
+				"opacity var(--ui-shimmer-fade-duration, 150ms) ease, display var(--ui-shimmer-fade-duration, 150ms) ease-out",
+			transitionBehavior: "allow-discrete",
+			"&:not(:indeterminate)": { opacity: 0 },
+			"@starting-style": { "&:indeterminate": { opacity: 0 } },
+			"@keyframes ui-shimmer-sweep": {
+				from: { backgroundPosition: "-100% 0" },
+				to: { backgroundPosition: "200% 0" },
+			},
+			"@keyframes ui-shimmer-breathe": {
+				"0%, 100%": { opacity: 1 },
+				"50%": { opacity: 0.6 },
+			},
+			"&:indeterminate": {
+				backgroundImage:
+					"linear-gradient(90deg, transparent, color-mix(in oklab, currentColor 35%, transparent), transparent)",
+				backgroundRepeat: "no-repeat",
+				backgroundSize: "var(--ui-shimmer-band-size, 50%) 100%",
+				animation:
+					"ui-shimmer-sweep var(--ui-shimmer-duration, 1.6s) var(--ui-shimmer-easing, ease-in-out) infinite",
+			},
+			"@media (prefers-reduced-motion: reduce)": {
+				"&:indeterminate": {
+					animation: "ui-shimmer-breathe var(--ui-shimmer-duration, 1.6s) ease-in-out infinite",
+				},
+			},
+		});
+	});
+});
+
+describe("textShimmer", () => {
+	test("default glyph sweep gated behind @supports, + reduced-motion breathe fallback", () => {
+		expect(styles(textShimmer())).toEqual({
+			opacity: 1,
+			transition:
+				"opacity var(--ui-text-shimmer-fade-duration, 150ms) ease, display var(--ui-text-shimmer-fade-duration, 150ms) ease-out",
+			transitionBehavior: "allow-discrete",
+			"@starting-style": { "&": { opacity: 0 } },
+			"@supports (background-clip: text) or (-webkit-background-clip: text)": {
+				"@keyframes ui-text-shimmer-sweep": {
+					from: { backgroundPosition: "100% 0" },
+					to: { backgroundPosition: "-100% 0" },
+				},
+				"@keyframes ui-text-shimmer-breathe": {
+					"0%, 100%": { opacity: 1 },
+					"50%": { opacity: 0.6 },
+				},
+				"&": {
+					backgroundImage:
+						"linear-gradient(var(--ui-text-shimmer-angle, 90deg), color-mix(in oklab, var(--ui-text-shimmer-color, currentColor) 45%, transparent) 0%, color-mix(in oklab, var(--ui-text-shimmer-color, currentColor) 45%, transparent) calc(50% - (var(--ui-text-shimmer-band-size, 30%) / 2)), var(--ui-text-shimmer-color, currentColor) 50%, color-mix(in oklab, var(--ui-text-shimmer-color, currentColor) 45%, transparent) calc(50% + (var(--ui-text-shimmer-band-size, 30%) / 2)), color-mix(in oklab, var(--ui-text-shimmer-color, currentColor) 45%, transparent) 100%)",
+					backgroundSize: "200% 100%",
+					backgroundRepeat: "no-repeat",
+					WebkitBackgroundClip: "text",
+					backgroundClip: "text",
+					WebkitTextFillColor: "transparent",
+					animation:
+						"ui-text-shimmer-sweep var(--ui-text-shimmer-duration, 2s) var(--ui-text-shimmer-easing, linear) infinite",
+				},
+				"@media (prefers-reduced-motion: reduce)": {
+					"&": {
+						backgroundImage: "none",
+						WebkitBackgroundClip: "border-box",
+						backgroundClip: "border-box",
+						WebkitTextFillColor: "currentColor",
+						animation:
+							"ui-text-shimmer-breathe var(--ui-text-shimmer-duration, 2s) ease-in-out infinite",
+					},
+				},
+			},
+		});
+	});
+});
