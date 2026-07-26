@@ -25,4 +25,8 @@ describe("fill", () => {
 	test("an explicit tint suffix aliases to the bg-tint property", () => {
 		expect(styles(fill("neutral.tint"))).toEqual({ fill: "var(--ui-neutral-bg-tint)" });
 	});
+
+	test("'none' passes through literally instead of resolving as a tone name", () => {
+		expect(styles(fill("none"))).toEqual({ fill: "none" });
+	});
 });

@@ -24,8 +24,17 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, outline, outlineStyle } from "@pkg/u/color";
 import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
-import { cursor, pointerEvents, raw } from "@pkg/u/general";
-import { absolute, block, inlineBlock, insBs, insIs, inset, relative } from "@pkg/u/layout";
+import { cursor, pointerEvents, pseudoContent, raw } from "@pkg/u/general";
+import {
+	absolute,
+	appearance,
+	block,
+	inlineBlock,
+	insBs,
+	insIs,
+	inset,
+	relative,
+} from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, is, m, mbs, minIs, mis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
@@ -243,8 +252,8 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 							insIs("50%"),
 							shadow("base"),
 							pointerEvents(),
+							pseudoContent('""'),
 							raw({
-								content: '""',
 								transform:
 									"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
 							}),
@@ -288,26 +297,26 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
 						m("0"),
 						bg("transparent"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 						outlineStyle("none"),
 
 						when("&::-webkit-slider-runnable-track", [
 							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
 							rounded("full"),
 							bg({ image: HUE_TRACK_GRADIENT }),
-							raw({ WebkitAppearance: "none", appearance: "none" }),
+							appearance("none", { moz: false }),
 						]),
 						when("&::-moz-range-track", [
 							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
 							rounded("full"),
 							bg({ image: HUE_TRACK_GRADIENT }),
 							border({ style: "none" }),
-							raw({ appearance: "none" }),
+							appearance("none", { webkit: false, moz: false }),
 						]),
 
 						when('[data-shape="circular"] &', [
 							cursor("pointer"),
-							raw({ WebkitAppearance: "none", appearance: "none" }),
+							appearance("none", { moz: false }),
 
 							when("&::-webkit-slider-runnable-track", bg({ image: "none", color: "transparent" })),
 							when("&::-moz-range-track", bg({ image: "none", color: "transparent" })),

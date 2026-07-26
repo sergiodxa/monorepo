@@ -35,6 +35,7 @@ import {
 	minIs,
 	outlineStyle,
 	overflow,
+	pseudoContent,
 	raw,
 	relative,
 	rounded,
@@ -232,8 +233,8 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 						minBs("0"),
 						overflow("hidden"),
 					]),
-					before([absolute(), rounded("full"), bg("neutral.border"), raw({ content: '""' })]),
-					after([absolute(), rounded("full"), bg("primary.solid"), raw({ content: '""' })]),
+					before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
+					after([absolute(), rounded("full"), bg("primary.solid"), pseudoContent('""')]),
 					when('[data-orientation="vertical"] &', [grow(), shrink(1), basis("0%")]),
 					when('[data-orientation="horizontal"] &::before', [
 						bs("var(--ui-slider-track-thickness, 0.5rem)"),

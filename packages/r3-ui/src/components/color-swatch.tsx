@@ -21,6 +21,7 @@ import { absolute, inlineFlex, inset, items, justify, relative, shrink } from "@
 import { overflow } from "@pkg/u/overflow";
 import { bs, is } from "@pkg/u/size";
 import { after, before, data } from "@pkg/u/state";
+import { verticalAlign } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 /** Shape variant {@link ColorSwatch} falls back to when `shape` is omitted. */
@@ -139,7 +140,7 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 					]),
 					data("shape", "circle", rounded("full")),
 					shrink(),
-					raw({ verticalAlign: "middle" }),
+					verticalAlign("middle"),
 					userSelect(),
 					data("shape", "square", rounded("none")),
 					before([

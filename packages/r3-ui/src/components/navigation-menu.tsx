@@ -13,7 +13,13 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, fg, outline, outlineStyle } from "@pkg/u/color";
-import { opacity, rounded, transition } from "@pkg/u/effects";
+import {
+	opacity,
+	rounded,
+	transition,
+	transitionBehavior,
+	transitionProperty,
+} from "@pkg/u/effects";
 import { cursor, raw, userSelect } from "@pkg/u/general";
 import {
 	container,
@@ -27,7 +33,7 @@ import {
 	relative,
 } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { atQuery, media, startingStyle } from "@pkg/u/responsive";
+import { at, media, startingStyle } from "@pkg/u/responsive";
 import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { data, disabled, hover, when } from "@pkg/u/state";
@@ -447,12 +453,12 @@ NavigationMenu.Content = function NavigationMenuContent(
 					}),
 					outlineStyle("none"),
 					scaleProperty("0.95"),
-					raw({ transitionBehavior: "allow-discrete" }),
+					transitionBehavior("allow-discrete"),
 					when("&:popover-open", [opacity(100), scaleProperty("none")]),
 					startingStyle(when("&:popover-open", [opacity(0), scaleProperty("0.95")])),
 					media("(prefers-reduced-motion: reduce)", [
 						scaleProperty("none"),
-						raw({ transitionProperty: "opacity, display, overlay" }),
+						transitionProperty("opacity, display, overlay"),
 					]),
 					mix,
 				]}
@@ -562,7 +568,7 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 					startingStyle(data("visible", [opacity(0), scaleProperty("0.95")])),
 					media("(prefers-reduced-motion: reduce)", [
 						scaleProperty("none"),
-						raw({ transitionProperty: "inline-size, block-size, opacity" }),
+						transitionProperty("inline-size, block-size, opacity"),
 					]),
 					mix,
 				]}
@@ -628,10 +634,7 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 				mix={[
 					grid(),
 					gap(4),
-					atQuery(
-						`${CONTAINER_NAME} (min-width: 40rem)`,
-						raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }),
-					),
+					at("40rem", CONTAINER_NAME, raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" })),
 					mix,
 				]}
 			/>

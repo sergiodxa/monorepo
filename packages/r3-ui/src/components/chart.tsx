@@ -37,7 +37,18 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { visuallyHidden } from "@pkg/u/a11y";
-import { bg, fg, outline } from "@pkg/u/color";
+import {
+	bg,
+	fg,
+	fill,
+	fillOpacity,
+	outline,
+	stroke,
+	strokeLinecap,
+	strokeLinejoin,
+	strokeWidth,
+	vectorEffect,
+} from "@pkg/u/color";
 import { opacity, rounded, shadow, transition, transitionDuration } from "@pkg/u/effects";
 import { cursor, pointerEvents, raw, userSelect } from "@pkg/u/general";
 import {
@@ -849,10 +860,8 @@ function renderChartMarkers(
 				mix={[
 					focusVisible(outline({ color: "primary.ring", offset: 2 })),
 					cursor("default"),
-					raw({
-						fill: "currentColor",
-						r: "var(--ui-chart-point-radius, 0.1875rem)",
-					}),
+					fill("currentColor"),
+					raw({ r: "var(--ui-chart-point-radius, 0.1875rem)" }),
 					markerMix,
 				]}
 			>
@@ -910,13 +919,11 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 					d={d}
 					mix={[
 						attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN }),
-						raw({
-							fill: "none",
-							stroke: "currentColor",
-							strokeWidth: "var(--ui-chart-line-width, 2px)",
-							strokeLinejoin: "round",
-							strokeLinecap: "round",
-						}),
+						fill("none"),
+						stroke("currentColor"),
+						strokeWidth("var(--ui-chart-line-width, 2px)"),
+						strokeLinejoin("round"),
+						strokeLinecap("round"),
 						parts?.path,
 					]}
 				/>
@@ -1147,14 +1154,12 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 					d={d}
 					mix={[
 						attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN }),
-						raw({
-							fill: "currentColor",
-							fillOpacity: "var(--ui-chart-area-fill-opacity, 0.25)",
-							stroke: "currentColor",
-							strokeWidth: "var(--ui-chart-area-width, 2px)",
-							strokeLinejoin: "round",
-							strokeLinecap: "round",
-						}),
+						fill("currentColor"),
+						fillOpacity("var(--ui-chart-area-fill-opacity, 0.25)"),
+						stroke("currentColor"),
+						strokeWidth("var(--ui-chart-area-width, 2px)"),
+						strokeLinejoin("round"),
+						strokeLinecap("round"),
 						parts?.path,
 					]}
 				/>
@@ -1423,11 +1428,9 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 							y1={y(value)}
 							y2={y(value)}
 							mix={[
-								raw({
-									stroke: "var(--ui-neutral-border)",
-									strokeWidth: "1",
-									vectorEffect: "non-scaling-stroke",
-								}),
+								stroke("var(--ui-neutral-border)"),
+								strokeWidth("1"),
+								vectorEffect("non-scaling-stroke"),
 								parts?.gridline,
 							]}
 						/>

@@ -12,8 +12,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { opacity, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { opacity, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
 import { media, startingStyle } from "@pkg/u/responsive";
 import { when } from "@pkg/u/state";
 import { scaleProperty } from "@pkg/u/transform";
@@ -103,7 +102,7 @@ export function Modal(handle: Handle<Modal.Props>) {
 				{...rest}
 				mix={[
 					scaleProperty(PANEL_EXIT_SCALE),
-					raw({ transitionBehavior: "allow-discrete" }),
+					transitionBehavior("allow-discrete"),
 					opacity(0),
 					transition("opacity, scale, display, overlay", {
 						duration: durations.normal,
@@ -113,7 +112,7 @@ export function Modal(handle: Handle<Modal.Props>) {
 					startingStyle(when("&[open]", [scaleProperty(PANEL_EXIT_SCALE), opacity(0)])),
 					media("(prefers-reduced-motion: reduce)", [
 						scaleProperty(PANEL_ENTERED_SCALE),
-						raw({ transitionProperty: "opacity, display, overlay" }),
+						transitionProperty("opacity, display, overlay"),
 					]),
 					mix,
 				]}

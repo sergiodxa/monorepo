@@ -27,6 +27,7 @@ import {
 	media,
 	opacity,
 	outline,
+	pseudoContent,
 	raw,
 	relative,
 	rounded,
@@ -134,7 +135,7 @@ export function Switch(handle: Handle<Switch.Props>) {
 					when("&:disabled", cursor("not-allowed")),
 					raw({ verticalAlign: "middle" }),
 					before([
-						raw({ content: '""' }),
+						pseudoContent('""'),
 						insBs("var(--ui-switch-thumb-inset, 0.125rem)"),
 						insIs("var(--ui-switch-thumb-inset, 0.125rem)"),
 						shadow("base"),

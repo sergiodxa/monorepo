@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, transition } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor, pseudoContent } from "@pkg/u/general";
 import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
 import { after, when } from "@pkg/u/state";
@@ -235,7 +235,7 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 							rounded("full"),
 							bg("primary.onSolid"),
 							transition("transform"),
-							raw({ content: '""' }),
+							pseudoContent('""'),
 							scale(0),
 						]),
 						rounded("full"),

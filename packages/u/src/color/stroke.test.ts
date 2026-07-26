@@ -25,4 +25,8 @@ describe("stroke", () => {
 	test("an explicit tint suffix aliases to the bg-tint property", () => {
 		expect(styles(stroke("neutral.tint"))).toEqual({ stroke: "var(--ui-neutral-bg-tint)" });
 	});
+
+	test("'none' passes through literally instead of resolving as a tone name", () => {
+		expect(styles(stroke("none"))).toEqual({ stroke: "none" });
+	});
 });

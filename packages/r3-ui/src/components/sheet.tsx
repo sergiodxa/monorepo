@@ -13,11 +13,22 @@
 import type { Handle } from "remix/ui";
 
 import { borderEdge, fg } from "@pkg/u/color";
-import { rounded, transition } from "@pkg/u/effects";
-import { raw, willChange } from "@pkg/u/general";
-import { fixed, flex, gap, insBe, insBs, items, justify, vstack } from "@pkg/u/layout";
+import { rounded, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
+import { willChange } from "@pkg/u/general";
+import {
+	fixed,
+	flex,
+	gap,
+	insBe,
+	insBs,
+	insLeft,
+	insRight,
+	items,
+	justify,
+	vstack,
+} from "@pkg/u/layout";
 import { media, startingStyle } from "@pkg/u/responsive";
-import { is, m, maxBs, maxIs, mbs, pbe, pbs } from "@pkg/u/size";
+import { is, m, maxBs, maxIs, mbs, paddingLeft, paddingRight, pbe, pbs } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
 import { translateX } from "@pkg/u/transform";
 import { fontSize } from "@pkg/u/typography";
@@ -144,29 +155,25 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 					is("min(90vw, var(--ui-sheet-size, 24rem))"),
 					insBs("0"),
 					insBe("0"),
-					raw({ transitionBehavior: "allow-discrete" }),
+					transitionBehavior("allow-discrete"),
 					willChange("transform"),
 					data("side", "right", [
 						borderEdge("left", { width: 1, color: "neutral" }),
 						translateX("100%"),
-						raw({
-							right: "0",
-							left: "auto",
-							paddingLeft: "1.5rem",
-							paddingRight: "calc(1.5rem + env(safe-area-inset-right, 0px))",
-						}),
+						insRight("0"),
+						insLeft("auto"),
+						paddingLeft("1.5rem"),
+						paddingRight("calc(1.5rem + env(safe-area-inset-right, 0px))"),
 					]),
 					data("side", "right", when("&[open]", translateX("0"))),
 
 					data("side", "left", [
 						borderEdge("right", { width: 1, color: "neutral" }),
 						translateX("-100%"),
-						raw({
-							left: "0",
-							right: "auto",
-							paddingRight: "1.5rem",
-							paddingLeft: "calc(1.5rem + env(safe-area-inset-left, 0px))",
-						}),
+						insLeft("0"),
+						insRight("auto"),
+						paddingRight("1.5rem"),
+						paddingLeft("calc(1.5rem + env(safe-area-inset-left, 0px))"),
 					]),
 					data("side", "left", when("&[open]", translateX("0"))),
 
@@ -175,7 +182,7 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 						when('&[data-side="left"][open]', translateX("-100%")),
 					]),
 
-					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
+					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 					gap("1rem"),
 					pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
 					pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),

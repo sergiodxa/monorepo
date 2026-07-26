@@ -19,7 +19,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { bg, border, linearGradient, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, ringShadow, rounded, transition, transitionDuration } from "@pkg/u/effects";
 import { cursor, pointerEvents, raw } from "@pkg/u/general";
-import { absolute, inlineBlock, inset, relative } from "@pkg/u/layout";
+import { absolute, appearance, inlineBlock, inset, relative } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
 import { bs, is, m } from "@pkg/u/size";
@@ -299,46 +299,39 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 					inset("0"),
 					m("0"),
 					bg("transparent"),
-					// Host-level native chrome reset. `@pkg/u/layout`'s `appearance()`
-					// would also emit `MozAppearance: "none"` on the host, which isn't
-					// present on the original declaration and is a real (not inert)
-					// change on Firefox's own range input — kept bespoke to avoid
-					// altering rendered output there. `direction` has no matching
+					// Host-level native chrome reset, narrowed to the standard and
+					// WebKit-prefixed properties only — Firefox's own range input
+					// needs a real (not inert) `MozAppearance: "none"` reset instead,
+					// applied per-pseudo-element below, so this host-level reset
+					// disables the Firefox mirror. `direction` has no matching
 					// utility at all.
-					raw({
-						appearance: "none",
-						WebkitAppearance: "none",
-						direction: "ltr",
-					}),
+					appearance("none", { moz: false }),
+					raw({ direction: "ltr" }),
 					pointerEvents(),
 					outlineStyle("none"),
 
 					// Runnable track: fully transparent and inert, sized to the square.
-					// The webkit/moz appearance resets here are inert cross-engine (each
-					// selector only ever matches in the engine owning that pseudo-element),
-					// so adding both is safe.
 					when("&::-webkit-slider-runnable-track", [
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 					]),
 					when("&::-moz-range-track", [
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ appearance: "none" }),
+						appearance("none", { webkit: false, moz: false }),
 						border({ style: "none" }),
 					]),
 
 					// The native thumb itself, reshaped into a thin line spanning the
-					// square via a literal size — the vendor appearance reset has no
-					// matching utility, but pointer-events/box-shadow now compose
+					// square via a literal size — pointer-events/box-shadow compose
 					// through `pointerEvents()`/`ringShadow()`.
 					when("&::-webkit-slider-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 						pointerEvents("auto"),
 						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),
@@ -448,15 +441,12 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 					inset("0"),
 					m("0"),
 					bg("transparent"),
-					// Host-level native chrome reset — see the matching comment in
-					// {@link ColorArea.SaturationThumb} for why `appearance()` isn't
-					// used here.
-					raw({
-						appearance: "none",
-						WebkitAppearance: "none",
-						writingMode: "vertical-lr",
-						direction: "rtl",
-					}),
+					// Host-level native chrome reset, narrowed to the standard and
+					// WebKit-prefixed properties only — see the matching comment in
+					// {@link ColorArea.SaturationThumb}. `writingMode`/`direction`
+					// have no matching utility.
+					appearance("none", { moz: false }),
+					raw({ writingMode: "vertical-lr", direction: "rtl" }),
 					pointerEvents(),
 					outlineStyle("none"),
 
@@ -464,20 +454,20 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 					]),
 					when("&::-moz-range-track", [
 						is("full"),
 						bs("full"),
 						bg("transparent"),
-						raw({ appearance: "none" }),
+						appearance("none", { webkit: false, moz: false }),
 						border({ style: "none" }),
 					]),
 
 					when("&::-webkit-slider-thumb", [
 						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
 						bs("var(--ui-color-area-size, 16rem)"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 						pointerEvents("auto"),
 						ringShadow("rgb(0 0 0 / 0.4)", 1),
 					]),

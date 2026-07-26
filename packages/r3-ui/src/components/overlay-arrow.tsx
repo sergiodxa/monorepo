@@ -12,8 +12,8 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fill } from "@pkg/u/color";
-import { calc, pointerEvents, raw, var as varUtility } from "@pkg/u/general";
-import { absolute, insBe, insBs, insIe, insIs } from "@pkg/u/layout";
+import { calc, pointerEvents, var as varUtility } from "@pkg/u/general";
+import { absolute, insBe, insBs, insIe, insIs, insLeft, insRight } from "@pkg/u/layout";
 import { mb, mi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { rotate } from "@pkg/u/transform";
@@ -130,14 +130,14 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 					when('&[data-placement^="left"]', [
 						mb("auto"),
 						rotate(-90),
-						raw({ left: "100%" }),
+						insLeft("100%"),
 						insBs("0"),
 						insBe("0"),
 					]),
 					when('&[data-placement^="right"]', [
 						mb("auto"),
 						rotate(90),
-						raw({ right: "100%" }),
+						insRight("100%"),
 						insBs("0"),
 						insBe("0"),
 					]),

@@ -21,9 +21,12 @@ import { color } from "../internal/tokens";
  * @example css({ fill: "var(--ui-neutral-bg-tint)" })
  * @example u.fill("brand")
  * @example css({ fill: "var(--ui-brand-fg)" })
+ * @example u.fill("none")
+ * @example css({ fill: "none" })
  */
 export function fill<Node extends Element = Element>(value?: ColorValue | (string & {})) {
 	return utility<Node>(() => ({
-		fill: value ? color(value, "fg") : varUtility("ui-fg", "CanvasText"),
+		fill:
+			value === "none" ? "none" : value ? color(value, "fg") : varUtility("ui-fg", "CanvasText"),
 	}));
 }

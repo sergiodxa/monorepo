@@ -13,8 +13,7 @@
 import type { Handle } from "remix/ui";
 
 import { bg, fg, fill } from "@pkg/u/color";
-import { opacity, rounded, shadow, transition } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { opacity, rounded, shadow, transition, transitionBehavior } from "@pkg/u/effects";
 import { block } from "@pkg/u/layout";
 import { media, startingStyle } from "@pkg/u/responsive";
 import { pb, pi } from "@pkg/u/size";
@@ -145,7 +144,7 @@ export function Tooltip(handle: Handle<Tooltip.Props>) {
 					}),
 					text("sm"),
 					scaleProperty("0.95"),
-					raw({ transitionBehavior: "allow-discrete" }),
+					transitionBehavior("allow-discrete"),
 					when(ENTERED_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
 					startingStyle(when(ENTERED_SELECTOR, [opacity(0), scaleProperty("0.95")])),
 					media("(hover: hover)", [

@@ -27,7 +27,7 @@ import {
 	items,
 	shrink,
 } from "@pkg/u/layout";
-import { atQuery } from "@pkg/u/responsive";
+import { atMax } from "@pkg/u/responsive";
 import { bs, is, mis, minIs, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text, truncate, weight } from "@pkg/u/typography";
@@ -41,13 +41,13 @@ import { text, truncate, weight } from "@pkg/u/typography";
 const CONTAINER_NAME = "ui-item";
 
 /**
- * `@container` query gating the point past which the row's own width is too
- * narrow to hold {@link Item.Media}, {@link Item.Content}, and
+ * `@container` max-width threshold gating the point past which the row's own
+ * width is too narrow to hold {@link Item.Media}, {@link Item.Content}, and
  * {@link Item.Actions} on one line without crowding {@link Item.Content}'s
  * text out of room; below it {@link Item} wraps and {@link Item.Actions}
  * drops to a second line of its own.
  */
-const NARROW_CONTAINER_QUERY = `${CONTAINER_NAME} (max-width: 20rem)`;
+const NARROW_CONTAINER_SIZE = "20rem";
 
 /**
  * Prop types for {@link Item} and its compound parts.
@@ -149,7 +149,7 @@ export function Item(handle: Handle<Item.Props>) {
 					pb("var(--ui-item-padding-block, 0.625rem)"),
 					pi("var(--ui-item-padding-inline, 0.75rem)"),
 					container(CONTAINER_NAME),
-					atQuery(NARROW_CONTAINER_QUERY, flexWrap("wrap")),
+					atMax(NARROW_CONTAINER_SIZE, CONTAINER_NAME, flexWrap("wrap")),
 					mix,
 				]}
 			>
@@ -332,7 +332,7 @@ Item.Actions = function ItemActions(handle: Handle<Item.ActionsProps>) {
 					mis("auto"),
 					shrink(),
 					gap("var(--ui-item-actions-gap, 0.5rem)"),
-					atQuery(NARROW_CONTAINER_QUERY, [
+					atMax(NARROW_CONTAINER_SIZE, CONTAINER_NAME, [
 						basis("100%"),
 						raw({
 							justifyContent: "flex-end",

@@ -13,9 +13,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { rounded, transition } from "@pkg/u/effects";
-import { raw, willChange } from "@pkg/u/general";
-import { fixed, insBe, insBs, insIe, insIs } from "@pkg/u/layout";
+import { rounded, transition, transitionBehavior, transitionProperty } from "@pkg/u/effects";
+import { willChange } from "@pkg/u/general";
+import { fixed, insBe, insBs, insIe, insIs, insLeft, insRight } from "@pkg/u/layout";
 import { media, startingStyle } from "@pkg/u/responsive";
 import { bs, is, m, maxBs, maxIs } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
@@ -131,7 +131,7 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						easing: easings.decelerate,
 					}),
 					willChange("transform"),
-					raw({ transitionBehavior: "allow-discrete" }),
+					transitionBehavior("allow-discrete"),
 
 					data("placement", "top", [
 						insBs("0"),
@@ -160,7 +160,7 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					data("placement", "left", [
 						insBs("0"),
 						insBe("0"),
-						raw({ left: "0" }),
+						insLeft("0"),
 						is("22rem"),
 						maxIs("90vw"),
 						maxBs("none"),
@@ -171,7 +171,7 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					data("placement", "right", [
 						insBs("0"),
 						insBe("0"),
-						raw({ right: "0" }),
+						insRight("0"),
 						is("22rem"),
 						maxIs("90vw"),
 						maxBs("none"),
@@ -186,7 +186,7 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						when('&[data-placement="right"][open]', translateX("100%")),
 					]),
 
-					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
+					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 
 					mix,
 				]}

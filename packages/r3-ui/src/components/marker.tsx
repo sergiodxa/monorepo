@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { pseudoContent, raw } from "@pkg/u/general";
 import { basis, center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
 import { bs, is, minIs, pb, pi } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
@@ -189,7 +189,7 @@ export function Marker(handle: Handle<Marker.Props>) {
 						"variant",
 						"separator",
 						when("&::before, &::after", [
-							raw({ content: '""' }),
+							pseudoContent('""'),
 							grow(),
 							shrink(1),
 							basis("0%"),

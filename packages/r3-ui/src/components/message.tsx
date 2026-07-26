@@ -28,7 +28,7 @@ import {
 	self,
 	vstack,
 } from "@pkg/u/layout";
-import { atQuery } from "@pkg/u/responsive";
+import { at } from "@pkg/u/responsive";
 import { maxIs, minIs } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, weight } from "@pkg/u/typography";
@@ -239,7 +239,7 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 					gap("0.125rem", "0.5rem"),
 					when("& > :first-child", [fontSize("sm"), weight("semibold"), fg("neutral.emphasis")]),
 					when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted")]),
-					atQuery(`${CONTAINER_NAME} (min-width: 26rem)`, [flexWrap("nowrap"), justify("between")]),
+					at("26rem", CONTAINER_NAME, [flexWrap("nowrap"), justify("between")]),
 					mix,
 				]}
 			>

@@ -9,6 +9,8 @@ export { is } from "./is";
 export { m } from "./m";
 export { marginLeft } from "./margin-left";
 export { marginRight } from "./margin-right";
+export { paddingLeft } from "./padding-left";
+export { paddingRight } from "./padding-right";
 export { maxBs } from "./max-bs";
 export { maxIs } from "./max-is";
 export { mb } from "./mb";

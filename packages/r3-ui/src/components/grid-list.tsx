@@ -19,7 +19,7 @@ import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
 import { container, flex, flexCol, gap, grid, items, virtualize } from "@pkg/u/layout";
-import { atQuery } from "@pkg/u/responsive";
+import { at } from "@pkg/u/responsive";
 import { mbs, pb, pbs, pi } from "@pkg/u/size";
 import { active, data, hover, not, when } from "@pkg/u/state";
 import { text, textTransform, tracking, weight } from "@pkg/u/typography";
@@ -220,12 +220,14 @@ export function GridList(handle: Handle<GridList.Props>) {
 							grid(),
 							gap("0.5rem"),
 							raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }),
-							atQuery(
-								`${CONTAINER_NAME} (min-width: 40rem)`,
+							at(
+								"40rem",
+								CONTAINER_NAME,
 								raw({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }),
 							),
-							atQuery(
-								`${CONTAINER_NAME} (min-width: 48rem)`,
+							at(
+								"48rem",
+								CONTAINER_NAME,
 								raw({ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }),
 							),
 						]),

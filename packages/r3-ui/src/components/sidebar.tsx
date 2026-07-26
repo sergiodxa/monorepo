@@ -25,8 +25,11 @@ import {
 	rounded,
 	shadow,
 	transition,
+	transitionBehavior,
+	transitionDuration,
+	transitionProperty,
 } from "@pkg/u/effects";
-import { cursor, raw, userSelect, willChange } from "@pkg/u/general";
+import { cursor, pseudoContent, userSelect, willChange } from "@pkg/u/general";
 import { var as varUtility } from "@pkg/u/general/var";
 import {
 	absolute,
@@ -42,6 +45,8 @@ import {
 	insBs,
 	insIe,
 	insIs,
+	insLeft,
+	insRight,
 	items,
 	justify,
 	relative,
@@ -514,7 +519,7 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 						`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`,
 						when('&[data-collapsible="icon"], &[data-collapsible="offcanvas"]', hidden()),
 					),
-					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
+					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 					bg("neutral.tint"),
 					fg("neutral.emphasis"),
 					transition("inline-size, transform", {
@@ -661,20 +666,16 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 					flexCol(),
 					overflow("hidden"),
 					willChange("transform"),
-					raw({ transitionBehavior: "allow-discrete" }),
-					data("side", "left", [raw({ left: "0" }), safeAreaPadding("left"), translateX("-100%")]),
+					transitionBehavior("allow-discrete"),
+					data("side", "left", [insLeft("0"), safeAreaPadding("left"), translateX("-100%")]),
 					when('&[data-side="left"][open]', translateX("0")),
-					data("side", "right", [
-						raw({ right: "0" }),
-						safeAreaPadding("right"),
-						translateX("100%"),
-					]),
+					data("side", "right", [insRight("0"), safeAreaPadding("right"), translateX("100%")]),
 					when('&[data-side="right"][open]', translateX("0")),
 					when("@starting-style", [
 						when('&[data-side="left"][open]', translateX("-100%")),
 						when('&[data-side="right"][open]', translateX("100%")),
 					]),
-					media("(prefers-reduced-motion: reduce)", raw({ transitionProperty: "none" })),
+					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 					pbs("env(safe-area-inset-top, 0px)"),
 					pbe("env(safe-area-inset-bottom, 0px)"),
 					transition("transform, display, overlay", {
@@ -1675,8 +1676,8 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 					z(20),
 					hidden(),
 					cursor("col-resize"),
-					when('[data-side="left"] &', raw({ right: "-1rem" })),
-					when('[data-side="right"] &', raw({ left: "-1rem" })),
+					when('[data-side="left"] &', insRight("-1rem")),
+					when('[data-side="right"] &', insLeft("-1rem")),
 					after([
 						absolute(),
 						is("2px"),
@@ -1685,11 +1686,9 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 						insBe("0"),
 						insIs("50%"),
 						translateProperty("-50% 0"),
-						raw({
-							content: '""',
-							transitionProperty: "background-color",
-							transitionDuration: "150ms",
-						}),
+						pseudoContent('""'),
+						transitionProperty("background-color"),
+						transitionDuration("150ms"),
 					]),
 					when(WIDE_SHELL_QUERY, [flex(), items("center"), justify("center")]),
 					hover(after(bg("neutral.border"))),

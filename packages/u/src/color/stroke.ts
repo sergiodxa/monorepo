@@ -21,9 +21,12 @@ import { color } from "../internal/tokens";
  * @example css({ stroke: "var(--ui-neutral-bg-tint)" })
  * @example u.stroke("brand")
  * @example css({ stroke: "var(--ui-brand-fg)" })
+ * @example u.stroke("none")
+ * @example css({ stroke: "none" })
  */
 export function stroke<Node extends Element = Element>(value?: ColorValue | (string & {})) {
 	return utility<Node>(() => ({
-		stroke: value ? color(value, "fg") : varUtility("ui-fg", "CanvasText"),
+		stroke:
+			value === "none" ? "none" : value ? color(value, "fg") : varUtility("ui-fg", "CanvasText"),
 	}));
 }

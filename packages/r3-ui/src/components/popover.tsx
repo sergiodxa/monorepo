@@ -15,10 +15,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import { raw } from "@pkg/u/general";
-import { inset } from "@pkg/u/layout";
+import { inset, positionArea, positionTryFallbacks } from "@pkg/u/layout";
 import { m, marginLeft, marginRight, mbe, mbs } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
+import { data, when } from "@pkg/u/state";
 
 import type { AnchorPlacement } from "../utils/placement";
 
@@ -131,22 +130,19 @@ export function Popover(handle: Handle<Popover.Props>) {
 					when('&[data-placement^="bottom"]', mbs("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
-					raw({
-						positionTryFallbacks: "flip-block, flip-inline, flip-block flip-inline",
-
-						'&[data-placement="top"]': { positionArea: "top" },
-						'&[data-placement="top-start"]': { positionArea: "top left" },
-						'&[data-placement="top-end"]': { positionArea: "top right" },
-						'&[data-placement="bottom"]': { positionArea: "bottom" },
-						'&[data-placement="bottom-start"]': { positionArea: "bottom left" },
-						'&[data-placement="bottom-end"]': { positionArea: "bottom right" },
-						'&[data-placement="left"]': { positionArea: "left" },
-						'&[data-placement="left-start"]': { positionArea: "left top" },
-						'&[data-placement="left-end"]': { positionArea: "left bottom" },
-						'&[data-placement="right"]': { positionArea: "right" },
-						'&[data-placement="right-start"]': { positionArea: "right top" },
-						'&[data-placement="right-end"]': { positionArea: "right bottom" },
-					}),
+					positionTryFallbacks("flip-block", "flip-inline", "flip-block flip-inline"),
+					data("placement", "top", positionArea("top")),
+					data("placement", "top-start", positionArea("top left")),
+					data("placement", "top-end", positionArea("top right")),
+					data("placement", "bottom", positionArea("bottom")),
+					data("placement", "bottom-start", positionArea("bottom left")),
+					data("placement", "bottom-end", positionArea("bottom right")),
+					data("placement", "left", positionArea("left")),
+					data("placement", "left-start", positionArea("left top")),
+					data("placement", "left-end", positionArea("left bottom")),
+					data("placement", "right", positionArea("right")),
+					data("placement", "right-start", positionArea("right top")),
+					data("placement", "right-end", positionArea("right bottom")),
 					mix,
 				]}
 			>

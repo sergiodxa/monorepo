@@ -13,13 +13,21 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { XIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
-import { backdropBlur, backdropSaturate, opacity, rounded, transition } from "@pkg/u/effects";
+import {
+	backdropBlur,
+	backdropSaturate,
+	opacity,
+	rounded,
+	transition,
+	transitionBehavior,
+} from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import {
 	absolute,
 	container,
 	flex,
 	flexCol,
+	flexColReverse,
 	flexRow,
 	gap,
 	inset,
@@ -27,7 +35,7 @@ import {
 	relative,
 } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { atQuery, media, startingStyle, supports } from "@pkg/u/responsive";
+import { at, media, startingStyle, supports } from "@pkg/u/responsive";
 import { is, maxBs, maxIs, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
@@ -178,7 +186,7 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					container(CONTAINER_NAME, "inline-size"),
 					when("&::backdrop", [
 						bg("rgb(0 0 0 / 0.5)"),
-						raw({ transitionBehavior: "allow-discrete" }),
+						transitionBehavior("allow-discrete"),
 						opacity(0),
 						transition("opacity, display, overlay", {
 							duration: durations.normal,
@@ -237,7 +245,7 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 					flexCol(),
 					gap(1.5),
 					textAlign("center"),
-					atQuery(`${CONTAINER_NAME} (min-width: 40rem)`, textAlign("start")),
+					at("40rem", CONTAINER_NAME, textAlign("start")),
 					mix,
 				]}
 			/>
@@ -328,8 +336,8 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 				mix={[
 					flex(),
 					gap(2),
-					raw({ flexDirection: "column-reverse" }),
-					atQuery(`${CONTAINER_NAME} (min-width: 40rem)`, [flexRow(), justify("end")]),
+					flexColReverse(),
+					at("40rem", CONTAINER_NAME, [flexRow(), justify("end")]),
 					mix,
 				]}
 			/>

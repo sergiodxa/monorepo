@@ -15,8 +15,18 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
 import { bg, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { basis, flex, grow, inlineBlock, items, justify, shrink } from "@pkg/u/layout";
+import { cursor } from "@pkg/u/general";
+import {
+	basis,
+	borderCollapse,
+	borderSpacing,
+	flex,
+	grow,
+	inlineBlock,
+	items,
+	justify,
+	shrink,
+} from "@pkg/u/layout";
 import { bs, is, mbe, p, pbe } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { scaleX } from "@pkg/u/transform";
@@ -486,7 +496,7 @@ Calendar.Grid = function CalendarGrid(handle: Handle<Calendar.GridProps>) {
 			<table
 				{...rest}
 				data-slot="grid"
-				mix={[raw({ borderCollapse: "separate", borderSpacing: "0.25rem" }), mix]}
+				mix={[borderCollapse("separate"), borderSpacing("0.25rem"), mix]}
 			/>
 		);
 	};

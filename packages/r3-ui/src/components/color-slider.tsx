@@ -24,7 +24,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, border, outlineStyle } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { cursor, pseudoContent } from "@pkg/u/general";
 import { absolute, appearance, inset, relative, vstack } from "@pkg/u/layout";
 import { bs, is, m, minIs } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
@@ -276,9 +276,9 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
 							size: "var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
 						}),
-						raw({ content: '""' }),
+						pseudoContent('""'),
 					]),
-					when("&::after", [absolute(), inset("0"), rounded("inherit"), raw({ content: '""' })]),
+					when("&::after", [absolute(), inset("0"), rounded("inherit"), pseudoContent('""')]),
 
 					when('[data-channel="hue"] &::after', bg({ image: HUE_GRADIENT })),
 					when('[data-channel="saturation"] &::after', bg({ image: SATURATION_GRADIENT })),
@@ -350,13 +350,13 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 					when("&::-webkit-slider-runnable-track", [
 						bs("full"),
 						bg("transparent"),
-						raw({ WebkitAppearance: "none", appearance: "none" }),
+						appearance("none", { moz: false }),
 					]),
 					when("&::-moz-range-track", [
 						bs("full"),
 						bg("transparent"),
 						border({ style: "none" }),
-						raw({ appearance: "none" }),
+						appearance("none", { webkit: false, moz: false }),
 					]),
 					mix,
 				]}
