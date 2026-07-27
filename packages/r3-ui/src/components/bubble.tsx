@@ -192,11 +192,7 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 					data("variant", "default", [bg("brand.solid"), fg("brand.onSolid")]),
 					data("variant", "secondary", [bg("neutral.solid"), fg("neutral.onSolid")]),
 					data("variant", "muted", [bg("neutral.tint"), fg("neutral.emphasis"), border("neutral")]),
-					data("variant", "tinted", [
-						bg("brand.tint"),
-						fg("brand.emphasis"),
-						border("brand"),
-					]),
+					data("variant", "tinted", [bg("brand.tint"), fg("brand.emphasis"), border("brand")]),
 					data("variant", "outline", [
 						fg("neutral.emphasis"),
 						border("neutral.strong"),

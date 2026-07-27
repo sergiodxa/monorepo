@@ -9,7 +9,7 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Button, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
@@ -25,9 +25,7 @@ import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import Button from "~/resources/components/button";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -129,7 +127,9 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							<StatCard
 								label={ctx.i18next.t("page.dnsMonitorDetail.info.status")}
 								value={
-									<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									<Badge
+										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
+									>
 										{monitor.last_status ?? ctx.i18next.t("page.dnsMonitorDetail.notChecked")}
 									</Badge>
 								}
@@ -197,7 +197,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 											<Table.Row key={result.id}>
 												<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
 												<Table.Cell>
-													<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
+													<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
 														{result.status}
 													</Badge>
 												</Table.Cell>

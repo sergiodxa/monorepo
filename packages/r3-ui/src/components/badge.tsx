@@ -114,11 +114,7 @@ export function Badge(handle: Handle<Badge.Props>) {
 					fontSize("xs"),
 					userSelect(),
 					data("variant", "default", [
-						data("color", "brand", [
-							bg("brand.solid"),
-							fg("brand.onSolid"),
-							border("brand.solid"),
-						]),
+						data("color", "brand", [bg("brand.solid"), fg("brand.onSolid"), border("brand.solid")]),
 						data("color", "neutral", [
 							bg("neutral.solid"),
 							fg("neutral.onSolid"),

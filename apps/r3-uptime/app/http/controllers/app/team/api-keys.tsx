@@ -12,7 +12,7 @@
 
 import { IntlProvider } from "@pkg/i18n/ui";
 import { KeyIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Button, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -29,10 +29,8 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import Button from "~/resources/components/button";
+import { badgeVariant } from "~/resources/components/badge";
 import CopyButton from "~/resources/components/copy-button";
-import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -153,7 +151,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 													</Table.Cell>
 													<Table.Cell>
 														{apiKey.scopes.map((scope) => (
-															<Badge key={scope} tone="neutral">
+															<Badge key={scope} {...badgeVariant("neutral")}>
 																{scope}
 															</Badge>
 														))}
@@ -165,7 +163,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 													</Table.Cell>
 													<Table.Cell>
 														{apiKey.expires_at ? (
-															<Badge tone={isExpired ? "down" : "neutral"}>
+															<Badge {...badgeVariant(isExpired ? "down" : "neutral")}>
 																{new Date(apiKey.expires_at).toLocaleDateString()}
 															</Badge>
 														) : (

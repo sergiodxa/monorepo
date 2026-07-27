@@ -28,7 +28,7 @@ import {
 	PlusIcon,
 	TrashIcon,
 } from "@pkg/lucide-remix";
-import { AlertDialog, Empty, Menu, Table } from "@pkg/r3-ui";
+import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/r3-ui";
 import { menuKeys } from "@pkg/r3-ui/mixins";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -49,9 +49,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { calculateMonitorStatus, getLatestHttpResult } from "~/app/services/analytics";
-import Badge from "~/resources/components/badge";
-import Button from "~/resources/components/button";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -187,7 +185,7 @@ export default createAction(routes.app.team.monitors.index, {
 															{monitor.name}
 														</a>
 														{monitor.enabled_at === null && (
-															<Badge tone="neutral">
+															<Badge {...badgeVariant("neutral")}>
 																{ctx.i18next.t("page.httpMonitors.table.disabled")}
 															</Badge>
 														)}
@@ -196,7 +194,7 @@ export default createAction(routes.app.team.monitors.index, {
 														<code>{monitor.url}</code>
 													</Table.Cell>
 													<Table.Cell>
-														<Badge tone={STATUS_BADGE_TONE[status]}>
+														<Badge {...badgeVariant(STATUS_BADGE_TONE[status])}>
 															{ctx.i18next.t(`page.httpMonitors.table.status.${status}`)}
 														</Badge>
 													</Table.Cell>

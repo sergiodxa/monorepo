@@ -15,16 +15,19 @@
 import type { Handle } from "remix/ui";
 
 import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
+import { justify } from "@pkg/u/layout";
+import { is, mbe } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { link } from "remix/ui";
 
 import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type {
@@ -42,9 +45,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
-import Badge from "~/resources/components/badge";
-import LinkButton from "~/resources/components/link-button";
-import { Tab, TabList } from "~/resources/components/tabs";
+import { badgeVariant } from "~/resources/components/badge";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import routes from "~/routes/web";
 
@@ -174,23 +175,38 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 					/>
 				))}
 
-				<TabList
-					aria-label={props.tabsListLabel}
-					activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
-				>
-					{DASHBOARD_TABS.map((tab) => (
-						<Tab
-							key={tab}
-							href={`${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${tab}`}
-							frameSrc={routes.app.team.dashboard.panel.href({ team: props.team.slug, type: tab })}
-							active={tab === props.tab}
-							controls="dashboard-panel-content"
-							frameTarget="dashboard-panel"
-						>
-							{props.tabLabels[tab]}
-						</Tab>
-					))}
-				</TabList>
+				<Tabs mix={[mbe(4)]}>
+					<Tabs.List
+						aria-label={props.tabsListLabel}
+						activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
+						tabSize="110px"
+					>
+						{DASHBOARD_TABS.map((tab) => {
+							let href = `${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${tab}`;
+							let frameSrc = routes.app.team.dashboard.panel.href({
+								team: props.team.slug,
+								type: tab,
+							});
+
+							return (
+								<Tabs.Tab
+									key={tab}
+									href={href}
+									aria-selected={tab === props.tab}
+									aria-controls="dashboard-panel-content"
+									tabIndex={tab === props.tab ? 0 : -1}
+									mix={[
+										is("110px"),
+										justify("center"),
+										link(href, { target: "dashboard-panel", src: frameSrc }),
+									]}
+								>
+									{props.tabLabels[tab]}
+								</Tabs.Tab>
+							);
+						})}
+					</Tabs.List>
+				</Tabs>
 
 				<div id="dashboard-panel-content" role="tabpanel" aria-label={props.panelLabel}>
 					{props.tab === "http" && (
@@ -271,11 +287,7 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={[
-											fg("brand"),
-											textDecoration("none"),
-											hover(textDecoration("underline")),
-										]}
+										mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 									>
 										{monitor.name}
 									</a>
@@ -286,7 +298,9 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 									</div>
 								</Table.Cell>
 								<Table.Cell>
-									<Badge tone={HEALTH_BADGE_TONE[health]}>{copy.statusLabels[health]}</Badge>
+									<Badge {...badgeVariant(HEALTH_BADGE_TONE[health])}>
+										{copy.statusLabels[health]}
+									</Badge>
 								</Table.Cell>
 							</Table.Row>
 						))}
@@ -352,11 +366,7 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={[
-											fg("brand"),
-											textDecoration("none"),
-											hover(textDecoration("underline")),
-										]}
+										mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 									>
 										{monitor.name}
 									</a>
@@ -365,7 +375,9 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 									<code>{monitor.domain}</code>
 								</Table.Cell>
 								<Table.Cell>
-									<Badge tone={DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									<Badge
+										{...badgeVariant(DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
+									>
 										{monitor.last_status ?? "not checked"}
 									</Badge>
 								</Table.Cell>
@@ -434,11 +446,7 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={[
-											fg("brand"),
-											textDecoration("none"),
-											hover(textDecoration("underline")),
-										]}
+										mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 									>
 										{monitor.name}
 									</a>
@@ -449,7 +457,9 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 									</code>
 								</Table.Cell>
 								<Table.Cell>
-									<Badge tone={TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									<Badge
+										{...badgeVariant(TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
+									>
 										{copy.statusLabels[monitor.last_status ?? "pending"] ?? monitor.last_status}
 									</Badge>
 								</Table.Cell>
@@ -518,11 +528,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={[
-											fg("brand"),
-											textDecoration("none"),
-											hover(textDecoration("underline")),
-										]}
+										mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 									>
 										{monitor.name}
 									</a>
@@ -531,7 +537,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
 								</Table.Cell>
 								<Table.Cell>
-									<Badge tone={CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
+									<Badge {...badgeVariant(CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>
 										{copy.statusLabels[monitor.status] ?? monitor.status}
 									</Badge>
 								</Table.Cell>

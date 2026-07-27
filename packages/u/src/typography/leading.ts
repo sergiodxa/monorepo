@@ -40,10 +40,7 @@ export function leading<Node extends Element = Element>(value: LeadingValue = "n
 			typeof value === "number"
 				? value
 				: value in LEADING_FALLBACKS
-					? varUtility(
-							`ui-leading-${value}`,
-							`${LEADING_FALLBACKS[value as NamedLeadingValue]}`,
-						)
+					? varUtility(`ui-leading-${value}`, `${LEADING_FALLBACKS[value as NamedLeadingValue]}`)
 					: value,
 	}));
 }

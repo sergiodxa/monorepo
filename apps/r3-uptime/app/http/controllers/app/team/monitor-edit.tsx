@@ -17,7 +17,7 @@
 import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
-import { AlertDialog, Select, Table } from "@pkg/r3-ui";
+import { AlertDialog, Button, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -38,7 +38,6 @@ import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";

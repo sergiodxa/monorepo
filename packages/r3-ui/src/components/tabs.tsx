@@ -11,9 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
-
 import type { SizeValue, SpacingValue } from "@pkg/u/tokens";
+import type { Handle, Props as TagProps } from "remix/ui";
 
 import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, transition } from "@pkg/u/effects";

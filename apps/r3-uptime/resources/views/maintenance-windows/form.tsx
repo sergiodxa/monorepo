@@ -10,14 +10,13 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Input, Label, Select, TextField } from "@pkg/r3-ui";
+import { Input, Label, Select, Switch, TextField } from "@pkg/r3-ui";
 import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { mbe } from "@pkg/u/size";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import Switch from "~/resources/components/switch";
 
 namespace MaintenanceWindowFormFields {
 	export interface Props {
@@ -87,15 +86,23 @@ export default function MaintenanceWindowFormFields(
 					/>
 				</div>
 
-				<Switch name="suppress_alerts" defaultChecked={window?.suppress_alerts ?? true}>
+				<Switch
+					name="suppress_alerts"
+					value="true"
+					defaultChecked={window?.suppress_alerts ?? true}
+				>
 					{t("suppressAlerts.label")}
 				</Switch>
 
-				<Switch name="show_on_status_page" defaultChecked={window?.show_on_status_page ?? true}>
+				<Switch
+					name="show_on_status_page"
+					value="true"
+					defaultChecked={window?.show_on_status_page ?? true}
+				>
 					{t("showOnStatusPage.label")}
 				</Switch>
 
-				<Switch name="is_recurring" defaultChecked={window?.is_recurring ?? false}>
+				<Switch name="is_recurring" value="true" defaultChecked={window?.is_recurring ?? false}>
 					{t("recurring.label")}
 				</Switch>
 

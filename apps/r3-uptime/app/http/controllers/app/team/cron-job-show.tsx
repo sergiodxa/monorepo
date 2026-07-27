@@ -8,7 +8,7 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -28,8 +28,7 @@ import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -124,7 +123,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 							<StatCard
 								label={ctx.i18next.t("page.cronJobDetail.info.status")}
 								value={
-									<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
+									<Badge {...badgeVariant(STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>
 										{monitor.status}
 									</Badge>
 								}
@@ -211,7 +210,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 											<Table.Row key={ping.id}>
 												<Table.Cell>{new Date(ping.created_at).toLocaleString()}</Table.Cell>
 												<Table.Cell>
-													<Badge tone={ping.was_on_time ? "up" : "degraded"}>
+													<Badge {...badgeVariant(ping.was_on_time ? "up" : "degraded")}>
 														{ping.was_on_time
 															? ctx.i18next.t("page.cronJobDetail.pings.status.onTime")
 															: ctx.i18next.t("page.cronJobDetail.pings.status.late")}

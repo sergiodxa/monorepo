@@ -160,11 +160,7 @@ export function Marker(handle: Handle<Marker.Props>) {
 						border({ width: 1 }),
 						pb(2),
 						pi(3.5),
-						data("color", "brand", [
-							border("brand"),
-							bg("brand.tint"),
-							fg("brand.emphasis"),
-						]),
+						data("color", "brand", [border("brand"), bg("brand.tint"), fg("brand.emphasis")]),
 						data("color", "neutral", [
 							border("neutral"),
 							bg("neutral.tint"),

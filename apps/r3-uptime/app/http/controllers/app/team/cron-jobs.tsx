@@ -6,7 +6,7 @@
  */
 
 import { ClockIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
@@ -21,8 +21,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -117,7 +116,7 @@ export default createAction(routes.app.team.cronJobs.index, {
 														{monitor.name}
 													</a>
 													{monitor.enabled_at === null && (
-														<Badge tone="neutral">
+														<Badge {...badgeVariant("neutral")}>
 															{ctx.i18next.t("page.cronJobs.table.disabled")}
 														</Badge>
 													)}
@@ -126,7 +125,7 @@ export default createAction(routes.app.team.cronJobs.index, {
 													{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
 												</Table.Cell>
 												<Table.Cell>
-													<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
+													<Badge {...badgeVariant(STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>
 														{ctx.i18next.t(`page.cronJobs.table.status.${monitor.status}`)}
 													</Badge>
 												</Table.Cell>

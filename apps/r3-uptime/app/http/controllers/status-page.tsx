@@ -18,7 +18,7 @@ import {
 	ClockIcon,
 	TriangleAlertIcon,
 } from "@pkg/lucide-remix";
-import { Empty } from "@pkg/r3-ui";
+import { Badge, Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
@@ -52,7 +52,7 @@ import {
 	deriveHttpStatus,
 	deriveTcpStatus,
 } from "~/app/services/status-page";
-import Badge from "~/resources/components/badge";
+import { badgeVariant } from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -440,7 +440,9 @@ export default createAction(
 									<div mix={[hstack({ align: "center", gap: "12px" })]}>
 										<CardStatusIcon status={service.status} />
 										<strong>{service.name}</strong>
-										<Badge tone={BADGE_TONE[service.status]}>{statusLabel[service.status]}</Badge>
+										<Badge {...badgeVariant(BADGE_TONE[service.status])}>
+											{statusLabel[service.status]}
+										</Badge>
 									</div>
 									<MiniHeatmap
 										days={service.days}
@@ -471,7 +473,7 @@ export default createAction(
 											<div mix={[hstack({ align: "center", gap: "12px" })]}>
 												<CardStatusIcon status={service.status} />
 												<strong>{service.name}</strong>
-												<Badge tone={BADGE_TONE[service.status]}>
+												<Badge {...badgeVariant(BADGE_TONE[service.status])}>
 													{statusLabel[service.status]}
 												</Badge>
 											</div>

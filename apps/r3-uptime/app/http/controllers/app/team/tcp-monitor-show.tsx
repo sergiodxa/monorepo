@@ -9,7 +9,7 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Button, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
@@ -25,9 +25,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import Button from "~/resources/components/button";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -123,7 +121,9 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							<StatCard
 								label={ctx.i18next.t("page.tcpMonitorDetail.info.status")}
 								value={
-									<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									<Badge
+										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
+									>
 										{ctx.i18next.t(
 											`page.tcpMonitors.table.status.${monitor.last_status ?? "pending"}`,
 										)}
@@ -189,7 +189,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 											<Table.Row key={result.id}>
 												<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
 												<Table.Cell>
-													<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
+													<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
 														{ctx.i18next.t(`page.tcpMonitors.table.status.${result.status}`)}
 													</Badge>
 												</Table.Cell>

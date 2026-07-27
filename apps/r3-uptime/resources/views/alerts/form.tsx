@@ -16,7 +16,7 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Input, Select, TextField } from "@pkg/r3-ui";
+import { Input, Select, Switch, TextField } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { mbe } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
@@ -24,7 +24,6 @@ import { fontSize } from "@pkg/u/typography";
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import Switch from "~/resources/components/switch";
 
 namespace AlertFormFields {
 	export interface Props {
@@ -151,7 +150,11 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					/>
 				</fieldset>
 
-				<Switch name="notify_on_recovery" defaultChecked={alert?.notify_on_recovery ?? true}>
+				<Switch
+					name="notify_on_recovery"
+					value="true"
+					defaultChecked={alert?.notify_on_recovery ?? true}
+				>
 					{t("notifyOnRecovery.label")}
 				</Switch>
 

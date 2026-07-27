@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Empty } from "@pkg/r3-ui";
+import { Empty, LinkButton } from "@pkg/r3-ui";
 import { flex, flexWrap, gap } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
 import { getContext } from "remix/async-context-middleware";
@@ -27,7 +27,6 @@ import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import LinkButton from "~/resources/components/link-button";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";

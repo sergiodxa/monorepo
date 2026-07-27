@@ -14,7 +14,7 @@
  */
 
 import { LogOutIcon, PlusIcon } from "@pkg/lucide-remix";
-import { AlertDialog, Empty, Select, Table } from "@pkg/r3-ui";
+import { AlertDialog, Button, Empty, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
@@ -36,7 +36,6 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
-import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";

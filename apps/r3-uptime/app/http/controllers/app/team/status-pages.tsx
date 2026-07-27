@@ -6,7 +6,7 @@
  */
 
 import { FileTextIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Empty, Table } from "@pkg/r3-ui";
+import { Badge, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
@@ -19,8 +19,7 @@ import StatusPage from "~/app/data/status-page";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Badge from "~/resources/components/badge";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -126,7 +125,7 @@ export default createAction(routes.app.team.statusPages.index, {
 												</Table.Cell>
 												<Table.Cell>{countsByPageId.get(page.id) ?? 0}</Table.Cell>
 												<Table.Cell>
-													<Badge tone={page.is_public ? "up" : "neutral"}>
+													<Badge {...badgeVariant(page.is_public ? "up" : "neutral")}>
 														{page.is_public
 															? ctx.i18next.t("page.statusPages.table.visibility.public")
 															: ctx.i18next.t("page.statusPages.table.visibility.private")}

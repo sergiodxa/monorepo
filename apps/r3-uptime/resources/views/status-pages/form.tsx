@@ -15,7 +15,15 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Checkbox, CheckboxGroup, Description, Label, TextArea, TextField } from "@pkg/r3-ui";
+import {
+	Checkbox,
+	CheckboxGroup,
+	Description,
+	Label,
+	Switch,
+	TextArea,
+	TextField,
+} from "@pkg/r3-ui";
 import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
@@ -27,8 +35,6 @@ import type {
 	SelectStatusPage,
 	SelectTcpMonitor,
 } from "~/database/schema";
-
-import Switch from "~/resources/components/switch";
 
 namespace StatusPageFormFields {
 	export interface Props {
@@ -145,14 +151,18 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 				/>
 
 				<div mix={[fieldStackLayout(), mbe("16px")]}>
-					<Switch name="is_public" defaultChecked={page?.is_public ?? true}>
+					<Switch name="is_public" value="true" defaultChecked={page?.is_public ?? true}>
 						{t("isPublic.label")}
 					</Switch>
 					<Description>{t("isPublic.description")}</Description>
 				</div>
 
 				<div mix={[fieldStackLayout(), mbe("16px")]}>
-					<Switch name="show_overall_status" defaultChecked={page?.show_overall_status ?? true}>
+					<Switch
+						name="show_overall_status"
+						value="true"
+						defaultChecked={page?.show_overall_status ?? true}
+					>
 						{t("showOverallStatus.label")}
 					</Switch>
 					<Description>{t("showOverallStatus.description")}</Description>

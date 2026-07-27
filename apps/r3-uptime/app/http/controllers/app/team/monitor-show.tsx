@@ -24,6 +24,7 @@ import {
 	ShieldCheckIcon,
 	ShieldXIcon,
 } from "@pkg/lucide-remix";
+import { Badge, LinkButton } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -46,8 +47,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { calculateSslStatus } from "~/app/services/ssl-info";
-import Badge from "~/resources/components/badge";
-import LinkButton from "~/resources/components/link-button";
+import { badgeVariant } from "~/resources/components/badge";
 import RunMonitorButton from "~/resources/components/run-monitor-button";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
@@ -204,7 +204,9 @@ function SslCard(handle: Handle<SslCard.Props>) {
 								{i18next.t("page.monitor.ssl.title")}
 							</h3>
 						</div>
-						<Badge tone="neutral">{i18next.t("page.monitor.ssl.status.unknown")}</Badge>
+						<Badge {...badgeVariant("neutral")}>
+							{i18next.t("page.monitor.ssl.status.unknown")}
+						</Badge>
 					</div>
 					<div mix={[flex(), items("center"), justify("between")]}>
 						<p mix={[m("0"), fg("neutral.muted")]}>{i18next.t("page.monitor.ssl.notConfigured")}</p>
@@ -232,7 +234,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 							{i18next.t("page.monitor.ssl.title")}
 						</h3>
 					</div>
-					<Badge tone={SSL_TONE[status] ?? "neutral"}>
+					<Badge {...badgeVariant(SSL_TONE[status] ?? "neutral")}>
 						{i18next.t(`page.monitor.ssl.status.${status}`)}
 					</Badge>
 				</div>

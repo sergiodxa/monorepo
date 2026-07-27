@@ -216,11 +216,7 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 					data("color", "success", [bg("success.tint"), fg("success")]),
 					data("color", "warning", [bg("warning.tint"), fg("warning")]),
 					data("color", "danger", [bg("danger.tint"), fg("danger")]),
-					when('&[aria-selected="true"]', [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-						weight(600),
-					]),
+					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(600)]),
 					when('&[aria-disabled="true"]', opacity(50)),
 					cursor("default"),
 					text("sm"),

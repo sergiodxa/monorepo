@@ -13,10 +13,8 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import type { ButtonSize } from "~/resources/components/button";
+import { Button, LinkButton } from "@pkg/r3-ui";
 
-import Button from "~/resources/components/button";
-import LinkButton from "~/resources/components/link-button";
 import routes from "~/routes/web";
 
 namespace AuthCta {
@@ -46,7 +44,7 @@ namespace AuthCta {
 }
 
 /** Maps {@link AuthCta.Props.size} onto the shared `Button`/`LinkButton` size scale — `"docs"` reuses `"sm"`. */
-function resolveButtonSize(size: "sm" | "lg" | "docs"): ButtonSize {
+function resolveButtonSize(size: "sm" | "lg" | "docs"): Button.Size {
 	return size === "lg" ? "lg" : "sm";
 }
 
@@ -62,12 +60,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		if (isSignedIn) {
 			return (
-				<LinkButton
-					href={routes.app.index.href()}
-					color="brand"
-					variant="solid"
-					size={buttonSize}
-				>
+				<LinkButton href={routes.app.index.href()} color="brand" variant="solid" size={buttonSize}>
 					{dashboardLabel}
 					{icon}
 				</LinkButton>

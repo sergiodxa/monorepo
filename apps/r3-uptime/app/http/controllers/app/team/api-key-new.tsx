@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
+import { Button, Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
@@ -22,7 +22,6 @@ import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { apiKeyScopes } from "~/database/schema";
-import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";

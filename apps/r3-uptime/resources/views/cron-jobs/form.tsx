@@ -11,12 +11,10 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Label, NumberField, TextField } from "@pkg/r3-ui";
+import { Label, NumberField, Switch, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
-
-import Switch from "~/resources/components/switch";
 
 /** Stable id linking the grace-period field's `Label` to its `NumberField.Input`. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
@@ -100,11 +98,15 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 					mix={mbe("28px")}
 				/>
 
-				<Switch name="alert_on_late" defaultChecked={monitor?.alert_on_late ?? false}>
+				<Switch name="alert_on_late" value="true" defaultChecked={monitor?.alert_on_late ?? false}>
 					{t("alertOnLate.label")}
 				</Switch>
 
-				<Switch name="is_enabled" defaultChecked={monitor ? monitor.enabled_at !== null : true}>
+				<Switch
+					name="is_enabled"
+					value="true"
+					defaultChecked={monitor ? monitor.enabled_at !== null : true}
+				>
 					{t("enabled.label")}
 				</Switch>
 			</>

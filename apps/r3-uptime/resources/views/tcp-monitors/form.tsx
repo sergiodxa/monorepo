@@ -12,12 +12,10 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Description, Label, NumberField, TextField } from "@pkg/r3-ui";
+import { Description, Label, NumberField, Switch, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
 
 import type { SelectTcpMonitor } from "~/database/schema";
-
-import Switch from "~/resources/components/switch";
 
 namespace TcpMonitorFormFields {
 	export interface Props {
@@ -110,7 +108,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 				</NumberField>
 
 				{monitor && (
-					<Switch name="is_enabled" defaultChecked={monitor.is_enabled}>
+					<Switch name="is_enabled" value="true" defaultChecked={monitor.is_enabled}>
 						{t("isEnabled.label")}
 					</Switch>
 				)}

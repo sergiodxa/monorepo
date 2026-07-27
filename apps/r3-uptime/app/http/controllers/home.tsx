@@ -303,9 +303,7 @@ export default createAction(routes.home, async (ctx) => {
 								i18nKey="landing.hero.title"
 								components={{
 									strong: (
-										<span
-											mix={[fg("brand"), media("(prefers-color-scheme: dark)", fg("brand"))]}
-										/>
+										<span mix={[fg("brand"), media("(prefers-color-scheme: dark)", fg("brand"))]} />
 									),
 								}}
 							/>

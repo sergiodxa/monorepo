@@ -9,6 +9,7 @@
  */
 
 import { redirect } from "@pkg/http/response";
+import { Button } from "@pkg/r3-ui";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items } from "@pkg/u/layout";
@@ -18,7 +19,6 @@ import { textAlign } from "@pkg/u/typography";
 import { createController } from "remix/fetch-router";
 
 import { getIdToken, logout } from "~/app/http/middleware/auth";
-import Button from "~/resources/components/button";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

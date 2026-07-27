@@ -5,7 +5,8 @@
  * duplicate the field markup or hardcode English strings. Fields are composed from
  * `@pkg/r3-ui`'s `TextField`/`Select` directly, wrapping `Select` in this app's own
  * `Field` for its label/description since `Select`, unlike `TextField`, doesn't bundle
- * one; "Enabled" goes through this app's `Switch` wrapper instead of a raw checkbox.
+ * one; "Enabled" goes through `@pkg/r3-ui`'s `Switch` directly, with an explicit
+ * `value="true"` since a native checkbox otherwise submits `"on"`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,13 +15,12 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Select, TextField } from "@pkg/r3-ui";
+import { Select, Switch, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import Switch from "~/resources/components/switch";
 
 const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 
@@ -102,7 +102,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					</Select>
 				</Field>
 
-				<Switch name="is_enabled" defaultChecked={monitor?.is_enabled ?? true}>
+				<Switch name="is_enabled" value="true" defaultChecked={monitor?.is_enabled ?? true}>
 					{t("isEnabled.label")}
 				</Switch>
 			</>
