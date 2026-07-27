@@ -228,9 +228,9 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 					size={size}
 					mix={[
 						transition("border-color, box-shadow"),
-						when("input:checked ~ &", border("primary.solid")),
-						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
-						when("input:checked ~ &", ringShadow("primary")),
+						when("input:checked ~ &", border("brand.solid")),
+						when("input:focus-visible ~ &", outline({ color: "brand.ring", offset: 2 })),
+						when("input:checked ~ &", ringShadow("brand")),
 						parts?.indicator,
 					]}
 				/>

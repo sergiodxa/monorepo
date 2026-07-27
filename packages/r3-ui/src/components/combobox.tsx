@@ -140,7 +140,7 @@ ComboBox.Group = function ComboBoxGroup(handle: Handle<ComboBox.GroupProps>) {
  * @example
  * <ComboBox.Input id="fruit" name="fruit" list="fruit-options" />
  * @example
- * <ComboBox.Input aria-label={t("form.country.label")} color="primary" list="country-options" />
+ * <ComboBox.Input aria-label={t("form.country.label")} color="brand" list="country-options" />
  */
 ComboBox.Input = function ComboBoxInput(handle: Handle<ComboBox.InputProps>) {
 	return () => {
@@ -189,7 +189,7 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 					fg("neutral"),
 					when("& svg", [is("1rem"), bs("1rem")]),
 					when("&:hover", bg("neutral.bg-tint-hover")),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 0 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
 					mis("-2rem"),
 					mix,
 				]}

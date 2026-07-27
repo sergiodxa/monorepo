@@ -16,8 +16,8 @@ import type { SemanticColor } from "./semantic-color";
 
 describe("SemanticColor", () => {
 	test("is exactly the five semantic tones every component colors itself with", () => {
-		let tones: readonly SemanticColor[] = ["primary", "neutral", "success", "warning", "danger"];
+		let tones: readonly SemanticColor[] = ["brand", "neutral", "success", "warning", "danger"];
 
-		expect(tones).toEqual(["primary", "neutral", "success", "warning", "danger"]);
+		expect(tones).toEqual(["brand", "neutral", "success", "warning", "danger"]);
 	});
 });

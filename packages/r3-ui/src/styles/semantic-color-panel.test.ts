@@ -21,7 +21,7 @@ describe("semanticColorPanel", () => {
 	test("emits one branch per semantic color", () => {
 		expect(Object.keys(styles(semanticColorPanel())).sort()).toEqual(
 			[
-				'&[data-color="primary"]',
+				'&[data-color="brand"]',
 				'&[data-color="neutral"]',
 				'&[data-color="success"]',
 				'&[data-color="warning"]',

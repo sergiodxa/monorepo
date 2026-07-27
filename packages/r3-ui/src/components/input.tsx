@@ -35,7 +35,7 @@ export namespace Input {
 	 * danger tone for its ring instead, regardless of `color` — see
 	 * {@link Input}'s own description.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Every native `<input>` attribute, unchanged, plus the `mix` passthrough.
@@ -86,7 +86,7 @@ export namespace Input {
  * @example
  * <Input
  * 	aria-label={t("form.search.label")}
- * 	color="primary"
+ * 	color="brand"
  * 	placeholder={t("form.search.placeholder")}
  * />
  * @example
@@ -119,9 +119,9 @@ export function Input(handle: Handle<Input.Props>) {
 					focusVisible([
 						border("neutral.strong"),
 						outline({ color: "neutral.ring", offset: 0 }),
-						when('&[data-color="primary"]', [
-							border("primary.strong"),
-							outline({ color: "primary.ring", offset: 0 }),
+						when('&[data-color="brand"]', [
+							border("brand.strong"),
+							outline({ color: "brand.ring", offset: 0 }),
 						]),
 						when('&[data-color="success"]', [
 							border("success.strong"),

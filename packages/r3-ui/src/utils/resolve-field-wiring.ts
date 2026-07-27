@@ -16,7 +16,7 @@
  * Semantic color role shared by every field convenience wrapper's control,
  * each mapped to its matching `--ui-*` variables.
  */
-export type FieldColor = "primary" | "neutral" | "success" | "warning" | "danger";
+export type FieldColor = "brand" | "neutral" | "success" | "warning" | "danger";
 
 /** Semantic color role {@link resolveFieldWiring} falls back to when `color` is omitted. */
 const DEFAULT_FIELD_COLOR: FieldColor = "neutral";
@@ -81,8 +81,8 @@ export interface FieldWiring {
  * @param options The field's own color, error message, description, and invalid override.
  * @returns The resolved color, invalid state, description/error ids, and joined `aria-describedby` value.
  * @example
- * resolveFieldWiring("email", { color: "primary", errorMessage: "Required" });
- * // { resolvedColor: "primary", resolvedInvalid: true, descriptionId: undefined, errorId: "email-error", describedBy: "email-error" }
+ * resolveFieldWiring("email", { color: "brand", errorMessage: "Required" });
+ * // { resolvedColor: "brand", resolvedInvalid: true, descriptionId: undefined, errorId: "email-error", describedBy: "email-error" }
  * @example
  * resolveFieldWiring("username", { description: "3-20 characters" });
  * // { resolvedColor: "neutral", resolvedInvalid: false, descriptionId: "username-description", errorId: undefined, describedBy: "username-description" }

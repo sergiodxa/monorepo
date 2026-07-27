@@ -32,7 +32,7 @@ export namespace Checkbox {
 	/**
 	 * Semantic color role, each mapped to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Per-part styling for the elements this convenience wrapper composes
@@ -136,11 +136,11 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 						when("&:has(~ input:indeterminate) > svg:last-child", block()),
 
 						when(
-							'&[data-color="primary"]',
+							'&[data-color="brand"]',
 							when("&:has(~ input:checked), &:has(~ input:indeterminate)", [
-								border("primary.solid"),
-								bg("primary.solid"),
-								fg("primary.onSolid"),
+								border("brand.solid"),
+								bg("brand.solid"),
+								fg("brand.onSolid"),
 							]),
 						),
 						when(
@@ -177,7 +177,7 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 						),
 
 						when("&:has(~ input:focus-visible)", [
-							outline({ color: "primary.ring", offset: 2 }),
+							outline({ color: "brand.ring", offset: 2 }),
 							when('&[data-color="neutral"]', outline("neutral.ring")),
 							when('&[data-color="success"]', outline("success.ring")),
 							when('&[data-color="warning"]', outline("warning.ring")),

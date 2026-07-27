@@ -22,7 +22,7 @@ import type { SemanticColor } from "../utils/semantic-color";
  * its branches.
  */
 const SEMANTIC_COLORS: readonly SemanticColor[] = [
-	"primary",
+	"brand",
 	"neutral",
 	"success",
 	"warning",

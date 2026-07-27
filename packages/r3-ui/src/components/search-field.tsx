@@ -91,7 +91,7 @@ export function SearchField(handle: Handle<SearchField.Props>) {
  * @example
  * <SearchField.Input aria-label={t("search.label")} placeholder={t("search.placeholder")} />
  * @example
- * <SearchField.Input name="q" color="primary" defaultValue="remix" />
+ * <SearchField.Input name="q" color="brand" defaultValue="remix" />
  */
 SearchField.Input = function SearchFieldInput(handle: Handle<SearchField.InputProps>) {
 	return () => {

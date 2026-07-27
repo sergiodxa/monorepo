@@ -108,7 +108,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 				data-size={resolvedSize}
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						data("color", "neutral", outline("neutral.ring")),
 						data("color", "success", outline("success.ring")),
 						data("color", "warning", outline("warning.ring")),
@@ -127,11 +127,11 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					data("size", "lg", [pi(5), pb(2.5), text("base")]),
 
 					data("variant", "solid", [
-						data("color", "primary", [
-							bg("primary.solid"),
-							fg("primary.onSolid"),
-							hover(bg("primary.bg-solid-hover")),
-							active(bg("primary.bg-solid-pressed")),
+						data("color", "brand", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							hover(bg("brand.bg-solid-hover")),
+							active(bg("brand.bg-solid-pressed")),
 						]),
 						data("color", "neutral", [
 							bg("neutral.solid"),
@@ -161,11 +161,11 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 
 					data("variant", "outline", [
 						border({ width: 2 }),
-						data("color", "primary", [
-							border("primary.strong"),
-							fg("primary"),
-							hover(bg("primary.tint")),
-							active(bg("primary.bg-tint-hover")),
+						data("color", "brand", [
+							border("brand.strong"),
+							fg("brand"),
+							hover(bg("brand.tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
 							border("neutral.strong"),
@@ -195,10 +195,10 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					data("variant", "outline", bg("transparent")),
 
 					data("variant", "ghost", [
-						data("color", "primary", [
-							fg("primary"),
-							hover(bg("primary.tint")),
-							active(bg("primary.bg-tint-hover")),
+						data("color", "brand", [
+							fg("brand"),
+							hover(bg("brand.tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
 							fg("neutral"),

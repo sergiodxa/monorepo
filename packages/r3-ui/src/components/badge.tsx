@@ -114,10 +114,10 @@ export function Badge(handle: Handle<Badge.Props>) {
 					fontSize("xs"),
 					userSelect(),
 					data("variant", "default", [
-						data("color", "primary", [
-							bg("primary.solid"),
-							fg("primary.onSolid"),
-							border("primary.solid"),
+						data("color", "brand", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							border("brand.solid"),
 						]),
 						data("color", "neutral", [
 							bg("neutral.solid"),
@@ -141,7 +141,7 @@ export function Badge(handle: Handle<Badge.Props>) {
 						]),
 					]),
 					data("variant", "secondary", [
-						data("color", "primary", [bg("primary.tint"), fg("primary"), border("primary")]),
+						data("color", "brand", [bg("brand.tint"), fg("brand"), border("brand")]),
 						data("color", "neutral", [bg("neutral.tint"), fg("neutral"), border("neutral")]),
 						data("color", "success", [bg("success.tint"), fg("success"), border("success")]),
 						data("color", "warning", [bg("warning.tint"), fg("warning"), border("warning")]),
@@ -149,7 +149,7 @@ export function Badge(handle: Handle<Badge.Props>) {
 					]),
 					data("variant", "outline", [
 						bg("transparent"),
-						data("color", "primary", [border("primary.strong"), fg("primary")]),
+						data("color", "brand", [border("brand.strong"), fg("brand")]),
 						data("color", "neutral", [border("neutral"), fg("neutral")]),
 						data("color", "success", [border("success.strong"), fg("success")]),
 						data("color", "warning", [border("warning.strong"), fg("warning")]),

@@ -67,7 +67,7 @@ export namespace Marker {
 	/**
 	 * Semantic color role, each mapped to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Props accepted by {@link Marker}.
@@ -150,7 +150,7 @@ export function Marker(handle: Handle<Marker.Props>) {
 					center(),
 					is("full"),
 					weight("medium"),
-					data("color", "primary", fg("primary.muted")),
+					data("color", "brand", fg("brand.muted")),
 					data("color", "neutral", fg("neutral.muted")),
 					data("color", "success", fg("success.muted")),
 					data("color", "warning", fg("warning.muted")),
@@ -160,10 +160,10 @@ export function Marker(handle: Handle<Marker.Props>) {
 						border({ width: 1 }),
 						pb(2),
 						pi(3.5),
-						data("color", "primary", [
-							border("primary"),
-							bg("primary.tint"),
-							fg("primary.emphasis"),
+						data("color", "brand", [
+							border("brand"),
+							bg("brand.tint"),
+							fg("brand.emphasis"),
 						]),
 						data("color", "neutral", [
 							border("neutral"),

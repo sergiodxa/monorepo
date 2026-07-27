@@ -68,7 +68,7 @@ const DEFAULT_CONTENT_ROLE = "log";
 const DEFAULT_CONTENT_ARIA_RELEVANT = "additions";
 
 /** Semantic color role {@link MessageScroller.Button} falls back to when `color` is omitted. */
-const DEFAULT_BUTTON_COLOR: Button.Color = "primary";
+const DEFAULT_BUTTON_COLOR: Button.Color = "brand";
 
 /** Visual weight {@link MessageScroller.Button} falls back to when `variant` is omitted. */
 const DEFAULT_BUTTON_VARIANT: Button.Variant = "solid";

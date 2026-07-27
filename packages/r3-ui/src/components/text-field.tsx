@@ -34,7 +34,7 @@ export namespace TextField {
 	 * Semantic color role for the control's keyboard focus ring, each mapped
 	 * to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Native `<input>` `type` this wrapper renders a single-line, text-like

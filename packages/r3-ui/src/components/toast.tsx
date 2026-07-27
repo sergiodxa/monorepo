@@ -110,7 +110,7 @@ export namespace Toast {
 	 * Semantic tone driving the host element's border, tint, and foreground
 	 * color through the `--ui-*` variables for that color.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * `aria-live` politeness applied to the host element. `"off"` omits the
@@ -296,7 +296,7 @@ export function Toast(handle: Handle<Toast.Props>) {
 					pb("1rem"),
 					pi("1rem"),
 					when('&:has(> [data-slot="close"])', pie("2.5rem")),
-					when('&[data-color="primary"]', [border("primary"), fg("primary.fg-emphasis")]),
+					when('&[data-color="brand"]', [border("brand"), fg("brand.fg-emphasis")]),
 					when('&[data-color="neutral"]', [border("neutral"), fg("neutral.fg-emphasis")]),
 					when('&[data-color="success"]', [border("success"), fg("success.fg-emphasis")]),
 					when('&[data-color="warning"]', [border("warning"), fg("warning.fg-emphasis")]),
@@ -311,9 +311,9 @@ export function Toast(handle: Handle<Toast.Props>) {
 					}),
 					data(
 						"color",
-						"primary",
+						"brand",
 						raw({
-							"--ui-toast-bg": "var(--ui-primary-bg-tint)",
+							"--ui-toast-bg": "var(--ui-brand-bg-tint)",
 							backgroundColor: "var(--ui-toast-bg)",
 						}),
 					),

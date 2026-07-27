@@ -21,7 +21,7 @@ describe(semanticColorPanelStyle.name, () => {
 	});
 
 	test("reads every semantic color's own variables rather than a fixed color", () => {
-		expect(semanticColorPanelStyle("primary").borderColor).toBe("var(--ui-primary-border)");
+		expect(semanticColorPanelStyle("brand").borderColor).toBe("var(--ui-brand-border)");
 		expect(semanticColorPanelStyle("success").backgroundColor).toBe("var(--ui-success-bg-tint)");
 		expect(semanticColorPanelStyle("warning").color).toBe("var(--ui-warning-fg-emphasis)");
 		expect(semanticColorPanelStyle("neutral")).toEqual({

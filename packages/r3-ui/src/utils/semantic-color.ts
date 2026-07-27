@@ -12,10 +12,13 @@
 
 /**
  * One of the five semantic tones a component colors itself with:
- * `"primary"` for its default emphasized action or state, `"neutral"` for
+ * `"brand"` for its default emphasized action or state, `"neutral"` for
  * an unemphasized default, and `"success"`, `"warning"`, `"danger"` for an
  * outcome-driven state. Every component's own `Color` type resolves to this
  * shared union, so the set of tones a component's styling and `data-color`
- * contract handle stays a single definition.
+ * contract handle stays a single definition. Named to match `@pkg/u`'s own
+ * `SemanticTones`/`ColorPalettes` tone name — `@pkg/u` defines the theme
+ * contract every consumer follows, rather than each consumer picking its
+ * own name for the same accent tone.
  */
-export type SemanticColor = "primary" | "neutral" | "success" | "warning" | "danger";
+export type SemanticColor = "brand" | "neutral" | "success" | "warning" | "danger";

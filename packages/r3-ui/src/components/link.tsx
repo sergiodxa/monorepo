@@ -20,7 +20,7 @@ import type { SemanticColor } from "../utils/semantic-color";
 import { interactiveTransition } from "../styles/interactive-transition";
 
 /** Semantic color role {@link Link} falls back to when `color` is omitted. */
-const DEFAULT_COLOR: Link.Color = "primary";
+const DEFAULT_COLOR: Link.Color = "brand";
 
 /**
  * Prop types for {@link Link}.
@@ -74,7 +74,7 @@ export function Link(handle: Handle<Link.Props>) {
 				{...rest}
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						data("color", "neutral", outline("neutral.ring")),
 						data("color", "success", outline("success.ring")),
 						data("color", "warning", outline("warning.ring")),
@@ -82,7 +82,7 @@ export function Link(handle: Handle<Link.Props>) {
 					]),
 					interactiveTransition(),
 					rounded("sm"),
-					data("color", "primary", fg("primary")),
+					data("color", "brand", fg("brand")),
 					data("color", "neutral", fg("neutral")),
 					data("color", "success", fg("success")),
 					data("color", "danger", fg("danger")),
@@ -90,19 +90,19 @@ export function Link(handle: Handle<Link.Props>) {
 					when('&[aria-disabled="true"]', opacity(50)),
 					textDecoration("underline"),
 					cursor("pointer"),
-					data("color", "primary", [
-						// `color-mix()`'s color argument (`var(--ui-primary-fg)`) isn't
+					data("color", "brand", [
+						// `color-mix()`'s color argument (`var(--ui-brand-fg)`) isn't
 						// a tone string `u.fg()`/`u.color()` can resolve, so the
 						// property itself stays raw() — only the literal string
 						// becomes a builder call.
 						raw({
 							textDecorationColor: colorMix(
 								"srgb",
-								{ color: varUtility("ui-primary-fg"), weight: 60 },
+								{ color: varUtility("ui-brand-fg"), weight: 60 },
 								"transparent",
 							),
 						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-primary-fg") })),
+						when("&:hover", raw({ textDecorationColor: varUtility("ui-brand-fg") })),
 					]),
 					data("color", "neutral", [
 						raw({

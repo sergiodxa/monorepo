@@ -24,7 +24,7 @@ describe(resolveFieldWiring.name, () => {
 	});
 
 	test("keeps an explicit color instead of falling back to neutral", () => {
-		expect(resolveFieldWiring("username", { color: "primary" }).resolvedColor).toBe("primary");
+		expect(resolveFieldWiring("username", { color: "brand" }).resolvedColor).toBe("brand");
 	});
 
 	test("marks the field invalid as soon as an error message is set", () => {

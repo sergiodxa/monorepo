@@ -247,7 +247,7 @@ AlertDialog.Footer = function AlertDialogFooter(handle: Handle<AlertDialog.Foote
  * @example
  * <AlertDialog.Action commandfor="delete-project">{t("actions.delete")}</AlertDialog.Action>
  * @example
- * <AlertDialog.Action commandfor="publish-post" color="primary">{t("actions.publish")}</AlertDialog.Action>
+ * <AlertDialog.Action commandfor="publish-post" color="brand">{t("actions.publish")}</AlertDialog.Action>
  */
 AlertDialog.Action = function AlertDialogAction(handle: Handle<AlertDialog.ActionProps>) {
 	return () => {

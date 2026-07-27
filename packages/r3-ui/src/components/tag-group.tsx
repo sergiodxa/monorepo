@@ -109,7 +109,7 @@ export namespace TagGroup {
  * @example
  * <TagGroup aria-label={t("skills.label")}>
  * 	<TagGroup.List>
- * 		<TagGroup.Tag color="primary">{t("skills.design")}</TagGroup.Tag>
+ * 		<TagGroup.Tag color="brand">{t("skills.design")}</TagGroup.Tag>
  * 		<TagGroup.Tag color="success">{t("skills.shipped")}</TagGroup.Tag>
  * 	</TagGroup.List>
  * </TagGroup>
@@ -198,7 +198,7 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 				data-slot="tag"
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						data("color", "neutral", outline("neutral.ring")),
 						data("color", "success", outline("success.ring")),
 						data("color", "warning", outline("warning.ring")),
@@ -212,13 +212,13 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 					pi(3),
 					pb(1),
 					data("size", "sm", [pi(2), pb(0.5)]),
-					data("color", "primary", [bg("primary.tint"), fg("primary")]),
+					data("color", "brand", [bg("brand.tint"), fg("brand")]),
 					data("color", "success", [bg("success.tint"), fg("success")]),
 					data("color", "warning", [bg("warning.tint"), fg("warning")]),
 					data("color", "danger", [bg("danger.tint"), fg("danger")]),
 					when('&[aria-selected="true"]', [
-						bg("primary.solid"),
-						fg("primary.onSolid"),
+						bg("brand.solid"),
+						fg("brand.onSolid"),
 						weight(600),
 					]),
 					when('&[aria-disabled="true"]', opacity(50)),
@@ -248,7 +248,7 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
  * <form method="post">
  * 	<TagGroup aria-label={t("filters.label")}>
  * 		<TagGroup.List>
- * 			<TagGroup.Tag color="primary">
+ * 			<TagGroup.Tag color="brand">
  * 				{t("filters.remote")}
  * 				<TagGroup.Remove name="remove" value="remote" aria-label={t("filters.removeRemote")} />
  * 			</TagGroup.Tag>
@@ -273,17 +273,17 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 					rounded("full"),
 					when("& svg", [is(3), bs(3)]),
 					fg("currentColor"),
-					hover(bg("primary.bg-tint-hover")),
+					hover(bg("brand.bg-tint-hover")),
 					when('[data-color="neutral"] &:hover', bg("neutral.bg-tint-hover")),
 					when('[data-color="success"] &:hover', bg("success.bg-tint-hover")),
 					when('[data-color="danger"] &:hover', bg("danger.bg-tint-hover")),
 					when('[data-color="warning"] &:hover', bg("warning.bg-tint-hover")),
-					active(bg("primary.bg-tint-pressed")),
+					active(bg("brand.bg-tint-pressed")),
 					when('[data-color="neutral"] &:active', bg("neutral.bg-tint-pressed")),
 					when('[data-color="success"] &:active', bg("success.bg-tint-pressed")),
 					when('[data-color="danger"] &:active', bg("danger.bg-tint-pressed")),
 					when('[data-color="warning"] &:active', bg("warning.bg-tint-pressed")),
-					when("&:focus-visible", outlineColor("primary")),
+					when("&:focus-visible", outlineColor("brand")),
 					when('[data-color="neutral"] &:focus-visible', outlineColor("neutral")),
 					when('[data-color="success"] &:focus-visible', outlineColor("success")),
 					when('[data-color="danger"] &:focus-visible', outlineColor("danger")),

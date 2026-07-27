@@ -72,7 +72,7 @@ export namespace Select {
 	/**
 	 * Semantic color role, each mapped to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Every native `<select>` attribute, unchanged, plus the `mix` passthrough.
@@ -156,7 +156,7 @@ export namespace Select {
  * 	<Select.Option value="ca">{t("countries.ca")}</Select.Option>
  * </Select>
  * @example
- * <Select aria-label={t("form.plan.label")} color="primary">
+ * <Select aria-label={t("form.plan.label")} color="brand">
  * 	<Select.Trigger />
  * 	<Select.Group label={t("form.plan.groups.personal")}>
  * 		<Select.Option value="free">{t("plans.free")}</Select.Option>
@@ -185,9 +185,9 @@ export function Select(handle: Handle<Select.Props>) {
 			when("&:focus-visible", [
 				border("neutral.strong"),
 				outline({ color: "neutral.ring", offset: 0 }),
-				data("color", "primary", [
-					border("primary.strong"),
-					outline({ color: "primary.ring", offset: 0 }),
+				data("color", "brand", [
+					border("brand.strong"),
+					outline({ color: "brand.ring", offset: 0 }),
 				]),
 				data("color", "neutral", [
 					border("neutral.strong"),
@@ -444,8 +444,8 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 					),
 					when("&:hover", bg("neutral.bg-tint-hover")),
 					when("&:active", bg("neutral.bg-tint-pressed")),
-					when("&:focus", bg("primary.tint")),
-					when("&:checked", [bg("primary.solid"), fg("primary.onSolid")]),
+					when("&:focus", bg("brand.tint")),
+					when("&:checked", [bg("brand.solid"), fg("brand.onSolid")]),
 					mix,
 				]}
 			/>

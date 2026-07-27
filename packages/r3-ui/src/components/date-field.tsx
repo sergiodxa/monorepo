@@ -31,7 +31,7 @@ export namespace DateField {
 	 * Semantic color role for the control's keyboard focus ring, each mapped
 	 * to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Per-part styling for the elements this convenience wrapper composes in

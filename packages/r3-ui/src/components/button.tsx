@@ -147,7 +147,7 @@ export function Button(handle: Handle<Button.Props>) {
 				disabled={resolvedDisabled}
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						when('&[data-color="neutral"]', outline("neutral.ring")),
 						when('&[data-color="success"]', outline("success.ring")),
 						when('&[data-color="warning"]', outline("warning.ring")),
@@ -171,11 +171,11 @@ export function Button(handle: Handle<Button.Props>) {
 					when('&[data-size="lg"]', [pi(5), pb(2.5), text("base")]),
 
 					when('&[data-variant="solid"]', [
-						when('&[data-color="primary"]', [
-							bg("primary.solid"),
-							fg("primary.onSolid"),
-							when("&:hover", bg("primary.bg-solid-hover")),
-							when("&:active", bg("primary.bg-solid-pressed")),
+						when('&[data-color="brand"]', [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							when("&:hover", bg("brand.bg-solid-hover")),
+							when("&:active", bg("brand.bg-solid-pressed")),
 						]),
 						when('&[data-color="neutral"]', [
 							bg("neutral.solid"),
@@ -206,11 +206,11 @@ export function Button(handle: Handle<Button.Props>) {
 					when('&[data-variant="outline"]', [
 						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
-						when('&[data-color="primary"]', [
-							border("primary.strong"),
-							fg("primary"),
-							when("&:hover", bg("primary.tint")),
-							when("&:active", bg("primary.bg-tint-hover")),
+						when('&[data-color="brand"]', [
+							border("brand.strong"),
+							fg("brand"),
+							when("&:hover", bg("brand.tint")),
+							when("&:active", bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
 							border("neutral.strong"),
@@ -240,10 +240,10 @@ export function Button(handle: Handle<Button.Props>) {
 
 					when('&[data-variant="ghost"]', [
 						bg("transparent"),
-						when('&[data-color="primary"]', [
-							fg("primary"),
-							when("&:hover", bg("primary.tint")),
-							when("&:active", bg("primary.bg-tint-hover")),
+						when('&[data-color="brand"]', [
+							fg("brand"),
+							when("&:hover", bg("brand.tint")),
+							when("&:active", bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
 							fg("neutral"),

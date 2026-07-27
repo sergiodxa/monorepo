@@ -41,7 +41,7 @@ export namespace FileTrigger {
 	/**
 	 * Semantic color role, each mapped to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Visual weight the trigger renders with: a solid fill with an on-solid
@@ -135,7 +135,7 @@ export namespace FileTrigger {
  * 	{t("profile.chooseFile")}
  * </FileTrigger>
  * @example
- * <FileTrigger name="attachments" multiple color="primary" variant="outline">
+ * <FileTrigger name="attachments" multiple color="brand" variant="outline">
  * 	{t("thread.attachFiles")}
  * </FileTrigger>
  * @example
@@ -174,7 +174,7 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					rounded("md"),
 					weight("medium"),
 					when("&:has(input:focus-visible)", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						data("color", "neutral", outline("neutral.ring")),
 						data("color", "success", outline("success.ring")),
 						data("color", "warning", outline("warning.ring")),
@@ -191,11 +191,11 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					data("size", "lg", [pi("1.25rem"), pb("0.625rem"), text("base")]),
 
 					data("variant", "solid", [
-						data("color", "primary", [
-							bg("primary.solid"),
-							fg("primary.onSolid"),
-							hover(bg("primary.bg-solid-hover")),
-							active(bg("primary.bg-solid-pressed")),
+						data("color", "brand", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							hover(bg("brand.bg-solid-hover")),
+							active(bg("brand.bg-solid-pressed")),
 						]),
 						data("color", "neutral", [
 							bg("neutral.solid"),
@@ -226,11 +226,11 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					data("variant", "outline", [
 						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
-						data("color", "primary", [
-							border("primary.strong"),
-							fg("primary"),
-							hover(bg("primary.tint")),
-							active(bg("primary.bg-tint-hover")),
+						data("color", "brand", [
+							border("brand.strong"),
+							fg("brand"),
+							hover(bg("brand.tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
 							border("neutral.strong"),
@@ -260,10 +260,10 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 
 					data("variant", "ghost", [
 						bg("transparent"),
-						data("color", "primary", [
-							fg("primary"),
-							hover(bg("primary.tint")),
-							active(bg("primary.bg-tint-hover")),
+						data("color", "brand", [
+							fg("brand"),
+							hover(bg("brand.tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						data("color", "neutral", [
 							fg("neutral"),

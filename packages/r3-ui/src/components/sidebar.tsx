@@ -201,7 +201,7 @@ export namespace Sidebar {
 	 * Semantic color role {@link Sidebar.Item} renders its current-page
 	 * treatment in, each mapped to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Size variant controlling {@link Sidebar.MenuButton}'s and
@@ -882,7 +882,7 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 				data-color={resolvedColor}
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						data("color", "neutral", outline("neutral.ring")),
 						data("color", "success", outline("success.ring")),
 						data("color", "warning", outline("warning.ring")),
@@ -914,11 +914,11 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 					]),
 					data(
 						"color",
-						"primary",
+						"brand",
 						when('&[aria-current]:not([aria-current="false"])', [
-							bg("primary.tint"),
-							fg("primary"),
-							when("& > svg, & > [data-slot='icon']", fg("primary")),
+							bg("brand.tint"),
+							fg("brand"),
+							when("& > svg, & > [data-slot='icon']", fg("brand")),
 						]),
 					),
 					data(
@@ -1080,7 +1080,7 @@ Sidebar.GroupAction = function SidebarGroupAction(handle: Handle<Sidebar.GroupAc
 				{...rest}
 				data-slot="group-action"
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					inlineFlex(),
 					is("1.25rem"),
 					bs("1.25rem"),
@@ -1216,7 +1216,7 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 				data-size={resolvedSize}
 				data-active={active || undefined}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					...menuRowMixins(),
 					mix,
 				]}
@@ -1254,7 +1254,7 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 				data-size={resolvedSize}
 				data-active={active || undefined}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					...menuRowMixins(),
 					mix,
 				]}
@@ -1365,7 +1365,7 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 				data-slot="menu-action"
 				data-show-on-hover={resolvedShowOnHover ? undefined : "false"}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					absolute(),
 					insIe("0.375rem"),
 					insBs("50%"),
@@ -1565,7 +1565,7 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
 				data-slot="menu-sub-button"
 				data-active={active || undefined}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					...menuSubRowMixins(),
 					mix,
 				]}
@@ -1596,7 +1596,7 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 				data-slot="menu-sub-link"
 				data-active={active || undefined}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					...menuSubRowMixins(),
 					mix,
 				]}
@@ -1692,7 +1692,7 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 					]),
 					when(WIDE_SHELL_QUERY, [flex(), items("center"), justify("center")]),
 					hover(after(bg("neutral.border"))),
-					when("&:active", after(bg("primary.ring"))),
+					when("&:active", after(bg("brand.ring"))),
 					mix,
 				]}
 			/>
@@ -1726,7 +1726,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 			<label
 				data-slot="trigger"
 				mix={[
-					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
 					is("2rem"),

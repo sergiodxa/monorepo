@@ -88,7 +88,7 @@ export function Spinner(handle: Handle<Spinner.Props>) {
 					items("center"),
 					justify("center"),
 
-					when('&[data-color="primary"]', fg("primary")),
+					when('&[data-color="brand"]', fg("brand")),
 					when('&[data-color="neutral"]', fg("neutral")),
 					when('&[data-color="success"]', fg("success")),
 					when('&[data-color="warning"]', fg("warning")),

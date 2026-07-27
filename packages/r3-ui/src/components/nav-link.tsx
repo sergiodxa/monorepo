@@ -70,7 +70,7 @@ export namespace NavLink {
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
  * @example
- * <NavLink href="/dashboard" color="primary">{t("nav.dashboard")}</NavLink>
+ * <NavLink href="/dashboard" color="brand">{t("nav.dashboard")}</NavLink>
  * @example
  * <NavLink href="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>{t("nav.settings")}</NavLink>
  * @example
@@ -89,7 +89,7 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 				mix={[
 					interactiveTransition(),
 					rounded("sm"),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					cursor("pointer"),
 					textDecoration("underline"),
 					raw({
@@ -101,11 +101,11 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 						textUnderlineOffset: "4px",
 					}),
 					hover(raw({ textDecorationColor: "currentcolor" })),
-					data("color", "primary", [
-						fg("primary"),
+					data("color", "brand", [
+						fg("brand"),
 						when('&[aria-current]:not([aria-current="false"])', [
 							weight(500),
-							fg("primary.emphasis"),
+							fg("brand.emphasis"),
 						]),
 					]),
 					data("color", "neutral", [

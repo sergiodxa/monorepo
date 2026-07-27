@@ -34,7 +34,7 @@ export namespace TextArea {
 	 * danger tone for its ring instead, regardless of `color` — see
 	 * {@link TextArea}'s own description.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Every native `<textarea>` attribute, unchanged, plus the `mix`
@@ -87,7 +87,7 @@ export namespace TextArea {
  * @example
  * <TextArea
  * 	aria-label={t("form.comment.label")}
- * 	color="primary"
+ * 	color="brand"
  * 	placeholder={t("form.comment.placeholder")}
  * />
  * @example
@@ -121,9 +121,9 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 					when("&:focus-visible", [
 						outline({ color: "neutral.ring", offset: 0 }),
 						border("neutral.border-strong"),
-						when('&[data-color="primary"]', [
-							border("primary.border-strong"),
-							outline({ color: "primary.ring", offset: 0 }),
+						when('&[data-color="brand"]', [
+							border("brand.border-strong"),
+							outline({ color: "brand.ring", offset: 0 }),
 						]),
 						when('&[data-color="success"]', [
 							border("success.border-strong"),

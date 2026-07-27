@@ -380,9 +380,9 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 					when("& :where(hr)", borderEdge("block-start", { color: "neutral", width: "1px" })),
 
 					// Links
-					when("& :where(a)", [fg("primary"), textDecoration("underline")]),
+					when("& :where(a)", [fg("brand"), textDecoration("underline")]),
 					when("& :where(a):focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						rounded("xs"),
 					]),
 

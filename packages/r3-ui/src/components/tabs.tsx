@@ -204,7 +204,7 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 						}),
 						insIs("var(--ui-tab-indicator-inline-start, 0px)"),
 						insBe("-0.0625rem"),
-						bg("var(--ui-primary-fg)"),
+						bg("var(--ui-brand-fg)"),
 						raw({
 							content: '""',
 							opacity: "var(--ui-tab-indicator-opacity, 0)",
@@ -259,13 +259,13 @@ Tabs.Tab = function TabsTab(handle: Handle<Tabs.TabProps>) {
 				mix={[
 					interactiveTransition(),
 					attrs({ role: DEFAULT_TAB_ROLE }),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					pi(4),
 					pb(2),
 					weight(500),
 					fg("neutral"),
 					when("&:hover", fg("neutral.emphasis")),
-					when('&[aria-selected="true"]', fg("primary")),
+					when('&[aria-selected="true"]', fg("brand")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					mbe("-0.0625rem"),
 					cursor("default"),
@@ -325,7 +325,7 @@ Tabs.Panel = function TabsPanel(handle: Handle<Tabs.PanelProps>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_PANEL_ROLE, tabIndex: DEFAULT_PANEL_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					pb(4),
 					pi(4),
 					outlineStyle("none"),

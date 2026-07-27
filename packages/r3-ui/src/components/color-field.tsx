@@ -66,7 +66,7 @@ export namespace ColorField {
 	 * Semantic color role for the control's keyboard focus ring, each mapped
 	 * to its matching `--ui-*` variables.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Notation the control's typed value is constrained to through its native

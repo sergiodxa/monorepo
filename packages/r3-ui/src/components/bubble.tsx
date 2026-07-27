@@ -189,13 +189,13 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 						vars({ "ui-bubble-reactions-justify": "flex-end" }),
 					]),
 
-					data("variant", "default", [bg("primary.solid"), fg("primary.onSolid")]),
+					data("variant", "default", [bg("brand.solid"), fg("brand.onSolid")]),
 					data("variant", "secondary", [bg("neutral.solid"), fg("neutral.onSolid")]),
 					data("variant", "muted", [bg("neutral.tint"), fg("neutral.emphasis"), border("neutral")]),
 					data("variant", "tinted", [
-						bg("primary.tint"),
-						fg("primary.emphasis"),
-						border("primary"),
+						bg("brand.tint"),
+						fg("brand.emphasis"),
+						border("brand"),
 					]),
 					data("variant", "outline", [
 						fg("neutral.emphasis"),

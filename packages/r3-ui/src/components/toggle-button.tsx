@@ -114,7 +114,7 @@ export namespace ToggleButton {
  * 	<BoldIcon />
  * </ToggleButton>
  * @example
- * <ToggleButton aria-pressed={filter === "active"} color="primary" name="filter" value="active">
+ * <ToggleButton aria-pressed={filter === "active"} color="brand" name="filter" value="active">
  * 	{t("tasks.filterActive")}
  * </ToggleButton>
  */
@@ -139,7 +139,7 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 				data-size={resolvedSize}
 				mix={[
 					when("&:focus-visible", [
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 						when('&[data-color="neutral"]', outline("neutral.ring")),
 						when('&[data-color="success"]', outline("success.ring")),
 						when('&[data-color="warning"]', outline("warning.ring")),
@@ -162,11 +162,11 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					data("size", "sm", text("xs")),
 					data("size", "lg", text("base")),
 					when('&[data-variant="solid"]', [
-						when('&[data-color="primary"]', [
-							bg("primary.bg-solid"),
-							fg("primary.fg-on-solid"),
-							hover(bg("primary.bg-solid-hover")),
-							active(bg("primary.bg-solid-pressed")),
+						when('&[data-color="brand"]', [
+							bg("brand.bg-solid"),
+							fg("brand.fg-on-solid"),
+							hover(bg("brand.bg-solid-hover")),
+							active(bg("brand.bg-solid-pressed")),
 						]),
 						when('&[data-color="neutral"]', [
 							bg("neutral.bg-solid"),
@@ -199,11 +199,11 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					]),
 					when('&[data-variant="ghost"]', bg("transparent")),
 					when('&[data-variant="outline"]', [
-						when('&[data-color="primary"]', [
-							border("primary.border-strong"),
-							fg("primary.fg"),
-							hover(bg("primary.bg-tint")),
-							active(bg("primary.bg-tint-hover")),
+						when('&[data-color="brand"]', [
+							border("brand.border-strong"),
+							fg("brand.fg"),
+							hover(bg("brand.bg-tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
 							border("neutral.border-strong"),
@@ -231,10 +231,10 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 						]),
 					]),
 					when('&[data-variant="ghost"]', [
-						when('&[data-color="primary"]', [
-							fg("primary.fg"),
-							hover(bg("primary.bg-tint")),
-							active(bg("primary.bg-tint-hover")),
+						when('&[data-color="brand"]', [
+							fg("brand.fg"),
+							hover(bg("brand.bg-tint")),
+							active(bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
 							fg("neutral.fg"),
@@ -259,8 +259,8 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					]),
 					when('&[aria-pressed="true"]', [
 						when(
-							'&[data-variant="outline"][data-color="primary"], &[data-variant="ghost"][data-color="primary"]',
-							bg("primary.bg-tint"),
+							'&[data-variant="outline"][data-color="brand"], &[data-variant="ghost"][data-color="brand"]',
+							bg("brand.bg-tint"),
 						),
 						when(
 							'&[data-variant="outline"][data-color="neutral"], &[data-variant="ghost"][data-color="neutral"]',

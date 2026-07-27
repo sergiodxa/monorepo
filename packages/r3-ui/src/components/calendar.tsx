@@ -64,7 +64,7 @@ export namespace Calendar {
 	 * semantic roles instead, matching every rendered month regardless of this
 	 * value.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Props accepted by {@link Calendar}. Composing {@link Calendar.Header} and
@@ -353,7 +353,7 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 				data-slot="previous-button"
 				mix={[
 					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -403,7 +403,7 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 				data-slot="next-button"
 				mix={[
 					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -632,7 +632,7 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 				data-slot="cell"
 				mix={[
 					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					justify("center"),
@@ -643,7 +643,7 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 					fg("neutral.emphasis"),
 					text("sm"),
 					hover(bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid")]),
+					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),
 					when("&[data-unavailable]", [fg("neutral.muted"), textDecoration("line-through")]),
 					when("&[data-outside-month]", fg("neutral.muted")),

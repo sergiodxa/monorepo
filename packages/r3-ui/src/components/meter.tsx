@@ -52,7 +52,7 @@ export namespace Meter {
 	 * Semantic color role, each mapped to its matching `--ui-*-bg-solid`
 	 * variable for the gauge's filled portion.
 	 */
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
+	export type Color = "brand" | "neutral" | "success" | "warning" | "danger";
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
@@ -165,7 +165,7 @@ Meter.Indicator = function MeterIndicator(handle: Handle<Meter.IndicatorProps>) 
 					border("none"),
 					when("&::-webkit-meter-bar", [bg("neutral.border"), rounded("full")]),
 					when(FILL_PSEUDO_ELEMENTS, [rounded("full"), transition("all")]),
-					data("color", "primary", when(FILL_PSEUDO_ELEMENTS, bg("primary.solid"))),
+					data("color", "brand", when(FILL_PSEUDO_ELEMENTS, bg("brand.solid"))),
 					data("color", "neutral", when(FILL_PSEUDO_ELEMENTS, bg("neutral.solid"))),
 					data("color", "success", when(FILL_PSEUDO_ELEMENTS, bg("success.solid"))),
 					data("color", "warning", when(FILL_PSEUDO_ELEMENTS, bg("warning.solid"))),

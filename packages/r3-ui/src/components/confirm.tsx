@@ -113,7 +113,7 @@ export namespace Confirm {
  * 	title={t("post.publishTitle")}
  * 	confirmLabel={t("actions.publish")}
  * 	cancelLabel={t("actions.cancel")}
- * 	color="primary"
+ * 	color="brand"
  * />
  */
 export function Confirm(handle: Handle<Confirm.Props>) {
