@@ -13,7 +13,6 @@
  */
 
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, pbe, pbs, pi, pis } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
@@ -22,7 +21,6 @@ import { createAction } from "remix/fetch-router";
 import { getViewer } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
-import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /terms — the Terms of Service page. */
@@ -41,45 +39,35 @@ export default createAction(routes.legal.terms, async (ctx) => {
 						pi("24px"),
 						pbe("80px"),
 						leading(1.75),
-						fg(neutral[800]),
+						fg("neutral"),
 						when("& h1", [
 							fontSize("2.25rem"),
 							weight(800),
 							tracking("tight"),
 							mbs(0),
 							mbe("32px"),
-							fg(neutral[900]),
+							fg("neutral.emphasis"),
 						]),
 						when("& h2", [
 							fontSize("1.5rem"),
 							weight(700),
 							mbs("48px"),
 							mbe("24px"),
-							fg(neutral[900]),
+							fg("neutral.emphasis"),
 						]),
 						when("& h3", [
 							fontSize("1.25rem"),
 							weight(600),
 							mbs("24px"),
 							mbe("12px"),
-							fg(neutral[900]),
+							fg("neutral.emphasis"),
 						]),
 						when("& p", m("20px", 0)),
 						when("& ul", [m("20px", 0), pis("1.25rem")]),
 						when("& li", mbe("8px")),
-						media("(prefers-color-scheme: dark)", [
-							fg(neutral[300]),
-							when("& h1, & h2, & h3", fg(neutral[50])),
-						]),
 					]}
 				>
-					<p
-						mix={[
-							fontSize("0.8125rem"),
-							fg(neutral[500]),
-							media("(prefers-color-scheme: dark)", fg(neutral[400])),
-						]}
-					>
+					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 						{ctx.i18next.t("legal.terms.lastUpdated")}
 					</p>
 

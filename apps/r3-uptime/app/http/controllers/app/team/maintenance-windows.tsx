@@ -9,7 +9,6 @@ import { PlusIcon, WrenchIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -25,7 +24,6 @@ import Badge from "~/resources/components/badge";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /app/:team/maintenance — the team's maintenance windows list. */
@@ -160,10 +158,9 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																			windowId: window.id,
 																		})}
 																		mix={[
-																			fg(primary[600]),
+																			fg("primary"),
 																			textDecoration("none"),
 																			hover(textDecoration("underline")),
-																			media("(prefers-color-scheme: dark)", fg(primary[400])),
 																		]}
 																	>
 																		{ctx.i18next.t("page.maintenance.table.edit")}

@@ -9,7 +9,6 @@ import { BellIcon, HistoryIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { fontSize } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -26,7 +25,6 @@ import Badge from "~/resources/components/badge";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 const HISTORY_LIMIT = 100;
@@ -133,13 +131,7 @@ export default createAction(routes.app.team.alerts.history, {
 														{ctx.i18next.t(`page.alertHistory.table.status.${event.status}`)}
 													</Badge>
 													{event.error_message && (
-														<p
-															mix={[
-																fontSize("0.8125rem"),
-																fg(neutral[500]),
-																media("(prefers-color-scheme: dark)", fg(neutral[400])),
-															]}
-														>
+														<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 															{event.error_message}
 														</p>
 													)}

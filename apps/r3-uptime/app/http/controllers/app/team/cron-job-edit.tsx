@@ -10,7 +10,6 @@ import { notFound } from "@pkg/http/response/html";
 import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -26,7 +25,6 @@ import Button from "~/resources/components/button";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { primary } from "~/resources/theme";
 import CronJobFormFields from "~/resources/views/cron-jobs/form";
 import routes from "~/routes/web";
 
@@ -89,12 +87,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							mix={[
-								fg(primary[600]),
-								textDecoration("none"),
-								hover(textDecoration("underline")),
-								media("(prefers-color-scheme: dark)", fg(primary[400])),
-							]}
+							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editCronJob.form.cancel")}
 						</a>

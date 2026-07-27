@@ -50,7 +50,6 @@ import type { DocSection } from "~/app/services/docs";
 
 import DocsNav from "~/resources/components/docs-nav";
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import { neutral } from "~/resources/theme";
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
@@ -69,19 +68,12 @@ const sidebarToggle = [
 	fg("inherit"),
 	cursor("pointer"),
 	shrink(0),
-	when("&:hover", bg(neutral[100])),
+	when("&:hover", bg("neutral.bg-tint-hover")),
 	media("(min-width: 768px)", hidden()),
-	media("(prefers-color-scheme: dark)", when("&:hover", bg(neutral[800]))),
 ];
 
 /** The sidebar's title, e.g. "Documentation". */
-const sidebarTitleCss = [
-	weight(600),
-	fontSize("lg"),
-	m(0),
-	fg(neutral[900]),
-	media("(prefers-color-scheme: dark)", fg(neutral[50])),
-];
+const sidebarTitleCss = [weight(600), fontSize("lg"), m(0), fg("neutral.emphasis")];
 
 /** The sidebar's subtitle, e.g. "Guides and reference". */
 const sidebarDescriptionCss = [
@@ -89,8 +81,7 @@ const sidebarDescriptionCss = [
 	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
 	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
 	raw({ margin: "4px 0 0" }),
-	fg(neutral[500]),
-	media("(prefers-color-scheme: dark)", fg(neutral[400])),
+	fg("neutral.muted"),
 ];
 
 /** The topbar row: nav toggle + breadcrumb on the left, the dashboard CTA on the right. */
@@ -101,8 +92,8 @@ const topbar = [
 	gap("16px"),
 	p("12px", "24px"),
 	bg("oklch(0.98 0.005 145 / 0.5)"),
-	borderEdge("bottom", { width: 1, color: neutral[200] }),
-	media("(prefers-color-scheme: dark)", [bg("oklch(0.24 0.005 145 / 0.5)"), border(neutral[800])]),
+	borderEdge("bottom", { width: 1, color: "neutral" }),
+	media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 ];
 
 const topbarLeft = [flex(), items("center"), gap("12px"), minIs(0)];
@@ -169,7 +160,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							raw({ maxHeight: "100vh" }),
 							p(0),
 							border("none"),
-							borderEdge("right", { width: 1, color: neutral[200] }),
+							borderEdge("right", { width: 1, color: "neutral" }),
 							raw({ background: "#ffffff" }),
 							raw({
 								boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
@@ -198,7 +189,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								shrink(0),
 								raw({ boxShadow: "none" }),
 							]),
-							media("(prefers-color-scheme: dark)", [bg(neutral[900]), border(neutral[800])]),
+							media("(prefers-color-scheme: dark)", bg("neutral.bg-tint")),
 						]}
 					>
 						<Sidebar.Header mix={[flexCol(), items("start"), bs("auto"), pb("1.25rem")]}>

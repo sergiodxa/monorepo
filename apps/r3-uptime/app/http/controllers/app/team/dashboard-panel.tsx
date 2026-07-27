@@ -19,7 +19,6 @@ import { Empty, Table } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -46,7 +45,6 @@ import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/anal
 import Badge from "~/resources/components/badge";
 import LinkButton from "~/resources/components/link-button";
 import { Tab, TabList } from "~/resources/components/tabs";
-import { primary } from "~/resources/theme";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import routes from "~/routes/web";
 
@@ -274,17 +272,16 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg(primary[600]),
+											fg("primary"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
-											media("(prefers-color-scheme: dark)", fg(primary[400])),
 										]}
 									>
 										{monitor.name}
 									</a>
 								</Table.Cell>
 								<Table.Cell>
-									<div mix={fg(primary[600])}>
+									<div mix={fg("primary")}>
 										<Sparkline points={sparklinePoints} />
 									</div>
 								</Table.Cell>
@@ -356,10 +353,9 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg(primary[600]),
+											fg("primary"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
-											media("(prefers-color-scheme: dark)", fg(primary[400])),
 										]}
 									>
 										{monitor.name}
@@ -439,10 +435,9 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg(primary[600]),
+											fg("primary"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
-											media("(prefers-color-scheme: dark)", fg(primary[400])),
 										]}
 									>
 										{monitor.name}
@@ -524,10 +519,9 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg(primary[600]),
+											fg("primary"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
-											media("(prefers-color-scheme: dark)", fg(primary[400])),
 										]}
 									>
 										{monitor.name}

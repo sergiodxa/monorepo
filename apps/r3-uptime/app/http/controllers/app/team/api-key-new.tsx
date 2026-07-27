@@ -12,7 +12,6 @@ import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
 import { mbe, p } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -28,7 +27,6 @@ import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** DOM id for the scopes {@link CheckboxGroup}'s visible caption, wired through `aria-labelledby`. */
@@ -66,12 +64,11 @@ export default createAction(routes.app.team.apiKeys.new, {
 									mix={[
 										p(2, 3),
 										rounded("md"),
-										border({ color: neutral[200], width: 1, style: "solid" }),
+										border("neutral"),
 										fontSize("sm"),
 										raw({ fontFamily: "inherit" }),
-										bg(neutral[50]),
+										bg("neutral.tint"),
 										fg("inherit"),
-										dark([border(neutral[700]), bg(neutral[900])]),
 									]}
 								/>
 							</Field>
@@ -101,12 +98,11 @@ export default createAction(routes.app.team.apiKeys.new, {
 									mix={[
 										p(2, 3),
 										rounded("md"),
-										border({ color: neutral[200], width: 1, style: "solid" }),
+										border("neutral"),
 										fontSize("sm"),
 										raw({ fontFamily: "inherit" }),
-										bg(neutral[50]),
+										bg("neutral.tint"),
 										fg("inherit"),
-										dark([border(neutral[700]), bg(neutral[900])]),
 									]}
 								/>
 							</Field>

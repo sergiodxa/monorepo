@@ -17,7 +17,6 @@ import { inject } from "@pkg/service-container";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { hstack, vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { pb, pi } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -36,7 +35,6 @@ import CopyButton from "~/resources/components/copy-button";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 interface NewApiKey {
@@ -81,9 +79,8 @@ export default createAction(routes.app.team.apiKeys.index, {
 									textAlign("center"),
 									pb("64px"),
 									pi("32px"),
-									border({ width: 1, style: "dashed", color: neutral[300] }),
+									border({ width: 1, style: "dashed", color: "neutral" }),
 									rounded("12px"),
-									media("(prefers-color-scheme: dark)", border(neutral[700])),
 								]}
 							>
 								<p>{ctx.i18next.t("page.apiKeys.newKey.title", { name: newApiKey.name })}</p>

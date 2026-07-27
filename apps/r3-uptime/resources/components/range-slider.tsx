@@ -28,8 +28,6 @@ import { mbe } from "@pkg/u/size";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
 import { on } from "remix/ui";
 
-import { neutral, primary } from "~/resources/theme";
-
 namespace RangeSlider {
 	export interface Props {
 		label: string;
@@ -88,7 +86,7 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 						mix={[flex(), justify("between"), items("baseline"), fontSize("0.875rem"), weight(600)]}
 					>
 						<Label htmlFor={name}>{label}</Label>
-						<Slider.Output htmlFor={name} mix={[fg(primary[600]), tabularNums()]}>
+						<Slider.Output htmlFor={name} mix={[fg("primary"), tabularNums()]}>
 							{Math.round(defaultValue / scale)}
 							{unit}
 						</Slider.Output>
@@ -102,7 +100,7 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 							mix={[syncOutput(scale, unit)]}
 						/>
 					</Slider.Track>
-					<div mix={[flex(), justify("between"), fontSize("0.75rem"), fg(neutral[500])]}>
+					<div mix={[flex(), justify("between"), fontSize("0.75rem"), fg("neutral.muted")]}>
 						<span>{low}</span>
 						<span>{high}</span>
 					</div>

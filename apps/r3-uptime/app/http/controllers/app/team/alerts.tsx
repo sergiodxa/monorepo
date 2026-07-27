@@ -10,7 +10,6 @@ import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hstack } from "@pkg/u/layout";
-import { dark } from "@pkg/u/responsive";
 import { hover } from "@pkg/u/state";
 import { fontSize, textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -25,7 +24,6 @@ import requireUser from "~/app/http/middleware/require-user";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts — the team's alerts list. */
@@ -73,7 +71,7 @@ export default createAction(routes.app.team.alerts.index, {
 				>
 					<div>
 						{atLimit && (
-							<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 								{ctx.i18next.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
 							</p>
 						)}
@@ -145,10 +143,9 @@ export default createAction(routes.app.team.alerts.index, {
 															alertId: alert.id,
 														})}
 														mix={[
-															fg(primary[600]),
+															fg("primary"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
-															dark(fg(primary[400])),
 														]}
 													>
 														{ctx.i18next.t("page.alerts.table.actions.edit")}

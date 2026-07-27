@@ -29,6 +29,7 @@ import {
 import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
+import { color } from "@pkg/u/tokens";
 import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
@@ -41,31 +42,6 @@ import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import { fontMono } from "~/resources/theme";
 import routes from "~/routes/web";
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-};
-
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = {
-	50: "oklch(0.98 0.02 142)",
-	200: "oklch(0.92 0.08 142)",
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-	700: "oklch(0.5 0.14 142)",
-	800: "oklch(0.42 0.12 142)",
-	950: "oklch(0.24 0.06 142)",
-};
 
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
@@ -263,13 +239,17 @@ export default createAction(routes.home, async (ctx) => {
 					mix={[
 						p("64px", "0"),
 						textAlign("center"),
-						bg({ image: linearGradient("to bottom", primary[50], "#ffffff") }),
+						bg({ image: linearGradient("to bottom", color("primary.tint"), "#ffffff") }),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
 						media(
 							"(prefers-color-scheme: dark)",
 							bg({
-								image: linearGradient("to bottom", "oklch(0.24 0.06 142 / 0.2)", neutral[950]),
+								image: linearGradient(
+									"to bottom",
+									"oklch(0.24 0.06 142 / 0.2)",
+									color("neutral.tint"),
+								),
 							}),
 						),
 					]}
@@ -291,14 +271,14 @@ export default createAction(routes.home, async (ctx) => {
 								rounded("999px"),
 								fontSize("0.75rem"),
 								weight(600),
-								border({ color: primary[200], width: 1 }),
-								bg(primary[50]),
-								fg(primary[600]),
+								border({ color: "primary", width: 1 }),
+								bg("primary.tint"),
+								fg("primary"),
 								mbe("16px"),
 								media("(prefers-color-scheme: dark)", [
-									border(primary[800]),
-									bg(primary[950]),
-									fg(primary[400]),
+									border("primary"),
+									bg("primary.tint"),
+									fg("primary"),
 								]),
 							]}
 						>
@@ -312,10 +292,10 @@ export default createAction(routes.home, async (ctx) => {
 								tracking("tight"),
 								m("0", "auto", "16px", "auto"),
 								maxIs("760px"),
-								fg(neutral[900]),
+								fg("neutral.emphasis"),
 								media("(min-width: 640px)", fontSize("3rem")),
 								media("(min-width: 1024px)", fontSize("3.75rem")),
-								media("(prefers-color-scheme: dark)", fg(neutral[50])),
+								media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
 							]}
 						>
 							<Trans
@@ -324,10 +304,7 @@ export default createAction(routes.home, async (ctx) => {
 								components={{
 									strong: (
 										<span
-											mix={[
-												fg(primary[600]),
-												media("(prefers-color-scheme: dark)", fg(primary[400])),
-											]}
+											mix={[fg("primary"), media("(prefers-color-scheme: dark)", fg("primary"))]}
 										/>
 									),
 								}}
@@ -336,11 +313,11 @@ export default createAction(routes.home, async (ctx) => {
 						<p
 							mix={[
 								fontSize("1.125rem"),
-								fg(neutral[600]),
+								fg("neutral"),
 								m("0", "auto", "24px", "auto"),
 								maxIs("576px"),
 								leading(1.625),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
+								media("(prefers-color-scheme: dark)", fg("neutral")),
 							]}
 						>
 							{ctx.i18next.t("landing.hero.description")}
@@ -366,9 +343,9 @@ export default createAction(routes.home, async (ctx) => {
 									justify("center"),
 									p("12px", "24px"),
 									rounded("8px"),
-									border({ color: neutral[300], width: 1 }),
+									border({ color: "neutral", width: 1 }),
 									raw({ backgroundColor: "#ffffff" }),
-									fg(neutral[700]),
+									fg("neutral"),
 									raw({ fontFamily: "inherit" }),
 									fontSize("1rem"),
 									weight(600),
@@ -376,17 +353,17 @@ export default createAction(routes.home, async (ctx) => {
 									textDecoration("none"),
 									raw({ boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }),
 									hover([
-										bg(neutral[50]),
+										bg("neutral.tint"),
 										raw({
 											boxShadow:
 												"0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
 										}),
 									]),
 									media("(prefers-color-scheme: dark)", [
-										border(neutral[700]),
-										bg(neutral[900]),
-										fg(neutral[300]),
-										hover(bg(neutral[800])),
+										border("neutral"),
+										bg("neutral.tint"),
+										fg("neutral"),
+										hover(bg("neutral.bg-tint-hover")),
 									]),
 								]}
 							>
@@ -403,8 +380,8 @@ export default createAction(routes.home, async (ctx) => {
 									items("center"),
 									gap("6px"),
 									fontSize("0.875rem"),
-									fg(neutral[500]),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
+									fg("neutral.muted"),
+									media("(prefers-color-scheme: dark)", fg("neutral.muted")),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -416,8 +393,8 @@ export default createAction(routes.home, async (ctx) => {
 									items("center"),
 									gap("6px"),
 									fontSize("0.875rem"),
-									fg(neutral[500]),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
+									fg("neutral.muted"),
+									media("(prefers-color-scheme: dark)", fg("neutral.muted")),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -429,8 +406,8 @@ export default createAction(routes.home, async (ctx) => {
 									items("center"),
 									gap("6px"),
 									fontSize("0.875rem"),
-									fg(neutral[500]),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
+									fg("neutral.muted"),
+									media("(prefers-color-scheme: dark)", fg("neutral.muted")),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -443,7 +420,7 @@ export default createAction(routes.home, async (ctx) => {
 				<section
 					mix={[
 						p("64px", "0"),
-						bg(neutral[50]),
+						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
 						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
@@ -475,8 +452,8 @@ export default createAction(routes.home, async (ctx) => {
 											weight(700),
 											raw({ lineHeight: "2.25rem" }),
 											raw({ fontFamily: fontMono }),
-											fg(neutral[900]),
-											media("(prefers-color-scheme: dark)", fg(neutral[50])),
+											fg("neutral.emphasis"),
+											media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
 										]}
 									>
 										{stat.value}
@@ -484,8 +461,8 @@ export default createAction(routes.home, async (ctx) => {
 									<div
 										mix={[
 											fontSize("0.875rem"),
-											fg(neutral[600]),
-											media("(prefers-color-scheme: dark)", fg(neutral[400])),
+											fg("neutral"),
+											media("(prefers-color-scheme: dark)", fg("neutral")),
 										]}
 									>
 										{stat.label}
@@ -543,7 +520,7 @@ export default createAction(routes.home, async (ctx) => {
 				<section
 					mix={[
 						p("64px", "0"),
-						bg(neutral[50]),
+						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
 						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
@@ -629,11 +606,11 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								p("20px"),
 								rounded("12px"),
-								border({ color: neutral[200], width: 1 }),
+								border({ color: "neutral", width: 1 }),
 								raw({ backgroundColor: "#ffffff" }),
 								mbs("24px"),
 								textAlign("center"),
-								media("(prefers-color-scheme: dark)", [border(neutral[800]), bg(neutral[900])]),
+								media("(prefers-color-scheme: dark)", [border("neutral"), bg("neutral.tint")]),
 							]}
 						>
 							<p
@@ -642,8 +619,8 @@ export default createAction(routes.home, async (ctx) => {
 									weight(600),
 									raw({ lineHeight: "1.75rem" }),
 									m("0", "0", "6px", "0"),
-									fg(neutral[900]),
-									media("(prefers-color-scheme: dark)", fg(neutral[50])),
+									fg("neutral.emphasis"),
+									media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
 								]}
 							>
 								{ctx.i18next.t("landing.useCases.tailoredFor")}
@@ -657,13 +634,10 @@ export default createAction(routes.home, async (ctx) => {
 										href={routes.marketing.audience.href({ slug: audience.slug })}
 										mix={[
 											fontSize("0.875rem"),
-											fg(neutral[600]),
+											fg("neutral"),
 											textDecoration("none"),
-											hover(fg(primary[600])),
-											media("(prefers-color-scheme: dark)", [
-												fg(neutral[400]),
-												hover(fg(primary[400])),
-											]),
+											hover(fg("primary")),
+											media("(prefers-color-scheme: dark)", [fg("neutral"), hover(fg("primary"))]),
 										]}
 									>
 										{audience.label}
@@ -678,7 +652,7 @@ export default createAction(routes.home, async (ctx) => {
 					id="pricing"
 					mix={[
 						p("64px", "0"),
-						bg(neutral[50]),
+						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
 						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),

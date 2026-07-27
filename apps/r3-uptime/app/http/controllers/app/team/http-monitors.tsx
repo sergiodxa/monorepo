@@ -34,7 +34,6 @@ import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
-import { media } from "@pkg/u/responsive";
 import { hover } from "@pkg/u/state";
 import { textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -55,7 +54,6 @@ import Button from "~/resources/components/button";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 interface MonitorRow {
@@ -181,10 +179,9 @@ export default createAction(routes.app.team.monitors.index, {
 															})}
 															mix={[
 																weight(600),
-																fg(primary[600]),
+																fg("primary"),
 																textDecoration("none"),
 																hover(textDecoration("underline")),
-																media("(prefers-color-scheme: dark)", fg(primary[400])),
 															]}
 														>
 															{monitor.name}
@@ -207,26 +204,14 @@ export default createAction(routes.app.team.monitors.index, {
 														{responseTimeMs !== null ? (
 															<span>{responseTimeMs}ms</span>
 														) : (
-															<span
-																mix={[
-																	fg(neutral[500]),
-																	media("(prefers-color-scheme: dark)", fg(neutral[400])),
-																]}
-															>
-																-
-															</span>
+															<span mix={[fg("neutral.muted")]}>-</span>
 														)}
 													</Table.Cell>
 													<Table.Cell>
 														{lastCheckedAt !== null ? (
 															new Date(lastCheckedAt).toLocaleString()
 														) : (
-															<span
-																mix={[
-																	fg(neutral[500]),
-																	media("(prefers-color-scheme: dark)", fg(neutral[400])),
-																]}
-															>
+															<span mix={[fg("neutral.muted")]}>
 																{ctx.i18next.t("page.httpMonitors.table.neverChecked")}
 															</span>
 														)}

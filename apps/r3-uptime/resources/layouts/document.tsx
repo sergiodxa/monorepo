@@ -15,11 +15,10 @@ import resetStyles from "@pkg/r3-ui/reset.css?url";
 import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { bg, fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
-import { media } from "@pkg/u/responsive";
 import { m } from "@pkg/u/size";
 
 import colorStyles from "~/resources/css/colors.css?url";
-import { fontMono, neutral } from "~/resources/theme";
+import { fontMono } from "~/resources/theme";
 
 /**
  * Raw `@font-face` rule for Mona Sans, the display font the marketing chrome opts
@@ -74,13 +73,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<style>{fontFaceCss}</style>
 				</head>
 				<body
-					mix={[
-						m(0),
-						bg(neutral[50]),
-						fg(neutral[950]),
-						raw({ fontFamily: fontMono }),
-						media("(prefers-color-scheme: dark)", [bg(neutral[950]), fg(neutral[50])]),
-					]}
+					mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), raw({ fontFamily: fontMono })]}
 				>
 					{children}
 					{/* `async`, not the implicit defer of a plain module script — a deferred

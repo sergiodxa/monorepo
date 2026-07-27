@@ -13,7 +13,6 @@ import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { m, minBs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { fontSize, textAlign, textDecoration } from "@pkg/u/typography";
@@ -26,7 +25,6 @@ import Invite from "~/app/data/invite";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /invite/:inviteId — accepts a team invite for the signed-in account. */
@@ -52,29 +50,15 @@ export default createAction(routes.invite, {
 								textAlign("center"),
 								gap("12px"),
 								p("64px", "32px"),
-								border({ color: neutral[300], width: 1, style: "dashed" }),
+								border({ color: "neutral", width: 1, style: "dashed" }),
 								rounded("12px"),
-								media("(prefers-color-scheme: dark)", border(neutral[700])),
 							]}
 						>
 							<h1 mix={[m("0")]}>{ctx.i18next.t("page.acceptInvite.errors.pageTitle")}</h1>
-							<p
-								mix={[
-									fontSize("0.8125rem"),
-									fg(neutral[500]),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
-								]}
-							>
-								{message}
-							</p>
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{message}</p>
 							<a
 								href={routes.home.href()}
-								mix={[
-									fg(primary[600]),
-									textDecoration("none"),
-									hover(textDecoration("underline")),
-									media("(prefers-color-scheme: dark)", fg(primary[400])),
-								]}
+								mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
 							>
 								{ctx.i18next.t("errors.backHome")}
 							</a>

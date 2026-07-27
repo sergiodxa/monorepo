@@ -30,8 +30,6 @@ import { height, is, m, p, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, textDecoration } from "@pkg/u/typography";
 
-import { danger, neutral } from "~/resources/theme";
-
 namespace RowMenu {
 	export interface Props {
 		/** Unique DOM id for this row's `Menu` panel; also the trigger's `commandfor` target. */
@@ -55,15 +53,14 @@ const trigger = [
 	bg("transparent"),
 	fg("inherit"),
 	cursor("pointer"),
-	when("&:hover", bg(neutral[100])),
-	media("(prefers-color-scheme: dark)", when("&:hover", bg(neutral[800]))),
+	when("&:hover", bg("neutral.bg-tint-hover")),
 ];
 
 /** Fixed panel width, right-aligned to the trigger via `placement="bottom-end"` so it never overflows the table. */
 const panel = [
 	is("200px"),
 	raw({ background: "#ffffff" }),
-	media("(prefers-color-scheme: dark)", bg(neutral[950])),
+	media("(prefers-color-scheme: dark)", bg("neutral.bg-tint")),
 ];
 
 /** Shared row styling for a menu entry; call sites compose their own `<button>`/`<a>` with it. */
@@ -76,7 +73,7 @@ export const menuItem = [
 	border("none"),
 	rounded("md"),
 	bg("transparent"),
-	fg(neutral[900]),
+	fg("neutral.emphasis"),
 	raw({ fontFamily: "inherit" }),
 	fontSize("sm"),
 	// `@pkg/u`'s `textAlign()` only exposes the logical start/end/center/justify
@@ -84,20 +81,18 @@ export const menuItem = [
 	raw({ textAlign: "left" }),
 	textDecoration("none"),
 	cursor("pointer"),
-	when("&:hover", bg(neutral[100])),
+	when("&:hover", bg("neutral.bg-tint-hover")),
 	when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-	media("(prefers-color-scheme: dark)", [fg(neutral[50]), when("&:hover", bg(neutral[800]))]),
 ];
 
 /** Applied on top of {@link menuItem} for destructive entries. */
-export const menuItemDanger = fg(danger[600]);
+export const menuItemDanger = fg("danger");
 
 /** Thin rule separating groups of items inside the panel. */
 export const menuSeparator = [
 	m("6px", 0),
 	border("none"),
-	borderEdge("top", { width: 1, color: neutral[200] }),
-	media("(prefers-color-scheme: dark)", border(neutral[800])),
+	borderEdge("top", { width: 1, color: "neutral" }),
 ];
 
 /** Renders a kebab-icon trigger and its `Menu`-based panel wrapping arbitrary `children`. */

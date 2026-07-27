@@ -17,7 +17,6 @@ import { renderToRemix } from "@pkg/markdown-remix";
 import { isFailure } from "@pkg/result";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { m, mbe } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import * as s from "remix/data-schema";
@@ -27,7 +26,6 @@ import { getViewer } from "~/app/http/middleware/auth";
 import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET /docs/*slug — an individual documentation page. */
@@ -114,25 +112,11 @@ export default createAction(routes.docs.show, async (ctx) => {
 				<article>
 					<header mix={[vstack({ gap: "2px" }), mbe("2rem")]}>
 						<h1 mix={[m("0")]}>{frontmatter.title}</h1>
-						<p
-							mix={[
-								fontSize("1.0625rem"),
-								fg("oklch(0.52 0.01 145)"),
-								m("6px", "0", "0", "0"),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
-							]}
-						>
+						<p mix={[fontSize("1.0625rem"), fg("neutral"), m("6px", "0", "0", "0")]}>
 							{frontmatter.description}
 						</p>
 						{frontmatter.lastUpdated && (
-							<p
-								mix={[
-									fontSize("0.8125rem"),
-									fg(neutral[500]),
-									m("0"),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
-								]}
-							>
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted"), m("0")]}>
 								{ctx.i18next.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}
 							</p>
 						)}

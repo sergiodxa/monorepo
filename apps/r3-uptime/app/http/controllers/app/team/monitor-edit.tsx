@@ -23,7 +23,6 @@ import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { mbe, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { fontSize, textDecoration } from "@pkg/u/typography";
@@ -44,7 +43,6 @@ import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary } from "~/resources/theme";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
@@ -74,13 +72,7 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 		return (
 			<div>
 				<h2>{i18next.t("contentMonitoring.title")}</h2>
-				<p
-					mix={[
-						fontSize("0.8125rem"),
-						fg(neutral[500]),
-						media("(prefers-color-scheme: dark)", fg(neutral[400])),
-					]}
-				>
+				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 					{i18next.t("contentMonitoring.description")}
 				</p>
 
@@ -184,12 +176,11 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 							mix={[
 								p("8px", "12px"),
 								rounded("6px"),
-								border({ color: neutral[200], width: 1 }),
+								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
 								raw({ fontFamily: "inherit" }),
-								bg(neutral[50]),
+								bg("neutral.tint"),
 								fg("inherit"),
-								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -251,12 +242,11 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							mix={[
 								p("8px", "12px"),
 								rounded("6px"),
-								border({ color: neutral[200], width: 1 }),
+								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
 								raw({ fontFamily: "inherit" }),
-								bg(neutral[50]),
+								bg("neutral.tint"),
 								fg("inherit"),
-								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -269,12 +259,11 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							mix={[
 								p("8px", "12px"),
 								rounded("6px"),
-								border({ color: neutral[200], width: 1 }),
+								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
 								raw({ fontFamily: "inherit" }),
-								bg(neutral[50]),
+								bg("neutral.tint"),
 								fg("inherit"),
-								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -289,12 +278,11 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							mix={[
 								p("8px", "12px"),
 								rounded("6px"),
-								border({ color: neutral[200], width: 1 }),
+								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
 								raw({ fontFamily: "inherit" }),
-								bg(neutral[50]),
+								bg("neutral.tint"),
 								fg("inherit"),
-								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -361,12 +349,7 @@ export default createAction(routes.app.team.monitors.edit, {
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							mix={[
-								fg(primary[600]),
-								textDecoration("none"),
-								hover(textDecoration("underline")),
-								media("(prefers-color-scheme: dark)", fg(primary[400])),
-							]}
+							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editMonitor.form.cancel")}
 						</a>

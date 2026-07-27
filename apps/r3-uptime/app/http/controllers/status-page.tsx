@@ -54,52 +54,13 @@ import {
 } from "~/app/services/status-page";
 import Badge from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral, primary, status } from "~/resources/theme";
 import routes from "~/routes/web";
 
-const success = {
-	50: "oklch(0.98 0.02 155)",
-	200: "oklch(0.92 0.09 155)",
-	800: "oklch(0.44 0.11 155)",
-} as const;
-
-const warning = {
-	50: "oklch(0.98 0.02 85)",
-	200: "oklch(0.92 0.12 85)",
-	800: "oklch(0.42 0.12 85)",
-} as const;
-
-const danger = {
-	50: "oklch(0.98 0.02 25)",
-	200: "oklch(0.92 0.1 25)",
-	800: "oklch(0.4 0.14 25)",
-} as const;
-
 const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof combine>> = {
-	operational: combine([
-		bg(success[50]),
-		border(success[200]),
-		fg(success[800]),
-		dark([bg("oklch(0.26 0.06 155 / 0.3)"), border(success[800]), fg(success[200])]),
-	]),
-	degraded: combine([
-		bg(warning[50]),
-		border(warning[200]),
-		fg(warning[800]),
-		dark([bg("oklch(0.24 0.06 85 / 0.3)"), border(warning[800]), fg(warning[200])]),
-	]),
-	down: combine([
-		bg(danger[50]),
-		border(danger[200]),
-		fg(danger[800]),
-		dark([bg("oklch(0.22 0.06 25 / 0.3)"), border(danger[800]), fg(danger[200])]),
-	]),
-	unknown: combine([
-		bg(success[50]),
-		border(success[200]),
-		fg(success[800]),
-		dark([bg("oklch(0.26 0.06 155 / 0.3)"), border(success[800]), fg(success[200])]),
-	]),
+	operational: combine([bg("success.tint"), border("success.border"), fg("success.emphasis")]),
+	degraded: combine([bg("warning.tint"), border("warning.border"), fg("warning.emphasis")]),
+	down: combine([bg("danger.tint"), border("danger.border"), fg("danger.emphasis")]),
+	unknown: combine([bg("success.tint"), border("success.border"), fg("success.emphasis")]),
 };
 
 /**
@@ -132,11 +93,11 @@ const STATUS_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
 };
 
 /** Colors a status icon to match its {@link BadgeTone}; combine with the icon's `mix` prop. */
-const ICON_COLOR_MIX: Record<BadgeTone, ReturnType<typeof combine>> = {
-	up: combine([fg(status.up.light), dark(fg(status.up.dark))]),
-	degraded: combine([fg(status.degraded.light), dark(fg(status.degraded.dark))]),
-	down: combine([fg(status.down.light), dark(fg(status.down.dark))]),
-	neutral: combine([fg(status.neutral.light), dark(fg(status.neutral.dark))]),
+const ICON_COLOR_MIX: Record<BadgeTone, ReturnType<typeof fg>> = {
+	up: fg("success"),
+	degraded: fg("warning"),
+	down: fg("danger"),
+	neutral: fg("neutral"),
 };
 
 namespace CardStatusIcon {
@@ -436,9 +397,7 @@ export default createAction(
 						)}
 						<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>{page.title}</h1>
 						{page.description && (
-							<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
-								{page.description}
-							</p>
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{page.description}</p>
 						)}
 					</div>
 
@@ -472,10 +431,10 @@ export default createAction(
 										vstack({ gap: "8px" }),
 										p("16px"),
 										rounded("8px"),
-										border({ color: neutral[200], width: 1 }),
+										border({ color: "neutral.border", width: 1 }),
 										raw({ background: "#ffffff" }),
 										mbe("12px"),
-										dark([border(neutral[800]), bg(neutral[900])]),
+										dark(bg("neutral.tint")),
 									]}
 								>
 									<div mix={[hstack({ align: "center", gap: "12px" })]}>
@@ -503,10 +462,10 @@ export default createAction(
 												vstack({ gap: "8px" }),
 												p("16px"),
 												rounded("8px"),
-												border({ color: neutral[200], width: 1 }),
+												border({ color: "neutral.border", width: 1 }),
 												raw({ background: "#ffffff" }),
 												mbe("12px"),
-												dark([border(neutral[800]), bg(neutral[900])]),
+												dark(bg("neutral.tint")),
 											]}
 										>
 											<div mix={[hstack({ align: "center", gap: "12px" })]}>
@@ -520,8 +479,7 @@ export default createAction(
 												mix={[
 													hstack({ align: "center", gap: "4px" }),
 													fontSize("0.8125rem"),
-													fg(neutral[500]),
-													dark(fg(neutral[400])),
+													fg("neutral.muted"),
 												]}
 											>
 												<ClockIcon size={12} />
@@ -530,7 +488,7 @@ export default createAction(
 													<code>{service.cronExpression}</code>
 												</span>
 											</p>
-											<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
+											<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 												{ctx.i18next.t("statusPage.cronJobs.lastPing")}:{" "}
 												{service.lastPingAt
 													? new Date(service.lastPingAt).toLocaleString()
@@ -543,17 +501,12 @@ export default createAction(
 						</>
 					)}
 
-					<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
+					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: new Date().toLocaleString() })}{" "}
 						·{" "}
 						<a
 							href={routes.home.href()}
-							mix={[
-								fg(primary[600]),
-								textDecoration("none"),
-								hover(textDecoration("underline")),
-								dark(fg(primary[400])),
-							]}
+							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("statusPage.footer.poweredBy")}
 						</a>

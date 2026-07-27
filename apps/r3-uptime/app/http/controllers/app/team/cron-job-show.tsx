@@ -14,7 +14,6 @@ import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { basis, flex, flexWrap, gap, grow, shrink } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { mbe, p } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -34,7 +33,6 @@ import LinkButton from "~/resources/components/link-button";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import { neutral } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
@@ -101,15 +99,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 				>
 					<div>
 						{monitor.description && (
-							<p
-								mix={[
-									fontSize("0.8125rem"),
-									fg(neutral[500]),
-									media("(prefers-color-scheme: dark)", fg(neutral[400])),
-								]}
-							>
-								{monitor.description}
-							</p>
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{monitor.description}</p>
 						)}
 
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
@@ -120,17 +110,10 @@ export default createAction(routes.app.team.cronJobs.show, {
 									basis("160px"),
 									p("16px"),
 									rounded("8px"),
-									border({ color: neutral[200], width: "1px" }),
-									media("(prefers-color-scheme: dark)", border(neutral[800])),
+									border({ color: "neutral.border", width: "1px" }),
 								]}
 							>
-								<div
-									mix={[
-										fontSize("0.8125rem"),
-										fg(neutral[500]),
-										media("(prefers-color-scheme: dark)", fg(neutral[400])),
-									]}
-								>
+								<div mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 									{ctx.i18next.t("page.cronJobDetail.info.schedule")}
 								</div>
 								<div mix={[fontSize("1.5rem"), weight(700), raw({ lineHeight: "2rem" })]}>
@@ -184,40 +167,16 @@ export default createAction(routes.app.team.cronJobs.show, {
 						</div>
 
 						<h2>{ctx.i18next.t("page.cronJobDetail.ping.title")}</h2>
-						<p
-							mix={[
-								fontSize("0.8125rem"),
-								fg(neutral[500]),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
-							]}
-						>
+						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 							{ctx.i18next.t("page.cronJobDetail.ping.description")}
 						</p>
-						<pre
-							mix={[
-								fontSize("0.8125rem"),
-								fg(neutral[500]),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
-							]}
-						>
+						<pre mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 							<code>POST {pingUrl}</code>
 						</pre>
-						<pre
-							mix={[
-								fontSize("0.8125rem"),
-								fg(neutral[500]),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
-							]}
-						>
+						<pre mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 							<code>curl -X POST {pingUrl}</code>
 						</pre>
-						<pre
-							mix={[
-								fontSize("0.8125rem"),
-								fg(neutral[500]),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
-							]}
-						>
+						<pre mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 							<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>
 						</pre>
 

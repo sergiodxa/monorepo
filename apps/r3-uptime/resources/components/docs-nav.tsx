@@ -28,8 +28,6 @@ import { when } from "@pkg/u/state";
 import { fontSize, textTransform, weight } from "@pkg/u/typography";
 import { clientEntry, on } from "remix/ui";
 
-import { neutral } from "~/resources/theme";
-
 /** One doc link, reduced to the fields the sidebar actually renders. */
 type DocsNavDoc = { path: string; title: string };
 
@@ -53,11 +51,10 @@ const sectionTitle = [
 	// with no raw-string escape, so this exact letter-spacing value can't route
 	// through it.
 	raw({ letterSpacing: "0.03em" }),
-	fg(neutral[500]),
+	fg("neutral.muted"),
 	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
 	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
 	raw({ margin: "20px 20px 8px" }),
-	media("(prefers-color-scheme: dark)", fg(neutral[400])),
 ];
 
 /**
@@ -128,14 +125,7 @@ export const DocsNav = clientEntry(
 											mix={[navLink]}
 										>
 											{doc.title}
-											<span
-												mix={[
-													block(),
-													fontSize("xs"),
-													fg(neutral[500]),
-													media("(prefers-color-scheme: dark)", fg(neutral[400])),
-												]}
-											>
+											<span mix={[block(), fontSize("xs"), fg("neutral.muted")]}>
 												{doc.section}
 											</span>
 										</NavLink>
