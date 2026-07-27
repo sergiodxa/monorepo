@@ -264,7 +264,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 									hidden(),
 									fontSize("sm"),
 									fg("neutral"),
-									hover(fg("primary")),
+									hover(fg("brand")),
 									media("(min-width: 768px)", inline()),
 								]}
 							>
@@ -318,7 +318,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 												fg("neutral"),
 												textDecoration("none"),
 												mbe("8px"),
-												hover(fg("primary")),
+												hover(fg("brand")),
 											]}
 										>
 											{link.label}
@@ -343,7 +343,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 														fg("neutral"),
 														textDecoration("none"),
 														mbe("8px"),
-														hover(fg("primary")),
+														hover(fg("brand")),
 													]}
 												>
 													{link.label}

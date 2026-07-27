@@ -56,7 +56,7 @@ export const Logo = clientEntry(
 
 			return (
 				<UILogo mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}>
-					<UILogo.Fallback mix={[bg("primary.tint"), fg("primary")]}>{initials}</UILogo.Fallback>
+					<UILogo.Fallback mix={[bg("brand.tint"), fg("brand")]}>{initials}</UILogo.Fallback>
 					{src && displayImage && (
 						<UILogo.Image
 							src={src}

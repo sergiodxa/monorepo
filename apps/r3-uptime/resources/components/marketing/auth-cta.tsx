@@ -64,7 +64,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			return (
 				<LinkButton
 					href={routes.app.index.href()}
-					color="primary"
+					color="brand"
 					variant="solid"
 					size={buttonSize}
 				>
@@ -76,7 +76,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		return (
 			<form method="post" action={routes.auth.action.href()}>
-				<Button type="submit" color="primary" variant="solid" size={buttonSize}>
+				<Button type="submit" color="brand" variant="solid" size={buttonSize}>
 					{startLabel}
 					{icon}
 				</Button>

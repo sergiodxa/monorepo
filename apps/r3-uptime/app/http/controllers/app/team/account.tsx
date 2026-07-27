@@ -103,7 +103,7 @@ export default createAction(routes.app.team.account, {
 											href={`mailto:${viewer.email}`}
 											mix={[
 												fontSize("0.8125rem"),
-												fg("primary"),
+												fg("brand"),
 												textDecoration("none"),
 												hover(textDecoration("underline")),
 											]}
@@ -314,7 +314,7 @@ export default createAction(routes.app.team.account, {
 																<a
 																	href={routes.app.team.dashboard.index.href({ team: team.slug })}
 																	mix={[
-																		fg("primary"),
+																		fg("brand"),
 																		textDecoration("none"),
 																		hover(textDecoration("underline")),
 																	]}

@@ -506,7 +506,7 @@ export default createAction(
 						·{" "}
 						<a
 							href={routes.home.href()}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("statusPage.footer.poweredBy")}
 						</a>

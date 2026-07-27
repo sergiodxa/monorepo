@@ -84,14 +84,14 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 							/>
 						</NumberField.Group>
 					</NumberField>
-					<Button type="submit" color="primary">
+					<Button type="submit" color="brand">
 						Open album
 					</Button>
 				</Form>
 				<div mix={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" })}>
 					<Button
 						type="button"
-						color="primary"
+						color="brand"
 						variant="outline"
 						mix={on<HTMLButtonElement, "click">("click", () => {
 							let album =
@@ -124,11 +124,11 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 				{handle.props.albums.map((album) => (
 					<li key={album.id}>
 						<a
-							data-color="primary"
+							data-color="brand"
 							mix={[
 								panelChrome(),
 								when("&:focus-visible", [
-									outline({ color: "primary.ring", offset: 2 }),
+									outline({ color: "brand.ring", offset: 2 }),
 									when('&[data-color="neutral"]', outline("neutral.ring")),
 									when('&[data-color="success"]', outline("success.ring")),
 									when('&[data-color="warning"]', outline("warning.ring")),
@@ -164,7 +164,7 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 								mix={css({
 									alignSelf: "start",
 									padding: 0,
-									color: "var(--ui-primary-fg-emphasis)",
+									color: "var(--ui-brand-fg-emphasis)",
 								})}
 							>
 								Album {album.id}

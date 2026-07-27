@@ -71,7 +71,7 @@ export function PhotoPreview(handle: Handle<PhotoPreviewProps>) {
 				</Card.Content>
 				<div mix={[flex(), flexCol(), overflow("auto")]}>
 					<Card.Header>
-						<Header mix={[p(0), fg("primary.emphasis")]}>Album {handle.props.photo.albumId}</Header>
+						<Header mix={[p(0), fg("brand.emphasis")]}>Album {handle.props.photo.albumId}</Header>
 						<Card.Title
 							mix={[
 								raw({
@@ -90,7 +90,7 @@ export function PhotoPreview(handle: Handle<PhotoPreviewProps>) {
 						{handle.props.actions ?? (
 							<LinkButton
 								href={routes.album.href({ id: String(handle.props.photo.albumId) })}
-								color="primary"
+								color="brand"
 								variant="outline"
 							>
 								Open album

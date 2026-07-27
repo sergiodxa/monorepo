@@ -55,7 +55,7 @@ export function AlbumSearch(handle: Handle<AlbumSearchProps>) {
 		<>
 			<Button
 				type="button"
-				color="primary"
+				color="brand"
 				variant="outline"
 				commandfor={DIALOG_ID}
 				command="show-modal"

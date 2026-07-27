@@ -92,7 +92,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 						<a
 							href={routes.app.team.statusPages.index.href({ team: ctx.team.slug })}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editMonitor.form.cancel")}
 						</a>

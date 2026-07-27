@@ -135,7 +135,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 				intro="Click a photo to show it over the album while the address bar uses the standalone photo URL."
 			>
 				<div mix={[hstack({ gap: "1rem", align: "center", justify: "between" }), mbe("1.5rem")]}>
-					<LinkButton href={routes.home.href()} color="primary" variant="outline" size="sm">
+					<LinkButton href={routes.home.href()} color="brand" variant="outline" size="sm">
 						Back to albums
 					</LinkButton>
 					<Text>

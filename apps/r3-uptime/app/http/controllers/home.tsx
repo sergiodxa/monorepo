@@ -239,7 +239,7 @@ export default createAction(routes.home, async (ctx) => {
 					mix={[
 						p("64px", "0"),
 						textAlign("center"),
-						bg({ image: linearGradient("to bottom", color("primary.tint"), "#ffffff") }),
+						bg({ image: linearGradient("to bottom", color("brand.tint"), "#ffffff") }),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
 						media(
@@ -271,14 +271,14 @@ export default createAction(routes.home, async (ctx) => {
 								rounded("999px"),
 								fontSize("0.75rem"),
 								weight(600),
-								border({ color: "primary", width: 1 }),
-								bg("primary.tint"),
-								fg("primary"),
+								border({ color: "brand", width: 1 }),
+								bg("brand.tint"),
+								fg("brand"),
 								mbe("16px"),
 								media("(prefers-color-scheme: dark)", [
-									border("primary"),
-									bg("primary.tint"),
-									fg("primary"),
+									border("brand"),
+									bg("brand.tint"),
+									fg("brand"),
 								]),
 							]}
 						>
@@ -304,7 +304,7 @@ export default createAction(routes.home, async (ctx) => {
 								components={{
 									strong: (
 										<span
-											mix={[fg("primary"), media("(prefers-color-scheme: dark)", fg("primary"))]}
+											mix={[fg("brand"), media("(prefers-color-scheme: dark)", fg("brand"))]}
 										/>
 									),
 								}}
@@ -636,8 +636,8 @@ export default createAction(routes.home, async (ctx) => {
 											fontSize("0.875rem"),
 											fg("neutral"),
 											textDecoration("none"),
-											hover(fg("primary")),
-											media("(prefers-color-scheme: dark)", [fg("neutral"), hover(fg("primary"))]),
+											hover(fg("brand")),
+											media("(prefers-color-scheme: dark)", [fg("neutral"), hover(fg("brand"))]),
 										]}
 									>
 										{audience.label}

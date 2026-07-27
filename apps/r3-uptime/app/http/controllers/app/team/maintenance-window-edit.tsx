@@ -82,7 +82,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 						<a
 							href={routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug })}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editMaintenance.form.cancel")}
 						</a>

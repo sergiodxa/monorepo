@@ -28,7 +28,7 @@ import { pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, textDecoration, weight } from "@pkg/u/typography";
 
-export type ButtonColor = "primary" | "neutral" | "danger";
+export type ButtonColor = "brand" | "neutral" | "danger";
 export type ButtonVariant = "solid" | "outline" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
@@ -62,7 +62,7 @@ export const buttonBase: MixInput = [
 	textDecoration("none"),
 	cursor("pointer"),
 	when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-	when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+	when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 ];
 
 export const buttonSizeMix: Record<ButtonSize, MixInput> = {
@@ -72,12 +72,12 @@ export const buttonSizeMix: Record<ButtonSize, MixInput> = {
 };
 
 const solid: Record<ButtonColor, MixInput> = {
-	primary: [
+	brand: [
 		border({ color: "transparent", width: 1 }),
-		bg("primary.solid"),
-		fg("primary.onSolid"),
-		when("&:hover", bg("primary.bg-solid-hover")),
-		when("&:active", bg("primary.bg-solid-pressed")),
+		bg("brand.solid"),
+		fg("brand.onSolid"),
+		when("&:hover", bg("brand.bg-solid-hover")),
+		when("&:active", bg("brand.bg-solid-pressed")),
 	],
 	neutral: [
 		border({ color: "transparent", width: 1 }),
@@ -96,12 +96,12 @@ const solid: Record<ButtonColor, MixInput> = {
 };
 
 const outlineVariant: Record<ButtonColor, MixInput> = {
-	primary: [
-		border({ color: "primary.strong", width: 2 }),
+	brand: [
+		border({ color: "brand.strong", width: 2 }),
 		bg("transparent"),
-		fg("primary"),
-		when("&:hover", bg("primary.tint")),
-		when("&:active", bg("primary.bg-tint-hover")),
+		fg("brand"),
+		when("&:hover", bg("brand.tint")),
+		when("&:active", bg("brand.bg-tint-hover")),
 	],
 	neutral: [
 		border({ color: "neutral.strong", width: 2 }),
@@ -120,12 +120,12 @@ const outlineVariant: Record<ButtonColor, MixInput> = {
 };
 
 const ghost: Record<ButtonColor, MixInput> = {
-	primary: [
+	brand: [
 		border({ color: "transparent", width: 1 }),
 		bg("transparent"),
-		fg("primary"),
-		when("&:hover", bg("primary.tint")),
-		when("&:active", bg("primary.bg-tint-hover")),
+		fg("brand"),
+		when("&:hover", bg("brand.tint")),
+		when("&:active", bg("brand.bg-tint-hover")),
 	],
 	neutral: [
 		border({ color: "transparent", width: 1 }),

@@ -179,7 +179,7 @@ export default createAction(routes.app.team.monitors.index, {
 															})}
 															mix={[
 																weight(600),
-																fg("primary"),
+																fg("brand"),
 																textDecoration("none"),
 																hover(textDecoration("underline")),
 															]}

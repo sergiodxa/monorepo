@@ -349,7 +349,7 @@ export default createAction(routes.app.team.monitors.edit, {
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editMonitor.form.cancel")}
 						</a>

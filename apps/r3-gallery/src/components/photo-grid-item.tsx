@@ -79,7 +79,7 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 						href={photoHref}
 						aria-label={title}
 						mix={[
-							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 							css({ display: "block", WebkitTapHighlightColor: "transparent" }),
 							on<HTMLAnchorElement, "click">("click", openPhoto),
 						]}
@@ -96,7 +96,7 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 				</Card.Content>
 				<Card.Header>
 					<Badge
-						color={liked ? "primary" : "neutral"}
+						color={liked ? "brand" : "neutral"}
 						variant={liked ? "secondary" : "outline"}
 						mix={css({ alignSelf: "flex-start" })}
 					>
@@ -137,7 +137,7 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 						<Button
 							type="submit"
 							size="sm"
-							color={liked ? "primary" : "neutral"}
+							color={liked ? "brand" : "neutral"}
 							variant={liked ? "solid" : "outline"}
 							isPending={fetcher.state !== "idle"}
 						>

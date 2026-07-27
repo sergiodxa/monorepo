@@ -1,8 +1,8 @@
 /**
- * Design tokens for the gallery, defining the five `--color-*` scales
- * @pkg/r3-ui's theme layer derives its semantic `--ui-*` variables from, so
- * every catalog component picks up the app's warm amber palette
- * automatically.
+ * Design tokens for the gallery, defining the five `--ui-color-*` scales
+ * @pkg/u's theme layer (imported transitively through @pkg/r3-ui's) derives
+ * its semantic `--ui-*` variables from, so every catalog component picks up
+ * the app's warm amber palette automatically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,63 +12,63 @@
 @import "@pkg/r3-ui/theme.css";
 
 :root {
-	--color-primary-50: oklch(0.98 0.016 73.684);
-	--color-primary-100: oklch(0.954 0.038 75.164);
-	--color-primary-200: oklch(0.901 0.076 70.697);
-	--color-primary-300: oklch(0.837 0.128 66.29);
-	--color-primary-400: oklch(0.75 0.183 55.934);
-	--color-primary-500: oklch(0.705 0.213 47.604);
-	--color-primary-600: oklch(0.646 0.222 41.116);
-	--color-primary-700: oklch(0.553 0.195 38.402);
-	--color-primary-800: oklch(0.47 0.157 37.304);
-	--color-primary-900: oklch(0.408 0.123 38.172);
-	--color-primary-950: oklch(0.266 0.079 36.259);
+	--ui-color-brand-50: oklch(0.98 0.016 73.684);
+	--ui-color-brand-100: oklch(0.954 0.038 75.164);
+	--ui-color-brand-200: oklch(0.901 0.076 70.697);
+	--ui-color-brand-300: oklch(0.837 0.128 66.29);
+	--ui-color-brand-400: oklch(0.75 0.183 55.934);
+	--ui-color-brand-500: oklch(0.705 0.213 47.604);
+	--ui-color-brand-600: oklch(0.646 0.222 41.116);
+	--ui-color-brand-700: oklch(0.553 0.195 38.402);
+	--ui-color-brand-800: oklch(0.47 0.157 37.304);
+	--ui-color-brand-900: oklch(0.408 0.123 38.172);
+	--ui-color-brand-950: oklch(0.266 0.079 36.259);
 
-	--color-neutral-50: oklch(0.985 0.001 106.423);
-	--color-neutral-100: oklch(0.97 0.001 106.424);
-	--color-neutral-200: oklch(0.923 0.003 48.717);
-	--color-neutral-300: oklch(0.869 0.005 56.366);
-	--color-neutral-400: oklch(0.709 0.01 56.259);
-	--color-neutral-500: oklch(0.553 0.013 58.071);
-	--color-neutral-600: oklch(0.444 0.011 73.639);
-	--color-neutral-700: oklch(0.374 0.01 67.558);
-	--color-neutral-800: oklch(0.268 0.007 34.298);
-	--color-neutral-900: oklch(0.216 0.006 56.043);
-	--color-neutral-950: oklch(0.147 0.004 49.25);
+	--ui-color-neutral-50: oklch(0.985 0.001 106.423);
+	--ui-color-neutral-100: oklch(0.97 0.001 106.424);
+	--ui-color-neutral-200: oklch(0.923 0.003 48.717);
+	--ui-color-neutral-300: oklch(0.869 0.005 56.366);
+	--ui-color-neutral-400: oklch(0.709 0.01 56.259);
+	--ui-color-neutral-500: oklch(0.553 0.013 58.071);
+	--ui-color-neutral-600: oklch(0.444 0.011 73.639);
+	--ui-color-neutral-700: oklch(0.374 0.01 67.558);
+	--ui-color-neutral-800: oklch(0.268 0.007 34.298);
+	--ui-color-neutral-900: oklch(0.216 0.006 56.043);
+	--ui-color-neutral-950: oklch(0.147 0.004 49.25);
 
-	--color-danger-50: oklch(0.971 0.013 17.38);
-	--color-danger-100: oklch(0.936 0.032 17.717);
-	--color-danger-200: oklch(0.885 0.062 18.334);
-	--color-danger-300: oklch(0.808 0.114 19.571);
-	--color-danger-400: oklch(0.704 0.191 22.216);
-	--color-danger-500: oklch(0.637 0.237 25.331);
-	--color-danger-600: oklch(0.577 0.245 27.325);
-	--color-danger-700: oklch(0.505 0.213 27.518);
-	--color-danger-800: oklch(0.444 0.177 26.899);
-	--color-danger-900: oklch(0.396 0.141 25.723);
-	--color-danger-950: oklch(0.258 0.092 26.042);
+	--ui-color-danger-50: oklch(0.971 0.013 17.38);
+	--ui-color-danger-100: oklch(0.936 0.032 17.717);
+	--ui-color-danger-200: oklch(0.885 0.062 18.334);
+	--ui-color-danger-300: oklch(0.808 0.114 19.571);
+	--ui-color-danger-400: oklch(0.704 0.191 22.216);
+	--ui-color-danger-500: oklch(0.637 0.237 25.331);
+	--ui-color-danger-600: oklch(0.577 0.245 27.325);
+	--ui-color-danger-700: oklch(0.505 0.213 27.518);
+	--ui-color-danger-800: oklch(0.444 0.177 26.899);
+	--ui-color-danger-900: oklch(0.396 0.141 25.723);
+	--ui-color-danger-950: oklch(0.258 0.092 26.042);
 
-	--color-warning-50: oklch(0.987 0.022 95.277);
-	--color-warning-100: oklch(0.962 0.059 95.617);
-	--color-warning-200: oklch(0.924 0.12 95.746);
-	--color-warning-300: oklch(0.879 0.169 91.605);
-	--color-warning-400: oklch(0.828 0.189 84.429);
-	--color-warning-500: oklch(0.769 0.188 70.08);
-	--color-warning-600: oklch(0.666 0.179 58.318);
-	--color-warning-700: oklch(0.555 0.163 48.998);
-	--color-warning-800: oklch(0.473 0.137 46.201);
-	--color-warning-900: oklch(0.414 0.112 45.904);
-	--color-warning-950: oklch(0.279 0.077 45.635);
+	--ui-color-warning-50: oklch(0.987 0.022 95.277);
+	--ui-color-warning-100: oklch(0.962 0.059 95.617);
+	--ui-color-warning-200: oklch(0.924 0.12 95.746);
+	--ui-color-warning-300: oklch(0.879 0.169 91.605);
+	--ui-color-warning-400: oklch(0.828 0.189 84.429);
+	--ui-color-warning-500: oklch(0.769 0.188 70.08);
+	--ui-color-warning-600: oklch(0.666 0.179 58.318);
+	--ui-color-warning-700: oklch(0.555 0.163 48.998);
+	--ui-color-warning-800: oklch(0.473 0.137 46.201);
+	--ui-color-warning-900: oklch(0.414 0.112 45.904);
+	--ui-color-warning-950: oklch(0.279 0.077 45.635);
 
-	--color-success-50: oklch(0.979 0.021 166.113);
-	--color-success-100: oklch(0.95 0.052 163.051);
-	--color-success-200: oklch(0.905 0.093 164.15);
-	--color-success-300: oklch(0.845 0.143 164.978);
-	--color-success-400: oklch(0.765 0.177 163.223);
-	--color-success-500: oklch(0.696 0.17 162.48);
-	--color-success-600: oklch(0.596 0.145 163.225);
-	--color-success-700: oklch(0.508 0.118 165.612);
-	--color-success-800: oklch(0.432 0.095 166.913);
-	--color-success-900: oklch(0.378 0.077 168.94);
-	--color-success-950: oklch(0.262 0.051 172.552);
+	--ui-color-success-50: oklch(0.979 0.021 166.113);
+	--ui-color-success-100: oklch(0.95 0.052 163.051);
+	--ui-color-success-200: oklch(0.905 0.093 164.15);
+	--ui-color-success-300: oklch(0.845 0.143 164.978);
+	--ui-color-success-400: oklch(0.765 0.177 163.223);
+	--ui-color-success-500: oklch(0.696 0.17 162.48);
+	--ui-color-success-600: oklch(0.596 0.145 163.225);
+	--ui-color-success-700: oklch(0.508 0.118 165.612);
+	--ui-color-success-800: oklch(0.432 0.095 166.913);
+	--ui-color-success-900: oklch(0.378 0.077 168.94);
+	--ui-color-success-950: oklch(0.262 0.051 172.552);
 }

@@ -86,7 +86,7 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 						mix={[flex(), justify("between"), items("baseline"), fontSize("0.875rem"), weight(600)]}
 					>
 						<Label htmlFor={name}>{label}</Label>
-						<Slider.Output htmlFor={name} mix={[fg("primary"), tabularNums()]}>
+						<Slider.Output htmlFor={name} mix={[fg("brand"), tabularNums()]}>
 							{Math.round(defaultValue / scale)}
 							{unit}
 						</Slider.Output>

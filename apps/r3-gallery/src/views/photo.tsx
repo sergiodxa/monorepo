@@ -55,7 +55,7 @@ export function PhotoPage(handle: Handle<PhotoPageProps>) {
 				actions={
 					<Button
 						type="button"
-						color="primary"
+						color="brand"
 						variant="outline"
 						mix={on<HTMLButtonElement, "click">("click", () => {
 							void handle.frame.reload();

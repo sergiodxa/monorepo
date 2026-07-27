@@ -109,7 +109,7 @@ export default createAction(routes.app.team.cronJobs.index, {
 															monitorId: monitor.id,
 														})}
 														mix={[
-															fg("primary"),
+															fg("brand"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}

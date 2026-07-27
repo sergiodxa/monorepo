@@ -113,7 +113,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 															monitorId: monitor.id,
 														})}
 														mix={[
-															fg("primary"),
+															fg("brand"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}

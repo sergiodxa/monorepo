@@ -116,7 +116,7 @@ export default createAction(routes.app.team.statusPages.index, {
 														target="_blank"
 														rel="noreferrer"
 														mix={[
-															fg("primary"),
+															fg("brand"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}
@@ -139,7 +139,7 @@ export default createAction(routes.app.team.statusPages.index, {
 															statusPageId: page.id,
 														})}
 														mix={[
-															fg("primary"),
+															fg("brand"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}

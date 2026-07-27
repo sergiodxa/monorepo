@@ -272,7 +272,7 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg("primary"),
+											fg("brand"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
 										]}
@@ -281,7 +281,7 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 									</a>
 								</Table.Cell>
 								<Table.Cell>
-									<div mix={fg("primary")}>
+									<div mix={fg("brand")}>
 										<Sparkline points={sparklinePoints} />
 									</div>
 								</Table.Cell>
@@ -353,7 +353,7 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg("primary"),
+											fg("brand"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
 										]}
@@ -435,7 +435,7 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg("primary"),
+											fg("brand"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
 										]}
@@ -519,7 +519,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 											monitorId: monitor.id,
 										})}
 										mix={[
-											fg("primary"),
+											fg("brand"),
 											textDecoration("none"),
 											hover(textDecoration("underline")),
 										]}

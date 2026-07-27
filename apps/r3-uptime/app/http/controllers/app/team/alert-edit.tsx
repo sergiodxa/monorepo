@@ -78,7 +78,7 @@ export default createAction(routes.app.team.alerts.edit, {
 
 						<a
 							href={routes.app.team.alerts.index.href({ team: ctx.team.slug })}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editAlert.form.cancel")}
 						</a>

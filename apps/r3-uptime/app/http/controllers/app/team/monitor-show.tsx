@@ -208,7 +208,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 					</div>
 					<div mix={[flex(), items("center"), justify("between")]}>
 						<p mix={[m("0"), fg("neutral.muted")]}>{i18next.t("page.monitor.ssl.notConfigured")}</p>
-						<LinkButton href={editHref} color="primary" size="sm">
+						<LinkButton href={editHref} color="brand" size="sm">
 							<LockIcon size={16} strokeWidth={1.5} />
 							{i18next.t("page.monitor.ssl.configure")}
 						</LinkButton>

@@ -143,7 +143,7 @@ export default createAction(routes.app.team.alerts.index, {
 															alertId: alert.id,
 														})}
 														mix={[
-															fg("primary"),
+															fg("brand"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}

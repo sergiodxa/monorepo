@@ -45,9 +45,9 @@ export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 						rounded("999px"),
 						fontSize("xs"),
 						weight(600),
-						border({ color: "primary", width: 1 }),
-						bg("primary.tint"),
-						fg("primary"),
+						border({ color: "brand", width: 1 }),
+						bg("brand.tint"),
+						fg("brand"),
 						mbe(4),
 					]}
 				>

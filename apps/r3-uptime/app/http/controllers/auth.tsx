@@ -80,7 +80,7 @@ function authError(ctx: AuthErrorContext, message: string) {
 					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{message}</p>
 					<a
 						href={routes.home.href()}
-						mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 					>
 						{ctx.i18next.t("errors.backHome")}
 					</a>

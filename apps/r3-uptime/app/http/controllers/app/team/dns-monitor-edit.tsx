@@ -82,7 +82,7 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							mix={[fg("primary"), textDecoration("none"), hover(textDecoration("underline"))]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{ctx.i18next.t("page.editDnsMonitor.form.cancel")}
 						</a>

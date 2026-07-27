@@ -158,7 +158,7 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																			windowId: window.id,
 																		})}
 																		mix={[
-																			fg("primary"),
+																			fg("brand"),
 																			textDecoration("none"),
 																			hover(textDecoration("underline")),
 																		]}

@@ -67,7 +67,7 @@ export default function Sparkline(handle: Handle<Sparkline.Props>) {
 				width={WIDTH}
 				height={HEIGHT}
 				role="img"
-				mix={fg("primary")}
+				mix={fg("brand")}
 			>
 				<title>Response time over the last {points.length} checks</title>
 				<polyline
