@@ -25,11 +25,18 @@ import {
 	ShieldXIcon,
 } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
+import { border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { flex, flexWrap, gap, grid, items, justify } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, mbe, mbs, p } from "@pkg/u/size";
+import { fontSize, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css, Fragment, Frame } from "remix/ui";
+import { Fragment, Frame } from "remix/ui";
 
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { SelectMonitor } from "~/database/schema";
@@ -115,7 +122,7 @@ export default createAction(routes.app.team.monitors.show, {
 					}
 				>
 					<div>
-						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<Frame
 								name="monitor-card-usage"
 								src={routes.app.team.monitors.cards.usage.href({
@@ -144,7 +151,7 @@ export default createAction(routes.app.team.monitors.show, {
 
 						<SslCard team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
 
-						<div mix={[css({ marginTop: 24 })]}>
+						<div mix={[mbs("24px")]}>
 							<Frame
 								name="monitor-card-heatmap"
 								src={routes.app.team.monitors.cards.heatmap.href({
@@ -193,51 +200,31 @@ function SslCard(handle: Handle<SslCard.Props>) {
 			return (
 				<div
 					mix={[
-						css({
-							padding: 24,
-							borderRadius: 8,
-							border: `1px solid ${neutral[200]}`,
-							"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-						}),
+						p("24px"),
+						rounded("8px"),
+						border({ color: neutral[200], width: "1px" }),
+						media("(prefers-color-scheme: dark)", border(neutral[800])),
 					]}
 				>
-					<div
-						mix={[
-							css({
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-								marginBottom: 16,
-							}),
-						]}
-					>
-						<div mix={[css({ display: "flex", alignItems: "center", gap: 8 })]}>
+					<div mix={[flex(), items("center"), justify("between"), mbe("16px")]}>
+						<div mix={[flex(), items("center"), gap("8px")]}>
 							<LockIcon
 								size={20}
 								strokeWidth={1.5}
-								mix={[
-									css({
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
-								]}
+								mix={[fg(neutral[500]), media("(prefers-color-scheme: dark)", fg(neutral[400]))]}
 							/>
-							<h3 mix={[css({ margin: 0, fontSize: "1.125rem", fontWeight: 700 })]}>
+							<h3 mix={[m("0"), fontSize("1.125rem"), weight(700)]}>
 								{i18next.t("page.monitor.ssl.title")}
 							</h3>
 						</div>
 						<Badge tone="neutral">{i18next.t("page.monitor.ssl.status.unknown")}</Badge>
 					</div>
-					<div
-						mix={[css({ display: "flex", alignItems: "center", justifyContent: "space-between" })]}
-					>
+					<div mix={[flex(), items("center"), justify("between")]}>
 						<p
 							mix={[
-								css({
-									margin: 0,
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								m("0"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{i18next.t("page.monitor.ssl.notConfigured")}
@@ -260,36 +247,20 @@ function SslCard(handle: Handle<SslCard.Props>) {
 		return (
 			<div
 				mix={[
-					css({
-						padding: 24,
-						borderRadius: 8,
-						border: `1px solid ${neutral[200]}`,
-						"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-					}),
+					p("24px"),
+					rounded("8px"),
+					border({ color: neutral[200], width: "1px" }),
+					media("(prefers-color-scheme: dark)", border(neutral[800])),
 				]}
 			>
-				<div
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							marginBottom: 16,
-						}),
-					]}
-				>
-					<div mix={[css({ display: "flex", alignItems: "center", gap: 8 })]}>
+				<div mix={[flex(), items("center"), justify("between"), mbe("16px")]}>
+					<div mix={[flex(), items("center"), gap("8px")]}>
 						<Icon
 							size={20}
 							strokeWidth={1.5}
-							mix={[
-								css({
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
-							]}
+							mix={[fg(neutral[500]), media("(prefers-color-scheme: dark)", fg(neutral[400]))]}
 						/>
-						<h3 mix={[css({ margin: 0, fontSize: "1.125rem", fontWeight: 700 })]}>
+						<h3 mix={[m("0"), fontSize("1.125rem"), weight(700)]}>
 							{i18next.t("page.monitor.ssl.title")}
 						</h3>
 					</div>
@@ -299,27 +270,24 @@ function SslCard(handle: Handle<SslCard.Props>) {
 				</div>
 				<div
 					mix={[
-						css({
-							display: "grid",
-							gap: 16,
-							gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-							alignItems: "end",
-						}),
+						grid(),
+						gap("16px"),
+						items("end"),
+						raw({ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }),
 					]}
 				>
 					<div>
 						<p
 							mix={[
-								css({ fontSize: "0.8125rem", marginBottom: 4 }),
-								css({
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								mbe("4px"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{i18next.t("page.monitor.ssl.expiresAt")}
 						</p>
-						<p mix={[css({ fontSize: "1.125rem", fontWeight: 600 })]}>
+						<p mix={[fontSize("1.125rem"), weight(600)]}>
 							{monitor.ssl_expires_at === null
 								? "—"
 								: new Date(monitor.ssl_expires_at).toLocaleDateString()}
@@ -327,11 +295,9 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						{daysUntilExpiry !== null && (
 							<p
 								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
+									fontSize("0.8125rem"),
+									fg(neutral[500]),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								{i18next.t("page.monitor.ssl.expiresIn", { days: daysUntilExpiry })}
@@ -341,38 +307,34 @@ function SslCard(handle: Handle<SslCard.Props>) {
 					<div>
 						<p
 							mix={[
-								css({ fontSize: "0.8125rem", marginBottom: 4 }),
-								css({
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								mbe("4px"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{i18next.t("page.monitor.ssl.issuer")}
 						</p>
-						<p mix={[css({ fontSize: "1.125rem", fontWeight: 600 })]}>
-							{monitor.ssl_issuer ?? "—"}
-						</p>
+						<p mix={[fontSize("1.125rem"), weight(600)]}>{monitor.ssl_issuer ?? "—"}</p>
 					</div>
 					<div>
 						<p
 							mix={[
-								css({ fontSize: "0.8125rem", marginBottom: 4 }),
-								css({
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								mbe("4px"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{i18next.t("page.monitor.ssl.lastChecked")}
 						</p>
-						<p mix={[css({ fontSize: "1.125rem", fontWeight: 600 })]}>
+						<p mix={[fontSize("1.125rem"), weight(600)]}>
 							{monitor.ssl_last_checked_at === null
 								? "—"
 								: new Date(monitor.ssl_last_checked_at).toLocaleString()}
 						</p>
 					</div>
-					<div mix={[css({ display: "flex", justifyContent: "flex-end" })]}>
+					<div mix={[flex(), justify("end")]}>
 						<LinkButton href={editHref} color="neutral" size="sm">
 							<PencilIcon size={16} strokeWidth={1.5} />
 							{i18next.t("page.monitor.ssl.configure")}

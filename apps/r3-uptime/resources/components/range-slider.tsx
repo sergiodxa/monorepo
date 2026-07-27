@@ -22,7 +22,11 @@
 import type { Handle } from "remix/ui";
 
 import { Description, Label, Slider } from "@pkg/r3-ui";
-import { css, on } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
+import { mbe } from "@pkg/u/size";
+import { fontSize, tabularNums, weight } from "@pkg/u/typography";
+import { on } from "remix/ui";
 
 import { neutral, primary } from "~/resources/theme";
 
@@ -78,26 +82,13 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 		let descriptionId = helperText ? `${name}-description` : undefined;
 
 		return (
-			<div
-				mix={[css({ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: 28 })]}
-			>
+			<div mix={[flex(), flexCol(), gap("0.5rem"), mbe("28px")]}>
 				<Slider min={min} max={max} defaultValue={defaultValue}>
 					<div
-						mix={[
-							css({
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "baseline",
-								fontSize: "0.875rem",
-								fontWeight: 600,
-							}),
-						]}
+						mix={[flex(), justify("between"), items("baseline"), fontSize("0.875rem"), weight(600)]}
 					>
 						<Label htmlFor={name}>{label}</Label>
-						<Slider.Output
-							htmlFor={name}
-							mix={[css({ color: primary[600], fontVariantNumeric: "tabular-nums" })]}
-						>
+						<Slider.Output htmlFor={name} mix={[fg(primary[600]), tabularNums()]}>
 							{Math.round(defaultValue / scale)}
 							{unit}
 						</Slider.Output>
@@ -111,16 +102,7 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 							mix={[syncOutput(scale, unit)]}
 						/>
 					</Slider.Track>
-					<div
-						mix={[
-							css({
-								display: "flex",
-								justifyContent: "space-between",
-								fontSize: "0.75rem",
-								color: neutral[500],
-							}),
-						]}
-					>
+					<div mix={[flex(), justify("between"), fontSize("0.75rem"), fg(neutral[500])]}>
 						<span>{low}</span>
 						<span>{high}</span>
 					</div>

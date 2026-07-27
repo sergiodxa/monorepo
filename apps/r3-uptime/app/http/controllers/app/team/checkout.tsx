@@ -14,9 +14,14 @@
 import { redirect } from "@pkg/http/response";
 import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
+import { border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { pb, pi } from "@pkg/u/size";
+import { fontSize, textAlign } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import Customer from "~/app/data/customer";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -47,30 +52,20 @@ export default createAction(routes.app.team.checkout, {
 					>
 						<div
 							mix={[
-								css({
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									textAlign: "center",
-									gap: 12,
-									padding: "64px 32px",
-									border: "1px dashed oklch(0.83 0.01 145)",
-									borderRadius: 12,
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: "oklch(0.42 0.008 145)",
-									},
-								}),
+								vstack({ gap: "12px", align: "center" }),
+								textAlign("center"),
+								pb("64px"),
+								pi("32px"),
+								border({ width: 1, style: "dashed", color: "oklch(0.83 0.01 145)" }),
+								rounded("12px"),
+								media("(prefers-color-scheme: dark)", border("oklch(0.42 0.008 145)")),
 							]}
 						>
 							<p
 								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: "oklch(0.62 0.01 145)",
-										"@media (prefers-color-scheme: dark)": {
-											color: "oklch(0.73 0.01 145)",
-										},
-									}),
+									fontSize("0.8125rem"),
+									fg("oklch(0.62 0.01 145)"),
+									media("(prefers-color-scheme: dark)", fg("oklch(0.73 0.01 145)")),
 								]}
 							>
 								{ctx.i18next.t("page.billing.ownerOnly")}

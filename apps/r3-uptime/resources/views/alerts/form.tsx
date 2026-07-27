@@ -17,7 +17,9 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { Input, Select, TextField } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { mbe } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
@@ -63,7 +65,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					name="name"
 					required
 					defaultValue={alert?.name}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<Field label={t("scope.label")}>
@@ -86,14 +88,14 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					</Select>
 				</Field>
 
-				<fieldset mix={[css({ marginBottom: 28 })]}>
+				<fieldset mix={[mbe("28px")]}>
 					<legend>{t("legends.email")}</legend>
 					<TextField
 						label={t("config.email.to.label")}
 						type="email"
 						name="email_to"
 						defaultValue={config?.strategy === "email" ? config.config.to : ""}
-						mix={[css({ marginBottom: 28 })]}
+						mix={[mbe("28px")]}
 					/>
 					<TextField
 						label={t("config.email.subjectPrefix.label")}
@@ -102,41 +104,34 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					/>
 				</fieldset>
 
-				<fieldset mix={[css({ marginBottom: 28 })]}>
+				<fieldset mix={[mbe("28px")]}>
 					<legend>{t("legends.webhook")}</legend>
 					<TextField
 						label={t("config.webhook.url.label")}
 						type="url"
 						name="webhook_url"
 						defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
-						mix={[css({ marginBottom: 28 })]}
+						mix={[mbe("28px")]}
 					/>
 					<TextField
 						label={t("config.webhook.secret.label")}
 						name="webhook_secret"
 						defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
-						mix={[css({ marginBottom: 28 })]}
+						mix={[mbe("28px")]}
 					/>
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: "var(--ui-neutral-fg-muted)",
-							}),
-						]}
-					>
+					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 						{renderInlineCode(t("config.webhook.signatureNote"))}
 					</p>
 				</fieldset>
 
-				<fieldset mix={[css({ marginBottom: 28 })]}>
+				<fieldset mix={[mbe("28px")]}>
 					<legend>{t("legends.slack")}</legend>
 					<TextField
 						label={t("config.slack.webhookUrl.label")}
 						type="url"
 						name="slack_webhook_url"
 						defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
-						mix={[css({ marginBottom: 28 })]}
+						mix={[mbe("28px")]}
 					/>
 					<TextField
 						label={t("config.slack.channel.label")}
@@ -146,7 +141,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					/>
 				</fieldset>
 
-				<fieldset mix={[css({ marginBottom: 28 })]}>
+				<fieldset mix={[mbe("28px")]}>
 					<legend>{t("legends.discord")}</legend>
 					<TextField
 						label={t("config.discord.webhookUrl.label")}

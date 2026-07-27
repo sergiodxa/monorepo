@@ -13,7 +13,7 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { Description, Label, NumberField, TextField } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
@@ -46,7 +46,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					label={t("name.label")}
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<TextField
@@ -57,10 +57,10 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					label={t("host.label")}
 					placeholder={t("host.placeholder")}
 					description={t("host.description")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
-				<NumberField mix={[css({ marginBottom: 28 })]}>
+				<NumberField mix={[mbe("28px")]}>
 					<Label htmlFor="tcp-monitor-port">{t("port.label")}</Label>
 					<NumberField.Group>
 						<NumberField.DecrementButton aria-label={t("port.decrement")} />
@@ -77,7 +77,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					<Description>{t("port.description")}</Description>
 				</NumberField>
 
-				<NumberField mix={[css({ marginBottom: 28 })]}>
+				<NumberField mix={[mbe("28px")]}>
 					<Label htmlFor="tcp-monitor-interval-seconds">{t("interval.label")}</Label>
 					<NumberField.Group>
 						<NumberField.DecrementButton aria-label={t("interval.decrement")} />
@@ -93,7 +93,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					<Description>{t("interval.description")}</Description>
 				</NumberField>
 
-				<NumberField mix={[css({ marginBottom: 28 })]}>
+				<NumberField mix={[mbe("28px")]}>
 					<Label htmlFor="tcp-monitor-timeout-ms">{t("timeout.label")}</Label>
 					<NumberField.Group>
 						<NumberField.DecrementButton aria-label={t("timeout.decrement")} />

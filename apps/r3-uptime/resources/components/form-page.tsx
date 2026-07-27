@@ -21,7 +21,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { css } from "remix/ui";
+import { is, maxIs, mi } from "@pkg/u/size";
 
 namespace FormPage {
 	export interface Props {
@@ -31,9 +31,5 @@ namespace FormPage {
 
 /** Wraps `children` in a 640px-wide column, centered within the page's content area. */
 export default function FormPage(handle: Handle<FormPage.Props>) {
-	return () => (
-		<div mix={css({ width: "100%", maxWidth: 640, marginInline: "auto" })}>
-			{handle.props.children}
-		</div>
-	);
+	return () => <div mix={[is("full"), maxIs("640px"), mi("auto")]}>{handle.props.children}</div>;
 }

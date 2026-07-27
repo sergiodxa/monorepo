@@ -35,7 +35,7 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { Select, TextField } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 import type { SelectMonitor } from "~/database/schema";
 
@@ -115,7 +115,7 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					required
 					defaultValue={monitor?.name}
 					placeholder={t("name.placeholder")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<TextField
@@ -126,7 +126,7 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					required
 					defaultValue={monitor?.url}
 					placeholder={t("url.placeholder")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<RangeSlider

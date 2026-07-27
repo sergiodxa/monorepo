@@ -28,7 +28,7 @@
 import type { Handle } from "remix/ui";
 
 import { Text } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
 
 import type { SparklinePoint } from "~/app/services/analytics";
 
@@ -67,7 +67,7 @@ export default function Sparkline(handle: Handle<Sparkline.Props>) {
 				width={WIDTH}
 				height={HEIGHT}
 				role="img"
-				mix={css({ color: "var(--ui-primary-fg)" })}
+				mix={fg("primary")}
 			>
 				<title>Response time over the last {points.length} checks</title>
 				<polyline

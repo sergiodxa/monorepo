@@ -16,7 +16,8 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Text } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { block } from "@pkg/u/layout";
+import { mbs } from "@pkg/u/size";
 
 namespace Subtitle {
 	export interface Props {
@@ -26,9 +27,5 @@ namespace Subtitle {
 
 /** Renders {@link Subtitle.Props.children} as a stat card's muted description line. */
 export default function Subtitle(handle: Handle<Subtitle.Props>) {
-	return () => (
-		<Text mix={css({ display: "block", marginBlockStart: "0.25rem" })}>
-			{handle.props.children}
-		</Text>
-	);
+	return () => <Text mix={[block(), mbs("0.25rem")]}>{handle.props.children}</Text>;
 }

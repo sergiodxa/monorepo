@@ -13,7 +13,11 @@
 import type { Handle } from "remix/ui";
 
 import { Empty } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { flex, flexCol } from "@pkg/u/layout";
+import { m, maxIs, minBs } from "@pkg/u/size";
+import { hover } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 
 import routes from "~/routes/web";
 
@@ -32,26 +36,17 @@ export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 		let { title, description, goBackHomeLabel } = handle.props;
 
 		return (
-			<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
-				<Empty
-					mix={[
-						css({
-							margin: "auto",
-							maxWidth: 480,
-						}),
-					]}
-				>
+			<main mix={[flex(), flexCol(), minBs("100vh")]}>
+				<Empty mix={[m("auto"), maxIs("480px")]}>
 					<Empty.Title>{title}</Empty.Title>
 					<Empty.Description>{description}</Empty.Description>
 					<Empty.Action>
 						<a
 							href={routes.home.href()}
 							mix={[
-								css({
-									color: "var(--ui-primary-fg)",
-									textDecoration: "none",
-									"&:hover": { textDecoration: "underline" },
-								}),
+								fg("var(--ui-primary-fg)"),
+								textDecoration("none"),
+								hover(textDecoration("underline")),
 							]}
 						>
 							{goBackHomeLabel}

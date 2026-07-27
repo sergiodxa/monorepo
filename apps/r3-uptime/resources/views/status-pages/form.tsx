@@ -17,7 +17,8 @@ import type { Handle } from "remix/ui";
 
 import { Checkbox, CheckboxGroup, Description, Label, TextArea, TextField } from "@pkg/r3-ui";
 import { fieldStackLayout } from "@pkg/r3-ui/styles";
-import { css } from "remix/ui";
+import { vstack } from "@pkg/u/layout";
+import { mbe } from "@pkg/u/size";
 
 import type {
 	SelectCronJobMonitor,
@@ -97,7 +98,7 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
 					defaultValue={page?.name}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<TextField
@@ -108,7 +109,7 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 					placeholder={t("slug.placeholder")}
 					description={t("slug.description")}
 					defaultValue={page?.slug}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<TextField
@@ -119,10 +120,10 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 					placeholder={t("title.placeholder")}
 					description={t("title.description")}
 					defaultValue={page?.title}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
-				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+				<div mix={[fieldStackLayout(), mbe("28px")]}>
 					<Label htmlFor={descriptionFieldId}>{t("description.label")}</Label>
 					<TextArea
 						id={descriptionFieldId}
@@ -140,17 +141,17 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 					placeholder={t("logoUrl.placeholder")}
 					description={t("logoUrl.description")}
 					defaultValue={page?.logo_url ?? ""}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
-				<div mix={[fieldStackLayout(), css({ marginBottom: 16 })]}>
+				<div mix={[fieldStackLayout(), mbe("16px")]}>
 					<Switch name="is_public" defaultChecked={page?.is_public ?? true}>
 						{t("isPublic.label")}
 					</Switch>
 					<Description>{t("isPublic.description")}</Description>
 				</div>
 
-				<div mix={[fieldStackLayout(), css({ marginBottom: 16 })]}>
+				<div mix={[fieldStackLayout(), mbe("16px")]}>
 					<Switch name="show_overall_status" defaultChecked={page?.show_overall_status ?? true}>
 						{t("showOverallStatus.label")}
 					</Switch>
@@ -158,7 +159,7 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 				</div>
 
 				{selectableMonitors.length > 0 && (
-					<div mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}>
+					<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
 						<CheckboxGroup aria-labelledby={monitorsLabelId}>
 							<Label id={monitorsLabelId}>{t("monitors.label")}</Label>
 							{selectableMonitors.map((monitor) => (
@@ -177,7 +178,7 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 				)}
 
 				{cronJobs.length > 0 && (
-					<div mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}>
+					<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
 						<CheckboxGroup aria-labelledby={cronJobsLabelId}>
 							<Label id={cronJobsLabelId}>{t("cronJobs.label")}</Label>
 							{cronJobs.map((cronJob) => (

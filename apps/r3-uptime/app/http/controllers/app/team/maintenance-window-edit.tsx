@@ -9,11 +9,14 @@
 import { notFound } from "@pkg/http/response/html";
 import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import Monitor from "~/app/data/monitor";
@@ -81,12 +84,12 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 
 						<a
 							href={routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug })}
-							mix={css({
-								color: primary[600],
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": { color: primary[400] },
-							})}
+							mix={[
+								fg(primary[600]),
+								textDecoration("none"),
+								hover(textDecoration("underline")),
+								media("(prefers-color-scheme: dark)", fg(primary[400])),
+							]}
 						>
 							{ctx.i18next.t("page.editMaintenance.form.cancel")}
 						</a>

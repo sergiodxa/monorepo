@@ -32,10 +32,14 @@ import { AlertDialog, Empty, Menu, Table } from "@pkg/r3-ui";
 import { menuKeys } from "@pkg/r3-ui/mixins";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { MonitorStatus } from "~/app/services/analytics";
 import type { SelectMonitor } from "~/database/schema";
@@ -154,21 +158,7 @@ export default createAction(routes.app.team.monitors.index, {
 												{ctx.i18next.t("page.httpMonitors.table.columns.lastChecked")}
 											</Table.Column>
 											<Table.Column align="end">
-												<span
-													mix={[
-														css({
-															position: "absolute",
-															width: 1,
-															height: 1,
-															padding: 0,
-															margin: -1,
-															overflow: "hidden",
-															clip: "rect(0, 0, 0, 0)",
-															whiteSpace: "nowrap",
-															border: 0,
-														}),
-													]}
-												>
+												<span mix={[visuallyHidden()]}>
 													{ctx.i18next.t("page.httpMonitors.table.columns.actions")}
 												</span>
 											</Table.Column>
@@ -190,13 +180,11 @@ export default createAction(routes.app.team.monitors.index, {
 																monitorId: monitor.id,
 															})}
 															mix={[
-																css({
-																	fontWeight: 600,
-																	color: primary[600],
-																	textDecoration: "none",
-																	"&:hover": { textDecoration: "underline" },
-																	"@media (prefers-color-scheme: dark)": { color: primary[400] },
-																}),
+																weight(600),
+																fg(primary[600]),
+																textDecoration("none"),
+																hover(textDecoration("underline")),
+																media("(prefers-color-scheme: dark)", fg(primary[400])),
 															]}
 														>
 															{monitor.name}
@@ -221,10 +209,8 @@ export default createAction(routes.app.team.monitors.index, {
 														) : (
 															<span
 																mix={[
-																	css({
-																		color: neutral[500],
-																		"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-																	}),
+																	fg(neutral[500]),
+																	media("(prefers-color-scheme: dark)", fg(neutral[400])),
 																]}
 															>
 																-
@@ -237,10 +223,8 @@ export default createAction(routes.app.team.monitors.index, {
 														) : (
 															<span
 																mix={[
-																	css({
-																		color: neutral[500],
-																		"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-																	}),
+																	fg(neutral[500]),
+																	media("(prefers-color-scheme: dark)", fg(neutral[400])),
 																]}
 															>
 																{ctx.i18next.t("page.httpMonitors.table.neverChecked")}

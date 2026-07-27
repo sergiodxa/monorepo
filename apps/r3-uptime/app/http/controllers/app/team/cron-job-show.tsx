@@ -10,11 +10,17 @@ import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { basis, flex, flexWrap, gap, grow, shrink } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { mbe, p } from "@pkg/u/size";
+import { fontSize, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
@@ -97,41 +103,37 @@ export default createAction(routes.app.team.cronJobs.show, {
 						{monitor.description && (
 							<p
 								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
+									fontSize("0.8125rem"),
+									fg(neutral[500]),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								{monitor.description}
 							</p>
 						)}
 
-						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<div
 								mix={[
-									css({
-										flex: "1 1 160px",
-										padding: 16,
-										borderRadius: 8,
-										border: `1px solid ${neutral[200]}`,
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-									}),
+									grow(1),
+									shrink(1),
+									basis("160px"),
+									p("16px"),
+									rounded("8px"),
+									border({ color: neutral[200], width: "1px" }),
+									media("(prefers-color-scheme: dark)", border(neutral[800])),
 								]}
 							>
 								<div
 									mix={[
-										css({
-											fontSize: "0.8125rem",
-											color: neutral[500],
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-										}),
+										fontSize("0.8125rem"),
+										fg(neutral[500]),
+										media("(prefers-color-scheme: dark)", fg(neutral[400])),
 									]}
 								>
 									{ctx.i18next.t("page.cronJobDetail.info.schedule")}
 								</div>
-								<div mix={[css({ fontSize: "1.5rem", fontWeight: 700, lineHeight: "2rem" })]}>
+								<div mix={[fontSize("1.5rem"), weight(700), raw({ lineHeight: "2rem" })]}>
 									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
 								</div>
 								<code>{monitor.cron_expression}</code>
@@ -154,7 +156,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 							/>
 						</div>
 
-						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
 								label={ctx.i18next.t("page.cronJobDetail.stats.lastPing.label")}
 								value={
@@ -184,44 +186,36 @@ export default createAction(routes.app.team.cronJobs.show, {
 						<h2>{ctx.i18next.t("page.cronJobDetail.ping.title")}</h2>
 						<p
 							mix={[
-								css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{ctx.i18next.t("page.cronJobDetail.ping.description")}
 						</p>
 						<pre
 							mix={[
-								css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							<code>POST {pingUrl}</code>
 						</pre>
 						<pre
 							mix={[
-								css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							<code>curl -X POST {pingUrl}</code>
 						</pre>
 						<pre
 							mix={[
-								css({
-									fontSize: "0.8125rem",
-									color: neutral[500],
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("0.8125rem"),
+								fg(neutral[500]),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>

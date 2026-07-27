@@ -13,7 +13,14 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Card, Header, LinkButton } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { block, container, flex, flexCol, grid } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { at } from "@pkg/u/responsive";
+import { aspect, fit, height, mbs, p, width } from "@pkg/u/size";
+import { leading, weight } from "@pkg/u/typography";
 
 import type { Photo } from "../data/types";
 
@@ -42,56 +49,44 @@ export interface PhotoPreviewProps {
  */
 export function PhotoPreview(handle: Handle<PhotoPreviewProps>) {
 	return () => (
-		<div
-			mix={css({
-				container: `${CONTAINER_NAME} / inline-size`,
-			})}
-		>
+		<div mix={container(CONTAINER_NAME)}>
 			<Card
-				mix={css({
-					display: "grid",
-					gridTemplateColumns: "1fr",
-					overflow: "hidden",
-					maxHeight: "min(85vh, 34rem)",
-					borderRadius: "1.25rem",
-
-					[`@container ${CONTAINER_NAME} (min-width: ${SPLIT_AT})`]: {
-						gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)",
-						aspectRatio: "16 / 10",
-					},
-				})}
+				mix={[
+					grid(),
+					raw({ gridTemplateColumns: "1fr", maxHeight: "min(85vh, 34rem)" }),
+					overflow(),
+					rounded("1.25rem"),
+					at(SPLIT_AT, CONTAINER_NAME, [
+						raw({ gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)" }),
+						aspect(16, 10),
+					]),
+				]}
 			>
-				<Card.Content mix={css({ padding: 0, overflow: "hidden" })}>
+				<Card.Content mix={[p(0), overflow()]}>
 					<img
-						mix={css({ display: "block", width: "100%", height: "100%", objectFit: "cover" })}
+						mix={[block(), width("full"), height("full"), fit("cover")]}
 						src={handle.props.photo.url}
 						alt={handle.props.photo.title}
 					/>
 				</Card.Content>
-				<div
-					mix={css({
-						display: "flex",
-						flexDirection: "column",
-						overflow: "auto",
-					})}
-				>
+				<div mix={[flex(), flexCol(), overflow("auto")]}>
 					<Card.Header>
-						<Header mix={css({ padding: 0, color: "var(--ui-primary-fg-emphasis)" })}>
-							Album {handle.props.photo.albumId}
-						</Header>
+						<Header mix={[p(0), fg("primary.emphasis")]}>Album {handle.props.photo.albumId}</Header>
 						<Card.Title
-							mix={css({
-								fontFamily: 'Georgia, "Times New Roman", serif',
-								fontSize: "clamp(1.5rem, 3vw, 2.25rem)",
-								fontWeight: 500,
-								letterSpacing: "-0.04em",
-								lineHeight: 1.05,
-							})}
+							mix={[
+								raw({
+									fontFamily: 'Georgia, "Times New Roman", serif',
+									fontSize: "clamp(1.5rem, 3vw, 2.25rem)",
+									letterSpacing: "-0.04em",
+								}),
+								weight(500),
+								leading(1.05),
+							]}
 						>
 							{titleCase(handle.props.photo.title)}
 						</Card.Title>
 					</Card.Header>
-					<Card.Footer mix={css({ marginBlockStart: "auto" })}>
+					<Card.Footer mix={mbs("auto")}>
 						{handle.props.actions ?? (
 							<LinkButton
 								href={routes.album.href({ id: String(handle.props.photo.albumId) })}

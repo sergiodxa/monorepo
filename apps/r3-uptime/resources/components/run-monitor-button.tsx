@@ -26,7 +26,9 @@ import type { Handle } from "remix/ui";
 import { intl } from "@pkg/i18n/ui";
 import { PlayIcon } from "@pkg/lucide-remix";
 import { Spinner } from "@pkg/r3-ui";
-import { clientEntry, css, on } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { m } from "@pkg/u/size";
+import { clientEntry, on } from "remix/ui";
 
 import { buttonBase, buttonSizeMix, buttonVariantMix } from "~/resources/components/button";
 
@@ -47,7 +49,7 @@ export const RunMonitorButton = clientEntry(
 					method="post"
 					action={handle.props.action}
 					mix={[
-						css({ margin: 0 }),
+						m(0),
 						on("submit", async (event) => {
 							event.preventDefault();
 							pending = true;
@@ -74,7 +76,7 @@ export const RunMonitorButton = clientEntry(
 							<Spinner
 								size="sm"
 								aria-label={t("page.monitor.header.action.running")}
-								mix={[css({ color: "inherit" })]}
+								mix={[fg("inherit")]}
 							/>
 						) : (
 							<PlayIcon size={16} strokeWidth={1.5} />

@@ -23,7 +23,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
+import { bg, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { flexWrap, hstack, vstack } from "@pkg/u/layout";
+import { overflowX } from "@pkg/u/overflow";
+import { bs, is, mbs, p, pbs } from "@pkg/u/size";
+import { fontSize, weight } from "@pkg/u/typography";
 
 import type { SelectMonitorDailyStats } from "~/database/schema";
 
@@ -74,61 +80,43 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 
 		return (
 			<div>
-				<div mix={css({ display: "flex", justifyContent: "space-between" })}>
-					<span
-						mix={css({
-							fontSize: "0.75rem",
-							color: "var(--ui-neutral-fg-muted)",
-						})}
-					>
+				<div mix={[hstack({ justify: "between" })]}>
+					<span mix={[fontSize("xs"), fg("neutral.muted")]}>
 						{start.toLocaleDateString(undefined, {
 							month: "short",
 							day: "numeric",
 							timeZone: "UTC",
 						})}
 					</span>
-					<span
-						mix={css({
-							fontSize: "0.75rem",
-							color: "var(--ui-neutral-fg-muted)",
-						})}
-					>
+					<span mix={[fontSize("xs"), fg("neutral.muted")]}>
 						{end.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}
 					</span>
 				</div>
 
-				<div mix={css({ display: "flex", gap: 8, overflowX: "auto", padding: "4px 0" })}>
-					<div
-						mix={css({
-							display: "flex",
-							flexDirection: "column",
-							justifyContent: "space-between",
-							gap: 4,
-							paddingTop: 0,
-						})}
-					>
+				<div mix={[hstack({ gap: "8px" }), overflowX("auto"), p("4px", "0")]}>
+					<div mix={[vstack({ justify: "between", gap: "4px" }), pbs(0)]}>
 						{["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => (
 							<span
 								key={index}
-								mix={css({
-									height: 16,
-									fontSize: "0.6875rem",
-									fontWeight: 600,
-									lineHeight: "16px",
-									color: "var(--ui-neutral-fg-muted)",
-								})}
+								mix={[
+									bs("16px"),
+									fontSize("0.6875rem"),
+									weight(600),
+									raw({ lineHeight: "16px" }),
+									fg("neutral.muted"),
+								]}
 							>
 								{label}
 							</span>
 						))}
 					</div>
 
-					<div mix={css({ display: "flex", gap: 4 })}>
+					<div mix={[hstack({ gap: "4px" })]}>
 						{weeks.map((week, weekIndex) => (
-							<div key={weekIndex} mix={css({ display: "flex", flexDirection: "column", gap: 4 })}>
+							<div key={weekIndex} mix={[vstack({ gap: "4px" })]}>
 								{week.map((date, dayIndex) => {
 									if (date === null) {
-										return <div key={dayIndex} mix={css({ width: 16, height: 16 })} />;
+										return <div key={dayIndex} mix={[is("16px"), bs("16px")]} />;
 									}
 									let day = byDate.get(date);
 									let successRate =
@@ -143,12 +131,7 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 													? `${date}: ${successRate}% success (${day.successful_checks}/${day.total_checks})`
 													: date
 											}
-											mix={css({
-												width: 16,
-												height: 16,
-												borderRadius: 2,
-												background: getCellColor(successRate),
-											})}
+											mix={[is("16px"), bs("16px"), rounded("2px"), bg(getCellColor(successRate))]}
 										/>
 									);
 								})}
@@ -158,14 +141,11 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 				</div>
 
 				<div
-					mix={css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "flex-end",
-						flexWrap: "wrap",
-						gap: 12,
-						marginTop: 4,
-					})}
+					mix={[
+						hstack({ align: "center", justify: "end", gap: "12px" }),
+						flexWrap("wrap"),
+						mbs("4px"),
+					]}
 				>
 					{[
 						{ label: "Success", rates: [70, 90, 100] },
@@ -173,26 +153,14 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 						{ label: "Failure", rates: [10, 30] },
 						{ label: "No data", rates: [null] },
 					].map(({ label, rates }) => (
-						<div key={label} mix={css({ display: "flex", alignItems: "center", gap: 4 })}>
+						<div key={label} mix={[hstack({ align: "center", gap: "4px" })]}>
 							{rates.map((rate, index) => (
 								<div
 									key={index}
-									mix={css({
-										width: 16,
-										height: 16,
-										borderRadius: 2,
-										background: getCellColor(rate),
-									})}
+									mix={[is("16px"), bs("16px"), rounded("2px"), bg(getCellColor(rate))]}
 								/>
 							))}
-							<span
-								mix={css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-								})}
-							>
-								{label}
-							</span>
+							<span mix={[fontSize("xs"), fg("neutral.muted")]}>{label}</span>
 						</div>
 					))}
 				</div>

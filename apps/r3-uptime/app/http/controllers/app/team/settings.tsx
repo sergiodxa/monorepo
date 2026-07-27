@@ -29,10 +29,29 @@ import {
 } from "@pkg/lucide-remix";
 import { AlertDialog, Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { pointerEvents, pseudoContent, raw } from "@pkg/u/general";
+import {
+	absolute,
+	basis,
+	grow,
+	hstack,
+	insBottom,
+	insRight,
+	insTop,
+	shrink,
+	vstack,
+} from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { is, maxIs, mi, minIs, p, m, width } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { fontSize, nowrap, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
@@ -99,19 +118,16 @@ function renderInlineCode(text: string): RemixNode {
 
 /** Shared visual style for every text/url input across this page's forms. */
 function textInput() {
-	return css({
-		padding: "8px 12px",
-		borderRadius: 6,
-		border: `1px solid ${neutral[200]}`,
-		fontSize: "0.875rem",
-		fontFamily: "inherit",
-		background: neutral[50],
-		color: "inherit",
-		"@media (prefers-color-scheme: dark)": {
-			borderColor: neutral[700],
-			background: neutral[900],
-		},
-	});
+	return [
+		p(2, 3),
+		rounded("md"),
+		border({ color: neutral[200], width: 1 }),
+		fontSize("sm"),
+		raw({ fontFamily: "inherit" }),
+		bg(neutral[50]),
+		fg("inherit"),
+		media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
+	];
 }
 
 /** GET /app/:team/settings — team settings: general, members, domains, billing, danger zone. */
@@ -147,33 +163,22 @@ export default createAction(routes.app.team.settings, {
 					isAdmin={ctx.membership.role === "admin"}
 					heading={ctx.i18next.t("page.settings.header.title")}
 				>
-					<div mix={[css({ display: "flex", flexDirection: "column", gap: 48 })]}>
+					<div mix={[vstack({ gap: 12 })]}>
 						{/* General */}
 						<section
 							id="general"
-							mix={[
-								css({
-									width: "100%",
-									maxWidth: 640,
-									marginInline: "auto",
-									display: "flex",
-									flexDirection: "column",
-									gap: 24,
-								}),
-							]}
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
 						>
-							<div mix={[css({ display: "flex", flexDirection: "column", gap: 4 })]}>
-								<h2 mix={[css({ margin: 0, fontSize: "1.25rem", fontWeight: 600 })]}>
+							<div mix={[vstack({ gap: 1 })]}>
+								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
 									{ctx.i18next.t("page.settings.sections.general.title")}
 								</h2>
 								<p
 									mix={[
-										css({
-											margin: 0,
-											fontSize: "0.875rem",
-											color: neutral[500],
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-										}),
+										m(0),
+										fontSize("sm"),
+										fg(neutral[500]),
+										media("(prefers-color-scheme: dark)", fg(neutral[400])),
 									]}
 								>
 									{ctx.i18next.t("page.settings.sections.general.description")}
@@ -182,12 +187,10 @@ export default createAction(routes.app.team.settings, {
 
 							<div
 								mix={[
-									css({
-										borderRadius: 12,
-										border: `1px solid ${neutral[200]}`,
-										overflow: "hidden",
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-									}),
+									rounded("xl"),
+									border({ color: neutral[200], width: 1 }),
+									overflow(),
+									media("(prefers-color-scheme: dark)", border(neutral[800])),
 								]}
 							>
 								<form
@@ -196,24 +199,23 @@ export default createAction(routes.app.team.settings, {
 								>
 									<div
 										mix={[
-											css({
-												padding: "20px 24px",
-												borderBottom: `1px solid ${neutral[200]}`,
-												"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-											}),
+											p(5, 6),
+											borderEdge("block-end", { color: neutral[200], width: 1 }),
+											media(
+												"(prefers-color-scheme: dark)",
+												borderEdge("block-end", { color: neutral[800] }),
+											),
 										]}
 									>
-										<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 											{ctx.i18next.t("page.settings.form.card.title")}
 										</h3>
 										<p
 											mix={[
-												css({
-													margin: 0,
-													fontSize: "0.8125rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												}),
+												m(0),
+												fontSize("0.8125rem"),
+												fg(neutral[500]),
+												media("(prefers-color-scheme: dark)", fg(neutral[400])),
 											]}
 										>
 											{ctx.i18next.t("page.settings.form.card.description")}
@@ -222,30 +224,26 @@ export default createAction(routes.app.team.settings, {
 
 									<div
 										mix={[
-											css({
-												// `Field`'s own trailing margin already spaces its last
-												// instance from the footer below, so this region carries no
-												// bottom padding of its own — otherwise the two would stack
-												// into a gap far larger than every other card's footer rhythm.
-												padding: "24px 24px 0",
-												display: "flex",
-												flexDirection: "column",
-												gap: 8,
-											}),
+											// `Field`'s own trailing margin already spaces its last
+											// instance from the footer below, so this region carries no
+											// bottom padding of its own — otherwise the two would stack
+											// into a gap far larger than every other card's footer rhythm.
+											p(6, 6, 0, 6),
+											vstack({ gap: 2 }),
 										]}
 									>
 										<Field
 											label={ctx.i18next.t("page.settings.form.fields.logo.label")}
 											description={ctx.i18next.t("page.settings.form.fields.logo.description")}
 										>
-											<div mix={[css({ display: "flex", alignItems: "center", gap: 16 })]}>
+											<div mix={[hstack({ gap: 4, align: "center" })]}>
 												<Avatar src={team.logo || null} name={team.name} size={48} />
 												<input
 													type="url"
 													name="logo"
 													defaultValue={team.logo ?? ""}
 													placeholder={ctx.i18next.t("page.settings.form.fields.logo.placeholder")}
-													mix={[textInput(), css({ flex: 1 })]}
+													mix={[textInput(), grow(), shrink(1), basis("0%")]}
 												/>
 											</div>
 										</Field>
@@ -267,14 +265,13 @@ export default createAction(routes.app.team.settings, {
 
 									<div
 										mix={[
-											css({
-												padding: "16px 24px",
-												borderTop: `1px solid ${neutral[200]}`,
-												display: "flex",
-												justifyContent: "flex-end",
-												gap: 8,
-												"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-											}),
+											p(4, 6),
+											borderEdge("block-start", { color: neutral[200], width: 1 }),
+											hstack({ gap: 2, justify: "end" }),
+											media(
+												"(prefers-color-scheme: dark)",
+												borderEdge("block-start", { color: neutral[800] }),
+											),
 										]}
 									>
 										<Button type="reset" variant="outline">
@@ -291,39 +288,19 @@ export default createAction(routes.app.team.settings, {
 						{/* Members */}
 						<section
 							id="members"
-							mix={[
-								css({
-									width: "100%",
-									maxWidth: 640,
-									marginInline: "auto",
-									display: "flex",
-									flexDirection: "column",
-									gap: 24,
-								}),
-							]}
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
 						>
-							<div
-								mix={[
-									css({
-										display: "flex",
-										alignItems: "flex-start",
-										justifyContent: "space-between",
-										gap: 16,
-									}),
-								]}
-							>
-								<div mix={[css({ display: "flex", flexDirection: "column", gap: 4 })]}>
-									<h2 mix={[css({ margin: 0, fontSize: "1.25rem", fontWeight: 600 })]}>
+							<div mix={[hstack({ gap: 4, align: "start", justify: "between" })]}>
+								<div mix={[vstack({ gap: 1 })]}>
+									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.members.title")}
 									</h2>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.875rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("sm"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.members.description")}
@@ -334,7 +311,7 @@ export default createAction(routes.app.team.settings, {
 									variant="outline"
 									commandfor="invite-member"
 									command="show-modal"
-									mix={[css({ flexShrink: 0 })]}
+									mix={[shrink()]}
 								>
 									<UserPlusIcon size={16} strokeWidth={1.5} />
 									<span>{ctx.i18next.t("page.settings.members.actions.invite")}</span>
@@ -344,23 +321,21 @@ export default createAction(routes.app.team.settings, {
 							<dialog
 								id="invite-member"
 								mix={[
-									css({
-										width: "100%",
-										maxWidth: "min(440px, calc(100vw - 32px))",
-										padding: 24,
-										boxSizing: "border-box",
-										borderRadius: 8,
-										border: `1px solid ${neutral[300]}`,
-										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-										"@media (prefers-color-scheme: dark)": {
-											borderColor: neutral[700],
-											background: neutral[900],
-											color: neutral[50],
-										},
-									}),
+									is("full"),
+									maxIs("min(440px, calc(100vw - 32px))"),
+									p(6),
+									raw({ boxSizing: "border-box" }),
+									rounded("lg"),
+									border({ color: neutral[300], width: 1 }),
+									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
+									media("(prefers-color-scheme: dark)", [
+										border(neutral[700]),
+										bg(neutral[900]),
+										fg(neutral[50]),
+									]),
 								]}
 							>
-								<h3 mix={[css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 })]}>
+								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
 									{ctx.i18next.t("page.invite.header.title")}
 								</h3>
 								<form
@@ -376,7 +351,7 @@ export default createAction(routes.app.team.settings, {
 											mix={[textInput()]}
 										/>
 									</Field>
-									<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
+									<div mix={[hstack({ gap: 2, justify: "end" })]}>
 										<Button
 											type="button"
 											variant="outline"
@@ -392,34 +367,31 @@ export default createAction(routes.app.team.settings, {
 
 							<div
 								mix={[
-									css({
-										borderRadius: 12,
-										border: `1px solid ${neutral[200]}`,
-										overflow: "hidden",
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-									}),
+									rounded("xl"),
+									border({ color: neutral[200], width: 1 }),
+									overflow(),
+									media("(prefers-color-scheme: dark)", border(neutral[800])),
 								]}
 							>
 								<div
 									mix={[
-										css({
-											padding: "20px 24px",
-											borderBottom: `1px solid ${neutral[200]}`,
-											"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-										}),
+										p(5, 6),
+										borderEdge("block-end", { color: neutral[200], width: 1 }),
+										media(
+											"(prefers-color-scheme: dark)",
+											borderEdge("block-end", { color: neutral[800] }),
+										),
 									]}
 								>
-									<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.members.table.label")}
 									</h3>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.8125rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("0.8125rem"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.members.table.description")}
@@ -437,21 +409,7 @@ export default createAction(routes.app.team.settings, {
 													{ctx.i18next.t("page.settings.members.table.columns.role")}
 												</Table.Column>
 												<Table.Column align="center">
-													<span
-														mix={[
-															css({
-																position: "absolute",
-																width: 1,
-																height: 1,
-																padding: 0,
-																margin: -1,
-																overflow: "hidden",
-																clip: "rect(0, 0, 0, 0)",
-																whiteSpace: "nowrap",
-																border: 0,
-															}),
-														]}
-													>
+													<span mix={[visuallyHidden()]}>
 														{ctx.i18next.t("page.settings.members.table.columns.actions")}
 													</span>
 												</Table.Column>
@@ -469,29 +427,23 @@ export default createAction(routes.app.team.settings, {
 												return (
 													<Table.Row key={member.id}>
 														<Table.Cell>
-															<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+															<div mix={[hstack({ gap: 3, align: "center" })]}>
 																<Avatar
 																	src={subject?.avatar || null}
 																	name={displayName}
 																	size={40}
 																/>
-																<div
-																	mix={[css({ display: "flex", flexDirection: "column", gap: 2 })]}
-																>
-																	<span mix={[css({ fontWeight: 600 })]}>{displayName}</span>
+																<div mix={[vstack({ gap: 0.5 })]}>
+																	<span mix={[weight("semibold")]}>{displayName}</span>
 																	{subject && (
 																		<a
 																			href={`mailto:${subject.emailAddress}`}
 																			mix={[
-																				css({
-																					fontSize: "0.8125rem",
-																					color: neutral[500],
-																					textDecoration: "none",
-																					"&:hover": { textDecoration: "underline" },
-																					"@media (prefers-color-scheme: dark)": {
-																						color: neutral[400],
-																					},
-																				}),
+																				fontSize("0.8125rem"),
+																				fg(neutral[500]),
+																				textDecoration("none"),
+																				hover(textDecoration("underline")),
+																				media("(prefers-color-scheme: dark)", fg(neutral[400])),
 																			]}
 																		>
 																			{subject.emailAddress}
@@ -500,12 +452,12 @@ export default createAction(routes.app.team.settings, {
 																</div>
 															</div>
 														</Table.Cell>
-														<Table.Cell mix={[css({ textAlign: "right" })]}>
+														<Table.Cell mix={[textAlign("end")]}>
 															{ctx.i18next.t(
 																`page.settings.members.table.role.${memberIsOwner ? "owner" : member.role}`,
 															)}
 														</Table.Cell>
-														<Table.Cell mix={[css({ textAlign: "center" })]}>
+														<Table.Cell mix={[textAlign("center")]}>
 															{!memberIsOwner && (
 																<>
 																	<RowMenu
@@ -623,34 +575,31 @@ export default createAction(routes.app.team.settings, {
 
 							<div
 								mix={[
-									css({
-										borderRadius: 12,
-										border: `1px solid ${neutral[200]}`,
-										overflow: "hidden",
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-									}),
+									rounded("xl"),
+									border({ color: neutral[200], width: 1 }),
+									overflow(),
+									media("(prefers-color-scheme: dark)", border(neutral[800])),
 								]}
 							>
 								<div
 									mix={[
-										css({
-											padding: "20px 24px",
-											borderBottom: `1px solid ${neutral[200]}`,
-											"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-										}),
+										p(5, 6),
+										borderEdge("block-end", { color: neutral[200], width: 1 }),
+										media(
+											"(prefers-color-scheme: dark)",
+											borderEdge("block-end", { color: neutral[800] }),
+										),
 									]}
 								>
-									<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.members.invitedTable.label")}
 									</h3>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.8125rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("0.8125rem"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.members.invitedTable.description")}
@@ -658,7 +607,7 @@ export default createAction(routes.app.team.settings, {
 								</div>
 
 								{pendingInvites.length === 0 ? (
-									<div mix={[css({ padding: 24 })]}>
+									<div mix={[p(6)]}>
 										<Empty>
 											<Empty.Description>
 												{ctx.i18next.t("page.settings.members.invitedTable.empty.description")}
@@ -677,21 +626,7 @@ export default createAction(routes.app.team.settings, {
 														{ctx.i18next.t("page.settings.members.invitedTable.columns.expires")}
 													</Table.Column>
 													<Table.Column align="center">
-														<span
-															mix={[
-																css({
-																	position: "absolute",
-																	width: 1,
-																	height: 1,
-																	padding: 0,
-																	margin: -1,
-																	overflow: "hidden",
-																	clip: "rect(0, 0, 0, 0)",
-																	whiteSpace: "nowrap",
-																	border: 0,
-																}),
-															]}
-														>
+														<span mix={[visuallyHidden()]}>
 															{ctx.i18next.t("page.settings.members.invitedTable.columns.actions")}
 														</span>
 													</Table.Column>
@@ -709,9 +644,9 @@ export default createAction(routes.app.team.settings, {
 													return (
 														<Table.Row key={invite.id}>
 															<Table.Cell>{invite.email}</Table.Cell>
-															<Table.Cell mix={[css({ textAlign: "right" })]}>
+															<Table.Cell mix={[textAlign("end")]}>
 																{expiration.isExpired ? (
-																	<span mix={[css({ color: danger[600] })]}>
+																	<span mix={[fg(danger[600])]}>
 																		{ctx.i18next.t(
 																			"page.settings.members.invitedTable.expires.expired",
 																		)}
@@ -720,7 +655,7 @@ export default createAction(routes.app.team.settings, {
 																	<span>{expiration.text}</span>
 																)}
 															</Table.Cell>
-															<Table.Cell mix={[css({ textAlign: "center" })]}>
+															<Table.Cell mix={[textAlign("center")]}>
 																<RowMenu
 																	id={`invite-menu-${invite.id}`}
 																	label={ctx.i18next.t(
@@ -788,29 +723,18 @@ export default createAction(routes.app.team.settings, {
 						{/* Domains */}
 						<section
 							id="domains"
-							mix={[
-								css({
-									width: "100%",
-									maxWidth: 640,
-									marginInline: "auto",
-									display: "flex",
-									flexDirection: "column",
-									gap: 24,
-								}),
-							]}
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
 						>
-							<div mix={[css({ display: "flex", flexDirection: "column", gap: 4 })]}>
-								<h2 mix={[css({ margin: 0, fontSize: "1.25rem", fontWeight: 600 })]}>
+							<div mix={[vstack({ gap: 1 })]}>
+								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
 									{ctx.i18next.t("page.settings.domains.title")}
 								</h2>
 								<p
 									mix={[
-										css({
-											margin: 0,
-											fontSize: "0.875rem",
-											color: neutral[500],
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-										}),
+										m(0),
+										fontSize("sm"),
+										fg(neutral[500]),
+										media("(prefers-color-scheme: dark)", fg(neutral[400])),
 									]}
 								>
 									{ctx.i18next.t("page.settings.domains.description")}
@@ -820,23 +744,21 @@ export default createAction(routes.app.team.settings, {
 							<dialog
 								id="add-domain"
 								mix={[
-									css({
-										width: "100%",
-										maxWidth: "min(440px, calc(100vw - 32px))",
-										padding: 24,
-										boxSizing: "border-box",
-										borderRadius: 8,
-										border: `1px solid ${neutral[300]}`,
-										"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-										"@media (prefers-color-scheme: dark)": {
-											borderColor: neutral[700],
-											background: neutral[900],
-											color: neutral[50],
-										},
-									}),
+									is("full"),
+									maxIs("min(440px, calc(100vw - 32px))"),
+									p(6),
+									raw({ boxSizing: "border-box" }),
+									rounded("lg"),
+									border({ color: neutral[300], width: 1 }),
+									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
+									media("(prefers-color-scheme: dark)", [
+										border(neutral[700]),
+										bg(neutral[900]),
+										fg(neutral[50]),
+									]),
 								]}
 							>
-								<h3 mix={[css({ margin: "0 0 16px", fontSize: "1rem", fontWeight: 600 })]}>
+								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
 									{ctx.i18next.t("page.settings.domains.form.title")}
 								</h3>
 								<form
@@ -860,7 +782,7 @@ export default createAction(routes.app.team.settings, {
 											mix={[textInput()]}
 										/>
 									</Field>
-									<div mix={[css({ display: "flex", gap: 8, justifyContent: "flex-end" })]}>
+									<div mix={[hstack({ gap: 2, justify: "end" })]}>
 										<Button type="button" variant="outline" commandfor="add-domain" command="close">
 											{ctx.i18next.t("page.settings.form.actions.cancel")}
 										</Button>
@@ -871,39 +793,33 @@ export default createAction(routes.app.team.settings, {
 
 							<div
 								mix={[
-									css({
-										borderRadius: 12,
-										border: `1px solid ${neutral[200]}`,
-										overflow: "hidden",
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-									}),
+									rounded("xl"),
+									border({ color: neutral[200], width: 1 }),
+									overflow(),
+									media("(prefers-color-scheme: dark)", border(neutral[800])),
 								]}
 							>
 								<div
 									mix={[
-										css({
-											padding: "20px 24px",
-											borderBottom: `1px solid ${neutral[200]}`,
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "space-between",
-											gap: 16,
-											"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-										}),
+										p(5, 6),
+										borderEdge("block-end", { color: neutral[200], width: 1 }),
+										hstack({ gap: 4, align: "center", justify: "between" }),
+										media(
+											"(prefers-color-scheme: dark)",
+											borderEdge("block-end", { color: neutral[800] }),
+										),
 									]}
 								>
 									<div>
-										<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 											{ctx.i18next.t("page.settings.domains.table.label")}
 										</h3>
 										<p
 											mix={[
-												css({
-													margin: 0,
-													fontSize: "0.8125rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												}),
+												m(0),
+												fontSize("0.8125rem"),
+												fg(neutral[500]),
+												media("(prefers-color-scheme: dark)", fg(neutral[400])),
 											]}
 										>
 											{ctx.i18next.t("page.settings.domains.table.description")}
@@ -914,14 +830,14 @@ export default createAction(routes.app.team.settings, {
 										variant="outline"
 										commandfor="add-domain"
 										command="show-modal"
-										mix={[css({ flexShrink: 0 })]}
+										mix={[shrink()]}
 									>
 										<span>{ctx.i18next.t("page.settings.domains.actions.addDomain")}</span>
 									</Button>
 								</div>
 
 								{domains.length === 0 ? (
-									<div mix={[css({ padding: 24 })]}>
+									<div mix={[p(6)]}>
 										<Empty>
 											<Empty.Description>
 												{ctx.i18next.t("page.settings.domains.table.empty.description")}
@@ -931,49 +847,30 @@ export default createAction(routes.app.team.settings, {
 								) : (
 									<Table.Container
 										mix={[
-											css({
-												"&::after": {
-													content: '""',
-													position: "absolute",
-													top: 0,
-													right: 0,
-													bottom: 0,
-													width: 24,
-													pointerEvents: "none",
-													boxShadow: `inset -16px 0 12px -12px rgba(0, 0, 0, 0.18)`,
-													"@media (prefers-color-scheme: dark)": {
-														boxShadow: `inset -16px 0 12px -12px rgba(0, 0, 0, 0.6)`,
-													},
-												},
-											}),
+											when("&::after", [
+												pseudoContent('""'),
+												absolute(),
+												insTop(0),
+												insRight(0),
+												insBottom(0),
+												width("24px"),
+												pointerEvents(),
+												raw({ boxShadow: "inset -16px 0 12px -12px rgba(0, 0, 0, 0.18)" }),
+												media(
+													"(prefers-color-scheme: dark)",
+													raw({ boxShadow: "inset -16px 0 12px -12px rgba(0, 0, 0, 0.6)" }),
+												),
+											]),
 										]}
 									>
 										<Table aria-label={ctx.i18next.t("page.settings.domains.table.label")}>
 											<Table.Header>
 												<Table.Row>
-													<Table.Column mix={[css({ whiteSpace: "nowrap", minWidth: 200 })]}>
+													<Table.Column mix={[nowrap(), minIs("200px")]}>
 														{ctx.i18next.t("page.settings.domains.table.columns.hostname")}
 													</Table.Column>
 													<Table.Column align="end">
-														<span
-															mix={
-																hasPendingDomainVerification
-																	? []
-																	: [
-																			css({
-																				position: "absolute",
-																				width: 1,
-																				height: 1,
-																				padding: 0,
-																				margin: -1,
-																				overflow: "hidden",
-																				clip: "rect(0, 0, 0, 0)",
-																				whiteSpace: "nowrap",
-																				border: 0,
-																			}),
-																		]
-															}
-														>
+														<span mix={hasPendingDomainVerification ? [] : [visuallyHidden()]}>
 															{ctx.i18next.t("page.settings.domains.table.columns.id")}
 														</span>
 													</Table.Column>
@@ -981,21 +878,7 @@ export default createAction(routes.app.team.settings, {
 														{ctx.i18next.t("page.settings.domains.table.columns.verifiedAt")}
 													</Table.Column>
 													<Table.Column align="center">
-														<span
-															mix={[
-																css({
-																	position: "absolute",
-																	width: 1,
-																	height: 1,
-																	padding: 0,
-																	margin: -1,
-																	overflow: "hidden",
-																	clip: "rect(0, 0, 0, 0)",
-																	whiteSpace: "nowrap",
-																	border: 0,
-																}),
-															]}
-														>
+														<span mix={[visuallyHidden()]}>
 															{ctx.i18next.t("page.settings.domains.table.columns.actions")}
 														</span>
 													</Table.Column>
@@ -1008,28 +891,23 @@ export default createAction(routes.app.team.settings, {
 
 													return (
 														<Table.Row key={domain.id}>
-															<Table.Cell mix={[css({ whiteSpace: "nowrap" })]}>
-																{domain.hostname}
-															</Table.Cell>
+															<Table.Cell mix={[nowrap()]}>{domain.hostname}</Table.Cell>
 															<Table.Cell
 																mix={[
-																	css({
-																		textAlign: "right",
-																		fontFamily: "inherit",
-																		fontSize: "0.75rem",
-																		maxWidth: 140,
-																		wordBreak: "break-all",
-																	}),
+																	textAlign("end"),
+																	raw({ fontFamily: "inherit", wordBreak: "break-all" }),
+																	fontSize("xs"),
+																	maxIs("140px"),
 																]}
 															>
 																{domain.verified_at === null ? `ping_${domain.id}` : null}
 															</Table.Cell>
-															<Table.Cell mix={[css({ textAlign: "right" })]}>
+															<Table.Cell mix={[textAlign("end")]}>
 																{domain.verified_at !== null
 																	? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
 																	: ctx.i18next.t("page.settings.domains.table.verifiedAt.pending")}
 															</Table.Cell>
-															<Table.Cell mix={[css({ textAlign: "center" })]}>
+															<Table.Cell mix={[textAlign("center")]}>
 																<RowMenu
 																	id={`domain-menu-${domain.id}`}
 																	label={ctx.i18next.t("page.settings.domains.table.actions.menu")}
@@ -1113,61 +991,51 @@ export default createAction(routes.app.team.settings, {
 							{hasPendingDomainVerification && (
 								<aside
 									mix={[
-										css({
-											display: "flex",
-											flexDirection: "column",
-											gap: 8,
-											borderRadius: 12,
-											border: `1px solid ${neutral[300]}`,
-											padding: 16,
-											fontSize: "0.875rem",
-											"@media (prefers-color-scheme: dark)": { borderColor: neutral[700] },
-										}),
+										vstack({ gap: 2 }),
+										rounded("xl"),
+										border({ color: neutral[300], width: 1 }),
+										p(4),
+										fontSize("sm"),
+										media("(prefers-color-scheme: dark)", border(neutral[700])),
 									]}
 								>
-									<h3 mix={[css({ margin: 0, fontSize: "1.0625rem", fontWeight: 600 })]}>
+									<h3 mix={[m(0), fontSize("1.0625rem"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.domains.instructions.title")}
 									</h3>
-									<p mix={[css({ margin: 0 })]}>
+									<p mix={[m(0)]}>
 										{ctx.i18next.t("page.settings.domains.instructions.description")}
 									</p>
-									<dl
-										mix={[
-											css({ margin: "4px 0", display: "flex", flexDirection: "column", gap: 8 }),
-										]}
-									>
-										<div mix={[css({ display: "flex", gap: 8 })]}>
-											<dt mix={[css({ fontWeight: 600 })]}>
+									<dl mix={[m(1, 0), vstack({ gap: 2 })]}>
+										<div mix={[hstack({ gap: 2 })]}>
+											<dt mix={[weight("semibold")]}>
 												{ctx.i18next.t("page.settings.domains.instructions.record.name.label")}
 											</dt>
-											<dd mix={[css({ margin: 0 })]}>
+											<dd mix={[m(0)]}>
 												<code>
 													{ctx.i18next.t("page.settings.domains.instructions.record.name.value")}
 												</code>
 											</dd>
 										</div>
-										<div mix={[css({ display: "flex", gap: 8 })]}>
-											<dt mix={[css({ fontWeight: 600 })]}>
+										<div mix={[hstack({ gap: 2 })]}>
+											<dt mix={[weight("semibold")]}>
 												{ctx.i18next.t("page.settings.domains.instructions.record.content.label")}
 											</dt>
-											<dd mix={[css({ margin: 0 })]}>
+											<dd mix={[m(0)]}>
 												<code>
 													{ctx.i18next.t("page.settings.domains.instructions.record.content.value")}
 												</code>
 											</dd>
 										</div>
 									</dl>
-									<p mix={[css({ margin: 0 })]}>
+									<p mix={[m(0)]}>
 										{renderInlineCode(ctx.i18next.t("page.settings.domains.instructions.note"))}
 									</p>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.8125rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("0.8125rem"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.domains.instructions.disclaimer")}
@@ -1180,29 +1048,18 @@ export default createAction(routes.app.team.settings, {
 						{viewerIsOwner && (
 							<section
 								id="billing"
-								mix={[
-									css({
-										width: "100%",
-										maxWidth: 640,
-										marginInline: "auto",
-										display: "flex",
-										flexDirection: "column",
-										gap: 24,
-									}),
-								]}
+								mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
 							>
-								<div mix={[css({ display: "flex", flexDirection: "column", gap: 4 })]}>
-									<h2 mix={[css({ margin: 0, fontSize: "1.25rem", fontWeight: 600 })]}>
+								<div mix={[vstack({ gap: 1 })]}>
+									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.billing.title")}
 									</h2>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.875rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("sm"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.billing.description")}
@@ -1211,49 +1068,44 @@ export default createAction(routes.app.team.settings, {
 
 								<div
 									mix={[
-										css({
-											borderRadius: 12,
-											border: `1px solid ${neutral[200]}`,
-											overflow: "hidden",
-											"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-										}),
+										rounded("xl"),
+										border({ color: neutral[200], width: 1 }),
+										overflow(),
+										media("(prefers-color-scheme: dark)", border(neutral[800])),
 									]}
 								>
 									<div
 										mix={[
-											css({
-												padding: "20px 24px",
-												borderBottom: `1px solid ${neutral[200]}`,
-												"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-											}),
+											p(5, 6),
+											borderEdge("block-end", { color: neutral[200], width: 1 }),
+											media(
+												"(prefers-color-scheme: dark)",
+												borderEdge("block-end", { color: neutral[800] }),
+											),
 										]}
 									>
-										<h3 mix={[css({ margin: "0 0 4px", fontSize: "1rem", fontWeight: 600 })]}>
+										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 											{ctx.i18next.t("page.settings.billing.card.title")}
 										</h3>
 										<p
 											mix={[
-												css({
-													margin: 0,
-													fontSize: "0.8125rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												}),
+												m(0),
+												fontSize("0.8125rem"),
+												fg(neutral[500]),
+												media("(prefers-color-scheme: dark)", fg(neutral[400])),
 											]}
 										>
 											{ctx.i18next.t("page.settings.billing.card.description")}
 										</p>
 									</div>
 
-									<div mix={[css({ padding: 24 })]}>
+									<div mix={[p(6)]}>
 										<p
 											mix={[
-												css({
-													margin: 0,
-													fontSize: "0.875rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												}),
+												m(0),
+												fontSize("sm"),
+												fg(neutral[500]),
+												media("(prefers-color-scheme: dark)", fg(neutral[400])),
 											]}
 										>
 											{ctx.i18next.t("page.settings.billing.card.notice")}
@@ -1262,13 +1114,13 @@ export default createAction(routes.app.team.settings, {
 
 									<div
 										mix={[
-											css({
-												padding: "16px 24px",
-												borderTop: `1px solid ${neutral[200]}`,
-												display: "flex",
-												justifyContent: "flex-end",
-												"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-											}),
+											p(4, 6),
+											borderEdge("block-start", { color: neutral[200], width: 1 }),
+											hstack({ justify: "end" }),
+											media(
+												"(prefers-color-scheme: dark)",
+												borderEdge("block-start", { color: neutral[800] }),
+											),
 										]}
 									>
 										<LinkButton href={routes.app.team.checkout.href({ team: team.slug })}>
@@ -1284,87 +1136,43 @@ export default createAction(routes.app.team.settings, {
 						{viewerIsOwner && (
 							<section
 								id="danger"
-								mix={[
-									css({
-										width: "100%",
-										maxWidth: 640,
-										marginInline: "auto",
-										display: "flex",
-										flexDirection: "column",
-										gap: 24,
-									}),
-								]}
+								mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
 							>
-								<div mix={[css({ display: "flex", flexDirection: "column", gap: 4 })]}>
-									<h2
-										mix={[
-											css({
-												margin: 0,
-												fontSize: "1.25rem",
-												fontWeight: 600,
-												color: danger[600],
-											}),
-										]}
-									>
+								<div mix={[vstack({ gap: 1 })]}>
+									<h2 mix={[m(0), fontSize("xl"), weight("semibold"), fg(danger[600])]}>
 										{ctx.i18next.t("page.settings.danger.title")}
 									</h2>
 									<p
 										mix={[
-											css({
-												margin: 0,
-												fontSize: "0.875rem",
-												color: neutral[500],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											m(0),
+											fontSize("sm"),
+											fg(neutral[500]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{ctx.i18next.t("page.settings.danger.description")}
 									</p>
 								</div>
 
-								<div
-									mix={[
-										css({
-											borderRadius: 12,
-											border: `1px solid ${danger[600]}`,
-											overflow: "hidden",
-										}),
-									]}
-								>
+								<div mix={[rounded("xl"), border({ color: danger[600], width: 1 }), overflow()]}>
 									<form
 										method="post"
 										action={routes.teamAdminActions.team.delete.href({ team: team.slug })}
 									>
 										<input type="hidden" name="_method" value="DELETE" />
 
-										<div
-											mix={[
-												css({
-													padding: "20px 24px",
-													borderBottom: `1px solid ${danger[600]}`,
-												}),
-											]}
-										>
+										<div mix={[p(5, 6), borderEdge("block-end", { color: danger[600], width: 1 })]}>
 											<h3
-												mix={[
-													css({
-														margin: "0 0 4px",
-														fontSize: "1rem",
-														fontWeight: 600,
-														color: danger[600],
-													}),
-												]}
+												mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold"), fg(danger[600])]}
 											>
 												{ctx.i18next.t("page.settings.danger.card.title")}
 											</h3>
 											<p
 												mix={[
-													css({
-														margin: 0,
-														fontSize: "0.8125rem",
-														color: neutral[500],
-														"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-													}),
+													m(0),
+													fontSize("0.8125rem"),
+													fg(neutral[500]),
+													media("(prefers-color-scheme: dark)", fg(neutral[400])),
 												]}
 											>
 												{ctx.i18next.t("page.settings.danger.card.description")}
@@ -1373,20 +1181,16 @@ export default createAction(routes.app.team.settings, {
 
 										<div
 											mix={[
-												css({
-													// `Field`'s own trailing margin already spaces the
-													// confirmation input from the footer below, so this region
-													// carries no bottom padding of its own — otherwise the two
-													// would stack into a gap far larger than every other card's
-													// footer rhythm.
-													padding: "24px 24px 0",
-													display: "flex",
-													flexDirection: "column",
-													gap: 16,
-												}),
+												// `Field`'s own trailing margin already spaces the
+												// confirmation input from the footer below, so this region
+												// carries no bottom padding of its own — otherwise the two
+												// would stack into a gap far larger than every other card's
+												// footer rhythm.
+												p(6, 6, 0, 6),
+												vstack({ gap: 4 }),
 											]}
 										>
-											<p mix={[css({ margin: 0, fontSize: "0.875rem", color: danger[600] })]}>
+											<p mix={[m(0), fontSize("sm"), fg(danger[600])]}>
 												{ctx.i18next.t("page.settings.danger.card.warning")}
 											</p>
 
@@ -1408,12 +1212,9 @@ export default createAction(routes.app.team.settings, {
 
 										<div
 											mix={[
-												css({
-													padding: "16px 24px",
-													borderTop: `1px solid ${danger[600]}`,
-													display: "flex",
-													justifyContent: "flex-end",
-												}),
+												p(4, 6),
+												borderEdge("block-start", { color: danger[600], width: 1 }),
+												hstack({ justify: "end" }),
 											]}
 										>
 											<Button type="submit" color="danger">

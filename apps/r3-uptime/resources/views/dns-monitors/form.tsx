@@ -15,7 +15,7 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { Select, TextField } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
@@ -60,7 +60,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					required
 					defaultValue={monitor?.name}
 					placeholder={t("name.placeholder")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<TextField
@@ -70,7 +70,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					required
 					defaultValue={monitor?.domain}
 					placeholder={t("domain.placeholder")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<Field label={t("recordType.label")} description={t("recordType.description")}>
@@ -89,7 +89,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					name="expected_value"
 					defaultValue={monitor?.expected_value ?? ""}
 					placeholder={t("expectedValue.placeholder")}
-					mix={[css({ marginBottom: 28 })]}
+					mix={[mbe("28px")]}
 				/>
 
 				<Field label={t("interval.label")} description={t("interval.description")}>

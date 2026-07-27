@@ -21,7 +21,30 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { ArrowRightIcon, MenuIcon } from "@pkg/lucide-remix";
 import { Breadcrumbs, Sidebar, Typeset } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import {
+	basis,
+	fixed,
+	flex,
+	flexCol,
+	gap,
+	grow,
+	hidden,
+	inlineFlex,
+	insBottom,
+	insLeft,
+	insTop,
+	items,
+	justify,
+	shrink,
+} from "@pkg/u/layout";
+import { overflowY } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { bs, height, m, maxIs, minBs, minIs, p, pb, width } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { fontSize, weight } from "@pkg/u/typography";
 
 import type { DocSection } from "~/app/services/docs";
 
@@ -33,57 +56,56 @@ import { neutral } from "~/resources/theme";
  * The hamburger button that opens the sidebar on mobile via the native Command
  * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px.
  */
-const sidebarToggle = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: 32,
-	height: 32,
-	padding: 0,
-	borderRadius: 6,
-	border: "none",
-	background: "transparent",
-	color: "inherit",
-	cursor: "pointer",
-	flexShrink: 0,
-	"&:hover": { background: neutral[100] },
-	"@media (min-width: 768px)": { display: "none" },
-	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
-});
+const sidebarToggle = [
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	width("32px"),
+	height("32px"),
+	p(0),
+	rounded("md"),
+	border("none"),
+	bg("transparent"),
+	fg("inherit"),
+	cursor("pointer"),
+	shrink(0),
+	when("&:hover", bg(neutral[100])),
+	media("(min-width: 768px)", hidden()),
+	media("(prefers-color-scheme: dark)", when("&:hover", bg(neutral[800]))),
+];
 
 /** The sidebar's title, e.g. "Documentation". */
-const sidebarTitleCss = css({
-	fontWeight: 600,
-	fontSize: "1.125rem",
-	margin: 0,
-	color: neutral[900],
-	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-});
+const sidebarTitleCss = [
+	weight(600),
+	fontSize("lg"),
+	m(0),
+	fg(neutral[900]),
+	media("(prefers-color-scheme: dark)", fg(neutral[50])),
+];
 
 /** The sidebar's subtitle, e.g. "Guides and reference". */
-const sidebarDescriptionCss = css({
-	fontSize: "0.8125rem",
-	margin: "4px 0 0",
-	color: neutral[500],
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-});
+const sidebarDescriptionCss = [
+	fontSize("0.8125rem"),
+	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
+	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
+	raw({ margin: "4px 0 0" }),
+	fg(neutral[500]),
+	media("(prefers-color-scheme: dark)", fg(neutral[400])),
+];
 
 /** The topbar row: nav toggle + breadcrumb on the left, the dashboard CTA on the right. */
-const topbar = css({
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "space-between",
-	gap: 16,
-	padding: "12px 24px",
-	background: "oklch(0.98 0.005 145 / 0.5)",
-	borderBottom: `1px solid ${neutral[200]}`,
-	"@media (prefers-color-scheme: dark)": {
-		background: "oklch(0.24 0.005 145 / 0.5)",
-		borderColor: neutral[800],
-	},
-});
+const topbar = [
+	flex(),
+	items("center"),
+	justify("between"),
+	gap("16px"),
+	p("12px", "24px"),
+	bg("oklch(0.98 0.005 145 / 0.5)"),
+	borderEdge("bottom", { width: 1, color: neutral[200] }),
+	media("(prefers-color-scheme: dark)", [bg("oklch(0.24 0.005 145 / 0.5)"), border(neutral[800])]),
+];
 
-const topbarLeft = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
+const topbarLeft = [flex(), items("center"), gap("12px"), minIs(0)];
 
 namespace DocsLayout {
 	export interface Props {
@@ -126,26 +148,8 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		}));
 
 		return (
-			<div
-				mix={[
-					css({
-						display: "flex",
-						flexDirection: "column",
-						height: "100dvh",
-						overflow: "hidden",
-					}),
-				]}
-			>
-				<div
-					mix={[
-						css({
-							display: "flex",
-							flex: 1,
-							minHeight: 0,
-							width: "100%",
-						}),
-					]}
-				>
+			<div mix={[flex(), flexCol(), height("100dvh"), raw({ overflow: "hidden" })]}>
+				<div mix={[flex(), grow(), shrink(), basis("0%"), minBs(0), width("100%")]}>
 					{/*
 					 * Fully hidden below 768px and replaced by a slide-in native
 					 * popover drawer triggered by the topbar's hamburger. At ≥768px
@@ -156,60 +160,48 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						id="docs-sidebar"
 						popover="auto"
 						mix={[
-							css({
-								position: "fixed",
-								top: 0,
-								left: 0,
-								bottom: 0,
-								margin: 0,
-								width: "min(80vw, 288px)",
-								maxHeight: "100vh",
-								padding: 0,
-								border: "none",
-								borderRight: `1px solid ${neutral[200]}`,
-								background: "#ffffff",
+							fixed(),
+							insTop(0),
+							insLeft(0),
+							insBottom(0),
+							m(0),
+							width("min(80vw, 288px)"),
+							raw({ maxHeight: "100vh" }),
+							p(0),
+							border("none"),
+							borderEdge("right", { width: 1, color: neutral[200] }),
+							raw({ background: "#ffffff" }),
+							raw({
 								boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
-								"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-								display: "flex",
-								flexDirection: "column",
-								minHeight: 0,
-								"@media (min-width: 768px)": {
-									display: "flex !important",
-									position: "static",
-									top: "auto",
-									left: "auto",
-									bottom: "auto",
-									width: 256,
-									/**
-									 * The native Popover API's UA stylesheet sets `height:
-									 * fit-content` on every `[popover]` element regardless of open
-									 * state (only `display` is gated behind `:popover-open`) — an
-									 * explicit, author-stylesheet `height` is required to beat it,
-									 * since stretch alignment from the flex row above only takes
-									 * over once `height` itself resolves to `auto`.
-									 */
-									height: "auto",
-									maxHeight: "none",
-									flexShrink: 0,
-									boxShadow: "none",
-								},
-								"@media (prefers-color-scheme: dark)": {
-									background: neutral[900],
-									borderColor: neutral[800],
-								},
 							}),
+							when("&::backdrop", raw({ background: "rgba(0, 0, 0, 0.4)" })),
+							flex(),
+							flexCol(),
+							minBs(0),
+							media("(min-width: 768px)", [
+								raw({ display: "flex !important" }),
+								raw({ position: "static" }),
+								insTop("auto"),
+								insLeft("auto"),
+								insBottom("auto"),
+								width("256px"),
+								/**
+								 * The native Popover API's UA stylesheet sets `height:
+								 * fit-content` on every `[popover]` element regardless of open
+								 * state (only `display` is gated behind `:popover-open`) — an
+								 * explicit, author-stylesheet `height` is required to beat it,
+								 * since stretch alignment from the flex row above only takes
+								 * over once `height` itself resolves to `auto`.
+								 */
+								height("auto"),
+								raw({ maxHeight: "none" }),
+								shrink(0),
+								raw({ boxShadow: "none" }),
+							]),
+							media("(prefers-color-scheme: dark)", [bg(neutral[900]), border(neutral[800])]),
 						]}
 					>
-						<Sidebar.Header
-							mix={[
-								css({
-									flexDirection: "column",
-									alignItems: "flex-start",
-									blockSize: "auto",
-									paddingBlock: "1.25rem",
-								}),
-							]}
-						>
+						<Sidebar.Header mix={[flexCol(), items("start"), bs("auto"), pb("1.25rem")]}>
 							<p mix={[sidebarTitleCss]}>{sidebarTitle}</p>
 							<p mix={[sidebarDescriptionCss]}>{sidebarDescription}</p>
 						</Sidebar.Header>
@@ -223,11 +215,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</Sidebar.Content>
 					</aside>
 
-					<div
-						mix={[
-							css({ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }),
-						]}
-					>
+					<div mix={[flex(), flexCol(), grow(), shrink(), basis("0%"), minIs(0), minBs(0)]}>
 						<div mix={[topbar]}>
 							<div mix={[topbarLeft]}>
 								<button
@@ -268,16 +256,18 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 
 						<div
 							mix={[
-								css({
-									flex: 1,
-									minWidth: 0,
-									minHeight: 0,
-									overflowY: "auto",
-									padding: "32px 24px 80px",
-								}),
+								grow(),
+								shrink(),
+								basis("0%"),
+								minIs(0),
+								minBs(0),
+								overflowY("auto"),
+								// Physical 3-value padding shorthand (top / left+right / bottom) —
+								// `@pkg/u`'s `p()` only covers the 1/2/4-value logical form.
+								raw({ padding: "32px 24px 80px" }),
 							]}
 						>
-							<Typeset mix={[css({ maxWidth: "896px", margin: "0 auto" })]}>{children}</Typeset>
+							<Typeset mix={[maxIs("896px"), m(0, "auto")]}>{children}</Typeset>
 						</div>
 					</div>
 				</div>

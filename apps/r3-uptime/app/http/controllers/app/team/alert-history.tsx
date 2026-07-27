@@ -8,10 +8,12 @@
 import { BellIcon, HistoryIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { fontSize } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
@@ -133,11 +135,9 @@ export default createAction(routes.app.team.alerts.history, {
 													{event.error_message && (
 														<p
 															mix={[
-																css({
-																	fontSize: "0.8125rem",
-																	color: neutral[500],
-																	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-																}),
+																fontSize("0.8125rem"),
+																fg(neutral[500]),
+																media("(prefers-color-scheme: dark)", fg(neutral[400])),
 															]}
 														>
 															{event.error_message}

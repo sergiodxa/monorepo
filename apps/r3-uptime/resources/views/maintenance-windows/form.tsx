@@ -12,7 +12,7 @@ import type { Handle } from "remix/ui";
 
 import { Input, Label, Select, TextField } from "@pkg/r3-ui";
 import { fieldStackLayout } from "@pkg/r3-ui/styles";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
@@ -51,7 +51,7 @@ export default function MaintenanceWindowFormFields(
 					name="name"
 					required
 					defaultValue={window?.name}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<Field label={t("scope.label")}>
@@ -65,7 +65,7 @@ export default function MaintenanceWindowFormFields(
 					</Select>
 				</Field>
 
-				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+				<div mix={[fieldStackLayout(), mbe("28px")]}>
 					<Label htmlFor="maintenance-window-starts-at">{t("startsAt.label")}</Label>
 					<Input
 						id="maintenance-window-starts-at"
@@ -76,7 +76,7 @@ export default function MaintenanceWindowFormFields(
 					/>
 				</div>
 
-				<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+				<div mix={[fieldStackLayout(), mbe("28px")]}>
 					<Label htmlFor="maintenance-window-ends-at">{t("endsAt.label")}</Label>
 					<Input
 						id="maintenance-window-ends-at"
@@ -105,7 +105,7 @@ export default function MaintenanceWindowFormFields(
 					defaultValue={window?.recurring_pattern ?? ""}
 					placeholder={t("recurringPattern.placeholder")}
 					description={t("recurringPattern.description")}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 			</>
 		);

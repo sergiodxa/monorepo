@@ -12,9 +12,25 @@
 
 import { CheckIcon } from "@pkg/lucide-remix";
 import { Table } from "@pkg/r3-ui";
+import { bg, border, fg, linearGradient } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import {
+	flex,
+	flexRow,
+	flexWrap,
+	gap,
+	grid,
+	inlineFlex,
+	items,
+	justify,
+	vstack,
+} from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
+import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import AuthCta from "~/resources/components/marketing/auth-cta";
@@ -90,118 +106,96 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							textAlign: "center",
-							background: `linear-gradient(to bottom, ${primary[50]}, #ffffff)`,
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": {
-								background: `linear-gradient(to bottom, oklch(0.24 0.06 142 / 0.2), ${neutral[950]})`,
-							},
-						}),
+						p("64px", "0"),
+						textAlign("center"),
+						bg({ image: linearGradient("to bottom", primary[50], "#ffffff") }),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media(
+							"(prefers-color-scheme: dark)",
+							bg({
+								image: linearGradient("to bottom", "oklch(0.24 0.06 142 / 0.2)", neutral[950]),
+							}),
+						),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<span
 							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									padding: "2px 10px",
-									borderRadius: 999,
-									fontSize: "0.75rem",
-									fontWeight: 600,
-									border: `1px solid ${primary[200]}`,
-									background: primary[50],
-									color: primary[600],
-									marginBottom: 16,
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: primary[800],
-										background: primary[950],
-										color: primary[400],
-									},
-								}),
+								inlineFlex(),
+								items("center"),
+								p("2px", "10px"),
+								rounded("999px"),
+								fontSize("0.75rem"),
+								weight(600),
+								border({ color: primary[200], width: 1 }),
+								bg(primary[50]),
+								fg(primary[600]),
+								mbe("16px"),
+								media("(prefers-color-scheme: dark)", [
+									border(primary[800]),
+									bg(primary[950]),
+									fg(primary[400]),
+								]),
 							]}
 						>
 							{badge}
 						</span>
 						<h1
 							mix={[
-								css({
-									fontSize: "2.25rem",
-									fontWeight: 700,
-									lineHeight: 1,
-									letterSpacing: "-0.025em",
-									margin: "0 auto 16px",
-									maxWidth: 760,
-									color: neutral[900],
-									"@media (min-width: 640px)": { fontSize: "3rem" },
-									"@media (min-width: 1024px)": { fontSize: "3.75rem" },
-									"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-								}),
+								fontSize("2.25rem"),
+								weight(700),
+								leading(1),
+								tracking("tight"),
+								m("0", "auto", "16px", "auto"),
+								maxIs("760px"),
+								fg(neutral[900]),
+								media("(min-width: 640px)", fontSize("3rem")),
+								media("(min-width: 1024px)", fontSize("3.75rem")),
+								media("(prefers-color-scheme: dark)", fg(neutral[50])),
 							]}
 						>
 							{title}{" "}
 							<span
-								mix={[
-									css({
-										color: primary[600],
-										"@media (prefers-color-scheme: dark)": { color: primary[400] },
-									}),
-								]}
+								mix={[fg(primary[600]), media("(prefers-color-scheme: dark)", fg(primary[400]))]}
 							>
 								{highlight}
 							</span>
 						</h1>
 						<p
 							mix={[
-								css({
-									fontSize: "1.125rem",
-									color: neutral[600],
-									margin: "0 auto 24px",
-									maxWidth: 576,
-									lineHeight: 1.625,
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("1.125rem"),
+								fg(neutral[600]),
+								m("0", "auto", "24px", "auto"),
+								maxIs("576px"),
+								leading(1.625),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{description}
 						</p>
 
 						<div
-							mix={[
-								css({
-									display: "flex",
-									flexWrap: "wrap",
-									justifyContent: "center",
-									gap: "8px 24px",
-									marginTop: 32,
-								}),
-							]}
+							mix={[flex(), flexWrap("wrap"), justify("center"), gap("8px", "24px"), mbs("32px")]}
 						>
 							{highlights.map((item) => (
 								<span
 									key={item}
 									mix={[
-										css({
-											display: "inline-flex",
-											alignItems: "center",
-											gap: 6,
-											fontSize: "0.875rem",
-											color: neutral[500],
-											"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-										}),
+										inlineFlex(),
+										items("center"),
+										gap("6px"),
+										fontSize("0.875rem"),
+										fg(neutral[500]),
+										media("(prefers-color-scheme: dark)", fg(neutral[400])),
 									]}
 								>
 									<CheckIcon size={16} />
@@ -212,14 +206,9 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									gap: 16,
-									marginTop: 32,
-									"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
-								}),
+								vstack({ gap: "16px", align: "center" }),
+								mbs("32px"),
+								media("(min-width: 640px)", [flexRow(), justify("center")]),
 							]}
 						>
 							<AuthCta
@@ -233,22 +222,18 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
+						p("64px", "0"),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader title={`Uptime vs ${competitor}`} description={summary} />
@@ -282,37 +267,31 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							background: neutral[50],
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
-						}),
+						p("64px", "0"),
+						bg(neutral[50]),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader title={ctx.i18next.t("landing.comparison.whyTeamsSwitchTitle")} />
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{features.map((feature) => (
@@ -328,36 +307,29 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
+						p("64px", "0"),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader title={ctx.i18next.t("landing.comparison.gettingStartedTitle")} />
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 24,
-									gridTemplateColumns: "1fr",
-									counterReset: "marketing-step",
-									"@media (min-width: 640px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("24px"),
+								raw({ gridTemplateColumns: "1fr", counterReset: "marketing-step" }),
+								media("(min-width: 640px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{steps.map((step) => (
@@ -369,24 +341,20 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							background: neutral[50],
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
-						}),
+						p("64px", "0"),
+						bg(neutral[50]),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader
@@ -400,12 +368,10 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "56px 0",
-							textAlign: "center",
-							background: `linear-gradient(to right, ${primary[600]}, ${primary[700]})`,
-							color: "#ffffff",
-						}),
+						p("56px", "0"),
+						textAlign("center"),
+						bg({ image: linearGradient("to right", primary[600], primary[700]) }),
+						fg("#ffffff"),
 					]}
 				>
 					<h2>{ctx.i18next.t("landing.comparison.finalCtaTitle")}</h2>
@@ -413,14 +379,9 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 					<div
 						mix={[
-							css({
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "center",
-								gap: 16,
-								marginTop: 32,
-								"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
-							}),
+							vstack({ gap: "16px", align: "center" }),
+							mbs("32px"),
+							media("(min-width: 640px)", [flexRow(), justify("center")]),
 						]}
 					>
 						<AuthCta

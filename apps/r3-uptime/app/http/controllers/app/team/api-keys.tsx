@@ -14,11 +14,16 @@ import { IntlProvider } from "@pkg/i18n/ui";
 import { KeyIcon, PlusIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { hstack, vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { pb, pi } from "@pkg/u/size";
+import { textAlign } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { css } from "remix/ui";
 
 import ApiKey from "~/app/data/api-key";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -72,22 +77,18 @@ export default createAction(routes.app.team.apiKeys.index, {
 						{newApiKey && (
 							<div
 								mix={[
-									css({
-										display: "flex",
-										flexDirection: "column",
-										alignItems: "center",
-										textAlign: "center",
-										gap: 12,
-										padding: "64px 32px",
-										border: `1px dashed ${neutral[300]}`,
-										borderRadius: 12,
-										"@media (prefers-color-scheme: dark)": { borderColor: neutral[700] },
-									}),
+									vstack({ gap: "12px", align: "center" }),
+									textAlign("center"),
+									pb("64px"),
+									pi("32px"),
+									border({ width: 1, style: "dashed", color: neutral[300] }),
+									rounded("12px"),
+									media("(prefers-color-scheme: dark)", border(neutral[700])),
 								]}
 							>
 								<p>{ctx.i18next.t("page.apiKeys.newKey.title", { name: newApiKey.name })}</p>
 								<p>{ctx.i18next.t("page.apiKeys.newKey.description")}</p>
-								<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+								<div mix={[hstack({ gap: "12px", align: "center" })]}>
 									<code>{newApiKey.key}</code>
 									{/* CopyButton is a `clientEntry` island: its render function runs
 									server-side too (for the initial HTML), where `intl(handle)` has no

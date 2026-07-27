@@ -23,7 +23,7 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { Description, Label } from "@pkg/r3-ui";
 import { fieldStackLayout } from "@pkg/r3-ui/styles";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 namespace Field {
 	export interface Props {
@@ -37,7 +37,7 @@ namespace Field {
 /** Wraps `children` (an input/select/textarea) with a label and optional description. */
 export default function Field(handle: Handle<Field.Props>) {
 	return () => (
-		<div mix={[fieldStackLayout(), css({ marginBottom: 28 })]}>
+		<div mix={[fieldStackLayout(), mbe("28px")]}>
 			<Label mix={[fieldStackLayout()]}>
 				<span>{handle.props.label}</span>
 				{handle.props.children}

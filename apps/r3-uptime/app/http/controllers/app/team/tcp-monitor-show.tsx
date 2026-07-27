@@ -11,11 +11,12 @@ import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { flex, flexWrap, gap, items } from "@pkg/u/layout";
+import { m, mbe } from "@pkg/u/size";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
@@ -86,11 +87,11 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 						},
 					]}
 					actions={
-						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+						<div mix={[flex(), items("center"), gap("12px")]}>
 							<form
 								method="post"
 								action={routes.actions.monitor.tcp.check.href({ team: ctx.team.slug })}
-								mix={[css({ margin: 0 })]}
+								mix={[m("0")]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<Button type="submit">
@@ -110,7 +111,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 					}
 				>
 					<div>
-						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
 								label={ctx.i18next.t("page.tcpMonitorDetail.info.endpoint")}
 								value={
@@ -139,7 +140,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							/>
 						</div>
 
-						<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<StatCard
 								label={ctx.i18next.t("page.tcpMonitorDetail.stats.uptime.label")}
 								value={uptimePercent === null ? "—" : `${uptimePercent}%`}

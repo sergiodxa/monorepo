@@ -14,7 +14,11 @@
 import type { Handle } from "remix/ui";
 
 import { Card, HeadingScope } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { opacity } from "@pkg/u/effects";
+import { block } from "@pkg/u/layout";
+import { bs } from "@pkg/u/size";
+import { fontSize, textDecoration } from "@pkg/u/typography";
 
 namespace MarketingCard {
 	export interface Props {
@@ -35,12 +39,10 @@ export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 			// renders as `<h3>` regardless of whatever (if any) ambient
 			// `HeadingScope` wraps the page.
 			<HeadingScope level={3}>
-				<Card mix={[href && css({ height: "100%" })]}>
+				<Card mix={[href && bs("full")]}>
 					<Card.Header>
-						<Card.Title mix={[css({ fontSize: "1.25rem" })]}>{title}</Card.Title>
-						<Card.Description
-							mix={[css({ fontSize: "1rem", opacity: 1, color: "var(--ui-neutral-fg)" })]}
-						>
+						<Card.Title mix={[fontSize("xl")]}>{title}</Card.Title>
+						<Card.Description mix={[fontSize("base"), opacity(100), fg("neutral")]}>
 							{description}
 						</Card.Description>
 					</Card.Header>
@@ -50,12 +52,7 @@ export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 
 		if (href) {
 			return (
-				<a
-					href={href}
-					mix={[
-						css({ display: "block", height: "100%", textDecoration: "none", color: "inherit" }),
-					]}
-				>
+				<a href={href} mix={[block(), bs("full"), textDecoration("none"), fg("inherit")]}>
 					{card}
 				</a>
 			);

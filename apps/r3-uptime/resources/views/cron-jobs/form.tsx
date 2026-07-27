@@ -12,7 +12,7 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { Label, NumberField, TextField } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { mbe } from "@pkg/u/size";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 
@@ -48,7 +48,7 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 					defaultValue={monitor?.name}
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<TextField
@@ -58,7 +58,7 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 					defaultValue={monitor?.description ?? ""}
 					placeholder={t("description.placeholder")}
 					description={t("description.description")}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<TextField
@@ -69,10 +69,10 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 					defaultValue={monitor?.cron_expression ?? ""}
 					placeholder={t("cronExpression.placeholder")}
 					description={t("cronExpression.description")}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
-				<NumberField mix={css({ marginBottom: 28 })}>
+				<NumberField mix={mbe("28px")}>
 					<Label htmlFor={GRACE_PERIOD_INPUT_ID}>
 						{t("gracePeriod.label")} ({t("gracePeriod.unit.seconds")})
 					</Label>
@@ -97,7 +97,7 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 					defaultValue={monitor?.timezone ?? "UTC"}
 					placeholder={t("timezone.placeholder")}
 					description={t("timezone.description")}
-					mix={css({ marginBottom: 28 })}
+					mix={mbe("28px")}
 				/>
 
 				<Switch name="alert_on_late" defaultChecked={monitor?.alert_on_late ?? false}>

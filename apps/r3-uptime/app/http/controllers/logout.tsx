@@ -9,8 +9,13 @@
  */
 
 import { redirect } from "@pkg/http/response";
+import { border } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { dark } from "@pkg/u/responsive";
+import { m, minBs, p } from "@pkg/u/size";
+import { textAlign } from "@pkg/u/typography";
 import { createController } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getIdToken, logout } from "~/app/http/middleware/auth";
 import Button from "~/resources/components/button";
@@ -23,25 +28,21 @@ export default createController(routes.logout, {
 		index(ctx) {
 			return ctx.render(
 				<DocumentLayout title={ctx.i18next.t("page.logout.title")}>
-					<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
+					<main mix={[flex(), flexCol(), minBs("100vh")]}>
 						<div
 							mix={[
-								css({
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									textAlign: "center",
-									gap: 12,
-									padding: "64px 32px",
-									border: "1px dashed oklch(0.83 0.01 145)",
-									borderRadius: 12,
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: "oklch(0.42 0.008 145)",
-									},
-								}),
+								flex(),
+								flexCol(),
+								items("center"),
+								textAlign("center"),
+								gap(3),
+								p(16, 8),
+								border({ color: "oklch(0.83 0.01 145)", width: 1, style: "dashed" }),
+								rounded("12px"),
+								dark(border("oklch(0.42 0.008 145)")),
 							]}
 						>
-							<h1 mix={[css({ margin: 0 })]}>{ctx.i18next.t("page.logout.title")}</h1>
+							<h1 mix={[m(0)]}>{ctx.i18next.t("page.logout.title")}</h1>
 							<form method="post" action={routes.logout.action.href()}>
 								<Button type="submit">{ctx.i18next.t("page.logout.cta")}</Button>
 							</form>

@@ -21,11 +21,18 @@ import {
 import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { combine, raw } from "@pkg/u/general";
+import { hstack, vstack } from "@pkg/u/layout";
+import { dark } from "@pkg/u/responsive";
+import { bs, is, m, maxIs, mbe, mbs, minIs, p } from "@pkg/u/size";
+import { hover } from "@pkg/u/state";
+import { fontSize, nowrap, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { ServiceStatus } from "~/app/services/status-page";
 import type { SelectMonitorDailyStats } from "~/database/schema";
@@ -68,47 +75,31 @@ const danger = {
 	800: "oklch(0.4 0.14 25)",
 } as const;
 
-const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof css>> = {
-	operational: css({
-		background: success[50],
-		borderColor: success[200],
-		color: success[800],
-		"@media (prefers-color-scheme: dark)": {
-			background: "oklch(0.26 0.06 155 / 0.3)",
-			borderColor: success[800],
-			color: success[200],
-		},
-	}),
-	degraded: css({
-		background: warning[50],
-		borderColor: warning[200],
-		color: warning[800],
-		"@media (prefers-color-scheme: dark)": {
-			background: "oklch(0.24 0.06 85 / 0.3)",
-			borderColor: warning[800],
-			color: warning[200],
-		},
-	}),
-	down: css({
-		background: danger[50],
-		borderColor: danger[200],
-		color: danger[800],
-		"@media (prefers-color-scheme: dark)": {
-			background: "oklch(0.22 0.06 25 / 0.3)",
-			borderColor: danger[800],
-			color: danger[200],
-		},
-	}),
-	unknown: css({
-		background: success[50],
-		borderColor: success[200],
-		color: success[800],
-		"@media (prefers-color-scheme: dark)": {
-			background: "oklch(0.26 0.06 155 / 0.3)",
-			borderColor: success[800],
-			color: success[200],
-		},
-	}),
+const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof combine>> = {
+	operational: combine([
+		bg(success[50]),
+		border(success[200]),
+		fg(success[800]),
+		dark([bg("oklch(0.26 0.06 155 / 0.3)"), border(success[800]), fg(success[200])]),
+	]),
+	degraded: combine([
+		bg(warning[50]),
+		border(warning[200]),
+		fg(warning[800]),
+		dark([bg("oklch(0.24 0.06 85 / 0.3)"), border(warning[800]), fg(warning[200])]),
+	]),
+	down: combine([
+		bg(danger[50]),
+		border(danger[200]),
+		fg(danger[800]),
+		dark([bg("oklch(0.22 0.06 25 / 0.3)"), border(danger[800]), fg(danger[200])]),
+	]),
+	unknown: combine([
+		bg(success[50]),
+		border(success[200]),
+		fg(success[800]),
+		dark([bg("oklch(0.26 0.06 155 / 0.3)"), border(success[800]), fg(success[200])]),
+	]),
 };
 
 /**
@@ -141,23 +132,11 @@ const STATUS_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
 };
 
 /** Colors a status icon to match its {@link BadgeTone}; combine with the icon's `mix` prop. */
-const ICON_COLOR_MIX: Record<BadgeTone, ReturnType<typeof css>> = {
-	up: css({
-		color: status.up.light,
-		"@media (prefers-color-scheme: dark)": { color: status.up.dark },
-	}),
-	degraded: css({
-		color: status.degraded.light,
-		"@media (prefers-color-scheme: dark)": { color: status.degraded.dark },
-	}),
-	down: css({
-		color: status.down.light,
-		"@media (prefers-color-scheme: dark)": { color: status.down.dark },
-	}),
-	neutral: css({
-		color: status.neutral.light,
-		"@media (prefers-color-scheme: dark)": { color: status.neutral.dark },
-	}),
+const ICON_COLOR_MIX: Record<BadgeTone, ReturnType<typeof combine>> = {
+	up: combine([fg(status.up.light), dark(fg(status.up.dark))]),
+	degraded: combine([fg(status.degraded.light), dark(fg(status.degraded.dark))]),
+	down: combine([fg(status.down.light), dark(fg(status.down.dark))]),
+	neutral: combine([fg(status.neutral.light), dark(fg(status.neutral.dark))]),
 };
 
 namespace CardStatusIcon {
@@ -259,47 +238,19 @@ function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 })]}>
-					<span
-						mix={[
-							css({
-								fontSize: "0.75rem",
-								color: "var(--ui-neutral-fg-muted)",
-								whiteSpace: "nowrap",
-							}),
-						]}
-					>
-						{labels.daysAgo}
-					</span>
-					<div mix={[css({ flex: 1, height: 1, background: "var(--ui-neutral-border)" })]} />
+				<div mix={[hstack({ align: "center", gap: "8px" }), mbe("6px")]}>
+					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.daysAgo}</span>
+					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
 					{uptime !== null && (
-						<span
-							mix={[
-								css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
+						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{formatUptime(uptime)}
 						</span>
 					)}
-					<div mix={[css({ flex: 1, height: 1, background: "var(--ui-neutral-border)" })]} />
-					<span
-						mix={[
-							css({
-								fontSize: "0.75rem",
-								color: "var(--ui-neutral-fg-muted)",
-								whiteSpace: "nowrap",
-							}),
-						]}
-					>
-						{labels.today}
-					</span>
+					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
+					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.today}</span>
 				</div>
 
-				<div mix={[css({ display: "flex", alignItems: "stretch", gap: 2, height: 32 })]}>
+				<div mix={[hstack({ align: "stretch", gap: "2px" }), bs("32px")]}>
 					{dates.map((date) => {
 						let day = byDate.get(date);
 						return (
@@ -311,104 +262,44 @@ function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 										: date
 								}
 								mix={[
-									css({ flex: 1, minWidth: 2, borderRadius: 1 }),
+									raw({ flex: 1 }),
+									minIs("2px"),
+									rounded("1px"),
 									day?.status === "up"
-										? css({ background: "var(--ui-success-bg-solid)" })
+										? bg("success.solid")
 										: day?.status === "degraded"
-											? css({ background: "var(--ui-warning-bg-solid)" })
+											? bg("warning.solid")
 											: day?.status === "down"
-												? css({ background: "var(--ui-danger-bg-solid)" })
-												: css({ background: "var(--ui-neutral-border)" }),
+												? bg("danger.solid")
+												: bg("neutral.border"),
 								]}
 							/>
 						);
 					})}
 				</div>
 
-				<div
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "flex-end",
-							gap: 12,
-							marginTop: 6,
-						}),
-					]}
-				>
-					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
-						<div
-							mix={[
-								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "var(--ui-success-bg-solid)" }),
-							]}
-						/>
-						<span
-							mix={[
-								css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
+				<div mix={[hstack({ align: "center", justify: "end", gap: "12px" }), mbs("6px")]}>
+					<div mix={[hstack({ align: "center", gap: "4px" })]}>
+						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("success.solid")]} />
+						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{labels.legend.full}
 						</span>
 					</div>
-					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
-						<div
-							mix={[
-								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "var(--ui-warning-bg-solid)" }),
-							]}
-						/>
-						<span
-							mix={[
-								css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
+					<div mix={[hstack({ align: "center", gap: "4px" })]}>
+						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("warning.solid")]} />
+						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{labels.legend.partial}
 						</span>
 					</div>
-					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
-						<div
-							mix={[
-								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "var(--ui-danger-bg-solid)" }),
-							]}
-						/>
-						<span
-							mix={[
-								css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
+					<div mix={[hstack({ align: "center", gap: "4px" })]}>
+						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("danger.solid")]} />
+						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{labels.legend.down}
 						</span>
 					</div>
-					<div mix={[css({ display: "flex", alignItems: "center", gap: 4 })]}>
-						<div
-							mix={[
-								css({ width: 10, height: 10, borderRadius: 2 }),
-								css({ background: "var(--ui-neutral-border)" }),
-							]}
-						/>
-						<span
-							mix={[
-								css({
-									fontSize: "0.75rem",
-									color: "var(--ui-neutral-fg-muted)",
-									whiteSpace: "nowrap",
-								}),
-							]}
-						>
+					<div mix={[hstack({ align: "center", gap: "4px" })]}>
+						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("neutral.border")]} />
+						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{labels.legend.noData}
 						</span>
 					</div>
@@ -538,51 +429,14 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={page.title}>
-				<main
-					mix={[
-						css({
-							maxWidth: 640,
-							margin: "0 auto",
-							padding: "40px 20px",
-						}),
-					]}
-				>
-					<div
-						mix={[
-							css({
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "center",
-								textAlign: "center",
-								gap: 4,
-								marginBottom: 32,
-							}),
-						]}
-					>
+				<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
+					<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
 						{page.logo_url && (
-							<img
-								src={page.logo_url}
-								alt={page.name}
-								width={64}
-								height={64}
-								mix={[css({ marginBottom: 12 })]}
-							/>
+							<img src={page.logo_url} alt={page.name} width={64} height={64} mix={[mbe("12px")]} />
 						)}
-						<h1 mix={[css({ margin: "0 0 4px", fontSize: "1.875rem", fontWeight: 700 })]}>
-							{page.title}
-						</h1>
+						<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>{page.title}</h1>
 						{page.description && (
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": {
-											color: neutral[400],
-										},
-									}),
-								]}
-							>
+							<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
 								{page.description}
 							</p>
 						)}
@@ -591,17 +445,12 @@ export default createAction(
 					{page.show_overall_status && (
 						<div
 							mix={[
-								css({
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									gap: 10,
-									padding: "14px 18px",
-									borderRadius: 8,
-									border: "1px solid transparent",
-									fontWeight: 600,
-									marginBottom: 24,
-								}),
+								hstack({ align: "center", justify: "center", gap: "10px" }),
+								p("14px", "18px"),
+								rounded("8px"),
+								border({ color: "transparent", width: 1 }),
+								weight(600),
+								mbe("24px"),
 								BANNER_MIX[overallStatus],
 							]}
 						>
@@ -620,23 +469,16 @@ export default createAction(
 								<div
 									key={`${service.kind}-${service.id}`}
 									mix={[
-										css({
-											display: "flex",
-											flexDirection: "column",
-											gap: 8,
-											padding: 16,
-											borderRadius: 8,
-											border: `1px solid ${neutral[200]}`,
-											background: "#ffffff",
-											marginBottom: 12,
-											"@media (prefers-color-scheme: dark)": {
-												borderColor: neutral[800],
-												background: neutral[900],
-											},
-										}),
+										vstack({ gap: "8px" }),
+										p("16px"),
+										rounded("8px"),
+										border({ color: neutral[200], width: 1 }),
+										raw({ background: "#ffffff" }),
+										mbe("12px"),
+										dark([border(neutral[800]), bg(neutral[900])]),
 									]}
 								>
-									<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+									<div mix={[hstack({ align: "center", gap: "12px" })]}>
 										<CardStatusIcon status={service.status} />
 										<strong>{service.name}</strong>
 										<Badge tone={BADGE_TONE[service.status]}>{statusLabel[service.status]}</Badge>
@@ -658,23 +500,16 @@ export default createAction(
 										<div
 											key={service.id}
 											mix={[
-												css({
-													display: "flex",
-													flexDirection: "column",
-													gap: 8,
-													padding: 16,
-													borderRadius: 8,
-													border: `1px solid ${neutral[200]}`,
-													background: "#ffffff",
-													marginBottom: 12,
-													"@media (prefers-color-scheme: dark)": {
-														borderColor: neutral[800],
-														background: neutral[900],
-													},
-												}),
+												vstack({ gap: "8px" }),
+												p("16px"),
+												rounded("8px"),
+												border({ color: neutral[200], width: 1 }),
+												raw({ background: "#ffffff" }),
+												mbe("12px"),
+												dark([border(neutral[800]), bg(neutral[900])]),
 											]}
 										>
-											<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+											<div mix={[hstack({ align: "center", gap: "12px" })]}>
 												<CardStatusIcon status={service.status} />
 												<strong>{service.name}</strong>
 												<Badge tone={BADGE_TONE[service.status]}>
@@ -683,16 +518,10 @@ export default createAction(
 											</div>
 											<p
 												mix={[
-													css({
-														display: "flex",
-														alignItems: "center",
-														gap: 4,
-														fontSize: "0.8125rem",
-														color: neutral[500],
-														"@media (prefers-color-scheme: dark)": {
-															color: neutral[400],
-														},
-													}),
+													hstack({ align: "center", gap: "4px" }),
+													fontSize("0.8125rem"),
+													fg(neutral[500]),
+													dark(fg(neutral[400])),
 												]}
 											>
 												<ClockIcon size={12} />
@@ -701,17 +530,7 @@ export default createAction(
 													<code>{service.cronExpression}</code>
 												</span>
 											</p>
-											<p
-												mix={[
-													css({
-														fontSize: "0.8125rem",
-														color: neutral[500],
-														"@media (prefers-color-scheme: dark)": {
-															color: neutral[400],
-														},
-													}),
-												]}
-											>
+											<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
 												{ctx.i18next.t("statusPage.cronJobs.lastPing")}:{" "}
 												{service.lastPingAt
 													? new Date(service.lastPingAt).toLocaleString()
@@ -724,30 +543,16 @@ export default createAction(
 						</>
 					)}
 
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": {
-									color: neutral[400],
-								},
-							}),
-						]}
-					>
+					<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
 						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: new Date().toLocaleString() })}{" "}
 						·{" "}
 						<a
 							href={routes.home.href()}
 							mix={[
-								css({
-									color: primary[600],
-									textDecoration: "none",
-									"&:hover": { textDecoration: "underline" },
-									"@media (prefers-color-scheme: dark)": {
-										color: primary[400],
-									},
-								}),
+								fg(primary[600]),
+								textDecoration("none"),
+								hover(textDecoration("underline")),
+								dark(fg(primary[400])),
 							]}
 						>
 							{ctx.i18next.t("statusPage.footer.poweredBy")}

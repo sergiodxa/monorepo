@@ -22,7 +22,9 @@
 import type { Handle } from "remix/ui";
 
 import { Avatar as UIAvatar } from "@pkg/r3-ui";
-import { clientEntry, css, on } from "remix/ui";
+import { is, bs } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
+import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type AvatarProps = { src: string | null; name: string; size?: number };
@@ -48,13 +50,7 @@ export const Avatar = clientEntry(
 
 			return (
 				<UIAvatar
-					mix={[
-						css({
-							inlineSize: size,
-							blockSize: size,
-							fontSize: `${Math.round(size * 0.42)}px`,
-						}),
-					]}
+					mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}
 				>
 					<UIAvatar.Fallback>{initials}</UIAvatar.Fallback>
 					{src && (

@@ -14,10 +14,12 @@
  */
 
 import { Empty } from "@pkg/r3-ui";
+import { flex, flexWrap, gap } from "@pkg/u/layout";
+import { mbe } from "@pkg/u/size";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { css, Frame } from "remix/ui";
+import { Frame } from "remix/ui";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
@@ -80,7 +82,7 @@ export default createAction(routes.app.team.dashboard.index, {
 					toast={toast}
 				>
 					<div>
-						<div mix={css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 16 })}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
 							<Frame
 								name="dashboard-card-usage"
 								src={routes.app.team.dashboard.cards.usage.href({ team: ctx.team.slug })}
@@ -98,7 +100,7 @@ export default createAction(routes.app.team.dashboard.index, {
 							/>
 						</div>
 
-						<div mix={css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })}>
+						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
 							<Frame
 								name="dashboard-card-count-http"
 								src={routes.app.team.dashboard.cards.count.href({

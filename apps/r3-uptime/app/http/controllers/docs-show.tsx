@@ -15,9 +15,13 @@
 
 import { renderToRemix } from "@pkg/markdown-remix";
 import { isFailure } from "@pkg/result";
+import { fg } from "@pkg/u/color";
+import { vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, mbe } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
@@ -108,18 +112,14 @@ export default createAction(routes.docs.show, async (ctx) => {
 				toggleNavLabel={toggleNavLabel}
 			>
 				<article>
-					<header
-						mix={[css({ display: "flex", flexDirection: "column", gap: 2, marginBottom: "2rem" })]}
-					>
-						<h1 mix={[css({ margin: 0 })]}>{frontmatter.title}</h1>
+					<header mix={[vstack({ gap: "2px" }), mbe("2rem")]}>
+						<h1 mix={[m("0")]}>{frontmatter.title}</h1>
 						<p
 							mix={[
-								css({
-									fontSize: "1.0625rem",
-									color: "oklch(0.52 0.01 145)",
-									margin: "6px 0 0",
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("1.0625rem"),
+								fg("oklch(0.52 0.01 145)"),
+								m("6px", "0", "0", "0"),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{frontmatter.description}
@@ -127,14 +127,10 @@ export default createAction(routes.docs.show, async (ctx) => {
 						{frontmatter.lastUpdated && (
 							<p
 								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										margin: 0,
-										"@media (prefers-color-scheme: dark)": {
-											color: neutral[400],
-										},
-									}),
+									fontSize("0.8125rem"),
+									fg(neutral[500]),
+									m("0"),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								{ctx.i18next.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}

@@ -65,7 +65,33 @@ import {
 import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/r3-ui";
 import { easings } from "@pkg/r3-ui/animations";
 import { menuKeys } from "@pkg/r3-ui/mixins";
-import { css } from "remix/ui";
+import { animation } from "@pkg/u/animation";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
+import { rounded, shadow } from "@pkg/u/effects";
+import { combine, cursor, listStyle, raw } from "@pkg/u/general";
+import {
+	basis,
+	fixed,
+	flex,
+	flexCol,
+	gap,
+	grid,
+	gridArea,
+	grow,
+	hidden,
+	inlineFlex,
+	insBottom,
+	insLeft,
+	insTop,
+	items,
+	justify,
+	shrink,
+} from "@pkg/u/layout";
+import { overflow, overflowY } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { fontSize, truncate, weight } from "@pkg/u/typography";
 
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
@@ -76,85 +102,82 @@ import routes from "~/routes/web";
  * closed (`display: none`, no box) or an off-canvas overlay (top-layer, outside
  * normal flow either way), so header+main are simply the only flex children that
  * matter. At ≥768px it becomes the two-column, three-row grid described above.
+ * `height`/`width` stay physical (not `bs()`/`is()`) here since this IS the
+ * viewport-sized outer frame — `grid-template-*` has no `@pkg/u` equivalent and
+ * stays a bespoke `raw()` declaration.
  */
-const page = css({
-	display: "flex",
-	flexDirection: "column",
-	height: "100vh",
-	overflow: "hidden",
-	"@media (min-width: 768px)": {
-		display: "grid",
-		gridTemplateColumns: "256px 1fr",
-		gridTemplateRows: "auto 1fr auto",
-		gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
-	},
-});
+const page = combine([
+	flex(),
+	flexCol(),
+	height("100vh"),
+	overflow(),
+	media("(min-width: 768px)", [
+		grid(),
+		raw({
+			gridTemplateColumns: "256px 1fr",
+			gridTemplateRows: "auto 1fr auto",
+			gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
+		}),
+	]),
+]);
 
 /** Horizontal group of inline items (nav toggle + breadcrumb, action buttons). */
-const row = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
+const row = combine([flex(), items("center"), gap(3), minIs(0)]);
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
  * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px, where the
  * sidebar is always visible and a toggle would be redundant.
  */
-const sidebarToggle = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: 32,
-	height: 32,
-	padding: 0,
-	borderRadius: 6,
-	border: "none",
-	background: "transparent",
-	color: "inherit",
-	cursor: "pointer",
-	flexShrink: 0,
-	"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
-	"@media (min-width: 768px)": { display: "none" },
-});
+const sidebarToggle = combine([
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	is("32px"),
+	bs("32px"),
+	p(0),
+	rounded(),
+	border("none"),
+	bg("transparent"),
+	fg("inherit"),
+	cursor("pointer"),
+	shrink(),
+	hover(bg("neutral.bg-tint-hover")),
+	media("(min-width: 768px)", hidden()),
+]);
 
 /**
  * The header cell: nav toggle + breadcrumb on the left, quick actions on the right.
  * `height` (with `boxSizing: border-box`, so padding/border count toward it) is fixed
  * at 64px so pages that pass no `actions` don't render a shorter header row.
  */
-const header = css({
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "space-between",
-	gap: 16,
-	height: 64,
-	boxSizing: "border-box",
-	padding: "0 20px",
-	borderBottom: "1px solid var(--ui-neutral-border)",
-	flexShrink: 0,
-	"@media (min-width: 768px)": { gridArea: "header" },
-});
+const header = combine([
+	flex(),
+	items("center"),
+	justify("between"),
+	gap(4),
+	bs("64px"),
+	raw({ boxSizing: "border-box" }),
+	pi(5),
+	borderEdge("bottom", { color: "neutral", width: 1 }),
+	shrink(),
+	media("(min-width: 768px)", gridArea("header")),
+]);
 
 /** The current page/section name, replacing what used to be each page's own `<h1>`. */
-const breadcrumbText = css({
-	fontSize: "0.9375rem",
-	fontWeight: 600,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-	color: "var(--ui-neutral-fg-emphasis)",
-});
+const breadcrumbText = combine([
+	truncate(),
+	fontSize("0.9375rem"),
+	weight(600),
+	fg("neutral.emphasis"),
+]);
 
 /**
  * Wraps the small `Breadcrumbs` trail and the bold {@link breadcrumbText} heading in
  * a single column so both sit stacked, vertically centered within the fixed-height
  * {@link header} row.
  */
-const headingColumn = css({
-	display: "flex",
-	flexDirection: "column",
-	justifyContent: "center",
-	gap: 2,
-	minWidth: 0,
-});
+const headingColumn = combine([flex(), flexCol(), justify("center"), gap("2px"), minIs(0)]);
 
 /**
  * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
@@ -164,37 +187,37 @@ const headingColumn = css({
  * stay pinned. At ≥768px it becomes `display: contents` (see the file docblock) —
  * the `!important`s throughout are required to beat the UA stylesheet's
  * `[popover]:not(:popover-open) { display: none }`, which otherwise wins on
- * specificity.
+ * specificity. `top`/`left`/`bottom` stay the physical `insTop()`/`insLeft()`/
+ * `insBottom()` exceptions since this drawer is pinned to the physical viewport
+ * edge it slides in from, not a logical writing-direction edge.
  */
-const sidebarNav = css({
-	position: "fixed",
-	top: 0,
-	left: 0,
-	bottom: 0,
-	margin: 0,
+const sidebarNav = combine([
+	fixed(),
+	insTop(0),
+	insLeft(0),
+	insBottom(0),
+	m(0),
 	/**
 	 * The UA popover stylesheet applies `height: fit-content` to every `[popover]`
 	 * element regardless of open state — left unset, that beats this element's
 	 * intended full-height drawer size below 768px.
 	 */
-	height: "100%",
-	boxSizing: "border-box",
-	display: "none",
-	flexDirection: "column",
-	overflow: "hidden",
-	width: "min(80vw, 288px)",
-	maxHeight: "100vh",
-	padding: 0,
-	border: "none",
-	borderRight: "1px solid var(--ui-neutral-border)",
-	background: "var(--ui-neutral-bg-tint)",
-	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
-	"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-	"&:popover-open": { display: "flex !important" },
-	"@media (min-width: 768px)": {
-		display: "contents !important",
-	},
-});
+	bs("full"),
+	raw({ boxSizing: "border-box" }),
+	hidden(),
+	flexCol(),
+	overflow(),
+	is("min(80vw, 288px)"),
+	maxBs("100vh"),
+	p(0),
+	border("none"),
+	borderEdge("right", { color: "neutral", width: 1 }),
+	bg("neutral.tint"),
+	shadow("lg"),
+	when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
+	when("&:popover-open", raw({ display: "flex !important" })),
+	media("(min-width: 768px)", raw({ display: "contents !important" })),
+]);
 
 /**
  * Top sidebar cell: the team picker. Shares row 1 with `header` at ≥768px — the
@@ -202,50 +225,52 @@ const sidebarNav = css({
  * `borderBottom`s land at the same y — with a matching `borderRight` to continue the
  * vertical divider between the sidebar and the content column.
  */
-const teamPickerCell = css({
-	display: "flex",
-	alignItems: "center",
-	padding: "10px 12px",
-	flexShrink: 0,
-	"@media (min-width: 768px)": {
-		gridArea: "teampicker",
-		padding: "0 16px",
-		borderBottom: "1px solid var(--ui-neutral-border)",
-		borderRight: "1px solid var(--ui-neutral-border)",
-	},
-});
+const teamPickerCell = combine([
+	flex(),
+	items("center"),
+	p("10px", "12px"),
+	shrink(),
+	media("(min-width: 768px)", [
+		gridArea("teampicker"),
+		p(0, 4),
+		borderEdge("bottom", { color: "neutral", width: 1 }),
+		borderEdge("right", { color: "neutral", width: 1 }),
+	]),
+]);
 
 /**
  * Middle sidebar cell: the primary + admin-only nav lists. Independently scrollable
  * (`overflow-y: auto`, `minHeight: 0`) so a long nav list never pushes the user menu
  * below the sidebar's own scroll instead of staying pinned to the bottom.
  */
-const navCell = css({
-	display: "flex",
-	flexDirection: "column",
-	gap: 12,
-	flex: 1,
-	minHeight: 0,
-	overflowY: "auto",
-	padding: "16px 12px",
-	"@media (min-width: 768px)": {
-		gridArea: "nav",
-		borderRight: "1px solid var(--ui-neutral-border)",
-	},
-});
+const navCell = combine([
+	flex(),
+	flexCol(),
+	gap(3),
+	grow(),
+	shrink(1),
+	basis("0%"),
+	minBs(0),
+	overflowY("auto"),
+	p(4, 3),
+	media("(min-width: 768px)", [
+		gridArea("nav"),
+		borderEdge("right", { color: "neutral", width: 1 }),
+	]),
+]);
 
 /** Bottom sidebar cell: the user menu. */
-const userMenuCell = css({
-	padding: 16,
-	borderTop: "1px solid var(--ui-neutral-border)",
-	flexShrink: 0,
-	"@media (min-width: 768px)": {
-		gridArea: "usermenu",
-		padding: 16,
-		borderTop: "1px solid var(--ui-neutral-border)",
-		borderRight: "1px solid var(--ui-neutral-border)",
-	},
-});
+const userMenuCell = combine([
+	p(4),
+	borderEdge("top", { color: "neutral", width: 1 }),
+	shrink(),
+	media("(min-width: 768px)", [
+		gridArea("usermenu"),
+		p(4),
+		borderEdge("top", { color: "neutral", width: 1 }),
+		borderEdge("right", { color: "neutral", width: 1 }),
+	]),
+]);
 
 /**
  * Plain (non-interactive) row used for the team picker when the viewer has one team.
@@ -253,13 +278,7 @@ const userMenuCell = css({
  * without it, this row (and the sidebar itself) would rather grow past its intended
  * width than truncate the team name.
  */
-const teamPickerRow = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	minWidth: 0,
-	width: "100%",
-});
+const teamPickerRow = combine([flex(), items("center"), gap(2), minIs(0), is("full")]);
 
 /**
  * Interactive team/user-menu trigger button, styled to look like the plain row
@@ -268,36 +287,37 @@ const teamPickerRow = css({
  * what gives the `Menu` its implicit CSS anchor, with no extra wiring on this button.
  * `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right edges
  * flush with its parent cell's own padding on both sides equally — the cell's
- * padding IS the button's margin from the sidebar's edge.
+ * padding IS the button's margin from the sidebar's edge. `font`/`textAlign: "left"`
+ * stay `raw()` — the CSS `font` shorthand and a physical (non-logical) text
+ * alignment have no `@pkg/u` equivalent.
  */
-const menuTriggerButton = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	width: "100%",
-	minWidth: 0,
-	padding: "6px 8px",
-	border: "none",
-	borderRadius: 8,
-	background: "transparent",
-	font: "inherit",
-	textAlign: "left",
-	cursor: "pointer",
-	color: "inherit",
-	"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
-});
+const menuTriggerButton = combine([
+	flex(),
+	items("center"),
+	gap(2),
+	is("full"),
+	minIs(0),
+	p("6px", "8px"),
+	border("none"),
+	rounded("lg"),
+	bg("transparent"),
+	raw({ font: "inherit", textAlign: "left" }),
+	cursor("pointer"),
+	fg("inherit"),
+	hover(bg("neutral.bg-tint-hover")),
+]);
 
 /** Truncated name/label text next to a logo/avatar in the team picker and user menu. */
-const truncatedLabel = css({
-	flex: 1,
-	minWidth: 0,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	whiteSpace: "nowrap",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	color: "var(--ui-neutral-fg-emphasis)",
-});
+const truncatedLabel = combine([
+	grow(),
+	shrink(1),
+	basis("0%"),
+	minIs(0),
+	truncate(),
+	fontSize("0.875rem"),
+	weight(500),
+	fg("neutral.emphasis"),
+]);
 
 /**
  * The "switch" affordance icon at the end of the team-picker/user-menu triggers.
@@ -305,28 +325,18 @@ const truncatedLabel = css({
  * here, since the icon and the label are siblings rather than parent/child, so they
  * don't necessarily inherit the same computed color.
  */
-const menuChevronIcon = css({
-	flexShrink: 0,
-	color: "var(--ui-neutral-fg-emphasis)",
-});
+const menuChevronIcon = combine([shrink(), fg("neutral.emphasis")]);
 
 /** A nav-list `<ul>` (used for both the primary and admin-only groups). */
-const navList = css({
-	listStyle: "none",
-	margin: 0,
-	padding: 0,
-	display: "flex",
-	flexDirection: "column",
-	gap: 4,
-});
+const navList = combine([listStyle(), m(0), p(0), flex(), flexCol(), gap(1)]);
 
 /** The page's main content area (grid area "content", spanning both content-side rows at ≥768px). */
-const main = css({
-	minWidth: 0,
-	padding: 20,
-	overflow: "auto",
-	"@media (min-width: 768px)": { gridArea: "content", padding: 48 },
-});
+const main = combine([
+	minIs(0),
+	p(5),
+	overflow("auto"),
+	media("(min-width: 768px)", [gridArea("content"), p(12)]),
+]);
 
 /**
  * Total time, in ms, the toast stays visible before fading out — matches
@@ -345,19 +355,20 @@ const TOAST_VISIBLE_MS = 5000;
  * doesn't fit a toast with no open/close state of its own — this reuses their
  * `easings.standard` curve instead of the plain `"ease"` keyword the previous
  * hand-rolled `@keyframes` used, so the motion still settles into the same rhythm as
- * every other transition in the catalog.
+ * every other transition in the catalog. Built on `@pkg/u/animation`'s `animation()`,
+ * which emits the same `@keyframes` rule plus longhand `animationName`/
+ * `animationDuration`/`animationTimingFunction`/`animationFillMode` host declarations.
  */
 function toastAutoFade() {
-	return css({
-		animationName: "uptime-toast-fade",
-		animationDuration: `${TOAST_VISIBLE_MS}ms`,
-		animationTimingFunction: easings.standard,
-		animationFillMode: "forwards",
-		"@keyframes uptime-toast-fade": {
+	return animation("uptime-toast-fade", {
+		keyframes: {
 			"0%": { opacity: 1 },
 			"85%": { opacity: 1 },
 			"100%": { opacity: 0, visibility: "hidden" },
 		},
+		duration: `${TOAST_VISIBLE_MS}ms`,
+		easing: easings.standard,
+		fillMode: "forwards",
 	});
 }
 
@@ -539,7 +550,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						</ul>
 
 						{isAdmin && (
-							<ul mix={[navList, css({ marginTop: "auto" })]}>
+							<ul mix={[navList, mbs("auto")]}>
 								{adminNavItems.map((item) => (
 									<li key={item.href}>
 										<Sidebar.Item

@@ -18,7 +18,7 @@ import type { Handle } from "remix/ui";
 
 import { Card, Skeleton } from "@pkg/r3-ui";
 import { pulse } from "@pkg/r3-ui/animations";
-import { css } from "remix/ui";
+import { basis, grow, shrink } from "@pkg/u/layout";
 
 namespace StatCardSkeleton {
 	export interface Props {
@@ -35,7 +35,7 @@ export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>)
 		return (
 			<>
 				{Array.from({ length: count }, (_, index) => (
-					<Card key={index} mix={css({ flex: "1 1 160px" })}>
+					<Card key={index} mix={[grow(1), shrink(1), basis("160px")]}>
 						<Card.Header>
 							<Skeleton style={{ inlineSize: "60%", blockSize: "0.75rem" }} mix={[pulse()]} />
 							<Skeleton style={{ inlineSize: "45%", blockSize: "1.75rem" }} mix={[pulse()]} />

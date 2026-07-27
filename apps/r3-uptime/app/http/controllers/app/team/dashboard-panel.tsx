@@ -18,11 +18,14 @@ import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/
 import { Empty, Table } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type {
@@ -270,18 +273,18 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={css({
-											color: primary[600],
-											textDecoration: "none",
-											"&:hover": { textDecoration: "underline" },
-											"@media (prefers-color-scheme: dark)": { color: primary[400] },
-										})}
+										mix={[
+											fg(primary[600]),
+											textDecoration("none"),
+											hover(textDecoration("underline")),
+											media("(prefers-color-scheme: dark)", fg(primary[400])),
+										]}
 									>
 										{monitor.name}
 									</a>
 								</Table.Cell>
 								<Table.Cell>
-									<div mix={css({ color: primary[600] })}>
+									<div mix={fg(primary[600])}>
 										<Sparkline points={sparklinePoints} />
 									</div>
 								</Table.Cell>
@@ -352,12 +355,12 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={css({
-											color: primary[600],
-											textDecoration: "none",
-											"&:hover": { textDecoration: "underline" },
-											"@media (prefers-color-scheme: dark)": { color: primary[400] },
-										})}
+										mix={[
+											fg(primary[600]),
+											textDecoration("none"),
+											hover(textDecoration("underline")),
+											media("(prefers-color-scheme: dark)", fg(primary[400])),
+										]}
 									>
 										{monitor.name}
 									</a>
@@ -435,12 +438,12 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={css({
-											color: primary[600],
-											textDecoration: "none",
-											"&:hover": { textDecoration: "underline" },
-											"@media (prefers-color-scheme: dark)": { color: primary[400] },
-										})}
+										mix={[
+											fg(primary[600]),
+											textDecoration("none"),
+											hover(textDecoration("underline")),
+											media("(prefers-color-scheme: dark)", fg(primary[400])),
+										]}
 									>
 										{monitor.name}
 									</a>
@@ -520,12 +523,12 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
-										mix={css({
-											color: primary[600],
-											textDecoration: "none",
-											"&:hover": { textDecoration: "underline" },
-											"@media (prefers-color-scheme: dark)": { color: primary[400] },
-										})}
+										mix={[
+											fg(primary[600]),
+											textDecoration("none"),
+											hover(textDecoration("underline")),
+											media("(prefers-color-scheme: dark)", fg(primary[400])),
+										]}
 									>
 										{monitor.name}
 									</a>

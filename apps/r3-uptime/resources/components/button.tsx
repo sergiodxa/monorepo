@@ -17,10 +17,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, MixInput, Props as TagProps } from "remix/ui";
 
 import { Button as UIButton } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { bg, border, fg, outline } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { appearance, gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { pb, pi } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { fontSize, textDecoration, weight } from "@pkg/u/typography";
 
 export type ButtonColor = "primary" | "neutral" | "danger";
 export type ButtonVariant = "solid" | "outline" | "ghost";
@@ -44,108 +50,102 @@ namespace Button {
  * {@link Button}'s own r3-ui-backed styling even though the two no longer
  * share an implementation.
  */
-export const buttonBase = css({
-	appearance: "none",
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	gap: "0.5rem",
-	borderRadius: "var(--ui-radius-md, 0.375rem)",
-	fontFamily: "inherit",
-	fontWeight: 500,
-	textDecoration: "none",
-	cursor: "pointer",
-	"&:disabled": { cursor: "not-allowed", opacity: 0.5 },
-	"&:focus-visible": {
-		outline: "2px solid var(--ui-primary-ring)",
-		outlineOffset: 2,
-	},
-});
+export const buttonBase: MixInput = [
+	appearance("none", { webkit: false, moz: false }),
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	gap("0.5rem"),
+	rounded("md"),
+	raw({ fontFamily: "inherit" }),
+	weight(500),
+	textDecoration("none"),
+	cursor("pointer"),
+	when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+	when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+];
 
-export const buttonSizeMix: Record<ButtonSize, ReturnType<typeof css>> = {
-	sm: css({ paddingInline: "0.75rem", paddingBlock: "0.375rem", fontSize: "0.75rem" }),
-	md: css({ paddingInline: "1rem", paddingBlock: "0.5rem", fontSize: "0.875rem" }),
-	lg: css({ paddingInline: "1.25rem", paddingBlock: "0.625rem", fontSize: "1rem" }),
+export const buttonSizeMix: Record<ButtonSize, MixInput> = {
+	sm: [pi("0.75rem"), pb("0.375rem"), fontSize("xs")],
+	md: [pi("1rem"), pb("0.5rem"), fontSize("sm")],
+	lg: [pi("1.25rem"), pb("0.625rem"), fontSize("base")],
 };
 
-const solid: Record<ButtonColor, ReturnType<typeof css>> = {
-	primary: css({
-		border: "1px solid transparent",
-		background: "var(--ui-primary-bg-solid)",
-		color: "var(--ui-primary-fg-on-solid)",
-		"&:hover": { background: "var(--ui-primary-bg-solid-hover)" },
-		"&:active": { background: "var(--ui-primary-bg-solid-pressed)" },
-	}),
-	neutral: css({
-		border: "1px solid transparent",
-		background: "var(--ui-neutral-bg-solid)",
-		color: "var(--ui-neutral-fg-on-solid)",
-		"&:hover": { background: "var(--ui-neutral-bg-solid-hover)" },
-		"&:active": { background: "var(--ui-neutral-bg-solid-pressed)" },
-	}),
-	danger: css({
-		border: "1px solid transparent",
-		background: "var(--ui-danger-bg-solid)",
-		color: "var(--ui-danger-fg-on-solid)",
-		"&:hover": { background: "var(--ui-danger-bg-solid-hover)" },
-		"&:active": { background: "var(--ui-danger-bg-solid-pressed)" },
-	}),
+const solid: Record<ButtonColor, MixInput> = {
+	primary: [
+		border({ color: "transparent", width: 1 }),
+		bg("primary.solid"),
+		fg("primary.onSolid"),
+		when("&:hover", bg("primary.bg-solid-hover")),
+		when("&:active", bg("primary.bg-solid-pressed")),
+	],
+	neutral: [
+		border({ color: "transparent", width: 1 }),
+		bg("neutral.solid"),
+		fg("neutral.onSolid"),
+		when("&:hover", bg("neutral.bg-solid-hover")),
+		when("&:active", bg("neutral.bg-solid-pressed")),
+	],
+	danger: [
+		border({ color: "transparent", width: 1 }),
+		bg("danger.solid"),
+		fg("danger.onSolid"),
+		when("&:hover", bg("danger.bg-solid-hover")),
+		when("&:active", bg("danger.bg-solid-pressed")),
+	],
 };
 
-const outline: Record<ButtonColor, ReturnType<typeof css>> = {
-	primary: css({
-		border: "2px solid var(--ui-primary-border-strong)",
-		background: "transparent",
-		color: "var(--ui-primary-fg)",
-		"&:hover": { background: "var(--ui-primary-bg-tint)" },
-		"&:active": { background: "var(--ui-primary-bg-tint-hover)" },
-	}),
-	neutral: css({
-		border: "2px solid var(--ui-neutral-border-strong)",
-		background: "transparent",
-		color: "var(--ui-neutral-fg)",
-		"&:hover": { background: "var(--ui-neutral-bg-tint)" },
-		"&:active": { background: "var(--ui-neutral-bg-tint-hover)" },
-	}),
-	danger: css({
-		border: "2px solid var(--ui-danger-border-strong)",
-		background: "transparent",
-		color: "var(--ui-danger-fg)",
-		"&:hover": { background: "var(--ui-danger-bg-tint)" },
-		"&:active": { background: "var(--ui-danger-bg-tint-hover)" },
-	}),
+const outlineVariant: Record<ButtonColor, MixInput> = {
+	primary: [
+		border({ color: "primary.strong", width: 2 }),
+		bg("transparent"),
+		fg("primary"),
+		when("&:hover", bg("primary.tint")),
+		when("&:active", bg("primary.bg-tint-hover")),
+	],
+	neutral: [
+		border({ color: "neutral.strong", width: 2 }),
+		bg("transparent"),
+		fg("neutral"),
+		when("&:hover", bg("neutral.tint")),
+		when("&:active", bg("neutral.bg-tint-hover")),
+	],
+	danger: [
+		border({ color: "danger.strong", width: 2 }),
+		bg("transparent"),
+		fg("danger"),
+		when("&:hover", bg("danger.tint")),
+		when("&:active", bg("danger.bg-tint-hover")),
+	],
 };
 
-const ghost: Record<ButtonColor, ReturnType<typeof css>> = {
-	primary: css({
-		border: "1px solid transparent",
-		background: "transparent",
-		color: "var(--ui-primary-fg)",
-		"&:hover": { background: "var(--ui-primary-bg-tint)" },
-		"&:active": { background: "var(--ui-primary-bg-tint-hover)" },
-	}),
-	neutral: css({
-		border: "1px solid transparent",
-		background: "transparent",
-		color: "var(--ui-neutral-fg)",
-		"&:hover": { background: "var(--ui-neutral-bg-tint-hover)" },
-		"&:active": { background: "var(--ui-neutral-bg-tint-pressed)" },
-	}),
-	danger: css({
-		border: "1px solid transparent",
-		background: "transparent",
-		color: "var(--ui-danger-fg)",
-		"&:hover": { background: "var(--ui-danger-bg-tint)" },
-		"&:active": { background: "var(--ui-danger-bg-tint-hover)" },
-	}),
+const ghost: Record<ButtonColor, MixInput> = {
+	primary: [
+		border({ color: "transparent", width: 1 }),
+		bg("transparent"),
+		fg("primary"),
+		when("&:hover", bg("primary.tint")),
+		when("&:active", bg("primary.bg-tint-hover")),
+	],
+	neutral: [
+		border({ color: "transparent", width: 1 }),
+		bg("transparent"),
+		fg("neutral"),
+		when("&:hover", bg("neutral.bg-tint-hover")),
+		when("&:active", bg("neutral.bg-tint-pressed")),
+	],
+	danger: [
+		border({ color: "transparent", width: 1 }),
+		bg("transparent"),
+		fg("danger"),
+		when("&:hover", bg("danger.tint")),
+		when("&:active", bg("danger.bg-tint-hover")),
+	],
 };
 
-export const buttonVariantMix: Record<
-	ButtonVariant,
-	Record<ButtonColor, ReturnType<typeof css>>
-> = {
+export const buttonVariantMix: Record<ButtonVariant, Record<ButtonColor, MixInput>> = {
 	solid,
-	outline,
+	outline: outlineVariant,
 	ghost,
 };
 

@@ -8,10 +8,13 @@
 import { ClockIcon, PlusIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
@@ -108,12 +111,10 @@ export default createAction(routes.app.team.cronJobs.index, {
 															monitorId: monitor.id,
 														})}
 														mix={[
-															css({
-																color: primary[600],
-																textDecoration: "none",
-																"&:hover": { textDecoration: "underline" },
-																"@media (prefers-color-scheme: dark)": { color: primary[400] },
-															}),
+															fg(primary[600]),
+															textDecoration("none"),
+															hover(textDecoration("underline")),
+															media("(prefers-color-scheme: dark)", fg(primary[400])),
 														]}
 													>
 														{monitor.name}

@@ -31,7 +31,10 @@
 import type { Handle } from "remix/ui";
 
 import { Logo as UILogo } from "@pkg/r3-ui";
-import { clientEntry, css, on } from "remix/ui";
+import { bg, fg } from "@pkg/u/color";
+import { bs, is } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
+import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type LogoProps = { src: string | null; name: string; size?: number };
@@ -52,25 +55,8 @@ export const Logo = clientEntry(
 			let initials = getInitials(name);
 
 			return (
-				<UILogo
-					mix={[
-						css({
-							inlineSize: size,
-							blockSize: size,
-							fontSize: `${Math.round(size * 0.42)}px`,
-						}),
-					]}
-				>
-					<UILogo.Fallback
-						mix={[
-							css({
-								backgroundColor: "var(--ui-primary-bg-tint)",
-								color: "var(--ui-primary-fg)",
-							}),
-						]}
-					>
-						{initials}
-					</UILogo.Fallback>
+				<UILogo mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}>
+					<UILogo.Fallback mix={[bg("primary.tint"), fg("primary")]}>{initials}</UILogo.Fallback>
 					{src && displayImage && (
 						<UILogo.Image
 							src={src}

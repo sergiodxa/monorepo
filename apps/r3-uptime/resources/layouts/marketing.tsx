@@ -22,14 +22,19 @@ import type { TFunction } from "i18next";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { NavLink } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { bg, borderEdge, colorMix, fg } from "@pkg/u/color";
+import { backdropBlur } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { block, gap, grid, hidden, hstack, inline, insTop, sticky, vstack } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, maxIs, mbe, minBs, p } from "@pkg/u/size";
+import { z } from "@pkg/u/stacking";
+import { hover } from "@pkg/u/state";
+import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import { fontSans } from "~/resources/theme";
 import routes from "~/routes/web";
-
-/** Page-level flex column filling the viewport height. */
-const page = css({ display: "flex", flexDirection: "column", minHeight: "100vh" });
 
 namespace MarketingLayout {
 	export interface Props {
@@ -223,39 +228,29 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 		let footerGrid = buildFooterGrid(footerColumns);
 
 		return (
-			<div mix={[page, css({ fontFamily: fontSans })]}>
+			<div mix={[vstack(), minBs("100vh"), raw({ fontFamily: fontSans })]}>
 				<header
 					mix={[
-						css({
-							position: "sticky",
-							top: 0,
-							zIndex: 10,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							gap: 16,
-							padding: "14px 24px",
-							borderBottom: "1px solid var(--ui-neutral-border)",
-							background: "color-mix(in oklab, var(--ui-neutral-bg-tint) 80%, transparent)",
-							backdropFilter: "blur(12px)",
-						}),
+						sticky(),
+						insTop(0),
+						z(10),
+						hstack({ align: "center", justify: "between", gap: "16px" }),
+						p("14px", "24px"),
+						borderEdge("bottom", { color: "neutral", width: 1 }),
+						bg(
+							colorMix("oklab", { color: "var(--ui-neutral-bg-tint)", weight: 80 }, "transparent"),
+						),
+						backdropBlur(),
 					]}
 				>
 					<a
 						href={routes.home.href()}
-						mix={[
-							css({
-								fontWeight: 700,
-								fontSize: "1.25rem",
-								textDecoration: "none",
-								color: "var(--ui-neutral-fg-emphasis)",
-							}),
-						]}
+						mix={[weight(700), fontSize("1.25rem"), textDecoration("none"), fg("neutral.emphasis")]}
 					>
 						{brandLabel}
 					</a>
 
-					<nav mix={[css({ display: "flex", alignItems: "center", gap: 20 })]}>
+					<nav mix={[hstack({ align: "center", gap: "20px" })]}>
 						{/*
 						 * Hidden entirely below `md` — no hamburger/drawer here,
 						 * only the logo and CTA remain visible on mobile.
@@ -266,13 +261,11 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 								href={link.href}
 								hasBackground
 								mix={[
-									css({
-										display: "none",
-										fontSize: "0.875rem",
-										color: "var(--ui-neutral-fg)",
-										"&:hover": { color: "var(--ui-primary-fg)" },
-										"@media (min-width: 768px)": { display: "inline" },
-									}),
+									hidden(),
+									fontSize("sm"),
+									fg("neutral"),
+									hover(fg("primary")),
+									media("(min-width: 768px)", inline()),
 								]}
 							>
 								{link.label}
@@ -292,40 +285,27 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 				<footer
 					mix={[
-						css({
-							borderTop: "1px solid var(--ui-neutral-border)",
-							background: "var(--ui-neutral-bg-tint)",
-							padding: "48px 24px 24px",
-						}),
+						borderEdge("top", { color: "neutral", width: 1 }),
+						bg("neutral.tint"),
+						p("48px", "24px", "24px", "24px"),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								display: "grid",
-								gap: 32,
-								gridTemplateColumns: "1fr",
-								maxWidth: 1152,
-								margin: "0 auto 32px",
-								"@media (min-width: 640px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-								"@media (min-width: 768px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(5, 1fr)" },
-							}),
+							grid(),
+							gap("32px"),
+							m(0, "auto", "32px", "auto"),
+							maxIs("1152px"),
+							raw({ gridTemplateColumns: "1fr" }),
+							media("(min-width: 640px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+							media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+							media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(5, 1fr)" })),
 						]}
 					>
 						{footerGrid.map((cell) =>
 							cell.kind === "column" ? (
 								<div key={cell.column.title}>
-									<p
-										mix={[
-											css({
-												fontSize: "0.875rem",
-												fontWeight: 600,
-												color: "var(--ui-neutral-fg-emphasis)",
-												marginBottom: 16,
-											}),
-										]}
-									>
+									<p mix={[fontSize("sm"), weight(600), fg("neutral.emphasis"), mbe("16px")]}>
 										{cell.column.title}
 									</p>
 									{cell.column.links.map((link) => (
@@ -333,14 +313,12 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 											key={link.href}
 											href={link.href}
 											mix={[
-												css({
-													display: "block",
-													fontSize: "0.875rem",
-													color: "var(--ui-neutral-fg)",
-													textDecoration: "none",
-													marginBottom: 8,
-													"&:hover": { color: "var(--ui-primary-fg)" },
-												}),
+												block(),
+												fontSize("sm"),
+												fg("neutral"),
+												textDecoration("none"),
+												mbe("8px"),
+												hover(fg("primary")),
 											]}
 										>
 											{link.label}
@@ -349,22 +327,10 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 								</div>
 							) : (
 								/** Bundles Documentation and Legal into a single footer grid cell. */
-								<div
-									key="docs-legal"
-									mix={[css({ display: "flex", flexDirection: "column", gap: 32 })]}
-								>
+								<div key="docs-legal" mix={[vstack({ gap: "32px" })]}>
 									{cell.columns.map((column) => (
 										<div key={column.title}>
-											<p
-												mix={[
-													css({
-														fontSize: "0.875rem",
-														fontWeight: 600,
-														color: "var(--ui-neutral-fg-emphasis)",
-														marginBottom: 16,
-													}),
-												]}
-											>
+											<p mix={[fontSize("sm"), weight(600), fg("neutral.emphasis"), mbe("16px")]}>
 												{column.title}
 											</p>
 											{column.links.map((link) => (
@@ -372,14 +338,12 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 													key={link.href}
 													href={link.href}
 													mix={[
-														css({
-															display: "block",
-															fontSize: "0.875rem",
-															color: "var(--ui-neutral-fg)",
-															textDecoration: "none",
-															marginBottom: 8,
-															"&:hover": { color: "var(--ui-primary-fg)" },
-														}),
+														block(),
+														fontSize("sm"),
+														fg("neutral"),
+														textDecoration("none"),
+														mbe("8px"),
+														hover(fg("primary")),
 													]}
 												>
 													{link.label}
@@ -394,14 +358,11 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								marginTop: 24,
-								textAlign: "center",
-								fontSize: "0.8125rem",
-								color: "var(--ui-neutral-fg-muted)",
-							}),
+							maxIs("1152px"),
+							m("24px", "auto", 0, "auto"),
+							textAlign("center"),
+							fontSize("0.8125rem"),
+							fg("neutral.muted"),
 						]}
 					>
 						{copyrightLine}

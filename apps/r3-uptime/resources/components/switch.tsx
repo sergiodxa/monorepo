@@ -15,7 +15,10 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Label, Switch as UISwitch } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { cursor } from "@pkg/u/general";
+import { hstack } from "@pkg/u/layout";
+import { mbe } from "@pkg/u/size";
+import { weight } from "@pkg/u/typography";
 
 namespace Switch {
 	export interface Props {
@@ -37,14 +40,10 @@ export default function Switch(handle: Handle<Switch.Props>) {
 		return (
 			<Label
 				mix={[
-					css({
-						display: "flex",
-						alignItems: "center",
-						gap: 8,
-						marginBottom: 16,
-						fontWeight: 400,
-						cursor: disabled ? "not-allowed" : "pointer",
-					}),
+					hstack({ gap: "8px", align: "center" }),
+					mbe("16px"),
+					weight(400),
+					cursor(disabled ? "not-allowed" : "pointer"),
 				]}
 			>
 				<UISwitch name={name} value="true" defaultChecked={defaultChecked} disabled={disabled} />

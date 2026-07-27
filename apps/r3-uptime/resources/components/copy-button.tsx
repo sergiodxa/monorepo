@@ -17,36 +17,18 @@ import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
 import { COPY_COMMAND, copyToClipboard } from "@pkg/r3-ui/mixins";
-import { clientEntry, css, on } from "remix/ui";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { border, bg, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { cursor } from "@pkg/u/general";
+import { inlineFlex, items } from "@pkg/u/layout";
+import { dark } from "@pkg/u/responsive";
+import { p } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
+import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type CopyButtonProps = { value: string; label?: string };
-
-const button = css({
-	display: "inline-flex",
-	alignItems: "center",
-	padding: "4px 10px",
-	borderRadius: 6,
-	border: "1px solid oklch(0.83 0.01 145)",
-	background: "transparent",
-	color: "inherit",
-	fontSize: "0.8125rem",
-	cursor: "pointer",
-	"@media (prefers-color-scheme: dark)": { borderColor: "oklch(0.42 0.008 145)" },
-});
-
-/** Visually hides {@link CopyButtonProps.value}'s carrier `<span>` while keeping its text readable to the clipboard mixin. */
-const hiddenValue = css({
-	position: "absolute",
-	width: 1,
-	height: 1,
-	padding: 0,
-	margin: -1,
-	overflow: "hidden",
-	clip: "rect(0, 0, 0, 0)",
-	whiteSpace: "nowrap",
-	border: 0,
-});
 
 /** Copies {@link CopyButtonProps.value} to the clipboard on click, swapping its label to "Copied!" for 2 seconds. */
 export const CopyButton = clientEntry(
@@ -61,7 +43,16 @@ export const CopyButton = clientEntry(
 				commandfor={valueId}
 				command={COPY_COMMAND}
 				mix={[
-					button,
+					inlineFlex(),
+					items("center"),
+					p(1, 2.5),
+					rounded("md"),
+					border({ color: "oklch(0.83 0.01 145)", width: 1, style: "solid" }),
+					bg("transparent"),
+					fg("inherit"),
+					fontSize("0.8125rem"),
+					cursor("pointer"),
+					dark(border("oklch(0.42 0.008 145)")),
 					copyToClipboard(),
 					on("ui:copy", (event) => {
 						if (!event.success) return;
@@ -77,7 +68,8 @@ export const CopyButton = clientEntry(
 				{copied
 					? intl(handle).t("components.copyButton.copied")
 					: (handle.props.label ?? intl(handle).t("components.copyButton.label"))}
-				<span id={valueId} mix={[hiddenValue]}>
+				{/* Keeps `value`'s text readable to the clipboard mixin while rendering no visible pixels. */}
+				<span id={valueId} mix={[visuallyHidden()]}>
 					{handle.props.value}
 				</span>
 			</button>

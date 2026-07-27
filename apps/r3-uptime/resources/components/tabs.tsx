@@ -29,7 +29,10 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Tabs } from "@pkg/r3-ui";
-import { css, link } from "remix/ui";
+import { raw } from "@pkg/u/general";
+import { justify } from "@pkg/u/layout";
+import { is, mbe } from "@pkg/u/size";
+import { link } from "remix/ui";
 
 /** Every tab's fixed width, in px — must be wide enough for the longest label. */
 const TAB_WIDTH = 110;
@@ -49,11 +52,13 @@ export function TabList(handle: Handle<TabList.Props>) {
 		let { "aria-label": ariaLabel, activeIndex, children } = handle.props;
 
 		return (
-			<Tabs mix={[css({ marginBottom: 16 })]}>
+			<Tabs mix={[mbe(4)]}>
 				<Tabs.List
 					aria-label={ariaLabel}
 					mix={[
-						css({
+						// Computed per-render from `activeIndex`/`TAB_WIDTH` — drives `Tabs.List`'s own
+						// sliding `::after` indicator, no generic utility shape to reach for here.
+						raw({
 							"--ui-tab-indicator-inline-start": `${activeIndex * TAB_WIDTH}px`,
 							"--ui-tab-indicator-inline-size": `${TAB_WIDTH}px`,
 							"--ui-tab-indicator-opacity": "1",
@@ -98,7 +103,8 @@ export function Tab(handle: Handle<Tab.Props>) {
 				aria-controls={controls}
 				tabIndex={active ? 0 : -1}
 				mix={[
-					css({ width: TAB_WIDTH, justifyContent: "center" }),
+					is(`${TAB_WIDTH}px`),
+					justify("center"),
 					link(href, frameTarget ? { target: frameTarget, src: frameSrc } : {}),
 				]}
 			>

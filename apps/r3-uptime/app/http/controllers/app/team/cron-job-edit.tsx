@@ -9,11 +9,14 @@
 import { notFound } from "@pkg/http/response/html";
 import { AlertDialog } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -86,12 +89,12 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							mix={css({
-								color: primary[600],
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": { color: primary[400] },
-							})}
+							mix={[
+								fg(primary[600]),
+								textDecoration("none"),
+								hover(textDecoration("underline")),
+								media("(prefers-color-scheme: dark)", fg(primary[400])),
+							]}
 						>
 							{ctx.i18next.t("page.editCronJob.form.cancel")}
 						</a>

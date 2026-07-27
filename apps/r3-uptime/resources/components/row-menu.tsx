@@ -21,7 +21,14 @@ import type { Handle, RemixNode } from "remix/ui";
 import { EllipsisVerticalIcon } from "@pkg/lucide-remix";
 import { Menu } from "@pkg/r3-ui";
 import { menuKeys } from "@pkg/r3-ui/mixins";
-import { css } from "remix/ui";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
+import { opacity, rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { height, is, m, p, width } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { fontSize, textDecoration } from "@pkg/u/typography";
 
 import { danger, neutral } from "~/resources/theme";
 
@@ -36,67 +43,62 @@ namespace RowMenu {
 }
 
 /** Square, icon-only trigger. */
-const trigger = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: 32,
-	height: 32,
-	padding: 0,
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: "transparent",
-	color: "inherit",
-	cursor: "pointer",
-	"&:hover": { background: neutral[100] },
-	"@media (prefers-color-scheme: dark)": {
-		"&:hover": { background: neutral[800] },
-	},
-});
+const trigger = [
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	width("32px"),
+	height("32px"),
+	p(0),
+	rounded("md"),
+	border({ color: "transparent", width: 1 }),
+	bg("transparent"),
+	fg("inherit"),
+	cursor("pointer"),
+	when("&:hover", bg(neutral[100])),
+	media("(prefers-color-scheme: dark)", when("&:hover", bg(neutral[800]))),
+];
 
 /** Fixed panel width, right-aligned to the trigger via `placement="bottom-end"` so it never overflows the table. */
-const panel = css({
-	inlineSize: 200,
-	background: "#ffffff",
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[950],
-	},
-});
+const panel = [
+	is("200px"),
+	raw({ background: "#ffffff" }),
+	media("(prefers-color-scheme: dark)", bg(neutral[950])),
+];
 
 /** Shared row styling for a menu entry; call sites compose their own `<button>`/`<a>` with it. */
-export const menuItem = css({
-	display: "flex",
-	alignItems: "center",
-	gap: 8,
-	width: "100%",
-	padding: "6px 8px",
-	border: "none",
-	borderRadius: 6,
-	background: "transparent",
-	color: neutral[900],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	textAlign: "left",
-	textDecoration: "none",
-	cursor: "pointer",
-	"&:hover": { background: neutral[100] },
-	"&:disabled": { cursor: "not-allowed", opacity: 0.5 },
-	"@media (prefers-color-scheme: dark)": {
-		color: neutral[50],
-		"&:hover": { background: neutral[800] },
-	},
-});
+export const menuItem = [
+	flex(),
+	items("center"),
+	gap("8px"),
+	width("100%"),
+	p("6px", "8px"),
+	border("none"),
+	rounded("md"),
+	bg("transparent"),
+	fg(neutral[900]),
+	raw({ fontFamily: "inherit" }),
+	fontSize("sm"),
+	// `@pkg/u`'s `textAlign()` only exposes the logical start/end/center/justify
+	// keywords, not the physical `"left"` this row deliberately uses.
+	raw({ textAlign: "left" }),
+	textDecoration("none"),
+	cursor("pointer"),
+	when("&:hover", bg(neutral[100])),
+	when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+	media("(prefers-color-scheme: dark)", [fg(neutral[50]), when("&:hover", bg(neutral[800]))]),
+];
 
 /** Applied on top of {@link menuItem} for destructive entries. */
-export const menuItemDanger = css({ color: danger[600] });
+export const menuItemDanger = fg(danger[600]);
 
 /** Thin rule separating groups of items inside the panel. */
-export const menuSeparator = css({
-	margin: "6px 0",
-	border: "none",
-	borderTop: `1px solid ${neutral[200]}`,
-	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-});
+export const menuSeparator = [
+	m("6px", 0),
+	border("none"),
+	borderEdge("top", { width: 1, color: neutral[200] }),
+	media("(prefers-color-scheme: dark)", border(neutral[800])),
+];
 
 /** Renders a kebab-icon trigger and its `Menu`-based panel wrapping arbitrary `children`. */
 export default function RowMenu(handle: Handle<RowMenu.Props>) {

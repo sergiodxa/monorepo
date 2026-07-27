@@ -12,8 +12,25 @@
 
 import { Trans } from "@pkg/i18n/ui";
 import { CheckIcon } from "@pkg/lucide-remix";
+import { bg, border, fg, linearGradient } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { cursor, raw } from "@pkg/u/general";
+import {
+	flex,
+	flexRow,
+	flexWrap,
+	gap,
+	grid,
+	inlineFlex,
+	items,
+	justify,
+	vstack,
+} from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
+import { hover } from "@pkg/u/state";
+import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import AuthCta from "~/resources/components/marketing/auth-cta";
@@ -244,66 +261,61 @@ export default createAction(routes.home, async (ctx) => {
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							textAlign: "center",
-							background: `linear-gradient(to bottom, ${primary[50]}, #ffffff)`,
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": {
-								background: `linear-gradient(to bottom, oklch(0.24 0.06 142 / 0.2), ${neutral[950]})`,
-							},
-						}),
+						p("64px", "0"),
+						textAlign("center"),
+						bg({ image: linearGradient("to bottom", primary[50], "#ffffff") }),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media(
+							"(prefers-color-scheme: dark)",
+							bg({
+								image: linearGradient("to bottom", "oklch(0.24 0.06 142 / 0.2)", neutral[950]),
+							}),
+						),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<span
 							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									padding: "2px 10px",
-									borderRadius: 999,
-									fontSize: "0.75rem",
-									fontWeight: 600,
-									border: `1px solid ${primary[200]}`,
-									background: primary[50],
-									color: primary[600],
-									marginBottom: 16,
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: primary[800],
-										background: primary[950],
-										color: primary[400],
-									},
-								}),
+								inlineFlex(),
+								items("center"),
+								p("2px", "10px"),
+								rounded("999px"),
+								fontSize("0.75rem"),
+								weight(600),
+								border({ color: primary[200], width: 1 }),
+								bg(primary[50]),
+								fg(primary[600]),
+								mbe("16px"),
+								media("(prefers-color-scheme: dark)", [
+									border(primary[800]),
+									bg(primary[950]),
+									fg(primary[400]),
+								]),
 							]}
 						>
 							{ctx.i18next.t("landing.hero.pill")}
 						</span>
 						<h1
 							mix={[
-								css({
-									fontSize: "2.25rem",
-									fontWeight: 700,
-									lineHeight: 1,
-									letterSpacing: "-0.025em",
-									margin: "0 auto 16px",
-									maxWidth: 760,
-									color: neutral[900],
-									"@media (min-width: 640px)": { fontSize: "3rem" },
-									"@media (min-width: 1024px)": { fontSize: "3.75rem" },
-									"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-								}),
+								fontSize("2.25rem"),
+								weight(700),
+								leading(1),
+								tracking("tight"),
+								m("0", "auto", "16px", "auto"),
+								maxIs("760px"),
+								fg(neutral[900]),
+								media("(min-width: 640px)", fontSize("3rem")),
+								media("(min-width: 1024px)", fontSize("3.75rem")),
+								media("(prefers-color-scheme: dark)", fg(neutral[50])),
 							]}
 						>
 							<Trans
@@ -313,10 +325,8 @@ export default createAction(routes.home, async (ctx) => {
 									strong: (
 										<span
 											mix={[
-												css({
-													color: primary[600],
-													"@media (prefers-color-scheme: dark)": { color: primary[400] },
-												}),
+												fg(primary[600]),
+												media("(prefers-color-scheme: dark)", fg(primary[400])),
 											]}
 										/>
 									),
@@ -325,14 +335,12 @@ export default createAction(routes.home, async (ctx) => {
 						</h1>
 						<p
 							mix={[
-								css({
-									fontSize: "1.125rem",
-									color: neutral[600],
-									margin: "0 auto 24px",
-									maxWidth: 576,
-									lineHeight: 1.625,
-									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-								}),
+								fontSize("1.125rem"),
+								fg(neutral[600]),
+								m("0", "auto", "24px", "auto"),
+								maxIs("576px"),
+								leading(1.625),
+								media("(prefers-color-scheme: dark)", fg(neutral[400])),
 							]}
 						>
 							{ctx.i18next.t("landing.hero.description")}
@@ -340,14 +348,9 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									gap: 16,
-									marginTop: 32,
-									"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
-								}),
+								vstack({ gap: "16px", align: "center" }),
+								mbs("32px"),
+								media("(min-width: 640px)", [flexRow(), justify("center")]),
 							]}
 						>
 							<AuthCta
@@ -358,33 +361,33 @@ export default createAction(routes.home, async (ctx) => {
 							<a
 								href="#pricing"
 								mix={[
-									css({
-										display: "inline-flex",
-										alignItems: "center",
-										justifyContent: "center",
-										padding: "12px 24px",
-										borderRadius: 8,
-										border: `1px solid ${neutral[300]}`,
-										background: "#ffffff",
-										color: neutral[700],
-										fontFamily: "inherit",
-										fontSize: "1rem",
-										fontWeight: 600,
-										cursor: "pointer",
-										textDecoration: "none",
-										boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-										"&:hover": {
-											background: neutral[50],
+									inlineFlex(),
+									items("center"),
+									justify("center"),
+									p("12px", "24px"),
+									rounded("8px"),
+									border({ color: neutral[300], width: 1 }),
+									raw({ backgroundColor: "#ffffff" }),
+									fg(neutral[700]),
+									raw({ fontFamily: "inherit" }),
+									fontSize("1rem"),
+									weight(600),
+									cursor("pointer"),
+									textDecoration("none"),
+									raw({ boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }),
+									hover([
+										bg(neutral[50]),
+										raw({
 											boxShadow:
 												"0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
-										},
-										"@media (prefers-color-scheme: dark)": {
-											borderColor: neutral[700],
-											background: neutral[900],
-											color: neutral[300],
-											"&:hover": { background: neutral[800] },
-										},
-									}),
+										}),
+									]),
+									media("(prefers-color-scheme: dark)", [
+										border(neutral[700]),
+										bg(neutral[900]),
+										fg(neutral[300]),
+										hover(bg(neutral[800])),
+									]),
 								]}
 							>
 								{ctx.i18next.t("landing.hero.cta.pricing")}
@@ -392,26 +395,16 @@ export default createAction(routes.home, async (ctx) => {
 						</div>
 
 						<div
-							mix={[
-								css({
-									display: "flex",
-									flexWrap: "wrap",
-									justifyContent: "center",
-									gap: "8px 24px",
-									marginTop: 32,
-								}),
-							]}
+							mix={[flex(), flexWrap("wrap"), justify("center"), gap("8px", "24px"), mbs("32px")]}
 						>
 							<span
 								mix={[
-									css({
-										display: "inline-flex",
-										alignItems: "center",
-										gap: 6,
-										fontSize: "0.875rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
+									inlineFlex(),
+									items("center"),
+									gap("6px"),
+									fontSize("0.875rem"),
+									fg(neutral[500]),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -419,14 +412,12 @@ export default createAction(routes.home, async (ctx) => {
 							</span>
 							<span
 								mix={[
-									css({
-										display: "inline-flex",
-										alignItems: "center",
-										gap: 6,
-										fontSize: "0.875rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
+									inlineFlex(),
+									items("center"),
+									gap("6px"),
+									fontSize("0.875rem"),
+									fg(neutral[500]),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -434,14 +425,12 @@ export default createAction(routes.home, async (ctx) => {
 							</span>
 							<span
 								mix={[
-									css({
-										display: "inline-flex",
-										alignItems: "center",
-										gap: 6,
-										fontSize: "0.875rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
+									inlineFlex(),
+									items("center"),
+									gap("6px"),
+									fontSize("0.875rem"),
+									fg(neutral[500]),
+									media("(prefers-color-scheme: dark)", fg(neutral[400])),
 								]}
 							>
 								<CheckIcon size={16} />
@@ -453,60 +442,50 @@ export default createAction(routes.home, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							background: neutral[50],
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
-						}),
+						p("64px", "0"),
+						bg(neutral[50]),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "repeat(2, 1fr)",
-									textAlign: "center",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "repeat(2, 1fr)" }),
+								textAlign("center"),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(4, 1fr)" })),
 							]}
 						>
 							{TRUST_INDICATORS.map((stat) => (
 								<div key={stat.label}>
 									<div
 										mix={[
-											css({
-												fontSize: "1.875rem",
-												fontWeight: 700,
-												lineHeight: "2.25rem",
-												fontFamily: fontMono,
-												color: neutral[900],
-												"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-											}),
+											fontSize("1.875rem"),
+											weight(700),
+											raw({ lineHeight: "2.25rem" }),
+											raw({ fontFamily: fontMono }),
+											fg(neutral[900]),
+											media("(prefers-color-scheme: dark)", fg(neutral[50])),
 										]}
 									>
 										{stat.value}
 									</div>
 									<div
 										mix={[
-											css({
-												fontSize: "0.875rem",
-												color: neutral[600],
-												"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-											}),
+											fontSize("0.875rem"),
+											fg(neutral[600]),
+											media("(prefers-color-scheme: dark)", fg(neutral[400])),
 										]}
 									>
 										{stat.label}
@@ -520,22 +499,18 @@ export default createAction(routes.home, async (ctx) => {
 				<section
 					id="features"
 					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
+						p("64px", "0"),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader
@@ -546,13 +521,11 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{FEATURE_LINKS.map((feature) => (
@@ -569,24 +542,20 @@ export default createAction(routes.home, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							background: neutral[50],
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
-						}),
+						p("64px", "0"),
+						bg(neutral[50]),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader
@@ -597,13 +566,11 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{COMPLETE_FEATURES.map((feature) => (
@@ -619,22 +586,18 @@ export default createAction(routes.home, async (ctx) => {
 
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
+						p("64px", "0"),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader
@@ -645,13 +608,11 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{USE_CASE_LINKS.map((useCase) => (
@@ -666,60 +627,43 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									padding: 20,
-									borderRadius: 12,
-									border: `1px solid ${neutral[200]}`,
-									background: "#ffffff",
-									marginTop: 24,
-									textAlign: "center",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[800],
-										background: neutral[900],
-									},
-								}),
+								p("20px"),
+								rounded("12px"),
+								border({ color: neutral[200], width: 1 }),
+								raw({ backgroundColor: "#ffffff" }),
+								mbs("24px"),
+								textAlign("center"),
+								media("(prefers-color-scheme: dark)", [border(neutral[800]), bg(neutral[900])]),
 							]}
 						>
 							<p
 								mix={[
-									css({
-										fontSize: "1.25rem",
-										fontWeight: 600,
-										lineHeight: "1.75rem",
-										margin: "0 0 6px",
-										color: neutral[900],
-										"@media (prefers-color-scheme: dark)": { color: neutral[50] },
-									}),
+									fontSize("1.25rem"),
+									weight(600),
+									raw({ lineHeight: "1.75rem" }),
+									m("0", "0", "6px", "0"),
+									fg(neutral[900]),
+									media("(prefers-color-scheme: dark)", fg(neutral[50])),
 								]}
 							>
 								{ctx.i18next.t("landing.useCases.tailoredFor")}
 							</p>
 							<div
-								mix={[
-									css({
-										display: "flex",
-										flexWrap: "wrap",
-										justifyContent: "center",
-										gap: "8px 24px",
-										marginTop: 32,
-									}),
-								]}
+								mix={[flex(), flexWrap("wrap"), justify("center"), gap("8px", "24px"), mbs("32px")]}
 							>
 								{AUDIENCE_LINKS.map((audience) => (
 									<a
 										key={audience.slug}
 										href={routes.marketing.audience.href({ slug: audience.slug })}
 										mix={[
-											css({
-												fontSize: "0.875rem",
-												color: neutral[600],
-												textDecoration: "none",
-												"&:hover": { color: primary[600] },
-												"@media (prefers-color-scheme: dark)": {
-													color: neutral[400],
-													"&:hover": { color: primary[400] },
-												},
-											}),
+											fontSize("0.875rem"),
+											fg(neutral[600]),
+											textDecoration("none"),
+											hover(fg(primary[600])),
+											media("(prefers-color-scheme: dark)", [
+												fg(neutral[400]),
+												hover(fg(primary[400])),
+											]),
 										]}
 									>
 										{audience.label}
@@ -733,24 +677,20 @@ export default createAction(routes.home, async (ctx) => {
 				<section
 					id="pricing"
 					mix={[
-						css({
-							padding: "64px 0",
-							background: neutral[50],
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-							"@media (prefers-color-scheme: dark)": { background: "oklch(0.24 0.005 145 / 0.5)" },
-						}),
+						p("64px", "0"),
+						bg(neutral[50]),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader
@@ -761,13 +701,11 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap("32px"),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							<MarketingCard
@@ -789,22 +727,18 @@ export default createAction(routes.home, async (ctx) => {
 				<section
 					id="faq"
 					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
+						p("64px", "0"),
+						media("(min-width: 640px)", p("96px", "0")),
+						media("(min-width: 1024px)", p("128px", "0")),
 					]}
 				>
 					<div
 						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
+							maxIs("1152px"),
+							m("0", "auto"),
+							p("0", "16px"),
+							media("(min-width: 640px)", p("0", "24px")),
+							media("(min-width: 1024px)", p("0", "32px")),
 						]}
 					>
 						<SectionHeader

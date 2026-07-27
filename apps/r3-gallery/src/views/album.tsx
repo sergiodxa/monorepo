@@ -14,7 +14,25 @@ import type { Handle } from "remix/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
 import { Button, LinkButton, Text } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
-import { Frame, addEventListeners, css, on } from "remix/ui";
+import { bg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import {
+	absolute,
+	block,
+	fixed,
+	gap,
+	grid,
+	hstack,
+	insBs,
+	insIe,
+	insIs,
+	inset,
+	place,
+} from "@pkg/u/layout";
+import { bs, is, mbe, p, width } from "@pkg/u/size";
+import { translateY } from "@pkg/u/transform";
+import { Frame, addEventListeners, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
 
@@ -38,19 +56,19 @@ export interface AlbumPageProps {
  * vertically centered, shaped into a circle.
  *
  * @param side Which inline edge the button is pinned to.
- * @returns A `css()` mixin ready for the button's `mix` prop.
+ * @returns A `@pkg/u` mixin array ready for the button's `mix` prop.
  */
 function overlayArrowMix(side: "start" | "end") {
-	return css({
-		position: "fixed",
-		insetBlockStart: "50%",
-		transform: "translateY(-50%)",
-		[side === "start" ? "insetInlineStart" : "insetInlineEnd"]: "1.5rem",
-		inlineSize: "3rem",
-		blockSize: "3rem",
-		padding: 0,
-		borderRadius: "var(--ui-radius-full, 9999px)",
-	});
+	return [
+		fixed(),
+		insBs("50%"),
+		translateY("-50%"),
+		side === "start" ? insIs("1.5rem") : insIe("1.5rem"),
+		is("3rem"),
+		bs("3rem"),
+		p(0),
+		rounded("full"),
+	];
 }
 
 /**
@@ -116,15 +134,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 				title={titleCase(handle.props.album.title)}
 				intro="Click a photo to show it over the album while the address bar uses the standalone photo URL."
 			>
-				<div
-					mix={css({
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						gap: "1rem",
-						marginBlockEnd: "1.5rem",
-					})}
-				>
+				<div mix={[hstack({ gap: "1rem", align: "center", justify: "between" }), mbe("1.5rem")]}>
 					<LinkButton href={routes.home.href()} color="primary" variant="outline" size="sm">
 						Back to albums
 					</LinkButton>
@@ -133,11 +143,11 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 					</Text>
 				</div>
 				<section
-					mix={css({
-						display: "grid",
-						gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 12rem), 1fr))",
-						gap: "0.85rem",
-					})}
+					mix={[
+						grid(),
+						gap("0.85rem"),
+						raw({ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 12rem), 1fr))" }),
+					]}
 					aria-label={`Photos in ${handle.props.album.title}`}
 				>
 					{handle.props.photos.map((photo) => (
@@ -148,16 +158,16 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 					<div
 						role="presentation"
 						mix={[
-							css({
-								position: "fixed",
-								inset: 0,
-								display: "grid",
-								boxSizing: "border-box",
-								placeItems: "center",
-								padding: "1rem",
-								background: "rgb(36 27 22 / 0.62)",
-								backdropFilter: "blur(16px)",
-							}),
+							fixed(),
+							inset(0),
+							grid(),
+							place({ items: "center" }),
+							p("1rem"),
+							bg("rgb(36 27 22 / 0.62)"),
+							// `backdropBlur()` would additionally set `WebkitBackdropFilter`, a
+							// vendor-prefixed property this backdrop never had — kept as a raw
+							// one-off to avoid introducing a rendering change on Safari.
+							raw({ boxSizing: "border-box", backdropFilter: "blur(16px)" }),
 							on<HTMLDivElement, "click">("click", (event) => {
 								if (event.target === event.currentTarget) closePhoto();
 							}),
@@ -176,7 +186,9 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							variant="solid"
 							size="sm"
 							mix={[
-								css({ position: "absolute", insetBlockStart: "1.5rem", insetInlineEnd: "1.5rem" }),
+								absolute(),
+								insBs("1.5rem"),
+								insIe("1.5rem"),
 								on<HTMLButtonElement, "click">("click", closePhoto),
 							]}
 						>
@@ -213,7 +225,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							<ChevronRightIcon aria-hidden />
 						</Button>
 						<div
-							mix={css({ width: "min(100%, 56rem)" })}
+							mix={width("min(100%, 56rem)")}
 							role="dialog"
 							aria-modal="true"
 							aria-label={`Photo ${selectedPhoto.id}`}
@@ -221,9 +233,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							<Frame
 								name="selected-photo"
 								src={routes.photo.href({ id: String(selectedPhoto.id) })}
-								fallback={
-									<Text mix={css({ display: "block", padding: "2rem" })}>Loading photo...</Text>
-								}
+								fallback={<Text mix={[block(), p("2rem")]}>Loading photo...</Text>}
 							/>
 						</div>
 					</div>

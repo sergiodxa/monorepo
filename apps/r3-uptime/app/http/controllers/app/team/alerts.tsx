@@ -8,10 +8,14 @@
 import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@pkg/lucide-remix";
 import { Empty, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { fg } from "@pkg/u/color";
+import { hstack } from "@pkg/u/layout";
+import { dark } from "@pkg/u/responsive";
+import { hover } from "@pkg/u/state";
+import { fontSize, textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import Monitor from "~/app/data/monitor";
@@ -53,7 +57,7 @@ export default createAction(routes.app.team.alerts.index, {
 						},
 					]}
 					actions={
-						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+						<div mix={[hstack({ align: "center", gap: 3 })]}>
 							<LinkButton href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}>
 								<HistoryIcon size={16} strokeWidth={1.5} />
 								{ctx.i18next.t("page.alerts.header.action.history")}
@@ -69,15 +73,7 @@ export default createAction(routes.app.team.alerts.index, {
 				>
 					<div>
 						{atLimit && (
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-									}),
-								]}
-							>
+							<p mix={[fontSize("0.8125rem"), fg(neutral[500]), dark(fg(neutral[400]))]}>
 								{ctx.i18next.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
 							</p>
 						)}
@@ -149,12 +145,10 @@ export default createAction(routes.app.team.alerts.index, {
 															alertId: alert.id,
 														})}
 														mix={[
-															css({
-																color: primary[600],
-																textDecoration: "none",
-																"&:hover": { textDecoration: "underline" },
-																"@media (prefers-color-scheme: dark)": { color: primary[400] },
-															}),
+															fg(primary[600]),
+															textDecoration("none"),
+															hover(textDecoration("underline")),
+															dark(fg(primary[400])),
 														]}
 													>
 														{ctx.i18next.t("page.alerts.table.actions.edit")}

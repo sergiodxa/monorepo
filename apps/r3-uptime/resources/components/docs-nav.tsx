@@ -18,7 +18,15 @@
 import type { Handle } from "remix/ui";
 
 import { NavLink, SearchField } from "@pkg/r3-ui";
-import { clientEntry, css, on } from "remix/ui";
+import { bg, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { listStyle, raw } from "@pkg/u/general";
+import { block } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { fontSize, textTransform, weight } from "@pkg/u/typography";
+import { clientEntry, on } from "remix/ui";
 
 import { neutral } from "~/resources/theme";
 
@@ -35,37 +43,42 @@ type DocsNavProps = {
 	searchPlaceholder: string;
 };
 
-const navList = css({ listStyle: "none", margin: 0, padding: 0 });
+const navList = [listStyle(), m(0), p(0)];
 
-const sectionTitle = css({
-	fontSize: "0.75rem",
-	fontWeight: 700,
-	textTransform: "uppercase",
-	letterSpacing: "0.03em",
-	color: neutral[500],
-	margin: "20px 20px 8px",
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-});
+const sectionTitle = [
+	fontSize("xs"),
+	weight(700),
+	textTransform("uppercase"),
+	// `@pkg/u`'s `tracking()` is a closed enum (tighter/tight/normal/wide/wider/widest)
+	// with no raw-string escape, so this exact letter-spacing value can't route
+	// through it.
+	raw({ letterSpacing: "0.03em" }),
+	fg(neutral[500]),
+	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
+	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.
+	raw({ margin: "20px 20px 8px" }),
+	media("(prefers-color-scheme: dark)", fg(neutral[400])),
+];
 
 /**
  * A doc nav row: `NavLink` styled with the same tokens `Sidebar.Item` uses for
  * its own rows (row padding, radius, hover/current tint) instead of an inline
  * text link's underline treatment — `hasBackground` drops that underline.
  */
-const navLink = css({
-	display: "block",
-	padding: "6px 20px",
-	margin: "0 8px",
-	borderRadius: "var(--ui-radius-lg, 0.5rem)",
-	fontSize: "0.875rem",
+const navLink = [
+	block(),
+	p("6px", "20px"),
+	m(0, "8px"),
+	rounded("lg"),
+	fontSize("sm"),
 
-	"&:hover": { backgroundColor: "var(--ui-neutral-bg-tint-hover)" },
+	when("&:hover", bg("neutral.bg-tint-hover")),
 
-	'&[aria-current]:not([aria-current="false"])': {
-		backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-		color: "var(--ui-neutral-fg-emphasis)",
-	},
-});
+	when('&[aria-current]:not([aria-current="false"])', [
+		bg("neutral.bg-tint-hover"),
+		fg("neutral.emphasis"),
+	]),
+];
 
 /** Renders {@link DocsNavProps.sections} grouped by section, or a flat filtered list once the visitor types a search query. */
 export const DocsNav = clientEntry(
@@ -85,7 +98,12 @@ export const DocsNav = clientEntry(
 
 			return (
 				<div>
-					<SearchField aria-label={searchPlaceholder} mix={[css({ margin: "0 20px 8px" })]}>
+					<SearchField
+						aria-label={searchPlaceholder}
+						// Physical 3-value margin shorthand (top / left+right / bottom) —
+						// `@pkg/u`'s `m()` only covers the 1/2/4-value logical form.
+						mix={[raw({ margin: "0 20px 8px" })]}
+					>
 						<SearchField.Input
 							value={search}
 							placeholder={searchPlaceholder}
@@ -111,12 +129,12 @@ export const DocsNav = clientEntry(
 										>
 											{doc.title}
 											<span
-												mix={css({
-													display: "block",
-													fontSize: "0.75rem",
-													color: neutral[500],
-													"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-												})}
+												mix={[
+													block(),
+													fontSize("xs"),
+													fg(neutral[500]),
+													media("(prefers-color-scheme: dark)", fg(neutral[400])),
+												]}
 											>
 												{doc.section}
 											</span>

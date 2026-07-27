@@ -15,7 +15,23 @@
 import type { Handle } from "remix/ui";
 
 import { CheckIcon } from "@pkg/lucide-remix";
-import { css } from "remix/ui";
+import { bg, border, fg, linearGradient } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import {
+	flex,
+	flexCol,
+	flexRow,
+	flexWrap,
+	gap,
+	grid,
+	inlineFlex,
+	items,
+	justify,
+} from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
+import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
@@ -24,6 +40,43 @@ import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingStep from "~/resources/components/marketing/step";
+
+/**
+ * Vertical section padding shared by every full-width section: 64px, growing
+ * to 96px at ≥640px and 128px at ≥1024px.
+ */
+function sectionPadding() {
+	return [pb(16), media("(min-width: 640px)", pb(24)), media("(min-width: 1024px)", pb(32))];
+}
+
+/**
+ * Centered content wrapper shared by every section: capped at 1152px,
+ * horizontally centered, with 16/24/32px side padding by breakpoint.
+ */
+function marketingContainer() {
+	return [
+		maxIs("1152px"),
+		mi("auto"),
+		pi(4),
+		media("(min-width: 640px)", pi(6)),
+		media("(min-width: 1024px)", pi(8)),
+	];
+}
+
+/**
+ * The CTA button row: stacked and centered below 640px, side-by-side and
+ * centered at ≥640px.
+ */
+function ctaRow() {
+	return [
+		flex(),
+		flexCol(),
+		items("center"),
+		gap(4),
+		mbs(8),
+		media("(min-width: 640px)", [flexRow(), justify("center")]),
+	];
+}
 
 namespace MarketingPageView {
 	/** Adds `isSignedIn` (drives the CTA's copy/target) and the translated section titles/CTA copy on top of the raw marketing-page content shape. */
@@ -72,98 +125,75 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 			<>
 				<section
 					mix={[
-						css({
-							padding: "64px 0",
-							textAlign: "center",
-							background:
-								"linear-gradient(to bottom, var(--ui-primary-bg-tint), var(--ui-neutral-bg-tint))",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
+						...sectionPadding(),
+						textAlign("center"),
+						bg({
+							image: linearGradient(
+								"to bottom",
+								"var(--ui-primary-bg-tint)",
+								"var(--ui-neutral-bg-tint)",
+							),
 						}),
 					]}
 				>
-					<div
-						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
-						]}
-					>
+					<div mix={[...marketingContainer()]}>
 						<span
 							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									padding: "2px 10px",
-									borderRadius: 999,
-									fontSize: "0.75rem",
-									fontWeight: 600,
-									border: "1px solid var(--ui-primary-border)",
-									background: "var(--ui-primary-bg-tint)",
-									color: "var(--ui-primary-fg)",
-									marginBottom: 16,
-								}),
+								inlineFlex(),
+								items("center"),
+								p("2px", "10px"),
+								rounded("999px"),
+								fontSize("0.75rem"),
+								weight(600),
+								border({ color: "primary.border", width: 1 }),
+								bg("primary.tint"),
+								fg("primary.fg"),
+								mbe(4),
 							]}
 						>
 							{badge}
 						</span>
 						<h1
 							mix={[
-								css({
-									fontSize: "2.25rem",
-									fontWeight: 700,
-									lineHeight: 1,
-									letterSpacing: "-0.025em",
-									margin: "0 auto 16px",
-									maxWidth: 760,
-									color: "var(--ui-neutral-fg-emphasis)",
-									"@media (min-width: 640px)": { fontSize: "3rem" },
-									"@media (min-width: 1024px)": { fontSize: "3.75rem" },
-								}),
+								fontSize("2.25rem"),
+								weight(700),
+								leading(1),
+								tracking("tight"),
+								mbs(0),
+								mi("auto"),
+								mbe(4),
+								maxIs("760px"),
+								fg("neutral.emphasis"),
+								media("(min-width: 640px)", fontSize("3rem")),
+								media("(min-width: 1024px)", fontSize("3.75rem")),
 							]}
 						>
-							{title} <span mix={[css({ color: "var(--ui-primary-fg)" })]}>{highlight}</span>
+							{title} <span mix={[fg("primary.fg")]}>{highlight}</span>
 						</h1>
 						<p
 							mix={[
-								css({
-									fontSize: "1.125rem",
-									color: "var(--ui-neutral-fg)",
-									margin: "0 auto 24px",
-									maxWidth: 576,
-									lineHeight: 1.625,
-								}),
+								fontSize("1.125rem"),
+								fg("neutral.fg"),
+								mbs(0),
+								mi("auto"),
+								mbe(6),
+								maxIs("576px"),
+								leading(1.625),
 							]}
 						>
 							{description}
 						</p>
 
-						<div
-							mix={[
-								css({
-									display: "flex",
-									flexWrap: "wrap",
-									justifyContent: "center",
-									gap: "8px 24px",
-									marginTop: 32,
-								}),
-							]}
-						>
+						<div mix={[flex(), flexWrap(), justify("center"), gap(2, 6), mbs(8)]}>
 							{highlights.map((item) => (
 								<span
 									key={item}
 									mix={[
-										css({
-											display: "inline-flex",
-											alignItems: "center",
-											gap: 6,
-											fontSize: "0.875rem",
-											color: "var(--ui-neutral-fg-muted)",
-										}),
+										inlineFlex(),
+										items("center"),
+										gap("6px"),
+										fontSize("0.875rem"),
+										fg("neutral.muted"),
 									]}
 								>
 									<CheckIcon size={16} />
@@ -172,18 +202,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							))}
 						</div>
 
-						<div
-							mix={[
-								css({
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									gap: 16,
-									marginTop: 32,
-									"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
-								}),
-							]}
-						>
+						<div mix={[...ctaRow()]}>
 							<AuthCta
 								isSignedIn={isSignedIn}
 								startLabel={startLabel}
@@ -193,37 +212,17 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					</div>
 				</section>
 
-				<section
-					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
-					]}
-				>
-					<div
-						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
-						]}
-					>
+				<section mix={[...sectionPadding()]}>
+					<div mix={[...marketingContainer()]}>
 						<SectionHeader title={everythingTitle} />
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 32,
-									gridTemplateColumns: "1fr",
-									"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap(8),
+								raw({ gridTemplateColumns: "1fr" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{features.map((feature) => (
@@ -237,39 +236,17 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					</div>
 				</section>
 
-				<section
-					mix={[
-						css({
-							padding: "64px 0",
-							background: "var(--ui-neutral-bg-tint)",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
-					]}
-				>
-					<div
-						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
-						]}
-					>
+				<section mix={[...sectionPadding(), bg("neutral.tint")]}>
+					<div mix={[...marketingContainer()]}>
 						<SectionHeader title={howItWorksTitle} />
 
 						<div
 							mix={[
-								css({
-									display: "grid",
-									gap: 24,
-									gridTemplateColumns: "1fr",
-									counterReset: "marketing-step",
-									"@media (min-width: 640px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-									"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-								}),
+								grid(),
+								gap(6),
+								raw({ gridTemplateColumns: "1fr", counterReset: "marketing-step" }),
+								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{steps.map((step) => (
@@ -279,26 +256,8 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					</div>
 				</section>
 
-				<section
-					mix={[
-						css({
-							padding: "64px 0",
-							"@media (min-width: 640px)": { padding: "96px 0" },
-							"@media (min-width: 1024px)": { padding: "128px 0" },
-						}),
-					]}
-				>
-					<div
-						mix={[
-							css({
-								maxWidth: 1152,
-								margin: "0 auto",
-								padding: "0 16px",
-								"@media (min-width: 640px)": { padding: "0 24px" },
-								"@media (min-width: 1024px)": { padding: "0 32px" },
-							}),
-						]}
-					>
+				<section mix={[...sectionPadding()]}>
+					<div mix={[...marketingContainer()]}>
 						<SectionHeader title={faqTitle} />
 
 						<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
@@ -307,30 +266,22 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 
 				<section
 					mix={[
-						css({
-							padding: "56px 0",
-							textAlign: "center",
-							background:
-								"linear-gradient(to right, var(--ui-primary-bg-solid), var(--ui-primary-bg-solid-hover))",
-							color: "var(--ui-primary-fg-on-solid)",
+						pb(14),
+						textAlign("center"),
+						bg({
+							image: linearGradient(
+								"to right",
+								"var(--ui-primary-bg-solid)",
+								"var(--ui-primary-bg-solid-hover)",
+							),
 						}),
+						fg("primary.onSolid"),
 					]}
 				>
 					<h2>{finalCtaTitle}</h2>
 					<p>{finalCtaBody}</p>
 
-					<div
-						mix={[
-							css({
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "center",
-								gap: 16,
-								marginTop: 32,
-								"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
-							}),
-						]}
-					>
+					<div mix={[...ctaRow()]}>
 						<AuthCta
 							isSignedIn={isSignedIn}
 							startLabel={startLabel}

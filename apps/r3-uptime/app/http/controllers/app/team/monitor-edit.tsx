@@ -19,11 +19,18 @@ import type { Handle } from "remix/ui";
 import { notFound } from "@pkg/http/response/html";
 import { AlertDialog, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { flex, gap, items } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { mbe, p } from "@pkg/u/size";
+import { hover } from "@pkg/u/state";
+import { fontSize, textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import type { SelectMonitor, SelectMonitorContentCheck } from "~/database/schema";
 
@@ -69,11 +76,9 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 				<h2>{i18next.t("contentMonitoring.title")}</h2>
 				<p
 					mix={[
-						css({
-							fontSize: "0.8125rem",
-							color: neutral[500],
-							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-						}),
+						fontSize("0.8125rem"),
+						fg(neutral[500]),
+						media("(prefers-color-scheme: dark)", fg(neutral[400])),
 					]}
 				>
 					{i18next.t("contentMonitoring.description")}
@@ -177,34 +182,19 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 							name="value"
 							required
 							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
+								p("8px", "12px"),
+								rounded("6px"),
+								border({ color: neutral[200], width: 1 }),
+								fontSize("0.875rem"),
+								raw({ fontFamily: "inherit" }),
+								bg(neutral[50]),
+								fg("inherit"),
+								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
 
-					<label
-						mix={[
-							css({
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-								marginBottom: 16,
-								fontSize: "0.875rem",
-							}),
-						]}
-					>
+					<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
 						<input type="checkbox" name="case_sensitive" value="true" />
 						<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
 					</label>
@@ -243,17 +233,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 				>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 
-					<label
-						mix={[
-							css({
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-								marginBottom: 16,
-								fontSize: "0.875rem",
-							}),
-						]}
-					>
+					<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
 						<input
 							type="checkbox"
 							name="ssl_monitoring_enabled"
@@ -269,19 +249,14 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							name="ssl_expires_at"
 							defaultValue={expiresAtValue}
 							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
+								p("8px", "12px"),
+								rounded("6px"),
+								border({ color: neutral[200], width: 1 }),
+								fontSize("0.875rem"),
+								raw({ fontFamily: "inherit" }),
+								bg(neutral[50]),
+								fg("inherit"),
+								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -292,19 +267,14 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							name="ssl_issuer"
 							defaultValue={monitor.ssl_issuer ?? ""}
 							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
+								p("8px", "12px"),
+								rounded("6px"),
+								border({ color: neutral[200], width: 1 }),
+								fontSize("0.875rem"),
+								raw({ fontFamily: "inherit" }),
+								bg(neutral[50]),
+								fg("inherit"),
+								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -317,19 +287,14 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 							max={365}
 							defaultValue={monitor.ssl_expiry_warning_days}
 							mix={[
-								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
-									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
-									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
-									},
-								}),
+								p("8px", "12px"),
+								rounded("6px"),
+								border({ color: neutral[200], width: 1 }),
+								fontSize("0.875rem"),
+								raw({ fontFamily: "inherit" }),
+								bg(neutral[50]),
+								fg("inherit"),
+								media("(prefers-color-scheme: dark)", [border(neutral[700]), bg(neutral[900])]),
 							]}
 						/>
 					</Field>
@@ -397,12 +362,10 @@ export default createAction(routes.app.team.monitors.edit, {
 								monitorId: monitor.id,
 							})}
 							mix={[
-								css({
-									color: primary[600],
-									textDecoration: "none",
-									"&:hover": { textDecoration: "underline" },
-									"@media (prefers-color-scheme: dark)": { color: primary[400] },
-								}),
+								fg(primary[600]),
+								textDecoration("none"),
+								hover(textDecoration("underline")),
+								media("(prefers-color-scheme: dark)", fg(primary[400])),
 							]}
 						>
 							{ctx.i18next.t("page.editMonitor.form.cancel")}

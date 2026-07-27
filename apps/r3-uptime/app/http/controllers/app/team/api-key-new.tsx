@@ -8,9 +8,15 @@
  */
 
 import { Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { flex, flexCol, gap } from "@pkg/u/layout";
+import { dark } from "@pkg/u/responsive";
+import { mbe, p } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
@@ -58,26 +64,19 @@ export default createAction(routes.app.team.apiKeys.new, {
 									required
 									placeholder={ctx.i18next.t("page.apiKeys.form.fields.name.placeholder")}
 									mix={[
-										css({
-											padding: "8px 12px",
-											borderRadius: 6,
-											border: `1px solid ${neutral[200]}`,
-											fontSize: "0.875rem",
-											fontFamily: "inherit",
-											background: neutral[50],
-											color: "inherit",
-											"@media (prefers-color-scheme: dark)": {
-												borderColor: neutral[700],
-												background: neutral[900],
-											},
-										}),
+										p(2, 3),
+										rounded("md"),
+										border({ color: neutral[200], width: 1, style: "solid" }),
+										fontSize("sm"),
+										raw({ fontFamily: "inherit" }),
+										bg(neutral[50]),
+										fg("inherit"),
+										dark([border(neutral[700]), bg(neutral[900])]),
 									]}
 								/>
 							</Field>
 
-							<div
-								mix={[css({ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 })]}
-							>
+							<div mix={[flex(), flexCol(), gap(2), mbe(5)]}>
 								<CheckboxGroup aria-labelledby={SCOPES_LABEL_ID}>
 									<Label id={SCOPES_LABEL_ID}>
 										{ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
@@ -100,19 +99,14 @@ export default createAction(routes.app.team.apiKeys.new, {
 									type="date"
 									name="expires_at"
 									mix={[
-										css({
-											padding: "8px 12px",
-											borderRadius: 6,
-											border: `1px solid ${neutral[200]}`,
-											fontSize: "0.875rem",
-											fontFamily: "inherit",
-											background: neutral[50],
-											color: "inherit",
-											"@media (prefers-color-scheme: dark)": {
-												borderColor: neutral[700],
-												background: neutral[900],
-											},
-										}),
+										p(2, 3),
+										rounded("md"),
+										border({ color: neutral[200], width: 1, style: "solid" }),
+										fontSize("sm"),
+										raw({ fontFamily: "inherit" }),
+										bg(neutral[50]),
+										fg("inherit"),
+										dark([border(neutral[700]), bg(neutral[900])]),
 									]}
 								/>
 							</Field>

@@ -16,12 +16,18 @@ import type { RemixNode } from "remix/ui";
 import { redirect } from "@pkg/http/response";
 import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
+import { border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { m, minBs, p } from "@pkg/u/size";
+import { hover } from "@pkg/u/state";
+import { fontSize, textAlign, textDecoration } from "@pkg/u/typography";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { createAuthProvider } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
@@ -31,6 +37,7 @@ import { returnTo, safeReturnTo } from "~/app/http/cookies";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import DocumentLayout from "~/resources/layouts/document";
+import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** Builds the OIDC provider from the app's registered client credentials. */
@@ -58,34 +65,26 @@ interface AuthErrorContext {
 function authError(ctx: AuthErrorContext, message: string) {
 	return ctx.render(
 		<DocumentLayout title={ctx.i18next.t("auth.error.signInFailedTitle")}>
-			<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>
+			<main mix={[flex(), flexCol(), minBs("100vh")]}>
 				<div
 					mix={[
-						css({
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							textAlign: "center",
-							gap: 12,
-							padding: "64px 32px",
-							border: "1px dashed oklch(0.83 0.01 145)",
-							borderRadius: 12,
-							"@media (prefers-color-scheme: dark)": {
-								borderColor: "oklch(0.42 0.008 145)",
-							},
-						}),
+						flex(),
+						flexCol(),
+						items("center"),
+						textAlign("center"),
+						gap("12px"),
+						p("64px", "32px"),
+						border({ color: neutral[300], width: 1, style: "dashed" }),
+						rounded("12px"),
+						media("(prefers-color-scheme: dark)", border(neutral[700])),
 					]}
 				>
-					<h1 mix={[css({ margin: 0 })]}>{ctx.i18next.t("auth.error.signInFailedTitle")}</h1>
+					<h1 mix={[m("0")]}>{ctx.i18next.t("auth.error.signInFailedTitle")}</h1>
 					<p
 						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: "oklch(0.62 0.01 145)",
-								"@media (prefers-color-scheme: dark)": {
-									color: "oklch(0.73 0.01 145)",
-								},
-							}),
+							fontSize("0.8125rem"),
+							fg(neutral[500]),
+							media("(prefers-color-scheme: dark)", fg(neutral[400])),
 						]}
 					>
 						{message}
@@ -93,14 +92,10 @@ function authError(ctx: AuthErrorContext, message: string) {
 					<a
 						href={routes.home.href()}
 						mix={[
-							css({
-								color: "oklch(0.6 0.16 142)",
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": {
-									color: "oklch(0.78 0.16 142)",
-								},
-							}),
+							fg(primary[600]),
+							textDecoration("none"),
+							hover(textDecoration("underline")),
+							media("(prefers-color-scheme: dark)", fg(primary[400])),
 						]}
 					>
 						{ctx.i18next.t("errors.backHome")}

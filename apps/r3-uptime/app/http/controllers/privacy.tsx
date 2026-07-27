@@ -12,8 +12,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fg } from "@pkg/u/color";
+import { media } from "@pkg/u/responsive";
+import { m, maxIs, mbe, mbs, pbe, pbs, pi, pis } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";
@@ -31,53 +35,49 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<article
 					mix={[
-						css({
-							maxWidth: 720,
-							margin: "0 auto",
-							padding: "48px 24px 80px",
-							lineHeight: 1.75,
-							color: neutral[800],
-							"& h1": {
-								fontSize: "2.25rem",
-								fontWeight: 800,
-								letterSpacing: "-0.025em",
-								marginTop: 0,
-								marginBottom: 32,
-								color: neutral[900],
-							},
-							"& h2": {
-								fontSize: "1.5rem",
-								fontWeight: 700,
-								marginTop: 48,
-								marginBottom: 24,
-								color: neutral[900],
-							},
-							"& h3": {
-								fontSize: "1.25rem",
-								fontWeight: 600,
-								marginTop: 24,
-								marginBottom: 12,
-								color: neutral[900],
-							},
-							"& p": { margin: "20px 0" },
-							"& ul": { margin: "20px 0", paddingLeft: "1.25rem" },
-							"& li": { marginBottom: 8 },
-							"@media (prefers-color-scheme: dark)": {
-								color: neutral[300],
-								"& h1, & h2, & h3": { color: neutral[50] },
-							},
-						}),
+						maxIs("720px"),
+						m(0, "auto"),
+						pbs("48px"),
+						pi("24px"),
+						pbe("80px"),
+						leading(1.75),
+						fg(neutral[800]),
+						when("& h1", [
+							fontSize("2.25rem"),
+							weight(800),
+							tracking("tight"),
+							mbs(0),
+							mbe("32px"),
+							fg(neutral[900]),
+						]),
+						when("& h2", [
+							fontSize("1.5rem"),
+							weight(700),
+							mbs("48px"),
+							mbe("24px"),
+							fg(neutral[900]),
+						]),
+						when("& h3", [
+							fontSize("1.25rem"),
+							weight(600),
+							mbs("24px"),
+							mbe("12px"),
+							fg(neutral[900]),
+						]),
+						when("& p", m("20px", 0)),
+						when("& ul", [m("20px", 0), pis("1.25rem")]),
+						when("& li", mbe("8px")),
+						media("(prefers-color-scheme: dark)", [
+							fg(neutral[300]),
+							when("& h1, & h2, & h3", fg(neutral[50])),
+						]),
 					]}
 				>
 					<p
 						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": {
-									color: neutral[400],
-								},
-							}),
+							fontSize("0.8125rem"),
+							fg(neutral[500]),
+							media("(prefers-color-scheme: dark)", fg(neutral[400])),
 						]}
 					>
 						{ctx.i18next.t("legal.privacy.lastUpdated")}

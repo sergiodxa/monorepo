@@ -17,7 +17,9 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { Card, Text } from "@pkg/r3-ui";
-import { css } from "remix/ui";
+import { fg } from "@pkg/u/color";
+import { basis, grow, shrink } from "@pkg/u/layout";
+import { text, weight } from "@pkg/u/typography";
 
 namespace StatCard {
 	export interface Props {
@@ -33,19 +35,10 @@ namespace StatCard {
 /** Renders a dashboard stat card with a muted label and a large value. */
 export default function StatCard(handle: Handle<StatCard.Props>) {
 	return () => (
-		<Card mix={css({ flex: "1 1 160px" })}>
+		<Card mix={[grow(1), shrink(1), basis("160px")]}>
 			<Card.Header>
 				<Text>{handle.props.label}</Text>
-				<Text
-					mix={css({
-						fontSize: "1.5rem",
-						fontWeight: 700,
-						lineHeight: "2rem",
-						color: "var(--ui-neutral-fg-emphasis)",
-					})}
-				>
-					{handle.props.value}
-				</Text>
+				<Text mix={[text("2xl"), weight(700), fg("neutral.emphasis")]}>{handle.props.value}</Text>
 			</Card.Header>
 		</Card>
 	);
