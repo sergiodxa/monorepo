@@ -21,6 +21,7 @@ import {
 	flexWrap,
 	gap,
 	grid,
+	gridTemplate,
 	inlineFlex,
 	items,
 	justify,
@@ -30,7 +31,15 @@ import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { color } from "@pkg/u/tokens";
-import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
+import {
+	font,
+	fontSize,
+	leading,
+	textAlign,
+	textDecoration,
+	tracking,
+	weight,
+} from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -344,7 +353,7 @@ export default createAction(routes.home, async (ctx) => {
 									border({ color: "neutral", width: 1 }),
 									raw({ backgroundColor: "#ffffff" }),
 									fg("neutral"),
-									raw({ fontFamily: "inherit" }),
+									font("inherit"),
 									fontSize("1rem"),
 									weight(600),
 									cursor("pointer"),
@@ -437,9 +446,9 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "repeat(2, 1fr)" }),
+								gridTemplate({ columns: "repeat(2, 1fr)" }),
 								textAlign("center"),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(4, 1fr)" })),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(4, 1fr)" })),
 							]}
 						>
 							{TRUST_INDICATORS.map((stat) => (
@@ -448,7 +457,7 @@ export default createAction(routes.home, async (ctx) => {
 										mix={[
 											fontSize("1.875rem"),
 											weight(700),
-											raw({ lineHeight: "2.25rem" }),
+											leading("2.25rem"),
 											raw({ fontFamily: fontMono }),
 											fg("neutral.emphasis"),
 											media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
@@ -498,9 +507,9 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{FEATURE_LINKS.map((feature) => (
@@ -543,9 +552,9 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{COMPLETE_FEATURES.map((feature) => (
@@ -585,9 +594,9 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{USE_CASE_LINKS.map((useCase) => (
@@ -615,7 +624,7 @@ export default createAction(routes.home, async (ctx) => {
 								mix={[
 									fontSize("1.25rem"),
 									weight(600),
-									raw({ lineHeight: "1.75rem" }),
+									leading("1.75rem"),
 									m("0", "0", "6px", "0"),
 									fg("neutral.emphasis"),
 									media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
@@ -675,9 +684,9 @@ export default createAction(routes.home, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							<MarketingCard

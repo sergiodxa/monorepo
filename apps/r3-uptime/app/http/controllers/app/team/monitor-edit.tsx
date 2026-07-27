@@ -21,11 +21,10 @@ import { AlertDialog, Button, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { flex, gap, items } from "@pkg/u/layout";
 import { mbe, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
-import { fontSize, textDecoration } from "@pkg/u/typography";
+import { font, fontSize, textDecoration } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -177,7 +176,7 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 								rounded("6px"),
 								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
-								raw({ fontFamily: "inherit" }),
+								font("inherit"),
 								bg("neutral.tint"),
 								fg("inherit"),
 							]}
@@ -243,7 +242,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 								rounded("6px"),
 								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
-								raw({ fontFamily: "inherit" }),
+								font("inherit"),
 								bg("neutral.tint"),
 								fg("inherit"),
 							]}
@@ -260,7 +259,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 								rounded("6px"),
 								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
-								raw({ fontFamily: "inherit" }),
+								font("inherit"),
 								bg("neutral.tint"),
 								fg("inherit"),
 							]}
@@ -279,7 +278,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 								rounded("6px"),
 								border({ color: "neutral.border", width: 1 }),
 								fontSize("0.875rem"),
-								raw({ fontFamily: "inherit" }),
+								font("inherit"),
 								bg("neutral.tint"),
 								fg("inherit"),
 							]}

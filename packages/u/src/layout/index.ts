@@ -46,6 +46,8 @@ export { place } from "./place";
 export { positionArea } from "./position-area";
 export { positionTryFallbacks } from "./position-try-fallbacks";
 export { relative } from "./relative";
+export { repeat } from "./repeat";
+export type { RepeatCount, RepeatTrack } from "./repeat";
 export { self } from "./self";
 export { shrink } from "./shrink";
 export { spacer } from "./spacer";

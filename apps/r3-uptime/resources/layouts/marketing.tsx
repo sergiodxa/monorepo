@@ -25,7 +25,18 @@ import { NavLink } from "@pkg/r3-ui";
 import { bg, borderEdge, colorMix, fg } from "@pkg/u/color";
 import { backdropBlur } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
-import { block, gap, grid, hidden, hstack, inline, insTop, sticky, vstack } from "@pkg/u/layout";
+import {
+	block,
+	gap,
+	grid,
+	gridTemplate,
+	hidden,
+	hstack,
+	inline,
+	insTop,
+	sticky,
+	vstack,
+} from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, minBs, p } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
@@ -296,10 +307,10 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							gap("32px"),
 							m(0, "auto", "32px", "auto"),
 							maxIs("1152px"),
-							raw({ gridTemplateColumns: "1fr" }),
-							media("(min-width: 640px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-							media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
-							media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(5, 1fr)" })),
+							gridTemplate({ columns: "1fr" }),
+							media("(min-width: 640px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+							media("(min-width: 768px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
+							media("(min-width: 1024px)", gridTemplate({ columns: "repeat(5, 1fr)" })),
 						]}
 					>
 						{footerGrid.map((cell) =>

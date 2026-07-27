@@ -17,8 +17,17 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import { GripVerticalIcon } from "@pkg/lucide-remix";
 import { bg, borderEdge, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
-import { container, flex, flexCol, gap, grid, items, virtualize } from "@pkg/u/layout";
+import { cursor } from "@pkg/u/general";
+import {
+	container,
+	flex,
+	flexCol,
+	gap,
+	grid,
+	gridTemplate,
+	items,
+	virtualize,
+} from "@pkg/u/layout";
 import { at } from "@pkg/u/responsive";
 import { mbs, pb, pbs, pi } from "@pkg/u/size";
 import { active, data, hover, not, when } from "@pkg/u/state";
@@ -219,17 +228,9 @@ export function GridList(handle: Handle<GridList.Props>) {
 						data("layout", "grid", [
 							grid(),
 							gap("0.5rem"),
-							raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }),
-							at(
-								"40rem",
-								CONTAINER_NAME,
-								raw({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }),
-							),
-							at(
-								"48rem",
-								CONTAINER_NAME,
-								raw({ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }),
-							),
+							gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" }),
+							at("40rem", CONTAINER_NAME, gridTemplate({ columns: "repeat(3, minmax(0, 1fr))" })),
+							at("48rem", CONTAINER_NAME, gridTemplate({ columns: "repeat(4, minmax(0, 1fr))" })),
 						]),
 						parts?.list,
 					]}

@@ -36,6 +36,7 @@ import { pointerEvents, pseudoContent, raw } from "@pkg/u/general";
 import {
 	absolute,
 	basis,
+	boxSizing,
 	grow,
 	hstack,
 	insBottom,
@@ -48,7 +49,15 @@ import { overflow } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
 import { is, maxIs, mi, minIs, p, m, width } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
-import { fontSize, nowrap, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import {
+	font,
+	fontSize,
+	nowrap,
+	textAlign,
+	textDecoration,
+	weight,
+	wordBreak,
+} from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -120,7 +129,7 @@ function textInput() {
 		rounded("md"),
 		border({ color: "neutral", width: 1 }),
 		fontSize("sm"),
-		raw({ fontFamily: "inherit" }),
+		font("inherit"),
 		bg("neutral.tint"),
 		fg("inherit"),
 	];
@@ -279,7 +288,7 @@ export default createAction(routes.app.team.settings, {
 									is("full"),
 									maxIs("min(440px, calc(100vw - 32px))"),
 									p(6),
-									raw({ boxSizing: "border-box" }),
+									boxSizing("border-box"),
 									rounded("lg"),
 									border({ color: "neutral", width: 1 }),
 									bg("neutral.tint"),
@@ -645,7 +654,7 @@ export default createAction(routes.app.team.settings, {
 									is("full"),
 									maxIs("min(440px, calc(100vw - 32px))"),
 									p(6),
-									raw({ boxSizing: "border-box" }),
+									boxSizing("border-box"),
 									rounded("lg"),
 									border({ color: "neutral", width: 1 }),
 									bg("neutral.tint"),
@@ -772,7 +781,8 @@ export default createAction(routes.app.team.settings, {
 															<Table.Cell
 																mix={[
 																	textAlign("end"),
-																	raw({ fontFamily: "inherit", wordBreak: "break-all" }),
+																	font("inherit"),
+																	wordBreak("break-all"),
 																	fontSize("xs"),
 																	maxIs("140px"),
 																]}

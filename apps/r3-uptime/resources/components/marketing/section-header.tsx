@@ -14,10 +14,9 @@ import type { Handle, RemixNode } from "remix/ui";
 import { Heading } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { inlineFlex, items } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
-import { m, mbe, p } from "@pkg/u/size";
+import { m, maxWidth, mbe, p } from "@pkg/u/size";
 import { fontSize, leading, text, textAlign, tracking, weight } from "@pkg/u/typography";
 
 namespace SectionHeader {
@@ -33,7 +32,7 @@ export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 	return () => (
 		<div
 			// Centered wrapper capping the badge/heading/lead paragraph at 640px wide.
-			mix={[textAlign("center"), m(0, "auto", 10, "auto"), raw({ maxWidth: 640 })]}
+			mix={[textAlign("center"), m(0, "auto", 10, "auto"), maxWidth("640px")]}
 		>
 			{handle.props.badge && (
 				// Small pill badge above hero/section headings: a brand-tinted outline chip.
@@ -77,7 +76,7 @@ export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 						leading(1.625),
 						fg("neutral"),
 						m(0, "auto", 6, "auto"),
-						raw({ maxWidth: 576 }),
+						maxWidth("576px"),
 					]}
 				>
 					{handle.props.description}

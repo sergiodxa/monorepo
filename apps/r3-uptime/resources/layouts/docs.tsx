@@ -42,7 +42,7 @@ import {
 } from "@pkg/u/layout";
 import { overflowY } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
-import { bs, height, m, maxIs, minBs, minIs, p, pb, width } from "@pkg/u/size";
+import { bs, height, m, maxHeight, maxIs, minBs, minIs, p, pb, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, weight } from "@pkg/u/typography";
 
@@ -157,7 +157,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							insBottom(0),
 							m(0),
 							width("min(80vw, 288px)"),
-							raw({ maxHeight: "100vh" }),
+							maxHeight("100vh"),
 							p(0),
 							border("none"),
 							borderEdge("right", { width: 1, color: "neutral" }),
@@ -185,7 +185,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								 * over once `height` itself resolves to `auto`.
 								 */
 								height("auto"),
-								raw({ maxHeight: "none" }),
+								maxHeight("none"),
 								shrink(0),
 								raw({ boxShadow: "none" }),
 							]),

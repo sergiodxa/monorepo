@@ -25,7 +25,7 @@ import { block } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { m, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { fontSize, textTransform, weight } from "@pkg/u/typography";
+import { fontSize, textTransform, tracking, weight } from "@pkg/u/typography";
 import { clientEntry, on } from "remix/ui";
 
 /** One doc link, reduced to the fields the sidebar actually renders. */
@@ -47,10 +47,10 @@ const sectionTitle = [
 	fontSize("xs"),
 	weight(700),
 	textTransform("uppercase"),
-	// `@pkg/u`'s `tracking()` is a closed enum (tighter/tight/normal/wide/wider/widest)
-	// with no raw-string escape, so this exact letter-spacing value can't route
-	// through it.
-	raw({ letterSpacing: "0.03em" }),
+	// 0.03em sits 0.005em (~0.08px at this font size) off the named `wide` step
+	// (0.025em) — close enough to be imperceptible, so this promotes to the
+	// scale instead of staying a one-off literal.
+	tracking("wide"),
 	fg("neutral.muted"),
 	// Physical 3-value margin shorthand (top / left+right / bottom) — `@pkg/u`'s
 	// `m()` only covers the 1/2/4-value logical form, not a 3-value one.

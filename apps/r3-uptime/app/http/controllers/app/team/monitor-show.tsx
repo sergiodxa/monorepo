@@ -28,8 +28,7 @@ import { Badge, LinkButton } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { flex, flexWrap, gap, grid, items, justify } from "@pkg/u/layout";
+import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@pkg/u/layout";
 import { m, mbe, mbs, p } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -243,7 +242,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						grid(),
 						gap("16px"),
 						items("end"),
-						raw({ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }),
+						gridTemplate({ columns: "repeat(auto-fit, minmax(140px, 1fr))" }),
 					]}
 				>
 					<div>

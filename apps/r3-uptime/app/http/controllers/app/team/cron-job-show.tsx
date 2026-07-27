@@ -12,10 +12,9 @@ import { Badge, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { basis, flex, flexWrap, gap, grow, shrink } from "@pkg/u/layout";
 import { mbe, p } from "@pkg/u/size";
-import { fontSize, weight } from "@pkg/u/typography";
+import { fontSize, leading, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -115,7 +114,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								<div mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 									{ctx.i18next.t("page.cronJobDetail.info.schedule")}
 								</div>
-								<div mix={[fontSize("1.5rem"), weight(700), raw({ lineHeight: "2rem" })]}>
+								<div mix={[fontSize("1.5rem"), weight(700), leading("2rem")]}>
 									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
 								</div>
 								<code>{monitor.cron_expression}</code>

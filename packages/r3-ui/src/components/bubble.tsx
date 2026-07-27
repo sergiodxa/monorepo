@@ -23,6 +23,7 @@ import { raw, vars } from "@pkg/u/general";
 import { block, container, flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
 import { maxIs, mbs, mie, mis, pb, pi, width } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
+import { wordBreak } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 /**
@@ -269,8 +270,8 @@ Bubble.Content = function BubbleContent(handle: Handle<Bubble.ContentProps>) {
 						fontSize: "0.9375rem",
 						lineHeight: "1.5",
 						overflowWrap: "break-word",
-						wordBreak: "break-word",
 					}),
+					wordBreak("break-word"),
 					mix,
 				]}
 			>

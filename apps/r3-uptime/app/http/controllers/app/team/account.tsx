@@ -19,12 +19,11 @@ import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
-import { hstack, shrink, vstack } from "@pkg/u/layout";
+import { boxSizing, hstack, shrink, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { is, m, maxIs, mi, p } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
-import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -222,7 +221,7 @@ export default createAction(routes.app.team.account, {
 									is("full"),
 									maxIs("min(440px, calc(100vw - 32px))"),
 									p("24px"),
-									raw({ boxSizing: "border-box" }),
+									boxSizing("border-box"),
 									rounded("8px"),
 									border({ color: "neutral", width: 1 }),
 									bg("neutral.tint"),
@@ -243,7 +242,7 @@ export default createAction(routes.app.team.account, {
 												rounded("6px"),
 												border({ color: "neutral", width: 1 }),
 												fontSize("0.875rem"),
-												raw({ fontFamily: "inherit" }),
+												font("inherit"),
 												bg("neutral.tint"),
 												fg("inherit"),
 											]}

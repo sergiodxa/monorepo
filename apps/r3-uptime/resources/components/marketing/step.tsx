@@ -13,7 +13,7 @@ import type { Handle } from "remix/ui";
 import { Card, HeadingScope } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
-import { pseudoContent, raw } from "@pkg/u/general";
+import { counterIncrement, pseudoContent } from "@pkg/u/general";
 import { absolute, flex, insBs, insIs, items, justify, relative } from "@pkg/u/layout";
 import { bs, is, pis } from "@pkg/u/size";
 import { before } from "@pkg/u/state";
@@ -35,7 +35,7 @@ export default function MarketingStep(handle: Handle<MarketingStep.Props>) {
 			mix={[
 				relative(),
 				pis(10),
-				raw({ counterIncrement: "marketing-step" }),
+				counterIncrement("marketing-step"),
 				before([
 					pseudoContent("counter(marketing-step)"),
 					absolute(),

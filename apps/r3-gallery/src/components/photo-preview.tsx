@@ -20,7 +20,7 @@ import { block, container, flex, flexCol, grid } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { at } from "@pkg/u/responsive";
 import { aspect, fit, height, mbs, p, width } from "@pkg/u/size";
-import { leading, weight } from "@pkg/u/typography";
+import { leading, tracking, weight } from "@pkg/u/typography";
 
 import type { Photo } from "../data/types";
 
@@ -77,8 +77,8 @@ export function PhotoPreview(handle: Handle<PhotoPreviewProps>) {
 								raw({
 									fontFamily: 'Georgia, "Times New Roman", serif',
 									fontSize: "clamp(1.5rem, 3vw, 2.25rem)",
-									letterSpacing: "-0.04em",
 								}),
+								tracking("-0.04em"),
 								weight(500),
 								leading(1.05),
 							]}

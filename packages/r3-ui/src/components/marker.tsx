@@ -13,11 +13,11 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { pseudoContent, raw } from "@pkg/u/general";
+import { pseudoContent } from "@pkg/u/general";
 import { basis, center, gap, grow, inlineFlex, items, shrink } from "@pkg/u/layout";
 import { bs, is, minIs, pb, pi } from "@pkg/u/size";
 import { data, when } from "@pkg/u/state";
-import { weight } from "@pkg/u/typography";
+import { fontSize, leading, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
 /** Visual shape {@link Marker} falls back to when `variant` is omitted. */
@@ -180,7 +180,8 @@ export function Marker(handle: Handle<Marker.Props>) {
 					]),
 					gap("var(--ui-marker-gap, 0.375rem)"),
 					pb("0.375rem"),
-					raw({ fontSize: "0.8125rem", lineHeight: "calc(1.25 / 0.8125)" }),
+					fontSize("0.8125rem"),
+					leading("calc(1.25 / 0.8125)"),
 					data(
 						"variant",
 						"separator",

@@ -20,6 +20,7 @@ import { raw } from "@pkg/u/general";
 import {
 	absolute,
 	block,
+	boxSizing,
 	fixed,
 	gap,
 	grid,
@@ -167,7 +168,8 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							// `backdropBlur()` would additionally set `WebkitBackdropFilter`, a
 							// vendor-prefixed property this backdrop never had — kept as a raw
 							// one-off to avoid introducing a rendering change on Safari.
-							raw({ boxSizing: "border-box", backdropFilter: "blur(16px)" }),
+							boxSizing("border-box"),
+							raw({ backdropFilter: "blur(16px)" }),
 							on<HTMLDivElement, "click">("click", (event) => {
 								if (event.target === event.currentTarget) closePhoto();
 							}),

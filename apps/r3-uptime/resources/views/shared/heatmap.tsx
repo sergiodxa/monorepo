@@ -25,11 +25,10 @@ import type { Handle } from "remix/ui";
 
 import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { flexWrap, hstack, vstack } from "@pkg/u/layout";
 import { overflowX } from "@pkg/u/overflow";
 import { bs, is, mbs, p, pbs } from "@pkg/u/size";
-import { fontSize, weight } from "@pkg/u/typography";
+import { fontSize, leading, weight } from "@pkg/u/typography";
 
 import type { SelectMonitorDailyStats } from "~/database/schema";
 
@@ -102,7 +101,12 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 									bs("16px"),
 									fontSize("0.6875rem"),
 									weight(600),
-									raw({ lineHeight: "16px" }),
+									// 16px / 11px ≈ 1.4545 — between `snug` (1.375) and `normal`
+									// (1.5) with no clean named-step match; this is the fixed
+									// calendar-cell row height (`bs("16px")` above), not a
+									// type-scale ratio, so it stays a literal length instead of
+									// being forced onto the scale.
+									leading("16px"),
 									fg("neutral.muted"),
 								]}
 							>

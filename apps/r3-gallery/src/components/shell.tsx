@@ -12,9 +12,9 @@ import type { Handle, RemixNode } from "remix/ui";
 import { Header, Heading, HeadingScope, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
-import { block, gap, grid } from "@pkg/u/layout";
-import { m, p } from "@pkg/u/size";
-import { fontSize, leading, weight } from "@pkg/u/typography";
+import { block, boxSizing, gap, grid } from "@pkg/u/layout";
+import { m, maxWidth, minHeight, minWidth, p } from "@pkg/u/size";
+import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 
 /**
  * Props for the shared document shell.
@@ -36,10 +36,10 @@ export function Shell(handle: Handle<ShellProps>) {
 	return () => (
 		<div
 			mix={[
+				boxSizing("border-box"),
+				minWidth("320px"),
+				minHeight("100vh"),
 				raw({
-					boxSizing: "border-box",
-					minWidth: "320px",
-					minHeight: "100vh",
 					color: "#241b16",
 					background:
 						"radial-gradient(circle at top left, rgb(252 211 77 / 0.42), transparent 34rem), linear-gradient(135deg, #fff7ed 0%, #fbf3ea 48%, #fef2f2 100%)",
@@ -57,21 +57,14 @@ export function Shell(handle: Handle<ShellProps>) {
 					grid(),
 					gap("1rem"),
 					m(0, "auto"),
+					boxSizing("border-box"),
+					maxWidth("72rem"),
 					raw({
-						boxSizing: "border-box",
-						maxWidth: "72rem",
 						padding: "clamp(2rem, 7vw, 5rem) clamp(1rem, 4vw, 4rem) clamp(1.5rem, 4vw, 3rem)",
 					}),
 				]}
 			>
-				<Header
-					mix={[
-						p(0),
-						fg("primary.emphasis"),
-						fontSize("0.78rem"),
-						raw({ letterSpacing: "0.18em" }),
-					]}
-				>
+				<Header mix={[p(0), fg("primary.emphasis"), fontSize("0.78rem"), tracking("0.18em")]}>
 					{handle.props.eyebrow}
 				</Header>
 				<Heading
@@ -80,11 +73,11 @@ export function Shell(handle: Handle<ShellProps>) {
 						weight(500),
 						leading(0.84),
 						fg("inherit"),
+						maxWidth("14ch"),
+						tracking("-0.08em"),
 						raw({
-							maxWidth: "14ch",
 							fontFamily: 'Georgia, "Times New Roman", serif',
 							fontSize: "clamp(3rem, 10vw, 8.5rem)",
-							letterSpacing: "-0.08em",
 						}),
 					]}
 				>
@@ -93,8 +86,8 @@ export function Shell(handle: Handle<ShellProps>) {
 				<Text
 					mix={[
 						block(),
+						maxWidth("42rem"),
 						raw({
-							maxWidth: "42rem",
 							color: "#6b4f43",
 							fontSize: "clamp(1rem, 2vw, 1.2rem)",
 						}),
@@ -106,9 +99,9 @@ export function Shell(handle: Handle<ShellProps>) {
 			<main
 				mix={[
 					m(0, "auto"),
+					boxSizing("border-box"),
+					maxWidth("72rem"),
 					raw({
-						boxSizing: "border-box",
-						maxWidth: "72rem",
 						padding: "0 clamp(1rem, 4vw, 4rem) 5rem",
 					}),
 				]}

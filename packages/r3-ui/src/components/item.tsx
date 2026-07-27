@@ -30,7 +30,7 @@ import {
 import { atMax } from "@pkg/u/responsive";
 import { bs, is, mis, minIs, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { text, truncate, weight } from "@pkg/u/typography";
+import { fontSize, leading, text, truncate, weight } from "@pkg/u/typography";
 
 /**
  * Named container {@link Item} declares on its own host, so
@@ -289,7 +289,8 @@ Item.Description = function ItemDescription(handle: Handle<Item.DescriptionProps
 				mix={[
 					fg("neutral.muted"),
 					truncate(),
-					raw({ fontSize: "0.8125rem", lineHeight: "calc(1.125 / 0.8125)" }),
+					fontSize("0.8125rem"),
+					leading("calc(1.125 / 0.8125)"),
 					mix,
 				]}
 			>

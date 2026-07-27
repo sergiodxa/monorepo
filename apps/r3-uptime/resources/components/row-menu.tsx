@@ -28,7 +28,7 @@ import { flex, gap, inlineFlex, items, justify } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { height, is, m, p, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { fontSize, textDecoration } from "@pkg/u/typography";
+import { font, fontSize, textAlign, textDecoration } from "@pkg/u/typography";
 
 namespace RowMenu {
 	export interface Props {
@@ -74,11 +74,10 @@ export const menuItem = [
 	rounded("md"),
 	bg("transparent"),
 	fg("neutral.emphasis"),
-	raw({ fontFamily: "inherit" }),
+	font("inherit"),
 	fontSize("sm"),
-	// `@pkg/u`'s `textAlign()` only exposes the logical start/end/center/justify
-	// keywords, not the physical `"left"` this row deliberately uses.
-	raw({ textAlign: "left" }),
+	// Deliberately physical `"left"`, not the logical start/end, per this row's layout.
+	textAlign("left"),
 	textDecoration("none"),
 	cursor("pointer"),
 	when("&:hover", bg("neutral.bg-tint-hover")),

@@ -260,7 +260,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						},
 						"& :where(pre)": {
 							fontSize: "0.875em",
-							lineHeight: "1.6",
 						},
 						"& :where(pre code)": {
 							padding: "0",
@@ -355,6 +354,12 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							},
 						}),
 					),
+
+					// Code: a plain multiplier, not a named step — kept as the exact
+					// literal 1.6 rather than promoted to `leading("relaxed")`
+					// (1.625), matching the heading rule below's own use of the raw
+					// numeric form over its exactly-matching named step ("tight").
+					when("& :where(pre)", leading(1.6)),
 
 					// Headings
 					when("& :where(h1, h2, h3, h4, h5, h6)", [

@@ -10,10 +10,9 @@
 import { Button, Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap } from "@pkg/u/layout";
 import { mbe, p } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
+import { font, fontSize } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 
@@ -65,7 +64,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 										rounded("md"),
 										border("neutral"),
 										fontSize("sm"),
-										raw({ fontFamily: "inherit" }),
+										font("inherit"),
 										bg("neutral.tint"),
 										fg("inherit"),
 									]}
@@ -99,7 +98,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 										rounded("md"),
 										border("neutral"),
 										fontSize("sm"),
-										raw({ fontFamily: "inherit" }),
+										font("inherit"),
 										bg("neutral.tint"),
 										fg("inherit"),
 									]}

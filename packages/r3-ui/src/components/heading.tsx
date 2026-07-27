@@ -15,8 +15,7 @@
 import type { Handle, Props as TagProps } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
-import { tracking, weight } from "@pkg/u/typography";
+import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 
 import type { HeadingLevel } from "./heading-scope";
 
@@ -73,7 +72,8 @@ export function Heading(handle: Handle<Heading.Props>) {
 					weight("semibold"),
 					tracking("tight"),
 					fg("neutral.emphasis"),
-					raw({ fontSize: "1.125rem", lineHeight: "1" }),
+					fontSize("lg"),
+					leading("none"),
 					mix,
 				]}
 			/>

@@ -87,11 +87,12 @@ import {
 	justify,
 	shrink,
 } from "@pkg/u/layout";
+import { boxSizing } from "@pkg/u/layout";
 import { overflow, overflowY } from "@pkg/u/overflow";
 import { media } from "@pkg/u/responsive";
 import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
-import { fontSize, truncate, weight } from "@pkg/u/typography";
+import { fontSize, textAlign, truncate, weight } from "@pkg/u/typography";
 
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
@@ -157,7 +158,7 @@ const header = combine([
 	justify("between"),
 	gap(4),
 	bs("64px"),
-	raw({ boxSizing: "border-box" }),
+	boxSizing("border-box"),
 	pi(5),
 	borderEdge("bottom", { color: "neutral", width: 1 }),
 	shrink(),
@@ -203,7 +204,7 @@ const sidebarNav = combine([
 	 * intended full-height drawer size below 768px.
 	 */
 	bs("full"),
-	raw({ boxSizing: "border-box" }),
+	boxSizing("border-box"),
 	hidden(),
 	flexCol(),
 	overflow(),
@@ -287,9 +288,10 @@ const teamPickerRow = combine([flex(), items("center"), gap(2), minIs(0), is("fu
  * what gives the `Menu` its implicit CSS anchor, with no extra wiring on this button.
  * `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right edges
  * flush with its parent cell's own padding on both sides equally — the cell's
- * padding IS the button's margin from the sidebar's edge. `font`/`textAlign: "left"`
- * stay `raw()` — the CSS `font` shorthand and a physical (non-logical) text
- * alignment have no `@pkg/u` equivalent.
+ * padding IS the button's margin from the sidebar's edge. `font` stays
+ * `raw()` — the CSS `font` shorthand has no `@pkg/u` equivalent — while the
+ * physical (non-logical) text alignment uses `textAlign()`'s raw-string
+ * escape.
  */
 const menuTriggerButton = combine([
 	flex(),
@@ -301,7 +303,8 @@ const menuTriggerButton = combine([
 	border("none"),
 	rounded("lg"),
 	bg("transparent"),
-	raw({ font: "inherit", textAlign: "left" }),
+	raw({ font: "inherit" }),
+	textAlign("left"),
 	cursor("pointer"),
 	fg("inherit"),
 	hover(bg("neutral.bg-tint-hover")),

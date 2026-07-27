@@ -20,13 +20,14 @@ import {
 	transitionBehavior,
 	transitionProperty,
 } from "@pkg/u/effects";
-import { cursor, raw, userSelect } from "@pkg/u/general";
+import { cursor, userSelect } from "@pkg/u/general";
 import {
 	container,
 	flex,
 	flexCol,
 	gap,
 	grid,
+	gridTemplate,
 	inlineFlex,
 	items,
 	justify,
@@ -634,7 +635,7 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 				mix={[
 					grid(),
 					gap(4),
-					at("40rem", CONTAINER_NAME, raw({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" })),
+					at("40rem", CONTAINER_NAME, gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" })),
 					mix,
 				]}
 			/>

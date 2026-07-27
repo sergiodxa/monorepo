@@ -13,7 +13,6 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
 import {
 	container,
 	flex,
@@ -21,6 +20,7 @@ import {
 	gap,
 	grid,
 	gridArea,
+	gridTemplate,
 	hstack,
 	items,
 	justify,
@@ -159,9 +159,9 @@ export function Message(handle: Handle<Message.Props>) {
 					grid(),
 					gap("var(--ui-message-row-gap, 0.25rem)", "var(--ui-message-gap, 0.75rem)"),
 					container(CONTAINER_NAME),
-					raw({
-						gridTemplateColumns: "auto 1fr",
-						gridTemplateAreas: `"avatar header" "avatar content" ". footer"`,
+					gridTemplate({
+						columns: "auto 1fr",
+						areas: `"avatar header" "avatar content" ". footer"`,
 					}),
 					when('& > [data-slot="avatar"]', [gridArea("avatar"), self("end")]),
 					when('& > [data-slot="header"]', gridArea("header")),

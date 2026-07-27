@@ -14,13 +14,14 @@ import { CheckIcon } from "@pkg/lucide-remix";
 import { Table } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { counterReset } from "@pkg/u/general";
 import {
 	flex,
 	flexRow,
 	flexWrap,
 	gap,
 	grid,
+	gridTemplate,
 	inlineFlex,
 	items,
 	justify,
@@ -289,9 +290,9 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							mix={[
 								grid(),
 								gap("32px"),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{features.map((feature) => (
@@ -327,9 +328,9 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							mix={[
 								grid(),
 								gap("24px"),
-								raw({ gridTemplateColumns: "1fr", counterReset: "marketing-step" }),
-								media("(min-width: 640px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								[gridTemplate({ columns: "1fr" }), counterReset("marketing-step")],
+								media("(min-width: 640px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{steps.map((step) => (

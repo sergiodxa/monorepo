@@ -17,7 +17,7 @@ import type { Handle } from "remix/ui";
 import { CheckIcon } from "@pkg/lucide-remix";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
+import { counterReset } from "@pkg/u/general";
 import {
 	flex,
 	flexCol,
@@ -25,6 +25,7 @@ import {
 	flexWrap,
 	gap,
 	grid,
+	gridTemplate,
 	inlineFlex,
 	items,
 	justify,
@@ -220,9 +221,9 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							mix={[
 								grid(),
 								gap(8),
-								raw({ gridTemplateColumns: "1fr" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{features.map((feature) => (
@@ -244,9 +245,10 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							mix={[
 								grid(),
 								gap(6),
-								raw({ gridTemplateColumns: "1fr", counterReset: "marketing-step" }),
-								media("(min-width: 768px)", raw({ gridTemplateColumns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", raw({ gridTemplateColumns: "repeat(3, 1fr)" })),
+								gridTemplate({ columns: "1fr" }),
+								counterReset("marketing-step"),
+								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
 							]}
 						>
 							{steps.map((step) => (
