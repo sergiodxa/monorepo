@@ -13,6 +13,8 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import type { SizeValue, SpacingValue } from "@pkg/u/tokens";
+
 import { bg, borderEdge, fg, outline, outlineStyle } from "@pkg/u/color";
 import { opacity, transition } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
@@ -32,6 +34,7 @@ import {
 } from "@pkg/u/layout";
 import { bs, is, mbe, mie, pb, pi } from "@pkg/u/size";
 import { after, data, when } from "@pkg/u/state";
+import { boxLength, spacing } from "@pkg/u/tokens";
 import { text, weight } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
@@ -48,6 +51,14 @@ const DEFAULT_TAB_ROLE = "tab";
 
 /** `role="tabpanel"` applied to {@link Tabs.Panel} through {@link attrs} unless a consumer supplies its own `role`. */
 const DEFAULT_PANEL_ROLE = "tabpanel";
+
+/**
+ * {@link Tabs.List}'s own inter-tab gap, applied through `hstack({ gap:
+ * LIST_GAP })`. Reused as-is when computing a controlled `activeIndex`'s
+ * indicator offset (see {@link tabIndicatorMix}), so the two stay in sync by
+ * construction instead of by a duplicated literal.
+ */
+const LIST_GAP: SpacingValue = 1;
 
 /**
  * Default {@link Tabs.PanelProps.tabIndex}, applied through {@link attrs}
@@ -88,7 +99,36 @@ export namespace Tabs {
 	/**
 	 * Props accepted by {@link Tabs.List}.
 	 */
-	export interface ListProps extends TagProps<"div"> {}
+	export interface ListProps extends TagProps<"div"> {
+		/**
+		 * Index of the currently active tab, for a tab bar with no
+		 * client-side measurement of the active {@link Tabs.Tab}'s bounding
+		 * box available — e.g. a link-based tab bar where each tab is a real
+		 * navigation and the active one is known from the current route
+		 * server-side, not from tracked selection state. When given together
+		 * with `tabSize`, {@link Tabs.List} computes and sets its own
+		 * `--ui-tab-indicator-*` custom properties from them directly,
+		 * instead of leaving those properties at their resting fallback for
+		 * something else (a future client-measured behavior) to set. Omit
+		 * both props to keep today's default: the indicator stays at its
+		 * resting, invisible fallback until something else sets those
+		 * custom properties — unchanged from before this prop existed.
+		 */
+		activeIndex?: number;
+
+		/**
+		 * Every {@link Tabs.Tab}'s fixed size along the enclosing
+		 * {@link Tabs}'s layout axis (inline-size when horizontal, block-size
+		 * when vertical) — required alongside `activeIndex`, since a
+		 * controlled index alone doesn't say how far apart the tabs actually
+		 * sit. A number resolves against the spacing scale, same as every
+		 * other sizing prop in this package; a raw CSS length string
+		 * (`"110px"`) passes through unchanged — most callers with a fixed
+		 * pixel-width tab bar want the latter. Ignored unless `activeIndex`
+		 * is also given.
+		 */
+		tabSize?: SizeValue;
+	}
 
 	/**
 	 * Props accepted by {@link Tabs.Tab}. A type alias rather than an
@@ -161,6 +201,47 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
 }
 
 /**
+ * Computes the `--ui-tab-indicator-*` custom properties {@link Tabs.List}'s
+ * own sliding indicator reads, for a controlled `activeIndex` with no
+ * client-side measurement available — e.g. a link-based tab bar rendering
+ * server-controlled active state, with no bounding box to measure from since
+ * there's no client behavior tracking selection at all. Every
+ * {@link Tabs.Tab} is assumed to share one fixed `tabSize` along `orientation`'s
+ * axis and to sit `LIST_GAP` apart (the same gap {@link Tabs.List} lays them
+ * out with via `hstack`), so the active tab's leading edge is `activeIndex`
+ * tab-and-gap widths from the start — the same offset a real flex layout of
+ * equal-width, evenly gapped items produces, computed here instead of read
+ * back from one.
+ *
+ * @param orientation The enclosing {@link Tabs}'s layout axis.
+ * @param activeIndex Index of the active tab among its siblings.
+ * @param tabSize Every tab's fixed size along `orientation`'s axis.
+ * @returns A `raw()` mixin setting the indicator's offset, length, and opacity.
+ */
+export function tabIndicatorMix(
+	orientation: Tabs.Orientation,
+	activeIndex: number,
+	tabSize: SizeValue,
+) {
+	let size = boxLength(tabSize);
+	let offset = `calc((${size} + ${spacing(LIST_GAP)}) * ${activeIndex})`;
+
+	if (orientation === "vertical") {
+		return raw({
+			"--ui-tab-indicator-block-start": offset,
+			"--ui-tab-indicator-block-size": size,
+			"--ui-tab-indicator-opacity": "1",
+		});
+	}
+
+	return raw({
+		"--ui-tab-indicator-inline-start": offset,
+		"--ui-tab-indicator-inline-size": size,
+		"--ui-tab-indicator-opacity": "1",
+	});
+}
+
+/**
  * Renders the tab strip: a `role="tablist"` host laying {@link Tabs.Tab}
  * links out in a row with a shared block-end border underlining the whole
  * strip, or in a column with a shared inline-end border alongside it when
@@ -168,8 +249,10 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
  * bar sits over that shared border through an absolutely positioned
  * pseudo-element, its offset, length, and opacity read from
  * `--ui-tab-indicator-*` custom properties; every one of those falls back to
- * a resting, invisible state, ready for a behavior that tracks the active
- * tab to animate them.
+ * a resting, invisible state by default, ready for a behavior that tracks
+ * the active tab to animate them — or, when `activeIndex`/`tabSize` are
+ * given, computed internally instead (see {@link tabIndicatorMix}), for a
+ * tab bar with no client-side measurement available at all.
  *
  * @param handle Runtime handle carrying the host's props.
  * @returns The render function producing the tab strip's markup.
@@ -178,11 +261,27 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
  * 	<Tabs.Tab href="/settings/profile" aria-selected="true">{t("settings.profile")}</Tabs.Tab>
  * 	<Tabs.Tab href="/settings/billing" aria-selected="false">{t("settings.billing")}</Tabs.Tab>
  * </Tabs.List>
+ * @example
+ * // A link-based, server-controlled tab bar: `activeIndex` comes from the
+ * // current route, not from any client-tracked selection state, so
+ * // `Tabs.List` computes its own sliding indicator with no client JS at all.
+ * <Tabs.List aria-label={t("dashboard.tabs")} activeIndex={activeIndex} tabSize="110px">
+ * 	<Tabs.Tab href="/dashboard/overview" aria-selected={activeIndex === 0}>
+ * 		{t("dashboard.overview")}
+ * 	</Tabs.Tab>
+ * 	<Tabs.Tab href="/dashboard/incidents" aria-selected={activeIndex === 1}>
+ * 		{t("dashboard.incidents")}
+ * 	</Tabs.Tab>
+ * </Tabs.List>
  */
 Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { mix, activeIndex, tabSize, ...rest } = handle.props;
 		let context = handle.context.get(Tabs);
+		let indicatorMix =
+			activeIndex !== undefined && tabSize !== undefined
+				? tabIndicatorMix(context.orientation, activeIndex, tabSize)
+				: undefined;
 
 		return (
 			<div
@@ -192,7 +291,7 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 				mix={[
 					attrs({ role: DEFAULT_LIST_ROLE }),
 					relative(),
-					hstack({ gap: 1 }),
+					hstack({ gap: LIST_GAP }),
 					borderEdge("block-end", { color: "neutral", width: 1 }),
 					after([
 						absolute(),
@@ -220,6 +319,7 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 							bs("var(--ui-tab-indicator-block-size, 0px)"),
 						]),
 					]),
+					indicatorMix,
 					mix,
 				]}
 			/>

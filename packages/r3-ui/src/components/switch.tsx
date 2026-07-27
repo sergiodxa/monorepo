@@ -2,14 +2,18 @@
  * A native checkbox styled and wired as an on/off switch: a pill-shaped
  * track whose thumb rests at the inline-start edge unchecked and slides to
  * the inline-end edge once checked, tinting the track with the semantic
- * primary color along the way. It renders no label text of its own — pair
- * it with {@link Label} or an explicit `aria-label`/`aria-labelledby`.
+ * primary color along the way. Passing `children` wraps the track in a
+ * native `<label>` alongside that visible label text, the same
+ * self-labeling composition {@link Checkbox} and {@link RadioGroup.Radio}
+ * already render; leave `children` unset to render the bare track alone,
+ * for pairing with an external {@link Label} or an explicit
+ * `aria-label`/`aria-labelledby` instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import {
 	absolute,
@@ -19,6 +23,7 @@ import {
 	bs,
 	cursor,
 	focusVisible,
+	hstack,
 	inlineBlock,
 	insBs,
 	insIs,
@@ -64,9 +69,19 @@ export namespace Switch {
 	 * `checked`/`defaultChecked` for the on/off state, `disabled` to disable
 	 * it, `name`/`value` for form submission, and
 	 * `aria-label`/`aria-labelledby` for its accessible name whenever it
-	 * isn't nested inside a {@link Label}.
+	 * isn't nested inside a {@link Label} or given `children`.
 	 */
-	export type Props = Omit<TagProps<"input">, "type" | "role" | "aria-checked">;
+	export interface Props extends Omit<TagProps<"input">, "type" | "role" | "aria-checked"> {
+		/**
+		 * Visible label text rendered after the track, inside the same
+		 * native `<label>` wrapping both — clicking or tapping the track or
+		 * the label text alike toggles the switch natively, with no
+		 * separate `htmlFor`/`id` pair required. Omit to render the bare
+		 * track alone, for pairing with an external {@link Label} or an
+		 * explicit `aria-label`/`aria-labelledby` instead.
+		 */
+		children?: RemixNode;
+	}
 }
 
 /**
@@ -85,8 +100,20 @@ export namespace Switch {
  * native switch behavior directly, while the `role="switch"` fallback keeps
  * the same accessibility semantics everywhere else.
  *
+ * Passing `children` wraps the track in a native `<label>` laid out as a
+ * row with a small gap, the label text following the track and toggling it
+ * when clicked or tapped the same way the track itself does, with the
+ * pointer cursor swapping to "not-allowed" once the track is disabled — the
+ * same self-labeling composition {@link Checkbox} and
+ * {@link RadioGroup.Radio} already render for their own controls. Leaving
+ * `children` unset renders the bare track with no wrapping `<label>` at
+ * all, unchanged from before, for a consumer pairing it with an external
+ * {@link Label} or an explicit `aria-label`/`aria-labelledby` instead.
+ *
  * @param handle Runtime handle carrying the host `<input>`'s props.
  * @returns The render function producing the switch's markup.
+ * @example
+ * <Switch name="notifications" defaultChecked>{t("settings.notifications.label")}</Switch>
  * @example
  * <Label>
  * 	{t("settings.notifications.label")}
@@ -97,10 +124,10 @@ export namespace Switch {
  */
 export function Switch(handle: Handle<Switch.Props>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { mix, children, ...rest } = handle.props;
 		let resolvedChecked = handle.props.checked ?? handle.props.defaultChecked ?? false;
 
-		return (
+		let track = (
 			<input
 				{...rest}
 				type="checkbox"
@@ -153,6 +180,21 @@ export function Switch(handle: Handle<Switch.Props>) {
 					mix,
 				]}
 			/>
+		);
+
+		if (children === undefined) return track;
+
+		return (
+			<label
+				mix={[
+					hstack({ gap: 2, align: "center" }),
+					cursor("pointer"),
+					when("&:has(input:disabled)", cursor("not-allowed")),
+				]}
+			>
+				{track}
+				{children}
+			</label>
 		);
 	};
 }
