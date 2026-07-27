@@ -19,9 +19,29 @@ import {
 } from "@pkg/r3-ui/mixins";
 import { panelChrome } from "@pkg/r3-ui/styles";
 import { visuallyHidden } from "@pkg/u/a11y";
-import { outline } from "@pkg/u/color";
-import { when } from "@pkg/u/state";
-import { css, on } from "remix/ui";
+import { bg, fg, outline } from "@pkg/u/color";
+import { rounded, transition, transitionDuration } from "@pkg/u/effects";
+import { listStyle, raw } from "@pkg/u/general";
+import {
+	boxSizing,
+	flex,
+	flexRow,
+	flexWrap,
+	gap,
+	grid,
+	gridTemplate,
+	items,
+	justify,
+	repeat,
+	self,
+} from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { media } from "@pkg/u/responsive";
+import { height, m, mbe, p } from "@pkg/u/size";
+import { hover, when } from "@pkg/u/state";
+import { translateY } from "@pkg/u/transform";
+import { fontSize, leading, lineClamp, textDecoration, tracking, weight } from "@pkg/u/typography";
+import { on } from "remix/ui";
 
 import type { Album } from "../data/types";
 
@@ -53,18 +73,13 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 			intro="A client-only Remix UI router demo. Pick an album to load its photos without a server render."
 		>
 			<Toolbar
-				mix={css({
-					flexWrap: "wrap",
-					justifyContent: "space-between",
-					marginBlockEnd: "1.5rem",
-					padding: "1rem",
-				})}
+				mix={[flexWrap("wrap"), justify("between"), mbe("1.5rem"), p("1rem")]}
 				aria-label="Album shortcuts"
 			>
 				<Form
 					method="POST"
 					action={routes.openAlbum.href()}
-					mix={[router.form(), css({ flexDirection: "row", flexWrap: "wrap", alignItems: "end" })]}
+					mix={[router.form(), flexRow(), flexWrap("wrap"), items("end")]}
 				>
 					<NumberField>
 						<Label htmlFor="albumId" mix={visuallyHidden()}>
@@ -88,7 +103,7 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 						Open album
 					</Button>
 				</Form>
-				<div mix={css({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" })}>
+				<div mix={[flex(), flexWrap("wrap"), items("center"), gap("0.5rem")]}>
 					<Button
 						type="button"
 						color="brand"
@@ -111,14 +126,14 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 				</div>
 			</Toolbar>
 			<ul
-				mix={css({
-					display: "grid",
-					gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 15rem), 1fr))",
-					gap: "1rem",
-					margin: 0,
-					padding: 0,
-					listStyle: "none",
-				})}
+				mix={[
+					grid(),
+					gridTemplate({ columns: repeat("auto-fit", "minmax(min(100%, 15rem), 1fr)") }),
+					gap("1rem"),
+					m(0),
+					p(0),
+					listStyle("none"),
+				]}
 				aria-label="Albums"
 			>
 				{handle.props.albums.map((album) => (
@@ -134,55 +149,44 @@ export function AlbumsPage(handle: Handle<AlbumsPageProps>) {
 									when('&[data-color="warning"]', outline("warning.ring")),
 									when('&[data-color="danger"]', outline("danger.ring")),
 								]),
-								css({
-									display: "grid",
-									boxSizing: "border-box",
-									overflow: "hidden",
-									height: "14rem",
-									padding: "1.2rem",
-									borderRadius: "1.5rem",
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									boxShadow: "0 1.5rem 4rem rgb(124 45 18 / 0.08)",
-									color: "inherit",
-									textDecoration: "none",
-									transition:
-										"transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease",
-									WebkitTapHighlightColor: "transparent",
-									"&:hover": {
-										backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-										boxShadow: "0 2rem 5rem rgb(124 45 18 / 0.14)",
-										transform: "translateY(-0.25rem)",
-									},
-									"@media (prefers-reduced-motion: reduce)": {
-										transitionDuration: "0.01ms",
-									},
+								grid(),
+								boxSizing("border-box"),
+								overflow("hidden"),
+								height("14rem"),
+								p("1.2rem"),
+								rounded("1.5rem"),
+								bg("neutral.tint"),
+								fg("inherit"),
+								textDecoration("none"),
+								transition("transform, box-shadow, background-color", {
+									duration: 180,
+									easing: "ease",
 								}),
+								raw({
+									boxShadow: "0 1.5rem 4rem rgb(124 45 18 / 0.08)",
+									WebkitTapHighlightColor: "transparent",
+								}),
+								hover([
+									bg("neutral.bg-tint-hover"),
+									raw({ boxShadow: "0 2rem 5rem rgb(124 45 18 / 0.14)" }),
+									translateY("-0.25rem"),
+								]),
+								media("(prefers-reduced-motion: reduce)", transitionDuration("0.01ms")),
 							]}
 							href={routes.album.href({ id: String(album.id) })}
 						>
-							<Header
-								mix={css({
-									alignSelf: "start",
-									padding: 0,
-									color: "var(--ui-brand-fg-emphasis)",
-								})}
-							>
-								Album {album.id}
-							</Header>
+							<Header mix={[self("start"), p(0), fg("brand.emphasis")]}>Album {album.id}</Header>
 							<Heading
-								mix={css({
-									alignSelf: "end",
-									fontFamily: 'Georgia, "Times New Roman", serif',
-									fontSize: "1.8rem",
-									fontWeight: 500,
-									letterSpacing: "-0.04em",
-									lineHeight: 1.1,
-									color: "inherit",
-									display: "-webkit-box",
-									overflow: "hidden",
-									"-webkit-line-clamp": "3",
-									"-webkit-box-orient": "vertical",
-								})}
+								mix={[
+									self("end"),
+									raw({ fontFamily: 'Georgia, "Times New Roman", serif' }),
+									fontSize("1.8rem"),
+									weight(500),
+									tracking("-0.04em"),
+									leading(1.1),
+									fg("inherit"),
+									lineClamp(3),
+								]}
 							>
 								{titleCase(album.title)}
 							</Heading>

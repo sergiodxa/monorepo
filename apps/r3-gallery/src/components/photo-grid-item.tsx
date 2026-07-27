@@ -12,9 +12,15 @@ import type { Handle } from "remix/ui";
 
 import { AspectRatio, Badge, Button, Card, Form } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
-import { outline } from "@pkg/u/color";
+import { fg, outline } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import { block, self } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { fit, height, minHeight, p, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
-import { addEventListeners, css, on } from "remix/ui";
+import { fontSize, leading, lineClamp, textDecoration } from "@pkg/u/typography";
+import { addEventListeners, on } from "remix/ui";
 
 import type { Photo } from "../data/types";
 import type { LikeToggleResult } from "../middleware/likes";
@@ -68,25 +74,26 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 
 		return (
 			<Card
-				mix={css({
-					overflow: "hidden",
-					borderRadius: "1.35rem",
-					boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)",
-				})}
+				mix={[
+					overflow("hidden"),
+					rounded("1.35rem"),
+					raw({ boxShadow: "0 1rem 2.4rem rgb(124 45 18 / 0.1)" }),
+				]}
 			>
-				<Card.Content mix={css({ padding: 0 })}>
+				<Card.Content mix={p(0)}>
 					<a
 						href={photoHref}
 						aria-label={title}
 						mix={[
 							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-							css({ display: "block", WebkitTapHighlightColor: "transparent" }),
+							block(),
+							raw({ WebkitTapHighlightColor: "transparent" }),
 							on<HTMLAnchorElement, "click">("click", openPhoto),
 						]}
 					>
 						<AspectRatio ratio="1 / 1">
 							<img
-								mix={css({ display: "block", width: "100%", height: "100%", objectFit: "cover" })}
+								mix={[block(), width("full"), height("full"), fit("cover")]}
 								src={handle.props.photo.thumbnailUrl}
 								alt=""
 								loading="lazy"
@@ -98,25 +105,16 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 					<Badge
 						color={liked ? "brand" : "neutral"}
 						variant={liked ? "secondary" : "outline"}
-						mix={css({ alignSelf: "flex-start" })}
+						mix={self("start")}
 					>
 						{liked ? "Saved" : "Unsaved"}
 					</Badge>
-					<Card.Title
-						mix={css({
-							fontSize: "0.9rem",
-							lineHeight: 1.3,
-							minHeight: "3.5rem",
-							display: "-webkit-box",
-							overflow: "hidden",
-							"-webkit-line-clamp": "3",
-							"-webkit-box-orient": "vertical",
-						})}
-					>
+					<Card.Title mix={[fontSize("0.9rem"), leading(1.3), minHeight("3.5rem"), lineClamp(3)]}>
 						<a
 							href={photoHref}
 							mix={[
-								css({ color: "inherit", textDecoration: "none" }),
+								fg("inherit"),
+								textDecoration("none"),
 								on<HTMLAnchorElement, "click">("click", openPhoto),
 							]}
 						>
