@@ -3,10 +3,11 @@
  * works with no JS at all (a plain navigating submit, same as before this
  * component existed) — `on("submit")` only runs once hydrated, where it
  * intercepts the submit to `fetch()` the same action instead, so clicking
- * doesn't navigate away, and swaps the play icon for `@pkg/r3-ui`'s `Spinner`
- * while the request is in flight. `Monitor.ping` only queues a workflow run
- * — the check itself finishes asynchronously — so "done" here means "the
- * queue request completed" (tied to request state, not to whether the queued
+ * doesn't navigate away, and hands its pending state to `@pkg/r3-ui`'s
+ * `Button` (`isPending`), which swaps its content for a spinner while the
+ * request is in flight. `Monitor.ping` only queues a workflow run — the
+ * check itself finishes asynchronously — so "done" here means "the queue
+ * request completed" (tied to request state, not to whether the queued
  * check has finished).
  *
  * Its label reads through `@pkg/i18n/ui`'s `intl(handle)` rather than
@@ -25,12 +26,9 @@ import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
 import { PlayIcon } from "@pkg/lucide-remix";
-import { Spinner } from "@pkg/r3-ui";
-import { fg } from "@pkg/u/color";
+import { Button } from "@pkg/r3-ui";
 import { m } from "@pkg/u/size";
 import { clientEntry, on } from "remix/ui";
-
-import { buttonBase, buttonSizeMix, buttonVariantMix } from "~/resources/components/button";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type RunMonitorButtonProps = { action: string; monitorId: string };
@@ -67,22 +65,10 @@ export const RunMonitorButton = clientEntry(
 					]}
 				>
 					<input type="hidden" name="monitor_id" value={handle.props.monitorId} />
-					<button
-						type="submit"
-						disabled={pending}
-						mix={[buttonBase, buttonSizeMix.md, buttonVariantMix.solid.neutral]}
-					>
-						{pending ? (
-							<Spinner
-								size="sm"
-								aria-label={t("page.monitor.header.action.running")}
-								mix={[fg("inherit")]}
-							/>
-						) : (
-							<PlayIcon size={16} strokeWidth={1.5} />
-						)}
+					<Button type="submit" color="neutral" isPending={pending} disabled={pending}>
+						<PlayIcon size={16} strokeWidth={1.5} />
 						{t("page.monitor.header.action.play")}
-					</button>
+					</Button>
 				</form>
 			);
 		};

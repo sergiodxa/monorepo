@@ -1,27 +1,16 @@
 /**
- * Status pill used across dashboard tables, monitor detail pages, and public status
- * pages. Maps this app's four monitor-status tones onto `@pkg/r3-ui`'s `Badge`
- * semantic colors (`up`→`success`, `degraded`→`warning`, `down`→`danger`,
- * `neutral`→`neutral`) and its `"outline"` variant — a transparent chip with just
- * a colored border and text, matching this badge's original look — so call sites
- * only need to name a tone instead of picking a color/variant pair themselves.
+ * Maps this app's four monitor-status tones onto `@pkg/r3-ui`'s `Badge` props
+ * (`up`→`success`, `degraded`→`warning`, `down`→`danger`, `neutral`→`neutral`,
+ * always paired with the `"outline"` variant — a transparent chip with just a
+ * colored border and text) so call sites only need to name a tone instead of
+ * picking a color/variant pair themselves. Spread the result onto `@pkg/r3-ui`'s
+ * real `Badge` directly: `<Badge {...badgeVariant(tone)}>{children}</Badge>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
-
-import { Badge as UIBadge } from "@pkg/r3-ui";
-
 export type BadgeTone = "up" | "degraded" | "down" | "neutral";
-
-namespace Badge {
-	export interface Props {
-		tone: BadgeTone;
-		children: RemixNode;
-	}
-}
 
 /** Maps this app's monitor-status tone onto `@pkg/r3-ui`'s `Badge` semantic color. */
 const TONE_COLOR: Record<BadgeTone, "success" | "warning" | "danger" | "neutral"> = {
@@ -31,11 +20,10 @@ const TONE_COLOR: Record<BadgeTone, "success" | "warning" | "danger" | "neutral"
 	neutral: "neutral",
 };
 
-/** Renders `children` as a colored, outlined status pill for the given {@link BadgeTone}. */
-export default function Badge(handle: Handle<Badge.Props>) {
-	return () => (
-		<UIBadge color={TONE_COLOR[handle.props.tone]} variant="outline">
-			{handle.props.children}
-		</UIBadge>
-	);
+/** Returns the `@pkg/r3-ui` `Badge` props for the given {@link BadgeTone}. */
+export function badgeVariant(tone: BadgeTone): {
+	color: "success" | "warning" | "danger" | "neutral";
+	variant: "outline";
+} {
+	return { color: TONE_COLOR[tone], variant: "outline" };
 }
