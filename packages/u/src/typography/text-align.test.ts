@@ -30,7 +30,7 @@ describe("textAlign", () => {
 		expect(styles(textAlign("justify"))).toEqual({ textAlign: "justify" });
 	});
 
-	test("never emits the physical left/right keywords", () => {
+	test("never emits the physical left/right keywords for the typed logical values", () => {
 		let values = [
 			styles(textAlign()).textAlign,
 			styles(textAlign("center")).textAlign,
@@ -40,5 +40,10 @@ describe("textAlign", () => {
 
 		expect(values).not.toContain("left");
 		expect(values).not.toContain("right");
+	});
+
+	test("accepts a raw physical left/right escape for the rare genuinely-physical case", () => {
+		expect(styles(textAlign("left"))).toEqual({ textAlign: "left" });
+		expect(styles(textAlign("right"))).toEqual({ textAlign: "right" });
 	});
 });

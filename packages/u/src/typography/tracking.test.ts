@@ -38,4 +38,9 @@ describe("tracking", () => {
 	test("no-arg defaults to normal", () => {
 		expect(styles(tracking())).toEqual({ letterSpacing: "var(--ui-tracking-normal, 0em)" });
 	});
+
+	test("a raw letter-spacing string passes through unchanged", () => {
+		expect(styles(tracking("0.18em"))).toEqual({ letterSpacing: "0.18em" });
+		expect(styles(tracking("-0.04em"))).toEqual({ letterSpacing: "-0.04em" });
+	});
 });

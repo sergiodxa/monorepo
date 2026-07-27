@@ -30,4 +30,9 @@ describe("leading", () => {
 	test("no-arg defaults to normal", () => {
 		expect(styles(leading())).toEqual({ lineHeight: "var(--ui-leading-normal, 1.5)" });
 	});
+
+	test("a raw CSS length passes through unchanged as a literal line-height", () => {
+		expect(styles(leading("16px"))).toEqual({ lineHeight: "16px" });
+		expect(styles(leading("2rem"))).toEqual({ lineHeight: "2rem" });
+	});
 });

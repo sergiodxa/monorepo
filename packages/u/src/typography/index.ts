@@ -16,3 +16,4 @@ export { type } from "./type";
 export { verticalAlign } from "./vertical-align";
 export type { VerticalAlignValue } from "./vertical-align";
 export { weight } from "./weight";
+export { wordBreak } from "./word-break";

@@ -25,4 +25,12 @@ describe("font", () => {
 			fontFamily: "var(--ui-font-mono, ui-monospace, SFMono-Regular, monospace)",
 		});
 	});
+
+	test("'inherit' passes through unchanged instead of being var()-wrapped", () => {
+		expect(styles(font("inherit"))).toEqual({ fontFamily: "inherit" });
+	});
+
+	test("'unset' passes through unchanged instead of being var()-wrapped", () => {
+		expect(styles(font("unset"))).toEqual({ fontFamily: "unset" });
+	});
 });

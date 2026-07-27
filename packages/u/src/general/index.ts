@@ -1,4 +1,6 @@
 export { calc } from "./calc";
+export { counterIncrement } from "./counter-increment";
+export { counterReset } from "./counter-reset";
 export { cursor } from "./cursor";
 export { combine } from "./combine";
 export { env } from "./env";
