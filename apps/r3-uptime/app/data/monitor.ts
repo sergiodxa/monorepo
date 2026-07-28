@@ -30,6 +30,9 @@ import {
 	tcpMonitors,
 } from "~/database/schema";
 
+/** Milliseconds in a minute, the bucket size for a scheduled check's job id. */
+const MS_PER_MINUTE = 60_000;
+
 /** Safety cap on cron occurrences counted per job, guarding against a pathological expression. */
 const MAX_CRON_OCCURRENCES_PER_MONTH = 100_000;
 
@@ -126,6 +129,24 @@ export default class Monitor {
 			scheduledAt: Date.now(),
 		});
 		return true;
+	}
+
+	/**
+	 * The job id for a scheduled check, which is also the `monitor_results` primary key
+	 * the consumer dedupes on.
+	 *
+	 * Keyed on the minute containing `scheduledAt` rather than on `scheduledAt` itself,
+	 * because the every-minute cron is delivered more than once per minute with a
+	 * different `scheduledTime` each time (observed ~7s apart in production).
+	 * {@link findDue} can't filter the second delivery out on its own — the first check
+	 * hasn't written its `completed_at` yet, so the monitor still reads as due — and a
+	 * raw timestamp would hand the two deliveries different ids and let both run. One id
+	 * per minute makes the second collide with the first instead. Safe because the
+	 * minimum `interval_seconds` is 60, so no monitor can legitimately owe two checks
+	 * inside the same minute.
+	 */
+	static scheduledJobId(monitorId: string, scheduledAt: number): string {
+		return `${monitorId}:${Math.floor(scheduledAt / MS_PER_MINUTE)}`;
 	}
 
 	/**

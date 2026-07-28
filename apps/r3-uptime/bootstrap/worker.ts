@@ -111,11 +111,11 @@ export default {
 								body: {
 									type: "checkHttp",
 									/**
-									 * Derived from the monitor and the tick rather than random, so a cron
-									 * that fires twice for the same minute produces the same job id and the
-									 * consumer's idempotency check collapses the two into one check.
+									 * Deliberately one id per monitor per minute, not per delivery — see
+									 * `Monitor.scheduledJobId` for why this cron fires more than once a
+									 * minute and what collides when it does.
 									 */
-									id: `${monitor.monitorId}:${controller.scheduledTime}`,
+									id: Monitor.scheduledJobId(monitor.monitorId, controller.scheduledTime),
 									monitorId: monitor.monitorId,
 									scheduledAt: controller.scheduledTime,
 								},

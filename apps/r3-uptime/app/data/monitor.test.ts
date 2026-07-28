@@ -246,6 +246,35 @@ describe("Monitor.ping", () => {
 		expect(queueSend).not.toHaveBeenCalled();
 	});
 
+	test("gives two cron deliveries in the same minute one shared job id", async () => {
+		let monitorId = crypto.randomUUID();
+		// The two deliveries this cron really produces: same minute, ~7s apart.
+		let first = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
+		let second = Date.UTC(2026, 6, 28, 12, 34, 15, 0);
+
+		expect(Monitor.scheduledJobId(monitorId, first)).toBe(
+			Monitor.scheduledJobId(monitorId, second),
+		);
+	});
+
+	test("gives consecutive minutes distinct job ids", async () => {
+		let monitorId = crypto.randomUUID();
+		let minute = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
+		let nextMinute = Date.UTC(2026, 6, 28, 12, 35, 8, 0);
+
+		expect(Monitor.scheduledJobId(monitorId, minute)).not.toBe(
+			Monitor.scheduledJobId(monitorId, nextMinute),
+		);
+	});
+
+	test("scopes the scheduled job id to the monitor", async () => {
+		let scheduledAt = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
+
+		expect(Monitor.scheduledJobId("monitor-a", scheduledAt)).not.toBe(
+			Monitor.scheduledJobId("monitor-b", scheduledAt),
+		);
+	});
+
 	test("gives each on-demand check its own job id", async () => {
 		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
