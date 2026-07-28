@@ -202,12 +202,12 @@ export default {
 				list: {
 					first: {
 						title: "基本サブスクリプション",
-						description: "月額$5で最初の5,000回のpingを含む",
+						description: "月額{{price}}で最初の{{included}}回のpingを含む",
 					},
 
 					second: {
 						title: "追加ping",
-						description: "5,000回以降は1pingあたり$0.001",
+						description: "以降は{{blockSize}}pingごとに{{blockPrice}}",
 					},
 
 					third: {
@@ -238,7 +238,7 @@ export default {
 					baseSubscription: "基本サブスクリプション",
 					includes: "最初の{{amount}}回のpingを含む",
 					additionalPings: "追加ping：",
-					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					additionalPingsCost: "{{pings}} pings × {{blockSize}}あたり{{blockPrice}}",
 					totalCost: "月額合計：",
 				},
 			},
@@ -332,7 +332,7 @@ export default {
 
 				seventeenth: {
 					q: "プランの制限を超えるとどうなりますか？",
-					a: "サブスクリプションに含まれる5,000回を超えるpingに対して、1,000pingごとに$1が課金されます。",
+					a: "サブスクリプションに含まれる{{included}}回を超えるpingは、{{blockSize}}pingごとに{{blockPrice}}が課金されます。",
 				},
 
 				eighteenth: {
@@ -428,6 +428,7 @@ export default {
 				tableLabel: "コスト比較: Uptime と {{competitor}}",
 				scenarioHeader: "ユースケース",
 				savingsHeader: "削減額",
+				savingsPerYear: "年間~{{amount}}",
 				footnote:
 					"一般的な利用パターンに基づく概算です。{{competitor}} の料金は変更される場合があり、実際の費用は構成によって異なります。",
 			},

@@ -66,6 +66,12 @@ import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import {
+	BASE_PRICE_USD,
+	INCLUDED_PINGS,
+	PINGS_PER_BLOCK,
+	PRICE_PER_BLOCK_USD,
+} from "~/app/lib/pricing";
 import { canonicalUrl, getWebSiteSchema } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
@@ -135,6 +141,21 @@ function responsiveGrid() {
  */
 function tintedSection() {
 	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
+}
+
+/** Formats a USD amount in `locale`, dropping the cents on whole amounts. */
+function formatMoney(locale: string, amount: number): string {
+	return amount.toLocaleString(locale, {
+		style: "currency",
+		currency: "USD",
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+	});
+}
+
+/** Formats a whole count (a ping allowance) in `locale`. */
+function formatCount(locale: string, value: number): string {
+	return value.toLocaleString(locale, { maximumFractionDigits: 0 });
 }
 
 /** One headline figure in the trust-indicator strip below the hero. */
@@ -260,6 +281,18 @@ export default createAction(routes.home, async (ctx) => {
 		label: t(`landing.useCases.audiences.${audience.key}`),
 	}));
 
+	/**
+	 * The pricing model's own figures, formatted for the request's locale, for the
+	 * copy that quotes them. Interpolated rather than written into the translations so
+	 * `app/lib/pricing.ts` stays the only place a price is stated.
+	 */
+	let pricingCopyValues = {
+		price: formatMoney(ctx.locale, BASE_PRICE_USD),
+		included: formatCount(ctx.locale, INCLUDED_PINGS),
+		blockPrice: formatMoney(ctx.locale, PRICE_PER_BLOCK_USD),
+		blockSize: formatCount(ctx.locale, PINGS_PER_BLOCK),
+	};
+
 	let FAQS = [
 		"first",
 		"second",
@@ -282,7 +315,10 @@ export default createAction(routes.home, async (ctx) => {
 		"nineteenth",
 	].map((key) => ({
 		question: t(`landing.faq.list.${key}.q`),
-		answer: t(`landing.faq.list.${key}.a`),
+		// The billing answers quote the pricing model's own figures through
+		// interpolation, so `app/lib/pricing.ts` stays the only place a price is
+		// stated; the keys that don't mention money simply ignore these values.
+		answer: t(`landing.faq.list.${key}.a`, pricingCopyValues),
 	}));
 
 	/** Split into two balanced accordion columns, the longer half first. */

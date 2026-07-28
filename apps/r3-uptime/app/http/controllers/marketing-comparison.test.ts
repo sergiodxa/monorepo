@@ -107,7 +107,15 @@ comparisons[WITH_SECTIONS_SLUG] = {
 		highlights: ["Fixture highlight"],
 	},
 	pricingScenarios: [
-		{ scenario: "Fixture scenario", theirCost: "$29/mo", ourCost: "$7/mo", savings: "$22/mo" },
+		{
+			scenario: "Fixture scenario",
+			// 10 monitors every 30 minutes is 13,440 pings — inside the included
+			// allowance, so this row prices at the bare base subscription and the
+			// yearly saving is (29 - 5) x 12.
+			usage: { monitors: 10, intervalMinutes: 30 },
+			theirCost: "$29/mo",
+			theirCostUsd: 29,
+		},
 	],
 };
 comparisons[WITHOUT_SECTIONS_SLUG] = createFixture(WITHOUT_SECTIONS_SLUG);
@@ -164,7 +172,11 @@ describe("GET /vs/:slug", () => {
 		expect(body).toContain(content.perfectFor!.title);
 		expect(body).toContain(content.perfectFor!.highlights[0]!);
 		expect(body).toContain(`>${content.pricingScenarios![0]!.scenario}</td>`);
-		expect(body).toContain(`>${content.pricingScenarios![0]!.savings}</td>`);
+		// Both our cost and the saving are computed from the pricing model, never
+		// authored in the record — a stale figure in a comparison table is exactly
+		// what that indirection exists to prevent.
+		expect(body).toContain(">$5/mo</td>");
+		expect(body).toContain(">~$288/year</td>");
 		expect(body).toContain(">Savings</th>");
 	});
 

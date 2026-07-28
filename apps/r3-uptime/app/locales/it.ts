@@ -208,12 +208,12 @@ export default {
 				list: {
 					first: {
 						title: "Abbonamento base",
-						description: "$5/mese include i primi 5.000 ping",
+						description: "{{price}}/mese include i primi {{included}} ping",
 					},
 
 					second: {
 						title: "Ping aggiuntivi",
-						description: "$0,001 per ping dopo i primi 5.000",
+						description: "{{blockPrice}} ogni {{blockSize}} ping aggiuntivi",
 					},
 
 					third: {
@@ -244,7 +244,7 @@ export default {
 					baseSubscription: "Abbonamento base",
 					includes: "Include i primi {{amount}} ping",
 					additionalPings: "Ping aggiuntivi:",
-					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					additionalPingsCost: "{{pings}} ping × {{blockPrice}} ogni {{blockSize}}",
 					totalCost: "Costo mensile totale:",
 				},
 			},
@@ -338,7 +338,7 @@ export default {
 
 				seventeenth: {
 					q: "Cosa succede se supero i limiti del mio piano?",
-					a: "Le verrà addebitato $1 per ogni 1.000 ping oltre i 5.000 inclusi nel suo abbonamento.",
+					a: "Le verrà addebitato {{blockPrice}} ogni {{blockSize}} ping oltre i {{included}} inclusi nel suo abbonamento.",
 				},
 
 				eighteenth: {
@@ -435,6 +435,7 @@ export default {
 				tableLabel: "Confronto dei costi: Uptime vs {{competitor}}",
 				scenarioHeader: "Caso d'uso",
 				savingsHeader: "Risparmio",
+				savingsPerYear: "~{{amount}}/anno",
 				footnote:
 					"Stime basate su modelli di utilizzo tipici. I prezzi di {{competitor}} possono cambiare e il costo effettivo dipende dalla tua configurazione.",
 			},

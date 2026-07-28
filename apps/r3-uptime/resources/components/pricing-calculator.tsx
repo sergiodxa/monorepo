@@ -50,21 +50,14 @@ import { before } from "@pkg/u/state";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
 import { clientEntry, on } from "remix/ui";
 
-/** Monthly base subscription price, in USD. */
-const BASE_PRICE = 5;
-
-/** Pings the {@link BASE_PRICE} subscription already covers. */
-const INCLUDED_PINGS = 5000;
-
-/** Price per ping past {@link INCLUDED_PINGS}, in USD. */
-const COST_PER_PING = 0.001;
-
-/**
- * Days a "month" is billed as. Deliberately 28 rather than 30/31 — it's the
- * shortest month, so the estimate a visitor sees is a floor they won't be
- * surprised above, and it matches the number the pricing copy is written against.
- */
-const DAYS_PER_MONTH = 28;
+import {
+	BASE_PRICE_USD,
+	INCLUDED_PINGS,
+	monthlyCost,
+	monthlyPings,
+	PINGS_PER_BLOCK,
+	PRICE_PER_BLOCK_USD,
+} from "~/app/lib/pricing";
 
 /** Slider bounds, in minutes: as often as every minute, as rarely as hourly. */
 const MIN_FREQUENCY = 1;
@@ -87,8 +80,10 @@ interface CalculatorMonitor {
 
 /** Monthly pings every monitor in `monitors` adds up to at its own frequency. */
 function totalPingsPerMonth(monitors: CalculatorMonitor[]): number {
-	let minutesPerMonth = DAYS_PER_MONTH * 24 * 60;
-	return monitors.reduce((total, monitor) => total + minutesPerMonth / monitor.frequency, 0);
+	return monitors.reduce(
+		(total, monitor) => total + monthlyPings({ monitors: 1, intervalMinutes: monitor.frequency }),
+		0,
+	);
 }
 
 /** Renders one slider per monitor and the running monthly cost they add up to. */
@@ -139,22 +134,33 @@ export const PricingCalculator = clientEntry(
 				maximumFractionDigits: 0,
 			});
 			let count = new Intl.NumberFormat(language, { maximumFractionDigits: 0 });
+			/**
+			 * Two fraction digits, but only once there's a fraction to show: the base
+			 * subscription reads `$5`, while metered usage lands on cents (`$5.30`) and
+			 * would be wrong rounded to whole dollars.
+			 */
 			let money = new Intl.NumberFormat(language, {
 				style: "currency",
 				currency: "USD",
-				maximumFractionDigits: 0,
-			});
-			/** Three fraction digits — the per-ping price is $0.001, which rounds to $0 otherwise. */
-			let perPingMoney = new Intl.NumberFormat(language, {
-				style: "currency",
-				currency: "USD",
-				maximumFractionDigits: 3,
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2,
 			});
 
 			let pingsPerMonth = totalPingsPerMonth(monitors);
-			let additionalPings = Math.max(0, pingsPerMonth - INCLUDED_PINGS);
-			let additionalPingsCost = additionalPings * COST_PER_PING;
-			let totalCost = BASE_PRICE + additionalPingsCost;
+			let { additionalPings, additionalCostUsd, totalUsd } = monthlyCost(pingsPerMonth);
+
+			/**
+			 * The model's own figures, formatted for the visitor's locale, for the copy
+			 * that quotes them. Every pricing string interpolates these rather than
+			 * spelling the numbers out, so `app/lib/pricing.ts` stays the only place a
+			 * price is stated — see that module's docblock.
+			 */
+			let pricingCopyValues = {
+				price: money.format(BASE_PRICE_USD),
+				included: count.format(INCLUDED_PINGS),
+				blockPrice: money.format(PRICE_PER_BLOCK_USD),
+				blockSize: count.format(PINGS_PER_BLOCK),
+			};
 
 			return (
 				// `level={2}`: the calculator sits under the pricing section's own `<h2>`,
@@ -318,7 +324,7 @@ export const PricingCalculator = clientEntry(
 												{t("landing.pricing.calculator.stats.baseSubscription")}
 											</dt>
 											<dd mix={[m(0), weight(600), tabularNums(), fg("neutral.emphasis")]}>
-												{money.format(BASE_PRICE)}
+												{money.format(BASE_PRICE_USD)}
 											</dd>
 										</div>
 										<p mix={[m(0), pis(4), fontSize("sm"), fg("neutral.muted")]}>
@@ -332,13 +338,14 @@ export const PricingCalculator = clientEntry(
 												{t("landing.pricing.calculator.stats.additionalPings")}
 											</dt>
 											<dd mix={[m(0), weight(600), tabularNums(), fg("neutral.emphasis")]}>
-												{money.format(additionalPingsCost)}
+												{money.format(additionalCostUsd)}
 											</dd>
 										</div>
 										<p mix={[m(0), pis(4), fontSize("sm"), fg("neutral.muted")]}>
 											{t("landing.pricing.calculator.stats.additionalPingsCost", {
 												pings: count.format(additionalPings),
-												costPerPing: perPingMoney.format(COST_PER_PING),
+												blockPrice: money.format(PRICE_PER_BLOCK_USD),
+												blockSize: count.format(PINGS_PER_BLOCK),
 											})}
 										</p>
 									</div>
@@ -359,7 +366,7 @@ export const PricingCalculator = clientEntry(
 											{t("landing.pricing.calculator.stats.totalCost")}
 										</dt>
 										<dd mix={[m(0), fontSize("2xl"), weight(700), tabularNums(), fg("brand")]}>
-											{money.format(totalCost)}
+											{money.format(totalUsd)}
 										</dd>
 									</div>
 								</dl>
@@ -415,10 +422,13 @@ export const PricingCalculator = clientEntry(
 												]}
 											>
 												<strong mix={[fg("brand.emphasis")]}>
-													{t(`landing.pricing.howItWorks.list.${step}.title`)}
+													{t(`landing.pricing.howItWorks.list.${step}.title`, pricingCopyValues)}
 												</strong>
 												<p mix={[m(0), fontSize("sm"), fg("neutral")]}>
-													{t(`landing.pricing.howItWorks.list.${step}.description`)}
+													{t(
+														`landing.pricing.howItWorks.list.${step}.description`,
+														pricingCopyValues,
+													)}
 												</p>
 											</li>
 										))}

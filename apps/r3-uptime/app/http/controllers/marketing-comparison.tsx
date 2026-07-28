@@ -20,6 +20,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TFunction } from "i18next";
+
 import { CheckIcon, TriangleAlertIcon } from "@pkg/lucide-remix";
 import { Heading, Table } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
@@ -45,7 +47,10 @@ import { font, fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typ
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
+import type { MarketingContent } from "~/resources/content/marketing";
+
 import { getViewer } from "~/app/http/middleware/auth";
+import { monthlyCostForUsage } from "~/app/lib/pricing";
 import { canonicalUrl, getFAQSchema, getSoftwareApplicationSchema } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
@@ -125,6 +130,46 @@ function responsiveGrid() {
  */
 function tintedSection() {
 	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
+}
+
+/** Formats a monthly USD price in `locale`, keeping cents only when there are any. */
+function formatMonthlyUsd(locale: string, amount: number): string {
+	return amount.toLocaleString(locale, {
+		style: "currency",
+		currency: "USD",
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+	});
+}
+
+/**
+ * What we charge for a cost-comparison row, priced through `app/lib/pricing.ts` from
+ * the row's own `usage` — so these tables restate the pricing model rather than
+ * carrying their own copy of it. Falls back to the row's authored `ourCost` for the
+ * rows whose scenario isn't a ping volume (seat pricing), and to an em dash for a row
+ * that supplies neither, which the content types make unreachable.
+ */
+function ourCostFor(row: MarketingContent.PricingScenario, locale: string): string {
+	if (row.usage) return `${formatMonthlyUsd(locale, monthlyCostForUsage(row.usage).totalUsd)}/mo`;
+	return row.ourCost ?? "—";
+}
+
+/**
+ * What the row wins on: the yearly difference when the competitor's price is one
+ * subtractable number and we come out cheaper, otherwise the row's own note. Never
+ * both — a row claiming a saving and a qualitative win at once reads as padding.
+ */
+function savingsFor(row: MarketingContent.PricingScenario, locale: string, t: TFunction): string {
+	if (row.usage && row.theirCostUsd !== undefined) {
+		let yearly = (row.theirCostUsd - monthlyCostForUsage(row.usage).totalUsd) * 12;
+		if (yearly > 0) {
+			return t("landing.comparison.pricing.savingsPerYear", {
+				amount: formatMonthlyUsd(locale, Math.round(yearly)),
+			});
+		}
+	}
+
+	return row.savingsNote ?? "";
 }
 
 /**
@@ -505,7 +550,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 														fg("brand"),
 													]}
 												>
-													{row.ourCost}
+													{ourCostFor(row, ctx.locale)}
 												</Table.Cell>
 												<Table.Cell
 													mix={[
@@ -516,7 +561,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 														fg("success"),
 													]}
 												>
-													{row.savings}
+													{savingsFor(row, ctx.locale, t)}
 												</Table.Cell>
 											</Table.Row>
 										))}

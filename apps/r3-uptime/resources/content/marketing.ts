@@ -9,7 +9,7 @@
  *
  * Two kinds of value here are load-bearing and must not be invented. Trust-indicator
  * figures are claims about our own product, so they track what Uptime actually does
- * today (9 regions, 1-60m intervals, 365-day retention, $5/mo + $0.001/ping). The
+ * today (9 regions, 1-60m intervals, 365-day retention, $5/mo + $1 per 10k pings). The
  * `theirCost` figures in `pricingScenarios` are claims about a named competitor's
  * public pricing — hedged with `~` where the plan mapping is approximate, and left
  * out entirely rather than guessed. `honestTake` exists for the same reason: a
@@ -20,6 +20,17 @@
  */
 
 import type { IconName } from "@pkg/lucide-remix";
+
+import type { Usage } from "~/app/lib/pricing";
+
+import {
+	BASE_PRICE_USD,
+	formatPings,
+	formatUsd,
+	INCLUDED_PINGS,
+	PINGS_PER_BLOCK,
+	PRICE_PER_BLOCK_USD,
+} from "~/app/lib/pricing";
 
 export namespace MarketingContent {
 	/** One bullet in a feature grid. */
@@ -55,14 +66,37 @@ export namespace MarketingContent {
 
 	/**
 	 * One cost scenario on a `/vs/:slug` page: the same monitoring setup priced
-	 * against both products. Costs are copy, not numbers — they read as
-	 * `"$7/mo"`, `"Free"`, `"Custom"`.
+	 * against both products.
+	 *
+	 * Our own side is never written down here. `usage` states the setup and the view
+	 * prices it through `app/lib/pricing.ts`, so a price change can't leave a stale
+	 * figure in a comparison table — the failure mode this shape exists to prevent.
+	 * The competitor's side stays copy: it's a claim about their published pricing,
+	 * quoted as they state it, hedges and all.
 	 */
 	export interface PricingScenario {
+		/** Row label, e.g. `"10 monitors at 30-min intervals"`. */
 		scenario: string;
+		/**
+		 * The setup `scenario` describes, priced through the pricing model. Omitted
+		 * only for a row that isn't a ping volume at all (seat pricing, tool sprawl),
+		 * which supplies {@link PricingScenario.ourCost} as copy instead.
+		 */
+		usage?: Usage;
+		/** Our cost as copy — only for the rows `usage` can't express. */
+		ourCost?: string;
+		/** The competitor's price, quoted as their own pricing page reads. */
 		theirCost: string;
-		ourCost: string;
-		savings: string;
+		/**
+		 * The competitor's monthly price in USD, when {@link PricingScenario.theirCost}
+		 * quotes one unambiguous figure. Present means the view states the yearly
+		 * difference; absent means it falls back to
+		 * {@link PricingScenario.savingsNote}, since a range or a bundled quote can't
+		 * be subtracted honestly.
+		 */
+		theirCostUsd?: number;
+		/** What the row wins on when that isn't a smaller number. */
+		savingsNote?: string;
 	}
 
 	/** One numbered step in a "how it works" list. */
@@ -1016,7 +1050,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			},
 			{
 				question: "How much does automated monitoring cost?",
-				answer: "$5/month includes 5,000 pings; additional pings are $0.001 each.",
+				answer: `${formatUsd(BASE_PRICE_USD)}/month includes ${formatPings(INCLUDED_PINGS)} pings; additional pings are ${formatUsd(PRICE_PER_BLOCK_USD)} per ${formatPings(PINGS_PER_BLOCK)}.`,
 			},
 		],
 	},
@@ -1246,14 +1280,16 @@ export const audiences: Record<string, MarketingContent.Page> = {
 	"indie-hackers": {
 		slug: "indie-hackers",
 		metaTitle: "Uptime for Indie Hackers | Simple Monitoring",
-		metaDescription:
-			"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 5,000 pings.",
+		metaDescription: `Uptime monitoring built for indie hackers. Start free, pay only for what you use. ${formatUsd(BASE_PRICE_USD)}/mo includes ${formatPings(INCLUDED_PINGS)} pings.`,
 		badge: "For Indie Hackers",
 		title: "Simple monitoring for",
 		highlight: "your next launch",
-		description:
-			"Start free, pay only for what you use. $5/month includes 5,000 pings — plenty for a lean, bootstrapped product.",
-		highlights: ["$5/mo includes 5,000 pings", "No hidden fees", "Set up in minutes"],
+		description: `Start free, pay only for what you use. ${formatUsd(BASE_PRICE_USD)}/month includes ${formatPings(INCLUDED_PINGS)} pings — plenty for a lean, bootstrapped product.`,
+		highlights: [
+			`${formatUsd(BASE_PRICE_USD)}/mo includes ${formatPings(INCLUDED_PINGS)} pings`,
+			"No hidden fees",
+			"Set up in minutes",
+		],
 		trustIndicators: [
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "rocket", value: "<2min", label: "Setup Time" },
@@ -1286,8 +1322,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		faqs: [
 			{
 				question: "What happens if I exceed my plan's limits?",
-				answer:
-					"You're charged $1 for every 1,000 pings above the 5,000 included in your subscription. No surprise cutoffs.",
+				answer: `You're charged ${formatUsd(PRICE_PER_BLOCK_USD)} for every ${formatPings(PINGS_PER_BLOCK)} pings above the ${formatPings(INCLUDED_PINGS)} included in your subscription. No surprise cutoffs.`,
 			},
 			{
 				question: "Can I cancel anytime?",
@@ -1767,21 +1802,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$7/mo (Solo plan)",
-				ourCost: "~$15/mo",
-				savings: "More features included",
+				theirCostUsd: 7,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$21/mo (Team plan)",
-				ourCost: "~$18/mo",
-				savings: "~$36/year",
+				theirCostUsd: 21,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$54/mo (Enterprise plan)",
-				ourCost: "~$36/mo",
-				savings: "~$216/year",
+				theirCostUsd: 54,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1878,21 +1913,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$29/mo",
-				ourCost: "~$15/mo",
-				savings: "48%",
+				theirCostUsd: 29,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$29/mo",
-				ourCost: "~$18/mo",
-				savings: "38%",
+				theirCostUsd: 29,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$29/mo",
-				ourCost: "~$36/mo",
-				savings: "Per-seat costs add up",
+				theirCostUsd: 29,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1986,21 +2021,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$15/mo",
-				ourCost: "~$15/mo",
-				savings: "Unlimited team members",
+				theirCostUsd: 15,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$29/mo",
-				ourCost: "~$18/mo",
-				savings: "38%",
+				theirCostUsd: 29,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$89/mo",
-				ourCost: "~$36/mo",
-				savings: "60%",
+				theirCostUsd: 89,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2096,21 +2131,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$20/mo",
-				ourCost: "~$15/mo",
-				savings: "25%",
+				theirCostUsd: 20,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$20/mo",
-				ourCost: "~$18/mo",
-				savings: "10%",
+				theirCostUsd: 20,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$66/mo",
-				ourCost: "~$36/mo",
-				savings: "45%",
+				theirCostUsd: 66,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2204,21 +2239,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "~$50/mo",
-				ourCost: "~$15/mo",
-				savings: "70%",
+				theirCostUsd: 50,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "~$60/mo",
-				ourCost: "~$18/mo",
-				savings: "70%",
+				theirCostUsd: 60,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "~$100/mo",
-				ourCost: "~$36/mo",
-				savings: "64%",
+				theirCostUsd: 100,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2313,21 +2348,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$9/mo",
-				ourCost: "~$15/mo",
-				savings: "More features at similar price",
+				theirCostUsd: 9,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$42/mo",
-				ourCost: "~$18/mo",
-				savings: "57%",
+				theirCostUsd: 42,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$89/mo",
-				ourCost: "~$36/mo",
-				savings: "60%",
+				theirCostUsd: 89,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2419,27 +2454,27 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "10 monitors at 30-min intervals",
+				usage: { monitors: 10, intervalMinutes: 30 },
 				theirCost: "$24/mo",
-				ourCost: "~$15/mo",
-				savings: "38%",
+				theirCostUsd: 24,
 			},
 			{
 				scenario: "25 monitors at 60-min intervals",
+				usage: { monitors: 25, intervalMinutes: 60 },
 				theirCost: "$24/mo",
-				ourCost: "~$18/mo",
-				savings: "25%",
+				theirCostUsd: 24,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$45/mo",
-				ourCost: "~$36/mo",
-				savings: "20%",
+				theirCostUsd: 45,
 			},
 			{
 				scenario: "Team of 5 people",
-				theirCost: "+$60/mo seats",
 				ourCost: "$0 extra",
-				savings: "100%",
+				theirCost: "+$60/mo seats",
+				savingsNote: "No seat pricing",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2536,21 +2571,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "5 monitors at 30-min intervals",
+				usage: { monitors: 5, intervalMinutes: 30 },
 				theirCost: "€15/mo (~$16)",
-				ourCost: "~$8/mo",
-				savings: "50%",
+				theirCostUsd: 16,
 			},
 			{
 				scenario: "20 monitors at 60-min intervals",
+				usage: { monitors: 20, intervalMinutes: 60 },
 				theirCost: "€29/mo (~$31)",
-				ourCost: "~$14/mo",
-				savings: "55%",
+				theirCostUsd: 31,
 			},
 			{
 				scenario: "50 monitors at 60-min intervals",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "€79/mo (~$85)",
-				ourCost: "~$36/mo",
-				savings: "58%",
+				theirCostUsd: 85,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2640,21 +2675,21 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "Basic monitoring (20 monitors)",
+				usage: { monitors: 20, intervalMinutes: 60 },
 				theirCost: "$20/mo (Starter)",
-				ourCost: "~$10/mo",
-				savings: "~$120/year",
+				theirCostUsd: 20,
 			},
 			{
 				scenario: "Growing team (50 monitors)",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "$49/mo+ (Pro)",
-				ourCost: "~$25/mo",
-				savings: "~$288/year",
+				theirCostUsd: 49,
 			},
 			{
 				scenario: "Full monitoring suite",
+				usage: { monitors: 100, intervalMinutes: 30 },
 				theirCost: "$99/mo+ (Business)",
-				ourCost: "~$40/mo",
-				savings: "~$708/year",
+				theirCostUsd: 99,
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -2741,21 +2776,22 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		pricingScenarios: [
 			{
 				scenario: "50 cron monitors",
+				usage: { monitors: 50, intervalMinutes: 60 },
 				theirCost: "Free (under 20) / $20/mo",
-				ourCost: "~$8/mo",
-				savings: "Full monitoring suite included",
+				savingsNote: "Full monitoring suite included",
 			},
 			{
 				scenario: "100 monitors total",
+				usage: { monitors: 100, intervalMinutes: 60 },
 				theirCost: "$20/mo (cron only)",
-				ourCost: "~$15/mo",
-				savings: "HTTP + DNS + SSL included",
+				theirCostUsd: 20,
+				savingsNote: "HTTP + DNS + SSL included",
 			},
 			{
 				scenario: "Mixed monitoring needs",
+				usage: { monitors: 100, intervalMinutes: 60 },
 				theirCost: "$20/mo + separate tool",
-				ourCost: "~$20/mo",
-				savings: "Single platform, no tool sprawl",
+				savingsNote: "Single platform, no tool sprawl",
 			},
 		],
 		steps: DEFAULT_STEPS,

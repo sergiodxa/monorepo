@@ -429,12 +429,12 @@ export default {
 				list: {
 					first: {
 						title: "Base subscription",
-						description: "$5/month includes your first 5,000 pings",
+						description: "{{price}}/month includes your first {{included}} pings",
 					},
 
 					second: {
 						title: "Additional pings",
-						description: "$0.001 per ping after the first 5,000",
+						description: "{{blockPrice}} per {{blockSize}} pings after that",
 					},
 
 					third: {
@@ -465,7 +465,7 @@ export default {
 					baseSubscription: "Base subscription",
 					includes: "Includes first {{amount}} pings",
 					additionalPings: "Additional pings:",
-					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					additionalPingsCost: "{{pings}} pings × {{blockPrice}} per {{blockSize}}",
 					totalCost: "Total monthly cost:",
 				},
 			},
@@ -559,7 +559,7 @@ export default {
 
 				seventeenth: {
 					q: "What happens if I exceed my plan’s limits?",
-					a: "You will be charged $1 for every 1,000 pings above the 5,000 included in your subscription.",
+					a: "You will be charged {{blockPrice}} for every {{blockSize}} pings above the {{included}} included in your subscription.",
 				},
 
 				eighteenth: {
@@ -686,6 +686,7 @@ export default {
 				tableLabel: "Cost comparison: Uptime vs {{competitor}}",
 				scenarioHeader: "Use case",
 				savingsHeader: "Savings",
+				savingsPerYear: "~{{amount}}/year",
 				footnote:
 					"Estimates based on typical usage patterns. {{competitor}} pricing can change and your actual cost depends on your setup.",
 			},
@@ -731,7 +732,7 @@ export default {
 				meta: {
 					title: "Uptime for Indie Hackers | Simple Monitoring",
 					description:
-						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 5,000 pings.",
+						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 100,000 pings.",
 				},
 			},
 		},
