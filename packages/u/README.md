@@ -12,7 +12,7 @@ Every export is a `remix/ui` mixin factory: `u.p(4)`, `u.bg("brand.tint")`, `u.h
 
 Not every export is a mixin. A handful are plain string resolvers — `u.var()`, `u.calc()`, `u.env()`, the three gradient builders, and the token resolvers at the `@pkg/u/tokens` subpath — which return a CSS value string to hand to a utility rather than something that goes in a `mix` array. Each entry below says which it is.
 
-The package covers CSS primitives across fourteen families — layout, size, color, typography, effects, overflow, stacking, transform, animation, state, responsive, accessibility, and general escape hatches — plus a set of composed patterns that pick several declarations together: `u.surface()` chooses a background, foreground, and border as a matching set; `u.hstack()`/`u.vstack()`/`u.zstack()` build the three common stacks; `u.circle()`, `u.squircle()`, `u.truncate()`, and `u.translucent()` bundle the multi-declaration recipes worth having a name.
+The package covers CSS primitives across thirteen families — layout, size, color, typography, effects, overflow, stacking, transform, animation, state, responsive, accessibility, and general escape hatches — plus a set of composed patterns that pick several declarations together: `u.surface()` chooses a background, foreground, and border as a matching set; `u.hstack()`/`u.vstack()`/`u.zstack()` build the three common stacks; `u.circle()`, `u.squircle()`, `u.truncate()`, and `u.translucent()` bundle the multi-declaration recipes worth having a name.
 
 Four CSS properties take a _list_ or a _function stack_ rather than a single value — `transform`, `filter`, `backdrop-filter`, and `box-shadow` — so a naive utility per function would silently overwrite its siblings. Each of those families instead writes its own `--ui-*` custom property plus one byte-identical composite declaration, which is why `u.rotate()` and `u.scaleX()`, or `u.blur()` and `u.grayscale()`, or `u.shadow()` and `u.ringShadow()`, all combine instead of the last call winning. The relevant entries spell out the mechanism.
 
@@ -14749,7 +14749,7 @@ const TONES = ["brand", "neutral", "success", "warning", "danger"] as const;
 
 ### Pattern: An edge-anchored panel that slides in
 
-The block edges stay logical (`u.insBs()`/`u.insBe()`) while the edge the panel slides from stays physical, because the platform's own safe-area geometry is physical and has to agree with it; `u.transitionBehavior("allow-discrete")` lets `display` and `overlay` participate, and `u.startingStyle()` supplies the off-screen values the entry animates from:
+The block edges stay logical (`u.insBs()`/`u.insBe()`) while the edge the panel slides from stays physical, because the platform's own safe-area geometry is physical and has to agree with it; `u.transitionBehavior("allow-discrete")` lets `display` and `overlay` participate, and `u.startingStyle()` supplies the off-screen values the entry animates from. `u.overscrollBehavior("contain")` stops a flick at the end of the panel's own scroll from carrying on into the page behind it, and `u.motionReduce()` drops the slide for anyone who asked for less motion:
 
 ```tsx
 import * as u from "@pkg/u";
@@ -14764,7 +14764,7 @@ import * as u from "@pkg/u";
 		u.is("min(90vw, 24rem)"),
 		u.maxIs("none"),
 		u.maxBs("none"),
-		u.pbe(`calc(1.5rem + ${u.env("safe-area-inset-bottom", "0px")})`),
+		u.pbe(u.calc(`1.5rem + ${u.env("safe-area-inset-bottom", "0px")}`)),
 		u.willChange("transform"),
 		u.transition("transform, display, overlay", { duration: 300 }),
 		u.transitionBehavior("allow-discrete"),
@@ -14775,7 +14775,8 @@ import * as u from "@pkg/u";
 			u.when('&[data-side="left"][open]', u.translateX("-100%")),
 			u.when('&[data-side="right"][open]', u.translateX("100%")),
 		]),
-		u.media("(prefers-reduced-motion: reduce)", u.transitionProperty("none")),
+		u.overscrollBehavior("contain"),
+		u.motionReduce(u.transitionProperty("none")),
 	]}
 >
 	{children}
@@ -14784,7 +14785,7 @@ import * as u from "@pkg/u";
 
 ### Pattern: A top-layer surface that fades and scales on entry
 
-The resting values sit on the element itself, the shown values in an `u.open()` branch, and the same branch repeats inside `u.startingStyle()` to give the transition somewhere to start from — without which an element entering from `display: none` simply appears. The reduced-motion override drops `scale` from both the property list and the element:
+The resting values sit on the element itself, the shown values in an `u.open()` branch, and the same branch repeats inside `u.startingStyle()` to give the transition somewhere to start from — without which an element entering from `display: none` simply appears. The `u.motionReduce()` branch drops `scale` from both the property list and the element, leaving the fade:
 
 ```tsx
 import * as u from "@pkg/u";
@@ -14803,7 +14804,7 @@ import * as u from "@pkg/u";
 		u.transitionBehavior("allow-discrete"),
 		u.open([u.opacity(100), u.scaleProperty("none")]),
 		u.startingStyle(u.open([u.opacity(0), u.scaleProperty(0.95)])),
-		u.media("(prefers-reduced-motion: reduce)", [
+		u.motionReduce([
 			u.transition("opacity, display, overlay", { duration: 150 }),
 			u.scaleProperty("none"),
 		]),
@@ -14815,7 +14816,7 @@ import * as u from "@pkg/u";
 
 ### Pattern: A native control clipped away and painted by a sibling
 
-`u.visuallyHidden()` keeps the real input focusable, operable, and submitted with the form while rendering none of its own pixels; a sibling element paints the visible indicator and reads every state off that input through `:has(~ input:...)`, so checked, focused, and disabled all resolve in CSS with no state to track:
+`u.visuallyHidden()` keeps the real input focusable, operable, and submitted with the form while rendering none of its own pixels; a sibling element paints the visible indicator and reads every state off that input through `u.hasSibling()`, so checked, focused, and disabled all resolve in CSS with no state to track. Note the order: `u.hasSibling()` emits `:has(~ ...)`, which only matches a _following_ sibling, so the indicator has to come first and the input after it:
 
 ```tsx
 import * as u from "@pkg/u";
@@ -14832,13 +14833,13 @@ import * as u from "@pkg/u";
 			u.rounded("sm"),
 			u.border({ color: "neutral.strong", width: 2 }),
 			u.transition("background-color, border-color"),
-			u.when("&:has(~ input:checked)", [
+			u.hasSibling("input:checked", [
 				u.border("brand.solid"),
 				u.bg("brand.solid"),
 				u.fg("brand.onSolid"),
 			]),
-			u.when("&:has(~ input:focus-visible)", u.outline({ color: "brand.ring", offset: 2 })),
-			u.when("&:has(~ input:disabled)", [u.cursor("not-allowed"), u.opacity(50)]),
+			u.hasSibling("input:focus-visible", u.outline({ color: "brand.ring", offset: 2 })),
+			u.hasSibling("input:disabled", [u.cursor("not-allowed"), u.opacity(50)]),
 		]}
 	>
 		{mark}
@@ -14887,7 +14888,7 @@ import * as u from "@pkg/u";
 			),
 		]),
 		u.active(u.before(u.scaleProperty(0.95))),
-		u.media("(prefers-reduced-motion: reduce)", u.before(u.transitionDuration("0s"))),
+		u.motionReduce(u.before(u.transitionDuration("0s"))),
 	]}
 />;
 ```
@@ -14931,7 +14932,7 @@ import * as u from "@pkg/u";
 
 ### Pattern: A scroll container with a stable gutter and faded edges
 
-`u.scroll()` only shows a scrollbar on the axis that actually overflows, `u.thinScrollbar()` reserves its gutter up front so its appearance never shifts content, and a four-stop gradient through `u.mask()` feathers both edges — a standing hint that content continues past the visible box:
+`u.scroll()` only shows a scrollbar on the axis that actually overflows, `u.thinScrollbar()` reserves its gutter up front so its appearance never shifts content, `u.overscrollBehavior("contain")` keeps a flick at either end from scrolling the page instead, and a four-stop gradient through `u.mask()` feathers both edges — a standing hint that content continues past the visible box:
 
 ```tsx
 import * as u from "@pkg/u";
@@ -14943,6 +14944,7 @@ const FADE = "1.5rem";
 	mix={[
 		u.scroll("y"),
 		u.thinScrollbar(),
+		u.overscrollBehavior("contain"),
 		u.maxBs("24rem"),
 		u.mask(
 			`linear-gradient(to bottom, transparent 0%, black ${FADE}, black calc(100% - ${FADE}), transparent 100%)`,
@@ -15030,6 +15032,545 @@ import * as u from "@pkg/u";
 <Panel mix={[u.vars({ "panel-is": "24rem" })]} />
 ```
 
+### Pattern: A carousel that snaps one item at a time
+
+`u.scrollSnapType()` goes on the container and `u.scrollSnapAlign()` on each item — the split is the thing to get right, since setting either alone does nothing. `u.scrollSnapStop("always")` forbids a fast flick from skipping past items, so paging stays one-at-a-time. `u.scrollPadding()` keeps the snap position clear of the container's own inline padding, and `u.overscrollBehavior("contain")` stops a swipe that reaches the end from scrolling the page instead. Smooth scrolling is motion, so it goes behind `u.motionSafe()` rather than being applied unconditionally:
+
+```tsx
+import * as u from "@pkg/u";
+
+<div
+	mix={[
+		u.hstack({ gap: 3 }),
+		u.scroll("x"),
+		u.scrollSnapType("inline"),
+		u.scrollPadding(4),
+		u.overscrollBehavior("contain"),
+		u.thinScrollbar(),
+		u.pi(4),
+		u.motionSafe(u.scrollBehavior("smooth")),
+	]}
+>
+	{slides.map((slide) => (
+		<figure
+			key={slide.id}
+			mix={[
+				u.scrollSnapAlign("start"),
+				u.scrollSnapStop("always"),
+				u.shrink(0),
+				u.is("min(80cqi, 22rem)"),
+				u.rounded("lg"),
+				u.clip(),
+			]}
+		>
+			<img
+				mix={[u.is("full"), u.aspect("video"), u.fit("cover")]}
+				src={slide.src}
+				alt={slide.alt}
+			/>
+		</figure>
+	))}
+</div>;
+```
+
+Reach for `u.thinScrollbar()` over `u.noScrollbar()` unless another paging affordance is visible — a hidden scrollbar removes the only cue that the strip scrolls at all.
+
+### Pattern: A tooltip anchored to its trigger
+
+Anchor positioning replaces the measure-and-position pass a floating element used to need. `u.anchorName()` names the trigger, `u.positionAnchor()` points the tooltip at that name, and `u.positionArea()` places it relative to the anchor without any coordinates. `u.positionTryFallbacks()` supplies the flip order for when the preferred side would overflow the viewport — the part a hand-rolled implementation usually gets wrong:
+
+```tsx
+import * as u from "@pkg/u";
+
+<>
+	<button mix={[u.anchorName("tip"), u.rounded("md"), u.p(2)]} popoverTarget="tip-content">
+		{label}
+	</button>
+
+	<div
+		id="tip-content"
+		popover="hint"
+		role="tooltip"
+		mix={[
+			u.absolute(),
+			u.positionAnchor("tip"),
+			u.positionArea("block-start center"),
+			u.positionTryFallbacks("flip-block", "flip-inline"),
+			u.m(0),
+			u.mbe(2),
+			u.maxIs("18rem"),
+			u.rounded("md"),
+			u.pb(1),
+			u.pi(2),
+			u.text("sm"),
+			u.pretty(),
+			u.surface("neutral"),
+			u.shadow("md"),
+			u.opacity(0),
+			u.transition("opacity, display, overlay", { duration: 120 }),
+			u.transitionBehavior("allow-discrete"),
+			u.open(u.opacity(100)),
+			u.startingStyle(u.open(u.opacity(0))),
+		]}
+	>
+		{description}
+	</div>
+</>;
+```
+
+Both halves are required: an `anchorName()` with no `positionAnchor()` referencing it does nothing, and a `positionArea()` with no resolved anchor falls back to normal absolute positioning against the nearest positioned ancestor.
+
+### Pattern: A card that flips to reveal its back
+
+Three utilities have to agree for a 3D rotation to read as depth rather than a horizontal squash: `u.transformStyle()` keeps the subtree in 3D, `u.perspective()` gives it a vanishing point, and both belong on the **parent** of the rotating faces. `u.backfaceVisibility()` on each face hides it once it turns away. The back face starts pre-rotated so it is already facing away at rest:
+
+```tsx
+import * as u from "@pkg/u";
+
+<div mix={[u.transformStyle(), u.perspective(800), u.zstack()]}>
+	<div
+		mix={[
+			u.backfaceVisibility(),
+			u.rounded("lg"),
+			u.clip(),
+			u.surface("muted"),
+			u.p(4),
+			u.motionSafe(u.transition("transform", { duration: 400 })),
+			u.data("flipped", u.rotateY(180)),
+		]}
+		data-flipped={flipped || undefined}
+	>
+		{front}
+	</div>
+	<div
+		mix={[
+			u.backfaceVisibility(),
+			u.rotateY(180),
+			u.rounded("lg"),
+			u.clip(),
+			u.surface("brand.tinted"),
+			u.p(4),
+			u.motionSafe(u.transition("transform", { duration: 400 })),
+			u.data("flipped", u.rotateY(0)),
+		]}
+		data-flipped={flipped || undefined}
+	>
+		{back}
+	</div>
+</div>;
+```
+
+Note the radius and clipping sit on the **faces**, not on the `u.transformStyle()` parent: an `overflow` other than `visible`, a filter, a mask, or an opacity below 1 on that parent silently forces the subtree back to flat and the effect collapses.
+
+### Pattern: A link whose underline clears its descenders
+
+An underline at the browser's default offset cuts through the descenders of `g`, `p`, and `y`. `u.textDecoration()`'s options form fixes that in one call, and takes its colour from the tone layer — so the underline can sit a shade back from the text rather than matching it exactly, which reads as less heavy without losing the affordance:
+
+```tsx
+import * as u from "@pkg/u";
+
+<a
+	href={href}
+	mix={[
+		u.fg("brand"),
+		u.rounded("sm"),
+		u.textDecoration({ line: "underline", color: "brand.muted", thickness: 1, offset: 2 }),
+		u.transition("text-decoration-color, color"),
+		u.hover(u.textDecoration({ color: "brand" })),
+		u.ring("brand"),
+	]}
+>
+	{children}
+</a>;
+```
+
+`thickness` and `offset` are the two properties CSS's `text-decoration` shorthand does _not_ include, which is why they are separate keys here. Never trade the underline for colour alone — colour is not a sufficient signal that something is a link.
+
+### Pattern: A selected thumbnail carrying both a ring and elevation
+
+`u.shadow()` and `u.ringShadow()` write different slots of the same composite `box-shadow`, so they stack: the ring hugs the element's edge and the elevation shadow falls outside it. Before that composition existed this needed one hand-written `box-shadow` with both layers in it:
+
+```tsx
+import * as u from "@pkg/u";
+
+<label mix={[u.relative(), u.cursor("pointer")]}>
+	<span
+		mix={[
+			u.block(),
+			u.is(20),
+			u.aspect("square"),
+			u.rounded("lg"),
+			u.clip(),
+			u.shadow("sm"),
+			u.motionSafe(u.transition("box-shadow, translate", { duration: 150 })),
+			u.hover([u.shadow("lg"), u.translateY(-1)]),
+			u.hasSibling("input:checked", u.ringShadow("brand", 3)),
+			u.hasSibling("input:focus-visible", u.outline({ color: "brand.ring", offset: 2 })),
+		]}
+	>
+		<img
+			mix={[u.is("full"), u.bs("full"), u.fit("cover"), u.objectPosition("top")]}
+			src={src}
+			alt=""
+		/>
+	</span>
+	<input type="radio" name="thumb" mix={[u.visuallyHidden()]} />
+</label>;
+```
+
+`u.objectPosition("top")` is what keeps a portrait subject's head in frame once `u.fit("cover")` crops a square out of a taller image. A raw `u.raw({ boxShadow })` on this element would replace the whole composite and silently erase the ring — write the slot variable directly if you ever need a genuinely custom layer.
+
+### Pattern: A tile grid where one item spans two tracks
+
+`u.gridTemplate()` establishes the tracks and `u.gridColumn()`/`u.gridRow()` place an individual item across them. A bare number means a grid _line_, so spanning is written `"span 2"` — that distinction is the one people trip over. `u.gridAutoRows()` sizes the implicit rows that appear beyond the declared template, so tiles added later keep the same height without touching the container:
+
+```tsx
+import * as u from "@pkg/u";
+
+<div
+	mix={[
+		u.grid(),
+		u.gridTemplate({ columns: "repeat(auto-fit, minmax(14rem, 1fr))" }),
+		u.gridAutoRows("10rem"),
+		u.gap(3),
+	]}
+>
+	<article
+		mix={[
+			u.gridColumn("span 2"),
+			u.gridRow("span 2"),
+			u.surface("brand.tinted"),
+			u.rounded("lg"),
+			u.p(4),
+		]}
+	>
+		{featured}
+	</article>
+	{tiles.map((tile) => (
+		<article key={tile.id} mix={[u.surface("muted"), u.rounded("lg"), u.p(3)]}>
+			{tile.label}
+		</article>
+	))}
+</div>;
+```
+
+Avoid `u.gridAutoFlow("dense")` here if the tiles are interactive: backfilling holes reorders them visually while leaving tab order in DOM order, which strands keyboard users.
+
+### Pattern: A textarea that grows with its content
+
+`u.fieldSizing("content")` is the native replacement for the resize-observer-and-scrollHeight dance: the control sizes itself to its own value. Bound it with `u.minBs()` and `u.maxBs()` so it starts at a sensible height and stops before it takes over the page, then let `u.scroll("y")` handle anything past the ceiling:
+
+```tsx
+import * as u from "@pkg/u";
+
+<textarea
+	rows={2}
+	mix={[
+		u.fieldSizing("content"),
+		u.minBs("3lh"),
+		u.maxBs("12lh"),
+		u.scroll("y"),
+		u.resize("block"),
+		u.is("full"),
+		u.appearance(),
+		u.font("inherit"),
+		u.text("base"),
+		u.leading("relaxed"),
+		u.p(2),
+		u.border({ color: "neutral", width: 1 }),
+		u.rounded("md"),
+		u.autofill(),
+		u.ring("brand"),
+		u.invalid([u.border("danger"), u.ring("danger")]),
+	]}
+/>;
+```
+
+`u.resize("block")` leaves the manual handle available on the axis that makes sense, which matters because auto-growing is a guess — someone with a long answer or a large font may still want to drag it taller. The `lh` unit ties both bounds to the control's own line height, so they stay right if the text size changes.
+
+### Pattern: A field whose label floats out of the way
+
+`u.placeholderShown()` matches an input only while it is empty, and `u.has()` lets the _wrapper_ read that state — so a label can sit inside an empty field and lift above it the moment the user types, with no JavaScript and no state to track. The input keeps a real `<label>` throughout, because a placeholder is not a label:
+
+```tsx
+import * as u from "@pkg/u";
+
+<div
+	mix={[
+		u.relative(),
+		u.pbs(3),
+		u.has(
+			"input:placeholder-shown:not(:focus)",
+			u.when("& > label", [u.translateY("1.7rem"), u.text("base")]),
+		),
+		u.has("input:focus", u.when("& > label", u.fg("brand"))),
+	]}
+>
+	<input
+		id="email"
+		type="email"
+		placeholder=" "
+		mix={[
+			u.is("full"),
+			u.appearance(),
+			u.font("inherit"),
+			u.p(2),
+			u.border({ color: "neutral", width: 1 }),
+			u.rounded("md"),
+			u.autofill(),
+			u.ring("brand"),
+		]}
+	/>
+	<label
+		htmlFor="email"
+		mix={[
+			u.absolute(),
+			u.insBs(0),
+			u.insIs(2),
+			u.text("xs"),
+			u.fg("neutral.muted"),
+			u.pointerEvents(),
+			u.motionSafe(u.transition("translate, font-size, color", { duration: 120 })),
+		]}
+	>
+		Email
+	</label>
+</div>;
+```
+
+Two details make it work. Give the input `placeholder=" "` — a single space — so `:placeholder-shown` tracks emptiness without showing text that competes with the label. And the `:not(:focus)` is what lets the label lift on focus rather than waiting for the first character.
+
+### Pattern: An unavailable card dimmed with stacked filters
+
+`filter` is one CSS property, but each filter utility writes its own variable into a shared composite — so `u.grayscale()`, `u.brightness()`, and `u.blur()` combine instead of overwriting each other. Order in the composite is fixed, so the result does not depend on the order of the calls:
+
+```tsx
+import * as u from "@pkg/u";
+
+<article
+	aria-disabled="true"
+	mix={[
+		u.surface("muted"),
+		u.rounded("lg"),
+		u.p(4),
+		u.motionSafe(u.transition("filter, opacity", { duration: 200 })),
+		u.aria("disabled", "true", [
+			u.grayscale(0.8),
+			u.brightness(0.98),
+			u.opacity(60),
+			u.cursor("not-allowed"),
+		]),
+	]}
+>
+	{children}
+	<p mix={[u.text("sm"), u.weight("medium"), u.fg("neutral")]}>Unavailable in your region</p>
+</article>;
+```
+
+The visible dimming carries no meaning on its own — a filter is invisible to assistive technology — so the `aria-disabled` attribute and the sentence of text are doing the actual work. Never let a filter be the only signal.
+
+### Pattern: A modal that dims the page behind it
+
+`u.backdrop()` styles the layer the browser paints behind a top-layer element, which is the correct way to dim the page rather than rendering an overlay `<div>` and managing its stacking. It transitions on the same `u.transitionBehavior("allow-discrete")` and `u.startingStyle()` contract the dialog itself uses, and `u.overscrollBehavior("contain")` keeps a scroll inside the dialog from leaking to the page:
+
+```tsx
+import * as u from "@pkg/u";
+
+<dialog
+	mix={[
+		u.m("auto"),
+		u.maxIs("min(90vw, 32rem)"),
+		u.maxBs("85dvh"),
+		u.scroll("y"),
+		u.overscrollBehavior("contain"),
+		u.surface("default"),
+		u.border({ color: "neutral", width: 1 }),
+		u.rounded("xl"),
+		u.p(5),
+		u.shadow("xl"),
+		u.opacity(0),
+		u.transition("opacity, display, overlay", { duration: 150 }),
+		u.transitionBehavior("allow-discrete"),
+		u.open(u.opacity(100)),
+		u.startingStyle(u.open(u.opacity(0))),
+		u.backdrop([
+			u.bg(u.colorMix("oklab", { color: "CanvasText", weight: 40 }, "transparent")),
+			u.transparencySafe(u.backdropBlur("sm")),
+			u.opacity(0),
+			u.transition("opacity, display, overlay", { duration: 150 }),
+			u.transitionBehavior("allow-discrete"),
+		]),
+		u.when("&[open]::backdrop", u.opacity(100)),
+		u.startingStyle(u.when("&[open]::backdrop", u.opacity(0))),
+	]}
+>
+	{children}
+</dialog>;
+```
+
+The blur goes behind `u.transparencySafe()` because `u.backdropBlur()` is an ungated primitive — without that wrapper it would override a reduced-transparency preference, while the solid `u.bg()` outside the gate keeps the dim either way.
+
+### Pattern: A headline filled with a gradient
+
+`u.bg({ clip: "text" })` clips a background to the glyphs, and a transparent foreground lets it show through. The text stays real, selectable, searchable text — which is the whole reason to do it this way rather than shipping an image:
+
+```tsx
+import * as u from "@pkg/u";
+
+<h1
+	mix={[
+		u.type("5xl"),
+		u.weight("bold"),
+		u.tracking("tighter"),
+		u.balance(),
+		u.bg({
+			image: u.linearGradient("to right", "var(--ui-brand-fg)", "var(--ui-brand-fg-emphasis)"),
+			clip: "text",
+		}),
+		u.fg("transparent"),
+	]}
+>
+	{title}
+</h1>;
+```
+
+Two cautions. Only the unprefixed `background-clip` is emitted, so an engine that still needs `-webkit-background-clip` requires a `u.raw()` alongside. And a gradient has no contrast guarantee against the page background — check the lightest stop, not the average, or the headline fails contrast at one end while looking fine at the other.
+
+### Pattern: A long list that skips off-screen rendering work
+
+`u.virtualize()` is the pattern to reach for: it pairs `content-visibility: auto` with a `contain-intrinsic-size` placeholder, so the browser skips layout and paint for rows outside the viewport _and_ still reserves their space, which keeps the scrollbar stable. `u.contentVisibility()` is the bare primitive underneath, for when the size is already known. `u.scrollMargin()` on each row keeps a scrolled-to row clear of the sticky header:
+
+```tsx
+import * as u from "@pkg/u";
+
+<div mix={[u.scroll("y"), u.overscrollBehavior("contain"), u.maxBs("32rem"), u.scrollPadding(12)]}>
+	<div mix={[u.sticky(), u.insBs(0), u.layer(1), u.translucent(), u.pb(2), u.pi(3)]}>{header}</div>
+
+	<ul role="list" mix={[u.listStyle(), u.divide()]}>
+		{rows.map((row) => (
+			<li
+				key={row.id}
+				id={row.id}
+				mix={[
+					u.virtualize("auto 3rem"),
+					u.scrollMargin(12),
+					u.hstack({ gap: 3, align: "center" }),
+					u.p(3),
+				]}
+			>
+				<span mix={[u.spacer(), u.minIs(0), u.truncate()]}>{row.label}</span>
+				<span mix={[u.tabularNums(), u.text("sm"), u.fg("neutral.muted")]}>{row.value}</span>
+			</li>
+		))}
+	</ul>
+</div>;
+```
+
+Get the `contain-intrinsic-size` estimate roughly right — too small and the scrollbar jumps as rows mount, too large and it overshoots the same way. Note `content-visibility: auto` also hides skipped content from find-in-page in some engines, which is a real tradeoff for a searchable list.
+
+### Pattern: A cell that breaks a long identifier instead of overflowing
+
+`u.overflowWrap()` breaks a word only when it would otherwise overflow, leaving ordinary prose alone — which is why it, and not `u.wordBreak("break-all")`, is the right tool for a URL, hash, or generated ID. It needs something to overflow _against_, so the bounded size is part of the pattern: in a table that means `u.maxIs()`, and in a flex row it means `u.minIs(0)`:
+
+```tsx
+import * as u from "@pkg/u";
+
+<table mix={[u.is("full"), u.borderCollapse()]}>
+	<tbody>
+		{rows.map((row) => (
+			<tr
+				key={row.id}
+				mix={[
+					u.when("& > td", [
+						u.pb(2),
+						u.pi(3),
+						u.borderEdge("block-end", { color: "neutral", width: 1 }),
+					]),
+				]}
+			>
+				<th scope="row" mix={[u.textAlign("start"), u.nowrap(), u.weight("medium")]}>
+					{row.label}
+				</th>
+				<td mix={[u.maxIs("28rem"), u.overflowWrap("break-word"), u.font("mono"), u.text("sm")]}>
+					{row.value}
+				</td>
+			</tr>
+		))}
+	</tbody>
+</table>;
+```
+
+Reach for `"anywhere"` instead of `"break-word"` when the cell also has to _shrink_: only `anywhere` lets the break affect the element's intrinsic min-content size, so a flex or grid item can narrow past its longest word.
+
+### Pattern: A disclosure driven by its ARIA state
+
+`u.aria()` styles straight from the attribute a component already sets for accessibility, so there is no parallel `data-` flag or class to keep in sync — the accessible state _is_ the styling state. (For a native `<details>` instead of a button, the equivalents are `u.open()` for the state, `u.marker()` for the disclosure triangle, and `u.detailsContent()` for the collapsible region.)
+
+```tsx
+import * as u from "@pkg/u";
+
+<button
+	aria-expanded={open}
+	aria-controls="panel"
+	mix={[
+		u.hstack({ gap: 2, align: "center", justify: "between" }),
+		u.is("full"),
+		u.p(3),
+		u.rounded("md"),
+		u.hover(u.bg("neutral.tint")),
+		u.ring("brand"),
+		u.aria("expanded", "true", u.when("& > svg", u.rotate(90))),
+	]}
+>
+	<span mix={[u.weight("medium")]}>{summary}</span>
+	<svg
+		aria-hidden="true"
+		mix={[
+			u.is(4),
+			u.bs(4),
+			u.shrink(0),
+			u.fill("currentColor"),
+			u.motionSafe(u.transition("transform", { duration: 150 })),
+		]}
+	>
+		<path d={caretPath} />
+	</svg>
+</button>;
+```
+
+Note the two-argument form, `u.aria("expanded", ...)`, matches the attribute being _present_ — which includes `aria-expanded="false"`. Pass the value explicitly, as above, whenever `false` is a state you care about distinguishing.
+
+### Pattern: An article that prints cleanly
+
+`u.print()` is the one wrapper in its family that is not about a user preference. Printing is where a screen layout quietly fails: interactive chrome wastes paper, a dark surface burns ink, and anything truncated or clamped loses content that has no second page to continue onto:
+
+```tsx
+import * as u from "@pkg/u";
+
+<>
+	<nav mix={[u.hstack({ gap: 3 }), u.print(u.hidden())]}>{links}</nav>
+
+	<article
+		mix={[
+			u.maxIs("65ch"),
+			u.mi("auto"),
+			u.vstack({ gap: 4 }),
+			u.pretty(),
+			u.leading("relaxed"),
+			u.print([u.maxIs("none"), u.fg("color.neutral.950"), u.bg("color.neutral.50")]),
+		]}
+	>
+		<h1 mix={[u.type("3xl"), u.weight("bold"), u.balance()]}>{title}</h1>
+		<p mix={[u.lineClamp(3), u.print(u.raw({ WebkitLineClamp: "unset", overflow: "visible" }))]}>
+			{summary}
+		</p>
+		{body}
+	</article>
+</>;
+```
+
+Undoing a clamp is one of the few genuine `u.raw()` cases left: `u.lineClamp()` takes a line count and has no "off" value, so the reset has to name the underlying properties.
+
 ## Related Packages
 
 - [`@pkg/r3-ui`](/packages/r3-ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
@@ -15048,3 +15589,9 @@ import * as u from "@pkg/u";
 10. **Fold a variant table with `u.combine()` rather than writing each branch out** - mapping tone or state names through `u.data()`/`u.when()` and combining the result yields one mixin whose branches are all siblings, which is also the only way to build branches from a list — neither a CSS selector nor a custom property name can be parameterized by a loop of its own.
 11. **`u.strokeWidth()` is unitless where every other width utility is pixels** - `u.strokeWidth(1)` means one SVG user unit, not `1px`, because a `px` suffix would make the stroke scale with the viewport instead of the drawing's own coordinate system; reach for `u.vectorEffect("non-scaling-stroke")` when a hairline needs to stay a hairline through a transform.
 12. **Transition `u.scaleProperty()`, not `u.scale()`** - the standalone `scale` property animates on its own without contending with whatever else composes into `transform`, which is why entry and press animations name `scale` in their property list and reset it with `u.scaleProperty("none")` rather than a bare `1`.
+13. **Snap type goes on the container, snap alignment on the items** - `u.scrollSnapType()` on the scroll container and `u.scrollSnapAlign()` on each child; either one alone does nothing, which is the most common way a carousel ends up not snapping. Add `u.scrollPadding()` so the snap position clears a sticky header or the container's own padding.
+14. **`u.shadow()` and `u.ringShadow()` now stack, but a raw `box-shadow` erases both** - they write separate slots of one composite declaration, so a ring and an elevation shadow coexist. A `u.raw({ boxShadow: "..." })` on the same element replaces the whole composite and silently drops the other layer; write the slot custom property directly instead.
+15. **Put motion behind `u.motionSafe()`, not `u.motionReduce()`** - wrapping the animation means the reduced-motion case is the unwrapped baseline, so forgetting the wrapper fails safe with no animation. The inverse form ships an ungated animation whenever you forget to add the override.
+16. **`u.transformStyle()` and `u.perspective()` belong on the parent, and clipping defeats them** - the 3D context has to be established above the rotating faces. On that same parent, an `overflow` other than `visible`, a filter, a mask, or an opacity below 1 all force the subtree back to flat, so put the radius and `u.clip()` on the faces instead.
+17. **Anchor positioning needs both halves** - `u.anchorName()` on the element being anchored to, `u.positionAnchor()` on the positioned one. With only one of them, `u.positionArea()` quietly falls back to ordinary absolute positioning against the nearest positioned ancestor, which usually looks almost right and is the hardest version to debug.
+18. **`u.overflowWrap()` is for long URLs, `u.wordBreak()` is not** - `overflow-wrap` breaks a word only when it would otherwise overflow, leaving prose intact; `word-break: break-all` breaks at any character and mangles it. Both need a bounded inline size to do anything, and only `u.overflowWrap("anywhere")` also lets a flex or grid item shrink below its longest word.
