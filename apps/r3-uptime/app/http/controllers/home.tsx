@@ -38,7 +38,7 @@ import {
 	ZapIcon,
 } from "@pkg/lucide-remix";
 import { Heading, LinkButton } from "@pkg/r3-ui";
-import { bg, border, borderEdge, fg, linearGradient, radialGradient } from "@pkg/u/color";
+import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import {
 	absolute,
@@ -62,23 +62,17 @@ import { dark, media } from "@pkg/u/responsive";
 import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { translateX, translateY } from "@pkg/u/transform";
-import {
-	font,
-	fontSize,
-	leading,
-	textAlign,
-	textDecoration,
-	tracking,
-	weight,
-} from "@pkg/u/typography";
+import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { canonicalUrl, getWebSiteSchema } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
 import SectionHeader from "~/resources/components/marketing/section-header";
+import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -300,6 +294,11 @@ export default createAction(routes.home, async (ctx) => {
 		<DocumentLayout
 			title={t("landing.meta.title")}
 			locale={ctx.locale}
+			seo={{
+				description: t("landing.meta.description"),
+				url: canonicalUrl(ctx.url),
+				jsonLd: getWebSiteSchema(),
+			}}
 			preload={[
 				{ href: SCREENSHOT_LIGHT, as: "image", media: "(prefers-color-scheme: light)" },
 				{ href: SCREENSHOT_DARK, as: "image", media: "(prefers-color-scheme: dark)" },
@@ -488,46 +487,7 @@ export default createAction(routes.home, async (ctx) => {
 					</div>
 				</section>
 
-				<section
-					mix={[
-						pb(8),
-						...tintedSection(),
-						borderEdge("top", { color: "neutral", width: 1 }),
-						borderEdge("bottom", { color: "neutral", width: 1 }),
-					]}
-				>
-					<div mix={[...marketingContainer()]}>
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								gridTemplate({ columns: "repeat(2, 1fr)" }),
-								textAlign("center"),
-								media("(min-width: 768px)", gridTemplate({ columns: "repeat(4, 1fr)" })),
-							]}
-						>
-							{TRUST_INDICATORS.map((stat) => (
-								<div key={stat.label} mix={[vstack({ gap: 2, align: "center" })]}>
-									<div
-										mix={[
-											inlineFlex(),
-											items("center"),
-											gap(1),
-											fontSize("3xl"),
-											weight(700),
-											leading(1),
-											fg("neutral.emphasis"),
-										]}
-									>
-										<span mix={[fg("brand")]}>{stat.icon}</span>
-										<span mix={[font("mono")]}>{stat.value}</span>
-									</div>
-									<p mix={[m(0), fontSize("sm"), fg("neutral")]}>{stat.label}</p>
-								</div>
-							))}
-						</div>
-					</div>
-				</section>
+				<MarketingTrustIndicators indicators={TRUST_INDICATORS} />
 
 				<section id="features" mix={[...sectionPadding()]}>
 					<div mix={[...marketingContainer()]}>

@@ -6,8 +6,9 @@
  * package's `MarkdownView` component, since this composes the result into the
  * shared `DocsLayout` sidebar chrome rather than needing a standalone wrapper
  * element. The current slug also drives the layout's active nav link and its
- * `docs > overview`-style breadcrumb trail. An unknown slug or a parse failure
- * renders the same not-found content inside that same chrome.
+ * `docs > overview`-style breadcrumb trail, and the frontmatter description doubles
+ * as the page's `<head>` meta/Open Graph description. An unknown slug or a parse
+ * failure renders the same not-found content inside that same chrome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,6 +24,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { canonicalUrl } from "~/app/lib/seo";
 import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -61,10 +63,16 @@ export default createAction(routes.docs.show, async (ctx) => {
 		});
 	}
 
+	/**
+	 * The 404 page for an unknown slug or an unparseable doc. Deliberately passes no
+	 * `seo`: there's no page here to describe, and a canonical link would invite a
+	 * crawler to treat this URL as a real, indexable document.
+	 */
 	let renderNotFound = () => {
 		return ctx.render(
 			<DocumentLayout
 				title={`${ctx.i18next.t("docs.error.notFoundTitle")} | ${ctx.i18next.t("docs.meta.title")}`}
+				locale={ctx.locale}
 			>
 				<DocsLayout
 					sections={sections}
@@ -96,7 +104,21 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let { content: parsedContent, frontmatter } = result.data;
 
 	return ctx.render(
-		<DocumentLayout title={`${frontmatter.title} | ${ctx.i18next.t("docs.meta.title")}`}>
+		<DocumentLayout
+			title={`${frontmatter.title} | ${ctx.i18next.t("docs.meta.title")}`}
+			locale={ctx.locale}
+			seo={{
+				// The doc's own frontmatter description, since that's what this URL is
+				// about; the shared docs description only stands in for a doc that
+				// shipped without one, so no page is left with an empty description.
+				description: frontmatter.description || ctx.i18next.t("docs.meta.description"),
+				url: canonicalUrl(ctx.url),
+				// No JSON-LD: `TechArticle` would be the closest fit, but it wants an
+				// author and dates only some docs carry in frontmatter, and a schema
+				// with invented fields is worse than none.
+				type: "article",
+			}}
+		>
 			<DocsLayout
 				sections={sections}
 				activePath={activePath}

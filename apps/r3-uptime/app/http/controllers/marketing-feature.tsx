@@ -5,6 +5,10 @@
  * all 12 feature pages instead of one file per page — see the content module's
  * docblock for why.
  *
+ * Each page describes itself to crawlers as a `SoftwareApplication` — its subject is
+ * one capability of the product — plus an `FAQPage` built from the very questions the
+ * page renders, so the structured data never claims answers a visitor can't find.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -13,10 +17,15 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { canonicalUrl, getFAQSchema, getSoftwareApplicationSchema } from "~/app/lib/seo";
 import { features } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
-import MarketingPageView from "~/resources/views/marketing/page";
+import MarketingPageView, {
+	buildMarketingPageChrome,
+	SCREENSHOT_DARK,
+	SCREENSHOT_LIGHT,
+} from "~/resources/views/marketing/page";
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -40,19 +49,38 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 		);
 	}
 
+	// The capability this page is about, taken from its meta title without the
+	// "| Uptime …" half — a schema `name` names the thing, where a `<title>` also
+	// has to place it inside the site.
+	let schemaName = content.metaTitle.split("|")[0]?.trim() || content.metaTitle;
+
 	return ctx.render(
-		<DocumentLayout title={`${content.metaTitle}`}>
+		<DocumentLayout
+			title={`${content.metaTitle}`}
+			locale={ctx.locale}
+			seo={{
+				description: content.metaDescription,
+				url: canonicalUrl(ctx.url),
+				jsonLd: [
+					getSoftwareApplicationSchema({
+						name: schemaName,
+						description: content.metaDescription,
+						// The very bullets the feature grid renders below the hero.
+						featureList: content.features.map((feature) => feature.title),
+					}),
+					...(content.faqs.length > 0 ? [getFAQSchema(content.faqs)] : []),
+				],
+			}}
+			preload={[
+				{ href: SCREENSHOT_LIGHT, as: "image", media: "(prefers-color-scheme: light)" },
+				{ href: SCREENSHOT_DARK, as: "image", media: "(prefers-color-scheme: dark)" },
+			]}
+		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<MarketingPageView
 					{...content}
+					{...buildMarketingPageChrome(ctx.i18next.t)}
 					isSignedIn={isSignedIn}
-					startLabel={chrome.startLabel}
-					dashboardLabel={chrome.dashboardLabel}
-					everythingTitle={ctx.i18next.t("landing.marketingPage.everythingTitle")}
-					howItWorksTitle={ctx.i18next.t("landing.marketingPage.howItWorksTitle")}
-					faqTitle={ctx.i18next.t("landing.marketingPage.faqTitle")}
-					finalCtaTitle={ctx.i18next.t("landing.marketingPage.finalCtaTitle")}
-					finalCtaBody={ctx.i18next.t("landing.finalCta.body")}
 				/>
 			</MarketingLayout>
 		</DocumentLayout>,

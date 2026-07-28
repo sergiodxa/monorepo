@@ -6,13 +6,19 @@
  * exists so those 40+ public pages share one header/footer instead of repeating
  * the chrome per page.
  *
- * Every piece of copy — the brand mark, nav labels, CTA labels, footer columns, and
- * the copyright line — arrives as a plain, already-translated prop, the same
+ * Every piece of copy — the brand wordmark, nav labels, CTA labels, footer columns,
+ * and the copyright line — arrives as a plain, already-translated prop, the same
  * convention `AppShell` uses for its own `heading`/`breadcrumbs` props: this layout
  * never reads `ctx.i18next` itself. {@link buildMarketingChrome} centralizes the
  * `t()` calls building those props (and the `routes`-derived hrefs alongside them)
  * so every calling controller (home, the marketing/legal pages) shares one
  * definition instead of repeating the same dozens of `t()` calls seven times over.
+ *
+ * The wordmark is paired with the brand glyph, inlined here as {@link BRAND_MARK_PATHS}
+ * rather than composed from `resources/components/logo.tsx`: that component is the
+ * *team* logo — a hydrated client island whose job is to swap a team's uploaded image
+ * for its initials at runtime — so it renders neither this mark nor anything worth
+ * shipping client JavaScript for on a static marketing page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,11 +39,12 @@ import {
 	hstack,
 	inline,
 	insTop,
+	shrink,
 	sticky,
 	vstack,
 } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
-import { m, maxIs, mbe, minBs, p } from "@pkg/u/size";
+import { bs, is, m, maxIs, mbe, minBs, p } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { hover } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
@@ -63,6 +70,19 @@ namespace MarketingLayout {
 		children: RemixNode;
 	}
 }
+
+/**
+ * The Uptime brand glyph: the four `<path d>` values of the mark, authored against a
+ * 10240-unit grid and flipped into the `<svg>`'s own 1024×1024 viewBox by the shared
+ * `matrix(.1 0 0 -.1 0 1024)` on their wrapping `<g>`. Kept as data next to its one
+ * call site so the header's JSX stays readable.
+ */
+const BRAND_MARK_PATHS = [
+	"M2970 8530c-318-68-583-290-705-592-69-170-65-32-65-2155-1-1736 1-1927 15-1998 69-335 305-609 622-724 43-16 113-36 156-46l77-17v-332c0-303 2-334 19-366 26-49 62-72 119-78 66-6 99 10 317 153 99 65 349 229 555 364l375 246 1380 5c1369 6 1381 6 1460 27 187 50 337 135 466 263 142 142 233 309 274 503 22 102 22 3891 1 3994-70 332-301 600-614 713-175 63-53 60-2311 59-1948 0-2060-1-2141-19zm4313-337c216-82 369-241 422-439 15-53 16-245 16-1969-1-1685-3-1918-16-1970-60-227-241-406-471-465-75-19-116-20-1444-20-1143 0-1374-2-1407-14-22-8-73-35-114-61-258-166-847-550-860-561-8-8-19-14-22-14-4 0-7 123-7 273 0 252-1 274-20 304-28 47-64 61-176 69-210 14-339 69-470 199-64 63-90 98-123 165-76 155-71 11-71 2090 0 2064-4 1937 66 2078 84 172 245 301 433 347 47 11 409 13 2131 12l2075-2 58-22z",
+	"M6344 7715c-200-43-373-211-419-406-64-275 84-550 350-648 83-31 211-38 295-17 243 61 410 258 427 501 18 265-173 515-436 571-80 17-137 17-217-1zM3540 7018c-56-29-82-73-82-138 0-58 24-105 69-136 25-17 54-22 145-28 717-44 1334-312 1832-795 339-329 591-744 710-1166 55-198 82-374 94-612 9-165 14-181 75-227 41-30 123-32 171-4 71 41 80 69 77 237-7 529-168 1043-471 1504-250 381-602 719-995 954-421 253-950 412-1425 429-149 6-157 5-200-18z",
+	"M3567 6085c-77-27-114-88-104-172 3-25 13-57 24-71 42-56 61-62 224-78 195-18 284-35 434-85 540-180 955-583 1135-1105 51-148 77-275 89-440 12-151 14-158 55-202 72-77 217-59 260 32 29 62 17 310-25 501-86 396-280 739-581 1030-344 333-746 526-1231 590-143 18-229 19-280 0z",
+	"M3537 5136c-48-18-62-29-81-70-24-50-20-112 9-161 29-50 75-75 138-75 65 0 184-25 282-58 241-83 424-259 501-482 21-58 42-205 44-302 0-4 15-24 32-44 94-107 253-75 288 57 14 50-3 225-31 333-86 328-340 605-673 735-182 71-412 101-509 67z",
+];
 
 export interface FooterColumn {
 	title: string;
@@ -254,8 +274,36 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 				>
 					<a
 						href={routes.home.href()}
-						mix={[weight(700), fontSize("1.25rem"), textDecoration("none"), fg("neutral.emphasis")]}
+						mix={[
+							hstack({ align: "center", gap: "8px" }),
+							weight(700),
+							fontSize("1.25rem"),
+							textDecoration("none"),
+							fg("neutral.emphasis"),
+						]}
 					>
+						{/*
+						 * Purely decorative: `aria-hidden` (no `role="img"`, no `<title>`) keeps
+						 * the glyph out of the accessibility tree so this link's accessible name
+						 * is the wordmark alone, instead of naming the product twice. It inherits
+						 * `fill="currentColor"` from its own `fg("brand")` rather than the
+						 * wordmark's neutral, matching the brand-tinted mark of the old header.
+						 */}
+						<svg
+							viewBox="0 0 1024 1024"
+							width={36}
+							height={36}
+							fill="currentColor"
+							aria-hidden="true"
+							mix={[fg("brand"), is("36px"), bs("36px"), shrink(0)]}
+						>
+							<g transform="matrix(.1 0 0 -.1 0 1024)">
+								{BRAND_MARK_PATHS.map((d) => (
+									<path key={d} d={d} />
+								))}
+							</g>
+						</svg>
+
 						{brandLabel}
 					</a>
 

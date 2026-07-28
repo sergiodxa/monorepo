@@ -414,6 +414,53 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime vs {{competitor}}",
+			tableCategoryHeader: "Catégorie",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Pourquoi les équipes passent à Uptime",
+			gettingStartedTitle: "Premiers pas",
+			finalCtaTitle: "Passez à Uptime",
+
+			honestTake: {
+				badge: "Avis honnête",
+				title: "Quand {{competitor}} peut être préférable",
+				description:
+					"Nous croyons à la transparence. Voici les cas où {{competitor}} pourrait être le bon choix.",
+			},
+
+			pricing: {
+				badge: "Tarifs",
+				title: "Comparaison réelle des coûts",
+				description:
+					"Découvrez combien vous pourriez économiser sur une configuration de surveillance typique.",
+				tableLabel: "Comparaison des coûts : Uptime vs {{competitor}}",
+				scenarioHeader: "Cas d'usage",
+				savingsHeader: "Économies",
+				footnote:
+					"Estimations basées sur des usages typiques. Les tarifs de {{competitor}} peuvent évoluer et votre coût réel dépend de votre configuration.",
+			},
+		},
+
+		finalCta: {
+			body: "Créez votre premier moniteur en moins de 2 minutes. Aucune carte bancaire requise pour commencer.",
+		},
+
+		marketingPage: {
+			everythingBadge: "En détail",
+			everythingTitle: "Tout ce dont vous avez besoin",
+			everythingDescription:
+				"Un regard détaillé sur ce que vous obtenez, de la première vérification à l'alerte qui vous parvient.",
+			howItWorksBadge: "Pour commencer",
+			howItWorksTitle: "Comment ça marche",
+			howItWorksDescription:
+				"Trois étapes pour passer d'un tableau de bord vide à des vérifications qui s'exécutent seules.",
+			faqBadge: "FAQ",
+			faqTitle: "Questions fréquemment posées",
+			faqDescription: "Les questions les plus courantes avant de commencer la surveillance.",
+			finalCtaTitle: "Commencez à surveiller vos services",
+		},
 	},
 
 	app: {

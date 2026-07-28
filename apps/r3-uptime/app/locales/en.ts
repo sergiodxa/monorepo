@@ -651,18 +651,44 @@ export default {
 		},
 
 		marketingPage: {
+			everythingBadge: "Deep Dive",
 			everythingTitle: "Everything you need",
+			everythingDescription:
+				"A closer look at what you get, from the first check to the alert that reaches you.",
+			howItWorksBadge: "Get started",
 			howItWorksTitle: "How it works",
+			howItWorksDescription: "Three steps from an empty dashboard to checks that run on their own.",
+			faqBadge: "FAQ",
 			faqTitle: "Frequently asked questions",
+			faqDescription: "The questions people ask most before they start monitoring.",
 			finalCtaTitle: "Start monitoring your services",
 		},
 
 		comparison: {
+			tableLabel: "Uptime vs {{competitor}}",
 			tableCategoryHeader: "Category",
 			tableProductHeader: "Uptime",
 			whyTeamsSwitchTitle: "Why teams switch to Uptime",
 			gettingStartedTitle: "Getting started",
 			finalCtaTitle: "Switch to Uptime",
+
+			honestTake: {
+				badge: "Honest take",
+				title: "When {{competitor}} might be better",
+				description:
+					"We believe in being transparent. Here's when {{competitor}} could be the right choice.",
+			},
+
+			pricing: {
+				badge: "Pricing",
+				title: "Real cost comparison",
+				description: "See how much you could save for a typical monitoring setup.",
+				tableLabel: "Cost comparison: Uptime vs {{competitor}}",
+				scenarioHeader: "Use case",
+				savingsHeader: "Savings",
+				footnote:
+					"Estimates based on typical usage patterns. {{competitor}} pricing can change and your actual cost depends on your setup.",
+			},
 		},
 
 		for: {

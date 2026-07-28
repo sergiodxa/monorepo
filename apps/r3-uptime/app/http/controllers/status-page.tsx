@@ -44,6 +44,7 @@ import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
+import { canonicalUrl } from "~/app/lib/seo";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
 import {
 	computeOverallStatus,
@@ -389,7 +390,17 @@ export default createAction(
 			ctx.i18next.t("statusPage.heatmap.tooltip.uptime", { percentage });
 
 		return ctx.render(
-			<DocumentLayout title={page.title}>
+			<DocumentLayout
+				title={page.title}
+				locale={ctx.locale}
+				seo={{
+					// The page owner's own description when they wrote one, falling back to
+					// its title. Both are team-authored content, never app copy, so there's
+					// nothing here to translate — and no locale key to reach for either.
+					description: page.description ?? page.title,
+					url: canonicalUrl(ctx.url),
+				}}
+			>
 				<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
 					<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
 						{page.logo_url && (

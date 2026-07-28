@@ -27,6 +27,7 @@ import { createRouter } from "remix/fetch-router";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import { BASE_URL } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
@@ -201,5 +202,44 @@ describe("GET /status/:slug", () => {
 		expect(body).toContain(monitor.name);
 		expect(body).toContain("Operational");
 		expect(body).toContain("All Systems Operational");
+	});
+
+	test("emits the canonical URL and the page's own description in <head>", async () => {
+		let { db, team } = await createFixture();
+
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme Status",
+				slug: "acme-seo",
+				title: "Acme Status",
+				description: "Live availability for every Acme service.",
+				logo_url: null,
+				custom_domain: null,
+				is_public: true,
+				show_overall_status: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		// No monitors attached, but `getTeamHttpSummaries` still queries Analytics
+		// Engine for the team, so the SQL API fetch needs a stub either way.
+		globalThis.fetch = mock(async () => {
+			return new Response(JSON.stringify({ data: [] }));
+		}) as unknown as typeof fetch;
+
+		let response = await get(db, page.slug);
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		// Canonical is normalized onto the product's own origin, not the request host.
+		expect(body).toContain(
+			`<link rel="canonical" href="${BASE_URL}${routes.statusPage.href({ slug: page.slug })}" />`,
+		);
+		expect(body).toContain(
+			'<meta name="description" content="Live availability for every Acme service." />',
+		);
 	});
 });

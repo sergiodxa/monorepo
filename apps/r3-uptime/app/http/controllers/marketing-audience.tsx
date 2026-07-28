@@ -5,6 +5,11 @@
  * all 6 audience pages instead of one file per page — see the content module's
  * docblock for why.
  *
+ * Structured data is the page's own `FAQPage`, built from the very questions it
+ * renders so it never claims answers a visitor can't find. No
+ * `SoftwareApplication` here: an audience page's subject is who the product is for,
+ * not a capability of it.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -13,10 +18,15 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { canonicalUrl, getFAQSchema } from "~/app/lib/seo";
 import { audiences } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
-import MarketingPageView from "~/resources/views/marketing/page";
+import MarketingPageView, {
+	buildMarketingPageChrome,
+	SCREENSHOT_DARK,
+	SCREENSHOT_LIGHT,
+} from "~/resources/views/marketing/page";
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -41,18 +51,24 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 	}
 
 	return ctx.render(
-		<DocumentLayout title={`${content.metaTitle}`}>
+		<DocumentLayout
+			title={`${content.metaTitle}`}
+			locale={ctx.locale}
+			seo={{
+				description: content.metaDescription,
+				url: canonicalUrl(ctx.url),
+				jsonLd: content.faqs.length > 0 ? getFAQSchema(content.faqs) : undefined,
+			}}
+			preload={[
+				{ href: SCREENSHOT_LIGHT, as: "image", media: "(prefers-color-scheme: light)" },
+				{ href: SCREENSHOT_DARK, as: "image", media: "(prefers-color-scheme: dark)" },
+			]}
+		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<MarketingPageView
 					{...content}
+					{...buildMarketingPageChrome(ctx.i18next.t)}
 					isSignedIn={isSignedIn}
-					startLabel={chrome.startLabel}
-					dashboardLabel={chrome.dashboardLabel}
-					everythingTitle={ctx.i18next.t("landing.marketingPage.everythingTitle")}
-					howItWorksTitle={ctx.i18next.t("landing.marketingPage.howItWorksTitle")}
-					faqTitle={ctx.i18next.t("landing.marketingPage.faqTitle")}
-					finalCtaTitle={ctx.i18next.t("landing.marketingPage.finalCtaTitle")}
-					finalCtaBody={ctx.i18next.t("landing.finalCta.body")}
 				/>
 			</MarketingLayout>
 		</DocumentLayout>,

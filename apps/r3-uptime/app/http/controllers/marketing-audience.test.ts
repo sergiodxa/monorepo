@@ -1,7 +1,8 @@
 /**
  * Tests the `/for/:slug` controller: a real slug from `resources/content/marketing.ts`'s
- * `audiences` record renders that page's content (200), and an unknown slug renders the
- * same not-found page the router's `defaultHandler` uses (404).
+ * `audiences` record renders that page's content (200) along with its canonical URL and
+ * `FAQPage` structured data, and an unknown slug renders the same not-found page the
+ * router's `defaultHandler` uses (404).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,6 +74,19 @@ describe("GET /for/:slug", () => {
 		let body = await response.text();
 		expect(body).toContain(`<title>${content.metaTitle}</title>`);
 		expect(body).toContain(content.title);
+	});
+
+	test("advertises its canonical URL and FAQ structured data", async () => {
+		let slug = Object.keys(audiences)[0];
+		if (!slug) throw new Error("expected at least one audience page");
+		let content = audiences[slug]!;
+
+		let response = await getAudience(slug);
+
+		let body = await response.text();
+		// Canonical on the production origin, not the `uptime.test` host that served it.
+		expect(body).toContain(`<link rel="canonical" href="https://uptime.sergiodxa.com/for/${slug}"`);
+		if (content.faqs.length > 0) expect(body).toContain('"@type":"FAQPage"');
 	});
 
 	test("renders the not-found page for an unknown slug", async () => {

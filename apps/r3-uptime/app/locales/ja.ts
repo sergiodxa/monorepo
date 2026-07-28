@@ -405,6 +405,52 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime と {{competitor}} の比較",
+			tableCategoryHeader: "項目",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "チームが Uptime に移行する理由",
+			gettingStartedTitle: "はじめかた",
+			finalCtaTitle: "Uptime に移行する",
+
+			honestTake: {
+				badge: "正直な評価",
+				title: "{{competitor}} のほうが適している場合",
+				description:
+					"私たちは透明性を大切にしています。次のような場合は {{competitor}} が適した選択かもしれません。",
+			},
+
+			pricing: {
+				badge: "料金",
+				title: "実際のコスト比較",
+				description: "一般的な監視構成でどれだけ節約できるかをご確認ください。",
+				tableLabel: "コスト比較: Uptime と {{competitor}}",
+				scenarioHeader: "ユースケース",
+				savingsHeader: "削減額",
+				footnote:
+					"一般的な利用パターンに基づく概算です。{{competitor}} の料金は変更される場合があり、実際の費用は構成によって異なります。",
+			},
+		},
+
+		finalCta: {
+			body: "2分以内に最初のモニターを作成できます。開始にクレジットカードは不要です。",
+		},
+
+		marketingPage: {
+			everythingBadge: "詳しく見る",
+			everythingTitle: "必要なすべてを",
+			everythingDescription:
+				"最初のチェックから届くアラートまで、提供される内容を詳しくご紹介します。",
+			howItWorksBadge: "はじめに",
+			howItWorksTitle: "仕組み",
+			howItWorksDescription:
+				"空のダッシュボードから自動で走るチェックまで、3つのステップで完了します。",
+			faqBadge: "FAQ",
+			faqTitle: "よくある質問",
+			faqDescription: "監視を始める前によく寄せられる質問をまとめました。",
+			finalCtaTitle: "サービスの監視を始めましょう",
+		},
 	},
 
 	app: {

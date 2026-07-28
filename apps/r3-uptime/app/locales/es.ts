@@ -414,6 +414,52 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime vs {{competitor}}",
+			tableCategoryHeader: "Categoría",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Por qué los equipos cambian a Uptime",
+			gettingStartedTitle: "Primeros pasos",
+			finalCtaTitle: "Cambie a Uptime",
+
+			honestTake: {
+				badge: "Opinión honesta",
+				title: "Cuándo {{competitor}} puede ser mejor",
+				description:
+					"Creemos en la transparencia. Estos son los casos en los que {{competitor}} podría ser la opción correcta.",
+			},
+
+			pricing: {
+				badge: "Precios",
+				title: "Comparación de costos real",
+				description: "Vea cuánto podría ahorrar en una configuración de monitoreo típica.",
+				tableLabel: "Comparación de costos: Uptime vs {{competitor}}",
+				scenarioHeader: "Caso de uso",
+				savingsHeader: "Ahorro",
+				footnote:
+					"Estimaciones basadas en patrones de uso típicos. Los precios de {{competitor}} pueden cambiar y su costo real depende de su configuración.",
+			},
+		},
+
+		finalCta: {
+			body: "Cree su primer monitor en menos de 2 minutos. No necesita tarjeta de crédito para empezar.",
+		},
+
+		marketingPage: {
+			everythingBadge: "En detalle",
+			everythingTitle: "Todo lo que necesita",
+			everythingDescription:
+				"Un repaso a fondo de lo que obtiene, desde la primera comprobación hasta la alerta que le llega.",
+			howItWorksBadge: "Primeros pasos",
+			howItWorksTitle: "Cómo funciona",
+			howItWorksDescription:
+				"Tres pasos para pasar de un panel vacío a comprobaciones que se ejecutan solas.",
+			faqBadge: "FAQ",
+			faqTitle: "Preguntas frecuentes",
+			faqDescription: "Las dudas más habituales antes de empezar a monitorear.",
+			finalCtaTitle: "Comience a monitorear sus servicios",
+		},
 	},
 
 	app: {

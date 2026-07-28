@@ -7,15 +7,62 @@
  * marketing copy; supporting copy (feature bullets, steps, FAQs, comparison rows) is
  * written fresh to a consistent structure per page family.
  *
+ * Two kinds of value here are load-bearing and must not be invented. Trust-indicator
+ * figures are claims about our own product, so they track what Uptime actually does
+ * today (9 regions, 1-60m intervals, 365-day retention, $5/mo + $0.001/ping). The
+ * `theirCost` figures in `pricingScenarios` are claims about a named competitor's
+ * public pricing — hedged with `~` where the plan mapping is approximate, and left
+ * out entirely rather than guessed. `honestTake` exists for the same reason: a
+ * comparison page that only lists our wins reads as marketing.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { IconName } from "@pkg/lucide-remix";
 
 export namespace MarketingContent {
 	/** One bullet in a feature grid. */
 	export interface Feature {
 		title: string;
 		description: string;
+		/**
+		 * Lucide icon name (kebab-case, e.g. `"globe"`), rendered through
+		 * `@pkg/lucide-remix`'s `<Icon name>`. A name rather than a component so
+		 * this file stays plain data with no JSX. Optional: a grid whose bullets
+		 * have no icons renders without the tiles.
+		 */
+		icon?: IconName;
+	}
+
+	/**
+	 * One headline figure in a page's trust-indicator strip — the four-up band of
+	 * stats below the hero. `value` is the figure itself (`"9"`, `"1-60m"`,
+	 * `"365d"`), `label` names it.
+	 */
+	export interface TrustIndicator {
+		/** Lucide icon name, same convention as {@link Feature.icon}. */
+		icon: IconName;
+		value: string;
+		label: string;
+	}
+
+	/** One "where the competitor is genuinely better" admission on a `/vs/:slug` page. */
+	export interface HonestTake {
+		title: string;
+		description: string;
+	}
+
+	/**
+	 * One cost scenario on a `/vs/:slug` page: the same monitoring setup priced
+	 * against both products. Costs are copy, not numbers — they read as
+	 * `"$7/mo"`, `"Free"`, `"Custom"`.
+	 */
+	export interface PricingScenario {
+		scenario: string;
+		theirCost: string;
+		ourCost: string;
+		savings: string;
 	}
 
 	/** One numbered step in a "how it works" list. */
@@ -50,6 +97,13 @@ export namespace MarketingContent {
 		features: Feature[];
 		steps: Step[];
 		faqs: Faq[];
+		/**
+		 * The four figures in this page's trust-indicator strip. Page-specific by
+		 * design — a feature page's stats are about that feature (`9` regions,
+		 * `1-60m` intervals), not the product at large. Optional: the strip is
+		 * skipped entirely for a page that has nothing to put in it.
+		 */
+		trustIndicators?: [TrustIndicator, TrustIndicator, TrustIndicator, TrustIndicator];
 	}
 
 	/** `/vs/:slug` comparison page content, extending {@link Page} with a table. */
@@ -57,6 +111,16 @@ export namespace MarketingContent {
 		competitor: string;
 		summary: string;
 		rows: ComparisonRow[];
+		/**
+		 * Where the competitor genuinely wins. Deliberately part of the page: a
+		 * comparison that only lists our advantages reads as marketing, and the
+		 * concession is what makes the rest credible.
+		 */
+		honestTake?: HonestTake[];
+		/** Who this product is the right call for, as a short banner: a claim plus its supporting bullets. */
+		perfectFor?: { title: string; description: string; highlights: string[] };
+		/** Same-setup cost comparisons, rendered as a table. */
+		pricingScenarios?: PricingScenario[];
 	}
 }
 
@@ -90,34 +154,46 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"HTTP health checks from 9 global regions. Monitor any URL with customizable intervals from 1 to 60 minutes.",
 		highlights: ["9 global regions", "1-60 min intervals", "Any HTTP status code"],
+		trustIndicators: [
+			{ icon: "globe", value: "9", label: "Global Regions" },
+			{ icon: "clock", value: "1-60m", label: "Check Intervals" },
+			{ icon: "activity", value: "HTTP", label: "Health Checks" },
+			{ icon: "database", value: "365d", label: "Data Retention" },
+		],
 		features: [
 			{
 				title: "Global coverage",
 				description:
 					"Monitor from Africa, APAC, Eastern/Western Europe, the Middle East, Oceania, and the Americas.",
+				icon: "globe",
 			},
 			{
 				title: "Flexible intervals",
 				description:
 					"Check every minute for critical services, or every hour for less urgent endpoints.",
+				icon: "timer",
 			},
 			{
 				title: "Status code validation",
 				description:
 					"Expect any HTTP status code — 200, 201, 301, 404 — whatever is correct for you.",
+				icon: "shield-check",
 			},
 			{
 				title: "Instant results",
 				description: "Run any monitor on demand to test immediately after changes.",
+				icon: "play",
 			},
 			{
 				title: "Heatmap visualization",
 				description: "See service health at a glance with daily heatmaps showing success rates.",
+				icon: "grid-2x2",
 			},
 			{
 				title: "365-day history",
 				description:
 					"Access a full year of monitoring data for trend analysis and incident review.",
+				icon: "calendar",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -155,32 +231,44 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Instant email, Slack, Discord, and webhook alerts for downtime detection, with recovery notifications and configurable cooldowns.",
 		highlights: ["Under 1s delivery", "4 alert channels", "Recovery notifications"],
+		trustIndicators: [
+			{ icon: "zap", value: "<1s", label: "Alert Latency" },
+			{ icon: "mail", value: "Email", label: "Notifications" },
+			{ icon: "webhook", value: "Webhooks", label: "Integrations" },
+			{ icon: "bell", value: "4", label: "Alert Channels" },
+		],
 		features: [
 			{
 				title: "Email alerts",
 				description: "Send downtime and recovery notifications to any address.",
+				icon: "mail",
 			},
 			{
 				title: "Slack & Discord",
 				description:
 					"Native webhook integrations post rich, readable alerts directly to your channels.",
+				icon: "message-square",
 			},
 			{
 				title: "Generic webhooks",
 				description: "Send signed JSON payloads to any endpoint, with an HMAC signature header.",
+				icon: "webhook",
 			},
 			{
 				title: "Recovery alerts",
 				description: "Get notified when a service comes back up, including downtime duration.",
+				icon: "bell-ring",
 			},
 			{
 				title: "Alert cooldowns",
 				description:
 					"Set a minimum time between repeat alerts so an ongoing outage doesn't flood your inbox.",
+				icon: "bell-off",
 			},
 			{
 				title: "Team or monitor scoped",
 				description: "Route some alerts to the whole team and others to a single critical monitor.",
+				icon: "route",
 			},
 		],
 		steps: [
@@ -232,27 +320,38 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Beautiful, customizable public status pages with real-time status, uptime history, and your own branding.",
 		highlights: ["Custom branding", "365-day heatmaps", "Public or private"],
+		trustIndicators: [
+			{ icon: "globe", value: "Public", label: "Status Pages" },
+			{ icon: "palette", value: "Custom", label: "Branding" },
+			{ icon: "trending-up", value: "Real-time", label: "Updates" },
+			{ icon: "eye", value: "24/7", label: "Visibility" },
+		],
 		features: [
 			{
 				title: "Overall status banner",
 				description: "A single glance shows operational, degraded, or down.",
+				icon: "circle-check",
 			},
 			{
 				title: "Any monitor type",
 				description: "Attach HTTP, DNS, TCP, and cron-job monitors to the same page.",
+				icon: "layers",
 			},
 			{
 				title: "Your branding",
 				description: "Add a logo, title, and description that match your product.",
+				icon: "palette",
 			},
 			{
 				title: "Uptime heatmaps",
 				description:
 					"Each service shows a 365-day heatmap so visitors can see historical reliability.",
+				icon: "grid-2x2",
 			},
 			{
 				title: "Public or private",
 				description: "Publish pages for customers, or keep them private for internal use only.",
+				icon: "eye",
 			},
 		],
 		steps: [
@@ -296,24 +395,34 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Visual heatmaps, response time tracking, and 365 days of retained data across every monitor type.",
 		highlights: ["365-day retention", "Daily heatmaps", "P99 response time"],
+		trustIndicators: [
+			{ icon: "calendar", value: "365", label: "Days Retention" },
+			{ icon: "grid-2x2", value: "Visual", label: "Heatmaps" },
+			{ icon: "clock", value: "P99", label: "Response Time" },
+			{ icon: "trending-up", value: "Trends", label: "Analysis" },
+		],
 		features: [
 			{
 				title: "Calendar heatmaps",
 				description: "See a full year of daily uptime at a glance, per monitor.",
+				icon: "grid-2x2",
 			},
 			{
 				title: "Response time tracking",
 				description: "Track average and P99 latency to catch slow-but-not-down degradation.",
+				icon: "timer",
 			},
 			{
 				title: "Dashboard stats",
 				description:
 					"Uptime percentage, ping usage, and slowest endpoint surfaced on your dashboard.",
+				icon: "layout-dashboard",
 			},
 			{
 				title: "Per-type breakdowns",
 				description:
 					"HTTP, DNS, TCP, and cron-job monitors each get their own aggregated daily stats.",
+				icon: "chart-column",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -345,23 +454,33 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Collaborate on uptime monitoring with unlimited team members, role-based access, and domain auto-provisioning.",
 		highlights: ["Unlimited members", "Owner/Admin/Member roles", "Domain auto-provisioning"],
+		trustIndicators: [
+			{ icon: "users", value: "Unlimited", label: "Team Members" },
+			{ icon: "shield", value: "3", label: "Role Levels" },
+			{ icon: "globe", value: "Domain", label: "Verification" },
+			{ icon: "user-plus", value: "Auto", label: "Provisioning" },
+		],
 		features: [
 			{
 				title: "Invite anyone",
 				description: "Send an email invite; the recipient joins with one click.",
+				icon: "user-plus",
 			},
 			{
 				title: "Role-based access",
 				description:
 					"Owners and Admins manage settings, billing, and members; Members focus on monitoring.",
+				icon: "shield",
 			},
 			{
 				title: "Domain auto-provisioning",
 				description: "Verify a company domain so anyone with a matching email joins automatically.",
+				icon: "globe",
 			},
 			{
 				title: "Shared visibility",
 				description: "Every team member sees the same monitors, alerts, and status pages.",
+				icon: "users",
 			},
 		],
 		steps: [
@@ -400,24 +519,34 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Integrate monitoring into your workflow with a REST API. Create monitors, manage alerts, and read metrics programmatically.",
 		highlights: ["API key scopes", "REST resources", "Cron-job ping endpoint"],
+		trustIndicators: [
+			{ icon: "code", value: "REST", label: "API" },
+			{ icon: "book-open", value: "Full", label: "Documentation" },
+			{ icon: "key", value: "Scoped", label: "API Keys" },
+			{ icon: "zap", value: "Fast", label: "Responses" },
+		],
 		features: [
 			{
 				title: "Scoped API keys",
 				description: "Issue keys with only the permissions each integration needs.",
+				icon: "key",
 			},
 			{
 				title: "Full resource coverage",
 				description:
 					"Monitors, DNS/TCP monitors, alerts, maintenance windows, status pages, and more.",
+				icon: "layers",
 			},
 			{
 				title: "Cron-job ping endpoint",
 				description: "A dedicated public endpoint your scheduled jobs call to report a heartbeat.",
+				icon: "radio-tower",
 			},
 			{
 				title: "Predictable errors",
 				description:
 					"Consistent error codes and rate limits so client integrations are easy to write.",
+				icon: "shield-check",
 			},
 		],
 		steps: [
@@ -458,20 +587,33 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Connect monitoring to your workflow with native Slack and Discord integrations, plus custom webhooks for everything else.",
 		highlights: ["Slack", "Discord", "Custom webhooks"],
+		trustIndicators: [
+			{ icon: "hash", value: "Slack", label: "Integration" },
+			{ icon: "message-square", value: "Discord", label: "Integration" },
+			{ icon: "zap", value: "Instant", label: "Delivery" },
+			{ icon: "bell", value: "Rich", label: "Notifications" },
+		],
 		features: [
 			{
 				title: "Slack",
 				description: "Native Incoming Webhook support with rich, readable alert formatting.",
+				icon: "hash",
 			},
-			{ title: "Discord", description: "Post alerts straight to a Discord channel via webhook." },
+			{
+				title: "Discord",
+				description: "Post alerts straight to a Discord channel via webhook.",
+				icon: "message-square",
+			},
 			{
 				title: "Custom webhooks",
 				description:
 					"Send signed JSON payloads to any endpoint — PagerDuty, Opsgenie, or your own service.",
+				icon: "webhook",
 			},
 			{
 				title: "Email",
 				description: "The simplest integration: alerts land straight in an inbox.",
+				icon: "mail",
 			},
 		],
 		steps: [
@@ -505,23 +647,33 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Schedule planned downtime, suppress alerts automatically, and end a maintenance window early when work finishes ahead of schedule.",
 		highlights: ["One-time or recurring", "Team or monitor scoped", "End early anytime"],
+		trustIndicators: [
+			{ icon: "calendar", value: "Scheduled", label: "Maintenance" },
+			{ icon: "bell-off", value: "Alert", label: "Suppression" },
+			{ icon: "repeat", value: "Recurring", label: "Windows" },
+			{ icon: "shield", value: "Clean", label: "Metrics" },
+		],
 		features: [
 			{
 				title: "Scheduled suppression",
 				description: "Alerts are automatically suppressed for the window's duration.",
+				icon: "bell-off",
 			},
 			{
 				title: "Recurring windows",
 				description: "Set a weekly deploy window once instead of every time.",
+				icon: "repeat",
 			},
 			{
 				title: "End early",
 				description:
 					"Finished ahead of schedule? End the window and resume monitoring immediately.",
+				icon: "circle-play",
 			},
 			{
 				title: "Scoped to what you need",
 				description: "Suppress alerts for the whole team or a single monitor.",
+				icon: "layers",
 			},
 		],
 		steps: [
@@ -561,22 +713,32 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor DNS records for unexpected changes. Track A, AAAA, CNAME, MX, TXT, and NS records to catch hijacking or misconfiguration.",
 		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "Global resolvers"],
+		trustIndicators: [
+			{ icon: "globe", value: "A/AAAA", label: "Records" },
+			{ icon: "server", value: "CNAME", label: "Records" },
+			{ icon: "layers", value: "MX/TXT", label: "Records" },
+			{ icon: "shield-check", value: "Hijack", label: "Detection" },
+		],
 		features: [
 			{
 				title: "Record change detection",
 				description: "Get alerted the moment a monitored record's value changes.",
+				icon: "refresh-cw",
 			},
 			{
 				title: "Multiple record types",
 				description: "Track A, AAAA, CNAME, MX, TXT, and NS in one monitor.",
+				icon: "database",
 			},
 			{
 				title: "Hijack protection",
 				description: "Unexpected DNS changes are often the first sign of an account compromise.",
+				icon: "shield-check",
 			},
 			{
 				title: "Propagation-aware",
 				description: "Checks account for normal DNS propagation delay before alerting.",
+				icon: "globe",
 			},
 		],
 		steps: [
@@ -617,23 +779,36 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Track SSL certificate expiry and get alerts before they expire, with daily checks and a configurable warning threshold.",
 		highlights: ["Daily checks", "Configurable warning window", "Per-monitor thresholds"],
+		// Deliberately says nothing about chain validation or mixed-content scanning:
+		// SSL monitoring compares a manually-entered expiry date against today, so
+		// anything implying we inspect the certificate itself would be a false claim.
+		trustIndicators: [
+			{ icon: "calendar-clock", value: "Daily", label: "Expiry Checks" },
+			{ icon: "bell-ring", value: "Custom", label: "Warning Days" },
+			{ icon: "repeat", value: "Repeat", label: "Reminders" },
+			{ icon: "shield-check", value: "Valid", label: "Cert Status" },
+		],
 		features: [
 			{
 				title: "Expiry tracking",
 				description: "Store your certificate's expiry date and issuer for quick reference.",
+				icon: "calendar-clock",
 			},
 			{
 				title: "Warning thresholds",
 				description: "Choose how many days before expiry you want to be alerted.",
+				icon: "bell-ring",
 			},
 			{
 				title: "Repeated reminders",
 				description: "Alerts repeat at each threshold, gated by cooldown, until you renew.",
+				icon: "repeat",
 			},
 			{
 				title: "Per-monitor status",
 				description:
 					"See valid, expiring soon, or expired status right on the monitor detail page.",
+				icon: "shield-check",
 			},
 		],
 		steps: [
@@ -674,22 +849,32 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor scheduled tasks and background jobs with heartbeat pings. Get alerted when a job is late or misses its window entirely.",
 		highlights: ["Heartbeat pings", "Cron expressions", "Late/missed detection"],
+		trustIndicators: [
+			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
+			{ icon: "zap", value: "<60s", label: "Alert Latency" },
+			{ icon: "clock", value: "24/7", label: "Monitoring" },
+			{ icon: "calendar", value: "365d", label: "Retention" },
+		],
 		features: [
 			{
 				title: "Simple ping URL",
 				description: "Your job calls one URL when it completes — no SDK required.",
+				icon: "radio-tower",
 			},
 			{
 				title: "Cron-aware scheduling",
 				description: "Uptime parses your cron expression and knows exactly when to expect a ping.",
+				icon: "calendar-clock",
 			},
 			{
 				title: "Grace periods",
 				description: "Allow jobs a little slack before marking them late.",
+				icon: "timer",
 			},
 			{
 				title: "Healthy → late → missed",
 				description: "A clear state machine so you always know a job's current status.",
+				icon: "activity",
 			},
 		],
 		steps: [
@@ -731,22 +916,32 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Verify specific content appears — or doesn't appear — on your pages. Check for keywords, patterns, or specific text to catch broken deploys and defacement.",
 		highlights: ["Contains / not-contains", "Regex patterns", "Case-sensitive option"],
+		trustIndicators: [
+			{ icon: "search", value: "Keyword", label: "Detection" },
+			{ icon: "circle-check", value: "Content", label: "Validation" },
+			{ icon: "regex", value: "Regex", label: "Patterns" },
+			{ icon: "shield-alert", value: "Defacement", label: "Detection" },
+		],
 		features: [
 			{
 				title: "Contains checks",
 				description: "Fail the monitor if expected text is missing from the response.",
+				icon: "search",
 			},
 			{
 				title: "Not-contains checks",
 				description: "Fail the monitor if an error string or banned phrase appears.",
+				icon: "circle-x",
 			},
 			{
 				title: "Regex patterns",
 				description: "Match complex patterns beyond simple substring checks.",
+				icon: "regex",
 			},
 			{
 				title: "Stacked on any HTTP monitor",
 				description: "Add multiple content checks to the same monitor.",
+				icon: "layers",
 			},
 		],
 		steps: [
@@ -784,22 +979,32 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Start free, upgrade when ready. Perfect for portfolios, side projects, and the first real users of your next idea.",
 		highlights: ["Free to start", "No credit card required", "Pay only for automation"],
+		trustIndicators: [
+			{ icon: "code", value: "Free", label: "To Start" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
+			{ icon: "database", value: "365", label: "Days History" },
+			{ icon: "globe", value: "9", label: "Regions" },
+		],
 		features: [
 			{
 				title: "Free manual monitoring",
 				description: "Create monitors and trigger pings by hand, forever, at no cost.",
+				icon: "mouse-pointer-click",
 			},
 			{
 				title: "Usage-based pricing",
 				description: "Automated checks are billed per-ping, so a small project stays cheap.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "One dashboard",
 				description: "See every monitor's status and history in a single, simple view.",
+				icon: "layout-dashboard",
 			},
 			{
 				title: "Alerts that reach you",
 				description: "Email, Slack, Discord, or webhook — wherever you already look.",
+				icon: "bell",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -827,22 +1032,32 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Team collaboration, instant alerts, and usage-based pricing that scales with you as your product — and your on-call rotation — grows.",
 		highlights: ["Unlimited team members", "Role-based access", "Usage-based pricing"],
+		trustIndicators: [
+			{ icon: "users", value: "Unlimited", label: "Team Members" },
+			{ icon: "zap", value: "<1s", label: "Alert Latency" },
+			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
+			{ icon: "globe", value: "9", label: "Regions" },
+		],
 		features: [
 			{
 				title: "Grow your team",
 				description: "Invite engineers as you hire, with no per-seat pricing.",
+				icon: "users",
 			},
 			{
 				title: "Role-based access",
 				description: "Owners and Admins manage settings; Members focus on monitoring.",
+				icon: "shield",
 			},
 			{
 				title: "Status pages",
 				description: "Give customers a public status page as trust becomes a selling point.",
+				icon: "layout-template",
 			},
 			{
 				title: "API access",
 				description: "Wire monitoring into your deploy pipeline as your infra matures.",
+				icon: "terminal",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -870,23 +1085,35 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor all your client websites from a single dashboard. Catch problems before a client notices — or calls.",
 		highlights: ["One team, many sites", "Status pages per client", "Proactive alerts"],
+		// "Multi-site", not the old page's "Multi-team": client sites live side by side
+		// in a single team, so a multi-team claim would misdescribe the workflow.
+		trustIndicators: [
+			{ icon: "building", value: "Multi-site", label: "One Dashboard" },
+			{ icon: "monitor", value: "Unlimited", label: "Monitors" },
+			{ icon: "bell", value: "<1s", label: "Alerts" },
+			{ icon: "globe", value: "9", label: "Regions" },
+		],
 		features: [
 			{
 				title: "Centralized monitoring",
 				description: "Every client site, in one team, on one dashboard.",
+				icon: "layout-dashboard",
 			},
 			{
 				title: "Client-facing status pages",
 				description: "Give each client their own branded status page.",
+				icon: "layout-template",
 			},
 			{
 				title: "Fast incident response",
 				description: "Instant alerts mean you're already investigating before the client calls.",
+				icon: "siren",
 			},
 			{
 				title: "SSL & DNS coverage",
 				description:
 					"Catch expiring certificates and DNS misconfiguration across every domain you manage.",
+				icon: "shield-check",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -914,23 +1141,35 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Domain verification, auto-provisioning, and role-based access, with a 99.9% uptime target for the monitoring platform itself.",
 		highlights: ["Domain auto-provisioning", "Role-based access", "99.9% uptime target"],
+		// "Uptime Target", not the old page's "SLA Guarantee": 99.9% is a goal we hold
+		// ourselves to, and we don't offer a financial-remedy SLA (see the FAQ below).
+		trustIndicators: [
+			{ icon: "shield", value: "99.9%", label: "Uptime Target" },
+			{ icon: "users", value: "Auto", label: "Provisioning" },
+			{ icon: "lock", value: "Verified", label: "Domains" },
+			{ icon: "globe", value: "9", label: "Regions" },
+		],
 		features: [
 			{
 				title: "Domain verification",
 				description: "Verify company domains via DNS TXT record for automatic onboarding.",
+				icon: "badge-check",
 			},
 			{
 				title: "Auto-provisioning",
 				description:
 					"Anyone signing in with a verified domain's email joins the team automatically.",
+				icon: "user-plus",
 			},
 			{
 				title: "Role-based access",
 				description: "Owner, Admin, and Member roles control who can change settings and billing.",
+				icon: "shield",
 			},
 			{
 				title: "Full audit trail",
 				description: "Alert history and domain verification records for every action.",
+				icon: "history",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -959,22 +1198,34 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"API-first design and webhook integrations mean Uptime fits into your deploy pipeline instead of asking you to change it.",
 		highlights: ["Full REST API", "Signed webhooks", "Cron & TCP monitoring"],
+		// The old page claimed "CLI Friendly"; there is no CLI, so this leads with the
+		// signed-webhook contract instead — the thing a DevOps reader can actually verify.
+		trustIndicators: [
+			{ icon: "code", value: "REST", label: "API First" },
+			{ icon: "webhook", value: "HMAC", label: "Signed Webhooks" },
+			{ icon: "layers", value: "No", label: "Lock-in" },
+			{ icon: "terminal", value: "TCP", label: "& Cron Checks" },
+		],
 		features: [
 			{
 				title: "REST API",
 				description: "Manage monitors, alerts, and maintenance windows programmatically.",
+				icon: "code",
 			},
 			{
 				title: "Signed webhooks",
 				description: "Every webhook alert carries an HMAC signature you can verify.",
+				icon: "webhook",
 			},
 			{
 				title: "TCP & cron monitoring",
 				description: "Watch raw ports and scheduled jobs, not just HTTP endpoints.",
+				icon: "terminal",
 			},
 			{
 				title: "Maintenance windows",
 				description: "Suppress alerts automatically during scheduled deploys.",
+				icon: "calendar-clock",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1003,22 +1254,32 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"Start free, pay only for what you use. $5/month includes 5,000 pings — plenty for a lean, bootstrapped product.",
 		highlights: ["$5/mo includes 5,000 pings", "No hidden fees", "Set up in minutes"],
+		trustIndicators: [
+			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
+			{ icon: "rocket", value: "<2min", label: "Setup Time" },
+			{ icon: "dollar-sign", value: "$5", label: "Base Price" },
+			{ icon: "globe", value: "9", label: "Global Regions" },
+		],
 		features: [
 			{
 				title: "Fast setup",
 				description: "Create your first monitor and get a result in under a minute.",
+				icon: "rocket",
 			},
 			{
 				title: "Transparent pricing",
 				description: "One flat base fee plus a clear per-ping rate — no surprise tiers.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "Status pages",
 				description: "Add a status page the moment you have real users to reassure.",
+				icon: "layout-template",
 			},
 			{
 				title: "Alerts you'll actually see",
 				description: "Email, Slack, or Discord — wherever you already spend your day.",
+				icon: "bell",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1050,22 +1311,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor website uptime and performance from 9 global regions. Track response times, SSL certificates, and get instant downtime alerts.",
 		highlights: ["9 global regions", "SSL expiry tracking", "Instant alerts"],
+		trustIndicators: [
+			{ icon: "globe", value: "Any", label: "Website" },
+			{ icon: "bell", value: "<1s", label: "Alerts" },
+			{ icon: "map", value: "9", label: "Regions" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
+		],
 		features: [
 			{
 				title: "Global HTTP checks",
 				description: "Confirm your site loads correctly from regions around the world.",
+				icon: "globe",
 			},
 			{
 				title: "SSL monitoring",
 				description: "Get warned before a certificate expires and breaks HTTPS.",
+				icon: "shield-check",
 			},
 			{
 				title: "Content checks",
 				description: "Verify the homepage actually renders, not just that it returns 200.",
+				icon: "search",
 			},
 			{
 				title: "Public status page",
 				description: "Show visitors real-time status when something does go wrong.",
+				icon: "layout-template",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1093,22 +1364,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and verify API health.",
 		highlights: ["Custom headers", "Any status code", "Latency tracking"],
+		trustIndicators: [
+			{ icon: "code", value: "REST", label: "& GraphQL" },
+			{ icon: "globe", value: "9", label: "Regions" },
+			{ icon: "clock", value: "P99", label: "Latency" },
+			{ icon: "shield", value: "Auth", label: "Headers" },
+		],
 		features: [
 			{
 				title: "Authenticated checks",
 				description: "Add Authorization headers to monitor endpoints behind auth.",
+				icon: "key",
 			},
 			{
 				title: "Status code validation",
 				description: "Expect the exact status code your API should return.",
+				icon: "shield-check",
 			},
 			{
 				title: "Latency tracking",
 				description: "Watch P99 response time to catch slow-but-not-down degradation.",
+				icon: "gauge",
 			},
 			{
 				title: "Content checks",
 				description: "Verify the response body contains an expected field or value.",
+				icon: "search",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1135,22 +1416,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor scheduled tasks and cron jobs. Get alerts when jobs are late, miss their window, or fail to complete.",
 		highlights: ["Heartbeat pings", "Grace periods", "Healthy/late/missed states"],
+		trustIndicators: [
+			{ icon: "clock", value: "<1min", label: "Detection Time" },
+			{ icon: "eye", value: "24/7", label: "Monitoring" },
+			{ icon: "shield", value: "365", label: "Days Retention" },
+			{ icon: "circle-check", value: "99.9%", label: "Uptime Target" },
+		],
 		features: [
 			{
 				title: "Cron-aware scheduling",
 				description: "Uptime parses your cron expression to know exactly when to expect a ping.",
+				icon: "calendar-clock",
 			},
 			{
 				title: "Public ping endpoint",
 				description: "One line in your job reports completion — no API key needed.",
+				icon: "radio-tower",
 			},
 			{
 				title: "Grace periods",
 				description: "Absorb normal timing variance before a job is marked late.",
+				icon: "timer",
 			},
 			{
 				title: "Status pages",
 				description: "Show scheduled job health alongside your other services.",
+				icon: "layout-template",
 			},
 		],
 		steps: [
@@ -1192,22 +1483,35 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Automated health checks for your services. Monitor endpoints, databases, and internal services with customizable intervals.",
 		highlights: ["1-60 min intervals", "Custom headers", "Any expected status"],
+		// The old page advertised Kubernetes/Docker "integration"; there is none — we
+		// call a health endpoint over HTTP like any other monitor, so these figures
+		// describe the check itself rather than an orchestrator hook.
+		trustIndicators: [
+			{ icon: "heart-pulse", value: "/healthz", label: "Endpoints" },
+			{ icon: "timer", value: "1-60m", label: "Intervals" },
+			{ icon: "play", value: "Manual", label: "Trigger" },
+			{ icon: "bell-ring", value: "Recovery", label: "Alerts" },
+		],
 		features: [
 			{
 				title: "Dedicated health endpoints",
 				description: "Point a monitor at any `/healthz`-style route.",
+				icon: "heart-pulse",
 			},
 			{
 				title: "Flexible intervals",
 				description: "Check as often as every minute, or as rarely as every hour.",
+				icon: "timer",
 			},
 			{
 				title: "Manual trigger",
 				description: "Run any health check instantly to verify after a deploy.",
+				icon: "play",
 			},
 			{
 				title: "Recovery alerts",
 				description: "Know the moment a service comes back healthy, not just when it fails.",
+				icon: "bell-ring",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1235,22 +1539,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Protect your online store with uptime monitoring. Track checkout, payments, and product pages to prevent lost sales.",
 		highlights: ["Checkout monitoring", "Content checks", "Instant alerts"],
+		trustIndicators: [
+			{ icon: "shopping-cart", value: "Checkout", label: "Monitoring" },
+			{ icon: "credit-card", value: "Payment", label: "APIs" },
+			{ icon: "zap", value: "<1s", label: "Alerts" },
+			{ icon: "dollar-sign", value: "Revenue", label: "Protected" },
+		],
 		features: [
 			{
 				title: "Checkout flow monitoring",
 				description: "Watch the pages that directly convert to revenue most closely.",
+				icon: "shopping-cart",
 			},
 			{
 				title: "Content checks",
 				description: "Verify a product page still shows an 'Add to cart' button, not an error.",
+				icon: "search",
 			},
 			{
 				title: "SSL monitoring",
 				description: "An expired certificate on a checkout page is a lost-sale emergency.",
+				icon: "shield-check",
 			},
 			{
 				title: "Public status page",
 				description: "Reassure customers during a rare incident instead of losing their trust.",
+				icon: "layout-template",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1279,22 +1593,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Comprehensive monitoring for SaaS products: track APIs, dashboards, and background jobs in one platform.",
 		highlights: ["API + web + cron", "Team collaboration", "Status pages for customers"],
+		trustIndicators: [
+			{ icon: "layers", value: "Multi", label: "Endpoint" },
+			{ icon: "users", value: "Customer", label: "Facing" },
+			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
+			{ icon: "trending-up", value: "Scales", label: "With You" },
+		],
 		features: [
 			{
 				title: "Full-stack coverage",
 				description: "Monitor your marketing site, app, API, and background jobs together.",
+				icon: "layers",
 			},
 			{
 				title: "Team collaboration",
 				description: "Invite your whole engineering team with role-based access.",
+				icon: "users",
 			},
 			{
 				title: "Customer-facing status page",
 				description: "Turn reliability into a trust signal for your customers.",
+				icon: "layout-template",
 			},
 			{
 				title: "Alert routing",
 				description: "Route critical API alerts to on-call, and lower-priority ones elsewhere.",
+				icon: "route",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1322,22 +1646,32 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor distributed systems and microservices architecture. Catch failures before they cascade across your infrastructure.",
 		highlights: ["Per-service monitors", "TCP port checks", "DNS change detection"],
+		trustIndicators: [
+			{ icon: "boxes", value: "Unlimited", label: "Services" },
+			{ icon: "network", value: "Distributed", label: "Architecture" },
+			{ icon: "activity", value: "Per-service", label: "Health" },
+			{ icon: "zap", value: "Fast", label: "Detection" },
+		],
 		features: [
 			{
 				title: "One monitor per service",
 				description: "Isolate failures to the exact service that's down.",
+				icon: "boxes",
 			},
 			{
 				title: "TCP port monitoring",
 				description: "Watch raw ports for services that don't speak HTTP.",
+				icon: "network",
 			},
 			{
 				title: "DNS monitoring",
 				description: "Catch service-discovery DNS changes before they misroute traffic.",
+				icon: "globe",
 			},
 			{
 				title: "Independent alerting",
 				description: "Scope alerts to a single service instead of the whole system.",
+				icon: "route",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1390,18 +1724,64 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "No monitor caps",
 				description: "Create as many monitors as you need; you pay for pings, not monitor slots.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "All monitor types included",
 				description: "HTTP, DNS, TCP, cron jobs, and SSL — one plan, not a tier ladder.",
+				icon: "layers",
 			},
 			{
 				title: "Signed webhooks",
 				description: "HMAC-signed webhook alerts, not just a raw payload.",
+				icon: "webhook",
 			},
 			{
 				title: "Status pages included",
 				description: "No separate status-page product or add-on fee.",
+				icon: "layout-template",
+			},
+		],
+		honestTake: [
+			{
+				title: "Their free tier is genuinely more generous",
+				description:
+					"UptimeRobot gives you 50 monitors at 5-minute intervals for free. Uptime's free tier only covers manual pings — automated checks need a subscription.",
+			},
+			{
+				title: "Switching costs are real",
+				description:
+					"If your team has built runbooks and integrations around UptimeRobot, the savings on a small setup probably won't cover the migration work.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams tired of monitor-slot math",
+			description:
+				"If you keep bumping into monitor counts and interval limits rather than actual monitoring volume, usage-based pricing removes the tier decision entirely.",
+			highlights: [
+				"No monitor or interval caps",
+				"DNS, TCP, and cron jobs included",
+				"Unlimited team members included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$7/mo (Solo plan)",
+				ourCost: "~$15/mo",
+				savings: "More features included",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$21/mo (Team plan)",
+				ourCost: "~$18/mo",
+				savings: "~$36/year",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$54/mo (Enterprise plan)",
+				ourCost: "~$36/mo",
+				savings: "~$216/year",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1449,19 +1829,70 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Pay for what you use",
 				description: "No per-seat pricing — cost scales with monitoring volume, not headcount.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "Focused scope",
 				description:
 					"Monitoring and alerting done well, without an incident-management platform bundled in.",
+				icon: "target",
 			},
 			{
 				title: "Status pages included",
 				description: "No separate tier required to publish a status page.",
+				icon: "layout-template",
 			},
 			{
 				title: "Signed webhooks",
 				description: "HMAC-signed alerts for reliable webhook verification.",
+				icon: "webhook",
+			},
+		],
+		honestTake: [
+			{
+				title: "Their on-call scheduling is a real product; ours doesn't exist",
+				description:
+					"Better Uptime ships rotation schedules, escalation policies, and phone/SMS escalation. Uptime detects and notifies, and stops there.",
+			},
+			{
+				title: "BetterStack is a platform, not just monitoring",
+				description:
+					"Logs, traces, and APM sit alongside monitoring in the same product. If you want one vendor for all of it, that consolidation has real value.",
+			},
+			{
+				title: "Incident workflow is built in",
+				description:
+					"Acknowledging, assigning, and postmortem-ing an incident happens where the alert fires. With Uptime you'd wire that up in a separate tool.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that already have their stack",
+			description:
+				"If you just need monitoring — not a full observability and incident-management platform — Uptime is the focused, affordable choice. Great for teams already running their own on-call tooling.",
+			highlights: [
+				"Works alongside your existing tools",
+				"No per-seat pricing",
+				"API-first design",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$29/mo",
+				ourCost: "~$15/mo",
+				savings: "48%",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$29/mo",
+				ourCost: "~$18/mo",
+				savings: "38%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$29/mo",
+				ourCost: "~$36/mo",
+				savings: "Per-seat costs add up",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1507,16 +1938,70 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Right-sized pricing",
 				description: "Pay for your actual ping volume instead of an enterprise-tier minimum.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "All-in-one monitor types",
 				description: "HTTP, DNS, TCP, SSL, and cron jobs in a single account.",
+				icon: "layers",
 			},
 			{
 				title: "Simple setup",
 				description: "Create a monitor and get your first result in under a minute.",
+				icon: "rocket",
 			},
-			{ title: "Status pages included", description: "No separate purchase required." },
+			{
+				title: "Status pages included",
+				description: "No separate purchase required.",
+				icon: "layout-template",
+			},
+		],
+		honestTake: [
+			{
+				title: "Real user monitoring is something we simply don't do",
+				description:
+					"Pingdom measures what your actual visitors experience in their own browsers. Uptime only runs synthetic checks from its own regions.",
+			},
+			{
+				title: "100+ probe locations versus our 9",
+				description:
+					"If you need per-country latency data or genuinely global coverage, Pingdom's probe network is far denser than ours.",
+			},
+			{
+				title: "Transaction monitoring covers flows we can't",
+				description:
+					"Multi-step scripted checks — log in, add to cart, complete checkout — are a Pingdom feature. Uptime checks one request at a time.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for small teams priced out of enterprise monitoring",
+			description:
+				"If you need dependable uptime checks but can't justify an enterprise monitoring contract, usage-based pricing scales down as far as your actual volume goes.",
+			highlights: [
+				"No enterprise tier minimum",
+				"Status pages at no extra cost",
+				"Unlimited team members included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$15/mo",
+				ourCost: "~$15/mo",
+				savings: "Unlimited team members",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$29/mo",
+				ourCost: "~$18/mo",
+				savings: "38%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$89/mo",
+				ourCost: "~$36/mo",
+				savings: "60%",
+			},
 		],
 		steps: DEFAULT_STEPS,
 		faqs: [
@@ -1563,16 +2048,70 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "One plan, every feature",
 				description: "SSL, DNS, TCP, and cron-job monitoring aren't gated behind a higher tier.",
+				icon: "layers",
 			},
 			{
 				title: "Modern, minimal UI",
 				description: "A dashboard built around heatmaps and stat cards, not dense legacy tables.",
+				icon: "sparkles",
 			},
 			{
 				title: "Usage-based pricing",
 				description: "Pay for the pings you actually run, not a feature-bundle tier.",
+				icon: "dollar-sign",
 			},
-			{ title: "Signed webhooks", description: "HMAC-signed webhook alerts out of the box." },
+			{
+				title: "Signed webhooks",
+				description: "HMAC-signed webhook alerts out of the box.",
+				icon: "webhook",
+			},
+		],
+		honestTake: [
+			{
+				title: "Page speed monitoring is theirs, not ours",
+				description:
+					"StatusCake tracks load times and performance metrics over time. Uptime records response time for a check and nothing more.",
+			},
+			{
+				title: "They monitor servers, we monitor endpoints",
+				description:
+					"CPU, memory, and disk monitoring on your own boxes is a StatusCake feature. Uptime never runs an agent, so it can't see inside a host.",
+			},
+			{
+				title: "A denser interface suits some teams better",
+				description:
+					"StatusCake's feature-rich, traditional UI puts more on screen at once. If you'd rather have density than minimalism, that's a genuine preference, not a flaw.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that want a modern monitoring dashboard",
+			description:
+				"If you'd rather read a heatmap than a table of rows, and you don't want to work out which feature bundle you need, Uptime keeps the whole monitoring feature set on one plan.",
+			highlights: [
+				"Every monitor type on one plan",
+				"365-day retention included",
+				"Unlimited team members included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$20/mo",
+				ourCost: "~$15/mo",
+				savings: "25%",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$20/mo",
+				ourCost: "~$18/mo",
+				savings: "10%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$66/mo",
+				ourCost: "~$36/mo",
+				savings: "45%",
+			},
 		],
 		steps: DEFAULT_STEPS,
 		faqs: [
@@ -1617,18 +2156,69 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "No agent required",
 				description: "Point a monitor at a URL, port, or DNS record — nothing to install.",
+				icon: "plug",
 			},
 			{
 				title: "Predictable billing",
 				description: "One base price plus a clear per-ping rate, not a complex usage matrix.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "Fast time-to-value",
 				description: "See your first check result within a minute of creating a monitor.",
+				icon: "rocket",
 			},
 			{
 				title: "Status pages included",
 				description: "No separate observability suite purchase required.",
+				icon: "layout-template",
+			},
+		],
+		honestTake: [
+			{
+				title: "APM, logs, and traces are a different product class",
+				description:
+					"Datadog correlates a slow request with the trace and log lines behind it. Uptime does no tracing, no log ingestion, and no code-level instrumentation.",
+			},
+			{
+				title: "Their synthetics do browser and multi-step API tests",
+				description:
+					"Datadog Synthetic Monitoring scripts real browser sessions and chains API calls together. Uptime checks a single HTTP request per monitor.",
+			},
+			{
+				title: "If you're already paying for Datadog, adding synthetics is simpler",
+				description:
+					"One vendor, one bill, one alerting pipeline is worth something. Bolting a second tool on for uptime checks may not be worth the savings.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that already have their observability stack",
+			description:
+				"If you already use Datadog, Grafana, or similar tools for APM and logs, Uptime is the focused, affordable choice for uptime monitoring. No need to pay for features you won't use.",
+			highlights: [
+				"Works alongside existing tools",
+				"No vendor lock-in",
+				"Unlimited team members included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "~$50/mo",
+				ourCost: "~$15/mo",
+				savings: "70%",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "~$60/mo",
+				ourCost: "~$18/mo",
+				savings: "70%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "~$100/mo",
+				ourCost: "~$36/mo",
+				savings: "64%",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1679,16 +2269,66 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Simple pricing",
 				description: "One base fee plus per-ping cost, not a resource-count tier matrix.",
+				icon: "dollar-sign",
 			},
 			{
 				title: "Fast setup",
 				description: "No agents or infrastructure discovery — just add a URL.",
+				icon: "rocket",
 			},
 			{
 				title: "All monitor types included",
 				description: "HTTP, DNS, TCP, SSL, and cron jobs in every plan.",
+				icon: "layers",
 			},
-			{ title: "Status pages included", description: "No separate purchase required." },
+			{
+				title: "Status pages included",
+				description: "No separate purchase required.",
+				icon: "layout-template",
+			},
+		],
+		honestTake: [
+			{
+				title: "Server, cloud, and network monitoring are theirs alone",
+				description:
+					"Site24x7 watches hosts, VMs, containers, routers, and switches from the inside. Uptime has no agent and sees only what a public endpoint returns.",
+			},
+			{
+				title: "APM and log management come in the same suite",
+				description:
+					"If you want application traces and log search next to your uptime checks, Site24x7's all-in-one approach genuinely saves you a vendor.",
+			},
+			{
+				title: "120+ monitoring locations versus our 9",
+				description:
+					"For a heavily geo-distributed application that needs per-region latency detail, their location count is a real advantage.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that want focused uptime monitoring",
+			description:
+				"If you don't need server monitoring, APM, or log management, why pay for them? Uptime gives you everything for uptime monitoring without the bloat.",
+			highlights: ["All features included", "Unlimited team members", "No complex tier decisions"],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$9/mo",
+				ourCost: "~$15/mo",
+				savings: "More features at similar price",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$42/mo",
+				ourCost: "~$18/mo",
+				savings: "57%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$89/mo",
+				ourCost: "~$36/mo",
+				savings: "60%",
+			},
 		],
 		steps: DEFAULT_STEPS,
 		faqs: [
@@ -1726,13 +2366,81 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "No-code setup",
 				description: "Create a monitor by filling in a form, not writing and maintaining a script.",
+				icon: "mouse-pointer-click",
 			},
 			{
 				title: "DNS & cron job monitoring",
 				description: "Covers monitor types outside Checkly's browser-test focus.",
+				icon: "globe",
 			},
-			{ title: "Fast to configure", description: "No test runner or scripting language to learn." },
-			{ title: "Predictable pricing", description: "Pay per ping, not per script execution." },
+			{
+				title: "Fast to configure",
+				description: "No test runner or scripting language to learn.",
+				icon: "zap",
+			},
+			{
+				title: "Predictable pricing",
+				description: "Pay per ping, not per script execution.",
+				icon: "dollar-sign",
+			},
+		],
+		honestTake: [
+			{
+				title: "Playwright browser testing is what Checkly is for",
+				description:
+					"Testing a login, a form submission, or a checkout as a real browser session is their core product. Uptime cannot do it at all.",
+			},
+			{
+				title: "Monitoring-as-code is a genuinely better model for some teams",
+				description:
+					"Checkly monitors live in your repo, get reviewed in pull requests, and deploy with your app. Uptime's monitors are configured in a dashboard and through its API.",
+			},
+			{
+				title: "Multi-step API checks chain requests together",
+				description:
+					"Checkly can call an endpoint, extract a token, and use it in the next request. Uptime checks one request per monitor.",
+			},
+			{
+				title: "First-class Terraform and Pulumi providers",
+				description:
+					"If your infrastructure is already declared as code, Checkly drops straight into that workflow. Uptime offers a REST API and nothing more.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that don't want to maintain test scripts",
+			description:
+				"If nobody on the team wants to own a Playwright suite just to know whether the site is up, a form-configured monitor gets you the same alert with nothing to maintain.",
+			highlights: [
+				"No DSL or test runner to learn",
+				"DNS, TCP, and cron jobs included",
+				"Unlimited team members included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "10 monitors at 30-min intervals",
+				theirCost: "$24/mo",
+				ourCost: "~$15/mo",
+				savings: "38%",
+			},
+			{
+				scenario: "25 monitors at 60-min intervals",
+				theirCost: "$24/mo",
+				ourCost: "~$18/mo",
+				savings: "25%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "$45/mo",
+				ourCost: "~$36/mo",
+				savings: "20%",
+			},
+			{
+				scenario: "Team of 5 people",
+				theirCost: "+$60/mo seats",
+				ourCost: "$0 extra",
+				savings: "100%",
+			},
 		],
 		steps: DEFAULT_STEPS,
 		faqs: [
@@ -1778,13 +2486,72 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Framework-agnostic",
 				description: "Works the same for any stack — no PHP/Laravel-specific integration needed.",
+				icon: "blocks",
 			},
 			{
 				title: "Usage-based pricing",
 				description: "Cost scales with ping volume, not the number of sites you monitor.",
+				icon: "dollar-sign",
 			},
-			{ title: "TCP monitoring", description: "Watch raw ports, not just HTTP endpoints." },
-			{ title: "Signed webhooks", description: "HMAC-signed alerts for any webhook integration." },
+			{
+				title: "TCP monitoring",
+				description: "Watch raw ports, not just HTTP endpoints.",
+				icon: "network",
+			},
+			{
+				title: "Signed webhooks",
+				description: "HMAC-signed alerts for any webhook integration.",
+				icon: "webhook",
+			},
+		],
+		// The old page also conceded cron-job monitoring to Oh Dear; that concession is
+		// now stale, since cron-job monitoring is a first-class Uptime feature.
+		honestTake: [
+			{
+				title: "They crawl your whole site for broken links",
+				description:
+					"Oh Dear walks every page looking for dead links and mixed content. Uptime checks the endpoints you point it at and never crawls.",
+			},
+			{
+				title: "Automated Lighthouse performance audits",
+				description:
+					"Oh Dear scores your pages on a schedule and tracks the trend. Uptime records response time and nothing else about page quality.",
+			},
+			{
+				title: "The Laravel ecosystem fit is real",
+				description:
+					"Oh Dear is built by Spatie, and if your team already lives in their packages, that integration and shared idiom is worth something Uptime can't match.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that want flexible pricing",
+			description:
+				"If you'd rather pay for actual usage than for site slots, Uptime's model scales better. Ideal for teams with many monitors at longer intervals or variable monitoring needs.",
+			highlights: [
+				"365 days data retention",
+				"9 global monitoring regions",
+				"Native Discord integration",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "5 monitors at 30-min intervals",
+				theirCost: "€15/mo (~$16)",
+				ourCost: "~$8/mo",
+				savings: "50%",
+			},
+			{
+				scenario: "20 monitors at 60-min intervals",
+				theirCost: "€29/mo (~$31)",
+				ourCost: "~$14/mo",
+				savings: "55%",
+			},
+			{
+				scenario: "50 monitors at 60-min intervals",
+				theirCost: "€79/mo (~$85)",
+				ourCost: "~$36/mo",
+				savings: "58%",
+			},
 		],
 		steps: DEFAULT_STEPS,
 		faqs: [
@@ -1825,12 +2592,69 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Broader monitor coverage",
 				description: "DNS and TCP monitoring alongside cron jobs and HTTP checks.",
+				icon: "network",
 			},
-			{ title: "Usage-based pricing", description: "Pay for pings, not a monitor-count tier." },
-			{ title: "Status pages included", description: "No higher tier required to publish one." },
+			{
+				title: "Usage-based pricing",
+				description: "Pay for pings, not a monitor-count tier.",
+				icon: "dollar-sign",
+			},
+			{
+				title: "Status pages included",
+				description: "No higher tier required to publish one.",
+				icon: "layout-template",
+			},
 			{
 				title: "Simple grace periods",
 				description: "Absorb normal cron-timing variance before alerting.",
+				icon: "timer",
+			},
+		],
+		honestTake: [
+			{
+				title: "They offer real user monitoring; we don't",
+				description:
+					"Cronitor can report what your actual visitors experienced. Uptime only knows what its own synthetic checks saw.",
+			},
+			{
+				title: "Their browser checks execute JavaScript",
+				description:
+					"Cronitor can load a page in a real browser and assert on the rendered result. Uptime reads the raw HTTP response, so a client-rendered failure can slip past a status-code check.",
+			},
+			{
+				title: "Error tracking lives in the same product",
+				description:
+					"If you want exceptions and uptime in one place, Cronitor bundles them. Uptime has no error tracking at all.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that want monitoring without the bloat",
+			description:
+				"If you already have observability tools and just need reliable, focused monitoring, Uptime delivers exactly that. No upsells to features you don't need.",
+			highlights: [
+				"DNS and TCP monitoring included",
+				"Simple usage-based pricing",
+				"Works alongside your existing stack",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "Basic monitoring (20 monitors)",
+				theirCost: "$20/mo (Starter)",
+				ourCost: "~$10/mo",
+				savings: "~$120/year",
+			},
+			{
+				scenario: "Growing team (50 monitors)",
+				theirCost: "$49/mo+ (Pro)",
+				ourCost: "~$25/mo",
+				savings: "~$288/year",
+			},
+			{
+				scenario: "Full monitoring suite",
+				theirCost: "$99/mo+ (Business)",
+				ourCost: "~$40/mo",
+				savings: "~$708/year",
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1869,18 +2693,69 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "One platform, every monitor type",
 				description: "Don't run a separate tool for website and API monitoring.",
+				icon: "layers",
 			},
 			{
 				title: "Same simple ping workflow",
 				description: "A public ping URL for cron jobs, just like Healthchecks.io.",
+				icon: "radio-tower",
 			},
 			{
 				title: "Grace periods",
 				description: "Absorb normal timing variance before marking a job late.",
+				icon: "timer",
 			},
 			{
 				title: "Usage-based pricing",
 				description: "One predictable pricing model across every monitor type.",
+				icon: "dollar-sign",
+			},
+		],
+		honestTake: [
+			{
+				title: "Their free tier beats ours outright",
+				description:
+					"Healthchecks.io monitors 20 checks free with no credit card. Uptime's free tier only covers manual pings, so automated cron monitoring needs a subscription.",
+			},
+			{
+				title: "If cron is all you'll ever need, their focus is the point",
+				description:
+					"Healthchecks.io does one job extremely well and nothing else gets in the way. Paying for monitor types you won't use is a bad trade.",
+			},
+			{
+				title: "Status badges come out of the box",
+				description:
+					"If a badge in a README or an internal doc is all the status reporting you need, Healthchecks.io gives you that without configuring a status page.",
+			},
+		],
+		perfectFor: {
+			title: "Perfect for teams that need more than cron monitoring",
+			description:
+				"If your infrastructure includes APIs, websites, and background jobs, why use separate tools? Uptime brings everything together with native integrations and status pages.",
+			highlights: [
+				"Single dashboard for all monitor types",
+				"Native Slack and Discord integrations",
+				"Status pages included",
+			],
+		},
+		pricingScenarios: [
+			{
+				scenario: "50 cron monitors",
+				theirCost: "Free (under 20) / $20/mo",
+				ourCost: "~$8/mo",
+				savings: "Full monitoring suite included",
+			},
+			{
+				scenario: "100 monitors total",
+				theirCost: "$20/mo (cron only)",
+				ourCost: "~$15/mo",
+				savings: "HTTP + DNS + SSL included",
+			},
+			{
+				scenario: "Mixed monitoring needs",
+				theirCost: "$20/mo + separate tool",
+				ourCost: "~$20/mo",
+				savings: "Single platform, no tool sprawl",
 			},
 		],
 		steps: DEFAULT_STEPS,

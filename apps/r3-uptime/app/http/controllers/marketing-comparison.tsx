@@ -1,19 +1,29 @@
 /**
  * `/vs/:slug` controller. Looks up the slug in `resources/content/marketing.ts`'s
  * `comparisons` record and renders the generic marketing page shape (hero, features,
- * how it works, FAQ, final CTA) extended with a head-to-head comparison table against
- * the named competitor; an unknown slug renders the same 404 the router's
- * `defaultHandler` uses. One controller covers all 10 comparison pages instead of one
- * file per page — see the content module's docblock for why.
+ * how it works, FAQ, final CTA) extended with the sections a head-to-head page needs:
+ * a comparison table against the named competitor, an honest take on where that
+ * competitor genuinely wins, a "perfect for" banner, and a same-setup cost table. An
+ * unknown slug renders the same 404 the router's `defaultHandler` uses. One controller
+ * covers all 10 comparison pages instead of one file per page — see the content
+ * module's docblock for why.
+ *
+ * The honest take, the banner, and the cost table are all optional in the content
+ * shape, so each renders only for a competitor whose record supplies it — a page
+ * missing one is a page with nothing to say there, not a broken page.
+ *
+ * Colors come from the semantic tone tokens (`brand`, `neutral`, `warning`,
+ * `success`) rather than the raw `oklch()` literals this page used to carry, so the
+ * light/dark pairing is the theme's job instead of a per-section media query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CheckIcon } from "@pkg/lucide-remix";
-import { Table } from "@pkg/r3-ui";
+import { CheckIcon, TriangleAlertIcon } from "@pkg/lucide-remix";
+import { Heading, Table } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
-import { rounded } from "@pkg/u/effects";
+import { rounded, shadow } from "@pkg/u/effects";
 import { counterReset } from "@pkg/u/general";
 import {
 	flex,
@@ -25,15 +35,18 @@ import {
 	inlineFlex,
 	items,
 	justify,
+	shrink,
 	vstack,
 } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
-import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
-import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { overflow } from "@pkg/u/overflow";
+import { dark, media } from "@pkg/u/responsive";
+import { m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
+import { font, fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { canonicalUrl, getFAQSchema, getSoftwareApplicationSchema } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -45,44 +58,103 @@ import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marke
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
-/** Neutral (silver) scale shades used on this page, hue 250. */
-const neutral = {
-	50: "oklch(0.98 0.004 250)",
-	200: "oklch(0.91 0.008 250)",
-	400: "oklch(0.73 0.013 250)",
-	500: "oklch(0.62 0.014 250)",
-	600: "oklch(0.52 0.014 250)",
-	800: "oklch(0.32 0.01 250)",
-	900: "oklch(0.24 0.008 250)",
-	950: "oklch(0.16 0.006 250)",
-};
+/**
+ * Vertical section padding shared by every full-width section: 64px, growing to
+ * 96px at ≥640px and 128px at ≥1024px.
+ */
+function sectionPadding() {
+	return [pb(16), media("(min-width: 640px)", pb(24)), media("(min-width: 1024px)", pb(32))];
+}
 
-/** Primary (emerald brand) scale shades used on this page, hue 162. */
-const primary = {
-	50: "oklch(0.98 0.02 162)",
-	200: "oklch(0.92 0.08 162)",
-	400: "oklch(0.78 0.16 162)",
-	600: "oklch(0.6 0.128 162)",
-	700: "oklch(0.5 0.107 162)",
-	800: "oklch(0.42 0.09 162)",
-	950: "oklch(0.24 0.051 162)",
-};
+/**
+ * Centered content wrapper shared by the full-width sections: capped at 1152px,
+ * horizontally centered, with 16/24/32px side padding by breakpoint.
+ */
+function marketingContainer() {
+	return [
+		maxIs("1152px"),
+		mi("auto"),
+		pi(4),
+		media("(min-width: 640px)", pi(6)),
+		media("(min-width: 1024px)", pi(8)),
+	];
+}
+
+/**
+ * Narrower variant of {@link marketingContainer} for the prose-shaped sections —
+ * the honest take, the "perfect for" banner, and the cost table all read as a
+ * single column of argument, which at 1152px wide would stretch past a
+ * comfortable measure.
+ */
+function narrowContainer() {
+	return [
+		maxIs("896px"),
+		mi("auto"),
+		pi(4),
+		media("(min-width: 640px)", pi(6)),
+		media("(min-width: 1024px)", pi(8)),
+	];
+}
+
+/**
+ * The one/two/three-column ladder every content grid on this page shares.
+ *
+ * The breakpoints are deliberately identical across sections rather than tuned per
+ * grid: `css()` emits each mixin into its own `@layer rmx.<class>`, and layer order
+ * follows each class's *first* appearance in the document — so between two
+ * overlapping media rules on the same element, the one whose class the page happened
+ * to emit later wins, regardless of which breakpoint is narrower. A grid asking for
+ * two columns at ≥640px and three at ≥1024px therefore renders two columns at
+ * 1280px whenever some earlier section already emitted the 1024px rule. Sharing one
+ * ladder keeps every grid's rules in ascending breakpoint order, which is the order
+ * the cascade needs them in.
+ */
+function responsiveGrid() {
+	return [
+		gridTemplate({ columns: "1fr" }),
+		media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+		media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
+	];
+}
+
+/**
+ * Background for the alternating sections. One palette step off the page's own
+ * `--ui-neutral-bg-tint` body color in each scheme, rather than the semantic
+ * `bg("neutral.tint")` — that resolves to the *same* token the body already uses,
+ * so the alternation it's meant to express renders as no change at all.
+ */
+function tintedSection() {
+	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
+}
+
+/**
+ * The CTA button row: stacked and centered below 640px, side-by-side and centered
+ * at ≥640px.
+ */
+function ctaRow() {
+	return [
+		vstack({ gap: 4, align: "center" }),
+		mbs(8),
+		media("(min-width: 640px)", [flexRow(), justify("center")]),
+	];
+}
 
 /** GET /vs/:slug — a competitor comparison marketing page. */
 export default createAction(routes.marketing.comparison, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.i18next.t);
+	let t = ctx.i18next.t;
 
 	let content = comparisons[slug];
 	if (!content) {
 		let props = {
-			title: ctx.i18next.t("notFound.title"),
-			description: ctx.i18next.t("notFound.description"),
+			title: t("notFound.title"),
+			description: t("notFound.description"),
 		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
-				<NotFoundView {...props} goBackHomeLabel={ctx.i18next.t("notFound.goBackHome")} />
+				<NotFoundView {...props} goBackHomeLabel={t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
 		);
@@ -98,95 +170,94 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 		summary,
 		rows,
 		features,
+		honestTake,
+		perfectFor,
+		pricingScenarios,
 		steps,
 		faqs,
 	} = content;
 
 	return ctx.render(
-		<DocumentLayout title={`${content.metaTitle}`}>
+		<DocumentLayout
+			title={content.metaTitle}
+			locale={ctx.locale}
+			seo={{
+				description: content.metaDescription,
+				url: canonicalUrl(ctx.url),
+				// Two schemas, both describing what this page actually renders: the
+				// product (its `featureList` is the "why teams switch" grid, verbatim)
+				// and the FAQ accordion further down.
+				jsonLd: [
+					getSoftwareApplicationSchema({
+						name: t("landing.comparison.tableProductHeader"),
+						description: content.metaDescription,
+						featureList: features.map((feature) => feature.title),
+					}),
+					getFAQSchema(faqs),
+				],
+			}}
+		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<section
 					mix={[
-						p("64px", "0"),
+						...sectionPadding(),
 						textAlign("center"),
-						bg({ image: linearGradient("to bottom", primary[50], "#ffffff") }),
-						media("(min-width: 640px)", p("96px", "0")),
-						media("(min-width: 1024px)", p("128px", "0")),
-						media(
-							"(prefers-color-scheme: dark)",
-							bg({
-								image: linearGradient("to bottom", "oklch(0.24 0.051 162 / 0.2)", neutral[950]),
-							}),
-						),
+						bg({
+							image: linearGradient(
+								"to bottom",
+								"var(--ui-brand-bg-tint)",
+								"var(--ui-neutral-bg-tint)",
+							),
+						}),
 					]}
 				>
-					<div
-						mix={[
-							maxIs("1152px"),
-							m("0", "auto"),
-							p("0", "16px"),
-							media("(min-width: 640px)", p("0", "24px")),
-							media("(min-width: 1024px)", p("0", "32px")),
-						]}
-					>
+					<div mix={[...marketingContainer()]}>
 						<span
 							mix={[
 								inlineFlex(),
 								items("center"),
 								p("2px", "10px"),
 								rounded("999px"),
-								fontSize("0.75rem"),
+								fontSize("xs"),
 								weight(600),
-								border({ color: primary[200], width: 1 }),
-								bg(primary[50]),
-								fg(primary[600]),
-								mbe("16px"),
-								media("(prefers-color-scheme: dark)", [
-									border(primary[800]),
-									bg(primary[950]),
-									fg(primary[400]),
-								]),
+								border({ color: "brand", width: 1 }),
+								bg("brand.tint"),
+								fg("brand"),
+								mbe(4),
 							]}
 						>
 							{badge}
 						</span>
-						<h1
+
+						<Heading
+							level={1}
 							mix={[
-								fontSize("2.25rem"),
+								fontSize("4xl"),
 								weight(700),
-								leading(1),
+								leading(1.1),
 								tracking("tight"),
-								m("0", "auto", "16px", "auto"),
+								m(0, "auto", 4, "auto"),
 								maxIs("760px"),
-								fg(neutral[900]),
-								media("(min-width: 640px)", fontSize("3rem")),
-								media("(min-width: 1024px)", fontSize("3.75rem")),
-								media("(prefers-color-scheme: dark)", fg(neutral[50])),
+								media("(min-width: 640px)", fontSize("5xl")),
+								media("(min-width: 1024px)", fontSize("6xl")),
 							]}
 						>
-							{title}{" "}
-							<span
-								mix={[fg(primary[600]), media("(prefers-color-scheme: dark)", fg(primary[400]))]}
-							>
-								{highlight}
-							</span>
-						</h1>
+							{title} <span mix={[fg("brand")]}>{highlight}</span>
+						</Heading>
+
 						<p
 							mix={[
-								fontSize("1.125rem"),
-								fg(neutral[600]),
-								m("0", "auto", "24px", "auto"),
+								m(0, "auto", 6, "auto"),
 								maxIs("576px"),
+								fontSize("lg"),
 								leading(1.625),
-								media("(prefers-color-scheme: dark)", fg(neutral[400])),
+								fg("neutral"),
 							]}
 						>
 							{description}
 						</p>
 
-						<div
-							mix={[flex(), flexWrap("wrap"), justify("center"), gap("8px", "24px"), mbs("32px")]}
-						>
+						<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(2, 6), mbs(8)]}>
 							{highlights.map((item) => (
 								<span
 									key={item}
@@ -194,24 +265,17 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 										inlineFlex(),
 										items("center"),
 										gap("6px"),
-										fontSize("0.875rem"),
-										fg(neutral[500]),
-										media("(prefers-color-scheme: dark)", fg(neutral[400])),
+										fontSize("sm"),
+										fg("neutral.muted"),
 									]}
 								>
-									<CheckIcon size={16} />
+									<CheckIcon size={16} strokeWidth={2} aria-hidden mix={[fg("success")]} />
 									{item}
 								</span>
 							))}
 						</div>
 
-						<div
-							mix={[
-								vstack({ gap: "16px", align: "center" }),
-								mbs("32px"),
-								media("(min-width: 640px)", [flexRow(), justify("center")]),
-							]}
-						>
+						<div mix={[...ctaRow()]}>
 							<AuthCta
 								isSignedIn={isSignedIn}
 								startLabel={chrome.startLabel}
@@ -221,33 +285,26 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				<section
-					mix={[
-						p("64px", "0"),
-						media("(min-width: 640px)", p("96px", "0")),
-						media("(min-width: 1024px)", p("128px", "0")),
-					]}
-				>
-					<div
-						mix={[
-							maxIs("1152px"),
-							m("0", "auto"),
-							p("0", "16px"),
-							media("(min-width: 640px)", p("0", "24px")),
-							media("(min-width: 1024px)", p("0", "32px")),
-						]}
-					>
-						<SectionHeader title={`Uptime vs ${competitor}`} description={summary} />
+				{/* No trust-indicator strip here, deliberately: a comparison page's job is
+				the head-to-head table, and the pages this one was ported from went straight
+				from hero to table. `ComparisonPage` inherits the optional `trustIndicators`
+				field from `Page`, but no comparison record fills it — rendering a band that
+				every real page leaves empty would be dead markup. */}
+
+				<section mix={[...sectionPadding()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader
+							title={t("landing.comparison.tableLabel", { competitor })}
+							description={summary}
+						/>
 
 						<Table.Container>
-							<Table aria-label={`Uptime vs ${competitor}`}>
+							<Table aria-label={t("landing.comparison.tableLabel", { competitor })}>
 								<Table.Header>
 									<Table.Row>
-										<Table.Column>
-											{ctx.i18next.t("landing.comparison.tableCategoryHeader")}
-										</Table.Column>
+										<Table.Column>{t("landing.comparison.tableCategoryHeader")}</Table.Column>
 										<Table.Column align="center">
-											{ctx.i18next.t("landing.comparison.tableProductHeader")}
+											{t("landing.comparison.tableProductHeader")}
 										</Table.Column>
 										<Table.Column align="center">{competitor}</Table.Column>
 									</Table.Row>
@@ -255,9 +312,15 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 								<Table.Body>
 									{rows.map((row) => (
 										<Table.Row key={row.label}>
-											<Table.Cell>{row.label}</Table.Cell>
-											<Table.Cell align="center">{row.us}</Table.Cell>
-											<Table.Cell align="center">{row.them}</Table.Cell>
+											<Table.Cell mix={[weight(500)]}>{row.label}</Table.Cell>
+											{/* `textAlign` rather than the `<td align>` attribute the
+											header cells use: `Table.Column` styles itself off its
+											`align` prop, but `Table.Cell` forwards `align` to the
+											deprecated presentational attribute. */}
+											<Table.Cell mix={[textAlign("center"), weight(600), fg("brand")]}>
+												{row.us}
+											</Table.Cell>
+											<Table.Cell mix={[textAlign("center"), fg("neutral")]}>{row.them}</Table.Cell>
 										</Table.Row>
 									))}
 								</Table.Body>
@@ -266,35 +329,11 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				<section
-					mix={[
-						p("64px", "0"),
-						bg(neutral[50]),
-						media("(min-width: 640px)", p("96px", "0")),
-						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
-					]}
-				>
-					<div
-						mix={[
-							maxIs("1152px"),
-							m("0", "auto"),
-							p("0", "16px"),
-							media("(min-width: 640px)", p("0", "24px")),
-							media("(min-width: 1024px)", p("0", "32px")),
-						]}
-					>
-						<SectionHeader title={ctx.i18next.t("landing.comparison.whyTeamsSwitchTitle")} />
+				<section mix={[...sectionPadding(), ...tintedSection()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader title={t("landing.comparison.whyTeamsSwitchTitle")} />
 
-						<div
-							mix={[
-								grid(),
-								gap("32px"),
-								gridTemplate({ columns: "1fr" }),
-								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-							]}
-						>
+						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
 							{features.map((feature) => (
 								<MarketingCard
 									key={feature.title}
@@ -306,33 +345,197 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				<section
-					mix={[
-						p("64px", "0"),
-						media("(min-width: 640px)", p("96px", "0")),
-						media("(min-width: 1024px)", p("128px", "0")),
-					]}
-				>
-					<div
-						mix={[
-							maxIs("1152px"),
-							m("0", "auto"),
-							p("0", "16px"),
-							media("(min-width: 640px)", p("0", "24px")),
-							media("(min-width: 1024px)", p("0", "32px")),
-						]}
-					>
-						<SectionHeader title={ctx.i18next.t("landing.comparison.gettingStartedTitle")} />
+				{/* The concession, and the reason the rest of the page is believable: the
+				scenarios where the competitor is the better tool, stated plainly. */}
+				{honestTake && honestTake.length > 0 && (
+					<section mix={[...sectionPadding()]}>
+						<div mix={[...narrowContainer()]}>
+							<SectionHeader
+								badge={t("landing.comparison.honestTake.badge")}
+								title={t("landing.comparison.honestTake.title", { competitor })}
+								description={t("landing.comparison.honestTake.description", { competitor })}
+							/>
 
-						<div
-							mix={[
-								grid(),
-								gap("24px"),
-								[gridTemplate({ columns: "1fr" }), counterReset("marketing-step")],
-								media("(min-width: 640px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-							]}
-						>
+							<div mix={[vstack({ gap: 6 })]}>
+								{honestTake.map((item) => (
+									<div
+										key={item.title}
+										mix={[
+											flex(),
+											gap(4),
+											p(6),
+											rounded("xl"),
+											border({ color: "warning", width: 1 }),
+											bg("warning.tint"),
+										]}
+									>
+										<TriangleAlertIcon
+											size={24}
+											strokeWidth={1.5}
+											aria-hidden
+											mix={[shrink(0), fg("warning")]}
+										/>
+										<div>
+											<Heading
+												level={3}
+												mix={[m(0), fontSize("base"), weight(600), fg("neutral.emphasis")]}
+											>
+												{item.title}
+											</Heading>
+											<p mix={[m(0), mbs(2), leading(1.625), fg("neutral")]}>{item.description}</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</section>
+				)}
+
+				{perfectFor && (
+					<section mix={[...sectionPadding(), ...tintedSection()]}>
+						<div mix={[...narrowContainer()]}>
+							<div
+								mix={[
+									overflow("hidden"),
+									rounded("xl"),
+									shadow("xl"),
+									p(8),
+									textAlign("center"),
+									bg({
+										image: linearGradient(
+											"to bottom right",
+											"var(--ui-brand-bg-solid)",
+											"var(--ui-brand-bg-solid-hover)",
+										),
+									}),
+									fg("brand.onSolid"),
+									media("(min-width: 640px)", p(12)),
+								]}
+							>
+								{/* `fg` restated on the heading itself: `Heading` sets
+								`neutral.emphasis` on its own host, which would otherwise beat the
+								banner's inherited on-solid color and render near-black on green. */}
+								<Heading
+									level={2}
+									mix={[
+										m(0),
+										fontSize("2xl"),
+										weight(700),
+										tracking("tight"),
+										fg("brand.onSolid"),
+										media("(min-width: 640px)", fontSize("3xl")),
+									]}
+								>
+									{perfectFor.title}
+								</Heading>
+
+								<p mix={[m(0, "auto"), mbs(4), maxIs("672px"), fontSize("lg"), leading(1.625)]}>
+									{perfectFor.description}
+								</p>
+
+								{perfectFor.highlights.length > 0 && (
+									<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(4), mbs(8)]}>
+										{perfectFor.highlights.map((item) => (
+											<span
+												key={item}
+												mix={[
+													inlineFlex(),
+													items("center"),
+													gap(2),
+													p(2, 4),
+													rounded("999px"),
+													// A wash of the banner's own foreground rather than a
+													// palette step: the pills sit on a gradient, so any
+													// fixed color would match it at one end only.
+													bg("color-mix(in oklab, currentColor 15%, transparent)"),
+													fontSize("sm"),
+												]}
+											>
+												<CheckIcon size={16} strokeWidth={2} aria-hidden />
+												{item}
+											</span>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					</section>
+				)}
+
+				{/* The same monitoring setup priced against both products. Costs are copy,
+				not arithmetic — the content record decides what each scenario costs. */}
+				{pricingScenarios && pricingScenarios.length > 0 && (
+					<section mix={[...sectionPadding()]}>
+						<div mix={[...narrowContainer()]}>
+							<SectionHeader
+								badge={t("landing.comparison.pricing.badge")}
+								title={t("landing.comparison.pricing.title")}
+								description={t("landing.comparison.pricing.description")}
+							/>
+
+							<Table.Container>
+								<Table aria-label={t("landing.comparison.pricing.tableLabel", { competitor })}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>{t("landing.comparison.pricing.scenarioHeader")}</Table.Column>
+											<Table.Column align="center">{competitor}</Table.Column>
+											<Table.Column align="center">
+												{t("landing.comparison.tableProductHeader")}
+											</Table.Column>
+											<Table.Column align="center">
+												{t("landing.comparison.pricing.savingsHeader")}
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
+										{pricingScenarios.map((row) => (
+											<Table.Row key={row.scenario}>
+												<Table.Cell mix={[weight(500)]}>{row.scenario}</Table.Cell>
+												<Table.Cell
+													mix={[textAlign("center"), font("mono"), fontSize("sm"), fg("neutral")]}
+												>
+													{row.theirCost}
+												</Table.Cell>
+												<Table.Cell
+													mix={[
+														textAlign("center"),
+														font("mono"),
+														fontSize("sm"),
+														weight(600),
+														fg("brand"),
+													]}
+												>
+													{row.ourCost}
+												</Table.Cell>
+												<Table.Cell
+													mix={[
+														textAlign("center"),
+														font("mono"),
+														fontSize("sm"),
+														weight(600),
+														fg("success"),
+													]}
+												>
+													{row.savings}
+												</Table.Cell>
+											</Table.Row>
+										))}
+									</Table.Body>
+								</Table>
+							</Table.Container>
+
+							<p mix={[m(0), mbs(6), textAlign("center"), fontSize("sm"), fg("neutral.muted")]}>
+								{t("landing.comparison.pricing.footnote", { competitor })}
+							</p>
+						</div>
+					</section>
+				)}
+
+				<section mix={[...sectionPadding(), ...tintedSection()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader title={t("landing.comparison.gettingStartedTitle")} />
+
+						<div mix={[grid(), gap(6), counterReset("marketing-step"), ...responsiveGrid()]}>
 							{steps.map((step) => (
 								<MarketingStep key={step.title} title={step.title} description={step.description} />
 							))}
@@ -340,28 +543,9 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</div>
 				</section>
 
-				<section
-					mix={[
-						p("64px", "0"),
-						bg(neutral[50]),
-						media("(min-width: 640px)", p("96px", "0")),
-						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
-					]}
-				>
-					<div
-						mix={[
-							maxIs("1152px"),
-							m("0", "auto"),
-							p("0", "16px"),
-							media("(min-width: 640px)", p("0", "24px")),
-							media("(min-width: 1024px)", p("0", "32px")),
-						]}
-					>
-						<SectionHeader
-							badge={ctx.i18next.t("landing.faq.badge")}
-							title={ctx.i18next.t("landing.faq.title")}
-						/>
+				<section mix={[...sectionPadding()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader badge={t("landing.faq.badge")} title={t("landing.faq.title")} />
 
 						<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
 					</div>
@@ -369,27 +553,41 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 				<section
 					mix={[
-						p("56px", "0"),
+						pb(14),
 						textAlign("center"),
-						bg({ image: linearGradient("to right", primary[600], primary[700]) }),
-						fg("#ffffff"),
+						bg({
+							image: linearGradient(
+								"to right",
+								"var(--ui-brand-bg-solid)",
+								"var(--ui-brand-bg-solid-hover)",
+							),
+						}),
+						fg("brand.onSolid"),
 					]}
 				>
-					<h2>{ctx.i18next.t("landing.comparison.finalCtaTitle")}</h2>
-					<p>{ctx.i18next.t("landing.finalCta.body")}</p>
+					<div mix={[...marketingContainer()]}>
+						{/* Same as the banner above: `Heading`'s own `neutral.emphasis` would
+						win over the section's inherited on-solid color. */}
+						<Heading
+							level={2}
+							mix={[m(0), fontSize("3xl"), weight(700), tracking("tight"), fg("brand.onSolid")]}
+						>
+							{t("landing.comparison.finalCtaTitle")}
+						</Heading>
+						<p mix={[m(0, "auto"), mbs(4), maxIs("576px"), fontSize("lg"), leading(1.625)]}>
+							{t("landing.finalCta.body")}
+						</p>
 
-					<div
-						mix={[
-							vstack({ gap: "16px", align: "center" }),
-							mbs("32px"),
-							media("(min-width: 640px)", [flexRow(), justify("center")]),
-						]}
-					>
-						<AuthCta
-							isSignedIn={isSignedIn}
-							startLabel={chrome.startLabel}
-							dashboardLabel={chrome.dashboardLabel}
-						/>
+						<div mix={[...ctaRow()]}>
+							{/* `neutral` on this brand-filled band: a brand-toned button on a
+							brand fill reads only by its border. */}
+							<AuthCta
+								isSignedIn={isSignedIn}
+								startLabel={chrome.startLabel}
+								dashboardLabel={chrome.dashboardLabel}
+								color="neutral"
+							/>
+						</div>
 					</div>
 				</section>
 			</MarketingLayout>

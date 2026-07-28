@@ -411,6 +411,53 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime vs {{competitor}}",
+			tableCategoryHeader: "Categoria",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Perché i team passano a Uptime",
+			gettingStartedTitle: "Per iniziare",
+			finalCtaTitle: "Passa a Uptime",
+
+			honestTake: {
+				badge: "Opinione sincera",
+				title: "Quando {{competitor}} può essere la scelta migliore",
+				description:
+					"Crediamo nella trasparenza. Ecco i casi in cui {{competitor}} potrebbe essere la scelta giusta.",
+			},
+
+			pricing: {
+				badge: "Prezzi",
+				title: "Confronto reale dei costi",
+				description:
+					"Scopri quanto potresti risparmiare con una configurazione di monitoraggio tipica.",
+				tableLabel: "Confronto dei costi: Uptime vs {{competitor}}",
+				scenarioHeader: "Caso d'uso",
+				savingsHeader: "Risparmio",
+				footnote:
+					"Stime basate su modelli di utilizzo tipici. I prezzi di {{competitor}} possono cambiare e il costo effettivo dipende dalla tua configurazione.",
+			},
+		},
+
+		finalCta: {
+			body: "Crei il suo primo monitor in meno di 2 minuti. Nessuna carta di credito richiesta per iniziare.",
+		},
+
+		marketingPage: {
+			everythingBadge: "Nel dettaglio",
+			everythingTitle: "Tutto ciò che Le serve",
+			everythingDescription:
+				"Uno sguardo più attento a ciò che ottiene, dal primo controllo all'avviso che Le arriva.",
+			howItWorksBadge: "Per iniziare",
+			howItWorksTitle: "Come funziona",
+			howItWorksDescription:
+				"Tre passaggi per passare da una dashboard vuota a controlli che si eseguono da soli.",
+			faqBadge: "FAQ",
+			faqTitle: "Domande Frequenti",
+			faqDescription: "Le domande più comuni prima di iniziare a monitorare.",
+			finalCtaTitle: "Inizi a monitorare i suoi servizi",
+		},
 	},
 
 	app: {

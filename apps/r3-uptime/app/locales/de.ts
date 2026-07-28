@@ -416,6 +416,52 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime vs. {{competitor}}",
+			tableCategoryHeader: "Kategorie",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Warum Teams zu Uptime wechseln",
+			gettingStartedTitle: "Erste Schritte",
+			finalCtaTitle: "Zu Uptime wechseln",
+
+			honestTake: {
+				badge: "Ehrliche Einschätzung",
+				title: "Wann {{competitor}} die bessere Wahl sein kann",
+				description:
+					"Wir setzen auf Transparenz. In diesen Fällen kann {{competitor}} die richtige Wahl sein.",
+			},
+
+			pricing: {
+				badge: "Preise",
+				title: "Echter Kostenvergleich",
+				description: "Sehen Sie, wie viel Sie bei einem typischen Monitoring-Setup sparen können.",
+				tableLabel: "Kostenvergleich: Uptime vs. {{competitor}}",
+				scenarioHeader: "Anwendungsfall",
+				savingsHeader: "Ersparnis",
+				footnote:
+					"Schätzungen auf Basis typischer Nutzungsmuster. Die Preise von {{competitor}} können sich ändern, und Ihre tatsächlichen Kosten hängen von Ihrem Setup ab.",
+			},
+		},
+
+		finalCta: {
+			body: "Erstellen Sie Ihren ersten Monitor in weniger als 2 Minuten. Keine Kreditkarte erforderlich.",
+		},
+
+		marketingPage: {
+			everythingBadge: "Im Detail",
+			everythingTitle: "Alles, was Sie brauchen",
+			everythingDescription:
+				"Ein genauer Blick darauf, was Sie erhalten – von der ersten Prüfung bis zur Benachrichtigung, die Sie erreicht.",
+			howItWorksBadge: "Erste Schritte",
+			howItWorksTitle: "So funktioniert es",
+			howItWorksDescription:
+				"Drei Schritte von einem leeren Dashboard zu Prüfungen, die von selbst laufen.",
+			faqBadge: "FAQ",
+			faqTitle: "Häufig gestellte Fragen",
+			faqDescription: "Die häufigsten Fragen, bevor Sie mit der Überwachung beginnen.",
+			finalCtaTitle: "Überwachen Sie jetzt Ihre Dienste",
+		},
 	},
 
 	app: {

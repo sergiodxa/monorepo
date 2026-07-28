@@ -40,6 +40,15 @@ namespace AuthCta {
 		size?: "sm" | "lg" | "docs";
 		/** Optional trailing icon (e.g. an arrow), rendered after the label. */
 		icon?: RemixNode;
+		/**
+		 * Tone of the rendered button. Defaults to `"brand"`, which is right
+		 * everywhere the CTA sits on a page background. A CTA sitting *on* a
+		 * brand-colored band needs `"neutral"` instead — a brand button on a brand
+		 * fill is legible only by its border.
+		 */
+		color?: Button.Color;
+		/** Visual weight. Defaults to `"solid"`; pair `variant="solid"` with `color="neutral"` for the inverted treatment a brand band needs. */
+		variant?: Button.Variant;
 	}
 }
 
@@ -55,12 +64,25 @@ function resolveButtonSize(size: "sm" | "lg" | "docs"): Button.Size {
  */
 export default function AuthCta(handle: Handle<AuthCta.Props>) {
 	return () => {
-		let { isSignedIn, startLabel, dashboardLabel, size = "lg", icon } = handle.props;
+		let {
+			isSignedIn,
+			startLabel,
+			dashboardLabel,
+			size = "lg",
+			icon,
+			color = "brand",
+			variant = "solid",
+		} = handle.props;
 		let buttonSize = resolveButtonSize(size);
 
 		if (isSignedIn) {
 			return (
-				<LinkButton href={routes.app.index.href()} color="brand" variant="solid" size={buttonSize}>
+				<LinkButton
+					href={routes.app.index.href()}
+					color={color}
+					variant={variant}
+					size={buttonSize}
+				>
 					{dashboardLabel}
 					{icon}
 				</LinkButton>
@@ -69,7 +91,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		return (
 			<form method="post" action={routes.auth.action.href()}>
-				<Button type="submit" color="brand" variant="solid" size={buttonSize}>
+				<Button type="submit" color={color} variant={variant} size={buttonSize}>
 					{startLabel}
 					{icon}
 				</Button>

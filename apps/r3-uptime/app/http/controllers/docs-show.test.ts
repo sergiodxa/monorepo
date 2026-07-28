@@ -1,8 +1,9 @@
 /**
  * Tests the `/docs/*slug` controller: a real slug (sourced from the shimmed doc
- * content) renders its parsed Markdoc content inside the shared `DocsLayout` chrome,
- * and an unknown slug renders the same not-found page the router's `defaultHandler`
- * uses.
+ * content) renders its parsed Markdoc content inside the shared `DocsLayout` chrome
+ * along with a canonical link and its frontmatter description in `<head>`, and an
+ * unknown slug renders the same not-found page the router's `defaultHandler` uses —
+ * with no canonical link, since a 404 is not an indexable document.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,6 +28,7 @@ import { renderWith } from "remix/render-middleware";
 import { renderToString } from "remix/ui/server";
 
 import i18n from "~/app/http/middleware/i18n";
+import { BASE_URL } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -112,6 +114,20 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("Key Features");
 	});
 
+	test("emits the canonical URL and the doc's own frontmatter description in <head>", async () => {
+		let response = await getDocsShow("overview");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		// Canonical is normalized onto the product's own origin, not the request host.
+		expect(body).toContain(
+			`<link rel="canonical" href="${BASE_URL}${routes.docs.show.href({ slug: "overview" })}" />`,
+		);
+		expect(body).toContain(
+			'<meta name="description" content="Monitor your websites, APIs, servers, and scheduled tasks. Get alerted when something goes wrong and share status with your users." />',
+		);
+	});
+
 	test("marks the current page's sidebar link active and builds a docs > ... breadcrumb", async () => {
 		let response = await getDocsShow("concepts/http-monitors");
 
@@ -153,5 +169,7 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("<title>Page Not Found | Documentation - Uptime</title>");
 		expect(body).toContain("<h1>Page Not Found</h1>");
 		expect(body).toContain("The documentation page you're looking for doesn't exist.");
+		// A 404 must not advertise itself as a canonical, indexable document.
+		expect(body).not.toContain('rel="canonical"');
 	});
 });

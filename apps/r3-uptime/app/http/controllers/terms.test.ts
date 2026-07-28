@@ -1,7 +1,8 @@
 /**
  * Tests the `/terms` controller: it renders the static Terms of Service page inside
  * the shared document/marketing chrome for both anonymous and signed-in viewers, with
- * the `MarketingLayout` header CTA switching between the two.
+ * the `MarketingLayout` header CTA switching between the two, and emits its canonical
+ * URL and meta description in `<head>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +25,7 @@ import { renderToString } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import { BASE_URL } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -82,6 +84,20 @@ describe("GET /terms", () => {
 		expect(body).toContain("<h1>Terms of Service</h1>");
 		// Anonymous: the header CTA is a sign-in form posting to the auth action.
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
+	});
+
+	test("emits the canonical URL and meta description in <head>", async () => {
+		let response = await getTerms(null);
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		// Canonical is normalized onto the product's own origin, not the request host.
+		expect(body).toContain(
+			`<link rel="canonical" href="${BASE_URL}${routes.legal.terms.href()}" />`,
+		);
+		expect(body).toContain(
+			'<meta name="description" content="Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí." />',
+		);
 	});
 
 	test("renders the Terms of Service page for a signed-in viewer", async () => {

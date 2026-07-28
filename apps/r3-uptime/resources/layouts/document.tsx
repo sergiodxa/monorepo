@@ -54,6 +54,32 @@ namespace DocumentLayout {
 		media?: string;
 	}
 
+	/**
+	 * Everything a public page needs in `<head>` beyond its `<title>`: the
+	 * description search engines and social cards quote, the canonical URL, and
+	 * optional structured data. Only meaningful for indexable pages — the
+	 * signed-in app's own screens have nothing to say to a crawler.
+	 */
+	export interface Seo {
+		/** Meta description, reused as `og:description` and `twitter:description`. */
+		description: string;
+		/**
+		 * The page's canonical absolute URL. Build it with `canonicalUrl()` from
+		 * `~/app/lib/seo` rather than passing `ctx.url` straight through, so every
+		 * page advertises one URL on one origin regardless of which host served it.
+		 */
+		url: string;
+		/** `og:type`. Defaults to `"website"`. */
+		type?: "website" | "article";
+		/**
+		 * schema.org structured data, emitted as `application/ld+json`. Use the
+		 * builders in `~/app/lib/seo` — and only describe what the page actually
+		 * renders (an `FAQPage` schema for questions a visitor can't find on the
+		 * page breaks Google's structured-data policy).
+		 */
+		jsonLd?: object | object[];
+	}
+
 	export interface Props {
 		children: RemixNode;
 		title?: string;
@@ -66,13 +92,28 @@ namespace DocumentLayout {
 		 * should just load normally.
 		 */
 		preload?: Preload[];
+		/** Description/canonical/Open Graph/structured data for an indexable page. Omit inside the app shell. */
+		seo?: Seo;
 	}
+}
+
+/** Site name used for `og:site_name`, the one piece of `<head>` copy that isn't the page's own. */
+const SITE_NAME = "Uptime";
+
+/**
+ * Serializes structured data for a `<script type="application/ld+json">` body.
+ * `<` is escaped to its unicode form so a `</script>` sequence inside any string
+ * value can't close the tag early — the JSON stays valid either way, since
+ * `<` and `<` are the same character to a JSON parser.
+ */
+function serializeJsonLd(jsonLd: object | object[]): string {
+	return JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
 }
 
 /** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`, with an optional `<title>` and the client entry script. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { title, locale = "en", preload = [], children } = handle.props;
+		let { title, locale = "en", preload = [], seo, children } = handle.props;
 
 		return (
 			<html lang={locale} class="system">
@@ -80,6 +121,29 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
+					{seo && (
+						<>
+							<meta name="description" content={seo.description} />
+							<link rel="canonical" href={seo.url} />
+							{/* Open Graph and Twitter both restate the title/description rather
+							than reading the tags above — every consumer of these cards reads
+							its own namespace and ignores the other's. */}
+							<meta property="og:type" content={seo.type ?? "website"} />
+							<meta property="og:url" content={seo.url} />
+							<meta property="og:site_name" content={SITE_NAME} />
+							{title && <meta property="og:title" content={title} />}
+							<meta property="og:description" content={seo.description} />
+							<meta name="twitter:card" content="summary_large_image" />
+							{title && <meta name="twitter:title" content={title} />}
+							<meta name="twitter:description" content={seo.description} />
+							{seo.jsonLd && (
+								/* `innerHTML`, not children: JSX escapes text nodes, which would
+								turn the JSON's own quotes into entities and leave the structured
+								data unparseable. */
+								<script type="application/ld+json" innerHTML={serializeJsonLd(seo.jsonLd)}></script>
+							)}
+						</>
+					)}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
 					{preload.map((asset) => (
 						<link

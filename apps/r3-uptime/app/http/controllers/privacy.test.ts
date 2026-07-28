@@ -1,7 +1,8 @@
 /**
  * Tests the `/privacy` controller: it renders the static Privacy Policy page inside
  * the shared document/marketing chrome for both anonymous and signed-in viewers, with
- * the `MarketingLayout` header CTA switching between the two.
+ * the `MarketingLayout` header CTA switching between the two, and emits its canonical
+ * URL and meta description in `<head>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +25,7 @@ import { renderToString } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import { BASE_URL } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -82,6 +84,20 @@ describe("GET /privacy", () => {
 		expect(body).toContain("<h1>Privacy Policy</h1>");
 		// Anonymous: the header CTA is a sign-in form posting to the auth action.
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
+	});
+
+	test("emits the canonical URL and meta description in <head>", async () => {
+		let response = await getPrivacy(null);
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		// Canonical is normalized onto the product's own origin, not the request host.
+		expect(body).toContain(
+			`<link rel="canonical" href="${BASE_URL}${routes.legal.privacy.href()}" />`,
+		);
+		expect(body).toContain(
+			'<meta name="description" content="Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service." />',
+		);
 	});
 
 	test("renders the Privacy Policy page for a signed-in viewer", async () => {
