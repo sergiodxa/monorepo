@@ -38,16 +38,49 @@ describe("filterFunction", () => {
 		});
 	});
 
+	test("the hue-rotate function reads a dash-cased variable from its camel-cased key", () => {
+		expect(styles(filterFunction({ hueRotate: "90deg" }))).toEqual({
+			"--ui-filter-hue-rotate": "90deg",
+			filter: COMPOSITE_FILTER,
+		});
+	});
+
+	test("the opacity filter function writes its own variable, not the opacity property", () => {
+		let result = styles(filterFunction({ opacity: "0.5" }));
+
+		expect(result).toEqual({ "--ui-filter-opacity": "0.5", filter: COMPOSITE_FILTER });
+		expect(result.opacity).toBeUndefined();
+	});
+
 	test("every filter function's variable appears in the composite with an identity fallback", () => {
 		expect(COMPOSITE_FILTER).toContain("blur(var(--ui-filter-blur, 0px))");
 		expect(COMPOSITE_FILTER).toContain("brightness(var(--ui-filter-brightness, 1))");
 		expect(COMPOSITE_FILTER).toContain("contrast(var(--ui-filter-contrast, 1))");
 		expect(COMPOSITE_FILTER).toContain("grayscale(var(--ui-filter-grayscale, 0))");
+		expect(COMPOSITE_FILTER).toContain("hue-rotate(var(--ui-filter-hue-rotate, 0deg))");
 		expect(COMPOSITE_FILTER).toContain("invert(var(--ui-filter-invert, 0))");
+		expect(COMPOSITE_FILTER).toContain("opacity(var(--ui-filter-opacity, 1))");
 		expect(COMPOSITE_FILTER).toContain("saturate(var(--ui-filter-saturate, 1))");
 		expect(COMPOSITE_FILTER).toContain("sepia(var(--ui-filter-sepia, 0))");
 		expect(COMPOSITE_FILTER).toContain(
 			"drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent))",
+		);
+	});
+
+	test("the composite carries all ten CSS filter functions, in the order CSS applies them", () => {
+		expect(COMPOSITE_FILTER).toBe(
+			[
+				"blur(var(--ui-filter-blur, 0px))",
+				"brightness(var(--ui-filter-brightness, 1))",
+				"contrast(var(--ui-filter-contrast, 1))",
+				"grayscale(var(--ui-filter-grayscale, 0))",
+				"hue-rotate(var(--ui-filter-hue-rotate, 0deg))",
+				"invert(var(--ui-filter-invert, 0))",
+				"opacity(var(--ui-filter-opacity, 1))",
+				"saturate(var(--ui-filter-saturate, 1))",
+				"sepia(var(--ui-filter-sepia, 0))",
+				"drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent))",
+			].join(" "),
 		);
 	});
 

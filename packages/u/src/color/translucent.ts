@@ -19,7 +19,7 @@ import { bg } from "./bg";
  * hand-built media query of its own.
  *
  * @example u.translucent("sm")
- * @example css({ backgroundColor: "var(--ui-bg, Canvas)", "@media (prefers-reduced-transparency: no-preference)": { "--ui-backdrop-blur": "var(--ui-blur-sm, 4px)", backdropFilter: "blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1))", WebkitBackdropFilter: "blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1))" } })
+ * @example css({ backgroundColor: "var(--ui-bg, Canvas)", "@media (prefers-reduced-transparency: no-preference)": { "--ui-backdrop-blur": "var(--ui-blur-sm, 4px)", backdropFilter: "blur(var(--ui-backdrop-blur, 0px)) ...", WebkitBackdropFilter: "blur(var(--ui-backdrop-blur, 0px)) ..." } })
  */
 export function translucent<Node extends Element = Element>(name: BlurName | (string & {}) = "md") {
 	let gatedBlur = media<Node>(

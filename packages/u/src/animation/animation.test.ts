@@ -91,6 +91,41 @@ describe("animation", () => {
 			expect("animationFillMode" in result).toBe(false);
 		});
 
+		test("sets animationDelay when delay is given", () => {
+			let mixin = animation("fade-in", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "150ms",
+				delay: "150ms",
+			});
+
+			expect(styles(mixin)).toEqual({
+				"@keyframes fade-in": { from: { opacity: 0 }, to: { opacity: 1 } },
+				animationName: "fade-in",
+				animationDuration: "150ms",
+				animationDelay: "150ms",
+			});
+		});
+
+		test("keeps a negative delay, which seeks into the animation instead of waiting", () => {
+			let mixin = animation("spin", {
+				keyframes: { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } },
+				duration: "1s",
+				delay: "-500ms",
+				iterationCount: "infinite",
+			});
+
+			expect(styles(mixin).animationDelay).toBe("-500ms");
+		});
+
+		test("omits animationDelay entirely when delay isn't given", () => {
+			let mixin = animation("fade-in", {
+				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+				duration: "150ms",
+			});
+
+			expect("animationDelay" in styles(mixin)).toBe(false);
+		});
+
 		test("sets animationTimeline and animationRange when given", () => {
 			let mixin = animation("reveal", {
 				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
@@ -191,9 +226,20 @@ describe("animationHost", () => {
 		});
 	});
 
+	test("picks up the delay key for free, since it takes every AnimationConfig key but keyframes", () => {
+		let result = styles(animationHost("ui-fade", { duration: "150ms", delay: "150ms" }));
+
+		expect(result).toEqual({
+			animationName: "ui-fade",
+			animationDuration: "150ms",
+			animationDelay: "150ms",
+		});
+	});
+
 	test("omits every optional field entirely when not given, same as animation()'s host half", () => {
 		let result = styles(animationHost("ui-fade", { duration: "150ms" }));
 
+		expect("animationDelay" in result).toBe(false);
 		expect(result).toEqual({ animationName: "ui-fade", animationDuration: "150ms" });
 	});
 });

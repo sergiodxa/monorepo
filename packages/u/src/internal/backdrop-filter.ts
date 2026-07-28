@@ -28,15 +28,38 @@ import { utility } from "./descriptor";
 /** The CSS custom property (without its leading `--`) each backdrop-filter function reads from. */
 const BACKDROP_FILTER_VARS = {
 	blur: "ui-backdrop-blur",
+	brightness: "ui-backdrop-brightness",
+	contrast: "ui-backdrop-contrast",
+	grayscale: "ui-backdrop-grayscale",
+	hueRotate: "ui-backdrop-hue-rotate",
+	invert: "ui-backdrop-invert",
+	opacity: "ui-backdrop-opacity",
 	saturate: "ui-backdrop-saturate",
+	sepia: "ui-backdrop-sepia",
+	dropShadow: "ui-backdrop-drop-shadow",
 } as const;
 
 export type BackdropFilterFunctionName = keyof typeof BACKDROP_FILTER_VARS;
 
-/** The fixed, identical-everywhere `backdropFilter` value every backdrop-filter utility emits. */
+/**
+ * The fixed, identical-everywhere `backdropFilter` value every
+ * backdrop-filter utility emits. The function order matches
+ * `COMPOSITE_FILTER`'s, so a backdrop utility and its `filter` twin compose
+ * their functions in the same sequence — backdrop-filter functions are no
+ * more commutative than filter functions, and pinning one shared order is
+ * what keeps both families predictable.
+ */
 export const COMPOSITE_BACKDROP_FILTER = [
 	`blur(${varUtility(BACKDROP_FILTER_VARS.blur, "0px")})`,
+	`brightness(${varUtility(BACKDROP_FILTER_VARS.brightness, "1")})`,
+	`contrast(${varUtility(BACKDROP_FILTER_VARS.contrast, "1")})`,
+	`grayscale(${varUtility(BACKDROP_FILTER_VARS.grayscale, "0")})`,
+	`hue-rotate(${varUtility(BACKDROP_FILTER_VARS.hueRotate, "0deg")})`,
+	`invert(${varUtility(BACKDROP_FILTER_VARS.invert, "0")})`,
+	`opacity(${varUtility(BACKDROP_FILTER_VARS.opacity, "1")})`,
 	`saturate(${varUtility(BACKDROP_FILTER_VARS.saturate, "1")})`,
+	`sepia(${varUtility(BACKDROP_FILTER_VARS.sepia, "0")})`,
+	`drop-shadow(${varUtility(BACKDROP_FILTER_VARS.dropShadow, "0 0 0 transparent")})`,
 ].join(" ");
 
 /**

@@ -17,13 +17,15 @@ import { compose, utility } from "../internal/descriptor";
 import { keyframes } from "./keyframes";
 
 /**
- * The keyframes, duration, and optional easing/iteration/direction/fill-mode
- * shared by both `animation()` call shapes.
+ * The keyframes, duration, and optional easing/delay/iteration/direction/
+ * fill-mode shared by both `animation()` call shapes.
  */
 export interface AnimationConfig {
 	keyframes: Record<string, CSSStyles>;
 	duration: string;
 	easing?: string;
+	/** Sets `animationDelay` (e.g. `"150ms"`). Omitted (platform default `0s`) when not given. */
+	delay?: string;
 	/** Sets `animationIterationCount` (e.g. `"infinite"`, `2`). Omitted (platform default `1`) when not given. */
 	iterationCount?: string | number;
 	/** Sets `animationDirection` (e.g. `"alternate"`, `"reverse"`). Omitted (platform default `"normal"`) when not given. */
@@ -39,10 +41,10 @@ export interface AnimationConfig {
 /**
  * Emits an `@keyframes` rule under `name` plus host `animationName`,
  * `animationDuration`, and (when given) `animationTimingFunction`,
- * `animationIterationCount`, `animationDirection`, `animationFillMode`,
- * `animationTimeline`, and `animationRange` declarations that reference it.
- * Use the named form when the animation name is useful for debugging in
- * devtools.
+ * `animationDelay`, `animationIterationCount`, `animationDirection`,
+ * `animationFillMode`, `animationTimeline`, and `animationRange` declarations
+ * that reference it. Use the named form when the animation name is useful for
+ * debugging in devtools.
  *
  * @example
  * u.animation("fade-in", {
@@ -53,6 +55,24 @@ export interface AnimationConfig {
  *   duration: "150ms",
  *   easing: "ease-out",
  * });
+ * @example css({
+ *   "@keyframes fade-in": { from: { opacity: 0 }, to: { opacity: 1 } },
+ *   animationName: "fade-in",
+ *   animationDuration: "150ms",
+ *   animationTimingFunction: "ease-out",
+ * })
+ * @example
+ * u.animation("fade-in", {
+ *   keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+ *   duration: "150ms",
+ *   delay: "150ms",
+ * });
+ * @example css({
+ *   "@keyframes fade-in": { from: { opacity: 0 }, to: { opacity: 1 } },
+ *   animationName: "fade-in",
+ *   animationDuration: "150ms",
+ *   animationDelay: "150ms",
+ * })
  */
 export function animation<Node extends Element = Element>(
 	name: string,
@@ -95,7 +115,9 @@ export function animation<Node extends Element = Element>(
 /**
  * Emits just the host `animation-*` declarations `animation()` would —
  * `animationName`/`animationDuration` plus whichever optional fields are
- * given — with NO accompanying `@keyframes` rule. This is the primitive
+ * given (it takes every {@link AnimationConfig} key except `keyframes`, so
+ * `delay`, `timeline`, and `range` all work here too) — with NO accompanying
+ * `@keyframes` rule. This is the primitive
  * `animation()` is sugar over, for call sites that need to compose the
  * keyframes and the host declarations separately: a loop that gates its
  * running state behind a selector (`u.when("&[data-busy]", u.animationHost(...))`)
@@ -130,6 +152,7 @@ function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 		animationDuration: config.duration,
 	};
 	if (config.easing) styles.animationTimingFunction = config.easing;
+	if (config.delay) styles.animationDelay = config.delay;
 	if (config.iterationCount !== undefined) styles.animationIterationCount = config.iterationCount;
 	if (config.direction) styles.animationDirection = config.direction;
 	if (config.fillMode) styles.animationFillMode = config.fillMode;

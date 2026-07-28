@@ -15,13 +15,13 @@ import { blur } from "../internal/tokens";
  * fallback under `prefers-reduced-transparency` — should use
  * `u.translucent()` instead of composing this primitive by hand.
  *
- * Composable with `u.backdropSaturate()` — both set the shared composite
- * `backdropFilter` declaration, so applying both to the same element
- * combines blur and saturation instead of the last one overwriting the
- * other.
+ * Composable with every other backdrop utility — they all set the shared
+ * composite `backdropFilter` declaration, so applying `u.backdropSaturate()`
+ * or `u.backdropBrightness()` alongside this one combines every function
+ * instead of the last one overwriting the rest.
  *
  * @example u.backdropBlur("lg")
- * @example css({ "--ui-backdrop-blur": "var(--ui-blur-lg, 24px)", backdropFilter: "blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1))", WebkitBackdropFilter: "blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1))" })
+ * @example css({ "--ui-backdrop-blur": "var(--ui-blur-lg, 24px)", backdropFilter: "blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1)) ...", WebkitBackdropFilter: "blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1)) ..." })
  */
 export function backdropBlur<Node extends Element = Element>(
 	name: BlurName | (string & {}) = "md",

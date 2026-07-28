@@ -24,3 +24,4 @@ export { readOnly } from "./read-only";
 export { required } from "./required";
 export { selection } from "./selection";
 export { when } from "./when";
+export { where } from "./where";

@@ -9,8 +9,8 @@ import { describe, expect, test } from "bun:test";
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
+import { forcedColorAdjust } from "../a11y/forced-color-adjust";
 import { bg } from "../color/bg";
-import { raw } from "../general/raw";
 import { hover } from "../state/hover";
 
 import { forcedColors } from "./forced-colors";
@@ -23,7 +23,7 @@ function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
 
 describe("forcedColors", () => {
 	test("nests the wrapped utility's styles under '@media (forced-colors: active)'", () => {
-		expect(styles(forcedColors(raw({ forcedColorAdjust: "none" })))).toEqual({
+		expect(styles(forcedColors(forcedColorAdjust("none")))).toEqual({
 			"@media (forced-colors: active)": { forcedColorAdjust: "none" },
 		});
 	});

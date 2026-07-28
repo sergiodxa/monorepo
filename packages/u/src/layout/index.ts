@@ -1,5 +1,9 @@
 export { absolute } from "./absolute";
+export { anchor } from "./anchor";
+export type { AnchorSide } from "./anchor";
 export { anchorName } from "./anchor-name";
+export { anchorSize } from "./anchor-size";
+export type { AnchorSizeDimension } from "./anchor-size";
 export { appearance } from "./appearance";
 export type { AppearanceOptions, AppearanceValue } from "./appearance";
 export { basis } from "./basis";
@@ -10,6 +14,8 @@ export { borderSpacing } from "./border-spacing";
 export { boxSizing } from "./box-sizing";
 export type { BoxSizingValue } from "./box-sizing";
 export { center } from "./center";
+export { contain } from "./contain";
+export type { ContainValue } from "./contain";
 export { container } from "./container";
 export type { ContainerTypeValue } from "./container";
 export { content } from "./content";

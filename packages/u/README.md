@@ -7251,9 +7251,16 @@ Note the background it sets is the _opaque_ system default `var(--ui-bg, Canvas)
 	background-color: var(--ui-bg, Canvas);
 	@media (prefers-reduced-transparency: no-preference) {
 		--ui-backdrop-blur: var(--ui-blur-sm, 4px);
-		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-			saturate(var(--ui-backdrop-saturate, 1));
+		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```
@@ -8317,9 +8324,16 @@ A backdrop filter only does anything if there is something translucent to see th
 /* u.backdropBlur("lg") */
 .host {
 	--ui-backdrop-blur: var(--ui-blur-lg, 24px);
-	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-		saturate(var(--ui-backdrop-saturate, 1));
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -8377,18 +8391,32 @@ It has no visible effect unless something is actually visible behind the element
 /* u.backdropSaturate() */
 .host {
 	--ui-backdrop-saturate: 1.4;
-	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-		saturate(var(--ui-backdrop-saturate, 1));
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 
 /* [u.backdropBlur("lg"), u.backdropSaturate(1.4)] — both variables set, one composite declaration */
 .host {
 	--ui-backdrop-blur: var(--ui-blur-lg, 24px);
 	--ui-backdrop-saturate: 1.4;
-	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-		saturate(var(--ui-backdrop-saturate, 1));
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -8490,7 +8518,8 @@ Blurring text to hide it is not a privacy measure — the content is still fully
 	--ui-filter-blur: var(--ui-blur-lg, 24px);
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 
@@ -8500,7 +8529,8 @@ Blurring text to hide it is not a privacy measure — the content is still fully
 	--ui-filter-grayscale: 1;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -8551,7 +8581,8 @@ The function order inside the composite is fixed, and it is the order CSS applie
 	--ui-filter-brightness: 1.1;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 
@@ -8561,7 +8592,8 @@ The function order inside the composite is fixed, and it is the order CSS applie
 	--ui-filter-saturate: 1.2;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -8617,7 +8649,8 @@ Do not use it to _fix_ an accessibility contrast failure. A filter changes rende
 	--ui-filter-contrast: 1.25;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -8681,7 +8714,8 @@ Two limits come from the CSS function rather than from this utility. `drop-shado
 		calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.15);
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 
@@ -8690,7 +8724,8 @@ Two limits come from the CSS function rather than from this utility. `drop-shado
 	--ui-filter-drop-shadow: 0 2px 4px var(--ui-brand-border);
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -8749,7 +8784,8 @@ It is purely visual and conveys nothing to assistive technology. A greyed-out el
 	--ui-filter-grayscale: 1;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 
@@ -8758,7 +8794,8 @@ It is purely visual and conveys nothing to assistive technology. A greyed-out el
 	--ui-filter-grayscale: 0.6;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -8812,7 +8849,8 @@ It composes through the shared composite `filter` declaration, writing only `--u
 	--ui-filter-invert: 1;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -9235,7 +9273,8 @@ Like every filter utility, it writes only `--ui-filter-saturate` plus the shared
 	--ui-filter-saturate: 1.5;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 
@@ -9245,11 +9284,19 @@ Like every filter utility, it writes only `--ui-filter-saturate` plus the shared
 	--ui-backdrop-saturate: 1.4;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
-	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-		saturate(var(--ui-backdrop-saturate, 1));
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -9306,7 +9353,8 @@ It composes through the shared composite `filter` declaration, writing only `--u
 	--ui-filter-sepia: 1;
 	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
 		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
-		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
 		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
@@ -12984,9 +13032,16 @@ Some utilities already gate themselves and shouldn't be wrapped again: `u.corner
 .host {
 	@supports (backdrop-filter: blur(1px)) {
 		--ui-backdrop-blur: var(--ui-blur-md, 12px);
-		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-			saturate(var(--ui-backdrop-saturate, 1));
+		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```
@@ -13094,9 +13149,16 @@ Note the two utilities both write the shared composite `backdropFilter` declarat
 .host {
 	@media (prefers-reduced-transparency: no-preference) {
 		--ui-backdrop-saturate: 1.4;
-		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
-			saturate(var(--ui-backdrop-saturate, 1));
+		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```

@@ -20,7 +20,7 @@ import { media } from "./media";
  * working here, which is why this package's no-argument defaults — built on
  * those keywords — degrade gracefully without needing this wrapper.
  *
- * @example u.forcedColors(u.raw({ forcedColorAdjust: "none" }))
+ * @example u.forcedColors(u.forcedColorAdjust("none"))
  * @example css({ "@media (forced-colors: active)": { forcedColorAdjust: "none" } })
  */
 export function forcedColors<Node extends Element = Element>(
