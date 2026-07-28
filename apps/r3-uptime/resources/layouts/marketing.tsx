@@ -24,7 +24,6 @@ import type { Handle, RemixNode } from "remix/ui";
 import { NavLink } from "@pkg/r3-ui";
 import { bg, borderEdge, colorMix, fg } from "@pkg/u/color";
 import { backdropBlur } from "@pkg/u/effects";
-import { raw } from "@pkg/u/general";
 import {
 	block,
 	gap,
@@ -41,10 +40,9 @@ import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, minBs, p } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { hover } from "@pkg/u/state";
-import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import { fontSans } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace MarketingLayout {
@@ -239,7 +237,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 		let footerGrid = buildFooterGrid(footerColumns);
 
 		return (
-			<div mix={[vstack(), minBs("100vh"), raw({ fontFamily: fontSans })]}>
+			<div mix={[vstack(), minBs("100vh"), font("sans")]}>
 				<header
 					mix={[
 						sticky(),

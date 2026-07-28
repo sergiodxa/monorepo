@@ -14,19 +14,18 @@ import type { Handle, RemixNode } from "remix/ui";
 import resetStyles from "@pkg/r3-ui/reset.css?url";
 import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { bg, fg } from "@pkg/u/color";
-import { raw } from "@pkg/u/general";
 import { m } from "@pkg/u/size";
+import { font } from "@pkg/u/typography";
 
 import colorStyles from "~/resources/css/colors.css?url";
-import { fontMono } from "~/resources/theme";
 
 /**
- * Raw `@font-face` rule for Mona Sans, the display font the marketing chrome opts
- * into (see `resources/theme.ts`'s `fontSans`). Declared here, once, so every
- * page's `<head>` gets it regardless of which layout it renders through. Emitted
- * as a plain `<style>` tag rather than through the `css()` mixin because that
- * mixin scopes every rule to a generated element class name, which can't express
- * a top-level, unscoped at-rule like this.
+ * Raw `@font-face` rule for Mona Sans, the display font `--ui-font-sans` (see
+ * `resources/css/colors.css`) points the marketing chrome at. Declared here, once,
+ * so every page's `<head>` gets it regardless of which layout it renders through.
+ * Emitted as a plain `<style>` tag rather than through the `css()` mixin because
+ * that mixin scopes every rule to a generated element class name, which can't
+ * express a top-level, unscoped at-rule like this.
  */
 const fontFaceCss = `
 	@font-face {
@@ -72,9 +71,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={themeStyles} />
 					<style>{fontFaceCss}</style>
 				</head>
-				<body
-					mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), raw({ fontFamily: fontMono })]}
-				>
+				<body mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("mono")]}>
 					{children}
 					{/* `async`, not the implicit defer of a plain module script — a deferred
 					script waits for this whole streamed response to finish parsing, so a

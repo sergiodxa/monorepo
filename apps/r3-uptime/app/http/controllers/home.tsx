@@ -32,7 +32,15 @@ import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { color } from "@pkg/u/tokens";
-import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
+import {
+	font,
+	fontSize,
+	leading,
+	textAlign,
+	textDecoration,
+	tracking,
+	weight,
+} from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -42,7 +50,6 @@ import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
-import { fontMono } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** GET / — the public marketing homepage. */
@@ -420,7 +427,7 @@ export default createAction(routes.home, async (ctx) => {
 											fontSize("1.875rem"),
 											weight(700),
 											leading("2.25rem"),
-											raw({ fontFamily: fontMono }),
+											font("mono"),
 											fg("neutral.emphasis"),
 											media("(prefers-color-scheme: dark)", fg("neutral.emphasis")),
 										]}

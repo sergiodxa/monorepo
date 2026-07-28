@@ -77,4 +77,17 @@
 	--ui-color-success-800: oklch(0.32 0.12 155);
 	--ui-color-success-900: oklch(0.24 0.09 155);
 	--ui-color-success-950: oklch(0.16 0.06 155);
+
+	/*
+	 * Font overrides on top of @pkg/u's own --ui-font-{sans,serif,mono}
+	 * defaults: --ui-font-mono is the document's default body font (the
+	 * platform's own UI monospace, no self-hosted file); --ui-font-sans is
+	 * the self-hosted display font the marketing chrome opts into.
+	 */
+	--ui-font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+		monospace;
+	--ui-font-sans:
+		"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+		"Segoe UI Symbol", "Noto Color Emoji";
 }

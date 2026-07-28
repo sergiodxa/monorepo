@@ -43,11 +43,7 @@ export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 					<Empty.Action>
 						<a
 							href={routes.home.href()}
-							mix={[
-								fg("brand"),
-								textDecoration("none"),
-								hover(textDecoration("underline")),
-							]}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
 						>
 							{goBackHomeLabel}
 						</a>
