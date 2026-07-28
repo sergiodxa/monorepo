@@ -91,9 +91,9 @@ const topbar = [
 	justify("between"),
 	gap("16px"),
 	p("12px", "24px"),
-	bg("oklch(0.98 0.005 145 / 0.5)"),
+	bg("oklch(0.98 0.004 250 / 0.5)"),
 	borderEdge("bottom", { width: 1, color: "neutral" }),
-	media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+	media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 ];
 
 const topbarLeft = [flex(), items("center"), gap("12px"), minIs(0)];

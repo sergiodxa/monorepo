@@ -7,40 +7,55 @@
  *
  * Every scale shares one lightness ramp (50 lightest -> 950 darkest) so tones
  * line up visually at the same step across colors; only hue and the chroma
- * curve (peaking mid-scale, tapering at both ends) vary per color. `neutral`
- * keeps the exact oklch values `resources/theme.ts` already used app-wide
- * (hue 145, near-achromatic) so existing neutral surfaces don't shift.
- * `brand` (142) and `danger` (25) extend that file's own partial scales to
- * the full 50-950 range `theme.css` expects; `warning` (85, was the "degraded"
- * monitor status) and `success` (155, was "up") are new scales split out of
- * `resources/theme.ts`'s old `status` object so each has a real color-scale
- * identity instead of a single light/dark pair.
+ * curve (peaking mid-scale, tapering at both ends) vary per color.
+ *
+ * The palette is Slytherin-inspired: `brand` is emerald (hue 162, a blue-leaning
+ * jewel green rather than a grassy one) and `neutral` is silver — still
+ * near-achromatic for text/borders/backgrounds, but tinted cool (hue 250)
+ * instead of the green 145 it used to carry, so neutral surfaces read as
+ * brushed metal and make the emerald pop rather than blending into it.
+ *
+ * `success` sits at hue 142 — the yellower green `brand` used to occupy. It has
+ * to stay green (green means "up" everywhere), so it takes over the space brand
+ * vacated instead of crowding emerald: 20 degrees of hue separates an "up" badge
+ * from a brand button, where 7 would have made them near-identical. `warning`
+ * (85) and `danger` (25) are untouched — they're orthogonal to the house palette
+ * and load-bearing for status at a glance.
+ *
+ * Every chroma here is held just inside the sRGB gamut for its own lightness, so
+ * the declared value is what actually renders. That matters most for `brand`:
+ * sRGB is far narrower toward emerald than toward the old grassy green (at
+ * L=0.52 it allows C=0.114 at hue 162 but C=0.175 at hue 142), so asking for the
+ * chroma the old scale used would silently clip and flatten 500/600/700 into
+ * near-identical tones. Because that ceiling falls away faster than lightness
+ * does, `brand`'s chroma peaks at step 400 rather than mid-scale — the ramp is
+ * still monotonic in both directions from there, just not centered.
  */
 
 :root {
-	--ui-color-neutral-50: oklch(0.98 0.005 145);
-	--ui-color-neutral-100: oklch(0.96 0.005 145);
-	--ui-color-neutral-200: oklch(0.91 0.008 145);
-	--ui-color-neutral-300: oklch(0.83 0.01 145);
-	--ui-color-neutral-400: oklch(0.73 0.01 145);
-	--ui-color-neutral-500: oklch(0.62 0.01 145);
-	--ui-color-neutral-600: oklch(0.52 0.01 145);
-	--ui-color-neutral-700: oklch(0.42 0.008 145);
-	--ui-color-neutral-800: oklch(0.32 0.006 145);
-	--ui-color-neutral-900: oklch(0.24 0.005 145);
-	--ui-color-neutral-950: oklch(0.16 0.004 145);
+	--ui-color-neutral-50: oklch(0.98 0.004 250);
+	--ui-color-neutral-100: oklch(0.96 0.005 250);
+	--ui-color-neutral-200: oklch(0.91 0.008 250);
+	--ui-color-neutral-300: oklch(0.83 0.011 250);
+	--ui-color-neutral-400: oklch(0.73 0.013 250);
+	--ui-color-neutral-500: oklch(0.62 0.014 250);
+	--ui-color-neutral-600: oklch(0.52 0.014 250);
+	--ui-color-neutral-700: oklch(0.42 0.012 250);
+	--ui-color-neutral-800: oklch(0.32 0.01 250);
+	--ui-color-neutral-900: oklch(0.24 0.008 250);
+	--ui-color-neutral-950: oklch(0.16 0.006 250);
 
-	--ui-color-brand-50: oklch(0.98 0.02 142);
-	--ui-color-brand-100: oklch(0.96 0.05 142);
-	--ui-color-brand-200: oklch(0.91 0.09 142);
-	--ui-color-brand-300: oklch(0.83 0.13 142);
-	--ui-color-brand-400: oklch(0.73 0.16 142);
-	--ui-color-brand-500: oklch(0.62 0.17 142);
-	--ui-color-brand-600: oklch(0.52 0.16 142);
-	--ui-color-brand-700: oklch(0.42 0.14 142);
-	--ui-color-brand-800: oklch(0.32 0.11 142);
-	--ui-color-brand-900: oklch(0.24 0.08 142);
-	--ui-color-brand-950: oklch(0.16 0.05 142);
+	--ui-color-brand-50: oklch(0.98 0.018 162);
+	--ui-color-brand-100: oklch(0.96 0.04 162);
+	--ui-color-brand-200: oklch(0.91 0.075 162);
+	--ui-color-brand-300: oklch(0.83 0.12 162);
+	--ui-color-brand-400: oklch(0.73 0.155 162);
+	--ui-color-brand-500: oklch(0.62 0.133 162);
+	--ui-color-brand-600: oklch(0.52 0.112 162);
+	--ui-color-brand-700: oklch(0.42 0.09 162);
+	--ui-color-brand-800: oklch(0.32 0.068 162);
+	--ui-color-brand-900: oklch(0.24 0.051 162);
+	--ui-color-brand-950: oklch(0.16 0.034 162);
 
 	--ui-color-danger-50: oklch(0.98 0.02 25);
 	--ui-color-danger-100: oklch(0.96 0.05 25);
@@ -66,17 +81,17 @@
 	--ui-color-warning-900: oklch(0.24 0.08 85);
 	--ui-color-warning-950: oklch(0.16 0.05 85);
 
-	--ui-color-success-50: oklch(0.98 0.02 155);
-	--ui-color-success-100: oklch(0.96 0.05 155);
-	--ui-color-success-200: oklch(0.91 0.09 155);
-	--ui-color-success-300: oklch(0.83 0.14 155);
-	--ui-color-success-400: oklch(0.73 0.18 155);
-	--ui-color-success-500: oklch(0.62 0.19 155);
-	--ui-color-success-600: oklch(0.52 0.18 155);
-	--ui-color-success-700: oklch(0.42 0.15 155);
-	--ui-color-success-800: oklch(0.32 0.12 155);
-	--ui-color-success-900: oklch(0.24 0.09 155);
-	--ui-color-success-950: oklch(0.16 0.06 155);
+	--ui-color-success-50: oklch(0.98 0.02 142);
+	--ui-color-success-100: oklch(0.96 0.05 142);
+	--ui-color-success-200: oklch(0.91 0.09 142);
+	--ui-color-success-300: oklch(0.83 0.14 142);
+	--ui-color-success-400: oklch(0.73 0.18 142);
+	--ui-color-success-500: oklch(0.62 0.19 142);
+	--ui-color-success-600: oklch(0.52 0.173 142);
+	--ui-color-success-700: oklch(0.42 0.14 142);
+	--ui-color-success-800: oklch(0.32 0.106 142);
+	--ui-color-success-900: oklch(0.24 0.079 142);
+	--ui-color-success-950: oklch(0.16 0.053 142);
 
 	/*
 	 * Font overrides on top of @pkg/u's own --ui-font-{sans,serif,mono}

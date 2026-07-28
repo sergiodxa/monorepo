@@ -56,16 +56,16 @@ export default createAction(routes.app.team.checkout, {
 								textAlign("center"),
 								pb("64px"),
 								pi("32px"),
-								border({ width: 1, style: "dashed", color: "oklch(0.83 0.01 145)" }),
+								border({ width: 1, style: "dashed", color: "oklch(0.83 0.011 250)" }),
 								rounded("12px"),
-								media("(prefers-color-scheme: dark)", border("oklch(0.42 0.008 145)")),
+								media("(prefers-color-scheme: dark)", border("oklch(0.42 0.012 250)")),
 							]}
 						>
 							<p
 								mix={[
 									fontSize("0.8125rem"),
-									fg("oklch(0.62 0.01 145)"),
-									media("(prefers-color-scheme: dark)", fg("oklch(0.73 0.01 145)")),
+									fg("oklch(0.62 0.014 250)"),
+									media("(prefers-color-scheme: dark)", fg("oklch(0.73 0.013 250)")),
 								]}
 							>
 								{ctx.i18next.t("page.billing.ownerOnly")}

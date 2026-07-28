@@ -47,12 +47,12 @@ export const CopyButton = clientEntry(
 					items("center"),
 					p(1, 2.5),
 					rounded("md"),
-					border({ color: "oklch(0.83 0.01 145)", width: 1, style: "solid" }),
+					border({ color: "oklch(0.83 0.011 250)", width: 1, style: "solid" }),
 					bg("transparent"),
 					fg("inherit"),
 					fontSize("0.8125rem"),
 					cursor("pointer"),
-					dark(border("oklch(0.42 0.008 145)")),
+					dark(border("oklch(0.42 0.012 250)")),
 					copyToClipboard(),
 					on("ui:copy", (event) => {
 						if (!event.success) return;

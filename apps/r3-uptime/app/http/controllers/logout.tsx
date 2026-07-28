@@ -37,9 +37,9 @@ export default createController(routes.logout, {
 								textAlign("center"),
 								gap(3),
 								p(16, 8),
-								border({ color: "oklch(0.83 0.01 145)", width: 1, style: "dashed" }),
+								border({ color: "oklch(0.83 0.011 250)", width: 1, style: "dashed" }),
 								rounded("12px"),
-								dark(border("oklch(0.42 0.008 145)")),
+								dark(border("oklch(0.42 0.012 250)")),
 							]}
 						>
 							<h1 mix={[m(0)]}>{ctx.i18next.t("page.logout.title")}</h1>

@@ -45,27 +45,27 @@ import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marke
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
-/** Neutral scale shades used on this page, hue 145. */
+/** Neutral (silver) scale shades used on this page, hue 250. */
 const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
+	50: "oklch(0.98 0.004 250)",
+	200: "oklch(0.91 0.008 250)",
+	400: "oklch(0.73 0.013 250)",
+	500: "oklch(0.62 0.014 250)",
+	600: "oklch(0.52 0.014 250)",
+	800: "oklch(0.32 0.01 250)",
+	900: "oklch(0.24 0.008 250)",
+	950: "oklch(0.16 0.006 250)",
 };
 
-/** Primary (brand) scale shades used on this page, hue 142. */
+/** Primary (emerald brand) scale shades used on this page, hue 162. */
 const primary = {
-	50: "oklch(0.98 0.02 142)",
-	200: "oklch(0.92 0.08 142)",
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-	700: "oklch(0.5 0.14 142)",
-	800: "oklch(0.42 0.12 142)",
-	950: "oklch(0.24 0.06 142)",
+	50: "oklch(0.98 0.02 162)",
+	200: "oklch(0.92 0.08 162)",
+	400: "oklch(0.78 0.16 162)",
+	600: "oklch(0.6 0.128 162)",
+	700: "oklch(0.5 0.107 162)",
+	800: "oklch(0.42 0.09 162)",
+	950: "oklch(0.24 0.051 162)",
 };
 
 /** GET /vs/:slug — a competitor comparison marketing page. */
@@ -115,7 +115,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						media(
 							"(prefers-color-scheme: dark)",
 							bg({
-								image: linearGradient("to bottom", "oklch(0.24 0.06 142 / 0.2)", neutral[950]),
+								image: linearGradient("to bottom", "oklch(0.24 0.051 162 / 0.2)", neutral[950]),
 							}),
 						),
 					]}
@@ -272,7 +272,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						bg(neutral[50]),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 					]}
 				>
 					<div
@@ -346,7 +346,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						bg(neutral[50]),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 					]}
 				>
 					<div

@@ -256,7 +256,7 @@ export default createAction(routes.home, async (ctx) => {
 							bg({
 								image: linearGradient(
 									"to bottom",
-									"oklch(0.24 0.06 142 / 0.2)",
+									"oklch(0.24 0.051 162 / 0.2)",
 									color("neutral.tint"),
 								),
 							}),
@@ -399,7 +399,7 @@ export default createAction(routes.home, async (ctx) => {
 						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 					]}
 				>
 					<div
@@ -499,7 +499,7 @@ export default createAction(routes.home, async (ctx) => {
 						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 					]}
 				>
 					<div
@@ -631,7 +631,7 @@ export default createAction(routes.home, async (ctx) => {
 						bg("neutral.tint"),
 						media("(min-width: 640px)", p("96px", "0")),
 						media("(min-width: 1024px)", p("128px", "0")),
-						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.005 145 / 0.5)")),
+						media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 					]}
 				>
 					<div
