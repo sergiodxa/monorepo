@@ -44,7 +44,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Captura de pantalla de un panel de monitoreo de uptime mostrando dos servicios con gráficos de mapa de calor semanal. Cada punto representa una verificación: verde para éxito, amarillo para mixto, rojo para falla y gris para sin datos. Cada monitor también muestra porcentaje de uptime, verificaciones totales, última verificación y tiempo de respuesta del percentil 99",
+				alt: "Captura de pantalla del panel de Uptime: una barra lateral con monitores HTTP, DNS y TCP, cron jobs, alertas, mantenimiento y páginas de estado; tarjetas de resumen con el uso mensual de pings, el porcentaje de uptime general y el endpoint más lento; conteos por tipo de monitores activos y caídos; y una tabla de monitores HTTP con gráficos de tendencia de latencia y etiquetas de estado",
 			},
 
 			trustIndicators: {

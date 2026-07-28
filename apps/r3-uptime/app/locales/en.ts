@@ -117,7 +117,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Screenshot of an uptime monitoring dashboard showing two services with weekly heatmap charts. Each dot represents a check: green for success, yellow for mixed, red for failure, and gray for no data. Each monitor also displays uptime percentage, total checks, last check time, and 99th percentile response time",
+				alt: "Screenshot of the Uptime dashboard: a sidebar listing HTTP, DNS, and TCP monitors, cron jobs, alerts, maintenance, and status pages; summary cards for monthly ping usage, overall uptime percentage, and the slowest endpoint; per-type counts of monitors up and down; and a table of HTTP monitors with latency trend sparklines and status badges",
 			},
 
 			trustIndicators: {

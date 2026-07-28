@@ -44,7 +44,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Screenshot eines Uptime-Überwachungs-Dashboards mit zwei Diensten und wöchentlichen Heatmap-Diagrammen. Jeder Punkt repräsentiert eine Prüfung: grün für Erfolg, gelb für gemischt, rot für Fehler und grau für keine Daten. Jeder Monitor zeigt auch Uptime-Prozentsatz, Gesamtprüfungen, letzte Prüfung und 99. Perzentil der Antwortzeit an",
+				alt: "Screenshot des Uptime-Dashboards: eine Seitenleiste mit HTTP-, DNS- und TCP-Monitoren, Cron-Jobs, Benachrichtigungen, Wartung und Statusseiten; Übersichtskarten für monatliche Ping-Nutzung, Gesamt-Uptime-Prozentsatz und den langsamsten Endpunkt; Zählungen aktiver und ausgefallener Monitore pro Typ; und eine Tabelle der HTTP-Monitore mit Latenz-Trendlinien und Status-Badges",
 			},
 
 			trustIndicators: {

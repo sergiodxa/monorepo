@@ -41,18 +41,38 @@ const fontFaceCss = `
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
 namespace DocumentLayout {
+	/**
+	 * One `<link rel="preload">` a page asks for on top of the document's own
+	 * fixed set. Narrow on purpose — a page declares *what* to fetch early, not
+	 * arbitrary `<head>` content.
+	 */
+	export interface Preload {
+		href: string;
+		/** The `as` destination, e.g. `"image"` for a hero screenshot. */
+		as: string;
+		/** Optional media condition, e.g. `"(prefers-color-scheme: dark)"` so only the matching variant is fetched. */
+		media?: string;
+	}
+
 	export interface Props {
 		children: RemixNode;
 		title?: string;
 		/** The request's detected language (`ctx.locale`), set as `<html lang>`. Defaults to `"en"` for the few call sites that don't have it in scope yet. */
 		locale?: string;
+		/**
+		 * Page-specific assets to preload, emitted before the stylesheets so the
+		 * browser starts fetching them as early as possible. Only for assets that
+		 * render above the fold (the homepage's hero screenshot) — everything else
+		 * should just load normally.
+		 */
+		preload?: Preload[];
 	}
 }
 
 /** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`, with an optional `<title>` and the client entry script. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { title, locale = "en", children } = handle.props;
+		let { title, locale = "en", preload = [], children } = handle.props;
 
 		return (
 			<html lang={locale} class="system">
@@ -61,6 +81,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
+					{preload.map((asset) => (
+						<link
+							key={`${asset.href}-${asset.media ?? ""}`}
+							rel="preload"
+							href={asset.href}
+							as={asset.as}
+							media={asset.media}
+						/>
+					))}
 					{/* Order matters: reset first, then semantic theme tokens, then this
 					app's own --color-* scales those tokens read through `var()` — CSS
 					custom properties resolve at used-value time, so declaration order

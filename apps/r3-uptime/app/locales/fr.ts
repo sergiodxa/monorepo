@@ -44,7 +44,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Capture d'écran d'un tableau de bord de surveillance de disponibilité affichant deux services avec des graphiques de chaleur hebdomadaires. Chaque point représente une vérification : vert pour succès, jaune pour mixte, rouge pour échec et gris pour aucune donnée. Chaque moniteur affiche également le pourcentage de disponibilité, le nombre total de vérifications, l'heure de la dernière vérification et le temps de réponse au 99e percentile",
+				alt: "Capture d'écran du tableau de bord Uptime : une barre latérale listant les moniteurs HTTP, DNS et TCP, les tâches cron, les alertes, la maintenance et les pages de statut ; des cartes de synthèse pour la consommation mensuelle de pings, le pourcentage de disponibilité global et le point de terminaison le plus lent ; le nombre de moniteurs actifs et hors service par type ; et un tableau des moniteurs HTTP avec des courbes de tendance de latence et des badges de statut",
 			},
 
 			trustIndicators: {

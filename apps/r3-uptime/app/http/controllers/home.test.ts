@@ -1,7 +1,9 @@
 /**
  * Tests the `/` controller: it renders the public marketing homepage inside the
  * shared document/marketing chrome for both anonymous and signed-in viewers, with the
- * hero CTA switching between a sign-in form and a dashboard link.
+ * hero CTA switching between a sign-in form and a dashboard link, and every section
+ * of the page — hero screenshot, trust indicators, feature/use-case grids, the
+ * pricing calculator's server-rendered baseline, and the FAQ — present in the markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,6 +85,69 @@ describe("GET /", () => {
 		expect(body).toContain("Monitor your services");
 		expect(body).toContain("with confidence");
 		expect(body).toContain("Start Monitoring");
+	});
+
+	test("renders the hero screenshot with a preloaded variant per color scheme", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).toContain(
+			'<link rel="preload" href="/screenshot-light.webp" as="image" media="(prefers-color-scheme: light)" />',
+		);
+		expect(body).toContain(
+			'<link rel="preload" href="/screenshot-dark.webp" as="image" media="(prefers-color-scheme: dark)" />',
+		);
+		expect(body).toContain('srcset="/screenshot-dark.webp"');
+		// The `<img>` fallback for engines that don't pick a `<source>`.
+		expect(body).toContain('src="/screenshot-light.webp"');
+		expect(body).toContain("Screenshot of the Uptime dashboard");
+	});
+
+	test("renders the trust indicators, feature grid, and use-case grid", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).toContain("99.9%");
+		expect(body).toContain("Uptime SLA");
+		expect(body).toContain("365");
+
+		// Feature cards link to their own page and carry the "learn more" affordance.
+		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
+		expect(body).toContain("Learn more");
+
+		// The secondary capability rows, which have no destination of their own.
+		expect(body).toContain("Maintenance Windows");
+		expect(body).toContain("Cron Job Monitoring");
+
+		expect(body).toContain(
+			`href="${routes.marketing.useCase.href({ slug: "website-monitoring" })}"`,
+		);
+		expect(body).toContain(`href="${routes.marketing.audience.href({ slug: "indie-hackers" })}"`);
+	});
+
+	test("server-renders the pricing calculator's initial estimate", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).toContain("Pricing Calculator");
+		// One monitor's slider, bounded at 1 and 60 minutes.
+		expect(body).toContain('type="range"');
+		expect(body).toContain('min="1"');
+		expect(body).toContain('max="60"');
+		// 28 days × 24 h × 60 min ÷ 10 min, which the base subscription fully covers.
+		expect(body).toContain("4,032");
+		expect(body).toContain("Total monthly cost:");
+		expect(body).toContain("How pricing works");
+	});
+
+	test("renders every FAQ entry across two accordion columns", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		// One `<details>` per entry, all nineteen of them.
+		expect(body.match(/<details/g)).toHaveLength(19);
+		expect(body).toContain("How does Uptime monitor my services?");
+		expect(body).toContain("From which regions can I monitor my services?");
 	});
 
 	test("renders the marketing homepage for a signed-in viewer with a dashboard CTA", async () => {

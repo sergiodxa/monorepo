@@ -44,7 +44,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Screenshot di una dashboard di monitoraggio uptime che mostra due servizi con grafici heatmap settimanali. Ogni punto rappresenta un controllo: verde per successo, giallo per misto, rosso per fallimento e grigio per nessun dato. Ogni monitor mostra anche la percentuale di uptime, controlli totali, ultimo controllo e tempo di risposta al 99° percentile",
+				alt: "Screenshot della dashboard di Uptime: una barra laterale con monitor HTTP, DNS e TCP, cron job, avvisi, manutenzione e pagine di stato; schede di riepilogo con l'uso mensile dei ping, la percentuale di uptime complessiva e l'endpoint più lento; il numero di monitor attivi e non raggiungibili per tipo; e una tabella dei monitor HTTP con grafici dell'andamento della latenza ed etichette di stato",
 			},
 
 			trustIndicators: {
