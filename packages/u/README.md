@@ -11459,7 +11459,7 @@ A selector wrapper that styles an element from the state of a sibling rather tha
 
 This is the compound-control idiom. A visually-hidden native `<input>` is paired with a sibling element that paints the visible indicator, and the indicator needs to read the input's state — checked, focused, disabled — while the input itself stays the real, accessible, form-submitting control. It is the single most repeated hand-written selector in real usage, which is why it gets a name of its own.
 
-**DOM order is load-bearing.** The `~` combinator only looks at _following_ siblings, so `&:has(~ input:checked)` matches an element that has a matching sibling _after_ it: the styled indicator must come **first** in the DOM and the hidden input **after** it. Reversed, every rule silently stops matching with no error anywhere. Reach for `u.has()` when the state lives on a descendant instead, and for a wrapper around both elements when the source order has to go the other way.
+**DOM order is load-bearing.** The `~` combinator only looks at _following_ siblings, so `&:has(~ input:checked)` matches an element that has a matching sibling _after_ it: the styled indicator must come **first** in the DOM and the hidden input **after** it. Reversed, every rule silently stops matching with no error anywhere. Reach for `u.has()` when the state lives on a descendant instead, and `u.precededBy()` when the source order goes the other way — input first, indicator after, which is the more common arrangement and the one that needs no `:has()` support.
 
 One more trap: do not use `u.ring()` for the focus state inside this wrapper. `ring()` composes `u.focusVisible()` internally, so it would test focus on the indicator — which never receives focus — rather than on the input. Use `u.outline()` inside `u.hasSibling("input:focus-visible", ...)`, where the focus test already lives in the selector.
 
@@ -11959,6 +11959,66 @@ The float-label composition — the wrapper's own `& > span` styles are the floa
 	/>
 </label>
 ```
+
+#### `precededBy(selector: string, input: UtilityInput): UtilityMixin`
+
+The mirror of `u.hasSibling()`. Both style an element from a _sibling's_ state, and which one you need is decided purely by source order: `hasSibling()` looks forward, so the styled element comes first, while this looks backward, so the element matching `selector` comes first and the styled element follows it. Sugar over `when("{selector} ~ &", input)`.
+
+The backward direction is usually the one a compound control wants, because it is the accessible source order — the real `<input>` first, then the element painting the visible indicator. Two smaller reasons to prefer it where either would work: it has no `:has()` dependency, since a plain `~` combinator has been supported far longer, and it keeps specificity flat, where `:has()` takes the specificity of its most specific argument.
+
+Note that no marker class or attribute goes on the sibling. Some utility-CSS frameworks solve this with a two-part protocol — a `peer`-style marker on one element and a `peer-*` variant on the other — which this package has no way to offer, since its mixins generate opaque class names and it keeps no runtime registry. Naming the sibling by its own selector needs neither half.
+
+**Parameters:**
+
+- `selector`: The preceding sibling's selector, used verbatim on the left of a `~` combinator. Any selector works — `"input:checked"`, `"input:focus-visible"`, `"*:hover"`, `"[data-slot='trigger'][aria-expanded='true']"`. `~` matches _any_ preceding sibling, not only the immediately preceding one; for the adjacent-only form reach for `when("{selector} + &", input)`.
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.precededBy("input:checked", u.border("brand.solid")) */
+.host {
+	input:checked ~ & {
+		border-color: var(--ui-brand-bg-solid);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.precededBy("input:checked", u.border("brand.solid"));
+let focusResult = u.precededBy("input:focus-visible", u.outline({ color: "brand", offset: 2 }));
+let hoverResult = u.precededBy("*:hover", u.opacity(100));
+```
+
+The compound-control pattern in its accessible source order — input first, indicator after, which is what this wrapper exists for:
+
+```tsx
+<label mix={[u.hstack({ gap: 2, align: "center" }), u.cursor("pointer")]}>
+	<input type="radio" name="plan" mix={[u.visuallyHidden()]} />
+	<span
+		aria-hidden="true"
+		mix={[
+			u.is(4),
+			u.bs(4),
+			u.circle(),
+			u.border({ color: "neutral", width: 2 }),
+			u.motionSafe(u.transition("border-color, background-color")),
+			u.precededBy("input:checked", [u.border("brand.solid"), u.bg("brand.solid")]),
+			u.precededBy("input:focus-visible", u.outline({ color: "brand", offset: 2 })),
+			u.precededBy("input:disabled", [u.opacity(50), u.cursor("not-allowed")]),
+		]}
+	/>
+	{label}
+</label>
+```
+
+Because it nests a descendant-style selector rather than a pseudo-class on the host, it composes with the pseudo-element wrappers: `u.precededBy("input:checked", u.after(u.scaleProperty(1)))` targets the indicator's `::after` only while the input is checked.
 
 #### `readOnly(input: UtilityInput): UtilityMixin`
 

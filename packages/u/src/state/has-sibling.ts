@@ -20,8 +20,9 @@ import { when } from "./when";
  * The `~` combinator only looks at *following* siblings, so this matches only
  * when the element matching `selector` comes after the styled element in the
  * DOM — put the indicator first and the hidden input after it. Reach for
- * `has()` instead when the state lives on a descendant, and for a wrapper
- * around both elements when the source order has to go the other way.
+ * `has()` instead when the state lives on a descendant, and `precededBy()` when
+ * the source order goes the other way, with the input first and the indicator
+ * after it.
  *
  * @example u.hasSibling("input:checked", u.bg("brand.solid"))
  * @example css({ "&:has(~ input:checked)": { backgroundColor: "..." } })

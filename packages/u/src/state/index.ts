@@ -19,6 +19,7 @@ export { not } from "./not";
 export { open } from "./open";
 export { placeholder } from "./placeholder";
 export { placeholderShown } from "./placeholder-shown";
+export { precededBy } from "./preceded-by";
 export { readOnly } from "./read-only";
 export { required } from "./required";
 export { selection } from "./selection";
