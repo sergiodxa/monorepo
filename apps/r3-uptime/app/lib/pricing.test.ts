@@ -14,7 +14,6 @@ import { describe, expect, test } from "bun:test";
 
 import {
 	BASE_PRICE_USD,
-	COST_PER_PING_USD,
 	formatPings,
 	formatUsd,
 	INCLUDED_PINGS,
@@ -31,7 +30,6 @@ describe("the pricing model", () => {
 		expect(INCLUDED_PINGS).toBe(100_000);
 		expect(PRICE_PER_BLOCK_USD).toBe(1);
 		expect(PINGS_PER_BLOCK).toBe(10_000);
-		expect(COST_PER_PING_USD).toBe(0.0001);
 	});
 });
 
@@ -56,27 +54,57 @@ describe("monthlyCost", () => {
 		expect(monthlyCost(INCLUDED_PINGS).totalUsd).toBe(5);
 	});
 
-	test("prorates usage past the allowance instead of rounding up to a whole block", () => {
-		// 3,000 over the allowance is 0.3 of a block — $0.30, not a full $1.
+	test("bills a single ping over the allowance as a whole block", () => {
+		let cost = monthlyCost(INCLUDED_PINGS + 1);
+
+		expect(cost.additionalPings).toBe(1);
+		expect(cost.billedBlocks).toBe(1);
+		expect(cost.totalUsd).toBe(6);
+	});
+
+	test("bills a ping past a full block as another whole block", () => {
+		// The stated example: 110,001 pings is $5 base, $1 for the first 10,000 over,
+		// and $1 more for the single ping past that block.
+		let cost = monthlyCost(110_001);
+
+		expect(cost.additionalPings).toBe(10_001);
+		expect(cost.billedBlocks).toBe(2);
+		expect(cost.totalUsd).toBe(7);
+	});
+
+	test("charges nothing extra for the last ping of a block", () => {
+		// Exactly two blocks, so the second one isn't a third.
+		let cost = monthlyCost(INCLUDED_PINGS + 20_000);
+
+		expect(cost.billedBlocks).toBe(2);
+		expect(cost.totalUsd).toBe(7);
+	});
+
+	test("rounds a partial block up rather than prorating it", () => {
+		// 3,000 over is three tenths of a block, and still costs a full dollar —
+		// dividing the block price by its size would understate this by $0.70.
 		let cost = monthlyCost(INCLUDED_PINGS + 3_000);
 
 		expect(cost.additionalPings).toBe(3_000);
-		expect(cost.additionalCostUsd).toBeCloseTo(0.3, 10);
-		expect(cost.totalUsd).toBeCloseTo(5.3, 10);
+		expect(cost.billedBlocks).toBe(1);
+		expect(cost.totalUsd).toBe(6);
 	});
 
-	test("prices a heavy setup off the metered rate", () => {
-		// 100 monitors every 5 minutes: 806,400 pings, 706,400 of them metered.
+	test("prices a heavy setup by whole blocks", () => {
+		// 100 monitors every 5 minutes: 806,400 pings, 706,400 over the allowance,
+		// which is 70.64 blocks and therefore 71 of them.
 		let cost = monthlyCostForUsage({ monitors: 100, intervalMinutes: 5 });
 
 		expect(cost.additionalPings).toBe(706_400);
-		expect(cost.totalUsd).toBeCloseTo(75.64, 10);
+		expect(cost.billedBlocks).toBe(71);
+		expect(cost.totalUsd).toBe(76);
 	});
 
 	test("never reports negative usage for a team under the allowance", () => {
 		expect(monthlyCost(0)).toEqual({
 			includedPings: INCLUDED_PINGS,
 			additionalPings: 0,
+			billedBlocks: 0,
 			additionalCostUsd: 0,
 			totalUsd: BASE_PRICE_USD,
 		});

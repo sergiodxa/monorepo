@@ -216,7 +216,8 @@ export default {
 
 					second: {
 						title: "Pings supplémentaires",
-						description: "{{blockPrice}} par tranche de {{blockSize}} pings supplémentaires",
+						description:
+							"{{blockPrice}} par tranche entamée de {{blockSize}} pings supplémentaires",
 					},
 
 					third: {
@@ -247,7 +248,8 @@ export default {
 					baseSubscription: "Abonnement de base",
 					includes: "Inclut les {{amount}} premiers pings",
 					additionalPings: "Pings supplémentaires :",
-					additionalPingsCost: "{{pings}} pings × {{blockPrice}} par {{blockSize}}",
+					additionalPingsCost:
+						"{{blocks}} × {{blockPrice}} par {{blockSize}} pings ({{pings}} au-delà)",
 					totalCost: "Coût mensuel total :",
 				},
 			},
@@ -341,7 +343,7 @@ export default {
 
 				seventeenth: {
 					q: "Que se passe-t-il si je dépasse les limites de mon forfait ?",
-					a: "Vous serez facturé {{blockPrice}} par tranche de {{blockSize}} pings au-delà des {{included}} inclus dans votre abonnement.",
+					a: "L'utilisation au-delà des {{included}} pings inclus dans votre abonnement est facturée par tranches entières de {{blockSize}} à {{blockPrice}} chacune : un seul ping supplémentaire entame une nouvelle tranche.",
 				},
 
 				eighteenth: {

@@ -434,7 +434,8 @@ export default {
 
 					second: {
 						title: "Additional pings",
-						description: "{{blockPrice}} per {{blockSize}} pings after that",
+						description:
+							"{{blockPrice}} per {{blockSize}} pings after that, billed in whole blocks",
 					},
 
 					third: {
@@ -465,7 +466,8 @@ export default {
 					baseSubscription: "Base subscription",
 					includes: "Includes first {{amount}} pings",
 					additionalPings: "Additional pings:",
-					additionalPingsCost: "{{pings}} pings × {{blockPrice}} per {{blockSize}}",
+					additionalPingsCost:
+						"{{blocks}} × {{blockPrice}} per {{blockSize}} pings ({{pings}} over)",
 					totalCost: "Total monthly cost:",
 				},
 			},
@@ -559,7 +561,7 @@ export default {
 
 				seventeenth: {
 					q: "What happens if I exceed my plan’s limits?",
-					a: "You will be charged {{blockPrice}} for every {{blockSize}} pings above the {{included}} included in your subscription.",
+					a: "Usage above the {{included}} pings included in your subscription is billed in whole blocks of {{blockSize}} at {{blockPrice}} each — a single ping over starts a new block.",
 				},
 
 				eighteenth: {

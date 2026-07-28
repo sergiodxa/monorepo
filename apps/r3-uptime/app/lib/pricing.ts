@@ -21,19 +21,14 @@ export const BASE_PRICE_USD = 5;
 /** Pings the {@link BASE_PRICE_USD} subscription covers before metered usage starts. */
 export const INCLUDED_PINGS = 100_000;
 
-/** Metered usage past {@link INCLUDED_PINGS} is quoted per block of this many pings. */
+/**
+ * Usage past {@link INCLUDED_PINGS} is billed per block of this many pings, and
+ * blocks are indivisible — see {@link monthlyCost} for why that matters.
+ */
 export const PINGS_PER_BLOCK = 10_000;
 
 /** Price of one {@link PINGS_PER_BLOCK} block, in USD. */
 export const PRICE_PER_BLOCK_USD = 1;
-
-/**
- * Per-ping rate the block price works out to. Metered usage is prorated at this
- * rate rather than rounded up to whole blocks — a team that goes 3,000 pings over
- * pays for 3,000 pings, not for a full block. The block is how the price is
- * *quoted* (a $0.0001 unit price is unreadable in copy), not how it's counted.
- */
-export const COST_PER_PING_USD = PRICE_PER_BLOCK_USD / PINGS_PER_BLOCK;
 
 /**
  * Days a billing month is estimated as when projecting a monitor's check frequency
@@ -67,27 +62,39 @@ export function monthlyPings(usage: Usage): number {
 export interface CostBreakdown {
 	/** Pings covered by the base subscription. */
 	includedPings: number;
-	/** Pings past {@link CostBreakdown.includedPings}, priced at {@link COST_PER_PING_USD}. */
+	/** Pings past {@link CostBreakdown.includedPings}, the volume the blocks are billed for. */
 	additionalPings: number;
-	/** Cost of those additional pings, in USD. */
+	/** Whole blocks billed for that volume — {@link CostBreakdown.additionalPings} rounded up. */
+	billedBlocks: number;
+	/** Cost of those blocks, in USD. */
 	additionalCostUsd: number;
-	/** Base subscription plus additional usage, in USD. */
+	/** Base subscription plus billed blocks, in USD. */
 	totalUsd: number;
 }
 
 /**
  * Prices a monthly ping count against the model above.
  *
+ * Usage past the allowance is billed in **whole blocks, rounded up** — there is no
+ * per-ping rate. One ping over the allowance buys a full block, and one ping past
+ * that block buys another: 100,001 pings costs $6, and 110,001 costs $7 ($5 base,
+ * one block for the first 10,000 over, a second block for the single ping past it).
+ * Anything that divides the block price by {@link PINGS_PER_BLOCK} to get a unit rate
+ * will understate every bill.
+ *
  * @example monthlyCost(13_440).totalUsd // 5 — inside the included allowance
- * @example monthlyCost(806_400).totalUsd // 75.64
+ * @example monthlyCost(100_001).totalUsd // 6 — one ping over buys a whole block
+ * @example monthlyCost(110_001).totalUsd // 7 — and one ping past that buys another
  */
 export function monthlyCost(pings: number): CostBreakdown {
 	let additionalPings = Math.max(0, pings - INCLUDED_PINGS);
-	let additionalCostUsd = additionalPings * COST_PER_PING_USD;
+	let billedBlocks = Math.ceil(additionalPings / PINGS_PER_BLOCK);
+	let additionalCostUsd = billedBlocks * PRICE_PER_BLOCK_USD;
 
 	return {
 		includedPings: INCLUDED_PINGS,
 		additionalPings,
+		billedBlocks,
 		additionalCostUsd,
 		totalUsd: BASE_PRICE_USD + additionalCostUsd,
 	};

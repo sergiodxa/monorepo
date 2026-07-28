@@ -207,7 +207,7 @@ export default {
 
 					second: {
 						title: "追加ping",
-						description: "以降は{{blockSize}}pingごとに{{blockPrice}}",
+						description: "以降は{{blockSize}}pingごとに{{blockPrice}}（ブロック単位での課金）",
 					},
 
 					third: {
@@ -238,7 +238,8 @@ export default {
 					baseSubscription: "基本サブスクリプション",
 					includes: "最初の{{amount}}回のpingを含む",
 					additionalPings: "追加ping：",
-					additionalPingsCost: "{{pings}} pings × {{blockSize}}あたり{{blockPrice}}",
+					additionalPingsCost:
+						"{{blocks}} × {{blockSize}}pingあたり{{blockPrice}}（超過{{pings}}）",
 					totalCost: "月額合計：",
 				},
 			},
@@ -332,7 +333,7 @@ export default {
 
 				seventeenth: {
 					q: "プランの制限を超えるとどうなりますか？",
-					a: "サブスクリプションに含まれる{{included}}回を超えるpingは、{{blockSize}}pingごとに{{blockPrice}}が課金されます。",
+					a: "サブスクリプションに含まれる{{included}}回を超える利用は、{{blockSize}}pingのブロック単位で1ブロックあたり{{blockPrice}}が課金されます（1回の超過でも1ブロック分）。",
 				},
 
 				eighteenth: {

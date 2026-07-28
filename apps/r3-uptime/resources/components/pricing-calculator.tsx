@@ -135,9 +135,10 @@ export const PricingCalculator = clientEntry(
 			});
 			let count = new Intl.NumberFormat(language, { maximumFractionDigits: 0 });
 			/**
-			 * Two fraction digits, but only once there's a fraction to show: the base
-			 * subscription reads `$5`, while metered usage lands on cents (`$5.30`) and
-			 * would be wrong rounded to whole dollars.
+			 * Every amount this panel can show is a whole dollar — the base price plus
+			 * some number of whole blocks — so the cents stay off. The two digits are
+			 * available rather than forbidden so that a price that *did* land on cents
+			 * would render honestly instead of being silently rounded.
 			 */
 			let money = new Intl.NumberFormat(language, {
 				style: "currency",
@@ -147,7 +148,8 @@ export const PricingCalculator = clientEntry(
 			});
 
 			let pingsPerMonth = totalPingsPerMonth(monitors);
-			let { additionalPings, additionalCostUsd, totalUsd } = monthlyCost(pingsPerMonth);
+			let { additionalPings, billedBlocks, additionalCostUsd, totalUsd } =
+				monthlyCost(pingsPerMonth);
 
 			/**
 			 * The model's own figures, formatted for the visitor's locale, for the copy
@@ -342,10 +344,14 @@ export const PricingCalculator = clientEntry(
 											</dd>
 										</div>
 										<p mix={[m(0), pis(4), fontSize("sm"), fg("neutral.muted")]}>
+											{/* Shows the *blocks* billed, not the ping volume times a unit
+											rate: blocks are indivisible, so a rate-shaped line would
+											disagree with the charge beside it — 10,001 pings over is $2,
+											not $1.01. */}
 											{t("landing.pricing.calculator.stats.additionalPingsCost", {
+												...pricingCopyValues,
+												blocks: count.format(billedBlocks),
 												pings: count.format(additionalPings),
-												blockPrice: money.format(PRICE_PER_BLOCK_USD),
-												blockSize: count.format(PINGS_PER_BLOCK),
 											})}
 										</p>
 									</div>
