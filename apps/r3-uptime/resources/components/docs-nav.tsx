@@ -22,7 +22,6 @@ import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { listStyle, raw } from "@pkg/u/general";
 import { block } from "@pkg/u/layout";
-import { media } from "@pkg/u/responsive";
 import { m, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, textTransform, tracking, weight } from "@pkg/u/typography";
