@@ -7255,12 +7255,14 @@ Note the background it sets is the _opaque_ system default `var(--ui-bg, Canvas)
 			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+			sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+			brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+			grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+			invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+			saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```
@@ -7500,6 +7502,134 @@ let withExplicitLeading = [u.fontSize("lg"), u.leading("tight")];
 </p>
 ```
 
+#### `fontVariantNumeric(value?: FontVariantNumericValue): UtilityMixin`
+
+Applies `font-variant-numeric`, the property that selects which OpenType numeral features the font should use — how digits are shaped and sized, and how fractions and ordinals are composed. `u.tabularNums()` already sets this property to `tabular-nums` and stays the right call for that common case; this is the primitive for every other value, and the two conflict on the same element because both write the same declaration. The default here is `"tabular-nums"` too, so a bare `u.fontVariantNumeric()` is just the long way to say `u.tabularNums()`.
+
+Every one of these values is a _request_ for a feature the font must actually ship. A font with no `onum` table silently ignores `"oldstyle-nums"` and renders its ordinary digits — no error, no fallback — so check the typeface before relying on one. That makes this a font-feature hint rather than a layout guarantee.
+
+The values that genuinely earn their place: `"slashed-zero"` to tell 0 apart from O in an identifier, key, or code sample; `"diagonal-fractions"` for a measurement or a recipe quantity; `"oldstyle-nums"` for numerals set inside running prose, where lining figures read as too loud. Because the property accepts a space-separated combination, the raw-string escape is how you ask for more than one feature at once.
+
+**Parameters:**
+
+- `value`: A `FontVariantNumericValue` naming the numeral feature to request. Defaults to `"tabular-nums"`.
+  - `"normal"` — disables every one of these features
+  - `"ordinal"` — shapes ordinal markers (`1st`, `2ª`) as proper superscript glyphs
+  - `"slashed-zero"` — draws zero with a slash through it, so it can't be misread as a capital O
+  - `"lining-nums"` — digits that all sit on the baseline at cap height
+  - `"oldstyle-nums"` — text figures, with ascenders and descenders like lowercase letters
+  - `"proportional-nums"` — each digit gets its own natural width
+  - `"tabular-nums"` — every digit gets the same width, so columns line up. The default.
+  - `"diagonal-fractions"` — shapes `1/2` as a slanted fraction
+  - `"stacked-fractions"` — shapes `1/2` as a stacked, horizontal-bar fraction
+  - any other string — the raw escape, which is how a space-separated combination of the above is passed through
+
+**Returns:**
+
+- A `UtilityMixin` that sets `font-variant-numeric`
+
+**CSS:**
+
+```css
+/* u.fontVariantNumeric() */
+.host {
+	font-variant-numeric: tabular-nums;
+}
+
+/* u.fontVariantNumeric("slashed-zero") */
+.host {
+	font-variant-numeric: slashed-zero;
+}
+
+/* u.fontVariantNumeric("tabular-nums slashed-zero") */
+.host {
+	font-variant-numeric: tabular-nums slashed-zero;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.fontVariantNumeric();
+let slashedResult = u.fontVariantNumeric("slashed-zero");
+let fractionResult = u.fontVariantNumeric("diagonal-fractions");
+let oldstyleResult = u.fontVariantNumeric("oldstyle-nums");
+let combinedResult = u.fontVariantNumeric("tabular-nums slashed-zero");
+```
+
+An identifier that will be read aloud or retyped, where a slashed zero is the difference between a working key and a support ticket — and the combination form for a monospaced value that must also line up in a column:
+
+```tsx
+<code mix={[u.font("mono"), u.fontVariantNumeric("slashed-zero"), u.fontSize("sm")]}>
+	{deploymentId}
+</code>
+
+<td
+	mix={[
+		u.font("mono"),
+		u.fontVariantNumeric("tabular-nums slashed-zero"),
+		u.textAlign("end"),
+		u.pi(3),
+	]}
+>
+	{checksum}
+</td>
+```
+
+#### `hyphens(value?: HyphensValue): UtilityMixin`
+
+Applies `hyphens`, letting a long word break with a hyphen at the end of a line instead of forcing the line to stay short. It is the typographic answer to a narrow measure — a sidebar, a card, a table cell — where a single long word would otherwise leave a visible gap at the end of every other line.
+
+`"auto"` only works when the element's language is known: the browser picks a hyphenation dictionary from a `lang` attribute on the element or on one of its ancestors, and with no `lang` anywhere it has no dictionary to consult and hyphenates nothing at all. That missing attribute is by far the most common reason this utility looks broken.
+
+It pairs naturally with `u.textAlign("justify")`. Justifying text without hyphenation stretches the word spacing of each line to fill the measure, which opens uneven rivers of whitespace down the column; hyphenation is the standard fix, giving the justification more break points to work with. For a string with no dictionary entry at all — a URL, a hash, a generated identifier — hyphenation can't help, and `u.overflowWrap()` is the tool that breaks it.
+
+**Parameters:**
+
+- `value`: A `HyphensValue` deciding how the browser may hyphenate. Defaults to `"auto"`.
+  - `"none"` — never hyphenates, not even at an explicit soft hyphen in the markup
+  - `"manual"` — CSS's own default: breaks only where the markup already marks an opportunity with `&shy;` or `<wbr>`
+  - `"auto"` — the browser hyphenates on its own, using its hyphenation dictionary for the element's language. The default, and the value that needs `lang`.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `hyphens`
+
+**CSS:**
+
+```css
+/* u.hyphens() */
+.host {
+	hyphens: auto;
+}
+
+/* u.hyphens("manual") */
+.host {
+	hyphens: manual;
+}
+
+/* u.hyphens("none") */
+.host {
+	hyphens: none;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.hyphens();
+let manualResult = u.hyphens("manual");
+let noneResult = u.hyphens("none");
+```
+
+Justified prose in a narrow column, with the `lang` attribute that makes `"auto"` do anything at all:
+
+```tsx
+<p lang="en" mix={[u.hyphens(), u.textAlign("justify"), u.maxIs("34ch"), u.leading("relaxed")]}>
+	{body}
+</p>
+```
+
 #### `leading(value?: LeadingValue): UtilityMixin`
 
 Applies `line-height`. Named values resolve through `var(--ui-leading-{name}, fallback)`, so an app can override the scale without losing the default; a raw number passes through as a unitless multiplier, and any other string passes through as a literal length.
@@ -7714,6 +7844,57 @@ Because `text-wrap` is inherited, setting it once on a prose container covers ev
 ```
 
 It sets the same property as `u.balance()`, so pick one per element.
+
+#### `tabSize(value?: number | (string & {})): UtilityMixin`
+
+Applies `tab-size`, the width a literal tab character renders at. A bare number is a count of space characters and is emitted unitless, which is what the property expects; a string passes through unchanged so a CSS length works too.
+
+It only has any effect where tab characters actually survive into the rendered text, which means alongside `u.whiteSpace("pre")` or `u.whiteSpace("pre-wrap")`. Under collapsed whitespace every tab has already become a single space, so there is nothing left to size and this declaration does nothing.
+
+The real use is a code block: the browser's default of 8 is far wider than any modern source file is indented, and 2 or 4 matches what the code was written against.
+
+**Parameters:**
+
+- `value`: The tab width, as a count of space characters or as a CSS length. Defaults to `2`.
+  - a `number` (`2`, `4`, `0`) — a count of space characters, emitted unitless
+  - a `string` (`"4ch"`, `"2rem"`) — passed through unchanged, so a CSS length works
+
+**Returns:**
+
+- A `UtilityMixin` that sets `tab-size`
+
+**CSS:**
+
+```css
+/* u.tabSize() */
+.host {
+	tab-size: 2;
+}
+
+/* u.tabSize(4) */
+.host {
+	tab-size: 4;
+}
+
+/* u.tabSize("4ch") */
+.host {
+	tab-size: 4ch;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.tabSize();
+let fourResult = u.tabSize(4);
+let lengthResult = u.tabSize("4ch");
+```
+
+A code block, which is where the pairing with a preserving `white-space` value is the whole point — without it the tabs have already collapsed and `tab-size` is inert:
+
+```tsx
+<pre mix={[u.whiteSpace("pre-wrap"), u.tabSize(2), u.font("mono"), u.fontSize("sm")]}>{source}</pre>
+```
 
 #### `tabularNums(): UtilityMixin`
 
@@ -8248,6 +8429,81 @@ Weight is the load-bearing part of a hierarchy — prefer it over size alone for
 
 Note `font-weight` is inherited, so setting it on a container affects the whole subtree — and using it for emphasis on a `<span>` conveys nothing to a screen reader; use `<strong>` where the emphasis is semantic.
 
+#### `whiteSpace(value?: WhiteSpaceValue): UtilityMixin`
+
+Applies `white-space`, whose keywords each answer two separate questions at once: whether runs of whitespace and newlines in the source are preserved, and whether lines are allowed to wrap.
+
+This is the general primitive behind three narrower utilities that already set the same property: `u.nowrap()` (`nowrap`), `u.truncate()` (which composes `u.nowrap()`), and `u.visuallyHidden()` (`nowrap`, to keep its clip rect stable regardless of surrounding text wrapping). All four write the same declaration, so this utility conflicts with each of them on the same element — pick one, and reach for the dedicated utilities for the cases they name.
+
+The default is `"pre-wrap"` because it is the one case with no other path today: preformatted text or a code block that must keep its own indentation and line breaks _and_ still wrap inside a narrow container rather than overflowing it. Note that `white-space` is inherited, so setting it on a container applies to the text of its descendants until one of them sets it again.
+
+**Parameters:**
+
+- `value`: A `WhiteSpaceValue`. Defaults to `"pre-wrap"`.
+  - `"normal"` — collapses whitespace and wraps; the browser's ordinary text behavior
+  - `"nowrap"` — collapses whitespace but never wraps, so the line overflows instead
+  - `"pre"` — preserves whitespace and newlines and never wraps
+  - `"pre-wrap"` — preserves whitespace and newlines and still wraps. The default.
+  - `"pre-line"` — collapses runs of spaces but honours newlines
+  - `"break-spaces"` — `pre-wrap` plus a wrapping opportunity after every preserved space, so a long run of trailing spaces can break instead of overflowing
+
+**Returns:**
+
+- A `UtilityMixin` that sets `white-space`
+
+**CSS:**
+
+```css
+/* u.whiteSpace() */
+.host {
+	white-space: pre-wrap;
+}
+
+/* u.whiteSpace("pre") */
+.host {
+	white-space: pre;
+}
+
+/* u.whiteSpace("pre-line") */
+.host {
+	white-space: pre-line;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.whiteSpace();
+let preResult = u.whiteSpace("pre");
+let preLineResult = u.whiteSpace("pre-line");
+let breakSpacesResult = u.whiteSpace("break-spaces");
+```
+
+The case the `"pre-wrap"` default exists for, with the rest of the code-block treatment around it: indentation preserved, tabs sized to what the source was written against, a monospaced family, and slashed zeros so digits can't be misread.
+
+```tsx
+<pre
+	mix={[
+		u.whiteSpace("pre-wrap"),
+		u.tabSize(2),
+		u.font("mono"),
+		u.fontVariantNumeric("slashed-zero"),
+		u.fontSize("sm"),
+		u.p(4),
+		u.rounded("md"),
+		u.surface("neutral"),
+	]}
+>
+	{source}
+</pre>
+```
+
+Because it is inherited, `"pre-line"` on a container is also the cheap way to honour newlines in user-entered text without preserving the indentation of the surrounding markup:
+
+```tsx
+<div mix={[u.whiteSpace("pre-line"), u.maxIs("60ch"), u.leading("relaxed")]}>{comment}</div>
+```
+
 #### `wordBreak(value?: WordBreakValue): UtilityMixin`
 
 Applies `word-break`, deciding whether the browser may break a line inside a word rather than only at ordinary break opportunities. The case that drives it is a long unbroken string — a URL, a hash, a generated identifier — overflowing a narrow container, because there is no space in it to wrap at. It only matters on an element whose inline size is actually bounded (a `maxIs()`, a grid column, or a flex item given `minIs(0)`); with an unbounded box the line simply grows and nothing has to break. Only `word-break` is emitted — this utility never touches `overflow-wrap`, so a rule wanting that property reaches for `u.overflowWrap()` instead — and that is usually the better tool for the long-URL case, since it breaks a word only when it would otherwise overflow. Pair with `truncate()` or `lineClamp()` instead when the overflow should be cut off rather than wrapped.
@@ -8328,12 +8584,14 @@ A backdrop filter only does anything if there is something translucent to see th
 		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -8363,6 +8621,544 @@ The full frosted-bar composition — a translucent background for the blur to ac
 ```
 
 Note that `u.translucent()` gates its blur behind `prefers-reduced-transparency` while this and `u.backdropSaturate()` do not, so mixing them can leave a reduced-transparency user with saturation but no blur. Wrap the ungated ones in the same `u.media()` gate when that matters.
+
+#### `backdropBrightness(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: brightness(...)`, scaling the lightness of whatever shows _through_ the element rather than the element's own pixels. Values below `1` darken and values above `1` brighten; `0` is solid black. Reach for it to knock back a busy backdrop behind a translucent sheet so the text sitting on the sheet stays readable, or to lift a backdrop that is too dark for a light panel to read against.
+
+`backdrop-filter` is a single CSS property, so two utilities that each set it outright would silently overwrite each other instead of combining. Every backdrop-filter utility therefore sets its own CSS custom property — `--ui-backdrop-brightness` here, `--ui-backdrop-blur` for `u.backdropBlur()`, `--ui-backdrop-saturate` for `u.backdropSaturate()`, and so on — plus one fixed, byte-identical composite `backdrop-filter` declaration that references every backdrop-filter function's variable with an identity fallback (`0px` for blur, `1` for brightness, contrast, opacity, and saturate, `0` for grayscale, invert, and sepia, `0deg` for hue-rotate, `0 0 0 transparent` for drop-shadow — all no-ops). Custom properties from separate classes on the same element all apply at once, and because the composite declaration's value text is identical in every backdrop utility it doesn't matter whose copy wins the cascade: the resolved `backdrop-filter` always reads every variable any applied utility set, and identity defaults for every variable none of them touched. So `u.backdropBrightness(0.8)` and `u.backdropBlur("md")` on one element compose into a darkened _and_ blurred backdrop rather than one erasing the other. The whole value is mirrored onto `-webkit-backdrop-filter`, which Safari still needs. This is the same mechanism `u.brightness()` and the rest of the `filter` family use, one property over.
+
+The function order inside the composite is fixed, and it deliberately matches `filter`'s — blur, brightness, contrast, grayscale, hue-rotate, invert, opacity, saturate, sepia, drop-shadow. Backdrop-filter functions are no more commutative than filter functions, so a `u.backdropGrayscale()` always applies _after_ a `u.backdropBrightness()` no matter which one a call site listed first.
+
+Two things it shares with every other backdrop utility. It is an **ungated primitive**: it applies even for a user who has asked for reduced transparency, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()` and supply a solid fallback (`u.translucent()` is the ready-made accessible pattern for the blur case). And it has no visible effect unless the host's own background is at least partly transparent — over an opaque background there is nothing showing through to filter, and the filtered backdrop is simply painted over.
+
+**Parameters:**
+
+- `value`: The brightness factor. Defaults to `1.1`, a barely-perceptible lift.
+  - a `number` — stringified as-is into an unitless multiplier: `1` is unchanged, `0` is solid black, `0.8` darkens, values above `1` brighten. `1.1` is the default.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropBrightness("80%")` emits `--ui-backdrop-brightness: 80%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-brightness` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropBrightness() */
+.host {
+	--ui-backdrop-brightness: 1.1;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+
+/* [u.backdropBrightness(0.8), u.backdropBlur("md")] — both variables set, one composite declaration */
+.host {
+	--ui-backdrop-brightness: 0.8;
+	--ui-backdrop-blur: var(--ui-blur-md, 12px);
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropBrightness();
+let darkened = u.backdropBrightness(0.8);
+let percentageEscapeHatch = u.backdropBrightness("80%");
+let gated = u.transparencySafe(u.backdropBrightness(0.8));
+```
+
+A translucent sheet over arbitrary page content, with the backdrop darkened and blurred behind it — both ungated, so both sit inside one `u.transparencySafe()` and the sheet keeps a solid background for the reduced-transparency case:
+
+```tsx
+<div
+	mix={[
+		u.fixed(),
+		u.inset(0),
+		u.layer(50),
+		u.surface("default"),
+		u.transparencySafe([
+			u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 70 }, "transparent")),
+			u.backdropBlur("md"),
+			u.backdropBrightness(0.8),
+		]),
+	]}
+>
+	{sheet}
+</div>
+```
+
+#### `backdropContrast(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: contrast(...)`, pushing whatever shows through the element away from mid-grey (values above `1`) or toward it (values below `1`). `0` flattens the backdrop to a uniform grey and `1` leaves it untouched.
+
+Pulling contrast _down_ is the useful direction for an overlay: it flattens a detailed backdrop into something closer to a single tone, which is what makes text sitting on top of a translucent panel legible without hiding the backdrop entirely. Pair it with `u.backdropBlur()` for the full frosted treatment, and reach for `u.contrast()` instead when it is the element's own rendering that needs firming up — the two are separate properties and apply together.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-contrast` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with `u.backdropBrightness()`, `u.backdropBlur()`, `u.backdropSaturate()`, and the rest instead of overwriting them — see `u.backdropBrightness()` for the full account of that mechanism and its fixed function order.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+Do not use it to _fix_ a contrast failure on the text above it. A filter changes rendered pixels, not the computed colors an automated checker reads, so it moves nothing measurable; fix the tones, and gate genuine high-contrast affordances on `u.contrastMore()`.
+
+**Parameters:**
+
+- `value`: The contrast factor. Defaults to `1.25`.
+  - a `number` — stringified as-is into an unitless multiplier: `1` is unchanged, `0` is uniform grey, values below `1` flatten, values above `1` intensify. `1.25` is the default.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropContrast("125%")` emits `--ui-backdrop-contrast: 125%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-contrast` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropContrast() */
+.host {
+	--ui-backdrop-contrast: 1.25;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropContrast();
+let flattened = u.backdropContrast(0.75);
+let percentageEscapeHatch = u.backdropContrast("125%");
+let gated = u.transparencySafe(u.backdropContrast(0.75));
+```
+
+A translucent toolbar whose backdrop is blurred and flattened so the controls on it read as the only detail in the strip:
+
+```tsx
+<div
+	mix={[
+		u.sticky(),
+		u.insBs(0),
+		u.layer(10),
+		u.hstack({ gap: 2, align: "center" }),
+		u.p(2),
+		u.border("neutral"),
+		u.transparencySafe([
+			u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 75 }, "transparent")),
+			u.backdropBlur("sm"),
+			u.backdropContrast(0.75),
+		]),
+	]}
+>
+	{controls}
+</div>
+```
+
+#### `backdropDropShadow(options?: BackdropDropShadowOptions): UtilityMixin`
+
+Applies a `backdrop-filter: drop-shadow(...)`, shadowing the _rendered shape of whatever shows through_ the element rather than the element's own box. That distinction is the whole point, and it makes this the narrowest utility in the backdrop family: the shadow is cast by the backdrop's silhouette as seen through a translucent host, so it reads as a subtle depth cue _behind_ a panel, not as elevation for the panel. For an elevation shadow on the element itself, reach for `u.shadow()`; for one that traces the element's own rendered shape, `u.dropShadow()`.
+
+Two limits come from the CSS function rather than from this utility: `drop-shadow()` accepts no spread radius and no `inset`, so a spread ring or an inner shadow has to come from `u.ringShadow()` or `u.shadow()` instead.
+
+It composes through the shared composite `backdrop-filter` declaration, writing only `--ui-backdrop-drop-shadow`, so it stacks with `u.backdropBlur()`, `u.backdropSaturate()`, and the rest — see `u.backdropBrightness()` for how that works. It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`, and it has no visible effect unless the host's own background is at least partly transparent: there is nothing showing through an opaque element to shadow.
+
+**Parameters:**
+
+- `options`: A `BackdropDropShadowOptions` object. Defaults to `{}`, which resolves to a small translucent-black shadow one spacing step down with a two-step blur.
+  - `x`: The shadow's inline offset. Defaults to `0`.
+    - a `number` — resolves against the spacing scale: `2` becomes `calc(var(--ui-spacing, 0.25rem) * 2)`.
+    - a `string` — a raw CSS length, passed through unchanged: `"1px"`, `"0.125rem"`, or a `var(...)` reference.
+  - `y`: The shadow's block offset. Defaults to `1`, one spacing step down. Same `number`-through-the-spacing-scale / `string`-passthrough handling as `x`.
+  - `blur`: The shadow's blur radius. Defaults to `2`. Same handling as `x` and `y`; `0` gives a hard-edged shadow.
+  - `color`: The shadow color, a `ColorValue` resolved with `border` as its default property. Defaults to the literal `rgb(0 0 0 / 0.15)` — the default is _not_ a token, so `border` only comes into play once a color is actually passed. Accepted forms:
+    - a bare semantic tone — `"neutral"`, `"brand"`, `"success"`, `"warning"`, `"danger"` — which takes the `border` default, so `"brand"` resolves to `var(--ui-brand-border)`.
+    - a tone with an explicit property suffix — `"brand.solid"`, `"neutral.strong"`, and so on, resolving to `var(--ui-{tone}-{suffix})`, with the usual friendly aliases (`tint` → `bg-tint`, `solid` → `bg-solid`, `muted` → `fg-muted`, `emphasis` → `fg-emphasis`, `onSolid` → `fg-on-solid`, `strong` → `border-strong`).
+    - a raw palette reference — `"color.neutral.400"` resolves to `var(--ui-color-neutral-400)`.
+    - `"transparent"`, `"inherit"`, or `"currentColor"` — passed through as-is.
+    - the raw CSS escape hatch — any string containing `(` is treated as an already-formed CSS color and passed through untouched, so `u.backdropDropShadow({ color: "rgb(0 0 0 / 0.4)" })` works.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-drop-shadow` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropDropShadow() */
+.host {
+	--ui-backdrop-drop-shadow: calc(var(--ui-spacing, 0.25rem) * 0)
+		calc(var(--ui-spacing, 0.25rem) * 1) calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.15);
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+
+/* u.backdropDropShadow({ x: "1px", y: "2px", blur: "4px", color: "brand" }) */
+.host {
+	--ui-backdrop-drop-shadow: 1px 2px 4px var(--ui-brand-border);
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropDropShadow();
+let rawLengths = u.backdropDropShadow({ x: "1px", y: "2px", blur: "4px" });
+let tonedShadow = u.backdropDropShadow({ y: "0", blur: "6px", color: "brand.solid" });
+let gated = u.transparencySafe(u.backdropDropShadow({ y: "2px", blur: "4px" }));
+```
+
+A translucent panel with a depth cue on the backdrop showing through it, and a real elevation shadow on the panel itself — two different shadows, from two different utilities:
+
+```tsx
+<aside
+	mix={[
+		u.rounded("lg"),
+		u.p(4),
+		u.shadow("lg"),
+		u.transparencySafe([
+			u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 70 }, "transparent")),
+			u.backdropBlur("md"),
+			u.backdropDropShadow({ y: "2px", blur: "4px" }),
+		]),
+	]}
+>
+	{children}
+</aside>
+```
+
+#### `backdropGrayscale(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: grayscale(...)`, desaturating whatever shows through the element toward grey. `1` is fully grey and `0` leaves it untouched. The use is stripping color out of a busy backdrop so a colored overlay on top of it reads as the only hue in the area — a brand-tinted sheet over a photo wall, a status banner over a colorful dashboard.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-grayscale` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with `u.backdropBlur()`, `u.backdropBrightness()`, and the rest rather than overwriting them — see `u.backdropBrightness()` for the mechanism and the fixed function order. That order matters here: grayscale sits after brightness and contrast in the composite, so it greys whatever those already produced. Reach for `u.grayscale()` when it's the element's own rendering that should go grey.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+**Parameters:**
+
+- `value`: The amount of desaturation. Defaults to `1`, a full conversion.
+  - a `number` — stringified as-is: `0` leaves the backdrop untouched, `0.5` is halfway, `1` is fully grey. Values above `1` are clamped by CSS.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropGrayscale("60%")` emits `--ui-backdrop-grayscale: 60%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-grayscale` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropGrayscale() */
+.host {
+	--ui-backdrop-grayscale: 1;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropGrayscale();
+let halfway = u.backdropGrayscale(0.5);
+let percentageEscapeHatch = u.backdropGrayscale("60%");
+let gated = u.transparencySafe(u.backdropGrayscale(0.5));
+```
+
+A brand-tinted overlay whose backdrop is greyed out, so the only color left in the region comes from the overlay:
+
+```tsx
+<div
+	mix={[
+		u.absolute(),
+		u.inset(0),
+		u.center(),
+		u.bg(u.colorMix("oklab", { color: u.var("ui-brand-bg-solid"), weight: 25 }, "transparent")),
+		u.transparencySafe([u.backdropGrayscale(), u.backdropBlur("sm")]),
+	]}
+>
+	<p mix={[u.fg("brand.onSolid"), u.text("lg")]}>{t("gallery.locked")}</p>
+</div>
+```
+
+#### `backdropHueRotate(value?: AngleValue): UtilityMixin`
+
+Applies a `backdrop-filter: hue-rotate(...)`, rotating the hue of whatever shows through the element around the color wheel by the given angle while leaving its lightness and saturation alone. Because rotation keeps the backdrop's original light/dark structure intact, it is the way to pull an arbitrary backdrop toward a single brand hue under a translucent panel without flattening the depth out of it.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-hue-rotate` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with `u.backdropBlur()`, `u.backdropSaturate()`, and the rest — see `u.backdropBrightness()` for the mechanism and the fixed function order. `u.hueRotate()` is the same rotation applied to the element's own pixels; the two are independent properties and can be used together.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+**Parameters:**
+
+- `value`: An `AngleValue`. Defaults to `90`, a quarter-turn.
+  - a `number` — treated as degrees and suffixed with `deg`: `180` becomes `180deg`, and a negative number rotates the other way (`-45` becomes `-45deg`).
+  - a `string` — passed through unchanged, for other angle units or a computed value: `"0.5turn"`, `"3.14rad"`, `"calc(var(--shift) * 1deg)"`.
+- No value throws; there is no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-hue-rotate` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropHueRotate() */
+.host {
+	--ui-backdrop-hue-rotate: 90deg;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+
+/* u.backdropHueRotate("0.5turn") */
+.host {
+	--ui-backdrop-hue-rotate: 0.5turn;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropHueRotate();
+let halfTurn = u.backdropHueRotate(180);
+let counterClockwise = u.backdropHueRotate(-45);
+let rawAngleUnit = u.backdropHueRotate("0.5turn");
+```
+
+A translucent hero panel that pulls whatever image is behind it toward the brand hue while keeping the photo's light and shade:
+
+```tsx
+<section
+	mix={[
+		u.relative(),
+		u.p(6),
+		u.rounded("xl"),
+		u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 60 }, "transparent")),
+		u.transparencySafe([u.backdropHueRotate(30), u.backdropSaturate(1.2), u.backdropBlur("sm")]),
+	]}
+>
+	{hero}
+</section>
+```
+
+#### `backdropInvert(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: invert(...)`, inverting the colors of whatever shows through the element. `1` is a full inversion and `0` leaves it untouched.
+
+It is a heavy, deliberately graphic effect, so the honest uses are narrow: a partial amount for a stylized overlay, or a full inversion on a small cutout — a custom cursor, a magnifier, a scrub handle — that must stay visible over any backdrop, light or dark. Reach for `u.invert()` when it's the element's own pixels that need flipping, and note that a full inversion of a mid-grey backdrop lands back on roughly the same grey.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-invert` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with the other backdrop utilities instead of overwriting them — see `u.backdropBrightness()` for the mechanism and the fixed function order.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+**Parameters:**
+
+- `value`: The amount of inversion. Defaults to `1`, a full inversion.
+  - a `number` — stringified as-is: `0` leaves the backdrop untouched, `0.15` is a light stylization, `1` is full. `0.5` collapses the backdrop to mid-grey.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropInvert("15%")` emits `--ui-backdrop-invert: 15%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-invert` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropInvert() */
+.host {
+	--ui-backdrop-invert: 1;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropInvert();
+let subtle = u.backdropInvert(0.15);
+let percentageEscapeHatch = u.backdropInvert("15%");
+let gated = u.transparencySafe(u.backdropInvert(0.15));
+```
+
+A thin scrub handle that inverts its own backdrop, so it stays visible wherever it lands on the waveform behind it:
+
+```tsx
+<div
+	mix={[
+		u.absolute(),
+		u.insBs(0),
+		u.is("2px"),
+		u.bs("full"),
+		u.bg("transparent"),
+		u.transparencySafe(u.backdropInvert()),
+	]}
+	aria-hidden="true"
+/>
+```
+
+#### `backdropOpacity(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: opacity(...)`, fading whatever shows through the element toward whatever is painted further back. It's the way to soften a backdrop without blurring it — the backdrop keeps its shapes and edges, it just loses presence.
+
+Two contrasts are worth stating plainly. It takes CSS's native `0`–`1` range (or a percentage string), **not** the `0`–`100` integer convention `u.opacity()` uses. And unlike `u.opacity()`, it never touches the element's own contents: only its backdrop. For the filter-function form applied to the element itself, see `u.filterOpacity()`.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-opacity` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with the other backdrop utilities instead of overwriting them — see `u.backdropBrightness()` for the mechanism and the fixed function order.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+**Parameters:**
+
+- `value`: The backdrop's opacity, in CSS's native range. Defaults to `0.5`.
+  - a `number` — stringified as-is: `1` leaves the backdrop untouched, `0.5` is the default half-fade, `0` fades it out entirely. Values above `1` are clamped by CSS, so `50` is fully opaque rather than half.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropOpacity("25%")` emits `--ui-backdrop-opacity: 25%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-opacity` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropOpacity() */
+.host {
+	--ui-backdrop-opacity: 0.5;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropOpacity();
+let quarter = u.backdropOpacity(0.25);
+let percentageEscapeHatch = u.backdropOpacity("25%");
+let gated = u.transparencySafe(u.backdropOpacity(0.25));
+```
+
+A dialog scrim that fades the page behind it without blurring it, so the layout underneath stays recognizable:
+
+```tsx
+<div
+	mix={[
+		u.fixed(),
+		u.inset(0),
+		u.layer(40),
+		u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 40 }, "transparent")),
+		u.transparencySafe(u.backdropOpacity(0.25)),
+	]}
+	aria-hidden="true"
+/>
+```
 
 #### `backdropSaturate(value?: number | string): UtilityMixin`
 
@@ -8395,12 +9191,14 @@ It has no visible effect unless something is actually visible behind the element
 		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 
 /* [u.backdropBlur("lg"), u.backdropSaturate(1.4)] — both variables set, one composite declaration */
@@ -8411,12 +9209,14 @@ It has no visible effect unless something is actually visible behind the element
 		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -8439,6 +9239,71 @@ let desaturatedBackdrop = u.backdropSaturate(0);
 		u.media("(prefers-reduced-transparency: reduce)", u.backdropSaturate(1)),
 	]}
 />
+```
+
+#### `backdropSepia(value?: number | (string & {})): UtilityMixin`
+
+Applies a `backdrop-filter: sepia(...)`, shifting whatever shows through the element toward a warm brown monochrome. `1` is a full conversion and `0` leaves it untouched. It is the warm sibling of `u.backdropGrayscale()`: both drop the backdrop to a single hue, this one to a tone that sits closer to a cream or parchment surface than to neutral grey.
+
+Like every backdrop-filter utility it writes only its own `--ui-backdrop-sepia` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations, so it stacks with the other backdrop utilities instead of overwriting them — see `u.backdropBrightness()` for the mechanism and the fixed function order. Reach for `u.sepia()` to warm the element's own rendering instead.
+
+It is an ungated primitive, so a call site that respects `prefers-reduced-transparency` should wrap it in `u.transparencySafe()`. And it has no visible effect unless the host's own background is at least partly transparent.
+
+**Parameters:**
+
+- `value`: The amount of conversion. Defaults to `1`, a full conversion.
+  - a `number` — stringified as-is: `0` leaves the backdrop untouched, `0.6` is a partial warming, `1` is full. Values above `1` are clamped by CSS.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.backdropSepia("60%")` emits `--ui-backdrop-sepia: 60%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-backdrop-sepia` custom property plus the shared composite `backdrop-filter` and `-webkit-backdrop-filter` declarations.
+
+**CSS:**
+
+```css
+/* u.backdropSepia() */
+.host {
+	--ui-backdrop-sepia: 1;
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
+		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
+		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
+		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdropSepia();
+let partial = u.backdropSepia(0.6);
+let percentageEscapeHatch = u.backdropSepia("60%");
+let gated = u.transparencySafe(u.backdropSepia(0.6));
+```
+
+A reading overlay that warms the page behind it, matched with a slight blur so the two effects land in one `backdrop-filter`:
+
+```tsx
+<div
+	mix={[
+		u.absolute(),
+		u.inset(0),
+		u.p(6),
+		u.bg(u.colorMix("oklab", { color: u.var("ui-bg", "Canvas"), weight: 65 }, "transparent")),
+		u.transparencySafe([u.backdropSepia(0.6), u.backdropBlur("sm")]),
+	]}
+>
+	{excerpt}
+</div>
 ```
 
 #### `backfaceVisibility(value?: BackfaceVisibilityValue): UtilityMixin`
@@ -8757,6 +9622,75 @@ A transparent-PNG logo whose shadow traces the mark instead of boxing it, and an
 </header>
 ```
 
+#### `filterOpacity(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: opacity(...)`, the filter-function form of transparency. It is named `filterOpacity` rather than `opacity` because `u.opacity()` already exists in this family and sets the plain `opacity` _property_ — two different things that happen to share a name in CSS.
+
+The distinction is subtle and it matters. `u.opacity()` sets the `opacity` property, which flattens the element **and all of its descendants** into one group and fades that group as a whole (and creates a stacking context). `u.filterOpacity()` adds an `opacity()` function to the element's `filter` list, so the fade runs inside the filter pipeline and composes with the other filter functions in the same declaration — a `u.blur()` or `u.grayscale()` applied by another utility. Because it is applied at a different stage of rendering than the property, the two can produce visibly different results on the same element; a filter chain plus a fade in one pass is the case this utility exists for.
+
+**Footgun: it takes CSS's native `0`–`1` range (or a percentage string), not the `0`–`100` integer convention `u.opacity()` uses.** `u.opacity(50)` and `u.filterOpacity(0.5)` are the same amount of fade. `u.filterOpacity(50)` is **not** — CSS clamps it, so it renders fully opaque.
+
+It composes through the shared composite `filter` declaration, writing only `--ui-filter-opacity`, so it stacks with every other filter utility instead of overwriting them; see `u.brightness()` for the mechanism and the fixed function order. Its own slot sits after grayscale, hue-rotate, and invert and before saturate.
+
+**Parameters:**
+
+- `value`: The opacity, in CSS's native range. Defaults to `0.5`.
+  - a `number` — stringified as-is: `1` leaves the element untouched, `0.5` is the default half-fade, `0` is fully transparent. Values above `1` are clamped by CSS, which is the footgun above — `50` is fully opaque, not half.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.filterOpacity("25%")` emits `--ui-filter-opacity: 25%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation. It never sets the `opacity` property — only `--ui-filter-opacity` and the composite.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-opacity` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.filterOpacity() */
+.host {
+	--ui-filter-opacity: 0.5;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* [u.filterOpacity(0.5), u.blur("lg")] — both variables set, one composite declaration */
+.host {
+	--ui-filter-opacity: 0.5;
+	--ui-filter-blur: var(--ui-blur-lg, 24px);
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.filterOpacity();
+let quarter = u.filterOpacity(0.25);
+let percentageEscapeHatch = u.filterOpacity("25%");
+let sameFadeAsOpacity50 = u.filterOpacity(0.5);
+```
+
+A locked preview blurred, greyed, and faded in a single `filter` pass — three filter utilities, one declaration, so none of them cancels the others:
+
+```tsx
+<div mix={[u.relative()]}>
+	<div
+		mix={[u.blur("sm"), u.grayscale(0.8), u.filterOpacity(0.6), u.pointerEvents(), u.userSelect()]}
+		aria-hidden="true"
+	>
+		{preview}
+	</div>
+	<div mix={[u.absolute(), u.inset(0), u.center()]}>{unlockPrompt}</div>
+</div>
+```
+
 #### `grayscale(value?: number | (string & {})): UtilityMixin`
 
 Applies a `filter: grayscale(...)`, desaturating the element toward grey. `1` is fully grey and `0` leaves it untouched. It is the cheapest way to dim an inactive, disabled, or unavailable thing without touching its layout or rewriting its colors — a locked integration logo, a sold-out product image, a paused chart.
@@ -8820,6 +9754,71 @@ An unavailable integration, greyed _and_ labelled — the grey is decoration, th
 	<span mix={[u.fg("neutral.muted")]}>{integration.name}</span>
 	<span mix={[u.text("sm"), u.fg("neutral.muted")]}>{t("integrations.unavailable")}</span>
 </li>
+```
+
+#### `hueRotate(value?: AngleValue): UtilityMixin`
+
+Applies a `filter: hue-rotate(...)`, rotating every pixel's hue around the color wheel by the given angle while leaving lightness and saturation alone. The real use is recoloring a whole image or icon in one declaration — tinting a single source asset per theme, or shifting a decorative illustration to match a brand hue — without shipping a second copy of the file.
+
+Because it rotates rather than negates, `u.hueRotate(180)` lands on the opposite hue but keeps the original lightness, so a light image stays light. That is precisely the difference from `u.invert()`, which flips lightness too and turns a light image dark. When you want a one-color raster asset to read on a dark background, `u.invert()` is the tool; when you want the same asset in a different color at the same lightness, this is.
+
+It composes through the shared composite `filter` declaration, writing only `--ui-filter-hue-rotate`, so it stacks with `u.saturate()`, `u.brightness()`, `u.blur()`, and the rest — see `u.brightness()` for the mechanism and the fixed function order. Any hue rotation other than `0deg` makes the element a stacking context and a containing block for fixed-position descendants. `u.backdropHueRotate()` is the same rotation applied to the element's backdrop instead.
+
+**Parameters:**
+
+- `value`: An `AngleValue`. Defaults to `90`, a quarter-turn.
+  - a `number` — treated as degrees and suffixed with `deg`: `180` becomes `180deg`, and a negative number rotates the other way (`-45` becomes `-45deg`).
+  - a `string` — passed through unchanged, for other angle units or a computed value: `"0.5turn"`, `"3.14rad"`, `"calc(var(--shift) * 1deg)"`.
+- No value throws; there is no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-hue-rotate` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.hueRotate() */
+.host {
+	--ui-filter-hue-rotate: 90deg;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* u.hueRotate("0.5turn") */
+.host {
+	--ui-filter-hue-rotate: 0.5turn;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		hue-rotate(var(--ui-filter-hue-rotate, 0deg)) invert(var(--ui-filter-invert, 0))
+		opacity(var(--ui-filter-opacity, 1)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.hueRotate();
+let oppositeHue = u.hueRotate(180);
+let counterClockwise = u.hueRotate(-45);
+let rawAngleUnit = u.hueRotate("0.5turn");
+```
+
+One decorative raster illustration recolored per surface — the rotation keeps its lightness, so it doesn't turn into a negative the way `u.invert()` would:
+
+```tsx
+<figure mix={[u.vstack({ gap: 2, align: "center" }), u.p(4)]}>
+	<img
+		src="/illustrations/empty-inbox.png"
+		alt=""
+		mix={[u.is(40), u.hueRotate(35), u.saturate(1.1)]}
+	/>
+	<figcaption mix={[u.text("sm"), u.fg("neutral.muted")]}>{t("inbox.empty")}</figcaption>
+</figure>
 ```
 
 #### `invert(value?: number | (string & {})): UtilityMixin`
@@ -8987,6 +9986,71 @@ The short form for a scroll fade, and the options form for a raster mask that ha
 		]}
 	/>
 </>
+```
+
+#### `mixBlendMode(value?: MixBlendModeValue): UtilityMixin`
+
+Applies `mix-blend-mode`, blending the element with the content painted behind it instead of simply covering it — a `multiply` caption that darkens into its background, a `plus-lighter` glow, a `luminosity` treatment that keeps the backdrop's hue but takes the overlay's lightness.
+
+Three things are worth knowing before reaching for it. Any value other than `normal` makes the element create a **stacking context** of its own, so its `z-index` starts being interpreted and its descendants can no longer be layered against elements outside it. Blending is confined to the nearest stacking context, which is exactly how the effect gets contained: the element blends with its siblings and its ancestors' painting up to that boundary and no further, so putting `u.isolate()` on the ancestor that should be the outer limit stops the blend there instead of letting it reach the page background. And it blends against _whatever_ happens to be painted behind it — predictable over a fixed design, unpredictable over user-supplied imagery, where a mode that reads well on a dark photo can make the same text vanish on a light one. Text over uncontrolled images wants an opaque background or a scrim, not a blend mode.
+
+**Parameters:**
+
+- `value`: A `MixBlendModeValue`. Defaults to `"multiply"`. Closed union, no raw-string escape hatch.
+  - `"normal"` — no blending; the element simply paints over what is behind it. The CSS initial value, and the way to opt one element back out.
+  - `"multiply"` — multiplies the two colors, so the result is never lighter than either. Darkens; white leaves the backdrop untouched. The default.
+  - `"screen"` — the inverse of multiply, so the result is never darker than either. Lightens; black leaves the backdrop untouched.
+  - `"overlay"` — multiply on the dark parts of the backdrop, screen on the light parts, so it boosts existing contrast.
+  - `"darken"` — keeps the darker of the two colors, channel by channel.
+  - `"lighten"` — keeps the lighter of the two colors, channel by channel.
+  - `"color-dodge"` — brightens the backdrop in proportion to the element; a hard, blown-out lift.
+  - `"color-burn"` — darkens the backdrop in proportion to the element; the mirror of color-dodge.
+  - `"hard-light"` — overlay with the two layers swapped, so the element's lightness drives the result. Harsh.
+  - `"soft-light"` — a gentler hard-light, closer to a diffuse spotlight over the backdrop.
+  - `"difference"` — the absolute difference between the two, so identical colors go black; a strong graphic effect.
+  - `"exclusion"` — like difference but with lower contrast in the midtones.
+  - `"hue"` — takes the element's hue with the backdrop's saturation and luminosity.
+  - `"saturation"` — takes the element's saturation with the backdrop's hue and luminosity.
+  - `"color"` — takes the element's hue and saturation with the backdrop's luminosity, the classic colorize.
+  - `"luminosity"` — the inverse: the element's luminosity over the backdrop's hue and saturation.
+  - `"plus-darker"` — a compositing mode rather than a separable blend: sums the darkness of both layers, clamped.
+  - `"plus-lighter"` — sums both layers additively, clamped to white; the mode behind additive glows and the standard trick for cross-fading two stacked layers without a dip in the middle.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `mix-blend-mode`.
+
+**CSS:**
+
+```css
+/* u.mixBlendMode() */
+.host {
+	mix-blend-mode: multiply;
+}
+
+/* u.mixBlendMode("plus-lighter") */
+.host {
+	mix-blend-mode: plus-lighter;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.mixBlendMode();
+let lightening = u.mixBlendMode("screen");
+let nonSeparable = u.mixBlendMode("luminosity");
+let additiveGlow = u.mixBlendMode("plus-lighter");
+let optedOut = u.mixBlendMode("normal");
+```
+
+A brand-tinted wash blended into a header image, with `u.isolate()` on the wrapper so the blend stops at the card instead of reaching the page background:
+
+```tsx
+<div mix={[u.zstack(), u.isolate(), u.rounded("lg"), u.overflow("hidden")]}>
+	<img src={post.cover} alt="" mix={[u.is("full"), u.bs("full"), u.fit("cover")]} />
+	<div mix={[u.absolute(), u.inset(0), u.bg("brand.solid"), u.mixBlendMode("luminosity")]} />
+</div>
 ```
 
 #### `opacity(value: number): UtilityMixin`
@@ -9291,12 +10355,14 @@ Like every filter utility, it writes only `--ui-filter-saturate` plus the shared
 		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-		contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-		hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-		opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-		sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+		grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+		invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+		saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+		drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -9475,6 +10541,84 @@ An elevation and a ring on one element, which is now just two utilities side by 
 </button>
 ```
 
+#### `textShadow(options?: TextShadowOptions): UtilityMixin`
+
+Applies `text-shadow`, which shadows the _glyphs_ themselves. That is the distinction from its two neighbours: `u.shadow()` shadows the element's box, `u.dropShadow()` shadows its rendered shape, and this one traces the letter forms.
+
+The real use is legibility for text sitting directly on an image or a video, where a soft dark shadow keeps the letters readable as the content behind them changes. Treat it as the weaker option, though: it only rescues text whose contrast is already borderline, and it does nothing measurable for a contrast ratio. A real scrim — a translucent overlay between the media and the text — is the reliable fix, with a text shadow layered on top of it at most.
+
+It sets one plain property and nothing else, so unlike `u.dropShadow()` it does not go through the composite `filter` declaration and never interacts with the filter utilities. Note also that `text-shadow` accepts no spread radius and no `inset`, unlike `box-shadow`.
+
+**Parameters:**
+
+- `options`: A `TextShadowOptions` object. Defaults to `{}`, which resolves to a translucent-black shadow one spacing step down with a two-step blur.
+  - `x`: The shadow's inline offset. Defaults to `0`.
+    - a `number` — resolves against the spacing scale: `2` becomes `calc(var(--ui-spacing, 0.25rem) * 2)`.
+    - a `string` — a raw CSS length, passed through unchanged: `"1px"`, `"0.125rem"`, or a `var(...)` reference.
+  - `y`: The shadow's block offset. Defaults to `1`, one spacing step down. Same `number`-through-the-spacing-scale / `string`-passthrough handling as `x`.
+  - `blur`: The shadow's blur radius. Defaults to `2`. Same handling as `x` and `y`; `0` gives a hard-edged shadow.
+  - `color`: The shadow color, a `ColorValue` resolved through the token layer with `border` as its default property. Defaults to the literal `rgb(0 0 0 / 0.35)` — a stronger default alpha than `u.dropShadow()`'s, because glyph edges need more help than a box edge — and that default is **not** a token, so it never touches the resolver and `border` only comes into play once a color is actually passed. Accepted forms:
+    - a bare semantic tone — `"neutral"`, `"brand"`, `"success"`, `"warning"`, `"danger"` — which takes the `border` default, so `"brand"` resolves to `var(--ui-brand-border)`.
+    - a tone with an explicit property suffix — `"brand.solid"`, `"neutral.strong"`, and so on, resolving to `var(--ui-{tone}-{suffix})`, with the usual friendly aliases (`tint` → `bg-tint`, `solid` → `bg-solid`, `muted` → `fg-muted`, `emphasis` → `fg-emphasis`, `onSolid` → `fg-on-solid`, `strong` → `border-strong`).
+    - a raw palette reference — `"color.neutral.400"` resolves to `var(--ui-color-neutral-400)`.
+    - `"transparent"`, `"inherit"`, or `"currentColor"` — passed through as-is.
+    - the raw CSS escape hatch — any string containing `(` is treated as an already-formed CSS color and passed through untouched, so `u.textShadow({ color: "rgb(0 0 0 / 0.6)" })` works.
+
+**Returns:**
+
+- A `UtilityMixin` that sets only `text-shadow`.
+
+**CSS:**
+
+```css
+/* u.textShadow() */
+.host {
+	text-shadow: calc(var(--ui-spacing, 0.25rem) * 0) calc(var(--ui-spacing, 0.25rem) * 1)
+		calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.35);
+}
+
+/* u.textShadow({ y: "1px", blur: "3px", color: "brand" }) */
+.host {
+	text-shadow: calc(var(--ui-spacing, 0.25rem) * 0) 1px 3px var(--ui-brand-border);
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.textShadow();
+let rawLengths = u.textShadow({ x: "1px", y: "2px", blur: "4px" });
+let tonedShadow = u.textShadow({ x: "0", y: "0", blur: "6px", color: "brand.solid" });
+let hardEdged = u.textShadow({ x: 1, y: 1, blur: 0, color: "color.neutral.400" });
+```
+
+A headline over a cover image done properly — a translucent scrim carries the contrast, and the text shadow is the finishing touch on top of it rather than the whole plan:
+
+```tsx
+<figure mix={[u.relative(), u.rounded("lg"), u.overflow("hidden")]}>
+	<img src={post.cover} alt="" mix={[u.is("full"), u.bs("full"), u.fit("cover")]} />
+	<div
+		mix={[
+			u.absolute(),
+			u.inset(0),
+			u.bg(u.colorMix("oklab", { color: "color.neutral.900", weight: 45 }, "transparent")),
+		]}
+	/>
+	<figcaption
+		mix={[
+			u.absolute(),
+			u.insBe(0),
+			u.p(4),
+			u.text("2xl"),
+			u.fg("neutral.onSolid"),
+			u.textShadow({ y: "1px", blur: "3px" }),
+		]}
+	>
+		{post.title}
+	</figcaption>
+</figure>
+```
+
 #### `transition(properties: string, options?: TransitionOptions): UtilityMixin`
 
 Applies the `transition-property`/`transition-timing-function`/`transition-duration` triplet in one call — the shared shape behind nearly every hover, focus, press, and selection state change, so a call site only names which properties animate and gets sensible timing for free. It writes the three longhands rather than the `transition` shorthand, so it never resets `transition-delay` or `transition-behavior`, which means it composes cleanly with `u.transitionBehavior()`.
@@ -9617,6 +10761,76 @@ let optedOut = u.transitionBehavior("normal");
 		u.open([u.opacity(100), u.scale(1), u.startingStyle([u.opacity(0), u.scale(0.95)])]),
 	]}
 />
+```
+
+#### `transitionDelay(value?: string): UtilityMixin`
+
+Sets `transition-delay` on its own, for adding a delay to a transition declared elsewhere without restating its property list, duration, or timing function. The real use is staggering a group of reveals: the same `u.transition()` on every item, an increasing delay per item, so a list or a menu animates in as a sequence rather than all at once.
+
+A delay is asymmetric in practice, and that asymmetry is the caveat. On the _enter_ transition it reads as choreography; on the _leave_ transition the element sits there doing nothing after the user has already acted, which reads as an unresponsive UI. So a stagger almost always belongs on the entering state only — put the delay inside the state wrapper that opens the group and leave the resting state at `0s`.
+
+Being a lone longhand, it only has an effect where a `transition-property` is already in force on the same element, from a `u.transition()` or a `u.transitionProperty()` composed alongside it; `transition-*` properties aren't inherited, so a delay on an element with no transition property of its own does nothing. It is **string-only**, matching its sibling `u.transitionDuration()` — `u.transition()`'s numeric `duration` option is the asymmetric one in this family, since it accepts a bare number as milliseconds, while these two standalone overrides want a CSS time string with its unit spelled out.
+
+**Parameters:**
+
+- `value`: A CSS time string, passed through unchanged with no validation. Defaults to `"0s"`, the no-delay value — useful for cancelling a delay set by a composed utility. There is no numeric form, so `u.transitionDelay(120)` is a type error and `u.transitionDelay("120ms")` is what to write. Accepts:
+  - a time in `ms` or `s` — `"0s"`, `"120ms"`, `"1.5s"`.
+  - a comma-separated list — `"0s, 120ms"`, matching a multi-property `transition-property` list positionally.
+  - a negative time — `"-100ms"`, which starts the transition already part-way through.
+  - the raw escape hatch — any CSS string, including `var(...)` and `calc(...)` references, which is how a per-item stagger driven by an index custom property is written: `"calc(var(--index) * 40ms)"`.
+
+**Returns:**
+
+- A `UtilityMixin` that sets only `transition-delay`.
+
+**CSS:**
+
+```css
+/* u.transitionDelay() */
+.host {
+	transition-delay: 0s;
+}
+
+/* u.transitionDelay("120ms") */
+.host {
+	transition-delay: 120ms;
+}
+
+/* u.transitionDelay("calc(var(--index) * 40ms)") */
+.host {
+	transition-delay: calc(var(--index) * 40ms);
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.transitionDelay();
+let staggerStep = u.transitionDelay("120ms");
+let perPropertyList = u.transitionDelay("0s, 120ms");
+let indexDriven = u.transitionDelay("calc(var(--index) * 40ms)");
+```
+
+A menu whose items stagger in on open and all leave together — the delay lives inside `u.open()`, so nothing lags on the way out:
+
+```tsx
+<ul mix={[u.vstack({ gap: 1 }), u.p(2)]}>
+	{items.map((item, index) => (
+		<li
+			key={item.id}
+			mix={[
+				u.opacity(0),
+				u.translateY(-1),
+				u.transition("opacity, transform", { duration: 150 }),
+				u.transitionDelay("0s"),
+				u.open([u.opacity(100), u.translateY(0), u.transitionDelay(`${index * 40}ms`)]),
+				u.motionReduce(u.transitionDelay("0s")),
+			]}
+		>
+			{item.label}
+		</li>
+	))}
+</ul>
 ```
 
 #### `transitionDuration(value: string): UtilityMixin`
@@ -13036,12 +14250,14 @@ Some utilities already gate themselves and shouldn't be wrapped again: `u.corner
 			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+			sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+			brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+			grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+			invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+			saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```
@@ -13153,12 +14369,14 @@ Note the two utilities both write the shared composite `backdropFilter` declarat
 			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
 			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
 			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
-		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) brightness(var(--ui-backdrop-brightness, 1))
-			contrast(var(--ui-backdrop-contrast, 1)) grayscale(var(--ui-backdrop-grayscale, 0))
-			hue-rotate(var(--ui-backdrop-hue-rotate, 0deg)) invert(var(--ui-backdrop-invert, 0))
-			opacity(var(--ui-backdrop-opacity, 1)) saturate(var(--ui-backdrop-saturate, 1))
-			sepia(var(--ui-backdrop-sepia, 0)) drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+			sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+			brightness(var(--ui-backdrop-brightness, 1)) contrast(var(--ui-backdrop-contrast, 1))
+			grayscale(var(--ui-backdrop-grayscale, 0)) hue-rotate(var(--ui-backdrop-hue-rotate, 0deg))
+			invert(var(--ui-backdrop-invert, 0)) opacity(var(--ui-backdrop-opacity, 1))
+			saturate(var(--ui-backdrop-saturate, 1)) sepia(var(--ui-backdrop-sepia, 0))
+			drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent));
 	}
 }
 ```
@@ -13203,6 +14421,7 @@ Because it emits an `@keyframes` rule, it must stay at a mixin's own top level o
 - `config.keyframes`: The keyframe steps, passed through to `u.keyframes()` — a map of offsets (`from`, `to`, or percentage keys like `"50%"`) to their styles. Required.
 - `config.duration`: The value applied as `animation-duration`, as a raw CSS time string (`"150ms"`, `"1s"`). Required, and string-only — a bare number is not accepted here, unlike `u.transition()`'s `duration` option.
 - `config.easing`: Applied as `animation-timing-function` (`"ease-out"`, `"linear"`, a `cubic-bezier(...)` or `steps(...)` value). Omitted when not given, leaving CSS's default `ease`.
+- `config.delay`: Applied as `animation-delay` — a CSS time string (`"150ms"`, `"0.3s"`), which may be negative to start the animation part-way through instead of waiting. Omitted when not given, leaving CSS's default `0s`. Use this key when the same call declares the animation, and `u.animationDelay()` when the delay has to override an animation declared elsewhere.
 - `config.iterationCount`: Applied as `animation-iteration-count` — a number, or `"infinite"`. Omitted when not given, leaving CSS's default of `1`. This is the one field checked for `undefined` rather than truthiness, so an explicit `0` is honored and emitted.
 - `config.direction`: Applied as `animation-direction` — `"normal"`, `"reverse"`, `"alternate"`, or `"alternate-reverse"`. Omitted when not given, leaving CSS's default `normal`.
 - `config.fillMode`: Applied as `animation-fill-mode` — `"none"`, `"forwards"`, `"backwards"`, or `"both"`. Omitted when not given, leaving CSS's default `none`, which snaps the element back to its unanimated style when the animation ends.
@@ -13250,6 +14469,25 @@ The unnamed form emits the same thing under a content-derived name:
 }
 ```
 
+And with a delay, which lands as its own declaration alongside the rest:
+
+```css
+/* u.animation("fade-in", { keyframes: { from: { opacity: 0 }, to: { opacity: 1 } }, duration: "150ms", delay: "150ms" }) */
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.host {
+	animation-name: fade-in;
+	animation-duration: 150ms;
+	animation-delay: 150ms;
+}
+```
+
 **Example:**
 
 ```typescript
@@ -13264,6 +14502,12 @@ let unnamed = u.animation({
 	keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
 	duration: "150ms",
 	easing: "ease-out",
+});
+
+let delayedResult = u.animation("fade-in", {
+	keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+	duration: "150ms",
+	delay: "150ms",
 });
 
 let loopResult = u.animation("spin", {
@@ -13296,6 +14540,81 @@ An animation is motion, so gate it on the user's preference rather than running 
 		),
 	]}
 />
+```
+
+#### `animationDelay(value?: string): UtilityMixin`
+
+Applies `animation-delay`, offsetting when the host's animation starts relative to when it was applied. String-only: a delay is a `<time>`, so it always carries a unit (`"150ms"`, `"0.3s"`) and there is no scale for a bare number to be looked up in.
+
+`u.animation()` already takes a `delay` key, and that is the one to reach for when the same call declares the animation. This standalone exists for the other case: overriding the delay of an animation declared _elsewhere_. The usual shape is a wrapper staggering its children — one shared `u.animation()` call supplies the `@keyframes`, duration, and easing, while each item shifts only its own start time by index. The delay is per element, so the animation itself stays a single declaration and only the offset varies.
+
+A **negative** delay does not wait, it seeks. The animation starts immediately, already advanced by that much of its duration, so `-500ms` on a `1s` animation begins half-way through. That is how a looping animation is seeded as "already in progress" rather than snapping in from its first keyframe, and it is also why a negative delay makes an entry animation appear to skip its opening frames.
+
+**Parameters:**
+
+- `value`: The delay, as a raw CSS `<time>` string. Defaults to `"0s"`, so a bare `u.animationDelay()` explicitly writes out no delay rather than emitting nothing.
+  - A positive time (`"150ms"`, `"0.3s"`) — the animation waits that long before its first frame
+  - A negative time (`"-500ms"`) — the animation starts at once, already that far into its own timeline
+  - A computed string (`` `${index * 60}ms` ``) — the staggering case this utility is for
+
+**Returns:**
+
+- A `UtilityMixin` that sets `animation-delay`, and nothing else — never `animation-name` or `animation-duration`
+
+**CSS:**
+
+```css
+/* u.animationDelay("150ms") */
+.host {
+	animation-delay: 150ms;
+}
+
+/* u.animationDelay() */
+.host {
+	animation-delay: 0s;
+}
+
+/* u.animationDelay("-500ms") — seeks half a second in instead of waiting */
+.host {
+	animation-delay: -500ms;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.animationDelay("150ms");
+let defaultResult = u.animationDelay();
+let staggeredResult = u.animationDelay(`${index * 60}ms`);
+let seekedResult = u.animationDelay("-500ms");
+```
+
+The staggered list it exists for — one animation declared once per item, and only the start time varying by index:
+
+```tsx
+<ul mix={[u.vstack({ gap: 2 })]}>
+	{items.map((item, index) => (
+		<li
+			key={item.id}
+			mix={[
+				u.motionSafe([
+					u.animation("ui-item-in", {
+						keyframes: {
+							from: { opacity: 0, translate: "0 4px" },
+							to: { opacity: 1, translate: "0 0" },
+						},
+						duration: "200ms",
+						easing: "ease-out",
+						fillMode: "both",
+					}),
+					u.animationDelay(`${index * 60}ms`),
+				]),
+			]}
+		>
+			{item.label}
+		</li>
+	))}
+</ul>
 ```
 
 #### `animationHost(name: string, config: Omit<AnimationConfig, "keyframes">): UtilityMixin`
@@ -13472,6 +14791,205 @@ The split-halves pattern — keyframes at the top level, the host declarations g
 	]}
 />
 ```
+
+#### `scrollTimelineName(name: string): UtilityMixin`
+
+Applies `scroll-timeline-name`, naming a scroll progress timeline driven by how far the host has been scrolled. It goes on the _scroll container_ itself — the element that actually overflows — so it needs an `overflow` value that scrolls (see `u.overflow()`) or it supplies no progress at all. The timeline runs from 0% at the scroll start position to 100% at the end.
+
+This is the _declaring_ half of a named timeline, the same declaring/referencing split `u.anchorName()` and `u.positionAnchor()` solve for anchor positioning. `u.animation()`'s `timeline` option already accepts the _anonymous_ `"scroll()"`, which walks up to the animating element's own nearest scrolling ancestor. Declare a name here when the animating element lives outside that container — a progress bar in a header, a marker in a sidebar — so it can point at a specific scroller instead of whichever one happens to be above it.
+
+The referencing half is `u.animation({ timeline: "--{name}" })`. An `animation-timeline` name is a bare **dashed-ident**, so the reference is the literal `--`-prefixed name and **not** a `var()` call: `u.var("page-scroll")` emits `var(--page-scroll)`, which substitutes the _value_ of a custom property rather than naming a timeline, and the animation then silently falls back to the document timeline — it still runs, just on the clock, which is a maddening bug to read back from the rendered result. Write `timeline: "--page-scroll"`.
+
+**Parameters:**
+
+- `name`: The timeline name, written **without** the leading `--` — the utility prepends it, mirroring the convention `u.anchorName()`, `u.vars()`, and `u.var()` already use, since a timeline name is a dashed-ident just like a custom property.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-timeline-name` to `--{name}`
+
+**CSS:**
+
+```css
+/* u.scrollTimelineName("page-scroll") */
+.host {
+	scroll-timeline-name: --page-scroll;
+}
+
+/* u.scrollTimelineName("log") */
+.host {
+	scroll-timeline-name: --log;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollTimelineName("page-scroll");
+let logResult = u.scrollTimelineName("log-scroll");
+```
+
+The scroller declares the name; a descendant references it as a bare dashed-ident, with `duration: "auto"` so progress comes from the timeline rather than the clock:
+
+```tsx
+<div mix={[u.overflow("auto"), u.maxBs("24rem"), u.scrollTimelineName("log-scroll"), u.relative()]}>
+	<div
+		mix={[
+			u.sticky(),
+			u.insTop(0),
+			u.bs(2),
+			u.bg("brand.solid"),
+			u.transformOrigin("left"),
+			u.motionSafe(
+				u.animation("ui-log-progress", {
+					keyframes: { from: { scale: "0 1" }, to: { scale: "1 1" } },
+					duration: "auto",
+					timeline: "--log-scroll",
+					fillMode: "both",
+				}),
+			),
+		]}
+	/>
+	{lines.map((line) => (
+		<p key={line.id}>{line.text}</p>
+	))}
+</div>
+```
+
+For an animating element outside the scroller's subtree, the name is invisible on its own — raise it with `u.timelineScope()` on a common ancestor.
+
+#### `timelineScope(...names: string[]): UtilityMixin`
+
+Applies `timeline-scope`, widening where one or more named timelines can be seen. This is the piece scroll-driven animations get stuck on: a timeline name declared by `u.scrollTimelineName()` or `u.viewTimelineName()` is only visible to the declaring element's own descendants and its later siblings. An animation on an element _outside_ that subtree — an earlier sibling, an ancestor, a cousin — resolves the name to nothing and silently falls back to the document timeline. Naming the timeline on a common ancestor with this utility raises its visibility to that ancestor's whole subtree, so the declaring element and the animating one are both inside it.
+
+The classic case is a reading-progress bar in a page header driven by a scroller that comes later in the document. The header is an _earlier_ sibling, so it can never see the scroller's name on its own; put `u.timelineScope("page-scroll")` on the element wrapping both, and the bar's `u.animation({ timeline: "--page-scroll", duration: "auto" })` resolves.
+
+It declares scope only — it does not create a timeline. Something inside the subtree still has to declare the actual name, and if nothing does, the name resolves to an inactive timeline: the animation holds at its start rather than running. Called with no names at all it emits an empty value (`timeline-scope: ;`), which scopes nothing, so a spread that happens to be empty is inert rather than an error.
+
+**Parameters:**
+
+- `names`: One or more timeline names to raise into the host's subtree, each written **without** the leading `--` — the utility prepends it to every one and joins them with `", "`, matching the convention `u.vars()`, `u.var()`, and the declaring utilities on the other side already use. With no arguments the emitted value is the empty string.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `timeline-scope` to the comma-separated `--`-prefixed names
+
+**CSS:**
+
+```css
+/* u.timelineScope("page-scroll") */
+.host {
+	timeline-scope: --page-scroll;
+}
+
+/* u.timelineScope("page-scroll", "hero-reveal") */
+.host {
+	timeline-scope: --page-scroll, --hero-reveal;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.timelineScope("page-scroll");
+let multipleResult = u.timelineScope("page-scroll", "hero-reveal");
+```
+
+The composition that makes a progress bar in a header work against a scroller elsewhere in the page — the wrapper raises the name, the scroller declares it, the bar references it:
+
+```tsx
+<div mix={[u.vstack(), u.timelineScope("page-scroll")]}>
+	<header mix={[u.sticky(), u.insTop(0), u.relative()]}>
+		<span
+			mix={[
+				u.absolute(),
+				u.insBottom(0),
+				u.insLeft(0),
+				u.is("100%"),
+				u.bs(2),
+				u.bg("brand.solid"),
+				u.transformOrigin("left"),
+				u.motionSafe(
+					u.animation("ui-read-progress", {
+						keyframes: { from: { scale: "0 1" }, to: { scale: "1 1" } },
+						duration: "auto",
+						timeline: "--page-scroll",
+						fillMode: "both",
+					}),
+				),
+			]}
+		/>
+		{title}
+	</header>
+
+	<main mix={[u.overflow("auto"), u.scrollTimelineName("page-scroll")]}>{children}</main>
+</div>
+```
+
+Without the `timelineScope` on the wrapper, `--page-scroll` is declared on `<main>` and the `<header>` precedes it, so the bar would animate on the document timeline instead — it would fill once on load and never track the scroll.
+
+#### `viewTimelineName(name: string): UtilityMixin`
+
+Applies `view-timeline-name`, naming a view progress timeline driven by the host's own visibility within its scrollport. It goes on the element being _watched_ — the card, the section, the image — not on the scroll container and not on the element that animates.
+
+This is the _declaring_ half of a named timeline, and it exists for the same reason `u.anchorName()` does: one element declares a name, another references it, and the referencing side alone cannot work. `u.animation()`'s `timeline` option already accepts an _anonymous_ timeline such as `"view()"`, which only ever reads the animating element's own visibility. Declare a name here when the element that animates is not the element whose visibility should drive it.
+
+The referencing half is `u.animation({ timeline: "--{name}" })`. An `animation-timeline` name is a bare **dashed-ident**, so the reference is the literal `--`-prefixed name and **not** a `var()` call: `u.var("reveal")` emits `var(--reveal)`, which substitutes the _value_ of a custom property instead of naming a timeline, and the animation silently falls back to the document timeline. Write `timeline: "--reveal"`.
+
+**Parameters:**
+
+- `name`: The timeline name, written **without** the leading `--` — the utility prepends it, mirroring the convention `u.anchorName()`, `u.vars()`, and `u.var()` already use, since a timeline name is a dashed-ident just like a custom property.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `view-timeline-name` to `--{name}`
+
+**CSS:**
+
+```css
+/* u.viewTimelineName("reveal") */
+.host {
+	view-timeline-name: --reveal;
+}
+
+/* u.viewTimelineName("hero-image") */
+.host {
+	view-timeline-name: --hero-image;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.viewTimelineName("reveal");
+let heroResult = u.viewTimelineName("hero-image");
+```
+
+The watched element declares the name and a descendant animates against it, with `u.animation()`'s `range` picking which slice of the pass through the scrollport maps onto the animation, and `duration: "auto"` so the progress comes from the timeline rather than the clock:
+
+```tsx
+<article mix={[u.viewTimelineName("reveal"), u.vstack({ gap: 4 }), u.p(6)]}>
+	<figure
+		mix={[
+			u.motionSafe(
+				u.animation("ui-reveal", {
+					keyframes: { from: { opacity: 0, scale: "0.96" }, to: { opacity: 1, scale: "1" } },
+					duration: "auto",
+					timeline: "--reveal",
+					range: "entry 0% cover 40%",
+					fillMode: "both",
+				}),
+			),
+		]}
+	>
+		<img src={image.src} alt={image.alt} mix={[u.is("100%"), u.rounded("lg")]} />
+	</figure>
+
+	<p>{body}</p>
+</article>
+```
+
+The name is only visible to this element's descendants and later siblings, so an animation anywhere else in the tree needs `u.timelineScope()` on a common ancestor to see it.
 
 ### Transform
 
