@@ -558,7 +558,7 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 					block(),
 					rounded("inherit"),
 					when("&[role]:hover", bg("neutral.bg-tint-hover")),
-					when("&[role]:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&[role]:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					mix,
 				]}
 			>

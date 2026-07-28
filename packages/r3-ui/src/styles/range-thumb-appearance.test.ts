@@ -76,7 +76,7 @@ describe(rangeThumbAppearance.name, () => {
 			borderRadius: "var(--ui-radius-full, 9999px)",
 			borderWidth: "var(--ui-slider-thumb-border-width, 2px)",
 			borderStyle: "solid",
-			borderColor: "var(--ui-primary-bg-solid)",
+			borderColor: "var(--ui-brand-bg-solid)",
 			backgroundColor: "var(--ui-neutral-bg-tint)",
 			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 			cursor: "pointer",
@@ -90,7 +90,7 @@ describe(rangeThumbAppearance.name, () => {
 			borderRadius: "var(--ui-radius-full, 9999px)",
 			borderWidth: "var(--ui-slider-thumb-border-width, 2px)",
 			borderStyle: "solid",
-			borderColor: "var(--ui-primary-bg-solid)",
+			borderColor: "var(--ui-brand-bg-solid)",
 			backgroundColor: "var(--ui-neutral-bg-tint)",
 			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
 			cursor: "pointer",
@@ -117,7 +117,7 @@ describe(rangeThumbAppearance.name, () => {
 			outlineWidth: "2px",
 			outlineStyle: "solid",
 			outlineOffset: "2px",
-			outlineColor: "var(--ui-primary-ring)",
+			outlineColor: "var(--ui-brand-ring)",
 		};
 
 		expect(style["&:focus-visible::-webkit-slider-thumb"]).toEqual(expected);

@@ -235,10 +235,10 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 					fg("neutral.emphasis"),
 					hover(bg("neutral.bg-tint-hover")),
 					active(bg("neutral.bg-tint-pressed")),
-					when("&:has(input:focus)", bg("primary.tint")),
+					when("&:has(input:focus)", bg("brand.tint")),
 					when('&:has(input:checked), &[aria-selected="true"]', [
-						bg("primary.solid"),
-						fg("primary.onSolid"),
+						bg("brand.solid"),
+						fg("brand.onSolid"),
 					]),
 					when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
 					cursor("default"),

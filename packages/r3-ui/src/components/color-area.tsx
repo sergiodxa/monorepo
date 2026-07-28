@@ -290,9 +290,9 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 					]),
 					when(
 						"&:focus-visible::-webkit-slider-thumb",
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 					),
-					when("&:focus-visible::-moz-range-thumb", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
 					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
 					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
 
@@ -432,9 +432,9 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 					]),
 					when(
 						"&:focus-visible::-webkit-slider-thumb",
-						outline({ color: "primary.ring", offset: 2 }),
+						outline({ color: "brand.ring", offset: 2 }),
 					),
-					when("&:focus-visible::-moz-range-thumb", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
 					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
 					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
 

@@ -185,7 +185,7 @@ export function Tree(handle: Handle<Tree.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					vstack(),
 					pb(1),
 					pi(1),
@@ -334,7 +334,7 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 					when("&:hover", bg("neutral.bg-tint-hover")),
 					when("&:active", bg("neutral.bg-tint-pressed")),
 					when("&:focus", bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', bg("primary.tint")),
+					when('&[aria-selected="true"]', bg("brand.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					mix,
 				]}
@@ -397,7 +397,7 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 					shrink(),
 					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 					when("&:hover", bg("neutral.bg-tint-pressed")),
-					when("&:focus-visible", outline("primary.ring")),
+					when("&:focus-visible", outline("brand.ring")),
 					mix,
 				]}
 			>

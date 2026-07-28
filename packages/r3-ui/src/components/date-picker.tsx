@@ -280,7 +280,7 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 				mix={[
 					flex(),
 					items("center"),
-					when("&:focus-within", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-within", outline({ color: "brand.ring", offset: 2 })),
 					mix,
 				]}
 			/>
@@ -335,7 +335,7 @@ DatePicker.Button = function DatePickerButton(handle: Handle<DatePicker.ButtonPr
 					fg("neutral"),
 					when("& svg", [is("1rem"), bs("1rem")]),
 					hover(bg("neutral.bg-tint-hover")),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 0 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
 					mix,
 				]}
 			>

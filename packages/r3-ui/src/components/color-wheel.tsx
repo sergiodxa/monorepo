@@ -223,7 +223,7 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 					minIs("10rem"),
 					when(
 						'&[data-shape="circular"]',
-						when("&:has(> input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+						when("&:has(> input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					),
 					when('&[data-shape="circular"]', [
 						inlineBlock(),
@@ -244,7 +244,7 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 							border({
 								width: "var(--ui-color-wheel-thumb-border-width, 2px)",
 								style: "solid",
-								color: "var(--ui-color-wheel-value, var(--ui-primary-bg-solid))",
+								color: "var(--ui-color-wheel-value, var(--ui-brand-bg-solid))",
 							}),
 							bg("neutral.tint"),
 							transition("transform"),

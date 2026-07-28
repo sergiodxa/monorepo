@@ -159,7 +159,7 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 				data-size={resolvedSize}
 				data-shape={resolvedShape}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
 					items("center"),

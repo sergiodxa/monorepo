@@ -439,20 +439,20 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 				{...rest}
 				mix={[
 					data("selection-start", [
-						bg("primary.solid"),
-						fg("primary.onSolid"),
+						bg("brand.solid"),
+						fg("brand.onSolid"),
 						roundedCorner("start-end", "none"),
 						roundedCorner("end-end", "none"),
 					]),
 					data("selection-end", [
-						bg("primary.solid"),
-						fg("primary.onSolid"),
+						bg("brand.solid"),
+						fg("brand.onSolid"),
 						roundedCorner("start-start", "none"),
 						roundedCorner("end-start", "none"),
 					]),
 					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
-						bg("primary.tint"),
-						fg("primary.emphasis"),
+						bg("brand.tint"),
+						fg("brand.emphasis"),
 						roundedCorner("start-start", "none"),
 						roundedCorner("start-end", "none"),
 						roundedCorner("end-start", "none"),

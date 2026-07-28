@@ -438,7 +438,7 @@ export namespace TextShimmer {
  * @example
  * <Text mix={[textShimmer()]}>{t("chat.generating")}</Text>
  * @example
- * <Text mix={[textShimmer({ color: "var(--ui-primary-fg)", duration: "1.5s" })]}>
+ * <Text mix={[textShimmer({ color: "var(--ui-brand-fg)", duration: "1.5s" })]}>
  * 	{t("chat.generating")}
  * </Text>
  */

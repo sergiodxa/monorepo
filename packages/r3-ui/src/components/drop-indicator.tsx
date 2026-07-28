@@ -83,8 +83,8 @@ export function DropIndicator(handle: Handle<DropIndicator.Props>) {
 					is("full"),
 					bs("0.125rem"),
 					rounded("full"),
-					bg("primary.ring"),
-					when("&[data-drop-target]", bg("primary.solid")),
+					bg("brand.ring"),
+					when("&[data-drop-target]", bg("brand.solid")),
 					mix,
 				]}
 			/>

@@ -301,7 +301,7 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 				{...rest}
 				data-slot="group"
 				mix={[
-					when("&:focus-within", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-within", outline({ color: "brand.ring", offset: 2 })),
 					hstack({ gap: 2, align: "center" }),
 					mix,
 				]}
@@ -357,7 +357,7 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 				data-slot="trigger"
 				data-shape={resolvedShape}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					relative(),
 					inlineFlex(),
 					is("var(--ui-color-picker-trigger-size, 2.25rem)"),

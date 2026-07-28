@@ -234,7 +234,7 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 						overflow("hidden"),
 					]),
 					before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
-					after([absolute(), rounded("full"), bg("primary.solid"), pseudoContent('""')]),
+					after([absolute(), rounded("full"), bg("brand.solid"), pseudoContent('""')]),
 					when('[data-orientation="vertical"] &', [grow(), shrink(1), basis("0%")]),
 					when('[data-orientation="horizontal"] &::before', [
 						bs("var(--ui-slider-track-thickness, 0.5rem)"),

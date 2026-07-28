@@ -126,11 +126,11 @@ ProgressBar.Indicator = function ProgressBarIndicator(handle: Handle<ProgressBar
 					bg("neutral.border"),
 					when("&::-webkit-progress-bar", [bg("neutral.border"), rounded("full")]),
 					when("&::-webkit-progress-value", [
-						bg("primary.solid"),
+						bg("brand.solid"),
 						rounded("full"),
 						transition("all"),
 					]),
-					when("&::-moz-progress-bar", [bg("primary.solid"), rounded("full"), transition("all")]),
+					when("&::-moz-progress-bar", [bg("brand.solid"), rounded("full"), transition("all")]),
 					border("none"),
 					media("(prefers-reduced-motion: reduce)", [
 						when("&::-webkit-progress-value", transitionDuration("0s")),

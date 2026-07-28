@@ -27,7 +27,7 @@ function thumbBase<Node extends Element = Element>(size: string, borderWidth: st
 		is<Node>(size),
 		bs<Node>(size),
 		rounded<Node>("full"),
-		border<Node>({ color: "primary.solid", width: borderWidth }),
+		border<Node>({ color: "brand.solid", width: borderWidth }),
 		bg<Node>("neutral.tint"),
 		// No `@pkg/u` shadow scale entry matches this exact value, so it stays raw.
 		raw<Node>({
@@ -94,11 +94,11 @@ export function rangeThumbAppearance<Node extends Element = Element>(
 		when<Node>("&:active::-moz-range-thumb", raw<Node>({ scale: "1.1" })),
 		when<Node>(
 			"&:focus-visible::-webkit-slider-thumb",
-			outline<Node>({ color: "primary.ring", offset: 2 }),
+			outline<Node>({ color: "brand.ring", offset: 2 }),
 		),
 		when<Node>(
 			"&:focus-visible::-moz-range-thumb",
-			outline<Node>({ color: "primary.ring", offset: 2 }),
+			outline<Node>({ color: "brand.ring", offset: 2 }),
 		),
 		when<Node>("&:disabled::-webkit-slider-thumb", [
 			raw<Node>({ cursor: "not-allowed", boxShadow: "none" }),

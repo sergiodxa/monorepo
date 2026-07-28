@@ -223,9 +223,9 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 			fg("neutral.emphasis"),
 			hover(bg("neutral.bg-tint-hover")),
 			active(bg("neutral.bg-tint-pressed")),
-			when("&:focus", bg("primary.tint")),
-			when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
-			when('&[aria-selected="true"]', [bg("primary.solid"), fg("primary.onSolid"), weight(500)]),
+			when("&:focus", bg("brand.tint")),
+			when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+			when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(500)]),
 			disabled([opacity(50), cursor("not-allowed")]),
 			when("&[data-danger]", [
 				fg("danger"),

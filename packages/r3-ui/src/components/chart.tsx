@@ -259,7 +259,7 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					inlineFlex(),
 					items("center"),
 					fg("neutral"),
-					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					gap(2),
 					cursor("default"),
 					transition("opacity, color"),
@@ -858,7 +858,7 @@ function renderChartMarkers(
 				tabIndex={0}
 				role="img"
 				mix={[
-					focusVisible(outline({ color: "primary.ring", offset: 2 })),
+					focusVisible(outline({ color: "brand.ring", offset: 2 })),
 					cursor("default"),
 					fill("currentColor"),
 					raw({ r: "var(--ui-chart-point-radius, 0.1875rem)" }),
@@ -1277,7 +1277,7 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 							tabIndex={0}
 							role="img"
 							mix={[
-								focusVisible(outline({ color: "primary.ring", offset: 2 })),
+								focusVisible(outline({ color: "brand.ring", offset: 2 })),
 								cursor("default"),
 								parts?.segment,
 							]}
@@ -1463,7 +1463,7 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 								role="img"
 								mix={[
 									hover(opacity(85)),
-									focusVisible(outline({ color: "primary.ring", offset: 2 })),
+									focusVisible(outline({ color: "brand.ring", offset: 2 })),
 									cursor("default"),
 									transition("opacity"),
 									media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),

@@ -354,7 +354,7 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 					<a
 						href={href}
 						mix={[
-							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 							inlineFlex(),
 							items("center"),
 							gap("0.25rem"),
@@ -406,7 +406,7 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 				mix={[
 					interactiveTransition(),
 					hover(bg("neutral.tint")),
-					when('&[aria-selected="true"]', bg("primary.tint")),
+					when('&[aria-selected="true"]', bg("brand.tint")),
 					mix,
 				]}
 			/>
@@ -462,7 +462,7 @@ Table.LoadMore = function TableLoadMore(handle: Handle<Table.LoadMoreProps>) {
 					<a
 						href={href}
 						mix={[
-							when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 							center(),
 							pb("1rem"),
 							fg("neutral.muted"),

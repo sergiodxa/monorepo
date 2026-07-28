@@ -63,7 +63,7 @@ function stepperButtonMix(dividerEdge: "start" | "end") {
 		borderEdge(dividerEdge === "start" ? "inline-start" : "inline-end", { width: 1 }),
 		hover(bg("neutral.bg-tint-hover")),
 		active(bg("neutral.bg-tint-pressed")),
-		when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+		when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 		rounded("none"),
 		bg("transparent"),
 		when("& svg", [is("1rem"), bs("1rem")]),
@@ -181,8 +181,8 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 					fg("neutral.emphasis"),
 					hover(border("neutral.strong")),
 					when("&:focus-within", [
-						outline({ color: "primary.ring", offset: 0 }),
-						border("primary.ring"),
+						outline({ color: "brand.ring", offset: 0 }),
+						border("brand.ring"),
 					]),
 					mix,
 				]}

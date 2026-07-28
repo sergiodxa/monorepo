@@ -193,7 +193,7 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 			<summary
 				{...rest}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					is("full"),
 					items("center"),

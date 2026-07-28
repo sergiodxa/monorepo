@@ -76,7 +76,7 @@ export function Group(handle: Handle<Group.Props>) {
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
-					when("&:has(:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					when("&:has(:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					items("center"),
 					when('&[aria-invalid="true"]', outlineColor("danger")),

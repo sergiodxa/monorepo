@@ -129,7 +129,7 @@ ScrollArea.Viewport = function ScrollAreaViewport(handle: Handle<ScrollArea.View
 				data-slot="viewport"
 				mix={[
 					attrs({ tabIndex: DEFAULT_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					is("full"),
 					bs("full"),
 					raw({

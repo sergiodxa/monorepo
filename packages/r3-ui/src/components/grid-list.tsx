@@ -209,7 +209,7 @@ export function GridList(handle: Handle<GridList.Props>) {
 				mix={[
 					attrs({ role: DEFAULT_ROLE }),
 					panelChrome(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					pb(2),
 					pi(2),
 					outline("none"),
@@ -283,7 +283,7 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 					hover(bg("neutral.bg-tint-hover")),
 					active(bg("neutral.bg-tint-pressed")),
 					when("&:focus", bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', bg("primary.tint")),
+					when('&[aria-selected="true"]', bg("brand.tint")),
 					when('&[aria-disabled="true"]', opacity(50)),
 					cursor("default"),
 					outline("none"),

@@ -291,8 +291,8 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 					fg("neutral.muted"),
 					when("&::before", [rounded("full"), bg("neutral.border")]),
 					hover(when("&::before", bg("neutral.strong"))),
-					when("&[data-resizing]::before", bg("primary.solid")),
-					focusVisible(outline({ color: "primary.ring" })),
+					when("&[data-resizing]::before", bg("brand.solid")),
+					focusVisible(outline({ color: "brand.ring" })),
 					mix,
 				]}
 			/>

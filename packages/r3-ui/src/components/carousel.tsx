@@ -189,7 +189,7 @@ Carousel.Viewport = function CarouselViewport(handle: Handle<Carousel.ViewportPr
 				data-slot="viewport"
 				mix={[
 					attrs({ role: DEFAULT_VIEWPORT_ROLE, tabIndex: DEFAULT_VIEWPORT_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					// `@pkg/u/overflow` only exposes physical `overflowX`/`overflowY` —
 					// no logical-property equivalent — and this viewport deliberately
 					// scrolls along the inline axis regardless of writing direction, so

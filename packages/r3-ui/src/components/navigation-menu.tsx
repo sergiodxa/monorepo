@@ -362,7 +362,7 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 				{...rest}
 				mix={[
 					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					inlineFlex(),
 					items("center"),
 					gap(2),
@@ -439,7 +439,7 @@ NavigationMenu.Content = function NavigationMenuContent(
 				data-size={resolvedSize}
 				{...rest}
 				mix={[
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					is("max-content"),
 					minIs("11rem"),
 					p(2),
@@ -500,7 +500,7 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 				{...rest}
 				mix={[
 					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "primary.ring", offset: 2 })),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					inlineFlex(),
 					items("center"),
 					gap(2),

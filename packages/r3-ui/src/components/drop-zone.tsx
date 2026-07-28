@@ -129,7 +129,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 				{...rest}
 				data-slot="zone"
 				mix={[
-					when("&:has(input:focus-visible)", outline({ color: "primary.ring", offset: 2 })),
+					when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					flex(),
 					flexCol(),
 					items("center"),
@@ -143,7 +143,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 					textAlign("center"),
 					bg("neutral.tint"),
 					fg("neutral"),
-					when("&[data-drop-target]", [border("primary.ring"), bg("primary.tint")]),
+					when("&[data-drop-target]", [border("brand.ring"), bg("brand.tint")]),
 					interactiveTransition(),
 					mix,
 				]}

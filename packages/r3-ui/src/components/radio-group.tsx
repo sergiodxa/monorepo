@@ -233,7 +233,7 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 							is("var(--ui-radio-mark-size, 0.625rem)"),
 							bs("var(--ui-radio-mark-size, 0.625rem)"),
 							rounded("full"),
-							bg("primary.onSolid"),
+							bg("brand.onSolid"),
 							transition("transform"),
 							pseudoContent('""'),
 							scale(0),
@@ -243,8 +243,8 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 						bg("neutral.tint"),
 						transition("background-color, border-color"),
 						when("input:checked ~ &::after", scale(1)),
-						when("input:checked ~ &", [border("primary.solid"), bg("primary.solid")]),
-						when("input:focus-visible ~ &", outline({ color: "primary.ring", offset: 2 })),
+						when("input:checked ~ &", [border("brand.solid"), bg("brand.solid")]),
+						when("input:focus-visible ~ &", outline({ color: "brand.ring", offset: 2 })),
 						parts?.indicator,
 					]}
 				/>
