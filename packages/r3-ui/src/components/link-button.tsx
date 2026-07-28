@@ -123,44 +123,52 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					weight("medium"),
 					pi(4),
 					pb(2),
+					// Every variant carries the same border width, colored to match its
+					// own fill (transparent for ghost) — so solid/ghost render exactly
+					// the same footprint as outline instead of shrinking by the border.
+					border({ width: 2 }),
 					data("size", "sm", [pi(3), pb(1.5)]),
 					data("size", "lg", [pi(5), pb(2.5), text("base")]),
 
 					data("variant", "solid", [
 						data("color", "brand", [
 							bg("brand.solid"),
+							border("brand.solid"),
 							fg("brand.onSolid"),
-							hover(bg("brand.bg-solid-hover")),
-							active(bg("brand.bg-solid-pressed")),
+							hover([bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
+							active([bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
 						]),
 						data("color", "neutral", [
 							bg("neutral.solid"),
+							border("neutral.solid"),
 							fg("neutral.onSolid"),
-							hover(bg("neutral.bg-solid-hover")),
-							active(bg("neutral.bg-solid-pressed")),
+							hover([bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
+							active([bg("neutral.bg-solid-pressed"), border("neutral.bg-solid-pressed")]),
 						]),
 						data("color", "success", [
 							bg("success.solid"),
+							border("success.solid"),
 							fg("success.onSolid"),
-							hover(bg("success.bg-solid-hover")),
-							active(bg("success.bg-solid-pressed")),
+							hover([bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
+							active([bg("success.bg-solid-pressed"), border("success.bg-solid-pressed")]),
 						]),
 						data("color", "warning", [
 							bg("warning.solid"),
+							border("warning.solid"),
 							fg("warning.onSolid"),
-							hover(bg("warning.bg-solid-hover")),
-							active(bg("warning.bg-solid-pressed")),
+							hover([bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
+							active([bg("warning.bg-solid-pressed"), border("warning.bg-solid-pressed")]),
 						]),
 						data("color", "danger", [
 							bg("danger.solid"),
+							border("danger.solid"),
 							fg("danger.onSolid"),
-							hover(bg("danger.bg-solid-hover")),
-							active(bg("danger.bg-solid-pressed")),
+							hover([bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
+							active([bg("danger.bg-solid-pressed"), border("danger.bg-solid-pressed")]),
 						]),
 					]),
 
 					data("variant", "outline", [
-						border({ width: 2 }),
 						data("color", "brand", [
 							border("brand.strong"),
 							fg("brand"),
@@ -221,7 +229,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 							active(bg("danger.bg-tint-hover")),
 						]),
 					]),
-					data("variant", "ghost", bg("transparent")),
+					data("variant", "ghost", [bg("transparent"), border("transparent")]),
 
 					when('&[aria-disabled="true"]', opacity(50)),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),

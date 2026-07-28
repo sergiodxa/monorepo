@@ -166,6 +166,10 @@ export function Button(handle: Handle<Button.Props>) {
 					pi(4),
 					pb(2),
 					text("sm"),
+					// Every variant carries the same border width, colored to match its
+					// own fill (transparent for ghost) — so solid/ghost render exactly
+					// the same footprint as outline instead of shrinking by the border.
+					border({ width: 2, noStyleDefault: true }),
 
 					when('&[data-size="sm"]', [pi(3), pb(1.5), text("xs")]),
 					when('&[data-size="lg"]', [pi(5), pb(2.5), text("base")]),
@@ -173,38 +177,51 @@ export function Button(handle: Handle<Button.Props>) {
 					when('&[data-variant="solid"]', [
 						when('&[data-color="brand"]', [
 							bg("brand.solid"),
+							border("brand.solid"),
 							fg("brand.onSolid"),
-							when("&:hover", bg("brand.bg-solid-hover")),
-							when("&:active", bg("brand.bg-solid-pressed")),
+							when("&:hover", [bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
+							when("&:active", [bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
 						]),
 						when('&[data-color="neutral"]', [
 							bg("neutral.solid"),
+							border("neutral.solid"),
 							fg("neutral.onSolid"),
-							when("&:hover", bg("neutral.bg-solid-hover")),
-							when("&:active", bg("neutral.bg-solid-pressed")),
+							when("&:hover", [bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
+							when("&:active", [
+								bg("neutral.bg-solid-pressed"),
+								border("neutral.bg-solid-pressed"),
+							]),
 						]),
 						when('&[data-color="success"]', [
 							bg("success.solid"),
+							border("success.solid"),
 							fg("success.onSolid"),
-							when("&:hover", bg("success.bg-solid-hover")),
-							when("&:active", bg("success.bg-solid-pressed")),
+							when("&:hover", [bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
+							when("&:active", [
+								bg("success.bg-solid-pressed"),
+								border("success.bg-solid-pressed"),
+							]),
 						]),
 						when('&[data-color="warning"]', [
 							bg("warning.solid"),
+							border("warning.solid"),
 							fg("warning.onSolid"),
-							when("&:hover", bg("warning.bg-solid-hover")),
-							when("&:active", bg("warning.bg-solid-pressed")),
+							when("&:hover", [bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
+							when("&:active", [
+								bg("warning.bg-solid-pressed"),
+								border("warning.bg-solid-pressed"),
+							]),
 						]),
 						when('&[data-color="danger"]', [
 							bg("danger.solid"),
+							border("danger.solid"),
 							fg("danger.onSolid"),
-							when("&:hover", bg("danger.bg-solid-hover")),
-							when("&:active", bg("danger.bg-solid-pressed")),
+							when("&:hover", [bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
+							when("&:active", [bg("danger.bg-solid-pressed"), border("danger.bg-solid-pressed")]),
 						]),
 					]),
 
 					when('&[data-variant="outline"]', [
-						border({ width: 2, noStyleDefault: true }),
 						bg("transparent"),
 						when('&[data-color="brand"]', [
 							border("brand.strong"),
@@ -240,6 +257,7 @@ export function Button(handle: Handle<Button.Props>) {
 
 					when('&[data-variant="ghost"]', [
 						bg("transparent"),
+						border("transparent"),
 						when('&[data-color="brand"]', [
 							fg("brand"),
 							when("&:hover", bg("brand.tint")),
