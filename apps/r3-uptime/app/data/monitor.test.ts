@@ -24,21 +24,35 @@ import {
 	teams,
 } from "~/database/schema";
 
-/** The shape `Monitor.ping` passes to `env.PING.create(...)`. */
-interface PingWorkflowInput {
+/** The message body `Monitor.ping` passes to `env.QUEUE.send(...)`. */
+interface PingQueueMessage {
+	type: string;
 	id: string;
-	params: { monitorId: string };
+	monitorId: string;
+	scheduledAt: number;
 }
 
 /**
- * `Monitor.ping` calls `env.PING.create(...)`, a Workflow binding with nothing to
- * assert on besides "it was called with the right id shape" — stub it so importing
- * the module doesn't crash and so `ping` can assert on the call.
+ * `Monitor.ping` calls `env.QUEUE.send(...)`, a queue binding with nothing to assert on
+ * besides "it was called with the right message shape" — stub it so importing the
+ * module doesn't crash and so `ping` can assert on the call.
  */
-let pingCreate = mock(async (_input: PingWorkflowInput) => ({}));
-mock.module("cloudflare:workers", () => ({ env: { PING: { create: pingCreate } } }));
+let queueSend = mock(async (_message: PingQueueMessage) => {});
+mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: queueSend } } }));
 
+let { PolarClient } = await import("@pkg/polar");
 let { default: Monitor } = await import("~/app/data/monitor");
+
+/** A `PolarClient` whose subscription lookup is forced to `hasActiveSubscription`. */
+function fakePolar(hasActiveSubscription: boolean) {
+	let client = new PolarClient({ accessToken: "t" });
+	(
+		client as unknown as {
+			hasActiveSubscription: InstanceType<typeof PolarClient>["hasActiveSubscription"];
+		}
+	).hasActiveSubscription = async () => hasActiveSubscription;
+	return client;
+}
 
 /** Inserts a team row so `findDue`'s join to `teams` has an owner to resolve. */
 async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> = {}) {
@@ -210,16 +224,37 @@ describe("Monitor.deleteById", () => {
 });
 
 describe("Monitor.ping", () => {
-	test("starts a PING workflow instance with an id derived from the monitor id", async () => {
-		pingCreate.mockClear();
+	test("enqueues a checkHttp message with a job id derived from the monitor id", async () => {
+		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
 
-		await Monitor.ping(monitorId);
+		expect(await Monitor.ping(fakePolar(true), monitorId, "owner-1")).toBe(true);
 
-		expect(pingCreate).toHaveBeenCalledTimes(1);
-		let call = pingCreate.mock.calls[0]?.[0];
-		expect(call?.id.startsWith(`${monitorId}-`)).toBe(true);
-		expect(call?.params).toEqual({ monitorId });
+		expect(queueSend).toHaveBeenCalledTimes(1);
+		let message = queueSend.mock.calls[0]?.[0];
+		expect(message?.type).toBe("checkHttp");
+		expect(message?.monitorId).toBe(monitorId);
+		expect(message?.id.startsWith(`${monitorId}:manual:`)).toBe(true);
+		expect(typeof message?.scheduledAt).toBe("number");
+	});
+
+	test("enqueues nothing when the team owner has no active subscription", async () => {
+		queueSend.mockClear();
+
+		expect(await Monitor.ping(fakePolar(false), crypto.randomUUID(), "owner-1")).toBe(false);
+
+		expect(queueSend).not.toHaveBeenCalled();
+	});
+
+	test("gives each on-demand check its own job id", async () => {
+		queueSend.mockClear();
+		let monitorId = crypto.randomUUID();
+
+		await Monitor.ping(fakePolar(true), monitorId, "owner-1");
+		await Monitor.ping(fakePolar(true), monitorId, "owner-1");
+
+		let [first, second] = queueSend.mock.calls.map((call) => call[0]?.id);
+		expect(first).not.toBe(second);
 	});
 });
 

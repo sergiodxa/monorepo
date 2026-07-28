@@ -1,7 +1,7 @@
 /**
  * Tests for the account page controller. No `cloudflare:workers` mock is needed —
  * this controller only touches `~/app/data/team` and `~/app/data/user-preferences`,
- * neither of which depends on a Workflow binding. `ctx.team`/`ctx.membership`/
+ * neither of which depends on a queue binding. `ctx.team`/`ctx.membership`/
  * `Auth`/`ctx.i18next` are seeded directly, standing in for the real
  * `requireUser`/`requireTeam` middleware chain.
  *

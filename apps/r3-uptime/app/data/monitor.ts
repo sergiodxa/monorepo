@@ -1,6 +1,6 @@
 /**
  * Data-access model for HTTP monitors. Exposes CRUD over the `monitors` table scoped
- * to a team, triggering an on-demand check via the `PING` workflow, the scheduling
+ * to a team, enqueuing a subscription-gated on-demand check, the scheduling
  * query the `scheduled` handler uses every minute to find monitors due for a check,
  * and an estimated monthly ping-consumption figure across every monitor type (HTTP,
  * DNS, TCP, cron) — the dashboard's usage card shows this alongside Polar's actual
@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
@@ -20,6 +21,7 @@ import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { InsertMonitor } from "~/database/schema";
 
+import Customer from "~/app/data/customer";
 import {
 	cronJobMonitors,
 	dnsMonitors,
@@ -108,10 +110,22 @@ export default class Monitor {
 		return await db.delete(monitors, monitorId);
 	}
 
-	/** Starts a `PING` workflow instance for an on-demand or scheduled check. */
-	static async ping(monitorId: string) {
-		let instanceId = `${monitorId}-${Date.now()}`;
-		return await env.PING.create({ id: instanceId, params: { monitorId } });
+	/**
+	 * Enqueues an on-demand check for a monitor, unless `ownerId`'s team has no active
+	 * subscription — billing is settled here rather than in the consumer, so a queued
+	 * check is always one that's allowed to run. Returns whether it was enqueued, which
+	 * is what lets the caller tell the visitor their check isn't going to happen.
+	 */
+	static async ping(polar: PolarClient, monitorId: string, ownerId: string): Promise<boolean> {
+		if (!(await Customer.hasActiveSubscription(polar, ownerId))) return false;
+
+		await env.QUEUE.send({
+			type: "checkHttp",
+			id: `${monitorId}:manual:${generateUUID()}`,
+			monitorId,
+			scheduledAt: Date.now(),
+		});
+		return true;
 	}
 
 	/**

@@ -3,37 +3,37 @@
  * the session cookie secret, opens a service-container scope, builds the application
  * router, and forwards the request to it. Its `scheduled` handler dispatches cron
  * triggers, and its `queue` handler validates and runs the matching background job.
- * Re-exports the `Ping` Workflow and `GeoFetchDO` Durable Object classes their
- * bindings need.
+ * Re-exports the `GeoFetchDO` Durable Object class its binding needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { logger } from "@pkg/logger";
+import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
+import Customer from "~/app/data/customer";
 import Monitor from "~/app/data/monitor";
 import { GeoFetchDO } from "~/app/do/geo-fetch";
 import { AggregateDailyStatsJob } from "~/app/jobs/aggregate-daily-stats";
 import { CheckCronJobsJob } from "~/app/jobs/check-cron-jobs";
 import { CheckDnsJob } from "~/app/jobs/check-dns";
+import { CheckHttpJob } from "~/app/jobs/check-http";
 import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
 import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
-import { PingJob } from "~/app/jobs/ping";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
-import { Ping } from "~/app/workflows/ping";
 
 import application from "./app";
 
-export { GeoFetchDO, Ping };
+export { GeoFetchDO };
 
 /**
  * Every queue message type the worker understands. Message shapes are a stable
@@ -41,7 +41,12 @@ export { GeoFetchDO, Ping };
  * `type` string or payload field breaks messages already in flight.
  */
 const QueueMessageSchema = s.variant("type", {
-	ping: s.object({ type: s.literal("ping"), monitorId: s.string(), ownerId: s.string() }),
+	checkHttp: s.object({
+		type: s.literal("checkHttp"),
+		id: s.string(),
+		monitorId: s.string(),
+		scheduledAt: s.number(),
+	}),
 	clean: s.object({ type: s.literal("clean") }),
 	cleanCronJobPings: s.object({ type: s.literal("cleanCronJobPings") }),
 	enqueuePendingDomains: s.object({ type: s.literal("enqueuePendingDomains") }),
@@ -81,16 +86,39 @@ export default {
 	/** Dispatches cron triggers. Only the crons this phase's jobs need are handled. */
 	async scheduled(controller) {
 		await container.scope(async () => {
-			// Every minute: enqueue a `ping` message for every monitor due for a check,
+			// Every minute: enqueue a `checkHttp` message for every monitor due for a check,
 			// plus a sweep of cron-job monitors for late/missed transitions.
 			if (controller.cron === "* * * * *") {
 				let db = getServiceContainer().get(Database);
 				let due = await Monitor.findDue(db, controller.scheduledTime);
-				if (due.length > 0) {
+
+				/**
+				 * Billing is settled here rather than in the consumer, so an enqueued check is
+				 * always one that's allowed to run. Polar is asked once per distinct owner,
+				 * not once per due monitor.
+				 */
+				let polar = getServiceContainer().get(PolarClient);
+				let subscribed = await Customer.filterActiveSubscribers(
+					polar,
+					due.map((monitor) => monitor.ownerId),
+				);
+				let payable = due.filter((monitor) => subscribed.has(monitor.ownerId));
+
+				if (payable.length > 0) {
 					waitUntil(
 						env.QUEUE.sendBatch(
-							due.map((monitor) => ({
-								body: { type: "ping", monitorId: monitor.monitorId, ownerId: monitor.ownerId },
+							payable.map((monitor) => ({
+								body: {
+									type: "checkHttp",
+									/**
+									 * Derived from the monitor and the tick rather than random, so a cron
+									 * that fires twice for the same minute produces the same job id and the
+									 * consumer's idempotency check collapses the two into one check.
+									 */
+									id: `${monitor.monitorId}:${controller.scheduledTime}`,
+									monitorId: monitor.monitorId,
+									scheduledAt: controller.scheduledTime,
+								},
 								contentType: "json",
 							})),
 						),
@@ -147,8 +175,8 @@ export default {
 				}
 
 				switch (result.value.type) {
-					case "ping":
-						waitUntil(PingJob.run({ message, uptime }));
+					case "checkHttp":
+						waitUntil(CheckHttpJob.run({ message, uptime }));
 						break;
 					case "clean":
 						waitUntil(CleanJob.run({ message, uptime }));

@@ -1,5 +1,5 @@
 /**
- * Shared alert-dispatch pipeline used by every check path (the HTTP `Ping` workflow,
+ * Shared alert-dispatch pipeline used by every check path (`CheckHttpJob`,
  * `CheckDnsJob`, `CheckTcpJob`, `CheckCronJobsJob`, and the cron-job ping endpoint) —
  * one module instead of one dispatch implementation duplicated per monitor type. For
  * every qualifying event it: skips entirely when an active, suppressing maintenance

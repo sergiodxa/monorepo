@@ -1,7 +1,7 @@
 /**
  * Tests for the billing checkout entry point. No `cloudflare:workers` mock is
  * needed — this controller only touches `~/app/data/customer`, which wraps
- * `@pkg/polar` and has no Workflow-binding dependency. A fake `PolarClient` stands
+ * `@pkg/polar` and has no queue-binding dependency. A fake `PolarClient` stands
  * in for the real one, stubbing every method `~/app/data/customer.ts` calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

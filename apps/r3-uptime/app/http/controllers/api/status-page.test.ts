@@ -23,7 +23,7 @@ import routes from "~/routes/web";
 
 /** `app/data/monitor.ts` imports `env` from `cloudflare:workers` for `Monitor.ping()`, which this route never calls, but the module-level import still needs a resolvable mock. */
 mock.module("cloudflare:workers", () => ({
-	env: { PING: { create: mock(async () => ({ id: "instance_1" })) } },
+	env: { QUEUE: { send: mock(async () => {}) } },
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 

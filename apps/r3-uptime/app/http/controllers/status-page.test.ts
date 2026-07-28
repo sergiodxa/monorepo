@@ -39,7 +39,7 @@ mock.module("cloudflare:workers", () => ({
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
 		KV: { get: kvGetMock, put: mock(async () => undefined) },
 		PING_RESULTS: { writeDataPoint: () => {} },
-		PING: { create: async () => ({ id: "instance_1" }) },
+		QUEUE: { send: async () => {} },
 	},
 }));
 

@@ -40,9 +40,27 @@ export default class Customer {
 	}
 
 	/**
+	 * Narrows `ownerIds` to those with an active monitoring subscription, asking Polar
+	 * once per distinct owner. The scheduler calls this every minute against every owner
+	 * with a monitor due, where the same owner usually appears many times over.
+	 */
+	static async filterActiveSubscribers(
+		polar: PolarClient,
+		ownerIds: string[],
+	): Promise<Set<string>> {
+		let distinct = [...new Set(ownerIds)];
+		let results = await Promise.all(
+			distinct.map(
+				async (ownerId) => [ownerId, await Customer.hasActiveSubscription(polar, ownerId)] as const,
+			),
+		);
+		return new Set(results.filter(([, isActive]) => isActive).map(([ownerId]) => ownerId));
+	}
+
+	/**
 	 * The team's Polar-billed `ping` usage for the calendar month containing `date`,
 	 * scoped to `teamId` via the meter's ingested metadata (see
-	 * `~/app/jobs/ping.ts`/`~/workflows/ping.ts` for where usage would be ingested).
+	 * `~/app/jobs/check-http.ts` for where usage would be ingested).
 	 * Throws when the request fails or the owner has no Polar customer — callers on
 	 * a billing dashboard should treat that as "usage unavailable" rather than "0".
 	 */

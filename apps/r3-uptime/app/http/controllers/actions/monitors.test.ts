@@ -2,8 +2,8 @@
  * Tests for the HTTP monitor create/update/delete/play actions. Not part of either
  * half of the actions-directory test-backfill split (it's neither in this half's list
  * nor the other's) but exists in the tree, so it's covered here too. `cloudflare:workers`
- * is mocked so `Monitor.ping()`'s `env.PING.create(...)` call never touches a real
- * Workflow binding, and `getViewer()` is seeded the same way `ctx.team`/`ctx.membership`
+ * is mocked so `Monitor.ping()`'s `env.QUEUE.send(...)` call never touches a real
+ * queue binding, and `getViewer()` is seeded the same way `ctx.team`/`ctx.membership`
  * are, standing in for the real `auth`/`requireUser`/`requireTeam` middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -15,6 +15,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
@@ -29,10 +30,10 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let pingCreate = mock(async () => ({ id: "instance_1" }));
+let queueSend = mock(async () => {});
 
 mock.module("cloudflare:workers", () => ({
-	env: { PING: { create: pingCreate } },
+	env: { QUEUE: { send: queueSend } },
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
@@ -85,6 +86,17 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
+/** A `PolarClient` whose subscription lookup is forced to `hasActiveSubscription`. */
+function fakePolar(hasActiveSubscription: boolean) {
+	let client = new PolarClient({ accessToken: "t" });
+	(
+		client as unknown as {
+			hasActiveSubscription: InstanceType<typeof PolarClient>["hasActiveSubscription"];
+		}
+	).hasActiveSubscription = async () => hasActiveSubscription;
+	return client;
+}
+
 /** Sends a form request through a minimal router mapping a single action route. */
 async function send(
 	db: Database,
@@ -94,9 +106,11 @@ async function send(
 	handler: RequestHandler<any>,
 	method: string,
 	params: Record<string, string>,
+	hasActiveSubscription = true,
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
+	container.instance(PolarClient, fakePolar(hasActiveSubscription));
 
 	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
@@ -113,7 +127,7 @@ async function send(
 describe("createMonitor", () => {
 	test("creates a monitor, queues a ping, and redirects to its detail page", async () => {
 		let { db, team, membership } = await createFixture();
-		pingCreate.mockClear();
+		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -134,12 +148,12 @@ describe("createMonitor", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
-		expect(pingCreate).toHaveBeenCalledTimes(1);
+		expect(queueSend).toHaveBeenCalledTimes(1);
 	});
 
 	test("redirects back to the form without creating a monitor when the url is invalid", async () => {
 		let { db, team, membership } = await createFixture();
-		pingCreate.mockClear();
+		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -158,7 +172,7 @@ describe("createMonitor", () => {
 
 		let matching = await db.findMany(monitors, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
-		expect(pingCreate).not.toHaveBeenCalled();
+		expect(queueSend).not.toHaveBeenCalled();
 	});
 });
 
@@ -324,7 +338,7 @@ describe("playMonitor", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		pingCreate.mockClear();
+		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -340,12 +354,43 @@ describe("playMonitor", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
-		expect(pingCreate).toHaveBeenCalledTimes(1);
+		expect(queueSend).toHaveBeenCalledTimes(1);
+	});
+
+	test("queues nothing when the team owner has no active subscription", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+		queueSend.mockClear();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.play,
+			playMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+			false,
+		);
+
+		expect(response.status).toBe(303);
+		expect(queueSend).not.toHaveBeenCalled();
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		pingCreate.mockClear();
+		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -358,6 +403,6 @@ describe("playMonitor", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(pingCreate).not.toHaveBeenCalled();
+		expect(queueSend).not.toHaveBeenCalled();
 	});
 });

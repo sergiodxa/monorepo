@@ -9,6 +9,7 @@
 
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
+import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -43,8 +44,10 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 	}
 
 	let db = getServiceContainer().get(Database);
+	let polar = getServiceContainer().get(PolarClient);
 	let monitor = await Monitor.create(db, ctx.team.id, viewer.id, result.data);
-	await Monitor.ping(monitor.id);
+	// Kicks off a first check right away; skipped without a subscription, like every check.
+	await Monitor.ping(polar, monitor.id, ctx.team.owner_id);
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${monitor.name}" created.` });
 	return redirect(
@@ -130,9 +133,16 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 	let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	await Monitor.ping(monitor.id);
+	let polar = getServiceContainer().get(PolarClient);
+	let queued = await Monitor.ping(polar, monitor.id, ctx.team.owner_id);
 
-	session?.flash("toast", { intent: "success", message: `Check queued for "${monitor.name}".` });
+	// Nothing was enqueued without a subscription, so don't claim a check is coming.
+	session?.flash(
+		"toast",
+		queued
+			? { intent: "success", message: `Check queued for "${monitor.name}".` }
+			: { intent: "error", message: "An active subscription is required to run a check." },
+	);
 	return redirect(
 		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },

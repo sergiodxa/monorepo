@@ -1,7 +1,7 @@
 /**
  * Tests for the new status-page form controller. `cloudflare:workers` is mocked
  * before the dynamic import because the controller's import chain pulls in
- * `~/app/data/monitor`, which touches the `PING` Workflow binding at module scope
+ * `~/app/data/monitor`, which touches the `QUEUE` binding at module scope
  * (see `monitors.test.ts`). `requireUser`/`requireTeam`/`i18n` are bypassed the same
  * way `monitors.test.ts` bypasses auth: a stand-in middleware seeds
  * `ctx.team`/`ctx.membership`/`ctx.i18next` directly, and `ctx.render` is backed by
@@ -40,7 +40,7 @@ mock.module("cloudflare:workers", () => ({
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
 		KV: { get: kvGetMock, put: mock(async () => undefined) },
 		PING_RESULTS: { writeDataPoint: () => {} },
-		PING: { create: async () => ({ id: "instance_1" }) },
+		QUEUE: { send: async () => {} },
 	},
 }));
 

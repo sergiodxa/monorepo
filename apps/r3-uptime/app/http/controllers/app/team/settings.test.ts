@@ -2,7 +2,7 @@
  * Tests for the team settings page controller. No `cloudflare:workers` mock is
  * needed — this controller only touches `~/app/data/invite`, `~/app/data/team`,
  * `~/app/data/team-domain`, and `~/app/services/subjects`, none of which depend on a
- * Workflow binding. A fake `AuthSDK` stands in for the real one so
+ * queue binding. A fake `AuthSDK` stands in for the real one so
  * `resolveSubjects()` doesn't attempt a real client-credentials call — it's made to
  * fail so the page falls back to rendering members by raw `subject_id`.
  *

@@ -72,7 +72,5 @@
 		},
 	],
 
-	"workflows": [{ "name": "ping-workflow", "binding": "PING", "class_name": "Ping" }],
-
 	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" }],
 }

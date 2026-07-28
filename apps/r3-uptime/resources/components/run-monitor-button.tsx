@@ -5,7 +5,7 @@
  * intercepts the submit to `fetch()` the same action instead, so clicking
  * doesn't navigate away, and hands its pending state to `@pkg/r3-ui`'s
  * `Button` (`isPending`), which swaps its content for a spinner while the
- * request is in flight. `Monitor.ping` only queues a workflow run — the
+ * request is in flight. `Monitor.ping` only enqueues the check — the
  * check itself finishes asynchronously — so "done" here means "the queue
  * request completed" (tied to request state, not to whether the queued
  * check has finished).
