@@ -14,7 +14,9 @@ Not every export is a mixin. A handful are plain string resolvers — `u.var()`,
 
 The package covers CSS primitives across fourteen families — layout, size, color, typography, effects, overflow, stacking, transform, animation, state, responsive, accessibility, and general escape hatches — plus a set of composed patterns that pick several declarations together: `u.surface()` chooses a background, foreground, and border as a matching set; `u.hstack()`/`u.vstack()`/`u.zstack()` build the three common stacks; `u.circle()`, `u.squircle()`, `u.truncate()`, and `u.translucent()` bundle the multi-declaration recipes worth having a name.
 
-Two conventions are worth knowing up front. **Logical properties are the default**: `u.is()`/`u.bs()` for sizing, `u.pi()`/`u.pb()` for padding, `u.insIs()` for insets — each has a physical counterpart (`u.width()`, `u.paddingLeft()`, `u.insLeft()`) documented as the deliberate exception for when a value must not flip with writing mode. And **accessibility gating is opt-in per utility**: `u.ring()` only ever shows on `:focus-visible` and `u.translucent()` gates its blur behind `prefers-reduced-transparency`, while the bare primitives they compose (`u.outline()`, `u.backdropBlur()`) apply unconditionally.
+Four CSS properties take a _list_ or a _function stack_ rather than a single value — `transform`, `filter`, `backdrop-filter`, and `box-shadow` — so a naive utility per function would silently overwrite its siblings. Each of those families instead writes its own `--ui-*` custom property plus one byte-identical composite declaration, which is why `u.rotate()` and `u.scaleX()`, or `u.blur()` and `u.grayscale()`, or `u.shadow()` and `u.ringShadow()`, all combine instead of the last call winning. The relevant entries spell out the mechanism.
+
+Three conventions are worth knowing up front. **Logical properties are the default**: `u.is()`/`u.bs()` for sizing, `u.pi()`/`u.pb()` for padding, `u.insIs()` for insets — each has a physical counterpart (`u.width()`, `u.paddingLeft()`, `u.insLeft()`) documented as the deliberate exception for when a value must not flip with writing mode. And **accessibility gating is opt-in per utility**: `u.ring()` only ever shows on `:focus-visible` and `u.translucent()` gates its blur behind `prefers-reduced-transparency`, while the bare primitives they compose (`u.outline()`, `u.backdropBlur()`) apply unconditionally.
 
 ## Usage
 
@@ -799,6 +801,62 @@ The anchor-and-place pair, with a logical inset so it flips under RTL:
 
 It conflicts with every other position utility — `u.relative()`, `u.fixed()`, `u.sticky()` — on the same element.
 
+#### `anchorName(name: string): UtilityMixin`
+
+Applies the CSS Anchor Positioning `anchor-name` property, naming the host as an anchor that other elements can be positioned against. This is the _declaring_ half of anchor positioning, and it goes on the element being anchored **to** — the button, the trigger, the table cell — not on the surface that moves. The querying half is `u.positionAnchor()`, which goes on the positioned element and points back at this name; with only one half in place there is no anchor relationship at all, which is why neither `u.positionArea()` nor `u.positionTryFallbacks()` can resolve a placement until both are written.
+
+The leading `--` is omitted from `name` and added for you, mirroring the convention `u.vars()` and `u.var()` already use: an anchor name is a dashed-ident exactly like a custom property, so `u.anchorName("tooltip")` emits `anchor-name: --tooltip`. Passing `"--tooltip"` would emit `anchor-name: ----tooltip`, so keep the argument bare.
+
+The name has to be visible to the positioned element through the DOM tree, and a second `u.anchorName()` on the same element replaces the first rather than adding a second name.
+
+**Parameters:**
+
+- `name`: The anchor's dashed-ident name, written **without** the leading `--`. Required, emitted verbatim after the prefix — no validation, no defaults.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `anchor-name` to `--{name}`
+
+**CSS:**
+
+```css
+/* u.anchorName("tooltip-trigger") */
+.host {
+	anchor-name: --tooltip-trigger;
+}
+
+/* u.anchorName("trigger") */
+.host {
+	anchor-name: --trigger;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.anchorName("tooltip-trigger");
+let shortResult = u.anchorName("trigger");
+```
+
+Both halves of the pair, with the surface taken out of flow so the anchor can position it:
+
+```tsx
+<div>
+	<button mix={[u.anchorName("tooltip-trigger")]}>{label}</button>
+	<div
+		role="tooltip"
+		mix={[
+			u.absolute(),
+			u.positionAnchor("tooltip-trigger"),
+			u.positionArea("block-start"),
+			u.positionTryFallbacks("flip-block"),
+		]}
+	>
+		{description}
+	</div>
+</div>
+```
+
 #### `appearance(value?: AppearanceValue | (string & {}), options?: AppearanceOptions): UtilityMixin`
 
 A primitive form-control reset: it clears (or restores) the platform's native control chrome. By default the value is mirrored onto `-webkit-appearance` and `-moz-appearance` as well as the standard property, because Safari and Firefox both still need their own prefixed property to fully clear a `<meter>`, `<progress>`, or range `<input>`'s native rendering.
@@ -1253,6 +1311,121 @@ A grouping wrapper whose children need to participate in the grandparent's grid 
 </div>
 ```
 
+#### `contentVisibility(value?: ContentVisibilityValue): UtilityMixin`
+
+Applies `content-visibility`, which lets the browser skip rendering work — style, layout, and paint — for an element's contents. Defaults to `"auto"`, the value that skips that work while the element is off-screen and does it as the element scrolls into view.
+
+This is the bare primitive, and for the long-scrollable-list case it is usually the wrong entry point: prefer `u.virtualize()`, which remains the recommended pattern because it sets `content-visibility: auto` _together with_ a `contain-intrinsic-size` placeholder. Without a reserved size the skipped content measures as zero, so the scroll height — and the scrollbar with it — jumps around as off-screen content mounts and unmounts. Reach for this utility directly only when a placeholder size genuinely does not apply, or when setting one of the other two values.
+
+`"hidden"` always skips the contents, and skipping them takes them out of the accessibility tree and out of find-in-page as well: a screen reader will not announce them and Ctrl/Cmd+F will not match them. That puts it close to `u.hidden()`, with one difference that matters — the element's own box is still generated and laid out, so it keeps occupying space and can be revealed without reflowing everything around it, whereas `display: none` removes the box entirely.
+
+**Parameters:**
+
+- `value`: The `content-visibility` keyword. Defaults to `"auto"`.
+  - `"auto"` (the default) — contents are skipped while off-screen and rendered on demand when scrolled to, focused, or found in page; the element stays searchable and stays in the accessibility tree
+  - `"visible"` — contents render normally, the CSS initial value; useful to opt a subtree back in
+  - `"hidden"` — contents are always skipped and are removed from the accessibility tree and find-in-page, while the element's own box is still laid out
+- The utility never emits `contain-intrinsic-size`; that pairing is what `u.virtualize()` is for.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `content-visibility`
+
+**CSS:**
+
+```css
+/* u.contentVisibility() */
+.host {
+	content-visibility: auto;
+}
+
+/* u.contentVisibility("hidden") */
+.host {
+	content-visibility: hidden;
+}
+
+/* u.contentVisibility("visible") */
+.host {
+	content-visibility: visible;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.contentVisibility();
+let hiddenResult = u.contentVisibility("hidden");
+let visibleResult = u.contentVisibility("visible");
+```
+
+A collapsed panel that keeps its box — and, for the rows of a long list, `u.virtualize()` instead:
+
+```tsx
+<section mix={[u.bs("12rem"), u.contentVisibility(expanded ? "visible" : "hidden")]}>
+	{panelContent}
+</section>
+<div mix={[u.scroll("y"), u.bs("30rem")]}>
+	{rows.map((row) => (
+		<div key={row.id} mix={[u.virtualize("auto 2.5rem")]} />
+	))}
+</div>
+```
+
+#### `fieldSizing(value?: FieldSizingValue): UtilityMixin`
+
+Applies `field-sizing` to an `<input>`, `<textarea>`, or `<select>`. Defaults to `"content"`, which makes the control size itself to the value it currently holds instead of the fixed default the platform picks — the native answer to an auto-growing textarea, or to a select that hugs its chosen option, replacing the resize observer (or mirrored hidden-element trick) that pattern used to require in JavaScript.
+
+Content sizing is unbounded on its own, so pair it with `u.maxBs()` to cap how tall a textarea grows and `u.maxIs()` to cap how wide an input grows, letting the control's own overflow take over past that point. `u.minBs()`/`u.minIs()` are the matching floor when an empty control should not collapse to nothing.
+
+It sits alongside `u.appearance()` as a form-control primitive: that one clears the platform's native chrome, this one hands sizing over to the value. It applies only to form controls — on a plain `<div>` the declaration is inert.
+
+**Parameters:**
+
+- `value`: The `field-sizing` keyword. Defaults to `"content"`.
+  - `"content"` (the default) — the control sizes to the value it holds, growing and shrinking as the value changes
+  - `"fixed"` — the platform's fixed default size, the CSS initial value; useful to opt one control back out
+
+**Returns:**
+
+- A `UtilityMixin` that sets `field-sizing`
+
+**CSS:**
+
+```css
+/* u.fieldSizing() */
+.host {
+	field-sizing: content;
+}
+
+/* u.fieldSizing("fixed") */
+.host {
+	field-sizing: fixed;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.fieldSizing();
+let fixedResult = u.fieldSizing("fixed");
+```
+
+The auto-growing textarea, bounded so it cannot run past a few lines:
+
+```tsx
+<textarea
+	mix={[
+		u.fieldSizing(),
+		u.minBs("3lh"),
+		u.maxBs("12lh"),
+		u.overflow("auto"),
+		u.resize("none"),
+		u.is("full"),
+		u.p(2),
+	]}
+/>
+```
+
 #### `fixed(): UtilityMixin`
 
 Sets `position: fixed`, positioning the host against the viewport so it stays put as the page scrolls. Like `u.absolute()`, it leaves normal flow and reserves no space.
@@ -1645,6 +1818,362 @@ let spanResult = u.gridArea("1 / 1 / 3 / 3");
 	<header mix={[u.gridArea("header")]} />
 	<aside mix={[u.gridArea("sidebar")]} />
 	<main mix={[u.gridArea("main")]} />
+</div>
+```
+
+#### `gridAutoColumns(value: SizeValue): UtilityMixin`
+
+Applies `grid-auto-columns`, sizing the _implicit_ columns a grid creates for content that runs past the explicit tracks `u.gridTemplate()` declared. It has no effect on those explicit tracks — it only answers "how wide is column four when I only declared three?". It needs `u.grid()` or `u.inlineGrid()` on the same element, and it matters most with `u.gridAutoFlow("column")`, where every track past the first is implicit by construction.
+
+The value goes through the same resolution as `u.is()` and friends: a number resolves against the spacing scale and `"full"` resolves to `100%`. The values implicit tracks most often want — `"auto"`, `"min-content"`, `"max-content"`, or a `minmax(...)` clause — are not lengths on a scale, so they take the raw-string escape and pass straight to CSS.
+
+**Parameters:**
+
+- `value`: The track size for implicit columns. Required — no default.
+  - a `number` — resolved against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`
+  - `"full"` — resolved to `100%`
+  - `"auto"` — passed through, sizing the track to its content and letting it stretch
+  - a raw CSS length (`"10rem"`, `"20ch"`) — passed through unchanged
+  - any other string — the raw escape hatch, passed through unchanged: an intrinsic keyword (`"min-content"`, `"max-content"`, `"fit-content(12rem)"`), a `minmax(...)` clause, a flexible `fr` length, or a `var(...)` reference
+
+**Returns:**
+
+- A `UtilityMixin` that sets `grid-auto-columns` to the resolved length
+
+**CSS:**
+
+```css
+/* u.gridAutoColumns(40) */
+.host {
+	grid-auto-columns: calc(var(--ui-spacing, 0.25rem) * 40);
+}
+
+/* u.gridAutoColumns("full") */
+.host {
+	grid-auto-columns: 100%;
+}
+
+/* u.gridAutoColumns("minmax(10rem, 1fr)") */
+.host {
+	grid-auto-columns: minmax(10rem, 1fr);
+}
+
+/* u.gridAutoColumns("max-content") */
+.host {
+	grid-auto-columns: max-content;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.gridAutoColumns(40);
+let fullResult = u.gridAutoColumns("full");
+let rangeResult = u.gridAutoColumns("minmax(10rem, 1fr)");
+let intrinsicResult = u.gridAutoColumns("max-content");
+```
+
+A horizontally scrolling carousel where every card is an implicit column of the same width:
+
+```tsx
+<div
+	mix={[
+		u.grid(),
+		u.gridAutoFlow("column"),
+		u.gridAutoColumns(64),
+		u.gap(4),
+		u.scroll("x"),
+		u.scrollSnapType("x"),
+	]}
+>
+	{cards}
+</div>
+```
+
+#### `gridAutoFlow(value?: GridAutoFlowValue): UtilityMixin`
+
+Applies `grid-auto-flow`, choosing the axis auto-placed items fill along and whether the dense packing mode is on. Defaults to `"row"`, the CSS default of filling each row before moving to the next. It needs `u.grid()` or `u.inlineGrid()` on the same element, and it governs only items the grid places automatically — an item positioned by `u.gridArea()`, `u.gridColumn()`, or `u.gridRow()` is placed where it was told regardless. Switching to `"column"` is what makes implicit _columns_ appear, so it usually travels with `u.gridAutoColumns()`; the default row flow pairs with `u.gridAutoRows()`.
+
+`dense` changes packing rather than direction: the default sparse algorithm only ever moves forward, so an explicitly placed item that pushes past a few tracks leaves holes behind it, while `dense` goes back and backfills those earlier holes with any later item small enough to fit.
+
+The real caveat is that backfilling decouples visual order from DOM order — an item rendered late can end up displayed early. Focus still follows the DOM, so for a keyboard user the tab order stops matching what they see on screen. Do not use `dense` where the grid items are interactive (links, buttons, form controls, anything focusable); keep it to purely presentational content such as an image or card mosaic.
+
+**Parameters:**
+
+- `value`: The `grid-auto-flow` value. Defaults to `"row"`.
+  - `"row"` (the default) — auto-placed items fill each row before starting a new one, creating implicit rows
+  - `"column"` — they fill each column first, creating implicit columns
+  - `"dense"` — the packing mode alone, which leaves the axis at its `row` default
+  - `"row dense"` — row flow with backfilling of earlier holes
+  - `"column dense"` — column flow with backfilling of earlier holes
+
+**Returns:**
+
+- A `UtilityMixin` that sets `grid-auto-flow`
+
+**CSS:**
+
+```css
+/* u.gridAutoFlow() */
+.host {
+	grid-auto-flow: row;
+}
+
+/* u.gridAutoFlow("column") */
+.host {
+	grid-auto-flow: column;
+}
+
+/* u.gridAutoFlow("row dense") */
+.host {
+	grid-auto-flow: row dense;
+}
+
+/* u.gridAutoFlow("column dense") */
+.host {
+	grid-auto-flow: column dense;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.gridAutoFlow();
+let columnResult = u.gridAutoFlow("column");
+let denseResult = u.gridAutoFlow("row dense");
+let denseColumnResult = u.gridAutoFlow("column dense");
+```
+
+A photo mosaic — non-interactive tiles, which is the one place `dense` is safe:
+
+```tsx
+<div
+	mix={[
+		u.grid(),
+		u.gridTemplate({ columns: u.repeat("auto-fill", "minmax(8rem, 1fr)") }),
+		u.gridAutoRows("8rem"),
+		u.gridAutoFlow("row dense"),
+		u.gap(2),
+	]}
+>
+	{photos.map((photo) => (
+		<img
+			key={photo.id}
+			mix={[photo.wide && u.gridColumn("span 2"), photo.tall && u.gridRow("span 2"), u.fit()]}
+		/>
+	))}
+</div>
+```
+
+#### `gridAutoRows(value: SizeValue): UtilityMixin`
+
+Applies `grid-auto-rows`, sizing the _implicit_ rows a grid creates for content that runs past the explicit tracks `u.gridTemplate()` declared. It has no effect on those explicit tracks — it only answers "how tall is row six when I only declared five?". It needs `u.grid()` or `u.inlineGrid()` on the same element, and it is the companion to the default `u.gridAutoFlow("row")`, where an unknown number of items keeps generating rows.
+
+The value goes through the same resolution as `u.bs()` and friends: a number resolves against the spacing scale and `"full"` resolves to `100%`. The values implicit tracks most often want — `"auto"`, `"min-content"`, `"max-content"`, or a `minmax(...)` clause — are not lengths on a scale, so they take the raw-string escape and pass straight to CSS. `"minmax(6rem, auto)"` is the usual choice for a uniform floor that can still grow with its content.
+
+**Parameters:**
+
+- `value`: The track size for implicit rows. Required — no default.
+  - a `number` — resolved against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`
+  - `"full"` — resolved to `100%`
+  - `"auto"` — passed through, sizing the track to its content
+  - a raw CSS length (`"6rem"`, `"8vh"`) — passed through unchanged
+  - any other string — the raw escape hatch, passed through unchanged: an intrinsic keyword (`"min-content"`, `"max-content"`, `"fit-content(20rem)"`), a `minmax(...)` clause, a flexible `fr` length, or a `var(...)` reference
+
+**Returns:**
+
+- A `UtilityMixin` that sets `grid-auto-rows` to the resolved length
+
+**CSS:**
+
+```css
+/* u.gridAutoRows(24) */
+.host {
+	grid-auto-rows: calc(var(--ui-spacing, 0.25rem) * 24);
+}
+
+/* u.gridAutoRows("full") */
+.host {
+	grid-auto-rows: 100%;
+}
+
+/* u.gridAutoRows("minmax(6rem, auto)") */
+.host {
+	grid-auto-rows: minmax(6rem, auto);
+}
+
+/* u.gridAutoRows("min-content") */
+.host {
+	grid-auto-rows: min-content;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.gridAutoRows(24);
+let fullResult = u.gridAutoRows("full");
+let rangeResult = u.gridAutoRows("minmax(6rem, auto)");
+let intrinsicResult = u.gridAutoRows("min-content");
+```
+
+A card grid with one declared header row and however many implicit rows the data needs:
+
+```tsx
+<div
+	mix={[
+		u.grid(),
+		u.gridTemplate({ columns: u.repeat("auto-fit", "minmax(14rem, 1fr)"), rows: "auto" }),
+		u.gridAutoRows("minmax(6rem, auto)"),
+		u.gap(4),
+	]}
+>
+	{cards}
+</div>
+```
+
+#### `gridColumn(value: GridLineValue): UtilityMixin`
+
+Applies `grid-column`, placing or spanning a grid item along the inline axis. `grid-column` is a shorthand for `grid-column-start` / `grid-column-end`, so a single value sets the start line and lets the end default to spanning one track, while a `"start / end"` string sets both at once. It goes on the item, not the container, and it resolves against the lines `u.gridTemplate({ columns })` declared on the parent (`u.gridArea()` is the named-area alternative when the parent declares `areas` instead).
+
+**A bare number is a grid _line_ number, not a span count** — exactly as CSS reads it, and it is emitted as a bare number rather than a stringified one. `u.gridColumn(2)` starts the item at the second column line and occupies one track; `u.gridColumn("span 2")` leaves the start to auto-placement and occupies two tracks. This is the distinction that most often trips people up, and the utility deliberately does not reinterpret a number as a span. Negative numbers count back from the end, so `-1` is the last line.
+
+Anything else is a raw string covering the full shorthand grammar, which is where the interesting placements live.
+
+**Parameters:**
+
+- `value`: The item's inline-axis placement. Required — no default, no validation.
+  - a `number` — a grid **line number**, emitted unchanged (`2` stays the number `2`); negatives count back from the end (`-1` is the last line)
+  - `` `span ${number}` `` — an explicit span of that many tracks, with the start left to auto-placement; this template-literal member exists so the span form autocompletes
+  - any other string — the full shorthand, passed through unchanged: a start/end pair (`"1 / 3"`), a mixed span/line pair (`"span 2 / -1"`), or named grid lines (`"main-start / main-end"`)
+
+**Returns:**
+
+- A `UtilityMixin` that sets `grid-column`
+
+**CSS:**
+
+```css
+/* u.gridColumn(2) */
+.host {
+	grid-column: 2;
+}
+
+/* u.gridColumn(-1) */
+.host {
+	grid-column: -1;
+}
+
+/* u.gridColumn("span 2") */
+.host {
+	grid-column: span 2;
+}
+
+/* u.gridColumn("1 / 3") */
+.host {
+	grid-column: 1 / 3;
+}
+
+/* u.gridColumn("span 2 / -1") */
+.host {
+	grid-column: span 2 / -1;
+}
+
+/* u.gridColumn("main-start / main-end") */
+.host {
+	grid-column: main-start / main-end;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.gridColumn(2);
+let spanResult = u.gridColumn("span 2");
+let pairResult = u.gridColumn("1 / 3");
+let namedResult = u.gridColumn("main-start / main-end");
+```
+
+A full-width row inside a three-column form grid, spanning every track:
+
+```tsx
+<div mix={[u.grid(), u.gridTemplate({ columns: u.repeat(3, 1) }), u.gap(4)]}>
+	<label mix={[u.vstack({ gap: 1 })]}>{firstName}</label>
+	<label mix={[u.vstack({ gap: 1 })]}>{lastName}</label>
+	<label mix={[u.vstack({ gap: 1 })]}>{suffix}</label>
+	<label mix={[u.gridColumn("1 / -1"), u.vstack({ gap: 1 })]}>{notes}</label>
+</div>
+```
+
+#### `gridRow(value: GridLineValue): UtilityMixin`
+
+Applies `grid-row`, placing or spanning a grid item along the block axis — the block-axis counterpart to `u.gridColumn()`, sharing its `GridLineValue` type. `grid-row` is a shorthand for `grid-row-start` / `grid-row-end`, so a single value sets the start line and lets the end default to spanning one track, while a `"start / end"` string sets both. It goes on the item and resolves against the lines the parent's `u.gridTemplate({ rows })` declared, or against the implicit rows sized by `u.gridAutoRows()` when the placement runs past them.
+
+**A bare number is a grid _line_ number, not a span count**, and it is emitted as a bare number rather than a stringified one. `u.gridRow(2)` starts the item at the second row line and occupies one track; `u.gridRow("span 3")` leaves the start to auto-placement and occupies three tracks. The utility deliberately does not reinterpret a number as a span. Negative numbers count back from the end, which makes `"1 / -1"` the idiom for an item that spans every row.
+
+**Parameters:**
+
+- `value`: The item's block-axis placement. Required — no default, no validation.
+  - a `number` — a grid **line number**, emitted unchanged (`2` stays the number `2`); negatives count back from the end (`-1` is the last line)
+  - `` `span ${number}` `` — an explicit span of that many tracks, with the start left to auto-placement; this template-literal member exists so the span form autocompletes
+  - any other string — the full shorthand, passed through unchanged: a start/end pair (`"1 / -1"`), a mixed span/line pair (`"span 2 / -1"`), or named grid lines (`"header-start / header-end"`)
+
+**Returns:**
+
+- A `UtilityMixin` that sets `grid-row`
+
+**CSS:**
+
+```css
+/* u.gridRow(2) */
+.host {
+	grid-row: 2;
+}
+
+/* u.gridRow(-1) */
+.host {
+	grid-row: -1;
+}
+
+/* u.gridRow("span 3") */
+.host {
+	grid-row: span 3;
+}
+
+/* u.gridRow("1 / -1") */
+.host {
+	grid-row: 1 / -1;
+}
+
+/* u.gridRow("header-start / header-end") */
+.host {
+	grid-row: header-start / header-end;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.gridRow(2);
+let spanResult = u.gridRow("span 3");
+let fullResult = u.gridRow("1 / -1");
+let namedResult = u.gridRow("header-start / header-end");
+```
+
+A sidebar that spans both declared rows while the header and main content each take one:
+
+```tsx
+<div
+	mix={[
+		u.grid(),
+		u.gridTemplate({ columns: "16rem 1fr", rows: "auto 1fr" }),
+		u.gap(4),
+		u.minBs("full"),
+	]}
+>
+	<aside mix={[u.gridRow("1 / -1"), u.vstack({ gap: 2 })]}>{nav}</aside>
+	<header mix={[u.hstack({ gap: 4, align: "center" })]}>{toolbar}</header>
+	<main mix={[u.gridColumn(2), u.overflow("auto")]}>{children}</main>
 </div>
 ```
 
@@ -2703,6 +3232,64 @@ Centring a single child on both axes in a grid, which needs no flex container at
 <div mix={[u.grid(), u.place({ items: "center" }), u.minBs("100dvh")]}>{children}</div>
 ```
 
+#### `positionAnchor(name: string): UtilityMixin`
+
+Applies the CSS Anchor Positioning `position-anchor` property, pointing the host at the anchor it should be positioned against. This is the _querying_ half of anchor positioning — it goes on the absolutely positioned element (the tooltip, the popover, the menu), and the name it references is the one `u.anchorName()` declared on the element being anchored to.
+
+The host needs `position: absolute` or `position: fixed` for this to do anything at all, so it always travels with `u.absolute()` or `u.fixed()`. Once both halves are in place, this is the anchor `u.positionArea()` resolves its placement against, and the one `u.positionTryFallbacks()` re-resolves against when the preferred placement would overflow. Without it, a `u.positionArea()` on the same element has no grid to place into and the declaration does nothing — the usual reason an anchored surface appears at the corner of its containing block instead of next to its trigger.
+
+The leading `--` is omitted from `name` and added for you, matching `u.anchorName()` on the other side and the convention `u.vars()`/`u.var()` already use: `u.positionAnchor("tooltip")` emits `position-anchor: --tooltip`.
+
+**Parameters:**
+
+- `name`: The anchor name to reference, written **without** the leading `--`, and matching the name given to `u.anchorName()`. Required, emitted verbatim after the prefix — no validation, no defaults.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `position-anchor` to `--{name}`
+
+**CSS:**
+
+```css
+/* u.positionAnchor("tooltip-trigger") */
+.host {
+	position-anchor: --tooltip-trigger;
+}
+
+/* u.positionAnchor("trigger") */
+.host {
+	position-anchor: --trigger;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.positionAnchor("tooltip-trigger");
+let shortResult = u.positionAnchor("trigger");
+```
+
+The complete anchored menu — declaring half on the trigger, querying half plus `u.absolute()` on the surface:
+
+```tsx
+<div>
+	<button mix={[u.anchorName("menu-button")]}>{label}</button>
+	<div
+		role="menu"
+		mix={[
+			u.absolute(),
+			u.positionAnchor("menu-button"),
+			u.positionArea("block-end span-inline-end"),
+			u.positionTryFallbacks("flip-block", "flip-inline"),
+			u.vstack({ gap: 1 }),
+			u.p(1),
+		]}
+	>
+		{items}
+	</div>
+</div>
+```
+
 #### `positionArea(value: string): UtilityMixin`
 
 Applies the CSS Anchor Positioning `position-area` property, placing an absolutely or anchor-positioned element in a named region of the 3x3 grid around its anchor — the declarative alternative to computing a popover's offsets by hand. It requires the host to be out of flow (`u.absolute()` or `u.fixed()`) and tied to an anchor; with no anchor in effect there is no grid to place against and the declaration does nothing. Once a region is set, any `u.insBs()`/`u.insIs()`/... offsets are resolved inside that region rather than against the whole containing block, and `u.positionTryFallbacks()` is what keeps the surface on screen when the chosen region overflows.
@@ -2917,6 +3504,72 @@ let autoFillResult = u.repeat("auto-fill", "minmax(min(100%, 12rem), 1fr)");
 		u.gap(4),
 	]}
 />
+```
+
+#### `resize(value?: ResizeValue): UtilityMixin`
+
+Applies `resize`, controlling which axes a user can drag the element's resize handle along. Defaults to `"block"` — the shape a textarea almost always wants (taller when the value outgrows the box, never wider than the form column), expressed logically so it follows the writing mode.
+
+`"block"` and `"inline"` are the logical forms and the default, matching every other logical utility here. `"horizontal"` and `"vertical"` are the physical exception, worth reaching for only when the direction genuinely must not flip with the writing mode — they are also the wider-support pair, so a control that must stay resizable on very old engines needs the physical form spelled out.
+
+`resize` only applies to an element whose `overflow` is something other than `visible`. That is why it works on a `<textarea>` with no extra setup — a textarea is already a scroll container — but needs `u.overflow()` (or one of its axis variants, `u.overflowBlock()`/`u.overflowInline()`) alongside it to do anything on a plain `<div>`.
+
+`"none"` takes away an affordance the platform provided and a user may be relying on: someone with a long answer to type, or a large font size, resizes a textarea because the default box is too small for them. Removing it should be a deliberate decision about a specific control — often because `u.fieldSizing()` now grows the control automatically — not a blanket reset.
+
+**Parameters:**
+
+- `value`: The `resize` keyword. Defaults to `"block"`.
+  - `"vertical"` — resizable in the physical vertical direction only, regardless of writing mode
+  - `"horizontal"` — resizable in the physical horizontal direction only
+  - `"block"` (the default) — the logical form of vertical: resizable along the block axis, following the writing mode
+  - `"inline"` — the logical form of horizontal: resizable along the inline axis, following the writing mode
+  - `"both"` — resizable on both axes
+  - `"none"` — no resize affordance at all; removes a native control the user may depend on, so use it deliberately
+
+**Returns:**
+
+- A `UtilityMixin` that sets `resize`
+
+**CSS:**
+
+```css
+/* u.resize() */
+.host {
+	resize: block;
+}
+
+/* u.resize("vertical") */
+.host {
+	resize: vertical;
+}
+
+/* u.resize("both") */
+.host {
+	resize: both;
+}
+
+/* u.resize("none") */
+.host {
+	resize: none;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.resize();
+let physicalResult = u.resize("vertical");
+let bothResult = u.resize("both");
+let noneResult = u.resize("none");
+```
+
+A comment box that grows along the block axis, and a resizable panel that needs its own overflow before the handle appears:
+
+```tsx
+<textarea mix={[u.resize("block"), u.minBs("4lh"), u.is("full"), u.p(2)]} />
+<div mix={[u.resize("both"), u.overflow("auto"), u.bs("12rem"), u.is("20rem"), u.p(3)]}>
+	{preview}
+</div>
 ```
 
 #### `self(value?: AlignSelfValue): UtilityMixin`
@@ -3504,7 +4157,7 @@ The radius supplies the size, `corner()` supplies the geometry, and unsupported 
 
 Applies `object-fit`, which decides how a replaced element's content — an `<img>`, `<video>`, or `<canvas>` — fills a box whose size comes from layout rather than from the media's intrinsic dimensions.
 
-It only affects replaced elements; on an ordinary `<div>` it does nothing. Pair it with `u.aspect()` (or an explicit size) to establish the box in the first place, and reach for `object-position` via `u.raw()` when the crop needs to favour a particular part of the image.
+It only affects replaced elements; on an ordinary `<div>` it does nothing. Pair it with `u.aspect()` (or an explicit size) to establish the box in the first place, and reach for `u.objectPosition()` when the crop needs to favour a particular part of the image.
 
 **Parameters:**
 
@@ -4449,6 +5102,76 @@ let indentResult = u.mis("2ch");
 </div>
 ```
 
+#### `objectPosition(value?: ObjectPositionValue): UtilityMixin`
+
+Applies `object-position`, which decides which part of a replaced element's content survives the crop `u.fit("cover")` performs. That makes it the utility that keeps a subject in frame: a portrait photo squeezed into a wide thumbnail is cropped from its centre by default, which reliably cuts off the head, and moving the position to `"top"` is the fix.
+
+It does nothing on its own. Without `u.fit()` establishing a crop there is no overflow to position, and it has no effect at all on non-replaced elements — an `<img>`, `<video>`, or `<canvas>` honours it, an ordinary `<div>` ignores it. Pair it with `u.aspect()` or an explicit `u.is()`/`u.bs()` for the box, the same as `u.fit()` needs. It is unrelated to `u.bg({ position })`, which positions a `background-image` rather than a replaced element's own content.
+
+The keywords are physical, not logical: `left` and `right` stay put under a right-to-left writing mode.
+
+**Parameters:**
+
+- `value`: An `ObjectPositionValue`. Defaults to `"center"`.
+  - `"center"` — the middle of the content is kept, cropping evenly on all sides. CSS's own default.
+  - `"top"` / `"bottom"` / `"left"` / `"right"` — a single edge keyword: that edge is held against the box and the crop is taken from the opposite side. `"top"` is the usual choice for a photo of a person.
+  - `"top left"` / `"top right"` / `"bottom left"` / `"bottom right"` — a corner
+  - any other `string` — the raw escape, passed through unchanged: a percentage pair (`"50% 20%"`, useful for aiming slightly above centre), explicit lengths, or a `var(...)`/`calc(...)` reference — which is how a per-image focal point stored with the asset can drive the crop
+
+**Returns:**
+
+- A `UtilityMixin` that sets `object-position`
+
+**CSS:**
+
+```css
+/* u.objectPosition() */
+.host {
+	object-position: center;
+}
+
+/* u.objectPosition("top") */
+.host {
+	object-position: top;
+}
+
+/* u.objectPosition("50% 20%") */
+.host {
+	object-position: 50% 20%;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.objectPosition();
+let faceResult = u.objectPosition("top");
+let cornerResult = u.objectPosition("bottom right");
+let focalResult = u.objectPosition("50% 20%");
+```
+
+A wide card header cropped from a tall source image, aimed a little above centre so faces stay in frame, and a focal point handed in per image:
+
+```tsx
+<img
+	mix={[u.is("full"), u.aspect(16, 9), u.fit("cover"), u.objectPosition("50% 20%"), u.rounded("md")]}
+	src={coverUrl}
+	alt=""
+/>
+
+<img
+	mix={[
+		u.circle(),
+		u.is(12),
+		u.fit("cover"),
+		u.objectPosition(u.var("focal", "center")),
+		u.vars({ focal: person.focalPoint }),
+	]}
+	src={person.avatarUrl}
+	alt={person.name}
+/>
+```
+
 #### `p(...values: SpacingValue[]): UtilityMixin`
 
 Applies logical padding using the spacing scale or a raw CSS length. One value applies all sides; two values map to block then inline; four values map to block-start, inline-end, block-end, and inline-start — see [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
@@ -5157,8 +5880,15 @@ Reach for `u.surface()` instead when the background needs a matching foreground 
   - `"scroll"` — the image is fixed to the element and scrolls with it, CSS's default
   - `"fixed"` — fixed to the viewport, producing a parallax effect. Known to be janky on mobile browsers.
   - `"local"` — fixed to the element's _contents_, so it scrolls when the element scrolls internally
+- `options.clip`: Sets `background-clip`, the area the background is actually painted in. A `BackgroundClipValue`.
+  - `"border-box"` — out to the outer edge of the border. CSS's initial value, so a translucent or dashed border shows the background through its gaps.
+  - `"padding-box"` — stops at the outer edge of the padding, so the border sits over the page rather than over the background
+  - `"content-box"` — stops at the content edge, leaving the padding unpainted
+  - `"text"` — clips the background to the shape of the element's glyphs
 
 Only the keys given are set; omitted keys are left entirely alone rather than reset.
+
+Two of the `clip` values carry real weight. `"content-box"` is how a background is kept from painting under the padding, which is what draws an inset scrollbar thumb: a thumb with padding and a content-box background reads as a narrow pill floating inside its track rather than filling it. `"text"` is how a gradient fills text — it needs a transparent text color (`u.fg("transparent")`) for the clipped background to show at all, and the text underneath must stay real, selectable text rather than being replaced by an image, so it remains readable to assistive technology, searchable, and translatable. Only the unprefixed property is emitted; an engine that still wants `-webkit-background-clip` needs `u.raw()` alongside.
 
 **Returns:**
 
@@ -5184,6 +5914,21 @@ Only the keys given are set; omitted keys are left entirely alone rather than re
 	background-position: center;
 	background-repeat: no-repeat;
 }
+
+/* u.bg({ color: "brand.solid", clip: "content-box" }) */
+.host {
+	background-color: var(--ui-brand-bg-solid);
+	background-clip: content-box;
+}
+
+/* u.bg({
+     image: u.linearGradient("to right", "var(--ui-brand-fg)", "var(--ui-brand-fg-emphasis)"),
+     clip: "text",
+   }) */
+.host {
+	background-image: linear-gradient(to right, var(--ui-brand-fg), var(--ui-brand-fg-emphasis));
+	background-clip: text;
+}
 ```
 
 **Example:**
@@ -5195,6 +5940,11 @@ let paletteResult = u.bg("color.neutral.50");
 let heroResult = u.bg({ image: "url(/hero.jpg)", size: "cover", position: "center" });
 let gradientResult = u.bg({ image: u.linearGradient("to right", "transparent", "currentColor") });
 let mixedResult = u.bg(u.colorMix("oklab", { color: "currentcolor", weight: 8 }, "transparent"));
+let insetResult = u.bg({ color: "neutral.solid", clip: "content-box" });
+let textResult = u.bg({
+	image: u.linearGradient(90, "var(--ui-brand-fg)", "var(--ui-brand-fg-emphasis)"),
+	clip: "text",
+});
 ```
 
 An image background needs a color underneath it as a fallback for while the image loads or if it fails:
@@ -5214,6 +5964,24 @@ An image background needs a color underneath it as a fallback for while the imag
 >
 	{children}
 </section>
+```
+
+A gradient filling the glyphs of a heading: the background is clipped to the text and the text itself is made transparent, while the heading stays ordinary selectable markup.
+
+```tsx
+<h1
+	mix={[
+		u.text("4xl"),
+		u.weight("bold"),
+		u.bg({
+			image: u.linearGradient("to right", "var(--ui-brand-fg)", "var(--ui-brand-fg-emphasis)"),
+			clip: "text",
+		}),
+		u.fg("transparent"),
+	]}
+>
+	{title}
+</h1>
 ```
 
 #### `border(value?: ColorValue): UtilityMixin` (overloaded: `border(options: BorderOptions): UtilityMixin`)
@@ -6853,6 +7621,60 @@ let result = u.nowrap();
 
 `u.truncate()` already includes it, so the two together are redundant. It also conflicts with `u.wordBreak()`'s effect: `nowrap` suppresses the wrapping opportunities `wordBreak` exists to create.
 
+#### `overflowWrap(value?: OverflowWrapValue): UtilityMixin`
+
+Applies `overflow-wrap`, which lets the browser break inside a word _only_ when that word would otherwise overflow its line. Ordinary text keeps breaking at its normal opportunities and stays intact. This is the right tool for a long URL, hash, or generated identifier sitting in a narrow column.
+
+The distinction from `u.wordBreak()` is the whole point, and picking wrong is the common mistake. `overflow-wrap` breaks a word only as a last resort, so prose around the offending token is untouched; `word-break: break-all` breaks at any character on every line, which fixes the overflow but mangles the surrounding prose along with it. Reach for this utility first — `word-break` is for CJK line-breaking rules (`"keep-all"`) and for the deliberate all-characters case. `u.wordBreak("break-word")` is a deprecated legacy alias that browsers treat as `overflow-wrap: break-word` under a different property name; prefer this utility and say what you mean.
+
+Two conditions govern whether it does anything. There must be a bounded inline size for a line to overflow in the first place — a `u.maxIs()`, a grid column, or a flex item given `u.minIs(0)`; an auto-width element just grows instead. And `u.nowrap()` removes the very wrapping opportunities this creates, so applying both cancels out; use `u.truncate()` or `u.lineClamp()` instead when the overflow should be cut off rather than wrapped.
+
+**Parameters:**
+
+- `value`: An `OverflowWrapValue`. Defaults to `"break-word"`.
+  - `"normal"` — the initial behavior: breaks only at spaces and other ordinary opportunities, so a long unbroken token overflows
+  - `"break-word"` — the overflowing word is broken, but the element's intrinsic `min-content` size is still computed from the unbroken word, so a flex or grid item sized from its content still refuses to shrink below that width. The default.
+  - `"anywhere"` — the same last-resort breaking, except the break counts toward `min-content` too, which is what actually lets such an item shrink. Reach for it when the box itself is the thing that will not get smaller.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `overflow-wrap`
+
+**CSS:**
+
+```css
+/* u.overflowWrap() */
+.host {
+	overflow-wrap: break-word;
+}
+
+/* u.overflowWrap("anywhere") */
+.host {
+	overflow-wrap: anywhere;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.overflowWrap();
+let anywhereResult = u.overflowWrap("anywhere");
+let normalResult = u.overflowWrap("normal");
+```
+
+A definition list whose values are URLs: the prose label wraps normally, the URL breaks only where it has to, and the `"anywhere"` variant is what lets the flex row's own column stop growing.
+
+```tsx
+<dd mix={[u.maxIs("32ch"), u.overflowWrap(), u.font("mono"), u.fontSize("sm")]}>
+	https://example.com/very/long/path/that/has/no/spaces/to/wrap/at
+</dd>
+
+<div mix={[u.hstack({ gap: 2 })]}>
+	<span mix={[u.nowrap(), u.fg("neutral.muted")]}>Endpoint</span>
+	<span mix={[u.minIs(0), u.overflowWrap("anywhere"), u.font("mono")]}>{endpoint}</span>
+</div>
+```
+
 #### `pretty(): UtilityMixin`
 
 Avoids leaving a short orphan word alone on the last line of a wrapped block. Unlike `u.balance()`, it scales to long-form body copy — browsers don't cap how many lines it applies to — so it is the safe default for prose, with `balance()` reserved for headings.
@@ -7020,26 +7842,44 @@ let physicalResult = u.textAlign("left");
 
 Note it aligns _inline content_ inside the box, not the box itself — to move the element, reach for `u.justify()`, `u.self()`, or `u.mi("auto")`.
 
-#### `textDecoration(value: TextDecorationLineValue): UtilityMixin`
+#### `textDecoration(value?: TextDecorationLineValue): UtilityMixin` (overloaded: `textDecoration(options: TextDecorationOptions): UtilityMixin`)
 
-Applies `text-decoration-line`, the longhand only — never the `text-decoration` shorthand — so it adds or removes the line without resetting the style, color, or thickness set elsewhere on the same element. It takes a single keyword rather than an options object: there are no `style`, `color`, or `thickness` keys, and a decoration needing those composes them through `u.raw({ textDecorationStyle, textDecorationColor, textDecorationThickness, textUnderlineOffset })`. Removing a link's default underline with `none` takes away the only non-color cue that the text is a link, so leave another affordance in place — commonly restoring the underline under `hover()` and `focusVisible()`.
+Applies `text-decoration-line`, or a full set of text-decoration properties when given an options object instead of a bare line value. The bare form emits the longhand only — never the `text-decoration` shorthand — so it adds or removes the line without resetting the style, color, or thickness set elsewhere on the same element. The options form is equally surgical: only the keys given are set, and omitted keys are left entirely alone rather than reset.
+
+Removing a link's default underline with `"none"` takes away the only non-color cue that the text is a link, so leave another affordance in place — commonly restoring the underline under `hover()` and `focusVisible()`.
+
+`offset` is worth reaching for on any underlined text. At the default offset an underline runs straight through the descenders of letters like `g`, `j`, and `p`, which both looks wrong and costs legibility; `text-underline-offset` is the standard fix, pushing the line down far enough to clear them. It and `thickness` are the two properties the `text-decoration` shorthand does _not_ include, which is why they are separate keys here rather than folded into one declaration: a shorthand set elsewhere will not reset them, and they cannot be set through it either.
 
 **Parameters:**
 
-- `value`: Which decoration line to draw. Required — there is no default.
-  - `none`: Draws no line, and removes a line inherited from an ancestor or a UA default such as a link's underline
-  - `underline`: A line below the text
-  - `overline`: A line above the text
-  - `line-through`: A line through the middle of the text, for struck-out or superseded values
+- `value`: Which decoration line to draw. A `TextDecorationLineValue`, defaulting to `"underline"`.
+  - `"none"` — draws no line, and removes a line inherited from an ancestor or a UA default such as a link's underline
+  - `"underline"` — a line below the text. The default.
+  - `"overline"` — a line above the text
+  - `"line-through"` — a line through the middle of the text, for struck-out or superseded values
+- `options.line`: Sets `text-decoration-line`. Same four values as the bare form. No default in this form — omit it and no line is set, so a call can restyle a decoration the element already has.
+- `options.color`: Sets `text-decoration-color`, resolved through the token layer with a default property of `fg` — so a bare tone works and the decoration can be tinted away from the text's own color. No default; omitted, the line takes the text's `currentColor`.
+  - a bare semantic tone (`"brand"`, `"danger"`) — resolves to that tone's `fg` weight, e.g. `var(--ui-brand-fg)`
+  - a tone with an explicit suffix (`"danger.muted"`, `"brand.emphasis"`) — resolved through the alias table, where `muted`→`fg-muted`, `emphasis`→`fg-emphasis`
+  - a raw palette reference (`"color.neutral.400"`) — resolves to `var(--ui-color-neutral-400)`
+  - `"transparent"`, `"inherit"`, `"currentColor"` — passed through as CSS keywords
+  - any value containing `(` — a `u.colorMix()` result or a `var(...)` reference — handed through untouched
+- `options.style`: Sets `text-decoration-style`. A `TextDecorationStyleValue`, no default.
+  - `"solid"` — an unbroken line, CSS's own default
+  - `"double"` — two parallel lines
+  - `"dotted"` / `"dashed"` — a broken line, quieter than solid at the same thickness
+  - `"wavy"` — the squiggle spell-checkers use, so it reads as "this text is wrong" and belongs with an error tone
+- `options.thickness`: Sets `text-decoration-thickness`. A bare number is treated as pixels (`2` → `2px`); a string passes through unchanged, which is how `"auto"` and `"from-font"` — the font's own metric, the best choice when it has one — are expressed. No default.
+- `options.offset`: Sets `text-underline-offset`, the distance between the text's baseline and its underline. A bare number is treated as pixels (`3` → `3px`); a string passes through unchanged, including `"auto"`. No default.
 
 **Returns:**
 
-- A `UtilityMixin` that sets `text-decoration-line`.
+- A `UtilityMixin` that sets `text-decoration-line`, or whichever of the five text-decoration properties the options object specifies
 
 **CSS:**
 
 ```css
-/* u.textDecoration("underline") */
+/* u.textDecoration() */
 .host {
 	text-decoration-line: underline;
 }
@@ -7048,14 +7888,32 @@ Applies `text-decoration-line`, the longhand only — never the `text-decoration
 .host {
 	text-decoration-line: none;
 }
+
+/* u.textDecoration({ line: "underline", color: "brand", offset: 3 }) */
+.host {
+	text-decoration-line: underline;
+	text-decoration-color: var(--ui-brand-fg);
+	text-underline-offset: 3px;
+}
+
+/* u.textDecoration({ style: "wavy", color: "danger", thickness: "from-font" }) */
+.host {
+	text-decoration-style: wavy;
+	text-decoration-color: var(--ui-danger-fg);
+	text-decoration-thickness: from-font;
+}
 ```
 
 **Example:**
 
 ```typescript
-let result = u.textDecoration("underline");
+let result = u.textDecoration();
 let removed = u.textDecoration("none");
 let struck = u.textDecoration("line-through");
+let tonedResult = u.textDecoration({ line: "underline", color: "brand", offset: 3 });
+let mutedResult = u.textDecoration({ color: "danger.muted" });
+let spellingResult = u.textDecoration({ style: "wavy", color: "danger", thickness: "from-font" });
+let thickResult = u.textDecoration({ line: "underline", thickness: 2, offset: "auto" });
 ```
 
 ```tsx
@@ -7070,6 +7928,30 @@ let struck = u.textDecoration("line-through");
 >
 	Pricing
 </a>
+```
+
+A tone-coloured underline pushed clear of the descenders, so the line stays visible without cutting through the `g` and `p`:
+
+```tsx
+<p mix={[u.text("base"), u.leading("relaxed")]}>
+	Upgrading changes your{" "}
+	<a
+		href="/billing"
+		mix={[
+			u.fg("brand"),
+			u.textDecoration({
+				line: "underline",
+				color: "brand.muted",
+				thickness: "from-font",
+				offset: 3,
+			}),
+			u.hover(u.textDecoration({ color: "brand" })),
+		]}
+	>
+		billing group
+	</a>{" "}
+	immediately.
+</p>
 ```
 
 #### `textTransform(value: TextTransformValue): UtilityMixin`
@@ -7361,7 +8243,7 @@ Note `font-weight` is inherited, so setting it on a container affects the whole 
 
 #### `wordBreak(value?: WordBreakValue): UtilityMixin`
 
-Applies `word-break`, deciding whether the browser may break a line inside a word rather than only at ordinary break opportunities. The case that drives it is a long unbroken string — a URL, a hash, a generated identifier — overflowing a narrow container, because there is no space in it to wrap at. It only matters on an element whose inline size is actually bounded (a `maxIs()`, a grid column, or a flex item given `minIs(0)`); with an unbounded box the line simply grows and nothing has to break. Only `word-break` is emitted — this utility never touches `overflow-wrap`, so a rule wanting that property directly (including `overflow-wrap: anywhere`) composes it through `u.raw({ overflowWrap: "anywhere" })`. Pair with `truncate()` or `lineClamp()` instead when the overflow should be cut off rather than wrapped.
+Applies `word-break`, deciding whether the browser may break a line inside a word rather than only at ordinary break opportunities. The case that drives it is a long unbroken string — a URL, a hash, a generated identifier — overflowing a narrow container, because there is no space in it to wrap at. It only matters on an element whose inline size is actually bounded (a `maxIs()`, a grid column, or a flex item given `minIs(0)`); with an unbounded box the line simply grows and nothing has to break. Only `word-break` is emitted — this utility never touches `overflow-wrap`, so a rule wanting that property reaches for `u.overflowWrap()` instead — and that is usually the better tool for the long-URL case, since it breaks a word only when it would otherwise overflow. Pair with `truncate()` or `lineClamp()` instead when the overflow should be cut off rather than wrapped.
 
 **Parameters:**
 
@@ -7470,7 +8352,9 @@ Note that `u.translucent()` gates its blur behind `prefers-reduced-transparency`
 
 #### `backdropSaturate(value?: number | string): UtilityMixin`
 
-Saturates (or mutes) whatever shows through the element via `backdrop-filter: saturate(...)` — the extra color punch a frosted panel needs so the content behind it doesn't read as washed out once it's blurred. Like `u.backdropBlur()`, it's an ungated primitive: it applies no matter what the user's transparency preference says, unlike `u.translucent()`, which gates its blur behind `prefers-reduced-transparency: no-preference`.
+Saturates (or mutes) whatever shows through the element via `backdrop-filter: saturate(...)` — the extra color punch a frosted panel needs so the content behind it doesn't read as washed out once it's blurred. Reach for `u.saturate()` instead to saturate the element's own rendering rather than its backdrop; the two are independent properties and can be applied together.
+
+Like `u.backdropBlur()`, it's an ungated primitive: it applies no matter what the user's transparency preference says, unlike `u.translucent()`, which gates its blur behind `prefers-reduced-transparency: no-preference`. Wrap it in `u.transparencySafe()` to put it behind the same gate.
 
 `backdrop-filter` is a single CSS property, so two utilities that each set it outright would silently overwrite each other instead of combining. Every backdrop-filter utility therefore sets its own CSS custom property — `--ui-backdrop-saturate` here, `--ui-backdrop-blur` for `u.backdropBlur()` — plus one fixed, byte-identical composite `backdrop-filter` declaration that references every backdrop-filter function's variable with an identity fallback (`0px` for blur, `1` for saturate, both no-ops). Custom properties from separate classes on the same element all apply at once, and because the composite declaration's value text is identical in every utility it doesn't matter whose copy wins the cascade: the resolved `backdrop-filter` always reads every variable any applied utility set, and identity defaults for every variable none of them touched. So `u.backdropBlur()` and `u.backdropSaturate()` on one element compose into a blurred _and_ saturated backdrop. The same value is mirrored onto `-webkit-backdrop-filter`, since Safari doesn't yet resolve the unprefixed property.
 
@@ -7533,7 +8417,7 @@ let desaturatedBackdrop = u.backdropSaturate(0);
 
 Controls whether the back face of a 3D-transformed element is painted once it has rotated to face away from the viewer. It only matters for elements that actually rotate in 3D — `u.rotateX()` and `u.rotateY()` — and is what stops the reversed, mirror-image face of a flip card showing through halfway through the turn.
 
-For it to work, the rotating faces must share a `transform-style: preserve-3d` ancestor; without that the browser flattens the subtree and there is no back face to hide. That property has no utility of its own, so it comes in through `u.raw()`.
+For it to work, the rotating faces must share a `transform-style: preserve-3d` ancestor; without that the browser flattens the subtree and there is no back face to hide. Reach for `u.transformStyle()` on that ancestor, and `u.perspective()` alongside it so the rotation reads as depth rather than a flat squash.
 
 **Parameters:**
 
@@ -7569,7 +8453,7 @@ let visibleResult = u.backfaceVisibility("visible");
 Both faces stacked and hidden from behind, with the back one pre-rotated:
 
 ```tsx
-<div mix={[u.zstack(), u.raw({ transformStyle: "preserve-3d", perspective: "800px" })]}>
+<div mix={[u.zstack(), u.transformStyle(), u.perspective(800)]}>
 	<div mix={[u.backfaceVisibility(), u.transition("transform", { duration: 400 })]}>{front}</div>
 	<div mix={[u.backfaceVisibility(), u.rotateY(180)]}>{back}</div>
 </div>
@@ -7579,7 +8463,9 @@ Both faces stacked and hidden from behind, with the back one pre-rotated:
 
 Applies a `filter: blur(...)` from the blur scale to the host element itself — as opposed to `u.backdropBlur()`, which blurs what shows through it. Reach for it to soften a decorative image, or to obscure content behind a loading or unauthenticated state.
 
-Note it sets the whole `filter` property rather than composing through a custom property the way the backdrop-filter family does, so it overwrites any other `filter` on the same element. It also makes the element a stacking context and a containing block for fixed-position descendants, and blurs the element's _entire_ rendering including its text and borders.
+`filter` is a single CSS property, so two utilities that each set it outright would silently overwrite each other instead of combining. This one therefore writes only its own `--ui-filter-blur` custom property plus one fixed, byte-identical composite `filter` declaration that references every filter function's variable with an identity fallback (`0px` for blur, `1` for brightness, contrast, and saturate, `0` for grayscale, invert, and sepia, `0 0 0 transparent` for drop-shadow — all no-ops). Custom properties from separate classes on the same element all apply at once, and because the composite declaration's value text is identical in every filter utility it doesn't matter whose copy wins the cascade: the resolved `filter` always reads every variable any applied utility set, and identity defaults for every variable none of them touched. So `u.blur("lg")` and `u.grayscale()` on one element compose into a blurred _and_ greyed element rather than one erasing the other — see `u.brightness()` for the full account of the mechanism, including why the composite's fixed function order makes composition independent of call order.
+
+It blurs the element's _entire_ rendering, text and borders included, and any blur other than `0` makes the element a stacking context and a containing block for fixed-position descendants.
 
 Blurring text to hide it is not a privacy measure — the content is still fully present in the DOM and in the accessibility tree.
 
@@ -7594,14 +8480,28 @@ Blurring text to hide it is not a privacy measure — the content is still fully
 
 **Returns:**
 
-- A `UtilityMixin` that sets `filter` to the resolved blur value
+- A `UtilityMixin` that sets the `--ui-filter-blur` custom property plus the shared composite `filter` declaration.
 
 **CSS:**
 
 ```css
 /* u.blur("lg") */
 .host {
-	filter: blur(var(--ui-blur-lg, 24px));
+	--ui-filter-blur: var(--ui-blur-lg, 24px);
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* [u.blur("lg"), u.grayscale()] — both variables set, one composite declaration */
+.host {
+	--ui-filter-blur: var(--ui-blur-lg, 24px);
+	--ui-filter-grayscale: 1;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
 }
 ```
 
@@ -7613,34 +8513,364 @@ let strongResult = u.blur("lg");
 let subtleResult = u.blur("2px");
 ```
 
+A locked preview blurred, greyed, and dimmed all at once — the blur and the grayscale land in the same `filter`, so neither cancels the other:
+
 ```tsx
 <div mix={[u.relative()]}>
-	<div mix={[u.blur("sm"), u.pointerEvents(), u.userSelect()]} aria-hidden="true">
+	<div mix={[u.blur("sm"), u.grayscale(0.8), u.pointerEvents(), u.userSelect()]} aria-hidden="true">
 		{preview}
 	</div>
 	<div mix={[u.absolute(), u.inset(0), u.center()]}>{unlockPrompt}</div>
 </div>
 ```
 
-#### `mask(image: string): UtilityMixin`
+#### `brightness(value?: number | (string & {})): UtilityMixin`
 
-Applies a `mask-image`, using the image's alpha channel to decide which parts of the element paint: fully opaque mask pixels show the element, fully transparent ones cut it away, and everything between fades it proportionally. Reach for it to fade a scroll container's edge into its background so overflowing content trails off instead of stopping at a hard line, or to cut an arbitrary shape out of an image with a `url(...)` reference to an SVG mask.
+Applies a `filter: brightness(...)`, scaling every pixel's lightness. Values below `1` darken and values above `1` brighten; `0` is solid black. Reach for it to knock back a cover image so overlaid text stays legible, or to lift a thumbnail a notch under `u.hover()`.
 
-The value is mirrored onto the `-webkit-mask-image` vendor-prefixed property as well, since Safari still requires its own prefixed property to render an element mask — the same vendor-prefix mirroring `u.appearance()` does for form-control resets.
+`filter` is a single CSS property, so two utilities that each set it outright would silently overwrite each other instead of combining. Every filter utility therefore sets its own CSS custom property — `--ui-filter-brightness` here, `--ui-filter-blur` for `u.blur()`, `--ui-filter-grayscale` for `u.grayscale()`, and so on — plus one fixed, byte-identical composite `filter` declaration that references every filter function's variable with an identity fallback (`0px` for blur, `1` for brightness, contrast, and saturate, `0` for grayscale, invert, and sepia, `0 0 0 transparent` for drop-shadow — all no-ops). Custom properties from separate classes on the same element all apply at once, and because the composite declaration's value text is identical in every filter utility it doesn't matter whose copy wins the cascade: the resolved `filter` always reads every variable any applied utility set, and identity defaults for every variable none of them touched. So `u.brightness(0.6)` and `u.saturate(1.2)` on one element compose into a darkened _and_ saturated element rather than one erasing the other. This is the same mechanism `u.backdropSaturate()` and `u.backdropBlur()` use for `backdrop-filter`, one property over.
 
-Two things to know about how it interacts with the rest of the tree. It masks the element _and everything it paints_, descendants included, which is exactly what makes the scroll-fade work — the fade applies to whatever content happens to be scrolled under it — but also means it can't be scoped to the element's own background. And per CSS masking, a computed `mask` other than `none` makes the element a stacking context and a containing block for absolutely and fixed-positioned descendants, so a `position: fixed` child inside a masked element anchors to that element instead of the viewport. Only `mask-image` is set here: `mask-size`, `mask-repeat`, `mask-position`, and `mask-mode` keep their initial values, so a raster or `url(...)` mask needing sizing, no-repeat, or a luminance mode must declare that alongside through `u.raw()`.
+The function order inside the composite is fixed, and it is the order CSS applies them in — blur, brightness, contrast, grayscale, invert, saturate, sepia, drop-shadow. Filter functions are not commutative, so a `u.grayscale()` always applies _after_ a `u.brightness()` no matter which one a call site listed first; brightening a grey element and greying a brightened one differ, and the composite always does the latter. Finally, any brightness other than `1` makes the element a stacking context and a containing block for fixed-position descendants, so a `position: fixed` child inside it anchors to that element rather than the viewport.
 
 **Parameters:**
 
-- `image`: Any value valid in `mask-image`, passed through verbatim with no token resolution or validation. Required — there is no default, and no value throws. In practice:
+- `value`: The brightness factor. Defaults to `1.1`, a barely-perceptible lift.
+  - a `number` — stringified as-is into an unitless multiplier: `1` is unchanged, `0` is solid black, `0.6` darkens, values above `1` brighten. `1.1` is the default.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.brightness("110%")` emits `--ui-filter-brightness: 110%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-brightness` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.brightness() */
+.host {
+	--ui-filter-brightness: 1.1;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* [u.brightness(0.6), u.saturate(1.2)] — both variables set, one composite declaration */
+.host {
+	--ui-filter-brightness: 0.6;
+	--ui-filter-saturate: 1.2;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.brightness();
+let darkened = u.brightness(0.6);
+let percentageEscapeHatch = u.brightness("110%");
+let solidBlack = u.brightness(0);
+```
+
+A cover image darkened and slightly saturated so the headline sitting on top of it stays readable — two filter utilities composing into one `filter`:
+
+```tsx
+<figure mix={[u.relative(), u.rounded("lg"), u.overflow("hidden")]}>
+	<img
+		src={post.cover}
+		alt=""
+		mix={[u.is("full"), u.bs("full"), u.fit("cover"), u.brightness(0.6), u.saturate(1.2)]}
+	/>
+	<figcaption mix={[u.absolute(), u.insBe(0), u.p(4), u.fg("neutral.onSolid"), u.text("xl")]}>
+		{post.title}
+	</figcaption>
+</figure>
+```
+
+#### `contrast(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: contrast(...)`, pushing pixels away from mid-grey (values above `1`) or toward it (values below `1`). `0` flattens the element to a uniform grey and `1` leaves it untouched. Reach for it to firm up a washed-out photograph, or to flatten a decorative background so foreground text wins.
+
+Like every filter utility, it writes only its own `--ui-filter-contrast` custom property plus the shared composite `filter` declaration, so it stacks with `u.brightness()`, `u.saturate()`, `u.blur()`, and the rest instead of overwriting them — see `u.brightness()` for the full explanation of that mechanism and its fixed function order. Any contrast other than `1` makes the element a stacking context and a containing block for fixed-position descendants.
+
+Do not use it to _fix_ an accessibility contrast failure. A filter changes rendered pixels, not the computed colors an automated checker reads, and it hits the element's entire subtree — text, borders, icons, and background together — which usually moves the text-to-background ratio less than expected. Fix the tones instead, and gate genuine high-contrast affordances on `u.contrastMore()`.
+
+**Parameters:**
+
+- `value`: The contrast factor. Defaults to `1.25`.
+  - a `number` — stringified as-is into an unitless multiplier: `1` is unchanged, `0` is uniform grey, values below `1` flatten, values above `1` intensify. `1.25` is the default.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.contrast("125%")` emits `--ui-filter-contrast: 125%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-contrast` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.contrast() */
+.host {
+	--ui-filter-contrast: 1.25;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.contrast();
+let punchier = u.contrast(1.5);
+let flattened = u.contrast(0.75);
+let percentageEscapeHatch = u.contrast("125%");
+```
+
+A user-uploaded screenshot given a little more definition, and returned to its untouched rendering when the platform is already forcing its own colors:
+
+```tsx
+<img
+	src={attachment.url}
+	alt={attachment.name}
+	mix={[
+		u.is("full"),
+		u.rounded("md"),
+		u.border("neutral"),
+		u.contrast(1.15),
+		u.forcedColors(u.contrast(1)),
+	]}
+/>
+```
+
+#### `dropShadow(options?: DropShadowOptions): UtilityMixin`
+
+Applies a `filter: drop-shadow(...)`, casting a shadow from the element's _rendered shape_ rather than from its box. That is the whole reason it exists next to `u.shadow()`: `drop-shadow()` follows the alpha channel of a transparent PNG, the outline of an inline SVG icon, or the silhouette left by a clip or a `u.mask()`, where `u.shadow()`'s `box-shadow` always draws a rectangle around the full element box — visibly wrong under a logo with transparent corners or a non-rectangular icon.
+
+Two limits come from the CSS function rather than from this utility. `drop-shadow()` accepts no spread radius and no `inset`, so a spread ring or an inner shadow has to come from `u.ringShadow()` or `u.shadow()` instead. And it is a filter, so it composes through the shared composite `filter` declaration — it writes only `--ui-filter-drop-shadow` and stacks with `u.blur()`, `u.grayscale()`, and the rest; see `u.brightness()` for how that works. A drop shadow also makes the element a stacking context and a containing block for fixed-position descendants.
+
+**Parameters:**
+
+- `options`: A `DropShadowOptions` object. Defaults to `{}`, which resolves to a small translucent-black shadow one spacing step down with a two-step blur.
+  - `x`: The shadow's inline offset. Defaults to `0`.
+    - a `number` — resolves against the spacing scale: `2` becomes `calc(var(--ui-spacing, 0.25rem) * 2)`.
+    - a `string` — a raw CSS length, passed through unchanged: `"1px"`, `"0.125rem"`, or a `var(...)` reference.
+  - `y`: The shadow's block offset. Defaults to `1`, one spacing step down. Same `number`-through-the-spacing-scale / `string`-passthrough handling as `x`.
+  - `blur`: The shadow's blur radius. Defaults to `2`. Same handling as `x` and `y`; `0` gives a hard-edged shadow.
+  - `color`: The shadow color, a `ColorValue` resolved with `border` as its default property. Defaults to the literal `rgb(0 0 0 / 0.15)` — the default is _not_ a token, so `border` only comes into play once a color is actually passed. Accepted forms:
+    - a bare semantic tone — `"neutral"`, `"brand"`, `"success"`, `"warning"`, `"danger"` — which takes the `border` default, so `"brand"` resolves to `var(--ui-brand-border)`.
+    - a tone with an explicit property suffix — `"brand.solid"`, `"neutral.strong"`, and so on, resolving to `var(--ui-{tone}-{suffix})`, with the usual friendly aliases (`tint` → `bg-tint`, `solid` → `bg-solid`, `muted` → `fg-muted`, `emphasis` → `fg-emphasis`, `onSolid` → `fg-on-solid`, `strong` → `border-strong`).
+    - a raw palette reference — `"color.neutral.400"` resolves to `var(--ui-color-neutral-400)`.
+    - `"transparent"`, `"inherit"`, or `"currentColor"` — passed through as-is.
+    - the raw CSS escape hatch — any string containing `(` is treated as an already-formed CSS color and passed through untouched, so `u.dropShadow({ color: "rgb(0 0 0 / 0.4)" })` works.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-drop-shadow` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.dropShadow() */
+.host {
+	--ui-filter-drop-shadow: calc(var(--ui-spacing, 0.25rem) * 0) calc(var(--ui-spacing, 0.25rem) * 1)
+		calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.15);
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* u.dropShadow({ x: "0", y: "2px", blur: "4px", color: "brand" }) */
+.host {
+	--ui-filter-drop-shadow: 0 2px 4px var(--ui-brand-border);
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.dropShadow();
+let rawLengths = u.dropShadow({ x: "1px", y: "2px", blur: "4px" });
+let tonedShadow = u.dropShadow({ y: "0", blur: "6px", color: "brand.solid" });
+let hardEdged = u.dropShadow({ x: 1, y: 1, blur: 0, color: "color.neutral.400" });
+```
+
+A transparent-PNG logo whose shadow traces the mark instead of boxing it, and an inline SVG icon lifted the same way:
+
+```tsx
+<header mix={[u.hstack({ gap: 3, align: "center" }), u.p(4)]}>
+	<img src="/logo.png" alt="Acme" mix={[u.is(10), u.dropShadow({ y: 1, blur: 2 })]} />
+	<svg
+		viewBox="0 0 24 24"
+		mix={[
+			u.is(6),
+			u.fill("brand.solid"),
+			u.dropShadow({ y: "1px", blur: "2px", color: "brand.strong" }),
+		]}
+	>
+		<path d={icon} />
+	</svg>
+</header>
+```
+
+#### `grayscale(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: grayscale(...)`, desaturating the element toward grey. `1` is fully grey and `0` leaves it untouched. It is the cheapest way to dim an inactive, disabled, or unavailable thing without touching its layout or rewriting its colors — a locked integration logo, a sold-out product image, a paused chart.
+
+It composes through the shared composite `filter` declaration, writing only `--ui-filter-grayscale`, so it stacks with `u.opacity()`-style dimming and with every other filter utility; see `u.brightness()` for the mechanism and the fixed function order. That order matters here: grayscale sits after brightness and contrast in the composite, so it greys whatever those already produced rather than the other way round.
+
+It is purely visual and conveys nothing to assistive technology. A greyed-out element reads exactly the same to a screen reader as a full-color one, and it is invisible to a user who cannot distinguish the difference, so grayscale must never be the _only_ signal that something is unavailable — pair it with real text, `aria-disabled`, or a `disabled` attribute (`u.disabled()` styles the latter). Note also that any grayscale other than `0` makes the element a stacking context and a containing block for fixed-position descendants.
+
+**Parameters:**
+
+- `value`: The amount of desaturation. Defaults to `1`, a full conversion.
+  - a `number` — stringified as-is: `0` leaves the element untouched, `0.5` is halfway, `1` is fully grey. Values above `1` are clamped by CSS.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.grayscale("60%")` emits `--ui-filter-grayscale: 60%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-grayscale` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.grayscale() */
+.host {
+	--ui-filter-grayscale: 1;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* u.grayscale(0.6) */
+.host {
+	--ui-filter-grayscale: 0.6;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.grayscale();
+let halfway = u.grayscale(0.5);
+let percentageEscapeHatch = u.grayscale("60%");
+let cancelled = u.grayscale(0);
+```
+
+An unavailable integration, greyed _and_ labelled — the grey is decoration, the text is the actual signal:
+
+```tsx
+<li
+	mix={[u.hstack({ gap: 3, align: "center" }), u.p(3), u.rounded("lg"), u.surface("default")]}
+	aria-disabled="true"
+>
+	<img src={integration.icon} alt="" mix={[u.is(8), u.grayscale(), u.opacity(60)]} />
+	<span mix={[u.fg("neutral.muted")]}>{integration.name}</span>
+	<span mix={[u.text("sm"), u.fg("neutral.muted")]}>{t("integrations.unavailable")}</span>
+</li>
+```
+
+#### `invert(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: invert(...)`, inverting the element's colors. `1` is a full inversion and `0` leaves it untouched.
+
+The real-world use is narrow and worth stating plainly: flipping a single-color raster asset — a black PNG logo, an icon sprite, a bitmap diagram — so it reads on a dark background under `u.dark()`. An inline SVG never needs this, because its shapes can be painted directly with `u.fill()` (and its strokes with `u.stroke()`), which is both sharper and controllable per shape. Inverting anything with more than one meaningful color, or anything containing text, produces a negative rather than a dark-mode variant.
+
+It composes through the shared composite `filter` declaration, writing only `--ui-filter-invert`, so it stacks with the other filter utilities — see `u.brightness()` for the mechanism and the fixed function order. Any inversion other than `0` makes the element a stacking context and a containing block for fixed-position descendants.
+
+**Parameters:**
+
+- `value`: The amount of inversion. Defaults to `1`, a full inversion.
+  - a `number` — stringified as-is: `0` leaves the element untouched, `0.25` is a partial inversion, `1` is full. `0.5` collapses everything to mid-grey.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.invert("100%")` emits `--ui-filter-invert: 100%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-invert` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.invert() */
+.host {
+	--ui-filter-invert: 1;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.invert();
+let partial = u.invert(0.25);
+let percentageEscapeHatch = u.invert("100%");
+let cancelled = u.invert(0);
+```
+
+A one-color raster logo flipped for dark mode, alongside the SVG case that does not need inverting at all:
+
+```tsx
+<>
+	<img src="/logo-black.png" alt="Acme" mix={[u.is(24), u.dark(u.invert())]} />
+	<svg viewBox="0 0 24 24" mix={[u.is(6), u.fill("neutral.emphasis")]}>
+		<path d={mark} />
+	</svg>
+</>
+```
+
+#### `mask(image: string): UtilityMixin` (overloaded: `mask(options: MaskOptions): UtilityMixin`)
+
+Applies a CSS mask, using the mask image's alpha channel to decide which parts of the element paint: fully opaque mask pixels show the element, fully transparent ones cut it away, and everything between fades it proportionally. Reach for it to fade a scroll container's edge into its background so overflowing content trails off instead of stopping at a hard line, or to cut an arbitrary shape out of an image with a `url(...)` reference to an SVG mask.
+
+It is overloaded. Passed a bare string it sets `mask-image` only — the short form for the gradient-fade case, where the initial `mask-size`, `mask-position`, `mask-repeat`, and `mask-mode` are already right. Passed a `MaskOptions` object it sets exactly the keys given and nothing else, which is what lets a raster or `url(...)` mask be sized, positioned, un-repeated, and switched to luminance without dropping to `u.raw()`. Every property is mirrored onto its `-webkit-` prefixed twin, since Safari still requires its own prefixed properties to render an element mask — the same vendor-prefix mirroring `u.appearance()` does for form-control resets.
+
+Two things to know about how it interacts with the rest of the tree. It masks the element _and everything it paints_, descendants included, which is exactly what makes the scroll-fade work — the fade applies to whatever content happens to be scrolled under it — but also means it can't be scoped to the element's own background. And per CSS masking, a computed `mask` other than `none` makes the element a stacking context and a containing block for absolutely and fixed-positioned descendants, so a `position: fixed` child inside a masked element anchors to that element instead of the viewport.
+
+**Parameters:**
+
+- `imageOrOptions`: Either a mask image string or a `MaskOptions` object. Required — there is no default. In the string form:
   - a gradient — `"linear-gradient(to bottom, black 80%, transparent)"` for an edge fade; the color stops only matter for their alpha, so `black` means "show" and `transparent` means "hide".
   - a `url(...)` reference — either an external image whose alpha channel is the mask, or a same-document fragment pointing at an SVG `<mask>` element (`"url(#ring-mask)"`).
   - `"none"` — the initial value, for cancelling a mask set by a composed utility or a state wrapper.
   - a comma-separated list of any of the above, layered the way `mask-image` layers them.
+- `MaskOptions` keys, all optional, all passed through verbatim with no token resolution or validation. Only the keys present are emitted, so an empty object sets nothing:
+  - `image`: Sets `mask-image` and `-webkit-mask-image`. Same accepted shapes as the bare-string form above; `u.mask({ image: x })` and `u.mask(x)` emit identically.
+  - `size`: Sets `mask-size` and `-webkit-mask-size` — anything valid there, such as `"cover"`, `"contain"`, `"24px 24px"`, or `"100% 2rem"`.
+  - `position`: Sets `mask-position` and `-webkit-mask-position` — `"center"`, `"top left"`, `"50% 50%"`, and so on.
+  - `repeat`: Sets `mask-repeat` and `-webkit-mask-repeat`. A `MaskRepeatValue`; CSS's own initial value is `repeat`, so a single-instance mask must pass `"no-repeat"` explicitly.
+    - `"repeat"` — tiles in both axes, the CSS initial value
+    - `"no-repeat"` — a single instance, what a `url(...)` badge or shape mask almost always wants
+    - `"repeat-x"` — tiles horizontally only
+    - `"repeat-y"` — tiles vertically only
+    - `"round"` — tiles a whole number of times, stretching or squashing the mask so tiles fit exactly
+    - `"space"` — tiles a whole number of times at their natural size, distributing the leftover as gaps between tiles
+  - `mode`: Sets `mask-mode` and `-webkit-mask-mode`, choosing which channel of the mask image drives the masking. A `MaskModeValue`:
+    - `"alpha"` — the mask image's alpha channel is the mask; transparent hides, opaque shows
+    - `"luminance"` — the mask image's lightness is the mask; black hides, white shows. What an SVG `<mask>` authored for luminance needs.
+    - `"match-source"` — defer to the source: SVG `<mask>` references use luminance, everything else uses alpha. The CSS initial value.
 
 **Returns:**
 
-- A `UtilityMixin` that sets both `mask-image` and `-webkit-mask-image` to `image`.
+- A `UtilityMixin` that sets `mask-image` and `-webkit-mask-image` in the string form, or each given option's property and its `-webkit-` twin in the options form.
 
 **CSS:**
 
@@ -7651,10 +8881,26 @@ Two things to know about how it interacts with the rest of the tree. It masks th
 	-webkit-mask-image: linear-gradient(to bottom, black 80%, transparent);
 }
 
-/* u.mask("url(#ring-mask)") */
+/* u.mask({ image: "url(/badge.png)", size: "contain", position: "center", repeat: "no-repeat", mode: "luminance" }) */
 .host {
-	mask-image: url(#ring-mask);
-	-webkit-mask-image: url(#ring-mask);
+	mask-image: url(/badge.png);
+	-webkit-mask-image: url(/badge.png);
+	mask-size: contain;
+	-webkit-mask-size: contain;
+	mask-position: center;
+	-webkit-mask-position: center;
+	mask-repeat: no-repeat;
+	-webkit-mask-repeat: no-repeat;
+	mask-mode: luminance;
+	-webkit-mask-mode: luminance;
+}
+
+/* u.mask({ size: "24px 24px", repeat: "space" }) — only the given keys are set */
+.host {
+	mask-size: 24px 24px;
+	-webkit-mask-size: 24px 24px;
+	mask-repeat: space;
+	-webkit-mask-repeat: space;
 }
 ```
 
@@ -7666,17 +8912,43 @@ let shapeCutout = u.mask("url(#ring-mask)");
 let bothEdges = u.mask(
 	"linear-gradient(to bottom, transparent, black 2rem, black calc(100% - 2rem), transparent)",
 );
+let sizedRasterMask = u.mask({
+	image: "url(/badge.png)",
+	size: "contain",
+	position: "center",
+	repeat: "no-repeat",
+});
+let luminanceMask = u.mask({ image: "url(#ring-mask)", mode: "luminance" });
 let cancelled = u.mask("none");
 ```
 
+The short form for a scroll fade, and the options form for a raster mask that has to be sized and stopped from tiling:
+
 ```tsx
-<div
-	mix={[
-		u.overflowY("auto"),
-		u.maxBs("20rem"),
-		u.mask("linear-gradient(to bottom, black 80%, transparent)"),
-	]}
-/>
+<>
+	<div
+		mix={[
+			u.overflowY("auto"),
+			u.maxBs("20rem"),
+			u.mask("linear-gradient(to bottom, black 80%, transparent)"),
+		]}
+	>
+		{rows}
+	</div>
+	<div
+		mix={[
+			u.is(16),
+			u.bs(16),
+			u.bg("brand.solid"),
+			u.mask({
+				image: "url(/badge.png)",
+				size: "contain",
+				position: "center",
+				repeat: "no-repeat",
+			}),
+		]}
+	/>
+</>
 ```
 
 #### `opacity(value: number): UtilityMixin`
@@ -7733,11 +9005,15 @@ The reveal-on-interaction pattern, with the fade paired to a transition so it an
 
 Because opacity fades the element _and all its descendants_ as one group, a child cannot be more opaque than its parent — to fade only a background, use a translucent color via `u.colorMix()` instead.
 
-#### `ringShadow(value: ColorValue | string, width?: number | string): UtilityMixin`
+#### `ringShadow(value: ColorValue, width?: number | (string & {})): UtilityMixin`
 
-Draws a persistent ring as `box-shadow: 0 0 0 {width} {color}` — a solid, zero-blur, zero-offset shadow — for the always-on selection state of a swatch, chip, or thumbnail. It's deliberately named apart from `u.ring()`, which composes `u.focusVisible()` and draws an `outline` that appears only under keyboard or assistive-tech focus and vanishes when focus moves on. This one has no gate at all: it stays visible for as long as a component applies it, which is what a `u.checked()` or `input:checked ~ &` selection style needs. It also differs from `u.shadow()`, which pulls a soft depth shadow off the shadow scale rather than a hard ring in a semantic color.
+Draws a persistent ring as `0 0 0 {width} {color}` — a solid, zero-blur, zero-offset box shadow — for the always-on selection state of a swatch, chip, or thumbnail. It's deliberately named apart from `u.ring()`, which composes `u.focusVisible()` and draws an `outline` that appears only under keyboard or assistive-tech focus and vanishes when focus moves on. This one has no gate at all: it stays visible for as long as a component applies it, which is what a `u.checked()` or `input:checked ~ &` selection style needs. It also differs from `u.shadow()`, which pulls a soft depth shadow off the shadow scale rather than a hard ring in a semantic color.
 
-A box-shadow ring beats an outline when the ring must hug a rounded element: `box-shadow` follows `border-radius` exactly, so it traces a pill or circle cleanly, and multiple shadows can share one declaration. The tradeoffs are real, though. A box-shadow paints outside the element's box without reserving any space, so in a tight grid the ring can overlap neighbors where an `outline` plus `outline-offset` would behave more predictably — leave room with `u.gap()` or `u.m()`. And because `box-shadow` is a single property, this **conflicts directly with `u.shadow()`**: whichever of the two lands later in the cascade replaces the other outright rather than adding to it. To get a depth shadow _and_ a ring, write both layers in one declaration through `u.raw({ boxShadow: "..." })`.
+A box-shadow ring beats an outline when the ring must hug a rounded element: `box-shadow` follows `border-radius` exactly, so it traces a pill or circle cleanly. The tradeoff is real — a box shadow paints outside the element's box without reserving any space, so in a tight grid the ring can overlap neighbors where an `outline` plus `outline-offset` would behave more predictably; leave room with `u.gap()` or `u.m()`.
+
+`box-shadow` is a single property whose value is a comma-separated _list_, so two utilities that each set it outright cannot stack the way the list syntax suggests — the later declaration replaces the earlier one wholesale. Both shadow utilities therefore write into a fixed two-slot composite instead: this one claims the `ring` slot via `--ui-box-shadow-ring`, `u.shadow()` claims the `elevation` slot via `--ui-box-shadow-elevation`, and each emits the exact same `box-shadow` declaration listing both slots with a paints-nothing identity fallback (`0 0 #0000`). Because that value text is byte-identical in both utilities it doesn't matter whose copy wins the cascade — the resolved `box-shadow` always reads whichever slots were set. **So `u.ringShadow()` and `u.shadow()` stack**: applying both to one element renders two layers. The slot order is fixed and meaningful — the ring is listed first, so it paints on top of and inside the elevation shadow, hugging the element's edge while the depth shadow falls outside it.
+
+Note it resolves its color with a default property of `bg-solid`, not `ring` — a bare `"brand"` gives the tone's solid background color, which is the saturated, high-contrast one a selection ring wants. That differs from `u.ring()`, which defaults to the tone's `ring` property.
 
 **Parameters:**
 
@@ -7754,24 +9030,32 @@ A box-shadow ring beats an outline when the ring must hug a rounded element: `bo
 
 **Returns:**
 
-- A `UtilityMixin` that sets `box-shadow` to `0 0 0 {width} {color}`.
+- A `UtilityMixin` that sets the `--ui-box-shadow-ring` custom property to `0 0 0 {width} {color}` plus the shared composite `box-shadow` declaration.
 
 **CSS:**
 
 ```css
 /* u.ringShadow("brand") */
 .host {
-	box-shadow: 0 0 0 2px var(--ui-brand-bg-solid);
+	--ui-box-shadow-ring: 0 0 0 2px var(--ui-brand-bg-solid);
+	box-shadow: var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000);
 }
 
 /* u.ringShadow("danger", 3) */
 .host {
-	box-shadow: 0 0 0 3px var(--ui-danger-bg-solid);
+	--ui-box-shadow-ring: 0 0 0 3px var(--ui-danger-bg-solid);
+	box-shadow: var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000);
 }
 
-/* u.ringShadow("color.neutral.400", "0.25rem") */
+/* [u.ringShadow("brand", 3), u.shadow("md")] — both slots set, one composite declaration */
 .host {
-	box-shadow: 0 0 0 0.25rem var(--ui-color-neutral-400);
+	--ui-box-shadow-ring: 0 0 0 3px var(--ui-brand-bg-solid);
+	--ui-box-shadow-elevation: var(
+		--ui-shadow-md,
+		0 4px 6px -1px rgb(0 0 0 / 0.1),
+		0 2px 4px -2px rgb(0 0 0 / 0.1)
+	);
+	box-shadow: var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000);
 }
 ```
 
@@ -7785,16 +9069,22 @@ let remWidth = u.ringShadow("neutral", "0.25rem");
 let rawColorEscapeHatch = u.ringShadow("oklch(0.7 0.2 250)");
 ```
 
+A selectable thumbnail carrying a depth shadow at all times and gaining a selection ring when its radio is checked — both live on the same element, in different slots of the same declaration, so the ring hugs the tile and the elevation still falls outside it:
+
 ```tsx
-<input
-	type="radio"
+<label
 	mix={[
-		u.appearance("none"),
-		u.circle(6),
-		u.bg("brand.solid"),
-		u.checked(u.ringShadow("brand", 3)),
+		u.relative(),
+		u.block(),
+		u.rounded("lg"),
+		u.shadow("md"),
+		u.transition("box-shadow"),
+		u.has("input:checked", u.ringShadow("brand", 3)),
 	]}
-/>
+>
+	<img src={photo.thumb} alt={photo.alt} mix={[u.is("full"), u.fit("cover"), u.rounded("lg")]} />
+	<input type="radio" name="cover" value={photo.id} mix={[u.visuallyHidden()]} />
+</label>
 ```
 
 #### `rounded(name?: RadiusName | (string & {})): UtilityMixin`
@@ -7918,11 +9208,138 @@ let rawLengthEscapeHatch = u.roundedCorner("start-end", "3px");
 <div mix={[u.rounded("lg"), u.roundedCorner("end-start", "none"), u.p(3), u.bg("brand.tint")]} />
 ```
 
+#### `saturate(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: saturate(...)`, scaling the element's color intensity. `0` is fully desaturated, `1` is unchanged, and values above `1` oversaturate. Reach for it to give a muted photograph some life, or to pull an image's colors back so it sits behind foreground content without competing.
+
+This is the `filter` counterpart to `u.backdropSaturate()`, and the distinction is which pixels get filtered: `u.saturate()` saturates the element itself and everything it paints, while `u.backdropSaturate()` saturates whatever shows _through_ the element and does nothing at all unless the element is translucent. They write different variables and different properties, so applying both to one element is meaningful rather than a conflict — the element's own colors and the colors behind it are saturated independently.
+
+Like every filter utility, it writes only `--ui-filter-saturate` plus the shared composite `filter` declaration, so it stacks with `u.brightness()`, `u.contrast()`, `u.blur()`, and the rest; see `u.brightness()` for the mechanism and the fixed function order. Any saturation other than `1` makes the element a stacking context and a containing block for fixed-position descendants.
+
+**Parameters:**
+
+- `value`: The saturation factor. Defaults to `1.5`.
+  - a `number` — stringified as-is into an unitless multiplier: `1` is unchanged, `0` is fully desaturated (equivalent to `u.grayscale()`), values above `1` intensify. `1.5` is the default.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.saturate("150%")` emits `--ui-filter-saturate: 150%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-saturate` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.saturate() */
+.host {
+	--ui-filter-saturate: 1.5;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+
+/* [u.saturate(1.5), u.backdropSaturate(1.4)] — different variables, different properties, no conflict */
+.host {
+	--ui-filter-saturate: 1.5;
+	--ui-backdrop-saturate: 1.4;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+	backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
+	-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+		saturate(var(--ui-backdrop-saturate, 1));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.saturate();
+let muted = u.saturate(0.6);
+let percentageEscapeHatch = u.saturate("150%");
+let fullyDesaturated = u.saturate(0);
+```
+
+A gallery thumbnail that sits muted at rest and comes up to full color on hover, with the transition on `filter` rather than on any individual function:
+
+```tsx
+<a
+	href={photo.href}
+	mix={[
+		u.block(),
+		u.rounded("md"),
+		u.overflow("hidden"),
+		u.saturate(0.7),
+		u.transition("filter"),
+		u.hover(u.saturate(1.1)),
+		u.focusVisible(u.saturate(1.1)),
+	]}
+>
+	<img src={photo.thumb} alt={photo.alt} mix={[u.is("full"), u.fit("cover")]} />
+</a>
+```
+
+#### `sepia(value?: number | (string & {})): UtilityMixin`
+
+Applies a `filter: sepia(...)`, shifting the element toward a warm brown monochrome. `1` is a full conversion and `0` leaves it untouched. It is the aged-photograph treatment — an archival or historical framing for imagery — and, at low amounts, a way to warm a cold photograph without a full grade.
+
+It composes through the shared composite `filter` declaration, writing only `--ui-filter-sepia`, so it stacks with the other filter utilities; see `u.brightness()` for the mechanism and the fixed function order. Sepia sits after grayscale in that order, which is why combining the two is redundant rather than additive — sepia already collapses the element to a single hue, so reach for one or the other. Any sepia other than `0` makes the element a stacking context and a containing block for fixed-position descendants.
+
+**Parameters:**
+
+- `value`: The amount of conversion. Defaults to `1`, a full conversion.
+  - a `number` — stringified as-is: `0` leaves the element untouched, `0.4` warms it partway, `1` is fully sepia. Values above `1` are clamped by CSS.
+  - a `string` — the raw CSS escape hatch, passed through verbatim, so percentage notation works: `u.sepia("40%")` emits `--ui-filter-sepia: 40%`. Also how you'd hand it a `var(...)` or `calc(...)` reference.
+- No value throws; there is no token scale and no validation.
+
+**Returns:**
+
+- A `UtilityMixin` that sets the `--ui-filter-sepia` custom property plus the shared composite `filter` declaration.
+
+**CSS:**
+
+```css
+/* u.sepia() */
+.host {
+	--ui-filter-sepia: 1;
+	filter: blur(var(--ui-filter-blur, 0px)) brightness(var(--ui-filter-brightness, 1))
+		contrast(var(--ui-filter-contrast, 1)) grayscale(var(--ui-filter-grayscale, 0))
+		invert(var(--ui-filter-invert, 0)) saturate(var(--ui-filter-saturate, 1))
+		sepia(var(--ui-filter-sepia, 0)) drop-shadow(var(--ui-filter-drop-shadow, 0 0 0 transparent));
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.sepia();
+let subtleWarmth = u.sepia(0.4);
+let percentageEscapeHatch = u.sepia("40%");
+let cancelled = u.sepia(0);
+```
+
+An archival photo aged and given a touch more contrast — two filter utilities in one composite, with the fixed order putting the contrast bump before the sepia conversion:
+
+```tsx
+<figure mix={[u.vstack({ gap: 2 }), u.maxIs("32rem")]}>
+	<img
+		src={record.scan}
+		alt={record.caption}
+		mix={[u.is("full"), u.rounded("sm"), u.sepia(0.8), u.contrast(1.1)]}
+	/>
+	<figcaption mix={[u.text("sm"), u.fg("neutral.muted")]}>{record.caption}</figcaption>
+</figure>
+```
+
 #### `shadow(name?: ShadowName | (string & {})): UtilityMixin`
 
 Applies a box shadow from the shadow scale. Shadows read as elevation, so keep the scale meaningful: a resting card at `"sm"` or `"base"`, a hovered or dragged one a step up, an overlay at `"lg"` or `"xl"`.
 
-Unlike the other scale-backed utilities, this one has **no raw-value passthrough**. A literal shadow value can't be told apart from an app-extended token name — both are arbitrary strings with no shape in common with a length — so an unrecognized name always resolves to `var(--ui-shadow-{name}, <md fallback>)`. For a genuinely one-off shadow, reach for `u.raw({ boxShadow: "..." })`.
+Unlike the other scale-backed utilities, this one has **no raw-value passthrough**. A literal shadow value can't be told apart from an app-extended token name — both are arbitrary strings with no shape in common with a length — so an unrecognized name always resolves to `var(--ui-shadow-{name}, <md fallback>)`. For a genuinely one-off shadow, write the slot variable directly — `u.raw({ "--ui-box-shadow-elevation": "0 3px 7px -2px rgb(0 0 0 / 0.12)" })` — rather than `u.raw({ boxShadow: "..." })`, which replaces the whole composite declaration and wipes out any `u.ringShadow()` applied alongside it.
+
+`box-shadow` is a single property whose value is a comma-separated _list_, so two utilities that each set it outright cannot stack the way the list syntax suggests — the later declaration replaces the earlier one wholesale. Both shadow utilities therefore write into a fixed two-slot composite instead: this one claims the `elevation` slot via `--ui-box-shadow-elevation`, `u.ringShadow()` claims the `ring` slot via `--ui-box-shadow-ring`, and each emits the exact same `box-shadow` declaration listing both slots with a paints-nothing identity fallback (`0 0 #0000`). Because that value text is byte-identical in both utilities it doesn't matter whose copy wins the cascade — the resolved `box-shadow` always reads whichever slots were set. **So `u.shadow()` and `u.ringShadow()` stack**: an elevation shadow and a selection ring on the same element render as two layers, in either order at the call site, with no need for `u.raw()`. The slot order is fixed: the ring is listed first, so it paints inside the elevation, hugging the element's edge while the depth shadow falls outside it.
 
 A shadow is invisible against most dark backgrounds, so a design that leans on elevation in light mode usually needs a border in dark mode instead — see `u.dark()`.
 
@@ -7938,18 +9355,30 @@ A shadow is invisible against most dark backgrounds, so a design that leans on e
 
 **Returns:**
 
-- A `UtilityMixin` that sets `box-shadow`
+- A `UtilityMixin` that sets the `--ui-box-shadow-elevation` custom property plus the shared composite `box-shadow` declaration.
 
 **CSS:**
 
 ```css
 /* u.shadow("lg") */
 .host {
-	box-shadow: var(
+	--ui-box-shadow-elevation: var(
 		--ui-shadow-lg,
 		0 10px 15px -3px rgb(0 0 0 / 0.1),
 		0 4px 6px -4px rgb(0 0 0 / 0.1)
 	);
+	box-shadow: var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000);
+}
+
+/* [u.shadow("lg"), u.ringShadow("brand")] — both slots set, one composite declaration */
+.host {
+	--ui-box-shadow-elevation: var(
+		--ui-shadow-lg,
+		0 10px 15px -3px rgb(0 0 0 / 0.1),
+		0 4px 6px -4px rgb(0 0 0 / 0.1)
+	);
+	--ui-box-shadow-ring: 0 0 0 2px var(--ui-brand-bg-solid);
+	box-shadow: var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000);
 }
 ```
 
@@ -7979,7 +9408,24 @@ Elevation that changes with interaction, and a border standing in for it under d
 </article>
 ```
 
-It sets the whole `box-shadow` property, so it conflicts with `u.ringShadow()` — the two cannot stack despite `box-shadow` accepting a list. Use `u.raw()` to emit both layers in one declaration when you need a ring and a shadow together.
+An elevation and a ring on one element, which is now just two utilities side by side:
+
+```tsx
+<button
+	type="button"
+	mix={[
+		u.rounded("lg"),
+		u.p(3),
+		u.surface("default"),
+		u.shadow("md"),
+		u.transition("box-shadow"),
+		u.aria("pressed", "true", u.ringShadow("brand", 2)),
+	]}
+	aria-pressed={isActive}
+>
+	{label}
+</button>
+```
 
 #### `transition(properties: string, options?: TransitionOptions): UtilityMixin`
 
@@ -8665,6 +10111,53 @@ let scrollResult = u.overflowY("auto");
 
 A vertical scroll container needs a bounded block size to scroll against — pair it with `u.maxBs()`, `u.bs()`, or a flex/grid track that constrains it, or the element simply grows and never scrolls.
 
+#### `overscrollBehavior(value?: OverscrollBehaviorValue): UtilityMixin`
+
+Applies `overscroll-behavior`, defaulting to `"contain"`. Its real job is stopping scroll _chaining_: without it, scrolling past the end of a scrollable drawer, dialog, dropdown, or message list hands the remaining momentum to the page behind it, so the background silently scrolls away under a surface the reader is still working in — and once the page has scrolled, dismissing the surface leaves them somewhere they never asked to be.
+
+Reach for it on any scroll container layered over the page. It only changes what happens at the _end_ of the scroll range, so it does nothing to an element that isn't already a scroll container — pair it with `u.scroll()`, `u.overflow()`, or the axis utilities `u.overflowInline()`/`u.overflowBlock()` on the same element.
+
+**Parameters:**
+
+- `value`: What happens once the container reaches the end of its own scrollable area. Defaults to `"contain"`.
+  - `"auto"` — the CSS initial behaviour: the scroll chains to the ancestor scroll container, and the platform's overscroll affordance is available
+  - `"contain"` — no chaining to the ancestor, but the platform's overscroll affordance is kept: rubber-banding on iOS, pull-to-refresh on Android
+  - `"none"` — no chaining _and_ no affordance, suppressing the rubber-band bounce and pull-to-refresh entirely. Worth it only when the bounce itself is the problem — a canvas, a map, or a custom pull gesture of your own that the platform's would fight.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `overscroll-behavior`
+
+**CSS:**
+
+```css
+/* u.overscrollBehavior() */
+.host {
+	overscroll-behavior: contain;
+}
+
+/* u.overscrollBehavior("none") */
+.host {
+	overscroll-behavior: none;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.overscrollBehavior();
+let noneResult = u.overscrollBehavior("none");
+let autoResult = u.overscrollBehavior("auto");
+```
+
+The shape of a scrollable panel that doesn't drag the page along with it:
+
+```tsx
+<div mix={[u.maxBs(96), u.scroll("y"), u.overscrollBehavior(), u.thinScrollbar(), u.p(4)]}>
+	{messages}
+</div>
+```
+
 #### `scroll(axis?: ScrollAxis): UtilityMixin`
 
 Turns the host into a scroll container that shows a scrollbar only on the axis where content actually overflows, rather than reserving one unconditionally. Composes `u.overflowX("auto")` and/or `u.overflowY("auto")` for whichever axis is selected.
@@ -8713,6 +10206,370 @@ The full shape of a well-behaved scroll region — bounded, one axis only, with 
 <div mix={[u.maxBs(96), u.scroll("y"), u.overflowX("clip"), u.thinScrollbar(), u.pi(2)]}>
 	{children}
 </div>
+```
+
+#### `scrollBehavior(value?: ScrollBehaviorValue): UtilityMixin`
+
+Applies `scroll-behavior`, defaulting to `"smooth"`, so anchor jumps and programmatic scrolls (`scrollIntoView`, `scrollTo`) animate instead of teleporting. It goes on the scroll container whose scroll position is changing — the scrolling element itself, not the link or the target.
+
+Accessibility caveat, stated plainly: smooth scrolling is motion, and this utility does **not** gate itself. Applying it unconditionally overrides the preference of anyone who asked for reduced motion, and a long smooth scroll is exactly the kind of sustained movement that triggers vestibular discomfort. Wrap the call in `u.motionSafe()` so the animation is opt-in for people who tolerate it and the default stays an instant jump.
+
+**Parameters:**
+
+- `value`: Whether a programmatic or anchor-triggered scroll jumps or animates. Defaults to `"smooth"`.
+  - `"auto"` — the CSS initial value: the scroll position changes instantly
+  - `"smooth"` — the scroll position animates over a browser-defined duration and curve, neither of which is configurable from CSS
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-behavior`
+
+**CSS:**
+
+```css
+/* u.scrollBehavior() */
+.host {
+	scroll-behavior: smooth;
+}
+
+/* u.motionSafe(u.scrollBehavior()) — the form to actually ship */
+.host {
+	@media (prefers-reduced-motion: no-preference) {
+		scroll-behavior: smooth;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollBehavior();
+let autoResult = u.scrollBehavior("auto");
+let gatedResult = u.motionSafe(u.scrollBehavior());
+```
+
+Gated, so the unwrapped baseline is an instant jump and the animation only reaches users who haven't asked for less motion:
+
+```tsx
+<div mix={[u.maxBs(96), u.scroll("y"), u.motionSafe(u.scrollBehavior()), u.thinScrollbar()]}>
+	{sections}
+</div>
+```
+
+Note that a user-initiated scroll — a wheel, a drag, a touch flick — is never affected by this property; only scrolls the page or the browser initiates are.
+
+#### `scrollMargin(...values: SpacingValue[]): UtilityMixin`
+
+Applies logical `scroll-margin` on a scroll _item_, growing the box the container aligns when it snaps to this item or an anchor jump targets it. It solves the sticky-header overlap from the item's side rather than the container's: `u.scrollPadding()` insets every landing point at once, while `scrollMargin()` offsets just the items that need the extra room. Reach for it when only some items need clearance — a section heading that should arrive with breathing room above it, a card that shouldn't sit flush against the container edge when it snaps.
+
+Follows the same 1/2/4-value logical mapping as `u.m()`, so it reads exactly like a margin. It affects nothing about layout or painting — the item's actual box is unchanged, and the value is consulted only when a scroll is being aligned.
+
+**Parameters:**
+
+- `values`: One, two, or four `SpacingValue`s. A number resolves against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`; any other string is assumed to already be a valid CSS length and passes through verbatim.
+  - one value — applies to all four sides via the `scroll-margin` shorthand
+  - two values — block then inline, via `scroll-margin-block` and `scroll-margin-inline`
+  - four values — block-start, inline-end, block-end, inline-start, mapping onto the logical directions rather than the physical top/right/bottom/left
+- Any other count throws: `@pkg/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-margin`, or the block/inline pair, or the four logical longhands
+
+**CSS:**
+
+```css
+/* u.scrollMargin(4) */
+.host {
+	scroll-margin: calc(var(--ui-spacing, 0.25rem) * 4);
+}
+
+/* u.scrollMargin(16, 0) */
+.host {
+	scroll-margin-block: calc(var(--ui-spacing, 0.25rem) * 16);
+	scroll-margin-inline: calc(var(--ui-spacing, 0.25rem) * 0);
+}
+
+/* u.scrollMargin(1, 2, 3, 4) */
+.host {
+	scroll-margin-block-start: calc(var(--ui-spacing, 0.25rem) * 1);
+	scroll-margin-inline-end: calc(var(--ui-spacing, 0.25rem) * 2);
+	scroll-margin-block-end: calc(var(--ui-spacing, 0.25rem) * 3);
+	scroll-margin-inline-start: calc(var(--ui-spacing, 0.25rem) * 4);
+}
+
+/* u.scrollMargin("3rem") — a raw CSS length passes through */
+.host {
+	scroll-margin: 3rem;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollMargin(4);
+let axisResult = u.scrollMargin(16, 0);
+let cornersResult = u.scrollMargin(1, 2, 3, 4);
+let lengthResult = u.scrollMargin("3rem");
+
+// Throws: expected 1, 2, or 4 values, got 3
+// let invalidResult = u.scrollMargin(1, 2, 3);
+```
+
+Only the headings need the clearance, so the offset lives on them rather than on the container:
+
+```tsx
+<div mix={[u.maxBs(96), u.scroll("y"), u.thinScrollbar()]}>
+	{sections.map((section) => (
+		<section key={section.id} id={section.id} mix={[u.scrollMargin(16, 0)]}>
+			<h2 mix={[u.text("lg"), u.weight("semibold")]}>{section.title}</h2>
+			{section.body}
+		</section>
+	))}
+</div>
+```
+
+#### `scrollPadding(...values: SpacingValue[]): UtilityMixin`
+
+Applies logical `scroll-padding` on a scroll _container_, insetting the region a snap position or an anchor jump is allowed to land in. Without it, a sticky header sitting inside the container covers the top of whatever the scroll just brought into view — the reader arrives at a heading that is hidden behind the bar, which is exactly the content they were being sent to. Give the container scroll-padding equal to the header's height and the landing point clears it.
+
+Reach for this rather than `u.scrollMargin()` when every landing point needs the same clearance, which is the usual case for a fixed piece of chrome: one declaration on the container beats one per item. It changes nothing about layout — unlike `u.p()`, it does not inset the content itself, only where a scroll comes to rest.
+
+Follows the same 1/2/4-value logical mapping as `u.p()`.
+
+**Parameters:**
+
+- `values`: One, two, or four `SpacingValue`s. A number resolves against the spacing scale as `calc(var(--ui-spacing, 0.25rem) * n)`; any other string is assumed to already be a valid CSS length and passes through verbatim.
+  - one value — applies to all four sides via the `scroll-padding` shorthand
+  - two values — block then inline, via `scroll-padding-block` and `scroll-padding-inline`
+  - four values — block-start, inline-end, block-end, inline-start, mapping onto the logical directions rather than the physical top/right/bottom/left
+- Any other count throws: `@pkg/u: expected 1, 2, or 4 values, got {n}`. Three values throw, and so does calling it with no arguments at all — there is no default.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-padding`, or the block/inline pair, or the four logical longhands
+
+**CSS:**
+
+```css
+/* u.scrollPadding(4) */
+.host {
+	scroll-padding: calc(var(--ui-spacing, 0.25rem) * 4);
+}
+
+/* u.scrollPadding(16, 0) */
+.host {
+	scroll-padding-block: calc(var(--ui-spacing, 0.25rem) * 16);
+	scroll-padding-inline: calc(var(--ui-spacing, 0.25rem) * 0);
+}
+
+/* u.scrollPadding(1, 2, 3, 4) */
+.host {
+	scroll-padding-block-start: calc(var(--ui-spacing, 0.25rem) * 1);
+	scroll-padding-inline-end: calc(var(--ui-spacing, 0.25rem) * 2);
+	scroll-padding-block-end: calc(var(--ui-spacing, 0.25rem) * 3);
+	scroll-padding-inline-start: calc(var(--ui-spacing, 0.25rem) * 4);
+}
+
+/* u.scrollPadding("3rem") — a raw CSS length passes through */
+.host {
+	scroll-padding: 3rem;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollPadding(4);
+let axisResult = u.scrollPadding(16, 0);
+let cornersResult = u.scrollPadding(1, 2, 3, 4);
+let lengthResult = u.scrollPadding("3rem");
+
+// Throws: expected 1, 2, or 4 values, got 3
+// let invalidResult = u.scrollPadding(1, 2, 3);
+```
+
+The header's height becomes the container's block-start scroll-padding, so nothing ever lands behind it:
+
+```tsx
+<div mix={[u.maxBs(96), u.scroll("y"), u.scrollPadding(12, 0), u.thinScrollbar()]}>
+	<header mix={[u.sticky(), u.insBs(0), u.z(10), u.surface("muted"), u.p(3)]}>{title}</header>
+	{sections}
+</div>
+```
+
+#### `scrollSnapAlign(value?: ScrollSnapAlignValue): UtilityMixin`
+
+Applies `scroll-snap-align`, defaulting to `"start"`, choosing where the item's box lines up against the scroll container's snapport when the scroll comes to rest.
+
+This one goes on the snap **items** — the children of the scroll container — while `u.scrollSnapType()` goes on the **container**. Splitting them the other way round is the single most common reason snapping silently does nothing, since neither property warns when its counterpart is missing: an item with `scroll-snap-align` inside a container with no `scroll-snap-type` simply scrolls freely, and a container with `scroll-snap-type` whose children declare no alignment has nothing to snap to. Pairs with `u.scrollSnapStop()` on the same item.
+
+**Parameters:**
+
+- `value`: Where the item lines up. Defaults to `"start"`.
+  - `"none"` — this item is not a snap position, letting one child opt out of a snapping container
+  - `"start"` — the item's start edge meets the snapport's start edge, the paged-carousel and section-list default
+  - `"center"` — the item is centred in the snapport, which suits a strip of items narrower than the container so neighbours peek in at both edges
+  - `"end"` — the item's end edge meets the snapport's end edge
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-snap-align`
+
+**CSS:**
+
+```css
+/* u.scrollSnapAlign() */
+.host {
+	scroll-snap-align: start;
+}
+
+/* u.scrollSnapAlign("center") */
+.host {
+	scroll-snap-align: center;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollSnapAlign();
+let centerResult = u.scrollSnapAlign("center");
+let endResult = u.scrollSnapAlign("end");
+let optOutResult = u.scrollSnapAlign("none");
+```
+
+On the item, never the container — see `u.scrollSnapType()` for both halves together:
+
+```tsx
+<li mix={[u.scrollSnapAlign("center"), u.minIs("full"), u.p(4)]}>{slide}</li>
+```
+
+#### `scrollSnapStop(value?: ScrollSnapStopValue): UtilityMixin`
+
+Applies `scroll-snap-stop` to a snap item, defaulting to `"always"`. With `"always"` a single fast flick cannot skip past the item — the scroll is forced to come to rest on it, which is what a paged carousel needs so one swipe advances exactly one page rather than four. `"normal"` lets momentum carry the scroll over any number of snap positions.
+
+Like `u.scrollSnapAlign()`, this belongs on the **items**, not on the container — the container is where `u.scrollSnapType()` goes. It also does nothing on its own: an item needs a `scroll-snap-align` other than `none` to be a snap position at all before there is anything to stop on, so pair it with `u.scrollSnapAlign()` on the same item.
+
+**Parameters:**
+
+- `value`: Whether a fast scroll gesture may pass over this snap position. Defaults to `"always"`.
+  - `"normal"` — the CSS initial value: momentum may carry the scroll past this and any number of further snap positions
+  - `"always"` — the scroll must stop here, so one gesture advances at most one item
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-snap-stop`
+
+**CSS:**
+
+```css
+/* u.scrollSnapStop() */
+.host {
+	scroll-snap-stop: always;
+}
+
+/* u.scrollSnapStop("normal") */
+.host {
+	scroll-snap-stop: normal;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollSnapStop();
+let normalResult = u.scrollSnapStop("normal");
+```
+
+Paging behaviour comes from the two item properties together:
+
+```tsx
+<li mix={[u.scrollSnapAlign(), u.scrollSnapStop(), u.minIs("full")]}>{page}</li>
+```
+
+Consider whether one-item-per-gesture is actually wanted before reaching for the default: on a long strip it makes travelling to the far end take one deliberate gesture per item, which is tedious where free scrolling with soft snapping would have done.
+
+#### `scrollSnapType(axis?: ScrollSnapAxis | "none", strictness?: ScrollSnapStrictness): UtilityMixin`
+
+Applies `scroll-snap-type` to a scroll **container**, defaulting to `"inline mandatory"` — the paged-carousel case. This is the half of scroll snapping that goes on the container; the children it snaps to need `u.scrollSnapAlign()` (and optionally `u.scrollSnapStop()`) on themselves. Getting that split backwards is the single most common reason snapping silently does nothing, and nothing warns you: neither property has any effect without its counterpart.
+
+It also needs the element to actually be a scroll container, so pair it with `u.scroll()`, `u.overflow()`, or the axis utilities — and with a bounded size on the scrolling axis, or the element grows to fit its content and never scrolls at all.
+
+One real quirk: passing `"none"` short-circuits, and the `strictness` argument is then silently ignored. `u.scrollSnapType("none", "proximity")` emits just `scroll-snap-type: none`, not `none proximity` — which is correct CSS, since the `none` keyword takes no strictness segment, but it means a strictness passed alongside it disappears without complaint.
+
+**Parameters:**
+
+- `axis`: The axis the container snaps along. Defaults to `"inline"`. Prefer the logical `"inline"`/`"block"` — they follow the writing mode, so a carousel stays correct under RTL and vertical writing modes; `"x"`/`"y"` are the physical exception, for the rare case that must stay pinned to the screen axis no matter the writing mode.
+  - `"inline"` — snaps along the inline axis, horizontal in a horizontal writing mode. The default, and the right choice for a carousel or a horizontal strip.
+  - `"block"` — snaps along the block axis, vertical in a horizontal writing mode. For full-height sections or a vertical pager.
+  - `"both"` — snaps along both axes independently, for a two-dimensional grid of panes.
+  - `"x"` — the physical horizontal axis, regardless of writing mode
+  - `"y"` — the physical vertical axis, regardless of writing mode
+  - `"none"` — snapping disabled. Short-circuits, emitting the bare `scroll-snap-type: none` with no strictness segment, and ignoring `strictness` entirely.
+- `strictness`: How firmly the container snaps. Defaults to `"mandatory"`. Ignored when `axis` is `"none"`.
+  - `"mandatory"` — the container always comes to rest on a snap position, never between two. Right for a pager where an in-between state is meaningless; wrong where an item is taller than the viewport, because content that falls between two snap positions can become unreachable.
+  - `"proximity"` — the container snaps only when a scroll ends near a snap position, otherwise leaving it where the user put it. The safer choice for a list of variable-height items.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `scroll-snap-type`
+
+**CSS:**
+
+```css
+/* u.scrollSnapType() */
+.host {
+	scroll-snap-type: inline mandatory;
+}
+
+/* u.scrollSnapType("block", "proximity") */
+.host {
+	scroll-snap-type: block proximity;
+}
+
+/* u.scrollSnapType("none") — and u.scrollSnapType("none", "proximity"), identically */
+.host {
+	scroll-snap-type: none;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.scrollSnapType();
+let axisResult = u.scrollSnapType("block");
+let strictnessResult = u.scrollSnapType("inline", "proximity");
+let bothAxesResult = u.scrollSnapType("both", "proximity");
+let physicalResult = u.scrollSnapType("x");
+
+// "none" short-circuits: the strictness is silently dropped
+let disabledResult = u.scrollSnapType("none", "proximity"); // scroll-snap-type: none
+```
+
+Both halves of scroll snapping together — the container declares the axis and strictness, each item declares its alignment and whether a flick may pass it:
+
+```tsx
+<ul
+	role="list"
+	mix={[
+		u.hstack(),
+		u.scroll("x"),
+		u.scrollSnapType("inline", "mandatory"),
+		u.overscrollBehavior(),
+		u.noScrollbar(),
+	]}
+>
+	{slides.map((slide) => (
+		<li key={slide.id} mix={[u.scrollSnapAlign(), u.scrollSnapStop(), u.minIs("full")]}>
+			<img
+				mix={[u.is("full"), u.aspect("video"), u.fit("cover")]}
+				src={slide.src}
+				alt={slide.alt}
+			/>
+		</li>
+	))}
+</ul>
 ```
 
 #### `thinScrollbar(): UtilityMixin`
@@ -8945,22 +10802,24 @@ let result = u.visuallyHidden();
 The compound-control pattern it exists for — the real input stays focusable and checkable, and a sibling reads its state to paint the indicator:
 
 ```tsx
-<label mix={[u.hstack({ gap: 2, align: "center" }), u.relative()]}>
-	<input type="checkbox" mix={[u.visuallyHidden()]} />
+<label mix={[u.hstack({ gap: 2, align: "center" })]}>
 	<span
 		mix={[
 			u.is(4),
 			u.bs(4),
 			u.rounded("sm"),
 			u.border("neutral"),
-			u.when("&:has(~ input:checked)", u.surface("brand")),
-			u.when("&:has(~ input:focus-visible)", u.ring("brand")),
+			u.hasSibling("input:checked", u.surface("brand")),
+			u.hasSibling("input:focus-visible", u.outline({ color: "brand.ring", offset: 2 })),
 		]}
 		aria-hidden="true"
 	/>
+	<input type="checkbox" mix={[u.visuallyHidden()]} />
 	Remember me
 </label>
 ```
+
+Note the DOM order: the indicator comes **first** and the input **after** it. `:has(~ ...)` only matches a _following_ sibling, so reversing them silently breaks every state rule. And the focus rule uses `u.outline()` rather than `u.ring()` — `ring()` composes `u.focusVisible()` internally, which would look for focus on the span, not on the input.
 
 Since it sets `position: absolute`, the host needs a positioned ancestor to be clipped predictably — and it conflicts with any other position utility (`u.relative()`, `u.fixed()`, `u.sticky()`) or size utility on the same element.
 
@@ -9067,6 +10926,130 @@ let nestedResult = u.after([u.pseudoContent('""'), u.opacity(0), u.hover(u.opaci
 </a>
 ```
 
+#### `aria(attribute: string, input: UtilityInput): UtilityMixin` (overloaded: `aria(attribute: string, value: string | number, input: UtilityInput): UtilityMixin`)
+
+A selector wrapper over the host element's own `aria-*` attribute, for styling from the state a widget already announces to assistive technology instead of mirroring that state into a second, visual-only attribute. The two-argument form targets the attribute's mere presence, the three-argument form an exact value. Sugar over `when()` in both shapes, so it composes and nests like any other state wrapper.
+
+It covers the ARIA states nothing else does. `u.checked()`, `u.disabled()`, and `u.invalid()` already bundle the common ones — `aria-checked`, `aria-disabled`, `aria-invalid` — with their native pseudo-class equivalents, so reach for those first and use this for `aria-expanded`, `aria-selected`, `aria-current`, `aria-pressed`, `aria-busy`, and `aria-sort`.
+
+Matching is exact-string, which means the presence form cannot express "any value except `false`": `u.aria("expanded", input)` matches an `aria-expanded="false"` element too, because the attribute is still present. Target the truthy state explicitly with `u.aria("expanded", "true", input)`.
+
+**Parameters:**
+
+- `attribute`: The attribute name **without** its `aria-` prefix — `"expanded"` targets `aria-expanded`. Interpolated into the selector as written, so it must already be a valid attribute name; passing `"aria-expanded"` yields the wrong `[aria-aria-expanded]` selector.
+- `value`: The exact attribute value to match, as a `string` or `number`. A number is interpolated as its string form, so `u.aria("level", 2, ...)` emits `&[aria-level="2"]`. Matching is exact and case-sensitive — there is no substring, prefix, or word-list matching, and no way to negate; wrap `not()` or reach for `when()` for those. Omit this argument entirely for the two-argument form.
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.aria("busy", u.opacity(50)) — two-argument form, attribute presence */
+.host[aria-busy] {
+	opacity: 0.5;
+}
+
+/* u.aria("selected", "true", u.bg("brand.tint")) — three-argument form, exact value */
+.host[aria-selected="true"] {
+	background-color: var(--ui-brand-bg-tint);
+}
+
+/* u.aria("level", 2, u.p(4)) — a numeric value is stringified */
+.host[aria-level="2"] {
+	padding: calc(var(--ui-spacing, 0.25rem) * 4);
+}
+```
+
+**Example:**
+
+```typescript
+let presenceResult = u.aria("busy", u.opacity(50));
+let valueResult = u.aria("selected", "true", u.bg("brand.tint"));
+let numericResult = u.aria("level", 2, u.p(4));
+let nestedResult = u.aria("expanded", "true", u.hover(u.bg("brand.tint")));
+```
+
+A tab whose selected state is announced once and styled from the same attribute:
+
+```tsx
+<button
+	role="tab"
+	aria-selected={isActive ? "true" : "false"}
+	mix={[
+		u.pi(3),
+		u.pb(2),
+		u.fg("neutral.muted"),
+		u.border({ color: "transparent", width: 2 }),
+		u.transition("color, border-color"),
+		u.aria("selected", "true", [u.fg("brand"), u.border("brand")]),
+		u.aria("busy", u.opacity(50)),
+	]}
+>
+	{label}
+</button>
+```
+
+#### `backdrop(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities to a top-layer element's `::backdrop` — the layer the browser paints behind an element promoted to the top layer, covering the whole viewport beneath it. Sugar over `when("&::backdrop", input)`.
+
+This is the correct way to dim the page behind a modal `<dialog>` or a popover: no extra overlay element in the markup, no `z-index` bookkeeping, and no scroll container to fight, because the browser owns the stacking. An overlay `<div>` sitting in normal flow has to be positioned above everything and clipped by nothing, which is a losing battle; the backdrop is above everything by construction.
+
+It only exists while the element is actually in the top layer — a `<dialog>` opened with `.show()` rather than `.showModal()` has no backdrop at all — so it pairs with `u.open()` when the dialog also needs styling in its closed state, and with `u.startingStyle()` plus `u.transitionBehavior("allow-discrete")` when the dim should fade in rather than snap.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.backdrop([u.bg("neutral.solid"), u.opacity(50)]) */
+.host {
+	&::backdrop {
+		background-color: var(--ui-neutral-bg-solid);
+		opacity: 0.5;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.backdrop(u.bg("neutral.solid"));
+let dimResult = u.backdrop([u.bg("neutral.solid"), u.opacity(50)]);
+let blurResult = u.backdrop([u.bg("neutral.solid"), u.opacity(50), u.backdropBlur("sm")]);
+```
+
+A modal dialog whose dim fades in with the dialog itself:
+
+```tsx
+<dialog
+	mix={[
+		u.surface(),
+		u.border({ width: 1 }),
+		u.rounded("lg"),
+		u.p(6),
+		u.backdrop([
+			u.bg("neutral.solid"),
+			u.opacity(0),
+			u.transition("opacity"),
+			u.open(u.opacity(50)),
+			u.startingStyle(u.open(u.opacity(0))),
+		]),
+	]}
+>
+	{children}
+</dialog>
+```
+
 #### `before(input: UtilityInput): UtilityMixin`
 
 Applies the given utilities to the host element's `::before` pseudo-element — a generated box laid out as the element's first child. Sugar over `when("&::before", input)`. Like `after()`, it generates nothing until a `content` declaration exists, which `pseudoContent()` supplies, and its content is not reliably exposed to assistive technology, so keep it decorative rather than meaningful. Prefer `before()` over `after()` when the decoration reads as leading the content (a bullet, a marker, a leading rule); the two are otherwise identical in behavior and can both be applied to the same element.
@@ -9119,7 +11102,7 @@ Applies the given utilities when the host is checked, matching both native check
 
 The doubled selector is the point: `:checked` only matches real `<input type="checkbox">`/`<input type="radio">`/`<option>` elements, so a `<div role="checkbox">` needs the attribute half. Note it does _not_ match `:indeterminate`, which is a third state a tri-state checkbox has to handle separately.
 
-If the visible indicator is a sibling rather than the input itself — the usual arrangement, since a native input can't be styled freely — this wrapper won't help, because it tests the host. Reach for `u.when("&:has(~ input:checked)", ...)` on the sibling instead.
+If the visible indicator is a sibling rather than the input itself — the usual arrangement, since a native input can't be styled freely — this wrapper won't help, because it tests the host. Reach for `u.hasSibling("input:checked", ...)` on the indicator instead, and note that it requires the indicator to come _before_ the input in the DOM, since `:has(~ ...)` only looks at following siblings.
 
 **Parameters:**
 
@@ -9412,6 +11395,142 @@ The input-group pattern — the wrapper carries the border and the focus treatme
 </div>
 ```
 
+#### `has(selector: string, input: UtilityInput): UtilityMixin`
+
+A selector wrapper that styles an element from the state of its own descendants: wraps `selector` in `:has(...)` and applies the given utilities there. Sugar over `when(\`&:has(${selector})\`, input)`.
+
+It expresses the thing no selector could express before `:has()`, since CSS otherwise only ever walks downwards. The real cases are a field wrapper reacting to its inner input, so the focus ring and error border land on the wrapper instead of the bare control; a card that has an image, so the two-column layout only kicks in when there is art to lay out; and a list that has a selected row. For the focus case specifically, `u.focusWithin()` is the shorter route, and `u.has(":focus-visible", ...)` is the version that ignores mouse focus.
+
+Reach for `u.hasSibling()` instead when the state lives on a sibling rather than a descendant. Note that `:has()` takes the specificity of its most specific argument, so a heavy selector inside it raises the whole rule's weight and can start winning against declarations you expected to override it.
+
+**Parameters:**
+
+- `selector`: The selector to test for, written as it appears inside `:has(...)` — a descendant (`"img"`, `"input:user-invalid"`), an attribute selector (`'[aria-selected="true"]'`), a combinator-led relative selector (`"> img"`), or a comma-separated list. Interpolated as written and not validated.
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.has("input:user-invalid", u.border("danger")) */
+.host {
+	&:has(input:user-invalid) {
+		border-color: var(--ui-danger-border);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.has("input:user-invalid", u.border("danger"));
+let imageResult = u.has("> img", u.p(4));
+let selectedResult = u.has('[aria-selected="true"]', u.bg("brand.tint"));
+let focusResult = u.has(":focus-visible", u.outline({ color: "brand", offset: 2 }));
+```
+
+The field-wrapper pattern — the wrapper carries the border and the error treatment, read off the control inside it:
+
+```tsx
+<div
+	mix={[
+		u.vstack({ gap: 1 }),
+		u.border({ color: "neutral", width: 1 }),
+		u.rounded("md"),
+		u.pi(3),
+		u.pb(2),
+		u.has(":focus-visible", u.outline({ color: "brand", offset: 2 })),
+		u.has("input:user-invalid", u.border("danger")),
+	]}
+>
+	<label mix={[u.text("xs"), u.fg("neutral.muted")]} htmlFor="email">
+		{label}
+	</label>
+	<input id="email" type="email" required mix={[u.appearance(), u.bg("transparent")]} />
+</div>
+```
+
+#### `hasSibling(selector: string, input: UtilityInput): UtilityMixin`
+
+A selector wrapper that styles an element from the state of a sibling rather than a descendant: emits `&:has(~ {selector})`. Sugar over `when(\`&:has(~ ${selector})\`, input)`.
+
+This is the compound-control idiom. A visually-hidden native `<input>` is paired with a sibling element that paints the visible indicator, and the indicator needs to read the input's state — checked, focused, disabled — while the input itself stays the real, accessible, form-submitting control. It is the single most repeated hand-written selector in real usage, which is why it gets a name of its own.
+
+**DOM order is load-bearing.** The `~` combinator only looks at _following_ siblings, so `&:has(~ input:checked)` matches an element that has a matching sibling _after_ it: the styled indicator must come **first** in the DOM and the hidden input **after** it. Reversed, every rule silently stops matching with no error anywhere. Reach for `u.has()` when the state lives on a descendant instead, and for a wrapper around both elements when the source order has to go the other way.
+
+One more trap: do not use `u.ring()` for the focus state inside this wrapper. `ring()` composes `u.focusVisible()` internally, so it would test focus on the indicator — which never receives focus — rather than on the input. Use `u.outline()` inside `u.hasSibling("input:focus-visible", ...)`, where the focus test already lives in the selector.
+
+**Parameters:**
+
+- `selector`: The following-sibling selector to test for, written as it appears after the `~` combinator — `"input:checked"`, `"input:focus-visible"`, `"input:disabled"`, `"input:indeterminate"`, or a comma-separated list. Interpolated as written and not validated.
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.hasSibling("input:checked", [u.bg("brand.solid"), u.border("brand")]) */
+.host {
+	&:has(~ input:checked) {
+		background-color: var(--ui-brand-bg-solid);
+		border-color: var(--ui-brand-border);
+	}
+}
+
+/* u.hasSibling("input:disabled", u.opacity(50)) */
+.host {
+	&:has(~ input:disabled) {
+		opacity: 0.5;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.hasSibling("input:checked", u.bg("brand.solid"));
+let focusResult = u.hasSibling("input:focus-visible", u.outline({ color: "brand", offset: 2 }));
+let disabledResult = u.hasSibling("input:disabled", [u.opacity(50), u.cursor("not-allowed")]);
+let mixedResult = u.hasSibling("input:indeterminate", u.bg("brand.solid"));
+```
+
+The full checkbox — note the indicator `<span>` comes before the `<input>`, which is what makes every rule below match:
+
+```tsx
+<label mix={[u.hstack({ gap: 2, align: "center" }), u.cursor("pointer")]}>
+	<span
+		aria-hidden="true"
+		mix={[
+			u.inlineFlex(),
+			u.items("center"),
+			u.justify("center"),
+			u.is(5),
+			u.bs(5),
+			u.rounded("sm"),
+			u.border({ color: "neutral.strong", width: 2 }),
+			u.transition("background-color, border-color"),
+			u.hasSibling("input:checked", [
+				u.bg("brand.solid"),
+				u.border("brand"),
+				u.fg("brand.onSolid"),
+			]),
+			u.hasSibling("input:focus-visible", u.outline({ color: "brand", offset: 2 })),
+			u.hasSibling("input:disabled", [u.opacity(50), u.cursor("not-allowed")]),
+		]}
+	>
+		{mark}
+	</span>
+	<input type="checkbox" mix={[u.visuallyHidden()]} />
+	{children}
+</label>
+```
+
 #### `hover(input: UtilityInput): UtilityMixin`
 
 Applies the given utilities when the host matches `:hover`. Sugar over `when("&:hover", input)`.
@@ -9460,6 +11579,60 @@ Revealing something on hover, with a focus equivalent so it isn't hover-only:
 		{actions}
 	</span>
 </li>
+```
+
+#### `indeterminate(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the host is in the indeterminate state, matching both natively indeterminate controls and ARIA mixed-state custom widgets. Sugar over `when('&:indeterminate, &[aria-checked="mixed"]', input)`.
+
+`u.checked()` does **not** match this third state — neither `:checked` nor `aria-checked="true"` is true of a mixed checkbox — which is exactly why this wrapper exists. A tri-state checkbox needs it to paint the dash that stands for "some, but not all", and without it a parent checkbox with a partial selection renders identically to an unchecked one.
+
+`:indeterminate` is broader than that one case: it also matches every radio button in a group where no option is selected yet, and a `<progress>` element with no `value` attribute. Scope it to the control you mean rather than applying it broadly.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.indeterminate(u.bg("brand.solid")) */
+.host {
+	&:indeterminate,
+	&[aria-checked="mixed"] {
+		background-color: var(--ui-brand-bg-solid);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.indeterminate(u.bg("brand.solid"));
+let fullResult = u.indeterminate([u.bg("brand.solid"), u.border("brand")]);
+```
+
+All three states of a tri-state checkbox, with `indeterminate` last so it wins over the unchecked resting styles:
+
+```tsx
+<button
+	role="checkbox"
+	aria-checked={selected.size === 0 ? "false" : selected.size === total ? "true" : "mixed"}
+	mix={[
+		u.is(5),
+		u.bs(5),
+		u.rounded("sm"),
+		u.border({ color: "neutral.strong", width: 2 }),
+		u.checked([u.bg("brand.solid"), u.border("brand")]),
+		u.indeterminate([u.bg("brand.solid"), u.border("brand")]),
+	]}
+>
+	{selected.size === total ? check : dash}
+</button>
 ```
 
 #### `invalid(input: UtilityInput): UtilityMixin`
@@ -9513,6 +11686,53 @@ let fullResult = u.invalid([u.border("danger"), u.ring("danger")]);
 		u.invalid([u.border("danger"), u.ring("danger")]),
 	]}
 />
+```
+
+#### `marker(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities to a list item's marker — its bullet or number — and to a `<summary>`'s disclosure triangle, via `::marker`. Sugar over `when("&::marker", input)`.
+
+Only a small set of properties apply here: `color`, the `font-*` family (`font-family`, `font-size`, `font-weight`, `font-style`, and the variant/feature longhands), and `content`. Everything else in the wrapped utilities is emitted but ignored by the browser, so the marker cannot be padded, positioned, or given a background through this wrapper. When the decoration needs box properties, drop `u.listStyle("none")` and draw it with `u.before()` plus `u.pseudoContent()` instead.
+
+To remove the marker entirely rather than restyle it, use `u.listStyle("none")` — recolouring it to match the background only hides it, leaving the space it occupies in the line box behind.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.marker(u.fg("brand")) */
+.host {
+	&::marker {
+		color: var(--ui-brand-fg);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.marker(u.fg("neutral.muted"));
+let toneResult = u.marker(u.fg("brand"));
+let contentResult = u.marker(u.pseudoContent('"→ "'));
+```
+
+Tinting the bullets of a list without touching the text colour:
+
+```tsx
+<ul mix={[u.vstack({ gap: 2 }), u.pis(5), u.marker(u.fg("brand"))]}>
+	{items.map((item) => (
+		<li key={item.id} mix={[u.text("sm")]}>
+			{item.label}
+		</li>
+	))}
+</ul>
 ```
 
 #### `not(selector: string, input: UtilityInput): UtilityMixin`
@@ -9613,6 +11833,297 @@ A complete popover entry animation — resting state, open state, start state, a
 >
 	{children}
 </div>
+```
+
+#### `placeholder(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities to an `<input>` or `<textarea>`'s `::placeholder` text. Sugar over `when("&::placeholder", input)`.
+
+Placeholder text is not a label substitute: it vanishes the moment the user types, and browsers render it at a contrast ratio that often fails on its own. Styling it does not remove the need for a real `<label>` — give the field a label and use the placeholder for an example value at most. If a design calls for the placeholder to double as the label, that is the float-label pattern, which needs `u.placeholderShown()` as well.
+
+For styling the _input itself_ while it is empty and showing that placeholder, use `u.placeholderShown()`. This wrapper only reaches the placeholder text.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.placeholder(u.fg("neutral.muted")) */
+.host {
+	&::placeholder {
+		color: var(--ui-neutral-fg-muted);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.placeholder(u.fg("neutral.muted"));
+let hiddenResult = u.placeholder(u.fg("transparent"));
+let styledResult = u.placeholder([u.fg("neutral.muted"), u.textTransform("none")]);
+```
+
+```tsx
+<>
+	<label htmlFor="search" mix={[u.text("sm"), u.weight("medium")]}>
+		{label}
+	</label>
+	<input
+		id="search"
+		type="search"
+		placeholder="acme.com"
+		mix={[
+			u.is("full"),
+			u.border({ color: "neutral", width: 1 }),
+			u.rounded("md"),
+			u.pi(3),
+			u.pb(2),
+			u.placeholder(u.fg("neutral.muted")),
+		]}
+	/>
+</>
+```
+
+#### `placeholderShown(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities while the host `<input>` or `<textarea>` is empty and therefore still showing its placeholder. Sugar over `when("&:placeholder-shown", input)`.
+
+It matches the _control_, not the placeholder text — that is `u.placeholder()`. The distinction matters because this is the only CSS handle on "this field has not been filled in", which is what makes the float-label pattern possible with no JavaScript: combine it with `u.has()` on the field wrapper and the label can sit inside an empty field, then shrink and move above it the moment the user types. `u.has(":placeholder-shown", ...)` on the wrapper describes the resting position and the wrapper's default styles describe the floated one, so the field ends up floated whenever the pseudo-class stops matching.
+
+The pattern needs a non-empty placeholder for `:placeholder-shown` to match at all — a single space is the usual trick — and the placeholder text itself is then hidden with `u.placeholder(u.fg("transparent"))`. Keep the real `<label>` in the markup regardless; the visual float is decoration over a properly labelled field.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.placeholderShown(u.fg("neutral.muted")) */
+.host {
+	&:placeholder-shown {
+		color: var(--ui-neutral-fg-muted);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.placeholderShown(u.fg("neutral.muted"));
+let truncateResult = u.placeholderShown(u.truncate());
+```
+
+The float-label composition — the wrapper's own `& > span` styles are the floated position, and the `u.has(":placeholder-shown", ...)` branch pushes the label back down into an empty field:
+
+```tsx
+<label
+	mix={[
+		u.relative(),
+		u.block(),
+		u.when("& > span", [
+			u.absolute(),
+			u.insBs(1),
+			u.insIs(3),
+			u.text("xs"),
+			u.fg("neutral.muted"),
+			u.transition("inset-block-start, font-size"),
+		]),
+		u.has(":placeholder-shown", u.when("& > span", [u.insBs(3), u.text("base")])),
+	]}
+>
+	<span>{label}</span>
+	<input
+		type="email"
+		placeholder=" "
+		mix={[
+			u.is("full"),
+			u.border({ color: "neutral", width: 1 }),
+			u.rounded("md"),
+			u.pi(3),
+			u.pbs(5),
+			u.pbe(2),
+			u.placeholder(u.fg("transparent")),
+		]}
+	/>
+</label>
+```
+
+#### `readOnly(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the host is read-only, matching both native read-only controls and ARIA read-only custom widgets. Sugar over `when('&:read-only, &[aria-readonly="true"]', input)`.
+
+Read-only is not disabled, and should not look like it. A read-only control is still focusable, still reachable by keyboard, still submits its value with the form, and is still announced with its label and contents — the user simply cannot edit it. `u.disabled()` covers the other case, where the control is inert and its value is dropped from the submission entirely. Style read-only as normal-but-static — a flat background, no editable affordance — rather than greyed-out, or users will read it as broken.
+
+Worth knowing that `:read-only` matches far more than form fields: every non-editable element in the document matches it, so scope this to the control you mean rather than applying it to a container.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.readOnly([u.bg("neutral.tint"), u.cursor("default")]) */
+.host {
+	&:read-only,
+	&[aria-readonly="true"] {
+		background-color: var(--ui-neutral-bg-tint);
+		cursor: default;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.readOnly(u.bg("neutral.tint"));
+let staticResult = u.readOnly([u.bg("neutral.tint"), u.cursor("default"), u.border("transparent")]);
+```
+
+The read-only field keeps its focus ring, because it is still focusable:
+
+```tsx
+<input
+	readOnly={!canEdit}
+	value={apiKey}
+	mix={[
+		u.is("full"),
+		u.border({ color: "neutral", width: 1 }),
+		u.rounded("md"),
+		u.pi(3),
+		u.pb(2),
+		u.ring("brand"),
+		u.readOnly([u.bg("neutral.tint"), u.cursor("default")]),
+	]}
+/>
+```
+
+#### `required(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the host is required, matching both native required controls and ARIA required custom widgets. Sugar over `when('&:required, &[aria-required="true"]', input)`.
+
+Whatever visual marker this paints must not be the only signal that the field is required: a colour change conveys nothing to anyone who cannot see it, and a bare asterisk conveys nothing on its own either. Keep the requirement in the label text or an explicit hint as well, and let this wrapper handle the decoration only.
+
+It pairs with `u.invalid()`, which deliberately matches `:user-invalid` rather than `:invalid` — so an untouched empty required field is styled as required without also being styled as an error before the user has done anything. Applying an error treatment through `:invalid` instead is the mistake this pairing avoids.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.required(u.border("neutral.strong")) */
+.host {
+	&:required,
+	&[aria-required="true"] {
+		border-color: var(--ui-neutral-border-strong);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.required(u.border("neutral.strong"));
+let markerResult = u.required(u.after([u.pseudoContent('" *"'), u.fg("danger")]));
+```
+
+The requirement is stated in the label text; the border weight and the marker are decoration on top of it, and the error treatment only lands after the user has left the field:
+
+```tsx
+<>
+	<label htmlFor="email" mix={[u.text("sm"), u.weight("medium")]}>
+		{t("form.email.label")}
+	</label>
+	<input
+		id="email"
+		type="email"
+		required
+		aria-describedby="email-error"
+		mix={[
+			u.is("full"),
+			u.border({ color: "neutral", width: 1 }),
+			u.rounded("md"),
+			u.pi(3),
+			u.pb(2),
+			u.required(u.border("neutral.strong")),
+			u.invalid([u.border("danger"), u.ring("danger")]),
+		]}
+	/>
+	<p id="email-error" mix={[u.text("xs"), u.fg("danger")]}>
+		{errors.email}
+	</p>
+</>
+```
+
+#### `selection(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities to the user's text selection inside the element, via `::selection`. Sugar over `when("&::selection", input)`.
+
+Only a small set of properties apply here — `color`, `background-color`, `text-decoration`, and `text-shadow`. Everything else in the wrapped utilities is emitted but ignored by the browser, so a selection cannot be padded, rounded, or given a border.
+
+The platform's own selection colours come with a contrast guarantee the user — or their OS high-contrast setting — has already agreed to, and overriding them throws that guarantee away. If you do override, keep the pair high-contrast and always set `color` and `background-color` together rather than one alone: setting only the background leaves the browser's default selection text colour against your new fill, which is where unreadable selections come from.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.selection([u.bg("brand.solid"), u.fg("brand.onSolid")]) */
+.host {
+	&::selection {
+		background-color: var(--ui-brand-bg-solid);
+		color: var(--ui-brand-fg-on-solid);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.selection(u.bg("brand.tint"));
+let pairResult = u.selection([u.bg("brand.solid"), u.fg("brand.onSolid")]);
+```
+
+Set once on a wrapper, since `::selection` applies to whichever element the selected text lives in:
+
+```tsx
+<article
+	mix={[
+		u.vstack({ gap: 4 }),
+		u.is("65ch"),
+		u.selection([u.bg("brand.solid"), u.fg("brand.onSolid")]),
+	]}
+>
+	{children}
+</article>
 ```
 
 #### `when(selector: string, input: UtilityInput): UtilityMixin`
@@ -9857,6 +12368,86 @@ let blockResult = u.atQuery("(min-height: 30rem)", u.bs("full"));
 </div>
 ```
 
+#### `contrastLess(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the user has asked for _less_ contrast. Sugar over `media("(prefers-contrast: less)", input)` — see that entry for the underlying escape hatch.
+
+The counterpart to `u.contrastMore()`, for softening a rule rather than strengthening it: dropping a heavy border back to a subtle one, easing an emphasis foreground toward the muted end. Note it is far less widely honoured by platforms than `more` — several report `no-preference` even where a low-contrast setting exists — so treat anything declared here as an enhancement, never as the only place a style is set. If a rule has to apply, put it in the unwrapped baseline and use this wrapper only to adjust it.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.contrastLess(u.border("neutral")) */
+.host {
+	@media (prefers-contrast: less) {
+		border-color: var(--ui-neutral-border);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.contrastLess(u.border("neutral"));
+let composedResult = u.contrastLess([u.border("neutral"), u.shadow("sm")]);
+```
+
+Because it composes rather than replaces, a nested state wrapper stays nested inside the at-rule:
+
+```typescript
+let hoverResult = u.contrastLess(u.hover(u.bg("brand.tint")));
+```
+
+#### `contrastMore(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the user has asked for higher contrast. Sugar over `media("(prefers-contrast: more)", input)`.
+
+Most of the time you shouldn't need it. The theme layer already promotes every tone's subtle `border` to its `border-strong` value under this query, so a call site using `u.border("neutral")` or `u.surface()` strengthens on its own — wrapping a border in this by hand usually just restates what the tones already did.
+
+Reach for it when something _else_ needs strengthening: raising a muted foreground to full contrast, or giving a decorative divider that normally sits at low contrast enough weight to be visible at all.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.contrastMore(u.fg("neutral.emphasis")) */
+.host {
+	@media (prefers-contrast: more) {
+		color: var(--ui-neutral-fg-emphasis);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.contrastMore(u.fg("neutral.emphasis"));
+let composedResult = u.contrastMore([u.fg("neutral.emphasis"), u.weight("medium")]);
+```
+
+The muted-caption case — readable by default, fully contrasted on request:
+
+```tsx
+<p mix={[u.text("sm"), u.fg("neutral.muted"), u.contrastMore(u.fg("neutral.emphasis"))]}>
+	{caption}
+</p>
+```
+
 #### `dark(input: UtilityInput): UtilityMixin`
 
 Applies the given utilities under dark mode, covering both a forced `.dark` ancestor class and the system `prefers-color-scheme: dark` preference read through a `.system` ancestor. Sugar over `scheme("dark", input)` — see that entry for the full selector contract.
@@ -9898,6 +12489,65 @@ let borderResult = u.dark(u.border("neutral.strong"));
 <div
 	mix={[u.surface("muted"), u.shadow("md"), u.dark([u.shadow("sm"), u.border("neutral.strong")])]}
 />
+```
+
+#### `forcedColors(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when a forced-colors mode is active. Sugar over `media("(forced-colors: active)", input)`.
+
+In forced-colors mode the platform replaces colors with its own limited palette, so most color declarations stop having any effect at all. That makes this the place to fix anything colour alone was carrying: restoring a border so a shape stays visible once its background is overridden, adding an underline to a link that was only distinguished by hue, or setting `forced-color-adjust` through `u.raw()` for the rare element that must keep its own colors — a colour swatch, a chart legend key.
+
+The system color keywords (`Canvas`, `CanvasText`, `Highlight`) keep working here, which is why this package's no-argument defaults — `u.bg()`, `u.fg()`, `u.border()` — are built on those keywords and degrade gracefully without needing this wrapper at all. What needs help is a component whose structure came from a background fill rather than from a border.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.forcedColors(u.raw({ forcedColorAdjust: "none" })) */
+.host {
+	@media (forced-colors: active) {
+		forced-color-adjust: none;
+	}
+}
+
+/* u.forcedColors(u.border({ width: 1 })) */
+.host {
+	@media (forced-colors: active) {
+		border-style: solid;
+		border-width: 1px;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.forcedColors(u.raw({ forcedColorAdjust: "none" }));
+let borderResult = u.forcedColors(u.border({ width: 1 }));
+```
+
+A solid-filled button loses its fill to the platform palette, so the border that keeps its shape readable is added back here:
+
+```tsx
+<button
+	type="button"
+	mix={[
+		u.bg("brand.solid"),
+		u.fg("brand.onSolid"),
+		u.rounded("md"),
+		u.p(2),
+		u.forcedColors(u.border({ width: 1 })),
+	]}
+>
+	{label}
+</button>
 ```
 
 #### `light(input: UtilityInput): UtilityMixin`
@@ -9997,6 +12647,154 @@ The motion-gating idiom — a transition only for users who haven't asked for le
 ```
 
 Because it emits an at-rule rather than a selector, an `@keyframes` rule stays valid inside it — `u.media()` and `u.supports()` are the only wrappers `u.animation()` can safely be nested in.
+
+#### `motionReduce(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the user has asked for less motion. Sugar over `media("(prefers-reduced-motion: reduce)", input)`.
+
+The opposite approach to `u.motionSafe()`: animate by default, then neutralise the motion here. The usual content is `u.transitionDuration("0s")`, which cancels the duration without having to re-declare `transition-property` and `transition-timing-function`, or a swap to a non-motion property such as opacity so the state change still reads without anything moving.
+
+Prefer `u.motionSafe()` when there is a choice. Declaring motion only inside the positive query means a missing wrapper degrades to no motion instead of to unrequested motion, and it needs no counter-rule at all; with this direction, every animated property is one you have to remember to neutralise.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.motionReduce(u.transitionDuration("0s")) */
+.host {
+	@media (prefers-reduced-motion: reduce) {
+		transition-duration: 0s;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.motionReduce(u.transitionDuration("0s"));
+let composedResult = u.motionReduce([u.transitionDuration("0s"), u.translateY(0)]);
+```
+
+The animate-then-neutralise shape, for when the transition genuinely has to be declared unconditionally:
+
+```tsx
+<div
+	mix={[
+		u.transition("opacity, translate", { duration: 200 }),
+		u.motionReduce(u.transitionDuration("0s")),
+		u.hover(u.opacity(80)),
+	]}
+/>
+```
+
+#### `motionSafe(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities only for users who have _not_ asked for less motion. Sugar over `media("(prefers-reduced-motion: no-preference)", input)`.
+
+This is the correct default home for a transition or an animation. Because the styles inside only apply under the positive preference, the reduced-motion case is simply the unwrapped baseline — it needs no extra rule to neutralise anything, because nothing was ever declared for it. And the polarity fails safe: forgetting the wrapper entirely means no animation at all, rather than an ungated animation that ignores the preference outright.
+
+In practice that makes it the wrapper `u.transition()` and `u.animation()` belong inside, and the fix for `u.scrollBehavior()`, which is motion and does not gate itself. Note that it emits an at-rule rather than a selector, which is what keeps an `@keyframes` rule valid inside it — `u.animation()` can be nested here safely, the same way it can inside `u.media()` and `u.supports()`. Reach for `u.motionReduce()` only when the motion has to be declared unconditionally and neutralised afterwards.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.motionSafe(u.transitionDuration("150ms")) */
+.host {
+	@media (prefers-reduced-motion: no-preference) {
+		transition-duration: 150ms;
+	}
+}
+
+/* u.motionSafe(u.scrollBehavior()) */
+.host {
+	@media (prefers-reduced-motion: no-preference) {
+		scroll-behavior: smooth;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.motionSafe(u.transitionDuration("150ms"));
+let transitionResult = u.motionSafe(u.transition("opacity, translate", { duration: 200 }));
+let scrollResult = u.motionSafe(u.scrollBehavior());
+```
+
+The whole animated rule lives inside the wrapper, so the baseline is a plain instant state change:
+
+```tsx
+<div
+	mix={[
+		u.opacity(100),
+		u.motionSafe(u.transition("opacity, translate", { duration: 200 })),
+		u.hover([u.opacity(80), u.motionSafe(u.translateY(-2))]),
+	]}
+/>
+```
+
+#### `print(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the page is being printed or rendered to PDF. Sugar over `media("print", input)`.
+
+`"print"` is a media _type_, not a feature query, so it is passed with no parentheses — `@media print`, never `@media (print)`. It is also the one wrapper in this family that isn't about a user preference at all: nothing here reflects a setting, only a different output medium.
+
+The real uses: hiding interactive chrome that means nothing on paper — navigation, buttons, sticky bars, a scroll container's own affordances — forcing a light surface so a dark theme doesn't print as a solid block of ink, and expanding a truncated or line-clamped block back to its full height so no content is silently cut off at the edge of the page.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.print(u.hidden()) */
+.host {
+	@media print {
+		display: none;
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.print(u.hidden());
+let surfaceResult = u.print([u.bg(), u.fg()]);
+let expandResult = u.print(u.raw({ WebkitLineClamp: "unset", overflow: "visible" }));
+```
+
+Chrome disappears and the clamped body opens up, so the printed page carries the content and nothing else:
+
+```tsx
+<article mix={[u.vstack({ gap: 4 })]}>
+	<nav mix={[u.hstack({ gap: 2 }), u.print(u.hidden())]}>{actions}</nav>
+	<div mix={[u.lineClamp(3), u.print(u.raw({ WebkitLineClamp: "unset", overflow: "visible" }))]}>
+		{body}
+	</div>
+</article>
+```
+
+`u.lineClamp()` only takes a line count, so undoing it is one of the cases `u.raw()` exists for.
 
 #### `scheme(mode: "dark" | "light", input: UtilityInput): UtilityMixin`
 
@@ -10166,6 +12964,106 @@ The two-branch pattern — an enhanced version where supported, a solid fallback
 ```
 
 Like `u.media()`, it emits an at-rule rather than a selector, so an `@keyframes` rule stays valid inside it — `u.supports()` and `u.media()` are the only wrappers `u.animation()` can safely be nested in.
+
+#### `transparencyReduce(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities when the user has asked for less transparency. Sugar over `media("(prefers-reduced-transparency: reduce)", input)`.
+
+The inverse of `u.transparencySafe()`, for supplying a solid fallback explicitly — an opaque background, a stronger border — when the styles that would otherwise have carried the surface are only declared inside the no-preference branch. Usually you don't need it: `u.translucent()` already sets a solid `u.bg()` unconditionally and only gates the blur, so the fallback is the baseline. Reach for this when the translucent version was hand-assembled and the reduced case would otherwise be left with nothing behind the content.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.transparencyReduce(u.bg()) */
+.host {
+	@media (prefers-reduced-transparency: reduce) {
+		background-color: var(--ui-bg, Canvas);
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.transparencyReduce(u.bg());
+let composedResult = u.transparencyReduce([u.bg(), u.border("neutral.strong")]);
+```
+
+The two-branch shape, each preference getting the surface it needs:
+
+```tsx
+<header
+	mix={[
+		u.sticky(),
+		u.insBs(0),
+		u.transparencySafe([u.backdropBlur("md"), u.backdropSaturate(1.4)]),
+		u.transparencyReduce(u.bg()),
+		u.p(3),
+	]}
+/>
+```
+
+#### `transparencySafe(input: UtilityInput): UtilityMixin`
+
+Applies the given utilities only for users who have _not_ asked for less transparency. Sugar over `media("(prefers-reduced-transparency: no-preference)", input)`.
+
+This is the exact gate `u.translucent()` applies internally, exposed for the case where other translucency-dependent styles need to sit behind the same condition. It matters specifically for `u.backdropBlur()` and `u.backdropSaturate()`, which are ungated primitives: composing either one directly alongside `u.translucent()` would leave a reduced-transparency user with the saturation still applied but no blur behind it — a see-through, over-saturated surface, which is worse than either the translucent or the solid version.
+
+Note the two utilities both write the shared composite `backdropFilter` declaration, so putting them in the same branch combines blur and saturation rather than one overwriting the other.
+
+**Parameters:**
+
+- `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
+
+**Returns:**
+
+- A utility mixin
+
+**CSS:**
+
+```css
+/* u.transparencySafe(u.backdropSaturate(1.4)) */
+.host {
+	@media (prefers-reduced-transparency: no-preference) {
+		--ui-backdrop-saturate: 1.4;
+		backdrop-filter: blur(var(--ui-backdrop-blur, 0px)) saturate(var(--ui-backdrop-saturate, 1));
+		-webkit-backdrop-filter: blur(var(--ui-backdrop-blur, 0px))
+			saturate(var(--ui-backdrop-saturate, 1));
+	}
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.transparencySafe(u.backdropSaturate(1.4));
+let composedResult = u.transparencySafe([u.backdropBlur("md"), u.backdropSaturate(1.4)]);
+```
+
+The fix: `u.translucent()` gates its own blur, so the extra saturation has to be put behind the same gate rather than applied beside it — otherwise a reduced-transparency user gets the saturation with no blur.
+
+```tsx
+<header
+	mix={[
+		u.sticky(),
+		u.insBs(0),
+		u.z(10),
+		u.translucent("md"),
+		u.transparencySafe(u.backdropSaturate(1.4)),
+		u.p(3),
+	]}
+/>
+```
+
+Written the wrong way — `u.backdropSaturate(1.4)` sitting ungated next to `u.translucent("md")` — the saturation applies to every user while the blur applies to only some of them.
 
 ### Animation
 
@@ -10455,7 +13353,138 @@ The split-halves pattern — keyframes at the top level, the host declarations g
 
 ### Transform
 
-`transform` is a single CSS property, so a naive per-function utility would silently overwrite another transform utility applied to the same element. Every utility in this family instead sets its own CSS custom property (`--ui-translate-x`, `--ui-rotate`, ...) plus the exact same composite `transform` declaration — one fixed expression referencing every transform function's variable with an identity fallback (`0`, `0deg`, `1`). Custom properties from separate classes on the same element all apply simultaneously, so combining any number of these utilities in one `mix` array composes every function instead of the last one winning.
+`transform` is a single CSS property, so a naive per-function utility would silently overwrite another transform utility applied to the same element. Every _transform-function_ utility here instead sets its own CSS custom property (`--ui-translate-x`, `--ui-rotate`, ...) plus the exact same composite `transform` declaration — one fixed expression referencing every transform function's variable with an identity fallback (`0`, `0deg`, `1`). Custom properties from separate classes on the same element all apply simultaneously, so combining any number of these utilities in one `mix` array composes every function instead of the last one winning.
+
+Six utilities in this family are _not_ part of that composition, because they set separate CSS properties rather than a function inside `transform`: `u.transformOrigin()`, `u.transformStyle()`, `u.perspective()`, and `u.perspectiveOrigin()` each set their own property outright, and `u.scaleProperty()`/`u.translateProperty()` set the standalone `scale`/`translate` properties. Those last two are worth care — they move the element _in addition to_ anything the composite `transform` does, so combining them with `u.scale()`/`u.translateX()` compounds rather than replaces.
+
+#### `perspective(value?: number | (string & {})): UtilityMixin`
+
+Sets how far the viewer is from the `z = 0` plane, which is what gives 3D-transformed children a vanishing point. Without it a 3D rotation has no depth cue at all: `u.rotateY(180)` reads as the element squashing horizontally and popping back, not as a card turning over. A smaller value puts the viewer closer and exaggerates the effect; a larger value flattens it.
+
+It belongs on the **parent** of the 3D-transformed children, next to `u.transformStyle()` — not on the rotating child. Together with `u.backfaceVisibility()` on the faces, those three are the complete set a flip effect needs, and the two rotation utilities (`u.rotateX()`, `u.rotateY()`) are the only things a perspective changes the appearance of.
+
+Unlike the rotate/scale/skew/translate utilities described above, `perspective` is its own CSS property rather than a transform function, so this utility sets it outright: it writes no `--ui-*` custom property and no composite `transform` declaration, and never joins that additive composition. A second `u.perspective()` on the same element simply overwrites the first. Note also that a perspective other than `none` makes the element a containing block for fixed-position descendants, the same way a `transform` does.
+
+**Parameters:**
+
+- `value`: The viewing distance. Defaults to `800`, i.e. `800px`.
+  - a `number` — treated as pixels, so `400` becomes `400px` and `0` becomes `0px`. Values in the 400–1200 range read as a normal camera; below that the distortion becomes obvious.
+  - a `string` — passed through unchanged, for any other length (`"50rem"`) or a `var(...)`/`calc(...)` reference. The `"none"` keyword also passes through, removing the perspective entirely and flattening the subtree's projection.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `perspective`, and nothing else — no `--ui-*` custom property and no composite `transform` declaration.
+
+**CSS:**
+
+```css
+/* u.perspective() */
+.host {
+	perspective: 800px;
+}
+
+/* u.perspective(400) */
+.host {
+	perspective: 400px;
+}
+
+/* u.perspective("none") */
+.host {
+	perspective: none;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.perspective();
+let closeResult = u.perspective(400);
+let remResult = u.perspective("50rem");
+let noneResult = u.perspective("none");
+```
+
+The parent owns the camera; the child owns the rotation:
+
+```tsx
+<div mix={[u.perspective(600), u.transformStyle()]}>
+	<figure
+		mix={[
+			u.rounded("lg"),
+			u.surface("default"),
+			u.p(4),
+			u.media(
+				"(prefers-reduced-motion: no-preference)",
+				u.transition("transform", { duration: 300 }),
+			),
+			u.hover(u.rotateY(-12)),
+		]}
+	>
+		{children}
+	</figure>
+</div>
+```
+
+#### `perspectiveOrigin(value?: TransformOriginValue): UtilityMixin`
+
+Moves the vanishing point that `u.perspective()` establishes, so the 3D effect can be aimed off-centre: children lean away from wherever the viewer is placed rather than always from the middle of the parent. It is the counterpart to `u.transformOrigin()` — that one moves the pivot of the child's own transform, this one moves the camera.
+
+Set it on the same **parent** element that carries `u.perspective()`. On its own it does nothing: with no perspective there is no vanishing point to move.
+
+It takes the same values as `u.transformOrigin()` (the `TransformOriginValue` union, raw-string escape included). Like the other three utilities in this group, `perspective-origin` is its own CSS property rather than a transform function, so it is set outright and never joins the composite `transform` composition described above.
+
+**Parameters:**
+
+- `value`: A `TransformOriginValue`. Defaults to `"center"`.
+  - `"center"` — the camera sits over the middle of the element. CSS's own default, and the neutral choice.
+  - `"top"` / `"bottom"` / `"left"` / `"right"` — a single edge keyword, centred on the other axis
+  - `"top left"` / `"top right"` / `"bottom left"` / `"bottom right"` — a corner
+  - any other `string` — the raw escape, passed through unchanged: a percentage pair (`"25% 75%"`), explicit lengths, or a `var(...)`/`calc(...)` reference
+
+**Returns:**
+
+- A `UtilityMixin` that sets `perspective-origin`, and nothing else — no `--ui-*` custom property and no composite `transform` declaration.
+
+**CSS:**
+
+```css
+/* u.perspectiveOrigin() */
+.host {
+	perspective-origin: center;
+}
+
+/* u.perspectiveOrigin("top left") */
+.host {
+	perspective-origin: top left;
+}
+
+/* u.perspectiveOrigin("25% 75%") */
+.host {
+	perspective-origin: 25% 75%;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.perspectiveOrigin();
+let cornerResult = u.perspectiveOrigin("top left");
+let percentResult = u.perspectiveOrigin("25% 75%");
+let varResult = u.perspectiveOrigin(u.var("origin", "center"));
+```
+
+A stack of cards viewed from above, so each tips away from a camera placed near its block start:
+
+```tsx
+<ul
+	mix={[u.vstack({ gap: 2 }), u.perspective(700), u.perspectiveOrigin("top"), u.transformStyle()]}
+>
+	{items.map((item) => (
+		<li key={item.id} mix={[u.rotateX(-8), u.rounded("md"), u.surface("default"), u.p(3)]}>
+			{item.label}
+		</li>
+	))}
+</ul>
+```
 
 #### `rotate(value: AngleValue): UtilityMixin`
 
@@ -10542,7 +13571,7 @@ let partialResult = u.rotateX(-15);
 ```
 
 ```tsx
-<div mix={[u.relative(), u.raw({ transformStyle: "preserve-3d", perspective: "600px" })]}>
+<div mix={[u.relative(), u.transformStyle(), u.perspective(600)]}>
 	<div
 		mix={[
 			u.backfaceVisibility(),
@@ -10594,7 +13623,7 @@ let subtleResult = u.rotateY("0.05turn");
 The two faces of a flip card, one pre-rotated so it starts hidden:
 
 ```tsx
-<div mix={[u.zstack(), u.raw({ transformStyle: "preserve-3d" })]}>
+<div mix={[u.zstack(), u.transformStyle()]}>
 	<div mix={[u.backfaceVisibility()]}>{front}</div>
 	<div mix={[u.backfaceVisibility(), u.rotateY(180)]}>{back}</div>
 </div>
@@ -10766,7 +13795,7 @@ A determinate progress bar, scaled from a custom property rather than re-renderi
 		mix={[
 			u.bs("full"),
 			u.bg("brand.solid"),
-			u.raw({ transformOrigin: "left" }),
+			u.transformOrigin("left"),
 			u.scaleX(u.var("progress", "0")),
 			u.transition("transform"),
 		]}
@@ -10903,6 +13932,150 @@ A slanted section edge, built from a skewed decorative layer rather than an imag
 	<div mix={[u.absolute(), u.inset(0), u.skewY(-3), u.bg("neutral.tint"), u.pointerEvents()]} />
 	<div mix={[u.relative(), u.p(6)]}>{children}</div>
 </section>
+```
+
+#### `transformOrigin(value?: TransformOriginValue): UtilityMixin`
+
+Sets the point every transform on the element pivots around. It is the reason `u.scaleX()` can grow a progress bar from its leading edge instead of from its middle, and the reason a menu can scale open from the corner it is anchored to instead of from its centre. Because the default is the element's centre, a scale or rotate that looks anchored to the wrong place is almost always a missing origin rather than a wrong transform.
+
+It applies to every transform function on the element at once — the whole composite `transform` expression shares one origin — so there is nothing to compose here: one call per element, and a second overwrites the first. `transform-origin` is its own CSS property rather than a transform function, so it is set outright and never joins the additive `transform` composition described above.
+
+The values are physical, not logical: CSS has no logical `transform-origin`, so `"left"` stays on the left under a right-to-left writing mode. An origin that has to flip under RTL cannot be expressed here directly — drive it from a custom property and pass that through the raw-string escape.
+
+**Parameters:**
+
+- `value`: A `TransformOriginValue`. Defaults to `"center"`.
+  - `"center"` — the element's centre on both axes. CSS's own default.
+  - `"top"` / `"bottom"` / `"left"` / `"right"` — a single edge keyword, centred on the other axis. `"left"` is the one that makes a horizontal progress bar grow rightward.
+  - `"top left"` / `"top right"` / `"bottom left"` / `"bottom right"` — a corner, for a popover that should scale out of the edge it is anchored to
+  - any other `string` — the raw escape, passed through unchanged: a percentage pair (`"25% 75%"`), explicit lengths, the three-value 3D form that also offsets the origin along the z axis (`"50% 50% 8px"`), or a `var(...)`/`calc(...)` reference
+
+**Returns:**
+
+- A `UtilityMixin` that sets `transform-origin`, and nothing else — no `--ui-*` custom property and no composite `transform` declaration.
+
+**CSS:**
+
+```css
+/* u.transformOrigin() */
+.host {
+	transform-origin: center;
+}
+
+/* u.transformOrigin("left") */
+.host {
+	transform-origin: left;
+}
+
+/* u.transformOrigin("50% 50% 8px") */
+.host {
+	transform-origin: 50% 50% 8px;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.transformOrigin();
+let edgeResult = u.transformOrigin("left");
+let cornerResult = u.transformOrigin("bottom right");
+let threeValueResult = u.transformOrigin("50% 50% 8px");
+let varResult = u.transformOrigin(u.var("origin", "center"));
+```
+
+A determinate progress bar driven by a single custom property: the origin is what makes it fill from the leading edge instead of growing out of the middle in both directions.
+
+```tsx
+<div
+	mix={[u.is("full"), u.bs(1), u.rounded("full"), u.bg("neutral.tint"), u.clip()]}
+	role="progressbar"
+	aria-valuenow={percent}
+>
+	<div
+		mix={[
+			u.bs("full"),
+			u.bg("brand.solid"),
+			u.transformOrigin("left"),
+			u.scaleX(u.var("progress", "0")),
+			u.transition("transform"),
+		]}
+	/>
+</div>
+```
+
+#### `transformStyle(value?: TransformStyleValue): UtilityMixin`
+
+Keeps an element's children positioned in their own 3D space instead of flattening them into the parent's plane. It belongs on the **parent** of the 3D-transformed children, never on the rotating child itself.
+
+CSS defaults to `flat`, which collapses the whole subtree onto one plane — that is why a `u.rotateY()` flip looks like a horizontal squash rather than a card turning over until `preserve-3d` is set on its container. This is the third piece of the 3D set: pair it with `u.perspective()` on the same parent for a vanishing point, and `u.backfaceVisibility()` on each face so the reversed side does not show through mid-rotation. `transform-style` is its own CSS property rather than a transform function, so it is set outright and never joins the additive `transform` composition described above.
+
+The caveat worth knowing, because it breaks the effect silently rather than loudly: `preserve-3d` cannot be combined with clipping or filtering on the same element. An `overflow` other than `visible` (so `u.clip()`, `u.scroll()`, `u.truncate()`, `u.overflow()`), a `filter` (`u.blur()`), a `mask` (`u.mask()`), or an `opacity` below 1 (`u.opacity()`) each force the subtree back to `flat`. Nothing errors — the flip just goes back to looking like a squash. Move those to a wrapper or down onto the faces instead of listing them next to this utility.
+
+**Parameters:**
+
+- `value`: A `TransformStyleValue`. Defaults to `"preserve-3d"`.
+  - `"preserve-3d"` — children keep their own positions in 3D space, so a rotated child reads as depth. The default, and what every 3D effect needs.
+  - `"flat"` — children are flattened into the element's own plane. CSS's own default, and useful only to opt a subtree back out.
+
+**Returns:**
+
+- A `UtilityMixin` that sets `transform-style`, and nothing else — no `--ui-*` custom property and no composite `transform` declaration.
+
+**CSS:**
+
+```css
+/* u.transformStyle() */
+.host {
+	transform-style: preserve-3d;
+}
+
+/* u.transformStyle("flat") */
+.host {
+	transform-style: flat;
+}
+```
+
+**Example:**
+
+```typescript
+let result = u.transformStyle();
+let flatResult = u.transformStyle("flat");
+```
+
+The complete flip card, with each of the three utilities on the element that needs it — note the rounding and clipping sit on the faces, because putting them on the `preserve-3d` parent would silently flatten the whole thing:
+
+```tsx
+<div mix={[u.perspective(800), u.transformStyle(), u.aspect(3, 2)]}>
+	<div
+		mix={[
+			u.zstack(),
+			u.bs("full"),
+			u.transformStyle(),
+			u.media(
+				"(prefers-reduced-motion: no-preference)",
+				u.transition("transform", { duration: 400 }),
+			),
+			u.data("flipped", u.rotateY(180)),
+		]}
+		data-flipped={flipped || undefined}
+	>
+		<div mix={[u.backfaceVisibility(), u.rounded("lg"), u.clip(), u.surface("default"), u.p(4)]}>
+			{front}
+		</div>
+		<div
+			mix={[
+				u.backfaceVisibility(),
+				u.rotateY(180),
+				u.rounded("lg"),
+				u.clip(),
+				u.surface("default"),
+				u.p(4),
+			]}
+		>
+			{back}
+		</div>
+	</div>
+</div>
 ```
 
 #### `translateProperty(value: string): UtilityMixin`

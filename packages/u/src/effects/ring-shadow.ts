@@ -4,7 +4,7 @@
  */
 import type { ColorValue } from "../types";
 
-import { utility } from "../internal/descriptor";
+import { boxShadowSlot } from "../internal/box-shadow";
 import { color } from "../internal/tokens";
 
 /**
@@ -17,17 +17,20 @@ import { color } from "../internal/tokens";
  * (`input:checked ~ &` and similar selectors keep it applied without a
  * focus state in the mix).
  *
- * @example u.ringShadow("primary")
- * @example css({ boxShadow: "0 0 0 2px var(--ui-primary-bg-solid)" })
+ * The ring is written to the `ring` slot of the shared composite `boxShadow`
+ * declaration, which paints before the `elevation` slot `u.shadow()` writes —
+ * so a ring hugs the element's edge and an elevation shadow applied alongside
+ * it falls outside the ring, instead of the two overwriting each other.
+ *
+ * @example u.ringShadow("brand")
+ * @example css({ "--ui-box-shadow-ring": "0 0 0 2px var(--ui-brand-bg-solid)", boxShadow: "var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000)" })
  * @example u.ringShadow("danger", 3)
- * @example css({ boxShadow: "0 0 0 3px var(--ui-danger-bg-solid)" })
+ * @example css({ "--ui-box-shadow-ring": "0 0 0 3px var(--ui-danger-bg-solid)", boxShadow: "var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000)" })
  */
 export function ringShadow<Node extends Element = Element>(
 	value: ColorValue | (string & {}),
 	width: number | (string & {}) = 2,
 ) {
-	return utility<Node>(() => {
-		let resolvedWidth = typeof width === "number" ? `${width}px` : width;
-		return { boxShadow: `0 0 0 ${resolvedWidth} ${color(value, "bg-solid")}` };
-	});
+	let resolvedWidth = typeof width === "number" ? `${width}px` : width;
+	return boxShadowSlot<Node>({ ring: `0 0 0 ${resolvedWidth} ${color(value, "bg-solid")}` });
 }

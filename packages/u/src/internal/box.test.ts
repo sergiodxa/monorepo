@@ -39,9 +39,43 @@ describe("resolveBox", () => {
 		});
 	});
 
+	test("the scrollPadding prefix builds camelCase scroll-padding keys", () => {
+		expect(resolveBox("scrollPadding", [4])).toEqual({
+			scrollPadding: "calc(var(--ui-spacing, 0.25rem) * 4)",
+		});
+		expect(resolveBox("scrollPadding", [1, 2])).toEqual({
+			scrollPaddingBlock: "calc(var(--ui-spacing, 0.25rem) * 1)",
+			scrollPaddingInline: "calc(var(--ui-spacing, 0.25rem) * 2)",
+		});
+		expect(resolveBox("scrollPadding", [1, 2, 3, 4])).toEqual({
+			scrollPaddingBlockStart: "calc(var(--ui-spacing, 0.25rem) * 1)",
+			scrollPaddingInlineEnd: "calc(var(--ui-spacing, 0.25rem) * 2)",
+			scrollPaddingBlockEnd: "calc(var(--ui-spacing, 0.25rem) * 3)",
+			scrollPaddingInlineStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
+		});
+	});
+
+	test("the scrollMargin prefix builds camelCase scroll-margin keys", () => {
+		expect(resolveBox("scrollMargin", [4])).toEqual({
+			scrollMargin: "calc(var(--ui-spacing, 0.25rem) * 4)",
+		});
+		expect(resolveBox("scrollMargin", [1, 2])).toEqual({
+			scrollMarginBlock: "calc(var(--ui-spacing, 0.25rem) * 1)",
+			scrollMarginInline: "calc(var(--ui-spacing, 0.25rem) * 2)",
+		});
+		expect(resolveBox("scrollMargin", [1, 2, 3, 4])).toEqual({
+			scrollMarginBlockStart: "calc(var(--ui-spacing, 0.25rem) * 1)",
+			scrollMarginInlineEnd: "calc(var(--ui-spacing, 0.25rem) * 2)",
+			scrollMarginBlockEnd: "calc(var(--ui-spacing, 0.25rem) * 3)",
+			scrollMarginInlineStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
+		});
+	});
+
 	test("throws for an unsupported value count", () => {
 		expect(() => resolveBox("padding", [1, 2, 3])).toThrow();
 		expect(() => resolveBox("padding", [])).toThrow();
+		expect(() => resolveBox("scrollPadding", [1, 2, 3])).toThrow();
+		expect(() => resolveBox("scrollMargin", [])).toThrow();
 	});
 });
 

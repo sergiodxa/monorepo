@@ -1,7 +1,7 @@
 /**
- * Shared logical-box-shorthand resolution behind `p()` and `m()`: the
- * 1/2/4-value overload that maps onto logical directions instead of
- * physical ones.
+ * Shared logical-box-shorthand resolution behind `p()`, `m()`,
+ * `scrollPadding()`, and `scrollMargin()`: the 1/2/4-value overload that maps
+ * onto logical directions instead of physical ones.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,13 +12,16 @@ import type { SpacingValue } from "./tokens";
 import { spacing } from "./tokens";
 
 /**
- * Resolves a 1, 2, or 4-value logical box shorthand for `padding` or
- * `margin`. One value applies uniformly; two values map to block then
- * inline; four values map to block-start, inline-end, block-end, and
- * inline-start — see
+ * Resolves a 1, 2, or 4-value logical box shorthand for `padding`, `margin`,
+ * `scroll-padding`, or `scroll-margin`. One value applies uniformly; two
+ * values map to block then inline; four values map to block-start, inline-end,
+ * block-end, and inline-start — see
  * [MDN: logical properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_logical_properties_and_values).
  */
-export function resolveBox(prefix: "padding" | "margin", values: SpacingValue[]): CSSStyles {
+export function resolveBox(
+	prefix: "padding" | "margin" | "scrollPadding" | "scrollMargin",
+	values: SpacingValue[],
+): CSSStyles {
 	let result: Record<string, string> = {};
 	if (values.length === 1) {
 		let [all] = values as [SpacingValue];

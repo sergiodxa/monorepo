@@ -56,4 +56,22 @@ describe("bg", () => {
 			backgroundAttachment: "fixed",
 		});
 	});
+
+	test("clip sets background-clip", () => {
+		expect(styles(bg({ clip: "content-box" }))).toEqual({
+			backgroundClip: "content-box",
+		});
+	});
+
+	test("clip combines with the other keys, and 'text' clips to the glyphs", () => {
+		expect(
+			styles(
+				bg({ image: "linear-gradient(to right, red, blue)", clip: "text", color: "transparent" }),
+			),
+		).toEqual({
+			backgroundImage: "linear-gradient(to right, red, blue)",
+			backgroundColor: "transparent",
+			backgroundClip: "text",
+		});
+	});
 });

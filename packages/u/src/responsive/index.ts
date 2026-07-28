@@ -1,8 +1,16 @@
 export { at, atMax } from "./at";
 export { atQuery } from "./at-query";
+export { contrastLess } from "./contrast-less";
+export { contrastMore } from "./contrast-more";
 export { dark } from "./dark";
+export { forcedColors } from "./forced-colors";
 export { light } from "./light";
 export { media } from "./media";
+export { motionReduce } from "./motion-reduce";
+export { motionSafe } from "./motion-safe";
+export { print } from "./print";
 export { scheme } from "./scheme";
 export { startingStyle } from "./starting-style";
 export { supports } from "./supports";
+export { transparencyReduce } from "./transparency-reduce";
+export { transparencySafe } from "./transparency-safe";

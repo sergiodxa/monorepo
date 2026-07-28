@@ -20,6 +20,8 @@ export type BackgroundRepeatValue =
 
 export type BackgroundAttachmentValue = "scroll" | "fixed" | "local";
 
+export type BackgroundClipValue = "border-box" | "padding-box" | "content-box" | "text";
+
 export interface BgOptions {
 	/** Sets `background-color`. Same accepted shapes as `u.bg(value)`. */
 	color?: ColorValue | (string & {});
@@ -33,6 +35,27 @@ export interface BgOptions {
 	repeat?: BackgroundRepeatValue;
 	/** Sets `background-attachment`. */
 	attachment?: BackgroundAttachmentValue;
+	/**
+	 * Sets `background-clip`, the area the background is actually painted in:
+	 *
+	 * - `"border-box"` — out to the outer edge of the border, the initial value,
+	 *   so a translucent or dashed border shows the background through its gaps.
+	 * - `"padding-box"` — stops at the outer edge of the padding, so the border
+	 *   sits over the page instead of over the background.
+	 * - `"content-box"` — stops at the content edge, leaving the padding
+	 *   unpainted.
+	 * - `"text"` — clips the background to the shape of the element's glyphs.
+	 *
+	 * Two of these carry real weight. `"content-box"` is how a background is
+	 * kept from painting under the padding, which is what draws an inset
+	 * scrollbar thumb: a thumb with padding and a content-box background reads
+	 * as a narrow pill floating inside its track rather than filling it.
+	 * `"text"` is how a gradient fills text — it needs a transparent text color
+	 * for the clipped background to be visible at all, and the text underneath
+	 * must stay real, selectable text rather than becoming an image, so it is
+	 * still readable to assistive technology, searchable, and translatable.
+	 */
+	clip?: BackgroundClipValue;
 }
 
 /**
@@ -50,6 +73,8 @@ export interface BgOptions {
  * @example css({ backgroundColor: "var(--ui-brand-bg-tint)" })
  * @example u.bg({ image: "url(/hero.jpg)", size: "cover", position: "center" })
  * @example css({ backgroundImage: "url(/hero.jpg)", backgroundSize: "cover", backgroundPosition: "center" })
+ * @example u.bg({ color: "brand.solid", clip: "content-box" })
+ * @example css({ backgroundColor: "var(--ui-brand-bg-solid)", backgroundClip: "content-box" })
  */
 export function bg<Node extends Element = Element>(
 	value?: ColorValue | (string & {}),
@@ -73,6 +98,7 @@ export function bg<Node extends Element = Element>(
 		if (options.position !== undefined) result.backgroundPosition = options.position;
 		if (options.repeat !== undefined) result.backgroundRepeat = options.repeat;
 		if (options.attachment !== undefined) result.backgroundAttachment = options.attachment;
+		if (options.clip !== undefined) result.backgroundClip = options.clip;
 		return result as CSSStyles;
 	});
 }

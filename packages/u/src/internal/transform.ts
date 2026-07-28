@@ -1,5 +1,3 @@
-import { var as varUtility } from "../general/var";
-
 /**
  * `transform` is a single CSS property, so two independent utilities that
  * each set it outright (`transform: translateX(...)`, `transform:
@@ -18,6 +16,9 @@ import { var as varUtility } from "../general/var";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { var as varUtility } from "../general/var";
+
 import type { CSSStyles } from "./css-styles";
 import type { UtilityMixin } from "./descriptor";
 
