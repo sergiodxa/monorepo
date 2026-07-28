@@ -64,7 +64,7 @@ export function Shell(handle: Handle<ShellProps>) {
 					}),
 				]}
 			>
-				<Header mix={[p(0), fg("primary.emphasis"), fontSize("0.78rem"), tracking("0.18em")]}>
+				<Header mix={[p(0), fg("brand.emphasis"), fontSize("0.78rem"), tracking("0.18em")]}>
 					{handle.props.eyebrow}
 				</Header>
 				<Heading

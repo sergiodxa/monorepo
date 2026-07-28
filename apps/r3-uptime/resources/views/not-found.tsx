@@ -44,7 +44,7 @@ export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 						<a
 							href={routes.home.href()}
 							mix={[
-								fg("var(--ui-primary-fg)"),
+								fg("brand"),
 								textDecoration("none"),
 								hover(textDecoration("underline")),
 							]}

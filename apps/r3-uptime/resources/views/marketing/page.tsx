@@ -131,7 +131,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						bg({
 							image: linearGradient(
 								"to bottom",
-								"var(--ui-primary-bg-tint)",
+								"var(--ui-brand-bg-tint)",
 								"var(--ui-neutral-bg-tint)",
 							),
 						}),
@@ -146,9 +146,9 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								rounded("999px"),
 								fontSize("0.75rem"),
 								weight(600),
-								border({ color: "primary.border", width: 1 }),
-								bg("primary.tint"),
-								fg("primary.fg"),
+								border({ color: "brand.border", width: 1 }),
+								bg("brand.tint"),
+								fg("brand"),
 								mbe(4),
 							]}
 						>
@@ -169,7 +169,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								media("(min-width: 1024px)", fontSize("3.75rem")),
 							]}
 						>
-							{title} <span mix={[fg("primary.fg")]}>{highlight}</span>
+							{title} <span mix={[fg("brand")]}>{highlight}</span>
 						</h1>
 						<p
 							mix={[
@@ -273,11 +273,11 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						bg({
 							image: linearGradient(
 								"to right",
-								"var(--ui-primary-bg-solid)",
-								"var(--ui-primary-bg-solid-hover)",
+								"var(--ui-brand-bg-solid)",
+								"var(--ui-brand-bg-solid-hover)",
 							),
 						}),
-						fg("primary.onSolid"),
+						fg("brand.onSolid"),
 					]}
 				>
 					<h2>{finalCtaTitle}</h2>

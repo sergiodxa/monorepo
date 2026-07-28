@@ -12,9 +12,10 @@
 
 import { Trans } from "@pkg/i18n/ui";
 import { CheckIcon } from "@pkg/lucide-remix";
+import { LinkButton } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { cursor, raw } from "@pkg/u/general";
+import { raw } from "@pkg/u/general";
 import {
 	flex,
 	flexRow,
@@ -31,15 +32,7 @@ import { media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { color } from "@pkg/u/tokens";
-import {
-	font,
-	fontSize,
-	leading,
-	textAlign,
-	textDecoration,
-	tracking,
-	weight,
-} from "@pkg/u/typography";
+import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -342,40 +335,9 @@ export default createAction(routes.home, async (ctx) => {
 								dashboardLabel={ctx.i18next.t("landing.hero.cta.in")}
 								startLabel={ctx.i18next.t("landing.hero.cta.out")}
 							/>
-							<a
-								href="#pricing"
-								mix={[
-									inlineFlex(),
-									items("center"),
-									justify("center"),
-									p("12px", "24px"),
-									rounded("8px"),
-									border({ color: "neutral", width: 1 }),
-									raw({ backgroundColor: "#ffffff" }),
-									fg("neutral"),
-									font("inherit"),
-									fontSize("1rem"),
-									weight(600),
-									cursor("pointer"),
-									textDecoration("none"),
-									raw({ boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }),
-									hover([
-										bg("neutral.tint"),
-										raw({
-											boxShadow:
-												"0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
-										}),
-									]),
-									media("(prefers-color-scheme: dark)", [
-										border("neutral"),
-										bg("neutral.tint"),
-										fg("neutral"),
-										hover(bg("neutral.bg-tint-hover")),
-									]),
-								]}
-							>
+							<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
 								{ctx.i18next.t("landing.hero.cta.pricing")}
-							</a>
+							</LinkButton>
 						</div>
 
 						<div
