@@ -17,7 +17,7 @@ import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@pkg/u/layout";
 import { bleed, is, m, mbs, mi, minIs, p } from "@pkg/u/size";
-import { overflowWrap, text, textTransform, tracking, weight } from "@pkg/u/typography";
+import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@pkg/u/typography";
 import { Frame } from "remix/ui";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
@@ -116,6 +116,7 @@ export function PostView() {
 							bg("neutral.bg-tint-hover"),
 							bleed(4),
 							overflowWrap("break-word"),
+							tabSize(),
 							minIs(0),
 						]}
 					>
