@@ -1,8 +1,8 @@
 /**
  * Layout component for public blog pages. Composes the shared document shell,
- * forwarding the page's title, description, canonical and social tags plus any
- * per-page stylesheets, and draws the parchment body and main navigation bar
- * before the page children. Exists to give every public page a shared shell.
+ * forwarding the page's title, description, canonical and social tags, and draws
+ * the parchment body and main navigation bar before the page children. Exists to
+ * give every public page a shared shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,7 +41,6 @@ export namespace BlogLayout {
 		title: string;
 		description: string;
 		activePath?: string;
-		stylesheets?: Array<{ href: string; media?: string }>;
 		canonical?: string;
 		meta?: Array<MetaTag>;
 		children: RemixNode;
@@ -75,15 +74,7 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
  */
 export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 	return () => {
-		let {
-			activePath,
-			canonical,
-			children,
-			description,
-			meta = [],
-			stylesheets = [],
-			title,
-		} = handle.props;
+		let { activePath, canonical, children, description, meta = [], title } = handle.props;
 
 		return (
 			<DocumentLayout
@@ -91,7 +82,6 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				description={description}
 				canonical={canonical}
 				meta={meta}
-				stylesheets={stylesheets}
 				bodyMix={[
 					m(0),
 					minBs("100vh"),

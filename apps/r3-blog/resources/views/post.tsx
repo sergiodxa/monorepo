@@ -23,7 +23,6 @@ import { Frame } from "remix/ui";
 import type { PostViewModel } from "~/app/http/view-models/post";
 
 import { PROFILE } from "~/config/profile";
-import prismStyles from "~/resources/css/prism.css?url";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -47,7 +46,6 @@ export function PostView() {
 				title={model.title}
 				description={model.description}
 				activePath={model.activePath}
-				stylesheets={[{ href: prismStyles }]}
 				canonical={model.canonical}
 				meta={model.meta}
 			>

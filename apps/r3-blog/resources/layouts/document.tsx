@@ -1,8 +1,8 @@
 /**
  * Root HTML document layout for the r3-blog app. It renders the outer
  * html/head/body shell with charset and viewport meta tags, the page title, SEO
- * and per-page tags, the design-system stylesheets, and the client entry script,
- * switching between the dev source and the built asset path. It exists as the
+ * tags, every stylesheet the app ships, and the client entry script, switching
+ * between the dev source and the built asset path. It exists as the
  * shared document wrapper every server-rendered page is composed into, so the
  * two page shells — the public blog and the CMS — differ only in their own
  * chrome and never in how the document itself is assembled.
@@ -18,6 +18,7 @@ import themeStyles from "@pkg/r3-ui/theme.css?url";
 
 import { NavigationIndicator } from "~/resources/components/navigation-indicator";
 import colorStyles from "~/resources/css/colors.css?url";
+import prismStyles from "~/resources/css/prism.css?url";
 
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
@@ -40,16 +41,6 @@ namespace DocumentLayout {
 		content: string;
 	}
 
-	/**
-	 * One page-specific stylesheet, linked after the design system's own so a page
-	 * can override the system where it needs to — the post page's code-block theme
-	 * is the only current case.
-	 */
-	export interface Stylesheet {
-		href: string;
-		media?: string;
-	}
-
 	export interface Props {
 		children: RemixNode;
 		title: string;
@@ -65,7 +56,6 @@ namespace DocumentLayout {
 		 * already own the URL and title strings those tags restate.
 		 */
 		meta?: Array<MetaTag>;
-		stylesheets?: Array<Stylesheet>;
 		/**
 		 * Styling for `<body>` itself, which the two shells genuinely disagree on:
 		 * the public pages set a serif face over a fixed parchment gradient, the CMS
@@ -87,7 +77,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			description,
 			locale = "en",
 			meta = [],
-			stylesheets = [],
 			title,
 		} = handle.props;
 
@@ -114,11 +103,22 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					then the semantic theme tokens that read them through `var()` — CSS
 					custom properties resolve at used-value time, so declaration order
 					between these three doesn't actually affect which value wins, but
-					reading them least-specific-to-most mirrors the token layering. Page
-					stylesheets come last, so a page can override the system. */}
+					reading them least-specific-to-most mirrors the token layering.
+
+					The code-block theme comes last so it still outranks the system, and it
+					loads on every page rather than only on posts. It used to be a per-page
+					stylesheet, which meant this render-blocking `<link>` was inserted when
+					navigating into a post and removed when navigating back out — and
+					adding or removing a render-blocking stylesheet mid-navigation forces a
+					full style recalculation of a document whose markup is still the old
+					page's. Posts were the only pages with a per-page stylesheet, which is
+					exactly the set of navigations that flashed. It is ~1.3 KB over the wire
+					and cached after the first page, so serving it everywhere is cheaper than
+					the churn was. */}
 					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
 					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
+					<link rel="stylesheet" href={prismStyles} data-key="style-code" />
 					<title data-key="title">{title}</title>
 					{description && <meta name="description" content={description} data-key="description" />}
 					{canonical && <link rel="canonical" href={canonical} data-key="canonical" />}
@@ -135,15 +135,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 							/>
 						);
 					})}
-					{stylesheets.map((item) => (
-						<link
-							key={item.href + (item.media ?? "")}
-							data-key={`page-style:${item.href}`}
-							rel="stylesheet"
-							href={item.href}
-							media={item.media}
-						/>
-					))}
 				</head>
 				<body mix={bodyMix}>
 					{/* First in the body so it paints above the page without needing to be
