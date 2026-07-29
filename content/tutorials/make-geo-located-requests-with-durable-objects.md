@@ -1,161 +1,156 @@
 ---
 title: How to Make Geo-Located Requests with Durable Objects
-excerpt: Use Durable Objects location hints to make HTTP requests from specific geographic regions.
+excerpt: Use Durable Object location hints to send monitoring requests from specific regions.
 tech: @cloudflare/workers-types@4.0.0
 ---
 
-A website might be up in North America but down in Europe. Regional outages, CDN issues, or DNS propagation delays can make a site accessible from one location and unreachable from another. This is why [regional monitoring matters](/articles/why-latency-is-not-universal-in-regional-monitoring): latency and availability are not universal. To build reliable uptime monitoring, you need to make requests that actually originate from specific geographic regions.
+A site can be reachable from North America and broken from Europe. Regional outages, DNS propagation, and upstream routing issues mean latency and availability are not universal. If you are building uptime monitoring, you need requests that originate from more than one region.
 
-Cloudflare Durable Objects provide **location hints**: a way to suggest where a Durable Object instance should be created. By routing HTTP requests through a Durable Object with a specific location hint, you can make requests that originate from that region and measure real-world latency from different parts of the world.
+Durable Objects support location hints. A hint tells Cloudflare where you would like a Durable Object instance to be created. That makes a Durable Object a useful regional fetcher: create one object per region, call it from your Worker, and let the object make the outbound request.
 
-## Create the Geo Fetch Durable Object
+## Create the Durable Object
+
+Use a Durable Object RPC method instead of a `fetch()` handler. The public method runs inside the Durable Object instance, so the outbound `fetch()` starts from wherever that object is placed.
 
 ```ts {% path="app/durable-objects/geo-fetch.ts" %}
 import { DurableObject } from "cloudflare:workers";
 
-export class GeoFetchDO extends DurableObject<Cloudflare.Env> {
-	override async fetch(request: Request): Promise<Response> {
+export interface Env {
+	GEO_FETCH: DurableObjectNamespace<GeoFetch>;
+}
+
+export interface PingResult {
+	status: number;
+	responseTimeMs: number;
+}
+
+export class GeoFetch extends DurableObject<Env> {
+	async ping(url: string): Promise<PingResult> {
 		let start = performance.now();
-		let response = await fetch(request);
+		let response = await fetch(url, { method: "HEAD" });
 		let end = performance.now();
 
-		response = new Response(response.body, response);
-		response.headers.set("X-Response-Time", `${end - start}`);
-
-		return response;
+		return {
+			status: response.status,
+			responseTimeMs: end - start,
+		};
 	}
 }
 ```
 
-This Durable Object acts as a proxy for HTTP requests. It receives a request, forwards it using `fetch()`, measures the response time, and adds it as a custom header. The key insight is that the `fetch()` call happens from wherever the Durable Object instance is running, which we control with location hints.
+This object does not need storage. It exists to pin outbound requests to a Durable Object instance. If you later store check history in the object, write it to Durable Object storage before caching anything in memory.
 
-## Configure the Durable Object Binding
+## Configure the Binding
+
+Bind the Durable Object class in `wrangler.jsonc`. Use a SQLite migration for new Durable Object classes.
 
 ```jsonc {% path="wrangler.jsonc" %}
 {
 	"durable_objects": {
-		"bindings": [{ "name": "GEO_FETCH", "class_name": "GeoFetchDO" }],
+		"bindings": [{ "name": "GEO_FETCH", "class_name": "GeoFetch" }],
 	},
 
-	"migrations": [{ "tag": "v1", "new_classes": ["GeoFetchDO"] }],
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["GeoFetch"] }],
 }
 ```
 
-This binds the Durable Object class to the `GEO_FETCH` namespace, making it available in your Worker's environment.
+The binding gives your Worker access to the `GEO_FETCH` namespace. The migration tells Cloudflare this Worker owns the Durable Object class.
 
-## Export the Durable Object Class
+## Export the Class
+
+Durable Object classes must be exported from the Worker entry point so Cloudflare can instantiate them.
 
 ```ts {% path="worker.ts" %}
-import { GeoFetchDO } from "./app/durable-objects/geo-fetch";
-
-export { GeoFetchDO };
+export { GeoFetch } from "./app/durable-objects/geo-fetch";
 ```
 
-Durable Object classes must be exported from your Worker's entry point for Cloudflare to instantiate them.
+## Choose a Region
 
-## Make Requests from a Specific Region
+Define the location hints your monitoring system supports. Cloudflare treats hints as placement preferences, not hard guarantees.
 
-```ts {% path="app/lib/geo-fetch.ts" %}
+```ts {% path="app/geo/location-hints.ts" %}
+export type LocationHint =
+	| "wnam"
+	| "enam"
+	| "sam"
+	| "weur"
+	| "eeur"
+	| "apac"
+	| "apac-ne"
+	| "apac-se"
+	| "oc"
+	| "afr"
+	| "me";
+
+export function isEuropeanLocation(locationHint: LocationHint) {
+	return locationHint === "weur" || locationHint === "eeur";
+}
+```
+
+The narrower `apac-ne` and `apac-se` hints are useful when you care about Northeast or Southeast Asia specifically. Use `apac` when you only need a broad Asia-Pacific check.
+
+## Fetch Through the Regional Object
+
+Create one deterministic Durable Object per location hint. Apply the EU jurisdiction before creating the ID, otherwise the ID and namespace can disagree about jurisdiction.
+
+```ts {% path="app/geo/ping-from-region.ts" %}
 import { env } from "cloudflare:workers";
 
-type LocationHint =
-	| "wnam" // Western North America
-	| "enam" // Eastern North America
-	| "sam" // South America
-	| "weur" // Western Europe
-	| "eeur" // Eastern Europe
-	| "apac" // Asia Pacific
-	| "oc" // Oceania
-	| "afr" // Africa
-	| "me"; // Middle East
+import { isEuropeanLocation, type LocationHint } from "./location-hints";
 
-async function pingFromRegion(url: string, locationHint: LocationHint) {
-	// Create a deterministic ID based on the location hint
-	let id = env.GEO_FETCH.idFromName(locationHint);
+export async function pingFromRegion(url: string, locationHint: LocationHint) {
+	let namespace = isEuropeanLocation(locationHint)
+		? env.GEO_FETCH.jurisdiction("eu")
+		: env.GEO_FETCH;
 
-	// Get the stub with the location hint
-	let stub = env.GEO_FETCH.get(id, { locationHint });
+	let id = namespace.idFromName(locationHint);
+	let stub = namespace.get(id, { locationHint });
 
-	// Make the request through the Durable Object
-	let response = await stub.fetch(url, { method: "HEAD" });
-
-	return {
-		status: response.status,
-		responseTimeMs: Number(response.headers.get("X-Response-Time")),
-	};
+	return await stub.ping(url);
 }
 ```
 
-The `idFromName()` method creates a deterministic ID from a string, so using the location hint as the name means all requests for the same region go to the same Durable Object instance. The `locationHint` option in `get()` tells Cloudflare where to create that instance.
+`idFromName(locationHint)` makes routing deterministic: every Western Europe check uses the same Western Europe object ID. The `locationHint` option on `get()` is only considered when the object is created for the first time.
 
-## Handle EU Jurisdiction for GDPR Compliance
+The EU jurisdiction is different from a location hint. `jurisdiction("eu")` restricts where the Durable Object runs and stores data. A location hint only asks Cloudflare to place the object near a region.
 
-```ts {% path="app/lib/geo-fetch.ts" %}
-async function pingFromRegion(url: string, locationHint: LocationHint) {
-	let id = env.GEO_FETCH.idFromName(locationHint);
+## Use It from a Workflow
 
-	// Use EU jurisdiction for European regions
-	let isEurope = locationHint === "eeur" || locationHint === "weur";
-
-	let stub = isEurope
-		? env.GEO_FETCH.jurisdiction("eu").get(id, { locationHint })
-		: env.GEO_FETCH.get(id, { locationHint });
-
-	let response = await stub.fetch(url, { method: "HEAD" });
-
-	return {
-		status: response.status,
-		responseTimeMs: Number(response.headers.get("X-Response-Time")),
-	};
-}
-```
-
-For European regions, you can use the `jurisdiction("eu")` method to ensure the Durable Object only runs in EU data centers. This is useful for GDPR compliance when the request or response might contain personal data.
-
-## Use the Geo Fetch in a Workflow
+For uptime monitoring, the regional request often belongs inside a Workflow step. That gives you durable progress if the workflow is interrupted.
 
 ```ts {% path="app/workflows/monitor.ts" %}
-import { env, WorkflowEntrypoint } from "cloudflare:workers";
+import { WorkflowEntrypoint } from "cloudflare:workers";
 
-export class MonitorWorkflow extends WorkflowEntrypoint<Cloudflare.Env> {
-	async run(event, step) {
+import { pingFromRegion } from "../geo/ping-from-region";
+import type { LocationHint } from "../geo/location-hints";
+
+interface MonitorPayload {
+	monitorId: string;
+	url: string;
+	locationHint: LocationHint;
+}
+
+export class MonitorWorkflow extends WorkflowEntrypoint<Cloudflare.Env, MonitorPayload> {
+	async run(event: WorkflowEvent<MonitorPayload>, step: WorkflowStep) {
 		let { monitorId, url, locationHint } = event.payload;
 
 		let result = await step.do("ping monitor", async () => {
-			let id = env.GEO_FETCH.idFromName(locationHint);
-
-			let isEurope = locationHint === "eeur" || locationHint === "weur";
-			let stub = isEurope
-				? env.GEO_FETCH.jurisdiction("eu").get(id, { locationHint })
-				: env.GEO_FETCH.get(id, { locationHint });
-
-			let response = await stub.fetch(url, { method: "HEAD" });
-
-			return {
-				status: response.status,
-				responseTimeMs: Number(response.headers.get("X-Response-Time")),
-			};
+			return await pingFromRegion(url, locationHint);
 		});
 
-		// Process the result...
+		await step.do("store result", async () => {
+			await saveMonitorResult({ monitorId, locationHint, result });
+		});
 	}
 }
 ```
 
-In a [Cloudflare Workflow](/tutorials/use-cloudflare-workflows-for-long-running-tasks), wrap the geo-located fetch in a `step.do()` call. This makes the operation durable: if the workflow is interrupted, it will resume from the last completed step rather than repeating the request.
+Keep the `ping monitor` step focused on the external request. Store the result in a separate step so retries and observability stay easier to reason about.
 
-## Understand Location Hint Behavior
+## Understand the Limits
 
-Location hints are suggestions, not guarantees. Cloudflare will try to create the Durable Object in the requested region, but may choose a nearby region if the requested one is unavailable. Once a Durable Object instance is created, it stays in that location for its lifetime.
+Location hints are best effort. Cloudflare tries to place the Durable Object near the hinted region, but it may choose another nearby region if the exact one is unavailable. Durable Objects also do not move after creation, so changing the hint later does not relocate an existing object.
 
-The available location hints cover major geographic regions:
+Some hints are broader than others. For example, `apac` covers Asia-Pacific, while `apac-ne` and `apac-se` target narrower subregions. Some hinted regions may currently spawn in a nearby supported region instead of the named region.
 
-- `wnam` and `enam` for North America (west and east)
-- `sam` for South America
-- `weur` and `eeur` for Europe (west and east)
-- `apac` for Asia Pacific
-- `oc` for Oceania
-- `afr` for Africa
-- `me` for Middle East
-
-By using `idFromName(locationHint)`, you create one Durable Object instance per region. All requests for that region route through the same instance, which is efficient for monitoring scenarios where you want consistent measurements from each location.
+Use this pattern when you need consistent regional vantage points for monitoring. Do not use one global Durable Object for every check. One object per region keeps the design simple and avoids turning one instance into a bottleneck.
