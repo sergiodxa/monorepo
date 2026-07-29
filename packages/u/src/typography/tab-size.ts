@@ -6,9 +6,16 @@ import { utility } from "../internal/descriptor";
 
 /**
  * Applies `tab-size`, the width a literal tab character renders at. A bare
- * number is a count of space characters and is emitted unitless, which is
- * what the property expects; a string passes through unchanged so a CSS
- * length (`"4ch"`, `"2rem"`) works too.
+ * number is a count of space characters and is stringified so it stays
+ * unitless, which is what the property expects — a number would otherwise be
+ * serialized as a `px` length, sizing the tab in pixels instead of
+ * characters. A string passes through unchanged, so a CSS length (`"4ch"`,
+ * `"2rem"`) works too.
+ *
+ * Prefer the unitless count over a length: the count resolves against the
+ * font of whatever element the inherited value lands on, while a length is
+ * resolved once where it is declared, so a `ch` value declared on a container
+ * would keep that container's font rather than the code block's.
  *
  * This only has any effect where tab characters actually survive into the
  * rendered text, i.e. alongside `u.whiteSpace("pre")` or
@@ -20,12 +27,12 @@ import { utility } from "../internal/descriptor";
  * written against.
  *
  * @example u.tabSize()
- * @example css({ tabSize: 2 })
+ * @example css({ tabSize: "2" })
  * @example u.tabSize(4)
- * @example css({ tabSize: 4 })
+ * @example css({ tabSize: "4" })
  * @example u.tabSize("4ch")
  * @example css({ tabSize: "4ch" })
  */
 export function tabSize<Node extends Element = Element>(value: number | (string & {}) = 2) {
-	return utility<Node>(() => ({ tabSize: value }));
+	return utility<Node>(() => ({ tabSize: String(value) }));
 }
