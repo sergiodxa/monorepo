@@ -6,9 +6,9 @@
  *
  * Renders the tab bar and the requested tab's table together, so a named `Frame`
  * reload keeps the tab bar's active state in sync with whichever monitor-type table
- * it swapped in. Alongside the tab bar it renders a refresh link that re-navigates
- * the same `Frame` to the current tab's fragment, so the table's data can be pulled
- * again without a full page reload and without hydrating anything.
+ * it swapped in. Alongside the tab bar it renders `RefreshFrameButton`, which reloads
+ * that same `Frame` from the current tab's fragment, so the table's data can be pulled
+ * again without a full page reload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,19 +16,12 @@
 
 import type { Handle } from "remix/ui";
 
-import {
-	ActivityIcon,
-	ClockIcon,
-	GlobeIcon,
-	NetworkIcon,
-	PlusIcon,
-	RefreshCwIcon,
-} from "@pkg/lucide-remix";
+import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
 import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { flex, gap, grow, items, justify } from "@pkg/u/layout";
+import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@pkg/u/layout";
 import { is, mbe } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
@@ -55,6 +48,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
 import { badgeVariant } from "~/resources/components/badge";
+import RefreshFrameButton from "~/resources/components/refresh-frame-button";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import routes from "~/routes/web";
 
@@ -200,8 +194,13 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 					/>
 				))}
 
-				<div mix={[flex(), items("end"), justify("between"), gap("16px"), mbe(4)]}>
-					<Tabs mix={[grow()]}>
+				{/*
+				 * The tab bar keeps the full content width, so its own block-end border
+				 * still runs the whole way across, and the refresh control sits over the
+				 * trailing end of that same row rather than cutting the border short.
+				 */}
+				<div mix={[relative(), mbe(4)]}>
+					<Tabs>
 						<Tabs.List
 							aria-label={props.tabsListLabel}
 							activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
@@ -234,24 +233,14 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 						</Tabs.List>
 					</Tabs>
 
-					{/*
-					 * A plain link, not a client entry: the `link` mixin on an anchor host
-					 * only renders `rmx-target`/`rmx-src` attributes, which the runtime's
-					 * own navigation listener picks up to re-navigate the named frame.
-					 */}
-					<LinkButton
-						href={refreshHref}
-						color="neutral"
-						variant="outline"
-						size="sm"
-						mix={[
-							mbe(2),
-							link(refreshHref, { target: "dashboard-panel", src: refreshSrc, resetScroll: false }),
-						]}
-					>
-						<RefreshCwIcon size={16} strokeWidth={1.5} />
-						{props.refreshLabel}
-					</LinkButton>
+					<div mix={[absolute(), insIe(0), insBs(0), insBe(0), flex(), items("center")]}>
+						<RefreshFrameButton
+							href={refreshHref}
+							src={refreshSrc}
+							target="dashboard-panel"
+							label={props.refreshLabel}
+						/>
+					</div>
 				</div>
 
 				<div id="dashboard-panel-content" role="tabpanel" aria-label={props.panelLabel}>
