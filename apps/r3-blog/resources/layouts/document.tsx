@@ -16,9 +16,17 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 import resetStyles from "@pkg/r3-ui/reset.css?url";
 import themeStyles from "@pkg/r3-ui/theme.css?url";
 
+import { NavigationIndicator } from "~/resources/components/navigation-indicator";
 import colorStyles from "~/resources/css/colors.css?url";
 
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+
+/**
+ * Accessible name for the pending-navigation bar. A literal rather than a
+ * localized string because this app ships no i18n layer; it is the one piece of
+ * copy the document itself owns.
+ */
+const NAVIGATION_INDICATOR_LABEL = "Loading page";
 
 namespace DocumentLayout {
 	/**
@@ -119,6 +127,10 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					))}
 				</head>
 				<body mix={bodyMix}>
+					{/* First in the body so it paints above the page without needing to be
+					repositioned, and so it survives as the first diffed node when the
+					client runtime swaps the document's content on navigation. */}
+					<NavigationIndicator label={NAVIGATION_INDICATOR_LABEL} />
 					{children}
 					{/* `async`, not the implicit defer of a plain module script — a deferred
 					script waits for this whole streamed response to finish parsing, so a
