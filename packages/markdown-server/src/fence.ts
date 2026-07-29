@@ -37,6 +37,11 @@ const LanguageAliasesSchema = z.object({
 	erb: z.literal("html"),
 	gql: z.literal("graphql"),
 	js: z.literal("javascript"),
+	/* Prism ships no `jsonc` grammar, and its JSON one already tokenizes both
+	comment forms, so the alias is the whole fix. Without it every ```jsonc fence —
+	which is every `wrangler.jsonc` listing — falls through untokenized and renders
+	as one undifferentiated run of plain text. */
+	jsonc: z.literal("json"),
 	jsx: z.literal("jsx"),
 	md: z.literal("markdown"),
 	mdx: z.literal("markdown"),

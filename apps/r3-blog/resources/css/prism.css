@@ -15,30 +15,34 @@
  *   comments, namespaces, and plain text. Emerald takes everything carrying
  *   program meaning — literals, strings, keywords, functions, class names. A
  *   reader skimming for what the code says is scanning for the green.
- * - Lightness tier splits roles inside a family. Each family uses four steps of
- *   its scale, and the schemes are mirror images: light runs 600/700/800/900,
- *   dark runs 400/300/200/100 — the same four rungs counted from the other end
- *   of the palette's shared lightness ramp, so tier ordering and spacing survive
- *   the scheme switch. The dark set runs at higher absolute contrast throughout,
- *   because a code surface at L 0.24 leaves more headroom above it than the
- *   light surface at L 0.96 leaves below.
+ * - Lightness tier splits roles inside a family. The schemes are mirror images:
+ *   light runs 600/700/800/900, dark runs 400/300/200/100 — the same four rungs
+ *   counted from the other end of the palette's shared lightness ramp, so tier
+ *   ordering and spacing survive the scheme switch. The dark set runs at higher
+ *   absolute contrast throughout, because a code surface at L 0.24 leaves more
+ *   headroom above it than the light surface at L 0.96 leaves below.
  *
- * Chroma is deliberately not an axis. A desaturated emerald and a saturated one
- * at the same lightness differ by roughly 0.04 chroma, which reads as the same
- * color at 14px in a mono face, so a third "sage" family would have bought a
- * tier that looks like a rendering artifact rather than a distinction. Weight is
- * the third axis instead: keyword, function, and class-name are bold, which is
- * what keeps a bold function name distinct from a literal sharing its step.
+ * The outermost tier — 900 in light, 100 in dark — is reserved for plain text and
+ * belongs to silver alone. Emerald gets the other three, which is what keeps a
+ * class name distinguishable from the ordinary identifier beside it: at that
+ * shared lightness the two would differ by about 0.04 chroma, and chroma is
+ * deliberately not an axis here. Two greens that far apart read as the same color
+ * at 14px in a mono face, which is also why there is no third desaturated-emerald
+ * family — it would have bought a tier that looks like a rendering artifact
+ * rather than a distinction.
  *
- * Most tokens need no per-scheme declaration at all, because the tiers the
- * design wants are exactly the pairs the theme layer already maps: `neutral.fg`
- * is 600/400, `neutral.fg-emphasis` 900/100, `brand.fg` 600/400,
- * `brand.fg-emphasis` 900/100. Those tokens follow the color scheme on their
- * own. Only the two middle emerald tiers and the silver operator tier have no
- * semantic equivalent; they read raw palette steps and are re-declared in the
- * scheme blocks below. Raw steps cannot follow a scheme by themselves, which is
- * why nothing outside this file should reference them — it is safe here only
- * because this file does its own scheme switch.
+ * Weight is the third axis, and it is what lets three emerald tiers carry five
+ * roles: a function name is a bold string tier and a class name a bold literal
+ * tier, so each of those pairs shares a color but never a weight.
+ *
+ * Most tokens need no per-scheme declaration at all, because the tiers the design
+ * wants are exactly the pairs the theme layer already maps: `neutral.fg` is
+ * 600/400, `neutral.fg-emphasis` 900/100, `brand.fg` 600/400. Those tokens follow
+ * the color scheme on their own. Only the literal tier, the keyword tier, and the
+ * silver operator tier have no semantic equivalent; they read raw palette steps
+ * and are re-declared in the scheme blocks below. Raw steps cannot follow a
+ * scheme by themselves, which is why nothing outside this file should reference
+ * them — it is safe here only because this file does its own scheme switch.
  *
  * `inserted` and `deleted` are the one deliberate exception to the two-family
  * rule. They are the only tokens whose meaning is itself a color: a diff that
@@ -82,18 +86,23 @@
 	--ui-highlight-namespace: var(--ui-neutral-fg);
 	--ui-highlight-operator: var(--ui-color-neutral-700);
 
-	/* Emerald: meaning, quietest tier to strongest. Strings and regexes are the
-	same tier because both are literal patterns, and a JSX tag takes the
-	class-name tier because a capitalized tag is a class name. */
+	/* Emerald: meaning, quietest tier to strongest. Three tiers for five roles, so
+	weight splits the two pairs that share one: a function name is a bold string
+	tier, a class name a bold literal tier. Strings and regexes are the same tier
+	because both are literal patterns; a JSX tag takes the class-name tier because
+	a capitalized tag is a class name; a JSX attribute name takes the literal tier
+	because it is a property. Nothing here reaches the `fg-emphasis` tier — that
+	one belongs to plain text, and an emerald sharing its lightness would be
+	separated from an ordinary identifier by chroma alone. */
 	--ui-highlight-string: var(--ui-brand-fg);
-	--ui-highlight-variable: var(--ui-brand-fg);
-	--ui-highlight-jsx-attr-value: var(--ui-brand-fg);
+	--ui-highlight-variable: var(--ui-highlight-string);
+	--ui-highlight-jsx-attr-value: var(--ui-highlight-string);
+	--ui-highlight-function: var(--ui-highlight-string);
 	--ui-highlight-literal: var(--ui-color-brand-700);
-	--ui-highlight-jsx-attr-name: var(--ui-color-brand-700);
-	--ui-highlight-function: var(--ui-color-brand-700);
+	--ui-highlight-jsx-attr-name: var(--ui-highlight-literal);
+	--ui-highlight-class: var(--ui-highlight-literal);
+	--ui-highlight-jsx-tag: var(--ui-highlight-literal);
 	--ui-highlight-keyword: var(--ui-color-brand-800);
-	--ui-highlight-class: var(--ui-brand-fg-emphasis);
-	--ui-highlight-jsx-tag: var(--ui-brand-fg-emphasis);
 
 	/* Diff, where the color is the meaning. */
 	--ui-highlight-inserted: var(--ui-success-fg);
@@ -102,15 +111,17 @@
 
 /*
  * The three tiers with no semantic equivalent, mirrored onto the dark half of
- * each scale. Gated exactly the way the theme layer gates its own scheme
- * switch: `.dark` for a forced scheme, `.system` under the OS preference. Every
- * other token above resolves through a semantic token and needs no restatement.
+ * each scale. Gated exactly the way the theme layer gates its own scheme switch:
+ * `.dark` for a forced scheme, `.system` under the OS preference.
+ *
+ * Three declarations cover eight tokens, because the rest of the set reaches
+ * these values through a `var()` of its own — `class` reads `literal`, `function`
+ * reads `string` — and custom properties resolve per element, so a token
+ * pointing at `literal` picks up whichever `literal` its own scheme declared.
  */
 :is(.dark, .dark *) {
 	--ui-highlight-operator: var(--ui-color-neutral-300);
 	--ui-highlight-literal: var(--ui-color-brand-300);
-	--ui-highlight-jsx-attr-name: var(--ui-color-brand-300);
-	--ui-highlight-function: var(--ui-color-brand-300);
 	--ui-highlight-keyword: var(--ui-color-brand-200);
 }
 
@@ -118,8 +129,6 @@
 	:is(.system, .system *) {
 		--ui-highlight-operator: var(--ui-color-neutral-300);
 		--ui-highlight-literal: var(--ui-color-brand-300);
-		--ui-highlight-jsx-attr-name: var(--ui-color-brand-300);
-		--ui-highlight-function: var(--ui-color-brand-300);
 		--ui-highlight-keyword: var(--ui-color-brand-200);
 	}
 }
