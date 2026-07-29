@@ -19,6 +19,7 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST reach for a `@pkg/r3-ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
 - MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@pkg/r3-ui/theme.css` and MUST NOT be redeclared here.
 - MUST link the stylesheets in document layouts in the order reset, app palette, theme (`@pkg/r3-ui/reset.css`, `resources/css/colors.css`, `@pkg/r3-ui/theme.css`).
+- MUST have every document layout load the `bootstrap/browser.ts` client entry as `<script type="module" async>` (plus a matching `modulepreload`), so same-origin navigations swap the document through the Navigation API and server-streamed `<Frame>` placeholders resolve. It stays `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
 - MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales.
 - MUST ensure changes pass `bunx tsc -p apps/r3-blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
@@ -28,7 +29,7 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
-- SHOULD keep color and typography changes consistent with the warm ink-on-parchment style: the `neutral` scale is a low-chroma warm cream and `brand` a muted slate blue, deliberately restrained rather than saturated.
+- SHOULD keep color and typography changes consistent with the warm ink-on-parchment style: the `neutral` scale is a low-chroma warm cream, while `brand` is a saturated blue ink running near the sRGB ceiling — restraint belongs to the neutrals, not to brand, which is mostly link text and goes dusty if desaturated.
 - SHOULD validate route params early and return `notFound("<h1>404 Not Found</h1>")` on invalid routes.
 - SHOULD prefer a semantic tone (`u.fg("neutral.muted")`) over a raw palette step (`u.bg("color.neutral.200")`) in component styles.
 - SHOULD reach for the `success` / `warning` / `danger` tones for status and destructive affordances rather than overloading `brand`.
