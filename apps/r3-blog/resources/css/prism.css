@@ -1,45 +1,70 @@
 /*
  * Syntax-highlighting theme for Prism-rendered code blocks.
  *
- * The chrome tokens — surface, border, gutter highlight, text, selection — are
- * derived from the app's own palette scales so a code block sits on the same
- * surface as the prose around it and shifts with the palette rather than
- * drifting from it. The syntax tokens below them stay a dedicated, hand-tuned
- * theme: reusing generic UI foreground tones for keywords and strings collapses
- * the hue separation reading code depends on, so those keep their own values.
+ * Every color here — chrome and syntax alike — resolves to the app's own two
+ * house scales: silver (`neutral`, hue 250) and emerald (`brand`, hue 162). A
+ * code block is therefore drawn from the same palette as the page around it
+ * rather than being a borrowed rainbow theme parked inside it, and it shifts
+ * with the palette instead of drifting from it.
  *
- * The chrome reads from the *semantic* `--ui-{tone}-*` tokens rather than raw
- * palette steps, which is what lets it follow the color scheme: the theme layer
- * already remaps those per scheme, so `--ui-neutral-bg-tint-hover` is the step
- * just off the page background in both directions — one step darker than a light
- * page, one step lighter than a dark one — which is exactly the relationship a
- * code block wants. Reading raw steps instead would pin the block to a near-white
- * surface and leave it glaring on a dark page.
+ * Two hues cannot carry a dozen token roles on hue alone, so roles separate
+ * along two other axes:
  *
- * The syntax hues cannot follow the same trick, because there is no semantic
- * token for "the blue a literal should be". They stay a dedicated, hand-tuned
- * theme — reusing generic UI foreground tones for keywords and strings collapses
- * the hue separation reading code depends on — which means they need one set per
- * scheme: dark-on-light below, and light-on-dark in the scheme blocks that
- * follow. Both sets keep the same hue per token, so a reader who switches schemes
- * still finds strings green and keywords warm; only lightness and chroma move.
+ * - Family splits scaffolding from meaning. Silver takes the parts of a listing
+ *   that are punctuation in the typographic sense — braces, operators,
+ *   comments, namespaces, and plain text. Emerald takes everything carrying
+ *   program meaning — literals, strings, keywords, functions, class names. A
+ *   reader skimming for what the code says is scanning for the green.
+ * - Lightness tier splits roles inside a family. Each family uses four steps of
+ *   its scale, and the schemes are mirror images: light runs 600/700/800/900,
+ *   dark runs 400/300/200/100 — the same four rungs counted from the other end
+ *   of the palette's shared lightness ramp, so tier ordering and spacing survive
+ *   the scheme switch. The dark set runs at higher absolute contrast throughout,
+ *   because a code surface at L 0.24 leaves more headroom above it than the
+ *   light surface at L 0.96 leaves below.
  *
- * The two near-achromatic tokens are the exception and do read from semantic
- * tokens: `comment` and `namespace` have to follow the neutral family or they
- * read as a stray smudge of the wrong temperature. `comment` takes the plain `fg`
- * weight rather than the muted one, because nothing at the muted step's lightness
- * clears AA against a near-white code surface, and a comment is prose that has to
- * be read.
+ * Chroma is deliberately not an axis. A desaturated emerald and a saturated one
+ * at the same lightness differ by roughly 0.04 chroma, which reads as the same
+ * color at 14px in a mono face, so a third "sage" family would have bought a
+ * tier that looks like a rendering artifact rather than a distinction. Weight is
+ * the third axis instead: keyword, function, and class-name are bold, which is
+ * what keeps a bold function name distinct from a literal sharing its step.
  *
- * The string and JSX-attribute-value green stays close to the brand hue on
- * purpose: the separation the theme needs is between syntax tokens, not between
- * a string and the surrounding UI, and a code block's own border already tells
- * the reader they have left the prose.
+ * Most tokens need no per-scheme declaration at all, because the tiers the
+ * design wants are exactly the pairs the theme layer already maps: `neutral.fg`
+ * is 600/400, `neutral.fg-emphasis` 900/100, `brand.fg` 600/400,
+ * `brand.fg-emphasis` 900/100. Those tokens follow the color scheme on their
+ * own. Only the two middle emerald tiers and the silver operator tier have no
+ * semantic equivalent; they read raw palette steps and are re-declared in the
+ * scheme blocks below. Raw steps cannot follow a scheme by themselves, which is
+ * why nothing outside this file should reference them — it is safe here only
+ * because this file does its own scheme switch.
+ *
+ * `inserted` and `deleted` are the one deliberate exception to the two-family
+ * rule. They are the only tokens whose meaning is itself a color: a diff that
+ * renders additions and removals as two shades of the same green cannot be read
+ * at all. They take `success.fg` and `danger.fg` — the app's own status tones,
+ * still not custom values — rather than an emerald tier.
+ *
+ * Every value clears WCAG AA as body text against the code surface it renders
+ * on (`neutral` 100 in light, 900 in dark). The tightest are brand 600 at
+ * 4.63:1 and success 600 at 4.58:1 in light; the whole dark set sits above
+ * 6.4:1. Inline code is deliberately not part of that budget: this app's
+ * Markdown renderer emits inline code as a bare `<code>` with no `language-*`
+ * class, so it only ever takes the plain text color, and no syntax token
+ * renders against the tighter inline surface.
  *
  * Sizes read the shared scale variables (spacing, radius) rather than one-off
  * lengths, so a code block's padding and corners match every other surface.
  */
 :root {
+	/* Chrome. Reads the semantic `--ui-{tone}-*` tokens rather than raw palette
+	steps, which is what lets it follow the color scheme: the theme layer already
+	remaps those per scheme, so `--ui-neutral-bg-tint-hover` is the step just off
+	the page background in both directions — one step darker than a light page,
+	one step lighter than a dark one — which is exactly the relationship a code
+	block wants. Reading raw steps instead would pin the block to a near-white
+	surface and leave it glaring on a dark page. */
 	--ui-highlight-text: var(--ui-neutral-fg-emphasis);
 	--ui-highlight-selection: var(--ui-brand-border);
 	--ui-highlight-surface: var(--ui-neutral-bg-tint-hover);
@@ -47,53 +72,55 @@
 	--ui-highlight-border: var(--ui-neutral-border);
 	--ui-highlight-line: var(--ui-neutral-bg-tint-pressed);
 	--ui-highlight-line-accent: var(--ui-brand-fg);
+
+	/* Silver: scaffolding. Comment, punctuation and namespace share the quietest
+	tier on purpose — they are the three things a reader skips — and the comment
+	face below is what tells them apart. Operators sit one tier up because they
+	carry meaning that punctuation does not. */
 	--ui-highlight-comment: var(--ui-neutral-fg);
-	--ui-highlight-punctuation: var(--ui-neutral-fg-emphasis);
+	--ui-highlight-punctuation: var(--ui-neutral-fg);
 	--ui-highlight-namespace: var(--ui-neutral-fg);
-	--ui-highlight-literal: oklch(0.43 0.09 246);
-	--ui-highlight-string: oklch(0.46 0.085 165);
-	--ui-highlight-operator: oklch(0.48 0.1 334);
-	--ui-highlight-keyword: oklch(0.5 0.11 32);
-	--ui-highlight-function: oklch(0.45 0.11 286);
-	--ui-highlight-variable: oklch(0.43 0.1 226);
-	--ui-highlight-class: oklch(0.53 0.085 72);
-	--ui-highlight-jsx-tag: oklch(0.41 0.095 244);
-	--ui-highlight-jsx-attr-name: oklch(0.5 0.11 32);
-	--ui-highlight-jsx-attr-value: oklch(0.46 0.085 165);
+	--ui-highlight-operator: var(--ui-color-neutral-700);
+
+	/* Emerald: meaning, quietest tier to strongest. Strings and regexes are the
+	same tier because both are literal patterns, and a JSX tag takes the
+	class-name tier because a capitalized tag is a class name. */
+	--ui-highlight-string: var(--ui-brand-fg);
+	--ui-highlight-variable: var(--ui-brand-fg);
+	--ui-highlight-jsx-attr-value: var(--ui-brand-fg);
+	--ui-highlight-literal: var(--ui-color-brand-700);
+	--ui-highlight-jsx-attr-name: var(--ui-color-brand-700);
+	--ui-highlight-function: var(--ui-color-brand-700);
+	--ui-highlight-keyword: var(--ui-color-brand-800);
+	--ui-highlight-class: var(--ui-brand-fg-emphasis);
+	--ui-highlight-jsx-tag: var(--ui-brand-fg-emphasis);
+
+	/* Diff, where the color is the meaning. */
+	--ui-highlight-inserted: var(--ui-success-fg);
+	--ui-highlight-deleted: var(--ui-danger-fg);
 }
 
 /*
- * Light-on-dark syntax hues, gated exactly the way the theme layer gates its own
- * scheme switch: `.dark` for a forced scheme, `.system` under the OS preference.
- * Every value sits at L=0.80 with its chroma held inside the sRGB gamut for that
- * lightness, and each clears better than 8:1 against the dark code surface — a
- * wide margin on purpose, since code is dense and read closely.
+ * The three tiers with no semantic equivalent, mirrored onto the dark half of
+ * each scale. Gated exactly the way the theme layer gates its own scheme
+ * switch: `.dark` for a forced scheme, `.system` under the OS preference. Every
+ * other token above resolves through a semantic token and needs no restatement.
  */
 :is(.dark, .dark *) {
-	--ui-highlight-literal: oklch(0.8 0.099 246);
-	--ui-highlight-string: oklch(0.8 0.123 165);
-	--ui-highlight-operator: oklch(0.8 0.145 334);
-	--ui-highlight-keyword: oklch(0.8 0.106 32);
-	--ui-highlight-function: oklch(0.8 0.097 286);
-	--ui-highlight-variable: oklch(0.8 0.123 226);
-	--ui-highlight-class: oklch(0.8 0.123 72);
-	--ui-highlight-jsx-tag: oklch(0.8 0.1 244);
-	--ui-highlight-jsx-attr-name: oklch(0.8 0.106 32);
-	--ui-highlight-jsx-attr-value: oklch(0.8 0.123 165);
+	--ui-highlight-operator: var(--ui-color-neutral-300);
+	--ui-highlight-literal: var(--ui-color-brand-300);
+	--ui-highlight-jsx-attr-name: var(--ui-color-brand-300);
+	--ui-highlight-function: var(--ui-color-brand-300);
+	--ui-highlight-keyword: var(--ui-color-brand-200);
 }
 
 @media (prefers-color-scheme: dark) {
 	:is(.system, .system *) {
-		--ui-highlight-literal: oklch(0.8 0.099 246);
-		--ui-highlight-string: oklch(0.8 0.123 165);
-		--ui-highlight-operator: oklch(0.8 0.145 334);
-		--ui-highlight-keyword: oklch(0.8 0.106 32);
-		--ui-highlight-function: oklch(0.8 0.097 286);
-		--ui-highlight-variable: oklch(0.8 0.123 226);
-		--ui-highlight-class: oklch(0.8 0.123 72);
-		--ui-highlight-jsx-tag: oklch(0.8 0.1 244);
-		--ui-highlight-jsx-attr-name: oklch(0.8 0.106 32);
-		--ui-highlight-jsx-attr-value: oklch(0.8 0.123 165);
+		--ui-highlight-operator: var(--ui-color-neutral-300);
+		--ui-highlight-literal: var(--ui-color-brand-300);
+		--ui-highlight-jsx-attr-name: var(--ui-color-brand-300);
+		--ui-highlight-function: var(--ui-color-brand-300);
+		--ui-highlight-keyword: var(--ui-color-brand-200);
 	}
 }
 
@@ -193,8 +220,7 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.boolean,
 .token.number,
 .token.constant,
-.token.symbol,
-.token.deleted {
+.token.symbol {
 	color: var(--ui-highlight-literal);
 }
 
@@ -202,9 +228,19 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.attr-name,
 .token.string,
 .token.char,
-.token.builtin,
-.token.inserted {
+.token.builtin {
 	color: var(--ui-highlight-string);
+}
+
+/* Split out of the literal and string groups they belong to in Prism's own
+theme, because inside a diff they are the two tokens a reader distinguishes by
+color alone. */
+.token.inserted {
+	color: var(--ui-highlight-inserted);
+}
+
+.token.deleted {
+	color: var(--ui-highlight-deleted);
 }
 
 .token.operator,
