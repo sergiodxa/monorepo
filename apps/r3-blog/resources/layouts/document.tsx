@@ -96,6 +96,34 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<head>
 					<meta charSet="utf-8" data-key="charset" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
+					{/* The color the mobile browser paints its own chrome — the address bar and
+					the status bar behind it — so the page appears to extend past the viewport
+					instead of butting against a stock grey or white band.
+
+					Both are `neutral.tint`, the color that actually sits at the top of every
+					page in each scheme: the CMS fills the body with it flat, and the public
+					shell's radial sheen holds its innermost stop out to 20% of a
+					150vmax-wide gradient, which is far enough that the entire top edge of any
+					phone viewport is still that first stop rather than the deeper base color.
+
+					Spelled out as literals because `content` is parsed as a bare color and
+					cannot resolve `var()`, so these two values have to be kept in step with
+					`--ui-color-neutral-50` and `--ui-color-neutral-950` in the palette by
+					hand. They are the palette's own oklch notation rather than a converted
+					hex so the drift is visible when it happens; a browser too old to parse
+					oklch simply falls back to its default chrome. */}
+					<meta
+						name="theme-color"
+						media="(prefers-color-scheme: light)"
+						content="oklch(0.98 0.004 250)"
+						data-key="theme-color-light"
+					/>
+					<meta
+						name="theme-color"
+						media="(prefers-color-scheme: dark)"
+						content="oklch(0.16 0.006 250)"
+						data-key="theme-color-dark"
+					/>
 					{/* Order matters: reset first, then this app's own --ui-color-* scales,
 					then the semantic theme tokens that read them through `var()` — CSS
 					custom properties resolve at used-value time, so declaration order
