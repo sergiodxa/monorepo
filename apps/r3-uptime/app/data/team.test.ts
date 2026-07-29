@@ -10,14 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
 import type { Database } from "remix/data-table";
 
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
 import IdToken from "~/app/auth/value-objects/id-token";
-import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
@@ -44,6 +43,16 @@ import {
 	teamDomains,
 	teams,
 } from "~/database/schema";
+
+/**
+ * `~/app/data/monitor` imports `env` from `cloudflare:workers`, which doesn't resolve
+ * outside the Workers runtime — stub it so the module loads, and import `Monitor`
+ * dynamically afterwards so the stub is registered before that import evaluates.
+ * Nothing here reaches the queue; the seed only creates monitors and reads them back.
+ */
+mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: async () => {} } } }));
+
+let { default: Monitor } = await import("~/app/data/monitor");
 
 /** A fully-populated `IdToken`, with any claim overridable per test. */
 function buildIdToken(

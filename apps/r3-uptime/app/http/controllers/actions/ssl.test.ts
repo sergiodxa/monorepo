@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
@@ -25,17 +25,12 @@ import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
- * object before handing it to the schema, but `remix/data-schema/form-data`'s
- * `f.object()` (which every schema in this app is built with) validates the raw
- * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
- * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
- * always fails, regardless of whether the submitted data is actually valid — a real,
- * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
- * mock forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ * The action imports `~/app/data/monitor`, which imports `env` from
+ * `cloudflare:workers` — a module that doesn't resolve outside the Workers runtime.
+ * Stub it so the import below can load; nothing here reaches the queue binding.
  */
+mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: async () => {} } } }));
+
 let { updateSsl } = await import("./ssl");
 
 /** Creates an in-memory database seeded with one team, a membership, and a monitor. */
