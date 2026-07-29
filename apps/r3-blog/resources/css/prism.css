@@ -1,33 +1,45 @@
-/* R3 Blog Prism theme */
+/*
+ * Syntax-highlighting theme for Prism-rendered code blocks.
+ *
+ * The chrome tokens — surface, border, gutter highlight, text, selection — are
+ * derived from the app's own palette scales so a code block sits on the same
+ * paper as the prose around it and shifts with the palette rather than drifting
+ * from it. The syntax tokens below them stay a dedicated, hand-tuned theme:
+ * reusing generic UI foreground tones for keywords and strings collapses the
+ * hue separation reading code depends on, so those keep their own values.
+ *
+ * Sizes read the shared scale variables (spacing, radius) rather than one-off
+ * lengths, so a code block's padding and corners match every other surface.
+ */
 :root {
-	--color-highlight-text: oklch(0.3 0.02 78);
-	--color-highlight-selection: oklch(0.89 0.022 240);
-	--color-highlight-surface: oklch(0.95 0.018 86);
-	--color-highlight-surface-inline: oklch(0.92 0.02 86);
-	--color-highlight-border: oklch(0.79 0.024 84);
-	--color-highlight-line: oklch(0.93 0.018 86);
-	--color-highlight-line-accent: oklch(0.71 0.03 84);
-	--color-highlight-comment: oklch(0.58 0.028 76);
-	--color-highlight-punctuation: oklch(0.43 0.02 78);
-	--color-highlight-literal: oklch(0.43 0.09 246);
-	--color-highlight-string: oklch(0.46 0.085 165);
-	--color-highlight-operator: oklch(0.48 0.1 334);
-	--color-highlight-keyword: oklch(0.5 0.11 32);
-	--color-highlight-function: oklch(0.45 0.11 286);
-	--color-highlight-variable: oklch(0.43 0.1 226);
-	--color-highlight-class: oklch(0.53 0.085 72);
-	--color-highlight-namespace: oklch(0.58 0.028 76);
-	--color-highlight-jsx-tag: oklch(0.41 0.095 244);
-	--color-highlight-jsx-attr-name: oklch(0.5 0.11 32);
-	--color-highlight-jsx-attr-value: oklch(0.46 0.085 165);
+	--ui-highlight-text: var(--ui-color-neutral-900);
+	--ui-highlight-selection: var(--ui-color-brand-200);
+	--ui-highlight-surface: var(--ui-color-neutral-100);
+	--ui-highlight-surface-inline: var(--ui-color-neutral-200);
+	--ui-highlight-border: var(--ui-color-neutral-300);
+	--ui-highlight-line: var(--ui-color-neutral-200);
+	--ui-highlight-line-accent: var(--ui-color-brand-400);
+	--ui-highlight-comment: var(--ui-color-neutral-500);
+	--ui-highlight-punctuation: var(--ui-color-neutral-700);
+	--ui-highlight-literal: oklch(0.43 0.09 246);
+	--ui-highlight-string: oklch(0.46 0.085 165);
+	--ui-highlight-operator: oklch(0.48 0.1 334);
+	--ui-highlight-keyword: oklch(0.5 0.11 32);
+	--ui-highlight-function: oklch(0.45 0.11 286);
+	--ui-highlight-variable: oklch(0.43 0.1 226);
+	--ui-highlight-class: oklch(0.53 0.085 72);
+	--ui-highlight-namespace: oklch(0.58 0.028 76);
+	--ui-highlight-jsx-tag: oklch(0.41 0.095 244);
+	--ui-highlight-jsx-attr-name: oklch(0.5 0.11 32);
+	--ui-highlight-jsx-attr-value: oklch(0.46 0.085 165);
 }
 
 pre[class*="language-"],
 code[class*="language-"] {
-	color: var(--color-highlight-text);
-	font-size: 13px;
+	color: var(--ui-highlight-text);
+	font-size: var(--ui-text-sm, 0.875rem);
 	text-shadow: none;
-	font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+	font-family: var(--ui-font-mono);
 	direction: ltr;
 	text-align: left;
 	white-space: pre;
@@ -43,26 +55,28 @@ code[class*="language-"]::selection,
 pre[class*="language-"]::-moz-selection,
 code[class*="language-"]::-moz-selection {
 	text-shadow: none;
-	background: var(--color-highlight-selection);
+	background: var(--ui-highlight-selection);
 }
 
 pre[class*="language-"] {
-	padding: 1em;
-	margin: 0.5em 0;
+	padding: calc(var(--ui-spacing, 0.25rem) * 4);
+	margin-block: calc(var(--ui-spacing, 0.25rem) * 2);
+	margin-inline: 0;
 	overflow-x: auto;
 	overflow-y: hidden;
 	overscroll-behavior-x: contain;
 	overscroll-behavior-inline: contain;
-	background: var(--color-highlight-surface);
-	border: 1px solid var(--color-highlight-border);
-	border-radius: 0.6rem;
+	background: var(--ui-highlight-surface);
+	border: 1px solid var(--ui-highlight-border);
+	border-radius: var(--ui-radius-lg, 0.5rem);
 }
 
 :not(pre) > code[class*="language-"] {
-	padding: 0.1em 0.3em;
-	border-radius: 0.3em;
-	color: var(--color-highlight-text);
-	background: var(--color-highlight-surface-inline);
+	padding-block: calc(var(--ui-spacing, 0.25rem) * 0.5);
+	padding-inline: calc(var(--ui-spacing, 0.25rem) * 1);
+	border-radius: var(--ui-radius-sm, 0.25rem);
+	color: var(--ui-highlight-text);
+	background: var(--ui-highlight-surface-inline);
 }
 
 pre[data-line] {
@@ -74,7 +88,7 @@ pre[class*="language-"] > code[class*="language-"] {
 	z-index: 1;
 	display: inline-block;
 	min-width: 100%;
-	padding-right: 1.1em;
+	padding-inline-end: calc(var(--ui-spacing, 0.25rem) * 4);
 	box-sizing: border-box;
 }
 
@@ -83,9 +97,9 @@ pre[class*="language-"] > code[class*="language-"] {
 	left: 0;
 	right: 0;
 	padding: inherit 0;
-	margin-top: 1em;
-	background: var(--color-highlight-line);
-	box-shadow: inset 4px 0 0 var(--color-highlight-line-accent);
+	margin-block-start: calc(var(--ui-spacing, 0.25rem) * 4);
+	background: var(--ui-highlight-line);
+	box-shadow: inset 4px 0 0 var(--ui-highlight-line-accent);
 	z-index: 0;
 	pointer-events: none;
 	line-height: inherit;
@@ -100,7 +114,7 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-	color: var(--color-highlight-comment);
+	color: var(--ui-highlight-comment);
 	font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive;
 	font-weight: 500;
 	font-size: 1.05em;
@@ -108,7 +122,7 @@ pre[class*="language-"] > code[class*="language-"] {
 }
 
 .token.punctuation {
-	color: var(--color-highlight-punctuation);
+	color: var(--ui-highlight-punctuation);
 }
 
 .token.property,
@@ -118,7 +132,7 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.constant,
 .token.symbol,
 .token.deleted {
-	color: var(--color-highlight-literal);
+	color: var(--ui-highlight-literal);
 }
 
 .token.selector,
@@ -127,7 +141,7 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.char,
 .token.builtin,
 .token.inserted {
-	color: var(--color-highlight-string);
+	color: var(--ui-highlight-string);
 }
 
 .token.operator,
@@ -135,56 +149,56 @@ pre[class*="language-"] > code[class*="language-"] {
 .token.url,
 .language-css .token.string,
 .style .token.string {
-	color: var(--color-highlight-operator);
+	color: var(--ui-highlight-operator);
 }
 
 .token.atrule,
 .token.attr-value,
 .token.keyword {
-	color: var(--color-highlight-keyword);
+	color: var(--ui-highlight-keyword);
 	font-weight: 600;
 }
 
 .token.function {
-	color: var(--color-highlight-function);
+	color: var(--ui-highlight-function);
 	font-weight: 600;
 }
 
 .token.regex,
 .token.important,
 .token.variable {
-	color: var(--color-highlight-variable);
+	color: var(--ui-highlight-variable);
 }
 
 .token.class-name,
 .token.maybe-class-name,
 .token.parameter {
-	color: var(--color-highlight-class);
+	color: var(--ui-highlight-class);
 	font-weight: 600;
 }
 
 .token.namespace {
-	color: var(--color-highlight-namespace);
+	color: var(--ui-highlight-namespace);
 }
 
 .language-jsx .token.tag,
 .language-tsx .token.tag,
 .language-javascript .token.tag,
 .language-typescript .token.tag {
-	color: var(--color-highlight-jsx-tag);
+	color: var(--ui-highlight-jsx-tag);
 	font-weight: 600;
 }
 
 .language-jsx .token.tag .token.punctuation,
 .language-tsx .token.tag .token.punctuation {
-	color: var(--color-highlight-operator);
+	color: var(--ui-highlight-operator);
 }
 
 .language-jsx .token.tag .token.class-name,
 .language-tsx .token.tag .token.class-name,
 .language-jsx .token.tag .token.script-punctuation,
 .language-tsx .token.tag .token.script-punctuation {
-	color: var(--color-highlight-jsx-tag);
+	color: var(--ui-highlight-jsx-tag);
 	font-weight: 700;
 }
 
@@ -192,7 +206,7 @@ pre[class*="language-"] > code[class*="language-"] {
 .language-tsx .token.attr-name,
 .language-javascript .token.attr-name,
 .language-typescript .token.attr-name {
-	color: var(--color-highlight-jsx-attr-name);
+	color: var(--ui-highlight-jsx-attr-name);
 	font-weight: 600;
 }
 
@@ -200,17 +214,17 @@ pre[class*="language-"] > code[class*="language-"] {
 .language-tsx .token.attr-value,
 .language-javascript .token.attr-value,
 .language-typescript .token.attr-value {
-	color: var(--color-highlight-jsx-attr-value);
+	color: var(--ui-highlight-jsx-attr-value);
 }
 
 .language-jsx .token.plain-text,
 .language-tsx .token.plain-text {
-	color: var(--color-highlight-text);
+	color: var(--ui-highlight-text);
 }
 
 .language-jsx .token.script,
 .language-tsx .token.script {
-	color: var(--color-highlight-text);
+	color: var(--ui-highlight-text);
 }
 
 .token.important,

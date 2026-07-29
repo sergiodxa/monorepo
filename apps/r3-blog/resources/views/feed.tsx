@@ -8,7 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import type { ColorValue } from "@pkg/u";
+
+import { Badge, Heading, Link } from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { listStyle } from "@pkg/u/general";
+import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@pkg/u/layout";
+import { bs, is, m, maxIs, mbs, mis, p } from "@pkg/u/size";
+import { spacing } from "@pkg/u/tokens";
+import { nowrap, text } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -26,7 +34,8 @@ export namespace FeedView {
 		date: string;
 		preview: boolean;
 		icon: string;
-		iconTint: string;
+		/** Semantic tone the icon is tinted with, resolved through `fg()` at render. */
+		iconTint: ColorValue;
 	}
 
 	/**
@@ -52,118 +61,62 @@ function formatDate(value: string) {
 export function FeedView() {
 	return ({ model }: { model: FeedView.Model }) => (
 		<BlogLayout title="Sergio Xalambrí" description="Sergio Xalambrí" activePath="/">
-			<main mix={[css({ display: "grid", gap: "0.95rem" })]}>
-				<h1
-					mix={[
-						css({
-							fontSize: "2.2rem",
-							margin: 0,
-							lineHeight: 1.05,
-							color: "var(--ui-neutral-fg-emphasis)",
-						}),
-					]}
-				>
+			<main mix={[grid(), gap(4)]}>
+				<Heading level={1} mix={[m(0), text("4xl")]}>
 					Sergio Xalambrí
-				</h1>
-				<p
-					mix={[
-						css({
-							margin: 0,
-							color: "var(--ui-neutral-fg)",
-							maxWidth: "60ch",
-							fontSize: "1.08rem",
-							lineHeight: 1.4,
-						}),
-					]}
-				>
+				</Heading>
+				<p mix={[m(0), fg("neutral"), maxIs("60ch"), text("lg")]}>
 					Web Developer from Buenos Aires with 10+ years of experience. I work at
 					<strong> Daffy</strong> and maintain several open-source libraries around React Router and
 					OAuth2.
 				</p>
-				<p
-					mix={[css({ margin: "0.2rem 0 0", color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}
-				>
-					Subscribe to my content using <a href={routes.rss.feed.href()}>RSS</a>.
+				<p mix={[m(0), mbs(1), fg("neutral"), text("lg")]}>
+					Subscribe to my content using <Link href={routes.rss.feed.href()}>RSS</Link>.
 				</p>
 
-				<h2
-					mix={[
-						css({
-							margin: "0.5rem 0 0",
-							fontSize: "1.4rem",
-							color: "var(--ui-neutral-fg-emphasis)",
-						}),
-					]}
-				>
+				<Heading level={2} mix={[m(0), mbs(2), text("2xl")]}>
 					Activity
-				</h2>
+				</Heading>
 
-				<ol
-					mix={[css({ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.9rem" })]}
-				>
+				<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(4)]}>
 					{model.activity.map((item, index) => (
 						<li
 							key={item.href + String(index)}
 							mix={[
-								css({
-									display: "grid",
-									gridTemplateColumns: "1.8rem 1fr auto",
-									gap: "0.8rem",
-									alignItems: "start",
-								}),
+								grid(),
+								/* The leading icon well is a fixed spacing-scale column so every
+								row's label starts at the same inline offset regardless of the
+								emoji's own intrinsic width. */
+								gridTemplate({ columns: `${spacing(7)} 1fr auto` }),
+								gap(3),
+								items("start"),
 							]}
 						>
 							<span
 								aria-hidden
 								mix={[
-									css({
-										display: "inline-flex",
-										justifyContent: "center",
-										alignItems: "center",
-										width: "1.8rem",
-										height: "1.8rem",
-										fontSize: "1.25rem",
-										color: item.iconTint,
-									}),
+									inlineFlex(),
+									justify("center"),
+									items("center"),
+									is(7),
+									bs(7),
+									text("xl"),
+									/* The view model picks which tone each activity kind reads in;
+									the theme still owns what that tone resolves to. */
+									fg(item.iconTint),
 								]}
 							>
 								{item.icon}
 							</span>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.05rem",
-										color: "var(--ui-neutral-fg-emphasis)",
-										lineHeight: 1.4,
-									}),
-								]}
-							>
-								<a href={item.href}>{item.label}</a>
+							<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
+								<Link href={item.href}>{item.label}</Link>
 								{item.preview && (
-									<span
-										mix={[
-											css({
-												marginLeft: "0.4rem",
-												fontSize: "0.85rem",
-												color: "var(--ui-accent-fg-emphasis)",
-											}),
-										]}
-									>
+									<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 										Preview
-									</span>
+									</Badge>
 								)}
 							</p>
-							<time
-								mix={[
-									css({
-										color: "var(--ui-neutral-fg-muted)",
-										fontSize: "0.95rem",
-										whiteSpace: "nowrap",
-										marginTop: "0.1rem",
-									}),
-								]}
-							>
+							<time mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(1)]}>
 								{formatDate(item.date)}
 							</time>
 						</li>

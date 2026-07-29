@@ -8,12 +8,25 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import {
+	Button,
+	Card,
+	Form,
+	Heading,
+	Input,
+	Label,
+	Link,
+	LinkButton,
+	Modal,
+	Table,
+} from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { raw } from "@pkg/u/general";
+import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
+import { is, m, p } from "@pkg/u/size";
+import { truncate } from "@pkg/u/typography";
 
-import { Button } from "~/resources/components/button";
-import { Input } from "~/resources/components/input";
 import { CMSLayout } from "~/resources/components/layout/cms";
-import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
 /**
@@ -92,266 +105,98 @@ export function CMSBookmarksIndexView() {
 
 		return (
 			<CMSLayout title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
-				<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
-						<div
-							mix={[
-								css({ display: "flex", justifyContent: "space-between", alignItems: "center" }),
-							]}
-						>
-							<h2
-								mix={[
-									css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }),
-								]}
-							>
-								Bookmarks
-							</h2>
-							<a
-								href={routes.cms.bookmarks.new.href()}
-								mix={[
-									css({
-										boxSizing: "border-box",
-										display: "inline-flex",
-										alignItems: "center",
-										height: "2.25rem",
-										padding: "0 0.7rem",
-										fontSize: "0.9rem",
-										borderRadius: "0.4rem",
-										border: "1px solid var(--ui-accent-border)",
-										backgroundColor: "var(--ui-accent-bg-tint)",
-										color: "var(--ui-accent-fg-emphasis)",
-										textDecoration: "none",
-									}),
-								]}
-							>
+				<main mix={[grid(), gap(4)]}>
+					<Card mix={[p(4)]}>
+						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
+							<Heading level={2}>Bookmarks</Heading>
+							<LinkButton href={routes.cms.bookmarks.new.href()} color="brand" size="sm">
 								New Bookmark
-							</a>
+							</LinkButton>
 						</div>
-					</section>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
+					</Card>
+					<Card mix={[p(4)]}>
 						{items.length === 0 ? (
-							<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
-								No bookmarks found in the database yet.
-							</p>
+							<p mix={[m(0), fg("neutral")]}>No bookmarks found in the database yet.</p>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table
-									mix={[css({ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" })]}
-								>
-									<thead>
-										<tr>
-											<th
-												mix={[
-													css({
-														width: "40%",
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Title
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												URL
-											</th>
-											<th
-												mix={[
-													css({
-														width: "7rem",
-														textAlign: "right",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
+							<Table.Container>
+								{/* Fixed layout is what lets the URL column ellipsize instead of
+								stretching the table past the panel; there is no `u` utility for
+								`table-layout`, so it stays a raw declaration. */}
+								<Table aria-label="Bookmarks" mix={[raw({ tableLayout: "fixed" })]}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column mix={[is("40%")]}>Title</Table.Column>
+											<Table.Column>URL</Table.Column>
+											<Table.Column align="end" mix={[is("7rem")]}>
 												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
+											</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{items.map((item, index) => {
 											let dialogId = `delete-bookmark-${String(index)}`;
 											return (
-												<tr key={item.id}>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg-emphasis)",
-															}),
-														]}
-													>
-														{item.title}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg)",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-																whiteSpace: "nowrap",
-															}),
-														]}
-													>
-														<a
-															href={normalizeBookmarkHref(item.url)}
-															mix={[css({ color: "var(--ui-accent-fg)" })]}
-														>
+												<Table.Row key={item.id}>
+													<Table.Cell>{item.title}</Table.Cell>
+													<Table.Cell mix={[fg("neutral"), truncate()]}>
+														<Link href={normalizeBookmarkHref(item.url)}>
 															{normalizeBookmarkHref(item.url)}
-														</a>
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "right",
-															}),
-														]}
-													>
-														<div
-															mix={[
-																css({
-																	display: "flex",
-																	gap: "0.35rem",
-																	justifyContent: "end",
-																	alignItems: "center",
-																}),
-															]}
-														>
-															<a
+														</Link>
+													</Table.Cell>
+													<Table.Cell>
+														<div mix={[hstack({ gap: 1, align: "center", justify: "end" })]}>
+															<LinkButton
 																href={item.href}
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-accent-border)",
-																		color: "var(--ui-accent-fg-emphasis)",
-																		textDecoration: "none",
-																	}),
-																]}
+																color="brand"
+																variant="outline"
+																size="sm"
 															>
 																Edit
-															</a>
-															<button
+															</LinkButton>
+															<Button
 																type="button"
 																commandfor={dialogId}
 																command="show-modal"
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-neutral-border)",
-																		backgroundColor: "transparent",
-																		color: "var(--ui-neutral-fg)",
-																		cursor: "pointer",
-																	}),
-																]}
+																color="danger"
+																variant="outline"
+																size="sm"
 															>
 																Delete
-															</button>
+															</Button>
 														</div>
 
 														<Modal id={dialogId}>
-															<form
-																method="post"
-																action={item.deleteAction}
-																mix={[css({ display: "grid", gap: "0.75rem" })]}
-															>
+															<Form method="post" action={item.deleteAction}>
 																<input type="hidden" name="_method" value="DELETE" />
-																<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
+																<Modal.Description>
 																	Delete bookmark <strong>{item.title}</strong>? This action cannot
 																	be undone.
-																</p>
-																<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
-																	<Button type="submit">Confirm delete</Button>
-																	<button
+																</Modal.Description>
+																<Modal.Footer>
+																	<Button type="submit" color="danger">
+																		Confirm delete
+																	</Button>
+																	<Button
 																		type="button"
 																		commandfor={dialogId}
 																		command="close"
-																		mix={[
-																			css({
-																				padding: "0.45rem 0.7rem",
-																				fontSize: "0.9rem",
-																				borderRadius: "0.4rem",
-																				border: "1px solid var(--ui-neutral-border)",
-																				backgroundColor: "transparent",
-																				color: "var(--ui-neutral-fg)",
-																				cursor: "pointer",
-																				fontFamily: "inherit",
-																			}),
-																		]}
+																		color="neutral"
+																		variant="outline"
 																	>
 																		Cancel
-																	</button>
-																</div>
-															</form>
+																	</Button>
+																</Modal.Footer>
+															</Form>
 														</Modal>
-													</td>
-												</tr>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
-					</section>
+					</Card>
 				</main>
 			</CMSLayout>
 		);
@@ -368,58 +213,40 @@ export function CMSBookmarksActionView() {
 		return (
 			<CMSLayout title={title} activePath={routes.cms.bookmarks.index.href()}>
 				<main>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-								display: "grid",
-								gap: "0.8rem",
-							}),
-						]}
-					>
-						<h2
-							mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
-						>
-							{title}
-						</h2>
-						<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
+					<Card mix={[p(4), grid(), gap(3)]}>
+						<Heading level={2}>{title}</Heading>
+						<p mix={[m(0), fg("neutral")]}>{description}</p>
 
-						<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
+						<Form method="post" action={action}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
+							{/* The field stays nested inside its `Label`, so the control keeps
+							the implicit label association it already had — no `id`/`for` pair
+							needed. */}
+							<Label mix={[grid(), gap(1)]}>
+								Title
 								<Input name="title" value={values.title} required />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>URL</span>
+							<Label mix={[grid(), gap(1)]}>
+								URL
 								<Input name="url" value={values.url} required />
-							</label>
+							</Label>
 
-							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
-								<Button type="submit">{submitLabel}</Button>
-								<a
+							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+								<Button type="submit" color="brand">
+									{submitLabel}
+								</Button>
+								<LinkButton
 									href={routes.cms.bookmarks.index.href()}
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-accent-border)",
-											color: "var(--ui-accent-fg-emphasis)",
-											textDecoration: "none",
-										}),
-									]}
+									color="brand"
+									variant="outline"
 								>
 									Back to list
-								</a>
+								</LinkButton>
 							</div>
-						</form>
-					</section>
+						</Form>
+					</Card>
 				</main>
 			</CMSLayout>
 		);

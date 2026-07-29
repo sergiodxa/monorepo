@@ -8,12 +8,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import {
+	Button,
+	Card,
+	Form,
+	Heading,
+	Input,
+	Label,
+	LinkButton,
+	Modal,
+	Table,
+	TextArea,
+} from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
+import { m, p } from "@pkg/u/size";
 
-import { Button } from "~/resources/components/button";
-import { Input } from "~/resources/components/input";
 import { CMSLayout } from "~/resources/components/layout/cms";
-import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
 /**
@@ -76,254 +87,91 @@ export function CMSGlossaryIndexView() {
 
 		return (
 			<CMSLayout title="Glossary" activePath={routes.cms.glossary.index.href()}>
-				<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
-						<div
-							mix={[
-								css({ display: "flex", justifyContent: "space-between", alignItems: "center" }),
-							]}
-						>
-							<h2
-								mix={[
-									css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }),
-								]}
-							>
-								Glossary
-							</h2>
-							<a
-								href={routes.cms.glossary.new.href()}
-								mix={[
-									css({
-										boxSizing: "border-box",
-										display: "inline-flex",
-										alignItems: "center",
-										height: "2.25rem",
-										padding: "0 0.7rem",
-										fontSize: "0.9rem",
-										borderRadius: "0.4rem",
-										border: "1px solid var(--ui-accent-border)",
-										backgroundColor: "var(--ui-accent-bg-tint)",
-										color: "var(--ui-accent-fg-emphasis)",
-										textDecoration: "none",
-									}),
-								]}
-							>
+				<main mix={[grid(), gap(4)]}>
+					<Card mix={[p(4)]}>
+						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
+							<Heading level={2}>Glossary</Heading>
+							<LinkButton href={routes.cms.glossary.new.href()} color="brand" size="sm">
 								New Glossary
-							</a>
+							</LinkButton>
 						</div>
-					</section>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
+					</Card>
+					<Card mix={[p(4)]}>
 						{items.length === 0 ? (
-							<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
-								No glossary terms found in the database yet.
-							</p>
+							<p mix={[m(0), fg("neutral")]}>No glossary terms found in the database yet.</p>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table mix={[css({ width: "100%", borderCollapse: "collapse" })]}>
-									<thead>
-										<tr>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Term
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Slug
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "right",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label="Glossary">
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>Term</Table.Column>
+											<Table.Column>Slug</Table.Column>
+											<Table.Column align="end">Actions</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{items.map((item, index) => {
 											let dialogId = `delete-glossary-${String(index)}`;
 											return (
-												<tr key={item.id}>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg-emphasis)",
-															}),
-														]}
-													>
-														{item.term}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg)",
-															}),
-														]}
-													>
+												<Table.Row key={item.id}>
+													<Table.Cell>{item.term}</Table.Cell>
+													<Table.Cell mix={[fg("neutral")]}>
 														<code>{`/glossary#${item.slug}`}</code>
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "right",
-															}),
-														]}
-													>
-														<div
-															mix={[
-																css({
-																	display: "flex",
-																	gap: "0.35rem",
-																	justifyContent: "end",
-																	alignItems: "center",
-																}),
-															]}
-														>
-															<a
+													</Table.Cell>
+													<Table.Cell>
+														<div mix={[hstack({ gap: 1, align: "center", justify: "end" })]}>
+															<LinkButton
 																href={item.href}
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-accent-border)",
-																		color: "var(--ui-accent-fg-emphasis)",
-																		textDecoration: "none",
-																	}),
-																]}
+																color="brand"
+																variant="outline"
+																size="sm"
 															>
 																Edit
-															</a>
-															<button
+															</LinkButton>
+															<Button
 																type="button"
 																commandfor={dialogId}
 																command="show-modal"
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-neutral-border)",
-																		backgroundColor: "transparent",
-																		color: "var(--ui-neutral-fg)",
-																		cursor: "pointer",
-																	}),
-																]}
+																color="danger"
+																variant="outline"
+																size="sm"
 															>
 																Delete
-															</button>
+															</Button>
 														</div>
 
 														<Modal id={dialogId}>
-															<form
-																method="post"
-																action={item.deleteAction}
-																mix={[css({ display: "grid", gap: "0.75rem" })]}
-															>
+															<Form method="post" action={item.deleteAction}>
 																<input type="hidden" name="_method" value="DELETE" />
-																<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
+																<Modal.Description>
 																	Delete glossary term <strong>{item.term}</strong>? This action
 																	cannot be undone.
-																</p>
-																<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
-																	<Button type="submit">Confirm delete</Button>
-																	<button
+																</Modal.Description>
+																<Modal.Footer>
+																	<Button type="submit" color="danger">
+																		Confirm delete
+																	</Button>
+																	<Button
 																		type="button"
 																		commandfor={dialogId}
 																		command="close"
-																		mix={[
-																			css({
-																				padding: "0.45rem 0.7rem",
-																				fontSize: "0.9rem",
-																				borderRadius: "0.4rem",
-																				border: "1px solid var(--ui-neutral-border)",
-																				backgroundColor: "transparent",
-																				color: "var(--ui-neutral-fg)",
-																				cursor: "pointer",
-																				fontFamily: "inherit",
-																			}),
-																		]}
+																		color="neutral"
+																		variant="outline"
 																	>
 																		Cancel
-																	</button>
-																</div>
-															</form>
+																	</Button>
+																</Modal.Footer>
+															</Form>
 														</Modal>
-													</td>
-												</tr>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
-					</section>
+					</Card>
 				</main>
 			</CMSLayout>
 		);
@@ -340,40 +188,28 @@ export function CMSGlossaryActionView() {
 		return (
 			<CMSLayout title={title} activePath={routes.cms.glossary.index.href()}>
 				<main>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-								display: "grid",
-								gap: "0.8rem",
-							}),
-						]}
-					>
-						<h2
-							mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
-						>
-							{title}
-						</h2>
-						<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
+					<Card mix={[p(4), grid(), gap(3)]}>
+						<Heading level={2}>{title}</Heading>
+						<p mix={[m(0), fg("neutral")]}>{description}</p>
 
-						<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
+						<Form method="post" action={action}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Term</span>
+							{/* Every field stays nested inside its `Label`, so the controls keep
+							the implicit label association they already had — no `id`/`for` pair
+							needed — and each one's original `aria-label` rides along untouched. */}
+							<Label mix={[grid(), gap(1)]}>
+								Term
 								<Input name="term" aria-label="Term" value={values.term} required />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
+							<Label mix={[grid(), gap(1)]}>
+								Title
 								<Input name="title" aria-label="Title" value={values.title} />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Slug</span>
+							<Label mix={[grid(), gap(1)]}>
+								Slug
 								<Input
 									name="slug"
 									aria-label="Slug"
@@ -381,49 +217,23 @@ export function CMSGlossaryActionView() {
 									required
 									readOnly={mode === "edit"}
 								/>
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Definition</span>
-								<textarea
-									name="definition"
-									rows={8}
-									required
-									defaultValue={values.definition}
-									mix={[
-										css({
-											padding: "0.45rem 0.55rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-neutral-border)",
-											backgroundColor: "var(--ui-neutral-bg-tint)",
-											color: "var(--ui-neutral-fg-emphasis)",
-											fontFamily: "inherit",
-										}),
-									]}
-								/>
-							</label>
+							<Label mix={[grid(), gap(1)]}>
+								Definition
+								<TextArea name="definition" rows={8} required defaultValue={values.definition} />
+							</Label>
 
-							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
-								<Button type="submit">{submitLabel}</Button>
-								<a
-									href={routes.cms.glossary.index.href()}
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-accent-border)",
-											color: "var(--ui-accent-fg-emphasis)",
-											textDecoration: "none",
-										}),
-									]}
-								>
+							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+								<Button type="submit" color="brand">
+									{submitLabel}
+								</Button>
+								<LinkButton href={routes.cms.glossary.index.href()} color="brand" variant="outline">
 									Back to list
-								</a>
+								</LinkButton>
 							</div>
-						</form>
-					</section>
+						</Form>
+					</Card>
 				</main>
 			</CMSLayout>
 		);

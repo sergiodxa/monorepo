@@ -1,8 +1,9 @@
 /**
  * Layout component for public blog pages. Renders the HTML document shell with
- * title, description, canonical, and custom meta tags, injects shared and
- * per-page stylesheets, and draws the gradient body plus the main navigation
- * bar before the page children. Exists to give every public page a shared shell.
+ * title, description, canonical, and custom meta tags, injects the design
+ * system's reset and theme stylesheets plus any per-page ones, and draws the
+ * parchment body and main navigation bar before the page children. Exists to
+ * give every public page a shared shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +11,15 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { css } from "remix/ui";
+import { NavLink } from "@pkg/r3-ui";
+import resetStyles from "@pkg/r3-ui/reset.css?url";
+import themeStyles from "@pkg/r3-ui/theme.css?url";
+import { bg, border, fg, radialGradient } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flexWrap, hstack } from "@pkg/u/layout";
+import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@pkg/u/size";
+import { color } from "@pkg/u/tokens";
+import { font, text, textTransform, tracking } from "@pkg/u/typography";
 
 import appColorsStyles from "~/resources/css/colors.css?url";
 import routes from "~/routes/web";
@@ -95,7 +104,13 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							content={tag.content}
 						/>
 					))}
+					{/* Reset first, then this app's raw palette scales, then the semantic
+					theme layer that reads them. Custom properties resolve at used-value
+					time so the order between the last two can't change which value wins,
+					but reading least-specific to most mirrors how the tokens layer. */}
+					<link rel="stylesheet" href={resetStyles} />
 					<link rel="stylesheet" href={appColorsStyles} />
+					<link rel="stylesheet" href={themeStyles} />
 					{stylesheets.map((item) => (
 						<link
 							key={item.href + (item.media ?? "")}
@@ -107,80 +122,67 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				</head>
 				<body
 					mix={[
-						css({
-							margin: 0,
-							fontFamily: "'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', serif",
-							backgroundColor: "var(--color-neutral-200)",
-							backgroundImage:
-								"radial-gradient(circle at 10% 10%, var(--ui-neutral-bg-tint-hover) 0, var(--ui-neutral-bg-tint-hover) 18%, var(--ui-neutral-bg-tint-pressed) 52%, var(--color-neutral-200) 100%)",
-							backgroundRepeat: "no-repeat",
-							backgroundSize: "150vmax 150vmax",
-							backgroundAttachment: "fixed",
-							color: "var(--ui-neutral-fg-emphasis)",
-							minHeight: "100vh",
+						m(0),
+						minBs("100vh"),
+						font("serif"),
+						fg("neutral.emphasis"),
+						/* The parchment wash: a fixed, oversized radial gradient running from
+						the two lightest neutral tints out to the 200 step, so the page reads
+						as a sheet of aged paper lit from its top-left corner rather than a
+						flat fill. Fixed attachment keeps the light source still while the
+						content scrolls past it. */
+						bg({
+							color: "neutral.tint",
+							image: radialGradient(
+								"circle at 10% 10%",
+								{ color: color("neutral.bg-tint-hover"), position: "0" },
+								{ color: color("neutral.bg-tint-hover"), position: "18%" },
+								{ color: color("neutral.bg-tint-pressed"), position: "52%" },
+								{ color: color("color.neutral.200"), position: "100%" },
+							),
+							repeat: "no-repeat",
+							size: "150vmax 150vmax",
+							attachment: "fixed",
 						}),
 					]}
 				>
-					<div
-						mix={[
-							css({
-								maxWidth: "85ch",
-								margin: "0 auto",
-								padding: "2rem 1rem 3rem",
-							}),
-						]}
-					>
-						<header mix={[css({ marginBottom: "2rem" })]}>
+					<div mix={[maxIs("85ch"), mi("auto"), pbs(8), pi(4), pbe(12)]}>
+						<header mix={[mbe(8)]}>
 							<p
 								mix={[
-									css({
-										textTransform: "uppercase",
-										letterSpacing: "0.16em",
-										fontSize: "0.75rem",
-										margin: 0,
-										color:
-											"color-mix(in oklch, var(--ui-neutral-fg-muted) 88%, var(--ui-neutral-bg-tint))",
-										textShadow:
-											"0 -1px 0 color-mix(in oklch, var(--ui-neutral-fg-emphasis) 28%, transparent), 0 1px 0 color-mix(in oklch, var(--ui-neutral-bg-tint) 92%, white), 0 2px 2px color-mix(in oklch, var(--ui-neutral-fg-muted) 12%, transparent)",
-									}),
+									m(0),
+									text("xs"),
+									textTransform("uppercase"),
+									tracking("widest"),
+									fg("neutral.muted"),
 								]}
 							>
 								Sergio Xalambrí
 							</p>
-							<nav
-								aria-label="Main"
-								mix={[
-									css({
-										display: "flex",
-										gap: "0.5rem",
-										marginTop: "0.75rem",
-										flexWrap: "wrap",
-									}),
-								]}
-							>
-								{navigationItems.map((item) => (
-									<a
-										key={item.href}
-										href={item.href}
-										mix={[
-											css({
-												padding: "0.3rem 0.7rem",
-												borderRadius: "999px",
-												fontSize: "0.9rem",
-												textDecoration: "none",
-												border: "1px solid var(--ui-neutral-border)",
-												color:
-													activePath === item.href ? "var(--ui-accent-fg)" : "var(--ui-neutral-fg)",
-												backgroundColor:
-													activePath === item.href
-														? "var(--ui-accent-bg-tint)"
-														: "var(--ui-neutral-bg-tint-hover)",
-											}),
-										]}
-									>
-										{item.label}
-									</a>
-								))}
+							<nav aria-label="Main" mix={[hstack({ gap: 2 }), flexWrap("wrap"), mbs(3)]}>
+								{navigationItems.map((item) => {
+									let isActive = activePath === item.href;
+
+									return (
+										<NavLink
+											key={item.href}
+											href={item.href}
+											color={isActive ? "brand" : "neutral"}
+											hasBackground
+											aria-current={isActive ? "page" : undefined}
+											mix={[
+												text("sm"),
+												pi(3),
+												pb(1),
+												rounded("full"),
+												border({ width: 1, color: isActive ? "brand" : "neutral" }),
+												bg(isActive ? "brand.tint" : "neutral.bg-tint-hover"),
+											]}
+										>
+											{item.label}
+										</NavLink>
+									);
+								})}
 							</nav>
 						</header>
 						{children}

@@ -8,7 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Button, Form, Heading } from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { contents, gap, grid, place } from "@pkg/u/layout";
+import { m, maxIs } from "@pkg/u/size";
+import { text, textAlign } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -33,42 +37,29 @@ export function LogoutView() {
 			description="Sign out from CMS"
 			activePath={routes.auth.logout.index.href()}
 		>
-			<main
-				mix={[css({ display: "grid", gap: "1rem", justifyItems: "center", textAlign: "center" })]}
-			>
-				<h1 mix={[css({ margin: 0, fontSize: "2.4rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+			<main mix={[grid(), gap(4), place({ items: "center" }), textAlign("center")]}>
+				<Heading level={1} mix={[m(0), text("4xl")]}>
 					Logout
-				</h1>
+				</Heading>
 
-				<p
-					mix={[
-						css({ margin: 0, maxWidth: "55ch", color: "var(--ui-neutral-fg)", lineHeight: 1.4 }),
-					]}
-				>
+				<p mix={[m(0), maxIs("55ch"), fg("neutral")]}>
 					Are you sure you want to sign out from CMS?
 				</p>
 
-				<form
+				{/* The form carries no fields of its own — the confirmation is the submit
+				itself — so it stays `display: contents` and lets the button sit directly in
+				the page's centered grid. */}
+				<Form
 					action={routes.auth.logout.action.href()}
 					method={routes.auth.logout.action.method}
-					mix={[css({ display: "contents" })]}
+					mix={[contents()]}
 				>
-					<button
-						type="submit"
-						mix={[
-							css({
-								textDecoration: "none",
-								backgroundColor: "var(--ui-accent-bg-solid)",
-								color: "var(--ui-accent-fg-on-solid)",
-								padding: "0.65rem 1rem",
-								borderRadius: "0.6rem",
-								fontWeight: 700,
-							}),
-						]}
-					>
+					{/* Ending a session is destructive, so the confirm button reads in the
+					danger tone rather than the brand one. */}
+					<Button type="submit" color="danger" size="lg">
 						Sign out
-					</button>
-				</form>
+					</Button>
+				</Form>
 			</main>
 		</BlogLayout>
 	);

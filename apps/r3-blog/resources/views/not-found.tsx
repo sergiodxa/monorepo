@@ -1,13 +1,15 @@
 /**
- * View for the 404 not-found page. Renders a centered emoji badge, title, and
- * description supplied by the route model inside the shared BlogLayout. Exists to
- * give missing routes a friendly, on-brand fallback screen.
+ * View for the 404 not-found page. Renders the title, description, and emoji
+ * supplied by the route model as a centered empty-state panel inside the shared
+ * BlogLayout. Exists to give missing routes a friendly, on-brand fallback screen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Empty } from "@pkg/r3-ui";
+import { maxIs, pbs } from "@pkg/u/size";
+import { text } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 
@@ -33,52 +35,18 @@ export namespace NotFoundView {
 export function NotFoundView() {
 	return ({ model }: { model: NotFoundView.Model }) => (
 		<BlogLayout title={model.title} description={model.description}>
-			<main
-				mix={[
-					css({
-						display: "grid",
-						gap: "1rem",
-						justifyItems: "center",
-						textAlign: "center",
-						paddingTop: "3rem",
-					}),
-				]}
-			>
-				<div
-					aria-hidden
-					mix={[
-						css({
-							width: "4.5rem",
-							height: "4.5rem",
-							borderRadius: "999px",
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontSize: "2.2rem",
-							backgroundColor: "var(--ui-accent-bg-tint)",
-							color: "var(--ui-accent-fg-emphasis)",
-							border: "1px solid var(--ui-accent-border)",
-						}),
-					]}
-				>
-					{model.emoji}
-				</div>
-				<h1 mix={[css({ margin: 0, fontSize: "2.7rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
-					{model.title}
-				</h1>
-				<p
-					mix={[
-						css({
-							margin: 0,
-							maxWidth: "56ch",
-							color: "var(--ui-neutral-fg)",
-							lineHeight: 1.4,
-							fontSize: "1.35rem",
-						}),
-					]}
-				>
-					{model.description}
-				</p>
+			<main mix={[pbs(12)]}>
+				{/* The panel supplies the centered column, the emoji well, and the brand
+				tint; only the type sizes are pushed up from the panel's compact defaults,
+				since a 404 is the whole page rather than a slot inside one. Empty.Title
+				still renders an <h1> here because no HeadingScope wraps the layout. */}
+				<Empty color="brand">
+					<Empty.Icon mix={[text("4xl")]}>{model.emoji}</Empty.Icon>
+					<Empty.Title mix={[text("5xl")]}>{model.title}</Empty.Title>
+					<Empty.Description mix={[maxIs("56ch"), text("2xl")]}>
+						{model.description}
+					</Empty.Description>
+				</Empty>
 			</main>
 		</BlogLayout>
 	);

@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ColorValue } from "@pkg/u";
+
 import type { Feed } from "~/app/repositories/feed";
 
 import { LikePost } from "~/app/repositories/posts/like";
@@ -37,8 +39,14 @@ export namespace FeedViewModel {
 		preview: boolean;
 		/** Emoji icon representing the activity type. */
 		icon: string;
-		/** CSS color expression (usually a semantic UI token) for the icon. */
-		iconTint: string;
+		/**
+		 * Semantic tone the icon is tinted with, named in the design system's own
+		 * vocabulary (`"brand.emphasis"`, `"neutral"`, ...) rather than as a raw
+		 * CSS color. The view resolves it through the color utilities, so this
+		 * stays a presentation *choice* the view model owns while the actual
+		 * value stays the theme's to decide.
+		 */
+		iconTint: ColorValue;
 	}
 
 	/**
@@ -80,7 +88,7 @@ export class FeedViewModel {
 						date: item.date,
 						preview: item.preview,
 						icon: "📝",
-						iconTint: "var(--ui-accent-fg-emphasis)",
+						iconTint: "brand.emphasis",
 					};
 				}
 
@@ -93,7 +101,7 @@ export class FeedViewModel {
 						date: item.date,
 						preview: item.preview,
 						icon: "🛠️",
-						iconTint: "var(--ui-accent-fg)",
+						iconTint: "brand",
 					};
 				}
 
@@ -106,7 +114,7 @@ export class FeedViewModel {
 						date: item.date,
 						preview: item.preview,
 						icon: "🔖",
-						iconTint: "var(--ui-neutral-fg-emphasis)",
+						iconTint: "neutral.emphasis",
 					};
 				}
 
@@ -118,7 +126,7 @@ export class FeedViewModel {
 					date: item.date,
 					preview: item.preview,
 					icon: "📘",
-					iconTint: "var(--ui-neutral-fg)",
+					iconTint: "neutral",
 				};
 			})
 			.filter(this.isActivityItem);

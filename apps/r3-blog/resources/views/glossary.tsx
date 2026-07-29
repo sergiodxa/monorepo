@@ -8,7 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Heading } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { ringShadow, rounded, transition } from "@pkg/u/effects";
+import { gap, grid } from "@pkg/u/layout";
+import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
+import { text, textDecoration, weight } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -58,92 +64,51 @@ export function GlossaryView() {
 			description="My definition of some terms."
 			activePath={routes.glossary.href()}
 		>
-			<main mix={[css({ display: "grid", gap: "1rem" })]}>
-				<h1 mix={[css({ margin: 0, fontSize: "2rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+			<main mix={[grid(), gap(4)]}>
+				<Heading level={1} mix={[text("3xl")]}>
 					Glossary
-				</h1>
-				<p
-					mix={[
-						css({
-							margin: 0,
-							color: "var(--ui-neutral-fg)",
-							maxWidth: "52ch",
-							fontSize: "1.05rem",
-							lineHeight: 1.35,
-						}),
-					]}
-				>
-					My definition of some terms.
-				</p>
-				<dl mix={[css({ margin: 0, display: "grid", gap: "1.1rem" })]}>
+				</Heading>
+				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>My definition of some terms.</p>
+				<dl mix={[m(0), grid(), gap(3)]}>
 					{model.entries.map((item) => (
+						/* The same list-row treatment the other public index pages use — a
+						tinted, hairline-bordered card on the `lg` radius with one padding step
+						on all sides. The border is a real hairline rather than the transparent
+						2px placeholder it used to be, so the `:target` highlight recolors an
+						existing edge instead of growing one and shifting the row. */
 						<div
 							key={item.id}
 							id={item.slug}
 							mix={[
-								css({
-									padding: "1rem",
-									borderRadius: "0.65rem",
-									border: "2px solid transparent",
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									transition:
-										"background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease",
-									":target": {
-										borderColor: "var(--ui-accent-border-strong)",
-										backgroundColor: "var(--ui-accent-bg-tint)",
-										boxShadow: "0 0 0 3px var(--ui-accent-ring)",
-									},
-									":target dt": {
-										color: "var(--ui-accent-fg-emphasis)",
-									},
-									":target dd": {
-										color: "var(--ui-accent-fg)",
-									},
-									":target small": {
-										color: "var(--ui-accent-fg-muted)",
-									},
-								}),
+								p(4),
+								rounded("lg"),
+								bg("neutral.tint"),
+								border({ width: 1, color: "neutral" }),
+								transition("background-color, border-color, box-shadow", { duration: 120 }),
+								when("&:target", [
+									bg("brand.tint"),
+									border("brand.strong"),
+									ringShadow("brand.ring", 3),
+								]),
+								when("&:target dt", fg("brand.emphasis")),
+								when("&:target dd", fg("brand")),
+								/* `fg`, not the `muted` weight this line would otherwise take: muted
+								is the tone's 500 step and lands under AA on the tint behind it, which
+								small print can least afford. */
+								when("&:target small", fg("brand")),
 							]}
 						>
-							<dt
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.5rem",
-										fontWeight: 700,
-										color: "var(--ui-neutral-fg-emphasis)",
-									}),
-								]}
-							>
-								<a href={`#${item.slug}`} mix={[css({ color: "inherit", textDecoration: "none" })]}>
+							<dt mix={[m(0), text("xl"), weight("bold"), fg("neutral.emphasis")]}>
+								<a href={`#${item.slug}`} mix={[fg("inherit"), textDecoration("none")]}>
 									{item.term}
 									{item.title && (
-										<small
-											mix={[
-												css({
-													marginLeft: "0.45rem",
-													color: "var(--ui-neutral-fg-muted)",
-													fontSize: "0.9rem",
-												}),
-											]}
-										>
+										<small mix={[mis(2), text("sm"), fg("neutral.muted")]}>
 											(aka {item.title})
 										</small>
 									)}
 								</a>
 							</dt>
-							<dd
-								mix={[
-									css({
-										margin: "0.4rem 0 0",
-										color: "var(--ui-neutral-fg-emphasis)",
-										fontSize: "1.05rem",
-										lineHeight: 1.5,
-									}),
-								]}
-							>
-								{item.definition}
-							</dd>
+							<dd mix={[m(0), mbs(2), text("lg"), fg("neutral.emphasis")]}>{item.definition}</dd>
 						</div>
 					))}
 				</dl>

@@ -18,10 +18,12 @@
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",
+		"@pkg/r3-ui": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/service-container": "workspace:*",
 		"@pkg/sitemap": "workspace:*",
+		"@pkg/u": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"inflected": "^2.1.0",
 		"remix": "3.0.0-beta.5"

@@ -8,13 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
+import { m, p } from "@pkg/u/size";
+import { textAlign } from "@pkg/u/typography";
 
-import { Button } from "~/resources/components/button";
-import { Input } from "~/resources/components/input";
 import { CMSLayout } from "~/resources/components/layout/cms";
-import { Modal } from "~/resources/components/modal";
-import { Select } from "~/resources/components/select";
 import routes from "~/routes/web";
 
 /**
@@ -62,251 +63,85 @@ export function CMSRedirectsIndexView() {
 
 		return (
 			<CMSLayout title="Redirects" activePath={routes.cms.redirects.index.href()}>
-				<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
+				<main mix={[grid(), gap(4)]}>
 					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
+						mix={[p(4), rounded("lg"), border({ width: 1, color: "neutral" }), bg("neutral.tint")]}
 					>
-						<div
-							mix={[
-								css({ display: "flex", justifyContent: "space-between", alignItems: "center" }),
-							]}
-						>
-							<h2
-								mix={[
-									css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }),
-								]}
-							>
-								Redirects
-							</h2>
-							<a
-								href={routes.cms.redirects.new.href()}
-								mix={[
-									css({
-										boxSizing: "border-box",
-										display: "inline-flex",
-										alignItems: "center",
-										height: "2.25rem",
-										padding: "0 0.7rem",
-										fontSize: "0.9rem",
-										borderRadius: "0.4rem",
-										border: "1px solid var(--ui-accent-border)",
-										backgroundColor: "var(--ui-accent-bg-tint)",
-										color: "var(--ui-accent-fg-emphasis)",
-										textDecoration: "none",
-									}),
-								]}
-							>
+						<div mix={[hstack({ justify: "between", align: "center" })]}>
+							<Heading level={2}>Redirects</Heading>
+							<LinkButton href={routes.cms.redirects.new.href()} color="brand">
 								New Redirect
-							</a>
+							</LinkButton>
 						</div>
 					</section>
 					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
+						mix={[p(4), rounded("lg"), border({ width: 1, color: "neutral" }), bg("neutral.tint")]}
 					>
 						{items.length === 0 ? (
-							<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
-								No redirects found in KV yet.
-							</p>
+							<p mix={[m(0), fg("neutral")]}>No redirects found in KV yet.</p>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table mix={[css({ width: "100%", borderCollapse: "collapse" })]}>
-									<thead>
-										<tr>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														verticalAlign: "middle",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												From
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														verticalAlign: "middle",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												To
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "center",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														verticalAlign: "middle",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Status
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "right",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														verticalAlign: "middle",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label="Redirects">
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>From</Table.Column>
+											<Table.Column>To</Table.Column>
+											<Table.Column align="center">Status</Table.Column>
+											<Table.Column align="end">Actions</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{items.map((item, index) => {
 											let dialogId = `delete-redirect-${String(index)}`;
 											return (
-												<tr key={item.from}>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg-emphasis)",
-															}),
-														]}
-													>
-														{item.from}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg)",
-															}),
-														]}
-													>
-														{item.to}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "center",
-																color: "var(--ui-neutral-fg)",
-															}),
-														]}
-													>
+												<Table.Row key={item.from}>
+													<Table.Cell>{item.from}</Table.Cell>
+													<Table.Cell mix={[fg("neutral")]}>{item.to}</Table.Cell>
+													<Table.Cell mix={[textAlign("center"), fg("neutral")]}>
 														{String(item.status)}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "right",
-															}),
-														]}
-													>
-														<button
+													</Table.Cell>
+													<Table.Cell mix={[textAlign("end")]}>
+														<Button
 															type="button"
 															commandfor={dialogId}
 															command="show-modal"
-															mix={[
-																css({
-																	boxSizing: "border-box",
-																	display: "inline-flex",
-																	alignItems: "center",
-																	justifyContent: "center",
-																	height: "1.8rem",
-																	padding: "0 0.55rem",
-																	fontSize: "0.82rem",
-																	fontFamily: "inherit",
-																	borderRadius: "0.35rem",
-																	border: "1px solid var(--ui-neutral-border)",
-																	backgroundColor: "transparent",
-																	color: "var(--ui-neutral-fg)",
-																	cursor: "pointer",
-																}),
-															]}
+															color="danger"
+															variant="outline"
+															size="sm"
 														>
 															Delete
-														</button>
+														</Button>
 
 														<Modal id={dialogId}>
-															<form
-																method="post"
-																action={item.deleteAction}
-																mix={[css({ display: "grid", gap: "0.75rem" })]}
-															>
+															<form method="post" action={item.deleteAction} mix={[grid(), gap(3)]}>
 																<input type="hidden" name="_method" value="DELETE" />
-																<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
+																<Modal.Description mix={[m(0)]}>
 																	Delete redirect <strong>{item.from}</strong>? This action cannot
 																	be undone.
-																</p>
-																<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
-																	<Button type="submit">Confirm delete</Button>
-																	<button
+																</Modal.Description>
+																<Modal.Footer>
+																	<Button type="submit" color="danger">
+																		Confirm delete
+																	</Button>
+																	<Button
 																		type="button"
 																		commandfor={dialogId}
 																		command="close"
-																		mix={[
-																			css({
-																				padding: "0.45rem 0.7rem",
-																				fontSize: "0.9rem",
-																				borderRadius: "0.4rem",
-																				border: "1px solid var(--ui-neutral-border)",
-																				backgroundColor: "transparent",
-																				color: "var(--ui-neutral-fg)",
-																				cursor: "pointer",
-																				fontFamily: "inherit",
-																			}),
-																		]}
+																		color="neutral"
+																		variant="outline"
 																	>
 																		Cancel
-																	</button>
-																</div>
+																	</Button>
+																</Modal.Footer>
 															</form>
 														</Modal>
-													</td>
-												</tr>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
 					</section>
 				</main>
@@ -327,63 +162,51 @@ export function CMSRedirectsNewView() {
 				<main>
 					<section
 						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-								display: "grid",
-								gap: "0.8rem",
-							}),
+							grid(),
+							gap(3),
+							p(4),
+							rounded("lg"),
+							border({ width: 1, color: "neutral" }),
+							bg("neutral.tint"),
 						]}
 					>
-						<h2
-							mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
-						>
-							{title}
-						</h2>
-						<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
+						<Heading level={2}>{title}</Heading>
+						<p mix={[m(0), fg("neutral")]}>{description}</p>
 
-						<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>From</span>
+						<form method="post" action={action} mix={[grid(), gap(3)]}>
+							<label mix={[grid(), gap(1)]}>
+								<Text>From</Text>
 								<Input name="from" aria-label="From" required />
 							</label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>To</span>
+							<label mix={[grid(), gap(1)]}>
+								<Text>To</Text>
 								<Input name="to" aria-label="To" required />
 							</label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Status</span>
+							<label mix={[grid(), gap(1)]}>
+								<Text>Status</Text>
 								<Select name="status">
-									<option value="301">301 Permanent</option>
-									<option value="302" selected>
+									<Select.Option value="301">301 Permanent</Select.Option>
+									<Select.Option value="302" selected>
 										302 Temporary
-									</option>
-									<option value="307">307 Temporary (Method Preserved)</option>
-									<option value="308">308 Permanent (Method Preserved)</option>
+									</Select.Option>
+									<Select.Option value="307">307 Temporary (Method Preserved)</Select.Option>
+									<Select.Option value="308">308 Permanent (Method Preserved)</Select.Option>
 								</Select>
 							</label>
 
-							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
-								<Button type="submit">Create Redirect</Button>
-								<a
+							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+								<Button type="submit" color="brand">
+									Create Redirect
+								</Button>
+								<LinkButton
 									href={routes.cms.redirects.index.href()}
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-accent-border)",
-											color: "var(--ui-accent-fg-emphasis)",
-											textDecoration: "none",
-										}),
-									]}
+									color="brand"
+									variant="outline"
 								>
 									Back to list
-								</a>
+								</LinkButton>
 							</div>
 						</form>
 					</section>

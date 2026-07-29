@@ -2,14 +2,23 @@
  * View for the blog post detail page. Renders the post's tags, eyebrow, title,
  * a "View as Markdown" link, and the Markdown-rendered body inside the shared
  * BlogLayout, plus a GitHub sponsor call-to-action and, for tutorials, an
- * embedded related-posts frame. Exists to present a single article or tutorial.
+ * embedded related-posts frame. The body's prose rhythm comes from the design
+ * system's `Typeset` layer rather than from local type declarations, while the
+ * code-block theme keeps overriding it from `prism.css`. Exists to present a
+ * single article or tutorial.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { MarkdownView } from "@pkg/markdown/client/remix";
-import { Frame, css } from "remix/ui";
+import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@pkg/u/layout";
+import { bleed, is, m, mbs, mi, minIs, p } from "@pkg/u/size";
+import { overflowWrap, text, textTransform, tracking, weight } from "@pkg/u/typography";
+import { Frame } from "remix/ui";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
 
@@ -42,185 +51,114 @@ export function PostView() {
 				canonical={model.canonical}
 				meta={model.meta}
 			>
-				<main mix={[css({ display: "grid", gap: "0.9rem", margin: "0 auto" })]}>
-					<header mix={[css({ display: "contents" })]}>
-						<div
-							mix={[
-								css({
-									display: "flex",
-									alignItems: "center",
-									width: "100%",
-									gap: "0.5rem",
-									flexWrap: "wrap",
-								}),
-							]}
-						>
+				<main mix={[grid(), gap(4), mi("auto")]}>
+					<header mix={[contents()]}>
+						<div mix={[hstack({ gap: 2, align: "center" }), is("full"), flexWrap("wrap")]}>
 							{model.post.tags.length > 0 && (
-								<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
+								<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
 									{model.post.tags.map((tag) => (
-										<span
-											key={tag}
-											mix={[
-												css({
-													padding: "0.2rem 0.6rem",
-													borderRadius: "999px",
-													backgroundColor: "var(--ui-accent-bg-tint)",
-													color: "var(--ui-accent-fg-emphasis)",
-													fontSize: "0.9rem",
-												}),
-											]}
-										>
+										<Badge key={tag} color="brand" variant="secondary">
 											{tag}
-										</span>
+										</Badge>
 									))}
 								</div>
 							)}
 						</div>
 
-						<hgroup mix={[css({ display: "contents" })]}>
+						<hgroup mix={[contents()]}>
 							<div
-								mix={[
-									css({
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										gap: "0.75rem",
-										flexWrap: "wrap",
-									}),
-								]}
+								mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}
 							>
 								<p
 									mix={[
-										css({
-											margin: 0,
-											textTransform: "uppercase",
-											letterSpacing: "0.12em",
-											fontSize: "0.8rem",
-											color: "var(--ui-neutral-fg-muted)",
-											fontWeight: 700,
-										}),
+										m(0),
+										textTransform("uppercase"),
+										tracking("widest"),
+										text("sm"),
+										fg("neutral.muted"),
+										weight("bold"),
 									]}
 								>
 									{model.post.eyebrow}
 								</p>
 
-								<a
+								<Link
 									href={routes.post.href({
 										postType: model.post.typePath,
 										postSlug: model.post.slug,
 										ext: "md",
 									})}
-									mix={[
-										css({
-											fontSize: "0.9rem",
-											lineHeight: "1.4",
-											fontFamily: "inherit",
-											color: "var(--ui-accent-fg-emphasis)",
-											flexShrink: 0,
-										}),
-									]}
+									mix={[text("sm"), shrink(0)]}
 								>
 									View as Markdown
-								</a>
+								</Link>
 							</div>
 
-							<h1
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "2.1rem",
-										lineHeight: 1.05,
-										color: "var(--ui-neutral-fg-emphasis)",
-										overflowWrap: "break-word",
-									}),
-								]}
-							>
+							<Heading level={1} mix={[m(0), text("4xl"), overflowWrap("break-word")]}>
 								{model.post.title}
-							</h1>
+							</Heading>
 						</hgroup>
 					</header>
 
+					{/* `bleed(4)` cancels the layout wrapper's own inline padding exactly, so
+					the tinted body panel runs edge to edge while its own padding puts the
+					prose back on the same measure as the header above it. Corners now stay
+					rounded at every width instead of collapsing to square below 800px. Type
+					size, leading, and block rhythm are delegated to `Typeset` inside, so
+					this element only owns the surface. */}
 					<article
 						mix={[
-							css({
-								lineHeight: 1.7,
-								color: "var(--ui-neutral-fg-emphasis)",
-								fontSize: "1rem",
-								padding: "1rem 1.1rem",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "clamp(0px, calc((100vw - 800px) * 999), 0.6rem)",
-								backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-								margin: "0 -1.1rem",
-								overflowWrap: "break-word",
-								minWidth: 0,
-							}),
+							p(4),
+							border({ width: 1, color: "neutral" }),
+							/* `lg`, not the `xl` a panel this size would otherwise take: the
+							sponsor `Card` below is a sibling panel and its own radius is not
+							overridable from a call site, so the article matches the component
+							rather than sitting a step apart from the panel directly beneath it. */
+							rounded("lg"),
+							bg("neutral.bg-tint-hover"),
+							bleed(4),
+							overflowWrap("break-word"),
+							minIs(0),
 						]}
 					>
 						{model.post.content ? (
-							<MarkdownView content={model.post.content} />
+							<Typeset preset="reading">
+								<MarkdownView content={model.post.content} />
+							</Typeset>
 						) : (
-							<p mix={[css({ margin: 0 })]}>No content.</p>
+							<p mix={[m(0)]}>No content.</p>
 						)}
 					</article>
 
-					<section
+					<Card
+						color="brand"
 						mix={[
-							css({
-								margin: "0 -1.1rem",
-								padding: "1rem 1.1rem",
-								border: "1px solid var(--ui-accent-border)",
-								borderRadius: "clamp(0px, calc((100vw - 800px) * 999), 0.8rem)",
-								backgroundColor: "var(--ui-accent-bg-tint)",
-								display: "flex",
-								flexWrap: "wrap",
-								justifyContent: "space-between",
-								gap: "0.8rem",
-								alignItems: "center",
-							}),
+							bleed(4),
+							p(4),
+							hstack({ gap: 3, align: "center", justify: "between" }),
+							flexWrap("wrap"),
 						]}
 					>
-						<div mix={[css({ minWidth: 0, flex: "1 1 30rem" })]}>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										color: "var(--ui-accent-fg-muted)",
-										fontSize: "1rem",
-										fontWeight: 700,
-									}),
-								]}
-							>
+						<div mix={[minIs(0), grow(1), shrink(1), basis("30rem")]}>
+							{/* `emphasis`/`fg`, not `muted`: the muted weight is the tone's 500 step,
+							which lands around 3.5:1 on this tinted background — under AA for copy at
+							this size. The two darker weights clear it at 15.6:1 and 5.3:1. */}
+							<p mix={[m(0), fg("brand.emphasis"), text("base"), weight("bold")]}>
 								Do you like my content?
 							</p>
-							<p
-								mix={[
-									css({
-										margin: "0.2rem 0 0",
-										color: "var(--ui-accent-fg-muted)",
-										fontSize: "1rem",
-									}),
-								]}
-							>
+							<p mix={[m(0), mbs(1), fg("brand"), text("base")]}>
 								Your sponsorship helps me create more tutorials, articles, and open-source tools.
 							</p>
 						</div>
-						<a
+						<LinkButton
 							href={PROFILE.github.sponsor}
-							mix={[
-								css({
-									textDecoration: "none",
-									backgroundColor: "var(--ui-accent-bg-solid)",
-									color: "var(--ui-neutral-fg-on-solid)",
-									padding: "0.7rem 1.1rem",
-									borderRadius: "0.65rem",
-									fontWeight: 700,
-									flexShrink: 0,
-								}),
-							]}
+							color="brand"
+							size="lg"
+							mix={[shrink(0), weight("bold")]}
 						>
 							Sponsor me on GitHub
-						</a>
-					</section>
+						</LinkButton>
+					</Card>
 
 					{model.post.typePath === "tutorials" && (
 						<Frame

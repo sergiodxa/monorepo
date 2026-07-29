@@ -1,53 +1,118 @@
+/*
+ * Raw --ui-color-{scale}-{step} palette scales, plus the two font-family
+ * overrides, consumed by the semantic --ui-{tone}-* tokens the design system's
+ * theme layer derives. That theme layer ships no palette of its own, so an app
+ * must declare these eleven-step scales itself.
+ *
+ * Every scale shares one lightness ramp (50 lightest -> 950 darkest) so tones
+ * line up visually at the same step across colors; only hue and the chroma
+ * curve (peaking mid-scale, tapering at both ends) vary per color.
+ *
+ * The palette keeps this site's ink-on-parchment identity. `neutral` is a warm
+ * cream at hue 84 held to a near-achromatic chroma ceiling of 0.024, so page
+ * surfaces read as aged paper while still behaving as a neutral for text,
+ * borders, and backgrounds. `brand` is a blue ink at hue 255, and it runs close
+ * to the sRGB ceiling on purpose: brand is almost entirely link text on cream,
+ * and an under-saturated blue at these lightnesses reads as dusty grey rather
+ * than as ink. An earlier revision held it to 0.075 chroma for restraint's sake
+ * and the links looked washed out, so the chroma now tracks roughly 90% of what
+ * the gamut allows per step.
+ *
+ * The hue is 255 rather than a truer blue for the same gamut reason: sRGB's
+ * chroma ceiling at these mid lightnesses climbs steeply with hue (at L=0.52 it
+ * allows 0.131 at hue 245 but 0.171 at 255), so a few degrees toward blue buy
+ * the saturation the ink needs without tipping into an electric, web-default
+ * blue that would compete with the parchment instead of sitting on it.
+ *
+ * Note that `brand`'s chroma peaks at step 500 and *falls* toward 600, unlike
+ * every other scale here, which peaks mid-scale and tapers symmetrically. That
+ * is the gamut ceiling again, not an oversight: it drops faster than lightness
+ * does through this part of blue, so asking 600 for 500's chroma would silently
+ * clip and flatten the two steps into the same rendered color.
+ *
+ * `success` (142), `warning` (85), and `danger` (25) are the status tones, and
+ * they deliberately break the muted rule: they exist to be noticed at a glance
+ * in the CMS, so they run at full chroma. `warning` sits only one degree of hue
+ * from `neutral`'s 84 and stays unambiguous anyway, because neutral never
+ * exceeds 0.024 chroma while warning peaks at 0.16 — the two can never be
+ * confused despite sharing a hue family.
+ *
+ * Every chroma is held inside the sRGB gamut for its own lightness, so the
+ * declared value is what actually renders rather than being silently clipped.
+ *
+ * No dark-mode class is set on the document: this is a light, paper-toned
+ * reading surface by design, so the theme's light `:root` block is the only one
+ * that ever applies.
+ */
+
 :root {
-	--color-accent-50: oklch(0.925 0.019 240);
-	--color-accent-100: oklch(0.875 0.021 240);
-	--color-accent-200: oklch(0.81 0.025 240);
-	--color-accent-300: oklch(0.74 0.029 240);
-	--color-accent-400: oklch(0.66 0.035 240);
-	--color-accent-500: oklch(0.58 0.041 240);
-	--color-accent-600: oklch(0.49 0.047 240);
-	--color-accent-700: oklch(0.43 0.051 240);
-	--color-accent-800: oklch(0.38 0.049 240);
-	--color-accent-900: oklch(0.33 0.046 240);
-	--color-accent-950: oklch(0.27 0.043 240);
+	--ui-color-neutral-50: oklch(0.98 0.014 84);
+	--ui-color-neutral-100: oklch(0.96 0.018 84);
+	--ui-color-neutral-200: oklch(0.91 0.022 84);
+	--ui-color-neutral-300: oklch(0.83 0.024 84);
+	--ui-color-neutral-400: oklch(0.73 0.024 84);
+	--ui-color-neutral-500: oklch(0.62 0.022 84);
+	--ui-color-neutral-600: oklch(0.52 0.02 84);
+	--ui-color-neutral-700: oklch(0.42 0.018 84);
+	--ui-color-neutral-800: oklch(0.32 0.015 84);
+	--ui-color-neutral-900: oklch(0.24 0.012 84);
+	--ui-color-neutral-950: oklch(0.16 0.009 84);
 
-	--color-neutral-50: oklch(0.992 0.021 88);
-	--color-neutral-100: oklch(0.975 0.021 88);
-	--color-neutral-200: oklch(0.88 0.028 84);
-	--color-neutral-300: oklch(0.83 0.028 84);
-	--color-neutral-400: oklch(0.71 0.028 84);
-	--color-neutral-500: oklch(0.53 0.028 76);
-	--color-neutral-600: oklch(0.51 0.028 76);
-	--color-neutral-700: oklch(0.43 0.028 76);
-	--color-neutral-800: oklch(0.34 0.028 76);
-	--color-neutral-900: oklch(0.27 0.028 76);
-	--color-neutral-950: oklch(0.21 0.028 76);
+	--ui-color-brand-50: oklch(0.98 0.005 255);
+	--ui-color-brand-100: oklch(0.96 0.012 255);
+	--ui-color-brand-200: oklch(0.91 0.031 255);
+	--ui-color-brand-300: oklch(0.83 0.069 255);
+	--ui-color-brand-400: oklch(0.73 0.125 255);
+	--ui-color-brand-500: oklch(0.62 0.188 255);
+	--ui-color-brand-600: oklch(0.52 0.158 255);
+	--ui-color-brand-700: oklch(0.42 0.122 255);
+	--ui-color-brand-800: oklch(0.32 0.087 255);
+	--ui-color-brand-900: oklch(0.24 0.06 255);
+	--ui-color-brand-950: oklch(0.16 0.037 255);
 
-	--ui-neutral-bg-tint: var(--color-neutral-50);
-	--ui-neutral-bg-tint-hover: var(--color-neutral-100);
-	--ui-neutral-bg-tint-pressed: var(--color-neutral-200);
-	--ui-neutral-bg-solid: var(--color-neutral-600);
-	--ui-neutral-bg-solid-hover: var(--color-neutral-700);
-	--ui-neutral-bg-solid-pressed: var(--color-neutral-800);
-	--ui-neutral-border: var(--color-neutral-300);
-	--ui-neutral-border-strong: var(--color-neutral-600);
-	--ui-neutral-ring: var(--color-neutral-500);
-	--ui-neutral-fg: var(--color-neutral-600);
-	--ui-neutral-fg-muted: var(--color-neutral-500);
-	--ui-neutral-fg-emphasis: var(--color-neutral-900);
-	--ui-neutral-fg-on-solid: var(--color-neutral-50);
+	--ui-color-danger-50: oklch(0.98 0.02 25);
+	--ui-color-danger-100: oklch(0.96 0.05 25);
+	--ui-color-danger-200: oklch(0.91 0.09 25);
+	--ui-color-danger-300: oklch(0.83 0.13 25);
+	--ui-color-danger-400: oklch(0.73 0.16 25);
+	--ui-color-danger-500: oklch(0.62 0.18 25);
+	--ui-color-danger-600: oklch(0.52 0.18 25);
+	--ui-color-danger-700: oklch(0.42 0.16 25);
+	--ui-color-danger-800: oklch(0.32 0.13 25);
+	--ui-color-danger-900: oklch(0.24 0.09 25);
+	--ui-color-danger-950: oklch(0.16 0.06 25);
 
-	--ui-accent-bg-tint: var(--color-accent-50);
-	--ui-accent-bg-tint-hover: var(--color-accent-100);
-	--ui-accent-bg-tint-pressed: var(--color-accent-200);
-	--ui-accent-bg-solid: var(--color-accent-600);
-	--ui-accent-bg-solid-hover: var(--color-accent-700);
-	--ui-accent-bg-solid-pressed: var(--color-accent-800);
-	--ui-accent-border: var(--color-accent-500);
-	--ui-accent-border-strong: var(--color-accent-700);
-	--ui-accent-ring: var(--color-accent-600);
-	--ui-accent-fg: var(--color-accent-700);
-	--ui-accent-fg-muted: var(--color-accent-600);
-	--ui-accent-fg-emphasis: var(--color-accent-900);
-	--ui-accent-fg-on-solid: var(--color-neutral-50);
+	--ui-color-warning-50: oklch(0.98 0.02 85);
+	--ui-color-warning-100: oklch(0.96 0.05 85);
+	--ui-color-warning-200: oklch(0.91 0.08 85);
+	--ui-color-warning-300: oklch(0.83 0.12 85);
+	--ui-color-warning-400: oklch(0.73 0.15 85);
+	--ui-color-warning-500: oklch(0.62 0.16 85);
+	--ui-color-warning-600: oklch(0.52 0.16 85);
+	--ui-color-warning-700: oklch(0.42 0.14 85);
+	--ui-color-warning-800: oklch(0.32 0.11 85);
+	--ui-color-warning-900: oklch(0.24 0.08 85);
+	--ui-color-warning-950: oklch(0.16 0.05 85);
+
+	--ui-color-success-50: oklch(0.98 0.02 142);
+	--ui-color-success-100: oklch(0.96 0.05 142);
+	--ui-color-success-200: oklch(0.91 0.09 142);
+	--ui-color-success-300: oklch(0.83 0.14 142);
+	--ui-color-success-400: oklch(0.73 0.18 142);
+	--ui-color-success-500: oklch(0.62 0.19 142);
+	--ui-color-success-600: oklch(0.52 0.173 142);
+	--ui-color-success-700: oklch(0.42 0.14 142);
+	--ui-color-success-800: oklch(0.32 0.106 142);
+	--ui-color-success-900: oklch(0.24 0.079 142);
+	--ui-color-success-950: oklch(0.16 0.053 142);
+
+	/*
+	 * Font-family overrides on top of the design system's own defaults. `serif`
+	 * is the reading face every public page sets on <body>, so long-form prose
+	 * is the default rather than an opt-in; `sans` is the CMS face, where dense
+	 * tables and forms read better without serifs. `mono` keeps the platform
+	 * stack the theme already ships.
+	 */
+	--ui-font-serif: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+	--ui-font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
 }

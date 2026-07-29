@@ -8,7 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import type { Handle } from "remix/ui";
+
+import { Heading, Link } from "@pkg/r3-ui";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
+import { m, p } from "@pkg/u/size";
+import { text, weight } from "@pkg/u/typography";
 
 import { CMSLayout } from "~/resources/components/layout/cms";
 import routes from "~/routes/web";
@@ -36,6 +44,54 @@ export namespace CMSDashboardView {
 }
 
 /**
+ * Inputs for one dashboard stat card.
+ */
+namespace StatCard {
+	/**
+	 * Caption, total, and the management section the card's link points at.
+	 */
+	export interface Props {
+		label: string;
+		value: number;
+		href: string;
+	}
+}
+
+/**
+ * Builds one stat card: a tinted, bordered panel stacking the metric's caption,
+ * its total, and a link into the section that manages those records. Exists so
+ * the four dashboard metrics share one markup and styling shape instead of
+ * repeating it per metric.
+ *
+ * @param handle Runtime handle carrying the card's caption, total, and link target.
+ * @returns A renderer producing the card's markup.
+ */
+function StatCard(handle: Handle<StatCard.Props>) {
+	return () => {
+		let { label, value, href } = handle.props;
+
+		return (
+			<article
+				mix={[
+					grid(),
+					gap(1),
+					p(3),
+					rounded("lg"),
+					border({ width: 1, color: "neutral" }),
+					bg("neutral.tint"),
+				]}
+			>
+				<p mix={[m(0), text("sm"), fg("neutral")]}>{label}</p>
+				<p mix={[m(0), text("3xl"), weight("bold"), fg("neutral.emphasis")]}>{value}</p>
+				<Link href={href} color="brand" mix={[text("sm")]}>
+					View all
+				</Link>
+			</article>
+		);
+	};
+}
+
+/**
  * Builds the CMS dashboard renderer with stat summary cards.
  */
 export function CMSDashboardView() {
@@ -44,169 +100,39 @@ export function CMSDashboardView() {
 
 		return (
 			<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
-				<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
-					<h2
-						mix={[
-							css({
-								position: "absolute",
-								width: "1px",
-								height: "1px",
-								padding: 0,
-								margin: "-1px",
-								overflow: "hidden",
-								clip: "rect(0,0,0,0)",
-								whiteSpace: "nowrap",
-								borderWidth: 0,
-							}),
-						]}
-					>
+				<main mix={[grid(), gap(4)]}>
+					{/* The cards already read as totals on their own, so the section's
+					heading exists only for assistive technology's outline. */}
+					<Heading level={2} mix={[visuallyHidden()]}>
 						Post Stats
-					</h2>
+					</Heading>
 					<div
 						mix={[
-							css({
-								display: "grid",
-								gap: "0.65rem",
-								gridTemplateColumns: "repeat(auto-fit, minmax(10rem, 1fr))",
-							}),
+							grid(),
+							gap(3),
+							gridTemplate({ columns: repeat("auto-fit", "minmax(10rem, 1fr)") }),
 						]}
 					>
-						<article
-							mix={[
-								css({
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.6rem",
-									padding: "0.8rem",
-									display: "grid",
-									gap: "0.25rem",
-								}),
-							]}
-						>
-							<p mix={[css({ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" })]}>
-								Total Articles
-							</p>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.8rem",
-										fontWeight: 700,
-										color: "var(--ui-neutral-fg-emphasis)",
-									}),
-								]}
-							>
-								{stats.articles}
-							</p>
-							<a
-								href={routes.cms.articles.index.href()}
-								mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
-							>
-								View all
-							</a>
-						</article>
-						<article
-							mix={[
-								css({
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.6rem",
-									padding: "0.8rem",
-									display: "grid",
-									gap: "0.25rem",
-								}),
-							]}
-						>
-							<p mix={[css({ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" })]}>
-								Total Likes
-							</p>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.8rem",
-										fontWeight: 700,
-										color: "var(--ui-neutral-fg-emphasis)",
-									}),
-								]}
-							>
-								{stats.likes}
-							</p>
-							<a
-								href={routes.cms.bookmarks.index.href()}
-								mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
-							>
-								View all
-							</a>
-						</article>
-						<article
-							mix={[
-								css({
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.6rem",
-									padding: "0.8rem",
-									display: "grid",
-									gap: "0.25rem",
-								}),
-							]}
-						>
-							<p mix={[css({ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" })]}>
-								Total Tutorials
-							</p>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.8rem",
-										fontWeight: 700,
-										color: "var(--ui-neutral-fg-emphasis)",
-									}),
-								]}
-							>
-								{stats.tutorials}
-							</p>
-							<a
-								href={routes.cms.tutorials.index.href()}
-								mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
-							>
-								View all
-							</a>
-						</article>
-						<article
-							mix={[
-								css({
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.6rem",
-									padding: "0.8rem",
-									display: "grid",
-									gap: "0.25rem",
-								}),
-							]}
-						>
-							<p mix={[css({ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" })]}>
-								Total Glossary Terms
-							</p>
-							<p
-								mix={[
-									css({
-										margin: 0,
-										fontSize: "1.8rem",
-										fontWeight: 700,
-										color: "var(--ui-neutral-fg-emphasis)",
-									}),
-								]}
-							>
-								{stats.glossary}
-							</p>
-							<a
-								href={routes.cms.glossary.index.href()}
-								mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
-							>
-								View all
-							</a>
-						</article>
+						<StatCard
+							label="Total Articles"
+							value={stats.articles}
+							href={routes.cms.articles.index.href()}
+						/>
+						<StatCard
+							label="Total Likes"
+							value={stats.likes}
+							href={routes.cms.bookmarks.index.href()}
+						/>
+						<StatCard
+							label="Total Tutorials"
+							value={stats.tutorials}
+							href={routes.cms.tutorials.index.href()}
+						/>
+						<StatCard
+							label="Total Glossary Terms"
+							value={stats.glossary}
+							href={routes.cms.glossary.index.href()}
+						/>
 					</div>
 				</main>
 			</CMSLayout>

@@ -13,9 +13,13 @@ This document defines app-specific rules for `apps/r3-blog`.
   - `published_at` in the future => preview
 - MUST only support `articles` and `tutorials` in `app/http/controllers/post.tsx`; unsupported `postType` must return 404.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).
-- MUST use semantic UI color tokens (`--ui-*`) in components, not hardcoded hex values.
-- MUST keep color tokens centralized in `resources/css/colors.css`.
-- MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors).
+- MUST style every component and view with `@pkg/u` utility mixins in a `mix` array, not `css({ ... })` objects; `u.raw({ ... })` is the only escape hatch, for properties the package has no utility for.
+- MUST express every length through the shared scales: spacing as a scale multiple (`u.p(4)`, `u.gap(2)`), radius as a named token (`u.rounded("lg")`), and font size as a named step (`u.text("sm")`). Off-scale one-off values (`0.45rem`, `0.7rem`, `1.05rem`, `borderRadius: "clamp(...)"`) are not acceptable, even to preserve an existing look.
+- MUST express color through the `@pkg/u` color utilities against the five semantic tones — `neutral`, `brand`, `success`, `warning`, `danger` — as in `u.bg("brand.tint")` / `u.fg("neutral.emphasis")` / `u.border({ width: 1, color: "neutral" })`. Never hand-write a `var(--ui-*)` string in a component.
+- MUST reach for a `@pkg/r3-ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
+- MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@pkg/r3-ui/theme.css` and MUST NOT be redeclared here.
+- MUST link the stylesheets in document layouts in the order reset, app palette, theme (`@pkg/r3-ui/reset.css`, `resources/css/colors.css`, `@pkg/r3-ui/theme.css`).
+- MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales.
 - MUST ensure changes pass `bunx tsc -p apps/r3-blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
@@ -24,9 +28,10 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
-- SHOULD keep color and typography changes consistent with the current warm visual style.
+- SHOULD keep color and typography changes consistent with the warm ink-on-parchment style: the `neutral` scale is a low-chroma warm cream and `brand` a muted slate blue, deliberately restrained rather than saturated.
 - SHOULD validate route params early and return `notFound("<h1>404 Not Found</h1>")` on invalid routes.
-- SHOULD prefer semantic tokens (`ui-neutral-*`, `ui-accent-*`) over raw palette tokens (`color-neutral-*`, `color-accent-*`) in UI component styles.
+- SHOULD prefer a semantic tone (`u.fg("neutral.muted")`) over a raw palette step (`u.bg("color.neutral.200")`) in component styles.
+- SHOULD reach for the `success` / `warning` / `danger` tones for status and destructive affordances rather than overloading `brand`.
 - SHOULD keep `/colors` route updated when tokens are added/removed.
 - SHOULD narrow unknown values with type guards, schema validation, or explicit interfaces instead of unsafe assertions.
 - SHOULD construct expensive middleware dependencies once (module-level cache/factory), not per request, unless request-scoped behavior is required.
@@ -38,7 +43,9 @@ This document defines app-specific rules for `apps/r3-blog`.
 
 - MUST NOT reintroduce support for non-public post types in `app/http/controllers/post.tsx` without explicit product direction.
 - MUST NOT mark items with `published_at === null` as preview.
-- MUST NOT use direct `#hex` colors in `resources/components/**/*.tsx`.
+- MUST NOT use direct `#hex` colors, or any raw color literal, in `resources/**/*.tsx`.
+- MUST NOT hoist a `mix` array or a style object to a module-level constant; write `mix` inline at the call site and accept the repetition, extracting a Handle-pattern component instead when markup genuinely repeats.
+- MUST NOT reintroduce app-local copies of components the design system already ships (button, input, select, modal).
 - MUST NOT bypass `@pkg/markdown/server` for markdown parsing.
 - MUST NOT use `as any` anywhere in this app (`apps/r3-blog/**/*`), including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
@@ -91,6 +98,9 @@ This document defines app-specific rules for `apps/r3-blog`.
 - Styling system
   - `resources/css/colors.css`
   - `resources/css/prism.css`
+  - `packages/u/README.md` (utility mixin catalog and the scale contract)
+  - `packages/r3-ui/README.md` (component catalog)
+  - `packages/r3-ui/src/theme.css` (the semantic `--ui-*` layer this app's palette feeds)
 - Data layer
   - `database/schema/index.ts`
   - `app/repositories/post.ts`

@@ -8,7 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Heading, Link } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
+import { m, mbs, p } from "@pkg/u/size";
+import { text, weight } from "@pkg/u/typography";
 
 /**
  * Groups the data shapes used to render related post cards.
@@ -41,46 +46,31 @@ export function PostRelatedView() {
 		if (model.items.length === 0) return <></>;
 
 		return (
-			<section mix={[css({ display: "grid", gap: "1rem" })]}>
-				<h2 mix={[css({ margin: 0, color: "var(--ui-neutral-fg-emphasis)", fontSize: "1.5rem" })]}>
+			<section mix={[grid(), gap(4)]}>
+				<Heading level={2} mix={[m(0), text("2xl")]}>
 					Related tutorials
-				</h2>
+				</Heading>
 				<div
 					mix={[
-						css({
-							display: "grid",
-							gap: "0.9rem",
-							gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
-						}),
+						grid(),
+						gap(4),
+						gridTemplate({ columns: repeat("auto-fit", "minmax(14rem, 1fr)") }),
 					]}
 				>
 					{model.items.map((item) => (
 						<article
 							key={item.href}
 							mix={[
-								css({
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.8rem",
-									padding: "0.9rem",
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-								}),
+								border({ width: 1, color: "neutral" }),
+								rounded("lg"),
+								p(4),
+								bg("neutral.tint"),
 							]}
 						>
-							<a
-								href={item.href}
-								mix={[
-									css({
-										fontSize: "1.05rem",
-										fontWeight: 700,
-										color: "var(--ui-accent-fg)",
-									}),
-								]}
-							>
+							<Link href={item.href} mix={[text("lg"), weight("bold")]}>
 								{item.label}
-							</a>
-							<p mix={[css({ margin: "0.6rem 0 0", color: "var(--ui-neutral-fg)" })]}>
-								{item.reason}
-							</p>
+							</Link>
+							<p mix={[m(0), mbs(3), fg("neutral")]}>{item.reason}</p>
 						</article>
 					))}
 				</div>

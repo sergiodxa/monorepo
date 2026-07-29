@@ -8,7 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Button, Form, Heading } from "@pkg/r3-ui";
+import { border, fg, surface } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { contents, gap, grid, place } from "@pkg/u/layout";
+import { m, maxIs, p } from "@pkg/u/size";
+import { text, textAlign } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -36,59 +41,33 @@ export function LoginView() {
 			description="Authenticate to access CMS tools"
 			activePath={routes.auth.login.index.href()}
 		>
-			<main
-				mix={[css({ display: "grid", gap: "1rem", justifyItems: "center", textAlign: "center" })]}
-			>
-				<h1 mix={[css({ margin: 0, fontSize: "2.4rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+			<main mix={[grid(), gap(4), place({ items: "center" }), textAlign("center")]}>
+				<Heading level={1} mix={[m(0), text("4xl")]}>
 					Login
-				</h1>
+				</Heading>
 
-				<p
-					mix={[
-						css({ margin: 0, maxWidth: "55ch", color: "var(--ui-neutral-fg)", lineHeight: 1.4 }),
-					]}
-				>
+				<p mix={[m(0), maxIs("55ch"), fg("neutral")]}>
 					Authenticate with your account to access CMS routes.
 				</p>
 
 				{model.error && (
-					<p
-						mix={[
-							css({
-								margin: 0,
-								padding: "0.55rem 0.8rem",
-								borderRadius: "0.55rem",
-								backgroundColor: "var(--ui-accent-bg-tint)",
-								border: "1px solid var(--ui-accent-border)",
-								color: "var(--ui-accent-fg-emphasis)",
-							}),
-						]}
-					>
+					<p mix={[m(0), p(2, 3), rounded("md"), surface("danger.tinted"), border({ width: 1 })]}>
 						{model.error}
 					</p>
 				)}
 
-				<form
+				{/* The form carries no fields of its own — the whole flow is one submit
+				that hands off to the OAuth provider — so it stays `display: contents` and
+				lets the button sit directly in the page's centered grid. */}
+				<Form
 					action={routes.auth.login.action.href()}
 					method={routes.auth.login.action.method}
-					mix={[css({ display: "contents" })]}
+					mix={[contents()]}
 				>
-					<button
-						type="submit"
-						mix={[
-							css({
-								textDecoration: "none",
-								backgroundColor: "var(--ui-accent-bg-solid)",
-								color: "var(--ui-accent-fg-on-solid)",
-								padding: "0.65rem 1rem",
-								borderRadius: "0.6rem",
-								fontWeight: 700,
-							}),
-						]}
-					>
+					<Button type="submit" color="brand" size="lg">
 						Continue with Auth
-					</button>
-				</form>
+					</Button>
+				</Form>
 			</main>
 		</BlogLayout>
 	);

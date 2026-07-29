@@ -1,6 +1,6 @@
 /**
  * View for the public tutorials list page. Renders an intro, an RSS subscribe
- * link, and a dated list of tutorial links (with optional preview badges) inside
+ * link, and a dated list of tutorial rows (with optional preview badges) inside
  * the shared BlogLayout. Exports helpers to build a tutorial href from a slug
  * and to format list dates. Exists to index all published tutorials.
  *
@@ -8,7 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { Badge, Heading, Link } from "@pkg/r3-ui";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded } from "@pkg/u/effects";
+import { listStyle } from "@pkg/u/general";
+import { gap, grid, gridTemplate, items } from "@pkg/u/layout";
+import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
+import { nowrap, tabularNums, text } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -66,87 +72,48 @@ export function TutorialsView() {
 			description="Learn about Remix, React, and more."
 			activePath={routes.tutorials.href()}
 		>
-			<main mix={[css({ display: "grid", gap: "0.85rem" })]}>
-				<h1 mix={[css({ margin: 0, fontSize: "2rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+			<main mix={[grid(), gap(4)]}>
+				<Heading level={1} mix={[text("3xl")]}>
 					Tutorials
-				</h1>
-				<p
-					mix={[
-						css({
-							margin: 0,
-							color: "var(--ui-neutral-fg)",
-							maxWidth: "52ch",
-							fontSize: "1.05rem",
-							lineHeight: 1.35,
-						}),
-					]}
-				>
+				</Heading>
+				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>
 					Learn about Remix, React, and more.
 				</p>
-				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}>
-					Subscribe to my tutorials using <a href={routes.rss.tutorials.href()}>RSS</a>.
+				<p mix={[m(0), text("lg"), fg("neutral")]}>
+					Subscribe to my tutorials using <Link href={routes.rss.tutorials.href()}>RSS</Link>.
 				</p>
 				{model.items.length === 0 ? (
-					<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>No tutorials yet.</p>
+					<p mix={[m(0), text("base"), fg("neutral")]}>No tutorials yet.</p>
 				) : (
-					<ol
-						mix={[
-							css({
-								margin: "0.4rem 0 0",
-								padding: 0,
-								listStyle: "none",
-								display: "grid",
-								gap: "0.9rem",
-							}),
-						]}
-					>
+					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
 						{model.items.map((item) => (
+							/* The shared list-row treatment used by every public index page: a
+							tinted, hairline-bordered card on the `lg` radius, one padding step
+							on all sides, with the title claiming the free track and the date
+							sitting in an auto track beside it. Baseline alignment replaces the
+							old hand-tuned nudge that pushed the date down to meet the title. */
 							<li
 								key={item.href}
 								mix={[
-									css({
-										display: "grid",
-										gridTemplateColumns: "1fr auto",
-										gap: "0.8rem",
-										alignItems: "start",
-									}),
+									grid(),
+									gridTemplate({ columns: "1fr auto" }),
+									gap(3),
+									items("baseline"),
+									p(4),
+									rounded("lg"),
+									bg("neutral.tint"),
+									border({ width: 1, color: "neutral" }),
 								]}
 							>
-								<p
-									mix={[
-										css({
-											margin: 0,
-											fontSize: "1.05rem",
-											color: "var(--ui-neutral-fg-emphasis)",
-											lineHeight: 1.4,
-										}),
-									]}
-								>
-									<a href={item.href}>{item.label}</a>
+								<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
+									<Link href={item.href}>{item.label}</Link>
 									{item.preview && (
-										<span
-											mix={[
-												css({
-													marginLeft: "0.4rem",
-													fontSize: "0.85rem",
-													color: "var(--ui-accent-fg-emphasis)",
-												}),
-											]}
-										>
+										<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 											Preview
-										</span>
+										</Badge>
 									)}
 								</p>
-								<time
-									mix={[
-										css({
-											color: "var(--ui-neutral-fg-muted)",
-											fontSize: "0.95rem",
-											whiteSpace: "nowrap",
-											marginTop: "0.1rem",
-										}),
-									]}
-								>
+								<time mix={[text("sm"), fg("neutral.muted"), nowrap(), tabularNums()]}>
 									{formatDate(item.date)}
 								</time>
 							</li>

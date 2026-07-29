@@ -1,6 +1,6 @@
 /**
  * Views for managing tutorials in the CMS. `CMSTutorialsIndexView` renders a
- * table of tutorials with tag chips, status indicators, and edit plus
+ * table of tutorials with tag chips, publish-state badges, and edit plus
  * modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
  * create/edit form. Exist to power the admin CRUD screens for tutorials.
  *
@@ -8,12 +8,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import {
+	Badge,
+	Button,
+	Card,
+	Form,
+	Heading,
+	Input,
+	Label,
+	Link,
+	LinkButton,
+	Modal,
+	Table,
+	TextArea,
+} from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
+import { minBs, p } from "@pkg/u/size";
+import { font, textAlign } from "@pkg/u/typography";
 
-import { Button } from "~/resources/components/button";
-import { Input } from "~/resources/components/input";
 import { CMSLayout } from "~/resources/components/layout/cms";
-import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
 /**
@@ -80,308 +94,114 @@ export function CMSTutorialsIndexView() {
 
 		return (
 			<CMSLayout title="Tutorials" activePath={routes.cms.tutorials.index.href()}>
-				<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
-						<div
-							mix={[
-								css({ display: "flex", justifyContent: "space-between", alignItems: "center" }),
-							]}
-						>
-							<h2
-								mix={[
-									css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }),
-								]}
-							>
-								Tutorials
-							</h2>
-							<a
-								href={routes.cms.tutorials.new.href()}
-								mix={[
-									css({
-										boxSizing: "border-box",
-										display: "inline-flex",
-										alignItems: "center",
-										height: "2.25rem",
-										padding: "0 0.7rem",
-										fontSize: "0.9rem",
-										borderRadius: "0.4rem",
-										border: "1px solid var(--ui-accent-border)",
-										backgroundColor: "var(--ui-accent-bg-tint)",
-										color: "var(--ui-accent-fg-emphasis)",
-										textDecoration: "none",
-									}),
-								]}
-							>
+				<main mix={[grid(), gap(4)]}>
+					<Card mix={[p(4)]}>
+						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
+							<Heading level={2}>Tutorials</Heading>
+							<LinkButton href={routes.cms.tutorials.new.href()} color="brand" variant="outline">
 								New Tutorial
-							</a>
+							</LinkButton>
 						</div>
-					</section>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-							}),
-						]}
-					>
+					</Card>
+					<Card mix={[p(4)]}>
 						{items.length === 0 ? (
-							<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
-								No tutorials found in the database yet.
-							</p>
+							<p mix={[fg("neutral")]}>No tutorials found in the database yet.</p>
 						) : (
-							<div mix={[css({ overflowX: "auto" })]}>
-								<table mix={[css({ width: "100%", borderCollapse: "collapse" })]}>
-									<thead>
-										<tr>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Title
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "left",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Tags
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "center",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Status
-											</th>
-											<th
-												mix={[
-													css({
-														textAlign: "right",
-														padding: "0.6rem 0.75rem",
-														borderBottom: "1px solid var(--ui-neutral-border)",
-														color: "var(--ui-neutral-fg)",
-														fontSize: "0.9rem",
-														fontWeight: 600,
-													}),
-												]}
-											>
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
+							<Table.Container>
+								<Table aria-label="Tutorials">
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>Title</Table.Column>
+											<Table.Column>Tags</Table.Column>
+											<Table.Column align="center">Status</Table.Column>
+											<Table.Column align="end">Actions</Table.Column>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
 										{items.map((item, index) => {
 											let dialogId = `delete-tutorial-${String(index)}`;
 											return (
-												<tr key={item.id}>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																color: "var(--ui-neutral-fg-emphasis)",
-															}),
-														]}
-													>
-														<a
-															href={item.publicHref}
-															mix={[css({ color: "var(--ui-accent-fg)", textDecoration: "none" })]}
-														>
-															{item.title}
-														</a>
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-															}),
-														]}
-													>
+												<Table.Row key={item.id}>
+													<Table.Cell>
+														<Link href={item.publicHref}>{item.title}</Link>
+													</Table.Cell>
+													<Table.Cell>
 														{item.tags ? (
-															<div
-																mix={[css({ display: "flex", gap: "0.3rem", flexWrap: "wrap" })]}
-															>
+															<div mix={[hstack({ gap: 1 }), flexWrap("wrap")]}>
 																{item.tags
 																	.split(", ")
 																	.filter(Boolean)
 																	.map((tag) => (
-																		<span
-																			key={tag}
-																			mix={[
-																				css({
-																					padding: "0.15rem 0.5rem",
-																					borderRadius: "999px",
-																					backgroundColor: "var(--ui-accent-bg-tint)",
-																					color: "var(--ui-accent-fg-emphasis)",
-																					fontSize: "0.78rem",
-																				}),
-																			]}
-																		>
+																		<Badge key={tag} color="brand" variant="secondary">
 																			{tag}
-																		</span>
+																		</Badge>
 																	))}
 															</div>
 														) : null}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "center",
-															}),
-														]}
-													>
-														{item.preview ? "📝" : "✅"}
-													</td>
-													<td
-														mix={[
-															css({
-																padding: "0.6rem 0.75rem",
-																borderBottom: "1px solid var(--ui-neutral-border)",
-																verticalAlign: "middle",
-																textAlign: "right",
-															}),
-														]}
-													>
-														<div
-															mix={[
-																css({
-																	display: "flex",
-																	gap: "0.35rem",
-																	justifyContent: "end",
-																	alignItems: "center",
-																}),
-															]}
-														>
-															<a
+													</Table.Cell>
+													{/* A future `published_at` reads as a draft still being worked
+													on, so it takes the warning tone, while anything already public
+													takes success — the same publish-state contract the public pages
+													use, spelled out in words instead of an emoji. */}
+													<Table.Cell mix={[textAlign("center")]}>
+														<Badge color={item.preview ? "warning" : "success"} variant="secondary">
+															{item.preview ? "Preview" : "Published"}
+														</Badge>
+													</Table.Cell>
+													<Table.Cell>
+														<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+															<LinkButton
 																href={item.href}
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-accent-border)",
-																		color: "var(--ui-accent-fg-emphasis)",
-																		textDecoration: "none",
-																	}),
-																]}
+																color="brand"
+																variant="outline"
+																size="sm"
 															>
 																Edit
-															</a>
-															<button
+															</LinkButton>
+															<Button
 																type="button"
 																commandfor={dialogId}
 																command="show-modal"
-																mix={[
-																	css({
-																		boxSizing: "border-box",
-																		display: "inline-flex",
-																		alignItems: "center",
-																		justifyContent: "center",
-																		height: "1.8rem",
-																		padding: "0 0.55rem",
-																		fontSize: "0.82rem",
-																		fontFamily: "inherit",
-																		borderRadius: "0.35rem",
-																		border: "1px solid var(--ui-neutral-border)",
-																		backgroundColor: "transparent",
-																		color: "var(--ui-neutral-fg)",
-																		cursor: "pointer",
-																	}),
-																]}
+																color="danger"
+																variant="outline"
+																size="sm"
 															>
 																Delete
-															</button>
+															</Button>
 														</div>
 
 														<Modal id={dialogId}>
-															<form
-																method="post"
-																action={item.deleteAction}
-																mix={[css({ display: "grid", gap: "0.75rem" })]}
-															>
+															<form method="post" action={item.deleteAction} mix={[grid(), gap(4)]}>
 																<input type="hidden" name="_method" value="DELETE" />
-																<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
+																<Modal.Description>
 																	Delete tutorial <strong>{item.title}</strong>? This action cannot
 																	be undone.
-																</p>
-																<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
-																	<Button type="submit">Confirm delete</Button>
-																	<button
+																</Modal.Description>
+																<Modal.Footer>
+																	<Button type="submit" color="danger">
+																		Confirm delete
+																	</Button>
+																	<Button
 																		type="button"
 																		commandfor={dialogId}
 																		command="close"
-																		mix={[
-																			css({
-																				padding: "0.45rem 0.7rem",
-																				fontSize: "0.9rem",
-																				borderRadius: "0.4rem",
-																				border: "1px solid var(--ui-neutral-border)",
-																				backgroundColor: "transparent",
-																				color: "var(--ui-neutral-fg)",
-																				cursor: "pointer",
-																				fontFamily: "inherit",
-																			}),
-																		]}
+																		color="neutral"
+																		variant="outline"
 																	>
 																		Cancel
-																	</button>
-																</div>
+																	</Button>
+																</Modal.Footer>
 															</form>
 														</Modal>
-													</td>
-												</tr>
+													</Table.Cell>
+												</Table.Row>
 											);
 										})}
-									</tbody>
-								</table>
-							</div>
+									</Table.Body>
+								</Table>
+							</Table.Container>
 						)}
-					</section>
+					</Card>
 				</main>
 			</CMSLayout>
 		);
@@ -398,110 +218,66 @@ export function CMSTutorialsActionView() {
 		return (
 			<CMSLayout title={title} activePath={routes.cms.tutorials.index.href()}>
 				<main>
-					<section
-						mix={[
-							css({
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								border: "1px solid var(--ui-neutral-border)",
-								borderRadius: "0.7rem",
-								padding: "1rem",
-								display: "grid",
-								gap: "0.8rem",
-							}),
-						]}
-					>
-						<h2
-							mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
-						>
-							{title}
-						</h2>
-						<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
+					<Card mix={[p(4), grid(), gap(3)]}>
+						<Heading level={2}>{title}</Heading>
+						<p mix={[fg("neutral")]}>{description}</p>
 
-						<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
+						<Form method="post" action={action} mix={[gap(3)]}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
+							<Label mix={[grid(), gap(1)]}>
+								<span>Title</span>
 								<Input name="title" value={values.title} required />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Slug</span>
+							<Label mix={[grid(), gap(1)]}>
+								<span>Slug</span>
 								<Input name="slug" value={values.slug} required readOnly={mode === "edit"} />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Excerpt</span>
-								<textarea
-									name="excerpt"
-									rows={3}
-									required
-									defaultValue={values.excerpt}
-									mix={[
-										css({
-											padding: "0.45rem 0.55rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-neutral-border)",
-											backgroundColor: "var(--ui-neutral-bg-tint)",
-											color: "var(--ui-neutral-fg-emphasis)",
-											fontFamily: "inherit",
-										}),
-									]}
-								/>
-							</label>
+							<Label mix={[grid(), gap(1)]}>
+								<span>Excerpt</span>
+								<TextArea name="excerpt" rows={3} required defaultValue={values.excerpt} />
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Tags (comma separated)</span>
+							<Label mix={[grid(), gap(1)]}>
+								<span>Tags (comma separated)</span>
 								<Input name="tags" value={values.tags} />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Published At</span>
+							<Label mix={[grid(), gap(1)]}>
+								<span>Published At</span>
 								<Input type="date" name="published_at" value={values.published_at} />
-							</label>
+							</Label>
 
-							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Content</span>
-								<textarea
+							<Label mix={[grid(), gap(1)]}>
+								<span>Content</span>
+								{/* The Markdown body is the one field worth many lines of room, so it
+								keeps a monospaced face and a tall floor on top of the control's own
+								content-driven sizing. */}
+								<TextArea
 									name="content"
 									rows={16}
 									required
 									defaultValue={values.content}
-									mix={[
-										css({
-											padding: "0.45rem 0.55rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-neutral-border)",
-											backgroundColor: "var(--ui-neutral-bg-tint)",
-											color: "var(--ui-neutral-fg-emphasis)",
-											fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-										}),
-									]}
+									mix={[font("mono"), minBs("24rem")]}
 								/>
-							</label>
+							</Label>
 
-							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
-								<Button type="submit">{submitLabel}</Button>
-								<a
+							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+								<Button type="submit" color="brand">
+									{submitLabel}
+								</Button>
+								<LinkButton
 									href={routes.cms.tutorials.index.href()}
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											fontSize: "0.9rem",
-											borderRadius: "0.4rem",
-											border: "1px solid var(--ui-accent-border)",
-											color: "var(--ui-accent-fg-emphasis)",
-											textDecoration: "none",
-										}),
-									]}
+									color="brand"
+									variant="outline"
 								>
 									Back to list
-								</a>
+								</LinkButton>
 							</div>
-						</form>
-					</section>
+						</Form>
+					</Card>
 				</main>
 			</CMSLayout>
 		);

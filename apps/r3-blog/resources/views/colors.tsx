@@ -1,14 +1,22 @@
 /**
- * View for the color-palette reference page. Declares the accent, neutral, and
- * semantic UI token lists from colors.css and renders them as example neutral
- * and accent UI cards plus grids of 50x50 swatches. Exists as a living style
+ * View for the color-palette reference page. Derives the raw palette scales and
+ * the semantic tone tokens from the design system's own contract and renders each
+ * tone as a worked example card plus grids of swatches. Exists as a living style
  * guide so the blog's design tokens can be previewed in the browser.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import type { Handle } from "remix/ui";
+
+import { Badge, Button, Heading } from "@pkg/r3-ui";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
+import { ringShadow, rounded } from "@pkg/u/effects";
+import { listStyle } from "@pkg/u/general";
+import { flexWrap, gap, grid, gridTemplate, hstack, items, shrink } from "@pkg/u/layout";
+import { bs, is, m, mis, p, pbs } from "@pkg/u/size";
+import { text } from "@pkg/u/typography";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
@@ -39,76 +47,144 @@ export namespace ColorsView {
 }
 
 /**
- * Accent palette tokens shown in the raw color section.
+ * The five semantic tone names the theme layer defines, in the order they are
+ * previewed. `neutral` leads because every surface on the site is built from it
+ * and the other four read as departures from that baseline.
  */
-const accentColorTokens: Array<ColorsView.Token> = [
-	{ name: "--color-accent-50" },
-	{ name: "--color-accent-100" },
-	{ name: "--color-accent-200" },
-	{ name: "--color-accent-300" },
-	{ name: "--color-accent-400" },
-	{ name: "--color-accent-500" },
-	{ name: "--color-accent-600" },
-	{ name: "--color-accent-700" },
-	{ name: "--color-accent-800" },
-	{ name: "--color-accent-900" },
-	{ name: "--color-accent-950" },
-];
+const TONES = ["neutral", "brand", "success", "warning", "danger"] as const;
 
 /**
- * Neutral palette tokens shown in the raw color section.
+ * The eleven steps every raw palette scale exposes, lightest to darkest. Kept as
+ * a list rather than generated from a range so the two irregular ends (`50` and
+ * `950`, which break the otherwise-even hundreds) stay visible at a glance.
  */
-const neutralColorTokens: Array<ColorsView.Token> = [
-	{ name: "--color-neutral-50" },
-	{ name: "--color-neutral-100" },
-	{ name: "--color-neutral-200" },
-	{ name: "--color-neutral-300" },
-	{ name: "--color-neutral-400" },
-	{ name: "--color-neutral-500" },
-	{ name: "--color-neutral-600" },
-	{ name: "--color-neutral-700" },
-	{ name: "--color-neutral-800" },
-	{ name: "--color-neutral-900" },
-	{ name: "--color-neutral-950" },
-];
+const PALETTE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
 /**
- * Semantic neutral UI tokens previewed as component states.
+ * Every property suffix a semantic tone carries. The four interaction states
+ * (`-hover`, `-pressed`) come from the component library's theme rather than the
+ * lower-level token contract, since how far a color shifts on hover is a
+ * component-design decision — they are listed here because this page documents
+ * what an app can actually reference, not which file declares it.
  */
-const uiNeutralTokens: Array<ColorsView.Token> = [
-	{ name: "--ui-neutral-bg-tint" },
-	{ name: "--ui-neutral-bg-tint-hover" },
-	{ name: "--ui-neutral-bg-tint-pressed" },
-	{ name: "--ui-neutral-bg-solid" },
-	{ name: "--ui-neutral-bg-solid-hover" },
-	{ name: "--ui-neutral-bg-solid-pressed" },
-	{ name: "--ui-neutral-border" },
-	{ name: "--ui-neutral-border-strong" },
-	{ name: "--ui-neutral-ring" },
-	{ name: "--ui-neutral-fg" },
-	{ name: "--ui-neutral-fg-muted" },
-	{ name: "--ui-neutral-fg-emphasis" },
-	{ name: "--ui-neutral-fg-on-solid" },
-];
+const TONE_PROPERTIES = [
+	"bg-tint",
+	"bg-tint-hover",
+	"bg-tint-pressed",
+	"bg-solid",
+	"bg-solid-hover",
+	"bg-solid-pressed",
+	"border",
+	"border-strong",
+	"ring",
+	"fg",
+	"fg-muted",
+	"fg-emphasis",
+	"fg-on-solid",
+] as const;
 
 /**
- * Semantic accent UI tokens previewed as component states.
+ * Props for the per-tone worked example.
  */
-const uiAccentTokens: Array<ColorsView.Token> = [
-	{ name: "--ui-accent-bg-tint" },
-	{ name: "--ui-accent-bg-tint-hover" },
-	{ name: "--ui-accent-bg-tint-pressed" },
-	{ name: "--ui-accent-bg-solid" },
-	{ name: "--ui-accent-bg-solid-hover" },
-	{ name: "--ui-accent-bg-solid-pressed" },
-	{ name: "--ui-accent-border" },
-	{ name: "--ui-accent-border-strong" },
-	{ name: "--ui-accent-ring" },
-	{ name: "--ui-accent-fg" },
-	{ name: "--ui-accent-fg-muted" },
-	{ name: "--ui-accent-fg-emphasis" },
-	{ name: "--ui-accent-fg-on-solid" },
-];
+namespace TonePreview {
+	export interface Props {
+		/** Tone whose tokens the card demonstrates. */
+		tone: (typeof TONES)[number];
+	}
+}
+
+/**
+ * Renders one tone as a worked example: a tinted card showing the three tint
+ * steps as chips and the three solid steps as buttons, so each token is seen in
+ * the role it was designed for rather than as an abstract swatch. The five cards
+ * are identical apart from their tone, which is the point — a tone swap should
+ * be the only difference between two otherwise-matching surfaces.
+ */
+function TonePreview(handle: Handle<TonePreview.Props>) {
+	return () => {
+		let { tone } = handle.props;
+
+		return (
+			<article
+				mix={[
+					grid(),
+					gap(3),
+					p(4),
+					rounded("xl"),
+					bg(`${tone}.tint`),
+					border({ width: 1, color: tone }),
+					fg(tone),
+				]}
+			>
+				<Heading level={3} mix={[fg(`${tone}.emphasis`)]}>
+					{tone}
+				</Heading>
+				<p mix={[m(0), fg(`${tone}.muted`)]}>
+					Tint, border, foreground, muted, and emphasis tokens for the {tone} tone.
+				</p>
+				<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
+					<Badge color={tone} variant="outline">
+						Tint
+					</Badge>
+					<span
+						mix={[
+							p(1, 2),
+							rounded("md"),
+							bg(`${tone}.bg-tint-hover`),
+							border({ width: 1, color: tone }),
+						]}
+					>
+						Hover
+					</span>
+					<span
+						mix={[
+							p(1, 2),
+							rounded("md"),
+							bg(`${tone}.bg-tint-pressed`),
+							border({ width: 1, color: `${tone}.strong` }),
+						]}
+					>
+						Pressed
+					</span>
+				</div>
+				<div
+					mix={[
+						hstack({ gap: 2 }),
+						flexWrap("wrap"),
+						pbs(2),
+						borderEdge("block-start", { width: 1, color: `${tone}.strong` }),
+					]}
+				>
+					<Button type="button" color={tone} size="sm">
+						Solid
+					</Button>
+					<span mix={[p(2, 3), rounded("lg"), bg(`${tone}.bg-solid-hover`), fg(`${tone}.onSolid`)]}>
+						Hover
+					</span>
+					<span
+						mix={[p(2, 3), rounded("lg"), bg(`${tone}.bg-solid-pressed`), fg(`${tone}.onSolid`)]}
+					>
+						Pressed
+					</span>
+					{/* `ring()` only ever paints on :focus-visible, and a focus ring nobody
+					can focus is invisible documentation — so this sample uses the
+					always-on `ringShadow()` against the same ring token instead. */}
+					<span
+						mix={[
+							mis("auto"),
+							p(2, 3),
+							rounded("lg"),
+							border({ width: 1, color: tone }),
+							ringShadow(`${tone}.ring`, 3),
+						]}
+					>
+						Ring
+					</span>
+				</div>
+			</article>
+		);
+	};
+}
 
 /**
  * Builds the colors page renderer with token previews and swatches.
@@ -116,10 +192,14 @@ const uiAccentTokens: Array<ColorsView.Token> = [
 export function ColorsView() {
 	return ({ model: _model }: { model: ColorsView.Model }) => {
 		let groups: Array<ColorsView.Group> = [
-			{ title: "Neutral", tokens: neutralColorTokens },
-			{ title: "Accent", tokens: accentColorTokens },
-			{ title: "UI Neutral", tokens: uiNeutralTokens },
-			{ title: "UI Accent", tokens: uiAccentTokens },
+			...TONES.map((tone) => ({
+				title: `Palette: ${tone}`,
+				tokens: PALETTE_STEPS.map((step) => ({ name: `--ui-color-${tone}-${step}` })),
+			})),
+			...TONES.map((tone) => ({
+				title: `Tone: ${tone}`,
+				tokens: TONE_PROPERTIES.map((property) => ({ name: `--ui-${tone}-${property}` })),
+			})),
 		];
 
 		return (
@@ -128,325 +208,56 @@ export function ColorsView() {
 				description="R3 Blog color tokens"
 				activePath={routes.colors.href()}
 			>
-				<main mix={[css({ display: "grid", gap: "1.2rem" })]}>
-					<h1 mix={[css({ margin: 0, fontSize: "2rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+				<main mix={[grid(), gap(5)]}>
+					<Heading level={1} mix={[text("3xl")]}>
 						R3 Blog Palette
-					</h1>
-					<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
-						Color tokens from <code>colors.css</code> shown as 50x50 swatches.
+					</Heading>
+					<p mix={[m(0), fg("neutral")]}>
+						Every raw palette step and semantic tone token this site defines, shown as swatches with
+						one worked example per tone.
 					</p>
 
 					<section
 						mix={[
-							css({
-								display: "grid",
-								gap: "0.9rem",
-								gridTemplateColumns: "repeat(auto-fit, minmax(20rem, 1fr))",
-							}),
+							grid(),
+							gap(4),
+							gridTemplate({ columns: "repeat(auto-fit, minmax(20rem, 1fr))" }),
 						]}
 					>
-						<article
-							mix={[
-								css({
-									padding: "1rem",
-									borderRadius: "0.8rem",
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									color: "var(--ui-neutral-fg)",
-									display: "grid",
-									gap: "0.65rem",
-								}),
-							]}
-						>
-							<h3
-								mix={[
-									css({ margin: 0, color: "var(--ui-neutral-fg-emphasis)", fontSize: "1.1rem" }),
-								]}
-							>
-								Neutral UI Card
-							</h3>
-							<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg-muted)" })]}>
-								Uses tint, border, foreground, muted and emphasis variables.
-							</p>
-							<div mix={[css({ display: "flex", gap: "0.45rem", flexWrap: "wrap" })]}>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-neutral-bg-tint)",
-											border: "1px solid var(--ui-neutral-border)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Tint
-								</span>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-											border: "1px solid var(--ui-neutral-border)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Hover
-								</span>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-											border: "1px solid var(--ui-neutral-border-strong)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Pressed
-								</span>
-							</div>
-							<div
-								mix={[
-									css({
-										borderTop: "1px solid var(--ui-neutral-border-strong)",
-										paddingTop: "0.6rem",
-										display: "flex",
-										gap: "0.45rem",
-										flexWrap: "wrap",
-									}),
-								]}
-							>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-neutral-bg-solid)",
-											color: "var(--ui-neutral-fg-on-solid)",
-										}),
-									]}
-								>
-									Solid
-								</button>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-neutral-bg-solid-hover)",
-											color: "var(--ui-neutral-fg-on-solid)",
-										}),
-									]}
-								>
-									Hover
-								</button>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-neutral-bg-solid-pressed)",
-											color: "var(--ui-neutral-fg-on-solid)",
-										}),
-									]}
-								>
-									Pressed
-								</button>
-								<span
-									mix={[
-										css({
-											marginLeft: "auto",
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "1px solid var(--ui-neutral-border)",
-											boxShadow: "0 0 0 3px var(--ui-neutral-ring)",
-										}),
-									]}
-								>
-									Ring
-								</span>
-							</div>
-						</article>
-
-						<article
-							mix={[
-								css({
-									padding: "1rem",
-									borderRadius: "0.8rem",
-									backgroundColor: "var(--ui-accent-bg-tint)",
-									border: "1px solid var(--ui-accent-border)",
-									color: "var(--ui-accent-fg)",
-									display: "grid",
-									gap: "0.65rem",
-								}),
-							]}
-						>
-							<h3
-								mix={[
-									css({ margin: 0, color: "var(--ui-accent-fg-emphasis)", fontSize: "1.1rem" }),
-								]}
-							>
-								Accent UI Card
-							</h3>
-							<p mix={[css({ margin: 0, color: "var(--ui-accent-fg-muted)" })]}>
-								Uses tint, border, foreground, muted and emphasis variables.
-							</p>
-							<div mix={[css({ display: "flex", gap: "0.45rem", flexWrap: "wrap" })]}>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-accent-bg-tint)",
-											border: "1px solid var(--ui-accent-border)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Tint
-								</span>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-accent-bg-tint-hover)",
-											border: "1px solid var(--ui-accent-border)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Hover
-								</span>
-								<span
-									mix={[
-										css({
-											padding: "0.3rem 0.5rem",
-											backgroundColor: "var(--ui-accent-bg-tint-pressed)",
-											border: "1px solid var(--ui-accent-border-strong)",
-											borderRadius: "0.45rem",
-										}),
-									]}
-								>
-									Pressed
-								</span>
-							</div>
-							<div
-								mix={[
-									css({
-										borderTop: "1px solid var(--ui-accent-border-strong)",
-										paddingTop: "0.6rem",
-										display: "flex",
-										gap: "0.45rem",
-										flexWrap: "wrap",
-									}),
-								]}
-							>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-accent-bg-solid)",
-											color: "var(--ui-accent-fg-on-solid)",
-										}),
-									]}
-								>
-									Solid
-								</button>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-accent-bg-solid-hover)",
-											color: "var(--ui-accent-fg-on-solid)",
-										}),
-									]}
-								>
-									Hover
-								</button>
-								<button
-									type="button"
-									mix={[
-										css({
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "none",
-											backgroundColor: "var(--ui-accent-bg-solid-pressed)",
-											color: "var(--ui-accent-fg-on-solid)",
-										}),
-									]}
-								>
-									Pressed
-								</button>
-								<span
-									mix={[
-										css({
-											marginLeft: "auto",
-											padding: "0.45rem 0.7rem",
-											borderRadius: "0.5rem",
-											border: "1px solid var(--ui-accent-border)",
-											boxShadow: "0 0 0 3px var(--ui-accent-ring)",
-										}),
-									]}
-								>
-									Ring
-								</span>
-							</div>
-						</article>
+						{TONES.map((tone) => (
+							<TonePreview key={tone} tone={tone} />
+						))}
 					</section>
 
 					{groups.map((group) => (
-						<section key={group.title} mix={[css({ display: "grid", gap: "0.8rem" })]}>
-							<h2
-								mix={[
-									css({ margin: 0, fontSize: "1.35rem", color: "var(--ui-neutral-fg-emphasis)" }),
-								]}
-							>
+						<section key={group.title} mix={[grid(), gap(3)]}>
+							<Heading level={2} mix={[text("2xl")]}>
 								{group.title}
-							</h2>
+							</Heading>
 							<ul
 								mix={[
-									css({
-										margin: 0,
-										padding: 0,
-										listStyle: "none",
-										display: "grid",
-										gap: "0.7rem",
-										gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-									}),
+									m(0),
+									p(0),
+									listStyle("none"),
+									grid(),
+									gap(3),
+									gridTemplate({ columns: "repeat(auto-fit, minmax(13rem, 1fr))" }),
 								]}
 							>
 								{group.tokens.map((token) => (
-									<li
-										key={token.name}
-										mix={[css({ display: "flex", alignItems: "center", gap: "0.65rem" })]}
-									>
+									<li key={token.name} mix={[hstack({ gap: 3 }), items("center")]}>
 										<span
 											aria-hidden
 											mix={[
-												css({
-													display: "inline-block",
-													width: "50px",
-													height: "50px",
-													backgroundColor: `var(${token.name})`,
-													border: "1px solid var(--ui-neutral-border)",
-													borderRadius: "0.35rem",
-													flexShrink: 0,
-												}),
+												is(12),
+												bs(12),
+												shrink(0),
+												rounded("sm"),
+												bg(`var(${token.name})`),
+												border({ width: 1, color: "neutral" }),
 											]}
 										/>
-										<code mix={[css({ color: "var(--ui-neutral-fg)" })]}>{token.name}</code>
+										<code mix={[text("sm"), fg("neutral")]}>{token.name}</code>
 									</li>
 								))}
 							</ul>
