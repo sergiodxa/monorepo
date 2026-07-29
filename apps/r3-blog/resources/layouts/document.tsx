@@ -93,33 +93,52 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 
 		return (
 			<html lang={locale}>
+				{/* Every child carries `data-key`, which is what the client runtime's DOM
+				diff matches head children on; without it the diff falls back to matching
+				by position and only reuses a node when the tag names line up. Pages here
+				disagree on how many head tags they have — a post adds a canonical link and
+				nine Open Graph/Twitter tags that no other page has — so a positional diff
+				lined a stylesheet `<link>` up against a `<meta>`, replaced it, and made the
+				browser re-fetch and re-apply the design system's stylesheets mid-navigation.
+				That was a visible flash of unstyled content on every navigation into or out
+				of a post. Keying makes the diff identity-based, so adding or dropping a tag
+				leaves every other tag's element untouched.
+
+				The fixed tags are also listed before the variable-length ones, so their
+				positions never move even if the keying is ever lost. */}
 				<head>
-					<meta charSet="utf-8" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					<title>{title}</title>
-					{description && <meta name="description" content={description} />}
-					{canonical && <link rel="canonical" href={canonical} />}
-					{meta.map((tag) => (
-						<meta
-							key={tag.property ?? tag.name ?? tag.content}
-							property={tag.property}
-							name={tag.name}
-							content={tag.content}
-						/>
-					))}
-					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
+					<meta charSet="utf-8" data-key="charset" />
+					<meta name="viewport" content="width=device-width, initial-scale=1" data-key="viewport" />
+					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} data-key="client-entry" />
 					{/* Order matters: reset first, then this app's own --ui-color-* scales,
 					then the semantic theme tokens that read them through `var()` — CSS
 					custom properties resolve at used-value time, so declaration order
 					between these three doesn't actually affect which value wins, but
 					reading them least-specific-to-most mirrors the token layering. Page
 					stylesheets come last, so a page can override the system. */}
-					<link rel="stylesheet" href={resetStyles} />
-					<link rel="stylesheet" href={colorStyles} />
-					<link rel="stylesheet" href={themeStyles} />
+					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
+					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
+					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
+					<title data-key="title">{title}</title>
+					{description && <meta name="description" content={description} data-key="description" />}
+					{canonical && <link rel="canonical" href={canonical} data-key="canonical" />}
+					{meta.map((tag) => {
+						let identity = tag.property ?? tag.name ?? tag.content;
+
+						return (
+							<meta
+								key={identity}
+								data-key={`meta:${identity}`}
+								property={tag.property}
+								name={tag.name}
+								content={tag.content}
+							/>
+						);
+					})}
 					{stylesheets.map((item) => (
 						<link
 							key={item.href + (item.media ?? "")}
+							data-key={`page-style:${item.href}`}
 							rel="stylesheet"
 							href={item.href}
 							media={item.media}
