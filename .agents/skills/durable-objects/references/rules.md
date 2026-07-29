@@ -187,9 +187,9 @@ async handleRequest() {
 
 **Never** hold across external I/O (fetch, R2, KV).
 
-## RPC Methods
+## RPC Methods and Fetch Handlers
 
-Use RPC (compatibility date >= 2024-04-03) instead of fetch() handler:
+Use RPC (compatibility date >= 2024-04-03) for typed domain operations:
 
 ```typescript
 export class ChatRoom extends DurableObject<Env> {
@@ -208,6 +208,8 @@ export class ChatRoom extends DurableObject<Env> {
 const stub = env.CHAT_ROOM.getByName(roomId);
 const msg = await stub.sendMessage("user-123", "Hello!"); // Typed!
 ```
+
+Keep `fetch()` handlers when the Durable Object is intentionally acting as an HTTP endpoint, proxy, WebSocket endpoint, or request forwarding boundary. Do not rewrite those examples to RPC only because RPC is available.
 
 ### Explicit init() Method
 
