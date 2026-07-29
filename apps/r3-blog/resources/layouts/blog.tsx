@@ -1,7 +1,7 @@
 /**
  * Layout component for public blog pages. Composes the shared document shell,
  * forwarding the page's title, description, canonical and social tags, and draws
- * the parchment body and main navigation bar before the page children. Exists to
+ * the silvered body and main navigation bar before the page children. Exists to
  * give every public page a shared shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -87,19 +87,24 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 					minBs("100vh"),
 					font("serif"),
 					fg("neutral.emphasis"),
-					/* The parchment wash: a fixed, oversized radial gradient running from
-					the two lightest neutral tints out to the 200 step, so the page reads
-					as a sheet of aged paper lit from its top-left corner rather than a
-					flat fill. Fixed attachment keeps the light source still while the
-					content scrolls past it. */
+					/* The silver sheen: a fixed, oversized radial gradient running from the
+					lightest neutral tint out to the next step, so the page reads as a
+					sheet of brushed metal catching light at its top-left corner rather
+					than a flat fill. Fixed attachment keeps the light source still while
+					the content scrolls past it, and the base color matches the outer stop
+					so a viewport wider than the gradient shows no seam.
+
+					The wash deliberately spans only those two steps. Link text is brand's
+					600 step, which clears AA against both of them (4.91:1 and 4.63:1) and
+					stops clearing it against anything darker, so letting the sheen deepen
+					further would trade readable links for a more dramatic gradient. */
 					bg({
-						color: "neutral.tint",
+						color: "neutral.bg-tint-hover",
 						image: radialGradient(
 							"circle at 10% 10%",
-							{ color: color("neutral.bg-tint-hover"), position: "0" },
-							{ color: color("neutral.bg-tint-hover"), position: "18%" },
-							{ color: color("neutral.bg-tint-pressed"), position: "52%" },
-							{ color: color("color.neutral.200"), position: "100%" },
+							{ color: color("neutral.tint"), position: "0" },
+							{ color: color("neutral.tint"), position: "20%" },
+							{ color: color("neutral.bg-tint-hover"), position: "100%" },
 						),
 						repeat: "no-repeat",
 						size: "150vmax 150vmax",

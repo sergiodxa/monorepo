@@ -8,72 +8,87 @@
  * line up visually at the same step across colors; only hue and the chroma
  * curve (peaking mid-scale, tapering at both ends) vary per color.
  *
- * The palette keeps this site's ink-on-parchment identity. `neutral` is a warm
- * cream at hue 84 held to a near-achromatic chroma ceiling of 0.024, so page
- * surfaces read as aged paper while still behaving as a neutral for text,
- * borders, and backgrounds. `brand` is a blue ink at hue 255, and it runs close
- * to the sRGB ceiling on purpose: brand is almost entirely link text on cream,
- * and an under-saturated blue at these lightnesses reads as dusty grey rather
- * than as ink. An earlier revision held it to 0.075 chroma for restraint's sake
- * and the links looked washed out, so the chroma now tracks roughly 90% of what
- * the gamut allows per step.
+ * The palette is Slytherin-inspired: black, emerald, and silver. `brand` is
+ * emerald (hue 162, a blue-leaning jewel green rather than a grassy one) and
+ * `neutral` is silver — still near-achromatic for text, borders, and
+ * backgrounds, but tinted cool (hue 250) rather than warm, so surfaces read as
+ * brushed metal and make the emerald pop instead of blending into it. "Black" is
+ * the dark end of that silver ramp: 900 is the body text and 950 the deepest
+ * step, both near-black with just enough cool tint to belong to the same family
+ * as the surfaces.
  *
- * The hue is 255 rather than a truer blue for the same gamut reason: sRGB's
- * chroma ceiling at these mid lightnesses climbs steeply with hue (at L=0.52 it
- * allows 0.131 at hue 245 but 0.171 at 255), so a few degrees toward blue buy
- * the saturation the ink needs without tipping into an electric, web-default
- * blue that would compete with the parchment instead of sitting on it.
+ * `success` sits at hue 142, the yellower green a house palette leaves free. It
+ * has to stay green (green means "up" everywhere), so it takes the space brand
+ * does not occupy rather than crowding emerald: 20 degrees of hue separates a
+ * success badge from a brand button, where 7 would have made them
+ * near-identical. `warning` (85) and `danger` (25) keep their hues — they're
+ * orthogonal to the house palette and load-bearing for status at a glance — and
+ * they deliberately break the muted rule, running at whatever chroma the gamut
+ * allows so they are noticed at a glance in the CMS.
  *
- * Note that `brand`'s chroma peaks at step 500 and *falls* toward 600, unlike
- * every other scale here, which peaks mid-scale and tapers symmetrically. That
- * is the gamut ceiling again, not an oversight: it drops faster than lightness
- * does through this part of blue, so asking 600 for 500's chroma would silently
- * clip and flatten the two steps into the same rendered color.
+ * Every chroma here is held just inside the sRGB gamut for its own lightness, so
+ * the declared value is what actually renders rather than being silently clipped
+ * into a different lightness and hue. That constrains three scales in ways worth
+ * spelling out, because each ceiling falls off differently:
  *
- * `success` (142), `warning` (85), and `danger` (25) are the status tones, and
- * they deliberately break the muted rule: they exist to be noticed at a glance
- * in the CMS, so they run at full chroma. `warning` sits only one degree of hue
- * from `neutral`'s 84 and stays unambiguous anyway, because neutral never
- * exceeds 0.024 chroma while warning peaks at 0.16 — the two can never be
- * confused despite sharing a hue family.
+ * - `brand`: sRGB is far narrower toward emerald than toward a grassy green (at
+ *   L=0.52 it allows C=0.114 at hue 162 but C=0.175 at hue 142), and the ceiling
+ *   falls away faster than lightness does, so brand's chroma peaks at step 400
+ *   rather than mid-scale. The ramp stays monotonic in both directions from
+ *   there, just not centered. Steps 400 and darker sit within 0.005 of the
+ *   ceiling on purpose: brand is mostly link text here, and an under-saturated
+ *   green at these lightnesses reads as dusty grey rather than as emerald.
+ * - `warning`: dark yellows do not exist in sRGB. The ceiling at hue 85 collapses
+ *   from 0.150 at L=0.73 to 0.033 at L=0.16, so every step from 400 down is
+ *   pinned to that ceiling. The scale therefore deepens into olive rather than
+ *   staying a saturated amber — that is the honest rendering of hue 85 at these
+ *   lightnesses, not a loss of intent.
+ * - `danger`: the mirror case. Pale reds cannot hold chroma either, so 50 through
+ *   300 are ceiling-pinned (0.009 at L=0.98) while 400 and darker keep the full
+ *   values the hue supports. The tints read as pale blush instead of pink.
  *
- * Every chroma is held inside the sRGB gamut for its own lightness, so the
- * declared value is what actually renders rather than being silently clipped.
+ * `brand` step 600 is the link color and clears WCAG AA as body text on both
+ * page surfaces (4.91:1 on neutral-50, 4.63:1 on neutral-100). Step 500 — which
+ * the theme maps to `fg-muted` — cannot: nothing at L=0.62 reaches 4.5:1 against
+ * a near-white background, in any hue. `brand.muted` is therefore not a text
+ * token on this site, and neither is `neutral.muted` for anything that has to be
+ * read rather than skimmed.
  *
- * No dark-mode class is set on the document: this is a light, paper-toned
- * reading surface by design, so the theme's light `:root` block is the only one
- * that ever applies.
+ * No dark-mode class is set on the document: this is still a light reading
+ * surface, and the code-block theme in prism.css is tuned for a light code
+ * surface only. The dark end of the ramp supplies the black — text, solid
+ * buttons, deep borders — rather than the page background.
  */
 
 :root {
-	--ui-color-neutral-50: oklch(0.98 0.014 84);
-	--ui-color-neutral-100: oklch(0.96 0.018 84);
-	--ui-color-neutral-200: oklch(0.91 0.022 84);
-	--ui-color-neutral-300: oklch(0.83 0.024 84);
-	--ui-color-neutral-400: oklch(0.73 0.024 84);
-	--ui-color-neutral-500: oklch(0.62 0.022 84);
-	--ui-color-neutral-600: oklch(0.52 0.02 84);
-	--ui-color-neutral-700: oklch(0.42 0.018 84);
-	--ui-color-neutral-800: oklch(0.32 0.015 84);
-	--ui-color-neutral-900: oklch(0.24 0.012 84);
-	--ui-color-neutral-950: oklch(0.16 0.009 84);
+	--ui-color-neutral-50: oklch(0.98 0.004 250);
+	--ui-color-neutral-100: oklch(0.96 0.005 250);
+	--ui-color-neutral-200: oklch(0.91 0.008 250);
+	--ui-color-neutral-300: oklch(0.83 0.011 250);
+	--ui-color-neutral-400: oklch(0.73 0.013 250);
+	--ui-color-neutral-500: oklch(0.62 0.014 250);
+	--ui-color-neutral-600: oklch(0.52 0.014 250);
+	--ui-color-neutral-700: oklch(0.42 0.012 250);
+	--ui-color-neutral-800: oklch(0.32 0.01 250);
+	--ui-color-neutral-900: oklch(0.24 0.008 250);
+	--ui-color-neutral-950: oklch(0.16 0.006 250);
 
-	--ui-color-brand-50: oklch(0.98 0.005 255);
-	--ui-color-brand-100: oklch(0.96 0.012 255);
-	--ui-color-brand-200: oklch(0.91 0.031 255);
-	--ui-color-brand-300: oklch(0.83 0.069 255);
-	--ui-color-brand-400: oklch(0.73 0.125 255);
-	--ui-color-brand-500: oklch(0.62 0.188 255);
-	--ui-color-brand-600: oklch(0.52 0.158 255);
-	--ui-color-brand-700: oklch(0.42 0.122 255);
-	--ui-color-brand-800: oklch(0.32 0.087 255);
-	--ui-color-brand-900: oklch(0.24 0.06 255);
-	--ui-color-brand-950: oklch(0.16 0.037 255);
+	--ui-color-brand-50: oklch(0.98 0.018 162);
+	--ui-color-brand-100: oklch(0.96 0.04 162);
+	--ui-color-brand-200: oklch(0.91 0.075 162);
+	--ui-color-brand-300: oklch(0.83 0.12 162);
+	--ui-color-brand-400: oklch(0.73 0.155 162);
+	--ui-color-brand-500: oklch(0.62 0.133 162);
+	--ui-color-brand-600: oklch(0.52 0.112 162);
+	--ui-color-brand-700: oklch(0.42 0.09 162);
+	--ui-color-brand-800: oklch(0.32 0.068 162);
+	--ui-color-brand-900: oklch(0.24 0.051 162);
+	--ui-color-brand-950: oklch(0.16 0.034 162);
 
-	--ui-color-danger-50: oklch(0.98 0.02 25);
-	--ui-color-danger-100: oklch(0.96 0.05 25);
-	--ui-color-danger-200: oklch(0.91 0.09 25);
-	--ui-color-danger-300: oklch(0.83 0.13 25);
+	--ui-color-danger-50: oklch(0.98 0.009 25);
+	--ui-color-danger-100: oklch(0.96 0.019 25);
+	--ui-color-danger-200: oklch(0.91 0.046 25);
+	--ui-color-danger-300: oklch(0.83 0.093 25);
 	--ui-color-danger-400: oklch(0.73 0.16 25);
 	--ui-color-danger-500: oklch(0.62 0.18 25);
 	--ui-color-danger-600: oklch(0.52 0.18 25);
@@ -83,16 +98,16 @@
 	--ui-color-danger-950: oklch(0.16 0.06 25);
 
 	--ui-color-warning-50: oklch(0.98 0.02 85);
-	--ui-color-warning-100: oklch(0.96 0.05 85);
+	--ui-color-warning-100: oklch(0.96 0.042 85);
 	--ui-color-warning-200: oklch(0.91 0.08 85);
 	--ui-color-warning-300: oklch(0.83 0.12 85);
-	--ui-color-warning-400: oklch(0.73 0.15 85);
-	--ui-color-warning-500: oklch(0.62 0.16 85);
-	--ui-color-warning-600: oklch(0.52 0.16 85);
-	--ui-color-warning-700: oklch(0.42 0.14 85);
-	--ui-color-warning-800: oklch(0.32 0.11 85);
-	--ui-color-warning-900: oklch(0.24 0.08 85);
-	--ui-color-warning-950: oklch(0.16 0.05 85);
+	--ui-color-warning-400: oklch(0.73 0.147 85);
+	--ui-color-warning-500: oklch(0.62 0.125 85);
+	--ui-color-warning-600: oklch(0.52 0.105 85);
+	--ui-color-warning-700: oklch(0.42 0.085 85);
+	--ui-color-warning-800: oklch(0.32 0.065 85);
+	--ui-color-warning-900: oklch(0.24 0.049 85);
+	--ui-color-warning-950: oklch(0.16 0.033 85);
 
 	--ui-color-success-50: oklch(0.98 0.02 142);
 	--ui-color-success-100: oklch(0.96 0.05 142);
