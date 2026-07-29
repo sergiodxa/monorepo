@@ -57,7 +57,10 @@ export function NavigationIndicator(handle: Handle<NavigationIndicator.Props>) {
 			<Spinner
 				aria-label={label}
 				color="brand"
-				size="sm"
+				/* The catalog's largest step. A page-level status cue competes with the
+				whole page for attention, so the smaller steps — sized for sitting inside
+				a button or a table row — disappear up here in the corner. */
+				size="lg"
 				mix={[
 					/* Pinned to the corner rather than placed in the page flow: the
 					indicator must not shift any layout when it appears, and the corner is
