@@ -81,7 +81,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		} = handle.props;
 
 		return (
-			<html lang={locale}>
+			/* `system` opts the theme layer into `prefers-color-scheme` — it is the
+			class that layer's own dark blocks are gated on, so without it only the
+			light `:root` block ever applies no matter what the visitor prefers. A
+			literal `dark` would force the scheme instead; this follows the OS. */
+			<html lang={locale} class="system">
 				{/* Every child carries `data-key`, which is what the client runtime's DOM
 				diff matches head children on; without it the diff falls back to matching
 				by position and only reuses a node when the tag names line up. Pages here

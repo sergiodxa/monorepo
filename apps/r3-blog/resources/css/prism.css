@@ -8,15 +8,28 @@
  * theme: reusing generic UI foreground tones for keywords and strings collapses
  * the hue separation reading code depends on, so those keep their own values.
  *
- * Those hand-tuned hues are deliberately kept as-is across a palette change,
- * since the block surface stays at the neutral 100 step and so its luminance —
- * the only thing token contrast depends on — does not move. The two exceptions
- * are the near-achromatic tokens, which have to follow the neutral family or
- * they read as a stray smudge of the wrong temperature: `comment` and
- * `namespace` are cool greys now, not warm ones. `comment` also sits a step
- * darker than the muted neutral it used to borrow, because nothing at that
- * lightness clears AA against a near-white code surface, and a comment is prose
- * that has to be read.
+ * The chrome reads from the *semantic* `--ui-{tone}-*` tokens rather than raw
+ * palette steps, which is what lets it follow the color scheme: the theme layer
+ * already remaps those per scheme, so `--ui-neutral-bg-tint-hover` is the step
+ * just off the page background in both directions — one step darker than a light
+ * page, one step lighter than a dark one — which is exactly the relationship a
+ * code block wants. Reading raw steps instead would pin the block to a near-white
+ * surface and leave it glaring on a dark page.
+ *
+ * The syntax hues cannot follow the same trick, because there is no semantic
+ * token for "the blue a literal should be". They stay a dedicated, hand-tuned
+ * theme — reusing generic UI foreground tones for keywords and strings collapses
+ * the hue separation reading code depends on — which means they need one set per
+ * scheme: dark-on-light below, and light-on-dark in the scheme blocks that
+ * follow. Both sets keep the same hue per token, so a reader who switches schemes
+ * still finds strings green and keywords warm; only lightness and chroma move.
+ *
+ * The two near-achromatic tokens are the exception and do read from semantic
+ * tokens: `comment` and `namespace` have to follow the neutral family or they
+ * read as a stray smudge of the wrong temperature. `comment` takes the plain `fg`
+ * weight rather than the muted one, because nothing at the muted step's lightness
+ * clears AA against a near-white code surface, and a comment is prose that has to
+ * be read.
  *
  * The string and JSX-attribute-value green stays close to the brand hue on
  * purpose: the separation the theme needs is between syntax tokens, not between
@@ -27,15 +40,16 @@
  * lengths, so a code block's padding and corners match every other surface.
  */
 :root {
-	--ui-highlight-text: var(--ui-color-neutral-900);
-	--ui-highlight-selection: var(--ui-color-brand-200);
-	--ui-highlight-surface: var(--ui-color-neutral-100);
-	--ui-highlight-surface-inline: var(--ui-color-neutral-200);
-	--ui-highlight-border: var(--ui-color-neutral-300);
-	--ui-highlight-line: var(--ui-color-neutral-200);
-	--ui-highlight-line-accent: var(--ui-color-brand-400);
-	--ui-highlight-comment: var(--ui-color-neutral-600);
-	--ui-highlight-punctuation: var(--ui-color-neutral-700);
+	--ui-highlight-text: var(--ui-neutral-fg-emphasis);
+	--ui-highlight-selection: var(--ui-brand-border);
+	--ui-highlight-surface: var(--ui-neutral-bg-tint-hover);
+	--ui-highlight-surface-inline: var(--ui-neutral-bg-tint-pressed);
+	--ui-highlight-border: var(--ui-neutral-border);
+	--ui-highlight-line: var(--ui-neutral-bg-tint-pressed);
+	--ui-highlight-line-accent: var(--ui-brand-fg);
+	--ui-highlight-comment: var(--ui-neutral-fg);
+	--ui-highlight-punctuation: var(--ui-neutral-fg-emphasis);
+	--ui-highlight-namespace: var(--ui-neutral-fg);
 	--ui-highlight-literal: oklch(0.43 0.09 246);
 	--ui-highlight-string: oklch(0.46 0.085 165);
 	--ui-highlight-operator: oklch(0.48 0.1 334);
@@ -43,10 +57,44 @@
 	--ui-highlight-function: oklch(0.45 0.11 286);
 	--ui-highlight-variable: oklch(0.43 0.1 226);
 	--ui-highlight-class: oklch(0.53 0.085 72);
-	--ui-highlight-namespace: oklch(0.5 0.022 250);
 	--ui-highlight-jsx-tag: oklch(0.41 0.095 244);
 	--ui-highlight-jsx-attr-name: oklch(0.5 0.11 32);
 	--ui-highlight-jsx-attr-value: oklch(0.46 0.085 165);
+}
+
+/*
+ * Light-on-dark syntax hues, gated exactly the way the theme layer gates its own
+ * scheme switch: `.dark` for a forced scheme, `.system` under the OS preference.
+ * Every value sits at L=0.80 with its chroma held inside the sRGB gamut for that
+ * lightness, and each clears better than 8:1 against the dark code surface — a
+ * wide margin on purpose, since code is dense and read closely.
+ */
+:is(.dark, .dark *) {
+	--ui-highlight-literal: oklch(0.8 0.099 246);
+	--ui-highlight-string: oklch(0.8 0.123 165);
+	--ui-highlight-operator: oklch(0.8 0.145 334);
+	--ui-highlight-keyword: oklch(0.8 0.106 32);
+	--ui-highlight-function: oklch(0.8 0.097 286);
+	--ui-highlight-variable: oklch(0.8 0.123 226);
+	--ui-highlight-class: oklch(0.8 0.123 72);
+	--ui-highlight-jsx-tag: oklch(0.8 0.1 244);
+	--ui-highlight-jsx-attr-name: oklch(0.8 0.106 32);
+	--ui-highlight-jsx-attr-value: oklch(0.8 0.123 165);
+}
+
+@media (prefers-color-scheme: dark) {
+	:is(.system, .system *) {
+		--ui-highlight-literal: oklch(0.8 0.099 246);
+		--ui-highlight-string: oklch(0.8 0.123 165);
+		--ui-highlight-operator: oklch(0.8 0.145 334);
+		--ui-highlight-keyword: oklch(0.8 0.106 32);
+		--ui-highlight-function: oklch(0.8 0.097 286);
+		--ui-highlight-variable: oklch(0.8 0.123 226);
+		--ui-highlight-class: oklch(0.8 0.123 72);
+		--ui-highlight-jsx-tag: oklch(0.8 0.1 244);
+		--ui-highlight-jsx-attr-name: oklch(0.8 0.106 32);
+		--ui-highlight-jsx-attr-value: oklch(0.8 0.123 165);
+	}
 }
 
 pre[class*="language-"],

@@ -54,10 +54,12 @@
  * token on this site, and neither is `neutral.muted` for anything that has to be
  * read rather than skimmed.
  *
- * No dark-mode class is set on the document: this is still a light reading
- * surface, and the code-block theme in prism.css is tuned for a light code
- * surface only. The dark end of the ramp supplies the black — text, solid
- * buttons, deep borders — rather than the page background.
+ * These eleven steps per scale are the whole palette in both color schemes: the
+ * theme layer switches *which* step each semantic token points at, so the same
+ * near-black that is body text on a light page becomes the page itself on a dark
+ * one. That is why nothing here is scheme-specific and why no component should
+ * ever reference a raw step directly — a raw step cannot follow the scheme, while
+ * every `--ui-{tone}-*` token can.
  */
 
 :root {
