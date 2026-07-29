@@ -28,7 +28,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 		let subject = await Subject.findById(db(), subjectId);
 
 		if (!subject || subject.role !== "admin") {
-			return redirect("/sessions");
+			return redirect(href("/account/sessions"));
 		}
 
 		return next();

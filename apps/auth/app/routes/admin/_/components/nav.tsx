@@ -21,19 +21,19 @@ export function Navigation() {
 			aria-label={t("label")}
 			className="flex-wrap items-center gap-4 border-b border-neutral-200 dark:border-neutral-700"
 		>
-			<NavLink to="" end hasBackground>
+			<NavLink to={href("/admin")} end hasBackground>
 				<span className="flex items-center gap-1.5">
 					<LayoutDashboardIcon className="size-4" />
 					{t("items.dashboard")}
 				</span>
 			</NavLink>
-			<NavLink to="clients" hasBackground>
+			<NavLink to={href("/admin/clients")} hasBackground>
 				<span className="flex items-center gap-1.5">
 					<AppWindowIcon className="size-4" />
 					{t("items.clients")}
 				</span>
 			</NavLink>
-			<NavLink to="subjects" hasBackground>
+			<NavLink to={href("/admin/subjects")} hasBackground>
 				<span className="flex items-center gap-1.5">
 					<UsersIcon className="size-4" />
 					{t("items.subjects")}

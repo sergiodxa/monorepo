@@ -104,7 +104,7 @@ export default function ClientsListPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<>
 			<AppHeader heading={t("title")}>
-				<LinkButton href="clients/new">{t("actions.create")}</LinkButton>
+				<LinkButton href={href("/admin/clients/new")}>{t("actions.create")}</LinkButton>
 			</AppHeader>
 
 			<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">{t("description")}</p>
