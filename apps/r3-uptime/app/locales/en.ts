@@ -1760,6 +1760,7 @@ export default {
 			panel: {
 				tabsLabel: "Monitor type",
 				tabPanelLabel: "{{tab}} monitors",
+				refresh: "Refresh",
 			},
 
 			error: {

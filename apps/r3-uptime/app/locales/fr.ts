@@ -1216,6 +1216,7 @@ export default {
 			panel: {
 				tabsLabel: "Type de moniteur",
 				tabPanelLabel: "Moniteurs {{tab}}",
+				refresh: "Actualiser",
 			},
 
 			error: {

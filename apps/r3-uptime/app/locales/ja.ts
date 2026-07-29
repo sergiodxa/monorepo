@@ -1203,6 +1203,7 @@ export default {
 			panel: {
 				tabsLabel: "モニタータイプ",
 				tabPanelLabel: "{{tab}}モニター",
+				refresh: "更新",
 			},
 
 			error: {

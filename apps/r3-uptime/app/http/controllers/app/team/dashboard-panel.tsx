@@ -6,7 +6,9 @@
  *
  * Renders the tab bar and the requested tab's table together, so a named `Frame`
  * reload keeps the tab bar's active state in sync with whichever monitor-type table
- * it swapped in.
+ * it swapped in. Alongside the tab bar it renders a refresh link that re-navigates
+ * the same `Frame` to the current tab's fragment, so the table's data can be pulled
+ * again without a full page reload and without hydrating anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,12 +16,19 @@
 
 import type { Handle } from "remix/ui";
 
-import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
+import {
+	ActivityIcon,
+	ClockIcon,
+	GlobeIcon,
+	NetworkIcon,
+	PlusIcon,
+	RefreshCwIcon,
+} from "@pkg/lucide-remix";
 import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
-import { justify } from "@pkg/u/layout";
+import { flex, gap, grow, items, justify } from "@pkg/u/layout";
 import { is, mbe } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
@@ -95,6 +104,15 @@ namespace DashboardPanel {
 		tabsListLabel: string;
 		/** Accessible label for the active tab's panel, e.g. "HTTP monitors". */
 		panelLabel: string;
+		/** Label for the control that re-navigates the frame to the current tab, e.g. "Refresh". */
+		refreshLabel: string;
+		/**
+		 * Per-render value appended to the refresh control's frame `src`, so clicking it
+		 * always reaches the server instead of being answered out of the browser cache by
+		 * an earlier response still inside its {@link CACHE_CONTROL} window. Every reload
+		 * re-renders this fragment with a new value, so consecutive clicks each get one.
+		 */
+		refreshToken: string;
 	}
 
 	export type Props = Common &
@@ -157,6 +175,13 @@ namespace DashboardPanel {
 function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 	return () => {
 		let props = handle.props;
+		// Falls back to a full page load of the current tab when the runtime isn't
+		// there to intercept the click; with it, only the frame re-navigates.
+		let refreshHref = `${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${props.tab}`;
+		let refreshSrc = `${routes.app.team.dashboard.panel.href({
+			team: props.team.slug,
+			type: props.tab,
+		})}?refresh=${props.refreshToken}`;
 
 		return (
 			<>
@@ -175,38 +200,59 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 					/>
 				))}
 
-				<Tabs mix={[mbe(4)]}>
-					<Tabs.List
-						aria-label={props.tabsListLabel}
-						activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
-						tabSize="110px"
-					>
-						{DASHBOARD_TABS.map((tab) => {
-							let href = `${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${tab}`;
-							let frameSrc = routes.app.team.dashboard.panel.href({
-								team: props.team.slug,
-								type: tab,
-							});
+				<div mix={[flex(), items("end"), justify("between"), gap("16px"), mbe(4)]}>
+					<Tabs mix={[grow()]}>
+						<Tabs.List
+							aria-label={props.tabsListLabel}
+							activeIndex={DASHBOARD_TABS.findIndex((tab) => tab === props.tab)}
+							tabSize="110px"
+						>
+							{DASHBOARD_TABS.map((tab) => {
+								let href = `${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${tab}`;
+								let frameSrc = routes.app.team.dashboard.panel.href({
+									team: props.team.slug,
+									type: tab,
+								});
 
-							return (
-								<Tabs.Tab
-									key={tab}
-									href={href}
-									aria-selected={tab === props.tab}
-									aria-controls="dashboard-panel-content"
-									tabIndex={tab === props.tab ? 0 : -1}
-									mix={[
-										is("110px"),
-										justify("center"),
-										link(href, { target: "dashboard-panel", src: frameSrc }),
-									]}
-								>
-									{props.tabLabels[tab]}
-								</Tabs.Tab>
-							);
-						})}
-					</Tabs.List>
-				</Tabs>
+								return (
+									<Tabs.Tab
+										key={tab}
+										href={href}
+										aria-selected={tab === props.tab}
+										aria-controls="dashboard-panel-content"
+										tabIndex={tab === props.tab ? 0 : -1}
+										mix={[
+											is("110px"),
+											justify("center"),
+											link(href, { target: "dashboard-panel", src: frameSrc }),
+										]}
+									>
+										{props.tabLabels[tab]}
+									</Tabs.Tab>
+								);
+							})}
+						</Tabs.List>
+					</Tabs>
+
+					{/*
+					 * A plain link, not a client entry: the `link` mixin on an anchor host
+					 * only renders `rmx-target`/`rmx-src` attributes, which the runtime's
+					 * own navigation listener picks up to re-navigate the named frame.
+					 */}
+					<LinkButton
+						href={refreshHref}
+						color="neutral"
+						variant="outline"
+						size="sm"
+						mix={[
+							mbe(2),
+							link(refreshHref, { target: "dashboard-panel", src: refreshSrc, resetScroll: false }),
+						]}
+					>
+						<RefreshCwIcon size={16} strokeWidth={1.5} />
+						{props.refreshLabel}
+					</LinkButton>
+				</div>
 
 				<div id="dashboard-panel-content" role="tabpanel" aria-label={props.panelLabel}>
 					{props.tab === "http" && (
@@ -566,6 +612,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 		};
 		let tabsListLabel = ctx.i18next.t("page.dashboard.panel.tabsLabel");
 		let panelLabel = ctx.i18next.t("page.dashboard.panel.tabPanelLabel", { tab: tabLabels[type] });
+		let refreshLabel = ctx.i18next.t("page.dashboard.panel.refresh");
+		let refreshToken = String(Date.now());
 
 		if (type === "dns") {
 			let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
@@ -577,6 +625,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 					tabLabels={tabLabels}
 					tabsListLabel={tabsListLabel}
 					panelLabel={panelLabel}
+					refreshLabel={refreshLabel}
+					refreshToken={refreshToken}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.dnsMonitors.empty.title"),
 						emptyDescription: ctx.i18next.t("page.dnsMonitors.empty.description"),
@@ -603,6 +653,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 					tabLabels={tabLabels}
 					tabsListLabel={tabsListLabel}
 					panelLabel={panelLabel}
+					refreshLabel={refreshLabel}
+					refreshToken={refreshToken}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.tcpMonitors.empty.title"),
 						emptyDescription: ctx.i18next.t("page.tcpMonitors.empty.description"),
@@ -635,6 +687,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 					tabLabels={tabLabels}
 					tabsListLabel={tabsListLabel}
 					panelLabel={panelLabel}
+					refreshLabel={refreshLabel}
+					refreshToken={refreshToken}
 					copy={{
 						emptyTitle: ctx.i18next.t("page.cronJobs.empty.title"),
 						emptyDescription: ctx.i18next.t("page.cronJobs.empty.description"),
@@ -683,6 +737,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 				tabLabels={tabLabels}
 				tabsListLabel={tabsListLabel}
 				panelLabel={panelLabel}
+				refreshLabel={refreshLabel}
+				refreshToken={refreshToken}
 				copy={{
 					emptyTitle: ctx.i18next.t("page.dashboard.empty.title"),
 					emptyDescription: ctx.i18next.t("page.dashboard.empty.description"),

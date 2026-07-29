@@ -180,6 +180,22 @@ describe("app/team/dashboard-panel", () => {
 		expect(body).toContain(en.page.dashboard.empty.cta);
 	});
 
+	test("renders a refresh link targeting the dashboard panel frame", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await fetchPanel(db, team, membership, "http");
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		let refreshLink = body.match(/<a[^>]*rmx-src="[^"]*\/panel\/http\?refresh=[^"]*"[^>]*>/)?.[0];
+		expect(refreshLink).toBeDefined();
+		expect(refreshLink).toContain('rmx-target="dashboard-panel"');
+		expect(refreshLink).toContain(
+			`href="${routes.app.team.dashboard.index.href({ team: team.slug })}?tab=http"`,
+		);
+		expect(body).toContain(en.page.dashboard.panel.refresh);
+	});
+
 	test("dns tab renders the empty state when the team has no DNS monitors", async () => {
 		let { db, team, membership } = await createFixture();
 
