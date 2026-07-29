@@ -32,6 +32,7 @@ import tutorialsCMS from "~/app/http/controllers/cms/tutorials";
 import colors from "~/app/http/controllers/colors";
 import feed from "~/app/http/controllers/feed";
 import glossary from "~/app/http/controllers/glossary";
+import healthcheck from "~/app/http/controllers/healthcheck";
 import post from "~/app/http/controllers/post";
 import postRelated from "~/app/http/controllers/post-related";
 import articlesRSS from "~/app/http/controllers/rss/articles";
@@ -98,6 +99,7 @@ export default function createApplication(env: App.Env) {
 	router.map(routes.colors, colors);
 	router.map(routes.sponsor, sponsor);
 	router.map(routes.sitemap, sitemap);
+	router.map(routes.healthcheck, healthcheck);
 	router.map(routes.articles, articles);
 	router.map(routes.tutorials, tutorials);
 	router.map(routes.bookmarks, bookmarks);

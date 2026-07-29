@@ -28,6 +28,8 @@ export default route({
 
 	sitemap: get("/sitemap.xml"),
 
+	healthcheck: get("/healthcheck"),
+
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),
