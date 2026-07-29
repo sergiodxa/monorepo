@@ -14,7 +14,7 @@ import { contents, gap, grid, place } from "@pkg/u/layout";
 import { m, maxIs } from "@pkg/u/size";
 import { text, textAlign } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**

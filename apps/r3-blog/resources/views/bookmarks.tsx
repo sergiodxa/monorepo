@@ -16,7 +16,7 @@ import { gap, grid, gridTemplate, hstack, items } from "@pkg/u/layout";
 import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
 import { leading, nowrap, tabularNums, text, textDecoration } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**

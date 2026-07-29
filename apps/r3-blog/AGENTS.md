@@ -18,7 +18,9 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST express color through the `@pkg/u` color utilities against the five semantic tones — `neutral`, `brand`, `success`, `warning`, `danger` — as in `u.bg("brand.tint")` / `u.fg("neutral.emphasis")` / `u.border({ width: 1, color: "neutral" })`. Never hand-write a `var(--ui-*)` string in a component.
 - MUST reach for a `@pkg/r3-ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
 - MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@pkg/r3-ui/theme.css` and MUST NOT be redeclared here.
-- MUST link the stylesheets in document layouts in the order reset, app palette, theme (`@pkg/r3-ui/reset.css`, `resources/css/colors.css`, `@pkg/r3-ui/theme.css`).
+- MUST assemble the `<html>`/`<head>`/`<body>` shell only in `resources/layouts/document.tsx`; page shells (`blog.tsx`, `cms.tsx`) compose it and contribute their own chrome. The stylesheet order (reset, app palette, theme, then page stylesheets), the `<title>`/meta tags, and the client entry script live there and nowhere else, so a change lands once.
+- MUST load the `bootstrap/browser.ts` client entry from that document shell as `<script type="module" async>` with a matching `modulepreload`, so same-origin navigations swap the document through the Navigation API and server-streamed `<Frame>` placeholders resolve. Keep it `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
+- SHOULD keep this app's build and document setup aligned with `apps/r3-uptime` (same `vite.config.ts` shape, same `resources/layouts/document.tsx` role and `CLIENT_ENTRY_SRC` constant), so a change to one app ports to the other by inspection.
 - MUST have every document layout load the `bootstrap/browser.ts` client entry as `<script type="module" async>` (plus a matching `modulepreload`), so same-origin navigations swap the document through the Navigation API and server-streamed `<Frame>` placeholders resolve. It stays `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
 - MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales.
 - MUST ensure changes pass `bunx tsc -p apps/r3-blog/tsconfig.json`.
@@ -94,8 +96,9 @@ This document defines app-specific rules for `apps/r3-blog`.
   - `app/http/controllers/post.tsx`
   - `app/http/controllers/colors.tsx`
 - UI components
-  - `resources/components/layout/blog.tsx`
-  - `resources/components/layout/cms.tsx`
+  - `resources/layouts/document.tsx`
+  - `resources/layouts/blog.tsx`
+  - `resources/layouts/cms.tsx`
 - Styling system
   - `resources/css/colors.css`
   - `resources/css/prism.css`

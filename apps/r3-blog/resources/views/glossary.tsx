@@ -16,7 +16,7 @@ import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text, textDecoration, weight } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**

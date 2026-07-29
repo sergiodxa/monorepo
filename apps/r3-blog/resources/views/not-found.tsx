@@ -11,7 +11,7 @@ import { Empty } from "@pkg/r3-ui";
 import { maxIs, pbs } from "@pkg/u/size";
 import { text } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 
 /**
  * Type contracts used by the not-found page renderer.

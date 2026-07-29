@@ -18,7 +18,7 @@ import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
 import { m, p } from "@pkg/u/size";
 import { text, weight } from "@pkg/u/typography";
 
-import { CMSLayout } from "~/resources/components/layout/cms";
+import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
 
 /**

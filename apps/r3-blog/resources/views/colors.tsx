@@ -18,7 +18,7 @@ import { flexWrap, gap, grid, gridTemplate, hstack, items, shrink } from "@pkg/u
 import { bs, is, m, mis, p, pbs } from "@pkg/u/size";
 import { text } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**

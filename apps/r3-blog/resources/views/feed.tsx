@@ -18,7 +18,7 @@ import { bs, is, m, maxIs, mbs, mis, p } from "@pkg/u/size";
 import { spacing } from "@pkg/u/tokens";
 import { nowrap, text } from "@pkg/u/typography";
 
-import { BlogLayout } from "~/resources/components/layout/blog";
+import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**

@@ -26,7 +26,7 @@ import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
 import { is, m, p } from "@pkg/u/size";
 import { truncate } from "@pkg/u/typography";
 
-import { CMSLayout } from "~/resources/components/layout/cms";
+import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
 
 /**
