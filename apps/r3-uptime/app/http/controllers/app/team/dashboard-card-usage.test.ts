@@ -1,11 +1,11 @@
 /**
  * Tests for the dashboard "Monthly Pings Usage" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env` at module
- * load, and a fake `PolarClient` stands in for the real Polar SDK client so
- * `Customer.hasActiveSubscription`/`Customer.getUsagePerMonth` never make a network
- * call. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing
- * in for the real `requireUser`/`requireTeam`/i18n middleware chain, following the
- * template in `app/http/controllers/actions/monitors.test.ts`.
+ * load. Both figures the card shows come from the local database, so there is no
+ * network client to stand in for. `ctx.team`/`ctx.membership`/auth/i18next state is
+ * seeded directly, standing in for the real `requireUser`/`requireTeam`/i18n
+ * middleware chain, following the template in
+ * `app/http/controllers/actions/monitors.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,6 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
@@ -31,7 +30,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, teams } from "~/database/schema";
+import { memberships, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
@@ -111,11 +110,9 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
-	polar: PolarClient,
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, polar);
 
 	let router = createRouter({
 		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
@@ -133,34 +130,60 @@ async function send(
 }
 
 describe("dashboard-card-usage", () => {
-	test("renders the error fallback when the team owner has no active subscription", async () => {
+	test("renders the pings counted from the team's own check history", async () => {
 		let { db, team, membership } = await createFixture();
-		let polar = {
-			hasActiveSubscription: mock(async () => false),
-			getMeterUsage: mock(async () => 0),
-		} as unknown as PolarClient;
 
-		let response = await send(db, team, membership, polar);
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: "owner-1",
+				name: "Homepage",
+				url: "https://example.com",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+		for (let index = 0; index < 3; index++) {
+			await db.create(
+				monitorResults,
+				{
+					id: `result-${index}`,
+					monitor_id: monitor.id,
+					response_status: 200,
+					response_time_ms: 100,
+					completed_at: Date.now(),
+				},
+				{ touch: true },
+			);
+		}
+
+		let response = await send(db, team, membership);
+		expect(response.status).toBe(200);
+
+		let body = await response.text();
+		expect(body).toContain("Monthly Pings Usage");
+		// The three recorded results, counted as the card's consumed figure.
+		expect(body).toMatch(/>3</);
+	});
+
+	test("renders the error fallback when both database queries fail", async () => {
+		let { db, team, membership } = await createFixture();
+		let failing = Object.create(db) as Database;
+		failing.exec = mock(async () => {
+			throw new Error("no such table");
+		}) as unknown as Database["exec"];
+		failing.findMany = mock(async () => {
+			throw new Error("no such table");
+		}) as unknown as Database["findMany"];
+
+		let response = await send(failing, team, membership);
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
 		expect(body).toContain("Error");
 		expect(body).toContain("-");
 		expect(body).toContain("Failed to load data");
-	});
-
-	test("renders the usage stat when the team owner has an active subscription", async () => {
-		let { db, team, membership } = await createFixture();
-		let polar = {
-			hasActiveSubscription: mock(async () => true),
-			getMeterUsage: mock(async () => 250),
-		} as unknown as PolarClient;
-
-		let response = await send(db, team, membership, polar);
-		expect(response.status).toBe(200);
-
-		let body = await response.text();
-		expect(body).toContain("Monthly Pings Usage");
-		expect(body).toContain("250");
 	});
 });

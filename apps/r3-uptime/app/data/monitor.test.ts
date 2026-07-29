@@ -17,9 +17,12 @@ import type { Database } from "remix/data-table";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	cronJobMonitors,
+	cronJobPings,
+	dnsMonitorResults,
 	dnsMonitors,
 	monitorResults,
 	monitors,
+	tcpMonitorResults,
 	tcpMonitors,
 	teams,
 } from "~/database/schema";
@@ -425,6 +428,125 @@ describe("Monitor.findDue", () => {
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 
 		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
+	});
+});
+
+describe("Monitor.countConsumedPingsByTeam", () => {
+	/** A completed HTTP check recorded at `createdAt`, the row one consumed ping produces. */
+	async function createHttpResult(db: Database, monitorId: string, createdAt: number) {
+		let result = await db.create(
+			monitorResults,
+			{
+				id: crypto.randomUUID(),
+				monitor_id: monitorId,
+				response_status: 200,
+				response_time_ms: 100,
+				completed_at: createdAt,
+			},
+			{ touch: true, returnRow: true },
+		);
+		// `touch` stamps `created_at` with the current time, so backdate it afterwards.
+		await db.update(monitorResults, result.id, { created_at: createdAt }, { touch: false });
+	}
+
+	test("counts every monitor type's checks recorded during the month", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+		let insideMonth = Date.UTC(2026, 6, 10, 8, 0, 0);
+
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		await createHttpResult(db, monitor.id, insideMonth);
+		await createHttpResult(db, monitor.id, insideMonth + 60_000);
+
+		let dnsMonitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "DNS",
+				domain: "example.com",
+				record_type: "A",
+			},
+			{ touch: true, returnRow: true },
+		);
+		await db.create(dnsMonitorResults, {
+			id: crypto.randomUUID(),
+			dns_monitor_id: dnsMonitor.id,
+			status: "ok",
+			resolved_value: "1.1.1.1",
+			response_time_ms: 10,
+			error_message: null,
+			checked_at: insideMonth,
+		});
+
+		let tcpMonitor = await db.create(
+			tcpMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "TCP", host: "example.com", port: 443 },
+			{ touch: true, returnRow: true },
+		);
+		await db.create(tcpMonitorResults, {
+			id: crypto.randomUUID(),
+			tcp_monitor_id: tcpMonitor.id,
+			status: "up",
+			response_time_ms: 10,
+			error_message: null,
+			checked_at: insideMonth,
+		});
+
+		let cronJob = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly job",
+				cron_expression: "0 0 * * *",
+			},
+			{ touch: true, returnRow: true },
+		);
+		let ping = await db.create(
+			cronJobPings,
+			{ id: crypto.randomUUID(), cron_job_monitor_id: cronJob.id, was_on_time: true },
+			{ touch: true, returnRow: true },
+		);
+		await db.update(cronJobPings, ping.id, { created_at: insideMonth }, { touch: false });
+
+		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(5);
+	});
+
+	test("never counts checks from another month or another team", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let otherTeam = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		// One check the millisecond before July starts, one the millisecond after it ends.
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1) - 1);
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 7, 1));
+
+		let otherMonitor = await Monitor.create(db, otherTeam.id, "author-1", {
+			name: "Other",
+			url: "https://other.example.com",
+		});
+		await createHttpResult(db, otherMonitor.id, Date.UTC(2026, 6, 10));
+
+		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(0);
+	});
+
+	test("counts zero, not null, for a team that has never been checked", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+
+		expect(
+			await Monitor.countConsumedPingsByTeam(db, team.id, new Date("2026-07-15T12:00:00.000Z")),
+		).toBe(0);
 	});
 });
 

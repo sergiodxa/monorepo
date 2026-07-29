@@ -2,10 +2,10 @@
  * Data-access model for HTTP monitors. Exposes CRUD over the `monitors` table scoped
  * to a team, enqueuing a subscription-gated on-demand check, the scheduling
  * query the `scheduled` handler uses every minute to find monitors due for a check,
- * and an estimated monthly ping-consumption figure across every monitor type (HTTP,
- * DNS, TCP, cron) — the dashboard's usage card shows this alongside Polar's actual
- * billed usage, since Polar doesn't offer a "what would this cost at current
- * settings" projection.
+ * and the two monthly ping-consumption figures the dashboard's usage card shows side
+ * by side across every monitor type (HTTP, DNS, TCP, cron): the pings already
+ * consumed, counted from the check history each type writes, and the consumption the
+ * team's current intervals project over the whole month.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -242,13 +242,52 @@ export default class Monitor {
 	}
 
 	/**
+	 * Counts a team's pings actually consumed during the calendar month containing
+	 * `date`, read from the check history every monitor type writes as it runs:
+	 * `monitor_results` (HTTP), `dns_monitor_results`, `tcp_monitor_results`, and
+	 * `cron_job_pings`. One row in those tables is one consumed ping, which makes this
+	 * a measurement of what has already happened, unlike
+	 * {@link estimateConsumedPingsByTeam}'s projection of current settings.
+	 *
+	 * Runs as one query of four team-scoped sub-counts rather than four queries, since
+	 * the dashboard's usage card blocks on it.
+	 */
+	static async countConsumedPingsByTeam(db: Database, teamId: string, date: Date): Promise<number> {
+		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+		/** The `team_id`/start/end triple every sub-count below binds, in that order. */
+		let scope = [teamId, start.getTime(), end.getTime()];
+
+		let result = await db.exec(
+			`SELECT
+			   (SELECT COUNT(*) FROM monitor_results r
+			      JOIN monitors m ON m.id = r.monitor_id
+			     WHERE m.team_id = ? AND r.created_at BETWEEN ? AND ?)
+			 + (SELECT COUNT(*) FROM dns_monitor_results r
+			      JOIN dns_monitors m ON m.id = r.dns_monitor_id
+			     WHERE m.team_id = ? AND r.checked_at BETWEEN ? AND ?)
+			 + (SELECT COUNT(*) FROM tcp_monitor_results r
+			      JOIN tcp_monitors m ON m.id = r.tcp_monitor_id
+			     WHERE m.team_id = ? AND r.checked_at BETWEEN ? AND ?)
+			 + (SELECT COUNT(*) FROM cron_job_pings p
+			      JOIN cron_job_monitors m ON m.id = p.cron_job_monitor_id
+			     WHERE m.team_id = ? AND p.created_at BETWEEN ? AND ?) AS consumed`,
+			[...scope, ...scope, ...scope, ...scope],
+		);
+
+		let [row] = (result.rows ?? []) as unknown as Array<{ consumed: number }>;
+		return row?.consumed ?? 0;
+	}
+
+	/**
 	 * Estimates a team's total ping consumption for the calendar month containing
 	 * `date`, across every monitor type: HTTP/DNS/TCP monitors are projected as
 	 * `monthMilliseconds / intervalMs` (how many checks their interval would produce
 	 * over the whole month), and cron jobs are counted by walking their cron
 	 * expression's occurrences with `cron-parser`. This is a projection based on
-	 * current settings, not the team's actual Polar-billed usage (which only reflects
-	 * checks that have already run) — the dashboard shows both figures side by side.
+	 * current settings, not what the team has actually consumed so far (which is what
+	 * {@link countConsumedPingsByTeam} counts) — the dashboard shows both side by side.
 	 */
 	static async estimateConsumedPingsByTeam(
 		db: Database,
