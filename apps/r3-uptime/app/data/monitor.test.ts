@@ -20,6 +20,7 @@ import {
 	cronJobPings,
 	dnsMonitorResults,
 	dnsMonitors,
+	monitorDailyStats,
 	monitorResults,
 	monitors,
 	tcpMonitorResults,
@@ -431,7 +432,16 @@ describe("Monitor.findDue", () => {
 	});
 });
 
+/**
+ * Every case below reads the month as of 2026-07-15, which puts the raw-counting
+ * window at July 14–15 and the rollup window at July 1–13. `monitor_results` rows
+ * dated before the 14th therefore never count on their own — after `CleanJob`'s
+ * retention they wouldn't exist anyway, and the rollup is what stands in for them.
+ */
 describe("Monitor.countConsumedPingsByTeam", () => {
+	let date = new Date("2026-07-15T12:00:00.000Z");
+	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
+
 	/** A completed HTTP check recorded at `createdAt`, the row one consumed ping produces. */
 	async function createHttpResult(db: Database, monitorId: string, createdAt: number) {
 		let result = await db.create(
@@ -449,93 +459,151 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		await db.update(monitorResults, result.id, { created_at: createdAt }, { touch: false });
 	}
 
-	test("counts every monitor type's checks recorded during the month", async () => {
-		let { db } = createTestDatabase();
-		let team = await createTeam(db);
-		let date = new Date("2026-07-15T12:00:00.000Z");
-		let insideMonth = Date.UTC(2026, 6, 10, 8, 0, 0);
+	/** A rolled-up day for one monitor, as `AggregateDailyStatsJob` would have written it. */
+	async function createDailyStats(
+		db: Database,
+		monitorId: string,
+		monitorType: "http" | "dns" | "tcp" | "cron",
+		day: string,
+		totalChecks: number,
+	) {
+		await db.create(
+			monitorDailyStats,
+			{
+				id: crypto.randomUUID(),
+				monitor_id: monitorId,
+				monitor_type: monitorType,
+				date: day,
+				total_checks: totalChecks,
+				successful_checks: totalChecks,
+				failed_checks: 0,
+				avg_response_time_ms: 100,
+				max_response_time_ms: 200,
+				p95_response_time_ms: null,
+				status: "up",
+			},
+			{ touch: true },
+		);
+	}
 
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+	/** One monitor of every type for `teamId`, to hang results and rollup rows off. */
+	async function createMonitors(db: Database, teamId: string) {
+		let http = await Monitor.create(db, teamId, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
-		await createHttpResult(db, monitor.id, insideMonth);
-		await createHttpResult(db, monitor.id, insideMonth + 60_000);
-
-		let dnsMonitor = await db.create(
+		let dns = await db.create(
 			dnsMonitors,
 			{
 				id: crypto.randomUUID(),
-				team_id: team.id,
+				team_id: teamId,
 				name: "DNS",
 				domain: "example.com",
 				record_type: "A",
 			},
 			{ touch: true, returnRow: true },
 		);
+		let tcp = await db.create(
+			tcpMonitors,
+			{ id: crypto.randomUUID(), team_id: teamId, name: "TCP", host: "example.com", port: 443 },
+			{ touch: true, returnRow: true },
+		);
+		let cron = await db.create(
+			cronJobMonitors,
+			{ id: crypto.randomUUID(), team_id: teamId, name: "Nightly", cron_expression: "0 0 * * *" },
+			{ touch: true, returnRow: true },
+		);
+
+		return { http, dns, tcp, cron };
+	}
+
+	test("sums the rollup and the raw window across every monitor type", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let { http, dns, tcp, cron } = await createMonitors(db, team.id);
+
+		// Rolled-up days, inside the month and before the raw window: 1000 + 100 + 10 + 1.
+		await createDailyStats(db, http.id, "http", "2026-07-02", 1000);
+		await createDailyStats(db, dns.id, "dns", "2026-07-02", 100);
+		await createDailyStats(db, tcp.id, "tcp", "2026-07-13", 10);
+		await createDailyStats(db, cron.id, "cron", "2026-07-13", 1);
+
+		// Raw results the rollup hasn't reached yet: 2 HTTP + 1 DNS + 1 TCP + 1 cron.
+		await createHttpResult(db, http.id, insideRawWindow);
+		await createHttpResult(db, http.id, insideRawWindow + 60_000);
 		await db.create(dnsMonitorResults, {
 			id: crypto.randomUUID(),
-			dns_monitor_id: dnsMonitor.id,
+			dns_monitor_id: dns.id,
 			status: "ok",
 			resolved_value: "1.1.1.1",
 			response_time_ms: 10,
 			error_message: null,
-			checked_at: insideMonth,
+			checked_at: insideRawWindow,
 		});
-
-		let tcpMonitor = await db.create(
-			tcpMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "TCP", host: "example.com", port: 443 },
-			{ touch: true, returnRow: true },
-		);
 		await db.create(tcpMonitorResults, {
 			id: crypto.randomUUID(),
-			tcp_monitor_id: tcpMonitor.id,
+			tcp_monitor_id: tcp.id,
 			status: "up",
 			response_time_ms: 10,
 			error_message: null,
-			checked_at: insideMonth,
+			checked_at: insideRawWindow,
 		});
-
-		let cronJob = await db.create(
-			cronJobMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				name: "Nightly job",
-				cron_expression: "0 0 * * *",
-			},
-			{ touch: true, returnRow: true },
-		);
 		let ping = await db.create(
 			cronJobPings,
-			{ id: crypto.randomUUID(), cron_job_monitor_id: cronJob.id, was_on_time: true },
+			{ id: crypto.randomUUID(), cron_job_monitor_id: cron.id, was_on_time: true },
 			{ touch: true, returnRow: true },
 		);
-		await db.update(cronJobPings, ping.id, { created_at: insideMonth }, { touch: false });
+		await db.update(cronJobPings, ping.id, { created_at: insideRawWindow }, { touch: false });
+
+		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(1116);
+	});
+
+	test("never double counts a day that has both a rollup row and surviving raw rows", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let { http } = await createMonitors(db, team.id);
+
+		// The 13th is rolled up, and its raw rows are still inside the 7-day retention.
+		await createDailyStats(db, http.id, "http", "2026-07-13", 5);
+		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 6, 0, 0));
+		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 7, 0, 0));
 
 		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(5);
 	});
 
-	test("never counts checks from another month or another team", async () => {
+	test("counts the whole month raw when the raw window covers it", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let { http } = await createMonitors(db, team.id);
+
+		// On the 1st the raw window is clamped to the month, leaving no rolled-up days.
+		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1, 0, 30, 0));
+		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1, 1, 30, 0));
+
+		expect(
+			await Monitor.countConsumedPingsByTeam(db, team.id, new Date("2026-07-01T12:00:00.000Z")),
+		).toBe(2);
+	});
+
+	test("never counts another month or another team", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let otherTeam = await createTeam(db);
-		let date = new Date("2026-07-15T12:00:00.000Z");
+		let { http, dns, tcp, cron } = await createMonitors(db, team.id);
 
-		let monitor = await Monitor.create(db, team.id, "author-1", {
-			name: "HTTP",
-			url: "https://example.com",
-		});
-		// One check the millisecond before July starts, one the millisecond after it ends.
-		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1) - 1);
-		await createHttpResult(db, monitor.id, Date.UTC(2026, 7, 1));
+		// Rolled-up days on either side of July.
+		await createDailyStats(db, http.id, "http", "2026-06-30", 1000);
+		await createDailyStats(db, dns.id, "dns", "2026-08-01", 1000);
+		// Raw checks the millisecond before July starts and the millisecond after it ends.
+		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1) - 1);
+		await createHttpResult(db, http.id, Date.UTC(2026, 7, 1));
+		// A rollup row for the right day, but keyed to the wrong monitor type.
+		await createDailyStats(db, tcp.id, "cron", "2026-07-02", 1000);
+		await createDailyStats(db, cron.id, "tcp", "2026-07-02", 1000);
 
-		let otherMonitor = await Monitor.create(db, otherTeam.id, "author-1", {
-			name: "Other",
-			url: "https://other.example.com",
-		});
-		await createHttpResult(db, otherMonitor.id, Date.UTC(2026, 6, 10));
+		let other = await createMonitors(db, otherTeam.id);
+		await createDailyStats(db, other.http.id, "http", "2026-07-02", 1000);
+		await createHttpResult(db, other.http.id, insideRawWindow);
 
 		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(0);
 	});
@@ -544,9 +612,7 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		expect(
-			await Monitor.countConsumedPingsByTeam(db, team.id, new Date("2026-07-15T12:00:00.000Z")),
-		).toBe(0);
+		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(0);
 	});
 });
 

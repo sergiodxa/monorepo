@@ -4,8 +4,8 @@
  * query the `scheduled` handler uses every minute to find monitors due for a check,
  * and the two monthly ping-consumption figures the dashboard's usage card shows side
  * by side across every monitor type (HTTP, DNS, TCP, cron): the pings already
- * consumed, counted from the check history each type writes, and the consumption the
- * team's current intervals project over the whole month.
+ * consumed, counted from the daily rollup plus the days it hasn't reached yet, and
+ * the consumption the team's current intervals project over the whole month.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,6 +32,17 @@ import {
 
 /** Milliseconds in a minute, the bucket size for a scheduled check's job id. */
 const MS_PER_MINUTE = 60_000;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * How many recent days {@link Monitor.countConsumedPingsByTeam} counts from the raw
+ * result tables instead of the daily rollup: today plus yesterday, so the count holds
+ * whether or not the 01:00 UTC aggregation job has run. Must stay well below
+ * `CleanJob`'s 7-day `monitor_results` retention, which is what keeps those rows
+ * around to be counted.
+ */
+const RAW_PING_WINDOW_DAYS = 2;
 
 /** Safety cap on cron occurrences counted per job, guarding against a pathological expression. */
 const MAX_CRON_OCCURRENCES_PER_MONTH = 100_000;
@@ -243,25 +254,67 @@ export default class Monitor {
 
 	/**
 	 * Counts a team's pings actually consumed during the calendar month containing
-	 * `date`, read from the check history every monitor type writes as it runs:
-	 * `monitor_results` (HTTP), `dns_monitor_results`, `tcp_monitor_results`, and
-	 * `cron_job_pings`. One row in those tables is one consumed ping, which makes this
-	 * a measurement of what has already happened, unlike
-	 * {@link estimateConsumedPingsByTeam}'s projection of current settings.
+	 * `date`, across every monitor type. Unlike
+	 * {@link estimateConsumedPingsByTeam}'s projection of current settings, this
+	 * measures what has already run.
 	 *
-	 * Runs as one query of four team-scoped sub-counts rather than four queries, since
-	 * the dashboard's usage card blocks on it.
+	 * Reads two stores, because neither one covers a whole month on its own:
+	 *
+	 * - `monitor_daily_stats.total_checks`, the per-monitor-per-day rollup
+	 *   `AggregateDailyStatsJob` writes at 01:00 UTC for the day before, which is the
+	 *   only durable record of an HTTP check once `CleanJob` has purged its
+	 *   `monitor_results` row (7-day retention, so raw counting alone would silently
+	 *   truncate the month to its last week).
+	 * - the raw result tables (`monitor_results`, `dns_monitor_results`,
+	 *   `tcp_monitor_results`, `cron_job_pings`) for the {@link RAW_PING_WINDOW_DAYS}
+	 *   most recent days, which the rollup hasn't reached yet.
+	 *
+	 * The two windows are cut so they can't overlap: the rollup half stops the day
+	 * before the raw half starts. That also makes the figure independent of whether
+	 * today's aggregation job has run yet, and the raw window stays well inside the
+	 * 7-day retention that keeps those rows around to be counted.
+	 *
+	 * A day the aggregation job failed for is missing from the rollup and therefore
+	 * undercounts, which is preferred over the double counting that overlapping the
+	 * two windows to compensate would cause.
+	 *
+	 * Runs as one query of eight team-scoped sub-counts, since the dashboard's usage
+	 * card blocks on it.
 	 */
 	static async countConsumedPingsByTeam(db: Database, teamId: string, date: Date): Promise<number> {
-		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		let monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+		let monthEnd = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999);
 
-		/** The `team_id`/start/end triple every sub-count below binds, in that order. */
-		let scope = [teamId, start.getTime(), end.getTime()];
+		let dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * MS_PER_DAY);
+
+		/**
+		 * The rollup half ends the day before the raw half begins. Early in the month
+		 * that lands in the previous month, leaving `BETWEEN` an empty range — correct,
+		 * since the raw window already covers everything the month contains.
+		 */
+		let rollupFrom = utcDate(monthStart);
+		let rollupTo = utcDate(rawStart - MS_PER_DAY);
+
+		/** What each sub-count binds, in the order the query's placeholders read them. */
+		let rollupScope = [teamId, rollupFrom, rollupTo];
+		let rawScope = [teamId, rawStart, monthEnd];
 
 		let result = await db.exec(
 			`SELECT
-			   (SELECT COUNT(*) FROM monitor_results r
+			   (SELECT COALESCE(SUM(s.total_checks), 0) FROM monitor_daily_stats s
+			      JOIN monitors m ON m.id = s.monitor_id
+			     WHERE s.monitor_type = 'http' AND m.team_id = ? AND s.date BETWEEN ? AND ?)
+			 + (SELECT COALESCE(SUM(s.total_checks), 0) FROM monitor_daily_stats s
+			      JOIN dns_monitors m ON m.id = s.monitor_id
+			     WHERE s.monitor_type = 'dns' AND m.team_id = ? AND s.date BETWEEN ? AND ?)
+			 + (SELECT COALESCE(SUM(s.total_checks), 0) FROM monitor_daily_stats s
+			      JOIN tcp_monitors m ON m.id = s.monitor_id
+			     WHERE s.monitor_type = 'tcp' AND m.team_id = ? AND s.date BETWEEN ? AND ?)
+			 + (SELECT COALESCE(SUM(s.total_checks), 0) FROM monitor_daily_stats s
+			      JOIN cron_job_monitors m ON m.id = s.monitor_id
+			     WHERE s.monitor_type = 'cron' AND m.team_id = ? AND s.date BETWEEN ? AND ?)
+			 + (SELECT COUNT(*) FROM monitor_results r
 			      JOIN monitors m ON m.id = r.monitor_id
 			     WHERE m.team_id = ? AND r.created_at BETWEEN ? AND ?)
 			 + (SELECT COUNT(*) FROM dns_monitor_results r
@@ -273,7 +326,16 @@ export default class Monitor {
 			 + (SELECT COUNT(*) FROM cron_job_pings p
 			      JOIN cron_job_monitors m ON m.id = p.cron_job_monitor_id
 			     WHERE m.team_id = ? AND p.created_at BETWEEN ? AND ?) AS consumed`,
-			[...scope, ...scope, ...scope, ...scope],
+			[
+				...rollupScope,
+				...rollupScope,
+				...rollupScope,
+				...rollupScope,
+				...rawScope,
+				...rawScope,
+				...rawScope,
+				...rawScope,
+			],
 		);
 
 		let [row] = (result.rows ?? []) as unknown as Array<{ consumed: number }>;
@@ -359,4 +421,9 @@ export default class Monitor {
 
 		return Math.round(monthMs / (monitor.interval_seconds * 1000));
 	}
+}
+
+/** An epoch-ms timestamp as the `"YYYY-MM-DD"` UTC date string `monitor_daily_stats.date` holds. */
+function utcDate(timestamp: number): string {
+	return new Date(timestamp).toISOString().slice(0, 10);
 }
