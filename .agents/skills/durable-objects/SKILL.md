@@ -1,6 +1,6 @@
 ---
 name: durable-objects
-description: Create and review Cloudflare Durable Objects. Use when building stateful coordination (chat rooms, multiplayer games, booking systems), implementing RPC methods, SQLite storage, alarms, WebSockets, or reviewing DO code for best practices. Covers Workers integration, wrangler config, and testing with Vitest.
+description: Create and review Cloudflare Durable Objects. Use when building stateful coordination (chat rooms, multiplayer games, booking systems), implementing RPC methods or fetch handlers, SQLite storage, alarms, WebSockets, or reviewing DO code for best practices. Covers Workers integration, wrangler config, and testing with Vitest.
 ---
 
 # Durable Objects
@@ -10,7 +10,7 @@ Build stateful, coordinated applications on Cloudflare's edge using Durable Obje
 ## When to Use
 
 - Creating new Durable Object classes for stateful coordination
-- Implementing RPC methods, alarms, or WebSocket handlers
+- Implementing RPC methods, fetch handlers, alarms, or WebSocket handlers
 - Reviewing existing DO code for best practices
 - Configuring wrangler.jsonc/toml for DO bindings and migrations
 - Writing tests with `@cloudflare/vitest-pool-workers`
@@ -102,7 +102,7 @@ export default {
 2. **Use `getByName()` for deterministic routing** - Same input = same DO instance
 3. **Use SQLite storage** - Configure `new_sqlite_classes` in migrations
 4. **Initialize in constructor** - Use `blockConcurrencyWhile()` for schema setup only
-5. **Use RPC methods** - Not fetch() handler (compatibility date >= 2024-04-03)
+5. **Choose the right entry point** - Use RPC for typed domain operations, and keep `fetch()` handlers for HTTP endpoints, proxies, WebSockets, and request forwarding boundaries
 6. **Persist first, cache second** - Always write to storage before updating in-memory state
 7. **One alarm per DO** - `setAlarm()` replaces any existing alarm
 
