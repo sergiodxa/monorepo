@@ -1,6 +1,6 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-	"name": "blog",
+	"name": "blog-legacy",
 	"main": "./app/entry.worker.ts",
 	"compatibility_date": "2025-04-07",
 	"compatibility_flags": ["nodejs_compat"],

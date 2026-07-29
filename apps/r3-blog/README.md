@@ -1,9 +1,9 @@
 # r3-blog
 
-Remix v3 SSR blog for `r3.sergiodxa.com`, rendered with `remix/ui/server` and
+Remix v3 SSR blog for `sergiodxa.com`, rendered with `remix/ui/server` and
 served from a Cloudflare Worker.
 
-Production URL: https://r3.sergiodxa.com
+Production URL: https://sergiodxa.com
 
 ## Development
 

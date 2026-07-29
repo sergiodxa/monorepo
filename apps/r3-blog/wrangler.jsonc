@@ -1,6 +1,6 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-	"name": "r3-blog",
+	"name": "blog",
 	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2025-04-07",
 	"compatibility_flags": ["nodejs_compat"],
@@ -17,7 +17,7 @@
 	"assets": {
 		"directory": "./build/client",
 	},
-	"routes": [{ "pattern": "r3.sergiodxa.com", "custom_domain": true }],
+	"routes": [{ "pattern": "sergiodxa.com", "custom_domain": true }],
 	"secrets_store_secrets": [
 		{
 			"binding": "CLIENT_ID",

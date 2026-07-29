@@ -2,7 +2,9 @@
 
 Personal blog and content management system with support for articles, tutorials, glossary entries, and bookmarks.
 
-Production URL: https://sergiodxa.com
+Retired: this app no longer serves `sergiodxa.com` and is kept for reference
+only. Its Worker is named `blog-legacy` so deploying it cannot take the
+production domain back.
 
 ## Development
 
