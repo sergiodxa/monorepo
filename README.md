@@ -79,7 +79,7 @@ Run from the repository root:
 | [r3-blog](apps/r3-blog)       | Remix v3 SSR blog                              | https://sergiodxa.com                               |
 | [r3-gallery](apps/r3-gallery) | Client-only Remix UI photo gallery SPA         | https://r3-gallery.sergiodxa-cloudflare.workers.dev |
 | [r3-uptime](apps/r3-uptime)   | Remix v3 port of the uptime monitoring service | https://uptime.sergiodxa.com                        |
-| [uptime](apps/uptime)         | Infrastructure monitoring service              | https://uptime.sergiodxa.com                        |
+| [uptime](apps/uptime)         | Infrastructure monitoring service              | Retired, not deployed                               |
 
 ## Packages
 
