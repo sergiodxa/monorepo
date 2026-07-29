@@ -14,6 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import resetStyles from "@pkg/r3-ui/reset.css?url";
 import themeStyles from "@pkg/r3-ui/theme.css?url";
+import { colorScheme } from "@pkg/u/color";
 
 import colorStyles from "~/resources/css/colors.css?url";
 import prismStyles from "~/resources/css/prism.css?url";
@@ -70,11 +71,20 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		} = handle.props;
 
 		return (
-			/* `system` opts the theme layer into `prefers-color-scheme` — it is the
-			class that layer's own dark blocks are gated on, so without it only the
-			light `:root` block ever applies no matter what the visitor prefers. A
-			literal `dark` would force the scheme instead; this follows the OS. */
-			<html lang={locale} class="system">
+			/* Two halves of the same switch, and both are needed.
+
+			`system` opts the theme layer into `prefers-color-scheme` — it is the class
+			that layer's own dark blocks are gated on, so without it only the light
+			`:root` block ever applies no matter what the visitor prefers. A literal
+			`dark` would force the scheme instead; this follows the OS.
+
+			`colorScheme("light dark")` covers what the theme layer cannot reach: the
+			chrome the *browser* paints rather than our own CSS — scrollbars, the canvas
+			behind the document, `<select>` dropdowns, date pickers, number-input
+			spinners, and native control borders. Without it a fully dark page still
+			renders a white scrollbar and light form controls, which the CMS is full of.
+			Declared once here because `color-scheme` inherits. */
+			<html lang={locale} class="system" mix={[colorScheme("light dark")]}>
 				{/* Every child carries `data-key`, which is what the client runtime's DOM
 				diff matches head children on; without it the diff falls back to matching
 				by position and only reuses a node when the tag names line up. Kept even
