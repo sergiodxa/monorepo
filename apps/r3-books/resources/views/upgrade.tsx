@@ -66,6 +66,7 @@ export default function UpgradeView(handle: Handle<UpgradeView.Props>) {
 					attribution={attribution}
 					error={error}
 					label="Email address"
+					reassurance={false}
 					submitLabel="Get Upgrade Link"
 				/>
 			</section>

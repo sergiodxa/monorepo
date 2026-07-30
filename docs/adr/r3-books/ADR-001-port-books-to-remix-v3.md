@@ -726,6 +726,49 @@ rather than against Polar's real product payload.
 - **`form()`'s two-leaf shape applied to `/sample` as predicted**: the controller exports
   named `index` and `action` actions and `bootstrap/app.tsx` maps each leaf.
 
+### Phase 3 — visual comparison against production
+
+Done after the fact, against the live OLD APP, once a working `POLAR_ACCESS_TOKEN` was
+available locally (the token in `.dev.vars` had expired, which made `/release` a 500 —
+worth knowing, since the page throws rather than degrading when Polar rejects the token).
+
+**Method.** Side-by-side screenshots of `/`, `/sample`, and `/upgrade` at desktop and phone
+widths, plus a line-by-line diff of the rendered text of all four pages against production.
+The text diff is the stronger check on the release page, which is too long to compare by eye
+with any confidence.
+
+**Result: the release page is text-identical to production** — 82 lines against 83, the one
+difference being the spinner's `Loading...` label this port drops. All eight section ids
+(`#hero`, `#description`, `#sample`, `#testimonial`, `#pricing`, `#author`, `#faq`, `#email`)
+match, and so do all three live prices ($29 / $119 / $199), which confirms the cents
+division against real Polar data rather than a fixture. Neither page loads the ParityDeals
+script right now, because the active campaign _is_ `EARLY` — so `ppp`'s polarity is verified
+against production rather than only against a test.
+
+The other three pages differ only in ways this port intends: the dropped `Loading...` and
+`Success` SVG labels, and per-page `<title>`s where production repeats one hardcoded title
+on every page (§8).
+
+**Three fidelity bugs found and fixed**, none of which a test would have caught:
+
+1. The submit button lost its `capitalize`, so `/sample` read "Read free sample" against
+   production's "Read Free Sample". The label is now capitalized in CSS on the button, which
+   is where the OLD APP does it — and which leaves the homepage's "Subscribe" unchanged.
+2. `/upgrade` was showing the "No spam. Unsubscribe anytime." line, which that page has
+   never had: someone upgrading is a customer being asked for the address they bought with,
+   not a visitor being asked to join a list. `SubscribeForm` grew a `reassurance` prop, and
+   with the line gone the error renders as its own paragraph, as it always has there.
+3. **A pre-existing bug in production, deliberately not carried over.** The reassurance line
+   was indented only from `lg` up, so at phone widths it sat flush against the viewport edge
+   while the heading and field above it were inset. It is now indented at every width.
+
+**Still not verified, and needing a human eye:** dark mode on any page (including whether
+the `<hr>` rules, left at their original light-scheme value, are too bright on a dark page);
+the sample chapter's prose rhythm and code-fence theme, both written from scratch; the
+ParityDeals banner overrides, which style DOM only the third-party script injects and which
+cannot be seen at all while `EARLY` is the active campaign; and the struck-through
+discounted price, which needs a non-`EARLY` campaign to appear.
+
 ## Notes
 
 - **Polar prices are in cents.** The release loader divides by 100 and formats with `Intl.NumberFormat` (USD, no fraction digits). Keep both, or prices render as `$4900`.

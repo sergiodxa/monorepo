@@ -21,7 +21,7 @@ import { hstack, shrink, vstack } from "@pkg/u/layout";
 import { dark, media } from "@pkg/u/responsive";
 import { is, maxIs, pb, pi } from "@pkg/u/size";
 import { focusVisible, placeholder, when } from "@pkg/u/state";
-import { pretty, text, weight, whiteSpace } from "@pkg/u/typography";
+import { pretty, text, textTransform, weight, whiteSpace } from "@pkg/u/typography";
 import { css } from "remix/ui";
 
 /** The viewport width the field and button stop stacking at, matching the site's `lg`. */
@@ -50,6 +50,12 @@ export namespace SubscribeForm {
 		};
 		/** A server-rendered error to show under the field, replacing the client-side one. */
 		error?: string;
+		/**
+		 * Whether to show the "No spam" reassurance line under the field. On by default,
+		 * and off for the upgrade form: someone upgrading is already a customer being asked
+		 * for the address they bought with, not a visitor being asked to join a list.
+		 */
+		reassurance?: boolean;
 	}
 }
 
@@ -61,6 +67,7 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 			attribution = {},
 			error,
 			label = "Email address",
+			reassurance = true,
 			submitLabel,
 			title,
 		} = handle.props;
@@ -127,6 +134,10 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 							css({ borderRadius: "0.125rem" }),
 							pi(5),
 							pb(2.5),
+							// The label is capitalized in CSS rather than in the copy, matching how the
+							// site has always rendered these buttons: "read free sample" reads as
+							// "Read Free Sample" without the caller having to title-case its string.
+							textTransform("capitalize"),
 							bg("color.neutral.950"),
 							fg("color.neutral.50"),
 							dark([bg("color.neutral.50"), fg("color.neutral.950")]),
@@ -136,30 +147,52 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 					</button>
 				</div>
 
-				<small
-					mix={[
-						vstack({ gap: 0.5, align: "baseline" }),
-						pretty(),
-						fg("color.neutral.700"),
-						media(SIDE_BY_SIDE, [pi(5)]),
-						dark(fg("color.neutral.300")),
-					]}
-				>
-					<span>No spam. Unsubscribe anytime.</span>
-					{error && (
-						<em
+				{reassurance ? (
+					<small
+						mix={[
+							vstack({ gap: 0.5, align: "baseline" }),
+							pretty(),
+							fg("color.neutral.700"),
+							/* Indented at every width, unlike the heading-and-field pair above, which
+							drops its padding once the two sit side by side. The original indented this
+							line only from `lg` up, which left it flush against the viewport edge on a
+							phone while everything above it was inset — visibly broken, so not carried
+							over. */
+							pi(5),
+							dark(fg("color.neutral.300")),
+						]}
+					>
+						<span>No spam. Unsubscribe anytime.</span>
+						{error && (
+							<em
+								mix={[
+									weight("medium"),
+									whiteSpace("pre-line"),
+									css({ fontStyle: "normal" }),
+									fg("color.danger.500"),
+									dark(fg("color.danger.400")),
+								]}
+							>
+								{error}
+							</em>
+						)}
+					</small>
+				) : (
+					/* With no reassurance line to sit inside, the error stands on its own — the
+					treatment the upgrade form has always given it. */
+					error && (
+						<p
 							mix={[
-								weight("medium"),
+								text("sm"),
 								whiteSpace("pre-line"),
-								css({ fontStyle: "normal" }),
-								fg("color.danger.500"),
+								fg("color.danger.600"),
 								dark(fg("color.danger.400")),
 							]}
 						>
 							{error}
-						</em>
-					)}
-				</small>
+						</p>
+					)
+				)}
 			</form>
 		);
 	};
