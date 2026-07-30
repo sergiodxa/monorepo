@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -182,9 +182,9 @@ Use the library already present for date pickers as the general date layer.
 
 ## Current Progress
 
-- [ ] Phase 1: Core Operations
-- [ ] Phase 2: Formatters
-- [ ] Phase 3: Grid Helpers And Adoption
+- [x] Phase 1: Core Operations
+- [x] Phase 2: Formatters
+- [x] Phase 3: Grid Helpers And Adoption
 
 ## Notes
 
