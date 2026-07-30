@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -180,8 +180,8 @@ Extend the package to build `robots.txt`.
 
 ## Current Progress
 
-- [ ] Phase 1: Factory And URLs
-- [ ] Phase 2: Schemas
+- [x] Phase 1: Factory And URLs
+- [x] Phase 2: Schemas
 - [ ] Phase 3: Components And Adoption
 
 ## Notes
