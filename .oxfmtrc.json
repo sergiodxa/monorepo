@@ -27,15 +27,6 @@
 					"stylesheet": "./apps/auth/app/styles.css"
 				}
 			}
-		},
-		{
-			"files": ["apps/books/**/*.{js,jsx,ts,tsx}"],
-			"options": {
-				"experimentalTailwindcss": {
-					"stylesheet": "./apps/books/app/app.css",
-					"functions": ["cn"]
-				}
-			}
 		}
 	]
 }

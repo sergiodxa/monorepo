@@ -812,13 +812,18 @@ cold-start fault that survives one request only is worth watching for during the
 - Dark mode beyond the homepage, the chapter's prose rhythm and fence theme, and the
   ParityDeals overrides — the last of which cannot be seen at all while `EARLY` is the
   active campaign, since that is exactly when the banner does not load.
-- **`apps/books` is still in the tree, and its `wrangler.jsonc` still claims the `books`
-  worker name.** Two configs now point at one worker, so a deploy from the old directory
-  would silently revert production. It is left in place deliberately as source-level
-  rollback insurance during the soak, and it is the first thing to delete after it.
-- After the soak: rename `apps/r3-books` → `apps/books`, drop the `apps/books` Tailwind
-  override from `.oxfmtrc.json`, update the root `README.md`, and mark this ADR
-  **Implemented**.
+- The week-long soak, and then marking this ADR **Implemented**.
+
+**Cleanup done at the owner's direction, without waiting for the soak:** the OLD APP was
+deleted and `apps/r3-books` renamed to `apps/books`, which also removed the hazard of two
+configs claiming one worker name. The `apps/books` Tailwind override is out of
+`.oxfmtrc.json` (the stylesheet it pointed at is gone), `.claude/launch.json` and the root
+`README.md` are updated, and the workspace is `@apps/books` again. Source-level rollback is
+now git history rather than a directory on disk; the deployed rollback pin is unaffected,
+since Cloudflare keeps that version server-side.
+
+With this, **React Router v8 is down to one app** (`apps/auth`), and React, React DOM,
+Tailwind, Zod, `remix-utils`, Markdoc, and Prism stay installed only for it.
 
 ## Notes
 

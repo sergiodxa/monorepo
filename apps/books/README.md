@@ -1,62 +1,76 @@
-# Books App
+# r3-books
 
-Landing page and sales funnel for the "React Router OAuth2 Handbook" book.
+Landing page and sales funnel for the _React Router OAuth2 Handbook_: email capture, a
+live-priced release page, a gated sample chapter, an upgrade path, and purchase tagging.
 
-Production URL: https://books.sergiodxa.com
+Production URL: https://books.sergiodxa.com (served by the `books` worker until cutover;
+this worker is reachable on its `workers.dev` subdomain in the meantime)
 
 ## Development
 
 1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run dev` to start the development server at http://localhost:3000
+2. Run `bun run dev` to start the development server at http://localhost:3003
 
 ## Cloudflare Services
 
-Smart Placement and Observability (with 10% trace sampling) are enabled. No storage bindings.
+None. The worker has no D1, KV, R2, queue, cron, or Durable Object binding — the only
+state the app has lives in Buttondown and Polar.
 
 ## Features
 
-- Email subscription via Buttondown
-- Payment processing via Polar
-- Webhook handling for payment events
-- Markdoc content rendering with Prism syntax highlighting
-- Dark mode support
+- **Email capture** on the homepage, with UTM attribution carried through from the query
+  string and stored on the Buttondown subscriber.
+- **Live pricing** on the release page, read from Polar products with the currently
+  applicable launch discount applied.
+- **Gated sample chapter**: an address unlocks the chapter, rendered from Markdown at
+  request time and deliberately not persisted across reloads.
+- **Upgrade path** from the Essentials package to the Complete package, priced with a
+  fixed upgrade discount for customers who already own Essentials.
+- **Purchase tagging**: a paid Polar order tags the customer in Buttondown with their
+  tier, which is what drives newsletter segmentation.
+- **Zero first-party JavaScript.** Every page is server-rendered HTML; forms use native
+  constraint validation and full-document POSTs.
 
 ## Integrations
 
-- **Buttondown** - Email list management and subscriptions
-- **Polar** - Payment processing and checkout sessions
+| Service             | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| Buttondown          | Newsletter subscribers and purchase-tier metadata        |
+| Polar               | Products, prices, discounts, checkouts, orders, webhooks |
+| ParityDeals         | Purchasing-power-parity banner on the release page       |
+| Cloudflare Insights | Page analytics beacon                                    |
 
 ## Routes
 
-| Route                 | Description                           |
-| --------------------- | ------------------------------------- |
-| `/`                   | Homepage with email capture form      |
-| `/release`            | Post-subscription page with pricing   |
-| `/sample`             | Gated sample chapter (requires email) |
-| `/upgrade`            | Upgrade path for existing customers   |
-| `/api/subscribe`      | Email subscription handler            |
-| `/api/checkout/:type` | Polar checkout redirect               |
-| `/webhooks/polar`     | Polar webhook handler                 |
+| Route                 | Methods | Purpose                                                     |
+| --------------------- | ------- | ----------------------------------------------------------- |
+| `/`                   | GET     | Landing page with the early-access subscribe form           |
+| `/release`            | GET     | Sales page with live prices, packages, FAQ                  |
+| `/sample`             | GET     | The sample-chapter email form                               |
+| `/sample`             | POST    | Subscribes, then renders the sample chapter                 |
+| `/upgrade`            | GET     | The upgrade email form                                      |
+| `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout |
+| `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`            |
+| `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it                 |
+| `/webhooks/polar`     | POST    | Verifies and handles `order.paid`                           |
+| `/healthcheck`        | GET     | Plain-text `OK`                                             |
 
 ## Scripts
 
-| Script       | Description                 |
-| ------------ | --------------------------- |
-| `dev`        | Start development server    |
-| `build`      | Build for production        |
-| `start`      | Preview production build    |
-| `cf:deploy`  | Deploy to Cloudflare        |
-| `cf:typegen` | Generate Cloudflare types   |
-| `rr:routes`  | List React Router routes    |
-| `rr:typegen` | Generate React Router types |
-| `typecheck`  | TypeScript type checking    |
+| Script              | Purpose                                |
+| ------------------- | -------------------------------------- |
+| `bun run dev`       | Start the dev server on port 3003      |
+| `bun run build`     | Build the worker and client assets     |
+| `bun run start`     | Preview the production build           |
+| `bun run typecheck` | Type-check the app                     |
+| `bun cf:typegen`    | Regenerate `worker-configuration.d.ts` |
+| `bun cf:deploy`     | Deploy the worker                      |
 
 ## Deployment
 
-```bash
-bun run cf:deploy
-```
+Run `bun run build` first — `wrangler deploy` does not build the Vite app — then
+`bun cf:deploy`. Secrets are set with `bunx wrangler secret put <NAME>`.
 
 ## Environment Variables
 
-See `.env.example` for required environment variables.
+See `.env.example`.

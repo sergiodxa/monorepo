@@ -1,24 +1,41 @@
 /**
- * Vite build configuration for the books app, wiring up the Cloudflare Workers
- * SSR environment, Tailwind CSS, the React Router plugin, and tsconfig path
- * resolution so the site can be developed locally and deployed to the edge.
+ * Vite build configuration for the books app. Registers the Cloudflare plugin so
+ * the worker runs in the SSR environment, and declares a client bundle entry with
+ * stable asset file-naming even though no page loads it today: the app ships zero
+ * first-party JavaScript, and the entry stays wired so an island can be added
+ * without reshaping the build.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fileURLToPath } from "node:url";
+
 import { cloudflare } from "@cloudflare/vite-plugin";
-import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+
+const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
 
 export default defineConfig({
-	server: { port: 3000 },
-	plugins: [
-		cloudflare({ viteEnvironment: { name: "ssr" } }),
-		tailwindcss(),
-		reactRouter(),
-		tsconfigPaths(),
-	],
+	server: { port: 3003 },
+
+	resolve: { tsconfigPaths: true },
+
+	environments: {
+		client: {
+			build: {
+				rollupOptions: {
+					input: {
+						clientEntry: clientEntryPath,
+					},
+					output: {
+						entryFileNames: "assets/[name].js",
+						chunkFileNames: "assets/[name]-[hash].js",
+					},
+				},
+			},
+		},
+	},
+
+	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
 });

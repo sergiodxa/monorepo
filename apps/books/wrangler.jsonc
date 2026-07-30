@@ -1,24 +1,38 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
 	"name": "books",
-	"main": "./app/entry.worker.ts",
-	"compatibility_date": "2025-02-02",
+	"main": "./bootstrap/worker.ts",
+	"compatibility_date": "2026-04-10",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
-	"dev": { "port": 3000 },
+	"dev": { "port": 3003 },
 	"placement": { "mode": "smart" },
+
+	// Traces are head-sampled at 10%: this is a marketing funnel whose homepage takes
+	// bot and crawler traffic, so full tracing is mostly noise.
 	"observability": {
 		"enabled": true,
-		"traces": {
-			"enabled": true,
-			"head_sampling_rate": 0.1,
-		},
+		"traces": { "enabled": true, "head_sampling_rate": 0.1 },
 	},
+
 	"assets": { "directory": "./build/client" },
 
-	"vars": {
-		"BUTTONDOWN_API_VERSION": "2024-07-01",
-	},
+	// Buttondown picks an API version per request from the `x-api-version` header, and
+	// falls back to the newsletter's pinned version or, failing that, to whatever is
+	// latest. Pinning it here is what stops a provider release from changing the response
+	// shapes this app parses; it is a public value, not a secret, so it lives in `vars`.
+	"vars": { "BUTTONDOWN_API_VERSION": "2024-07-01" },
 
+	// This app deploys *as* the `books` worker rather than beside it, so the custom domain,
+	// the three secrets, and the Polar webhook URL registered against this domain all carry
+	// over untouched. The route is declared here so a deploy never drops it. Rollback is
+	// redeploying the previous version, not moving a domain.
 	"routes": [{ "pattern": "books.sergiodxa.com", "custom_domain": true }],
+
+	// This worker has no storage at all — no D1, KV, R2, queue, cron, or Durable
+	// Object bindings. Its only state lives in Buttondown and Polar.
+
+	// Plain secrets (BUTTONDOWN_API_KEY, POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET) come
+	// from `.dev.vars` locally and `wrangler secret put` in production; only bindings
+	// need a wrangler.jsonc entry.
 }
