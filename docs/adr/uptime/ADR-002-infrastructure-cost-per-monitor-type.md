@@ -355,11 +355,22 @@ QUERY PLAN
 `--SEARCH r USING AUTOMATIC COVERING INDEX (monitor_id=?) LEFT-JOIN
 ```
 
-The correlated subquery `SELECT monitor_id, MAX(completed_at) … GROUP BY monitor_id` cannot
-be satisfied by a seek, so SQLite materialises it with a **full scan of the covering index
-over every row in `monitor_results`**. `SCAN m` is a second full scan — `monitors` has
+`MATERIALIZE r` is `EXPLAIN QUERY PLAN` reporting how it executes the existing query's
+`LEFT JOIN (SELECT … GROUP BY …)` subquery — planner output, not SQL or a hint anywhere in the
+codebase. The correlated subquery `SELECT monitor_id, MAX(completed_at) … GROUP BY monitor_id`
+cannot be satisfied by a seek, so SQLite materialises it with a **full scan of the covering
+index over every row in `monitor_results`**. `SCAN m` is a second full scan — `monitors` has
 indexes on `team_id` and `created_at` but **none on `enabled_at`**, the column in the
 `WHERE` clause.
+
+> **How this plan was captured, and its limits.** Host `sqlite3` 3.51.0 against a copy of the
+> local D1 database file, which carries the real schema and index set. D1 runs its own SQLite
+> build, so the exact plan text and the planner's choices may differ in production. The
+> planner-independent part of the claim: `MAX(completed_at) … GROUP BY monitor_id` over an
+> unfiltered table must read every row of it, by any strategy. Confirm with
+> `wrangler d1 execute DB --remote --command "EXPLAIN QUERY PLAN …"`, and treat `meta.rows_read`
+> from a real response as the authoritative number (§16). Every row count in this ADR that came
+> from a query plan carries the same caveat.
 
 `monitor_results` holds 7 days of history (`CleanJob`'s `RETENTION_MS`), which makes the
 per-ping cost independent of scale:
