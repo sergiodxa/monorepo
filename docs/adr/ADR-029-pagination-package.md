@@ -343,7 +343,7 @@ Both handlers reach `paginate()` through `PAGING`, so both spell the page size `
 
 ### Neutral
 
-- **No UI component here** - a pager component belongs in the UI package and consumes `series()`.
+- **No pager component anywhere** - `@pkg/r3-ui` already ships `Pagination` with `List`, `Item`, `Link`, and `Button` compound parts, so an app maps `series()` onto those directly. Neither package gains a dependency on the other, and the page-number-to-URL function an app writes for the markup is the same one `paginate()` needs for `Link` headers.
 - **Existing endpoints keep their shape until migrated** - adoption is per route.
 
 ## Implementation Plan
