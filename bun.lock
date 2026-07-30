@@ -495,6 +495,17 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/cloudflare-mocks": {
+      "name": "@pkg/cloudflare-mocks",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260723.1",
+        "@pkg/data-table-d1": "workspace:*",
+        "@pkg/data-table-sqlstorage": "workspace:*",
+        "@types/bun": "^1.3.14",
+        "remix": "3.0.0-beta.5",
+      },
+    },
     "packages/cn": {
       "name": "@pkg/cn",
       "version": "0.0.1",
@@ -505,6 +516,27 @@
       "devDependencies": {
         "@types/bun": "^1.3.14",
         "@types/react": "^19.2.17",
+      },
+    },
+    "packages/cron": {
+      "name": "@pkg/cron",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/duration": "workspace:*",
+        "@pkg/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/crypto": {
+      "name": "@pkg/crypto",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/data-table-d1": {
@@ -529,6 +561,17 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/dates": {
+      "name": "@pkg/dates",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/duration": "workspace:*",
+        "@pkg/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/db-helpers": {
       "name": "@pkg/db-helpers",
       "version": "0.0.0",
@@ -541,6 +584,16 @@
       },
       "peerDependencies": {
         "drizzle-orm": "^0.45.2",
+      },
+    },
+    "packages/duration": {
+      "name": "@pkg/duration",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/get-client-ip": {
@@ -580,6 +633,8 @@
       "name": "@pkg/http",
       "version": "0.0.1",
       "dependencies": {
+        "@pkg/crypto": "workspace:*",
+        "@pkg/duration": "workspace:*",
         "@pkg/location": "workspace:*",
       },
       "devDependencies": {
@@ -657,6 +712,24 @@
         "@types/node": "^26.1.1",
         "lucide-static": "^1.26.0",
       },
+    },
+    "packages/mail": {
+      "name": "@pkg/mail",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+        "resend": "^6.18.0",
+      },
+      "peerDependencies": {
+        "resend": "^6.18.0",
+      },
+      "optionalPeers": [
+        "resend",
+      ],
     },
     "packages/markdown": {
       "name": "@pkg/markdown",
@@ -755,6 +828,19 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/pagination": {
+      "name": "@pkg/pagination",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/crypto": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/polar": {
       "name": "@pkg/polar",
       "version": "0.0.1",
@@ -785,6 +871,21 @@
       },
       "devDependencies": {
         "@types/bun": "^1.3.11",
+      },
+    },
+    "packages/rate-limit": {
+      "name": "@pkg/rate-limit",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/duration": "workspace:*",
+        "@pkg/get-client-ip": "workspace:*",
+        "@pkg/http": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260723.1",
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/response": {
@@ -824,6 +925,16 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/seo": {
+      "name": "@pkg/seo",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/service-container": {
       "name": "@pkg/service-container",
       "version": "0.0.1",
@@ -848,6 +959,13 @@
       "dependencies": {
         "@pkg/xml": "workspace:*",
       },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/strings": {
+      "name": "@pkg/strings",
+      "version": "0.0.1",
       "devDependencies": {
         "@types/bun": "^1.3.14",
       },
@@ -927,6 +1045,34 @@
         "@types/bun": "^1.3.14",
         "remix": "3.0.0-beta.5",
         "zod": "^4.4.3",
+      },
+    },
+    "packages/webhooks": {
+      "name": "@pkg/webhooks",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/crypto": "workspace:*",
+        "@pkg/duration": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260723.1",
+        "@types/bun": "^1.3.14",
+        "remix": "3.0.0-beta.5",
+      },
+    },
+    "packages/workers-cache": {
+      "name": "@pkg/workers-cache",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260723.1",
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/xml": {
@@ -1530,13 +1676,23 @@
 
     "@pkg/blog-engine": ["@pkg/blog-engine@workspace:packages/blog-engine"],
 
+    "@pkg/cloudflare-mocks": ["@pkg/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
+
     "@pkg/cn": ["@pkg/cn@workspace:packages/cn"],
+
+    "@pkg/cron": ["@pkg/cron@workspace:packages/cron"],
+
+    "@pkg/crypto": ["@pkg/crypto@workspace:packages/crypto"],
 
     "@pkg/data-table-d1": ["@pkg/data-table-d1@workspace:packages/data-table-d1"],
 
     "@pkg/data-table-sqlstorage": ["@pkg/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
 
+    "@pkg/dates": ["@pkg/dates@workspace:packages/dates"],
+
     "@pkg/db-helpers": ["@pkg/db-helpers@workspace:packages/db-helpers"],
+
+    "@pkg/duration": ["@pkg/duration@workspace:packages/duration"],
 
     "@pkg/get-client-ip": ["@pkg/get-client-ip@workspace:packages/get-client-ip"],
 
@@ -1560,6 +1716,8 @@
 
     "@pkg/lucide-remix": ["@pkg/lucide-remix@workspace:packages/lucide-remix"],
 
+    "@pkg/mail": ["@pkg/mail@workspace:packages/mail"],
+
     "@pkg/markdown": ["@pkg/markdown@workspace:packages/markdown"],
 
     "@pkg/markdown-react": ["@pkg/markdown-react@workspace:packages/markdown-react"],
@@ -1572,11 +1730,15 @@
 
     "@pkg/oidc-provider": ["@pkg/oidc-provider@workspace:packages/oidc-provider"],
 
+    "@pkg/pagination": ["@pkg/pagination@workspace:packages/pagination"],
+
     "@pkg/polar": ["@pkg/polar@workspace:packages/polar"],
 
     "@pkg/r3-ui": ["@pkg/r3-ui@workspace:packages/r3-ui"],
 
     "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
+
+    "@pkg/rate-limit": ["@pkg/rate-limit@workspace:packages/rate-limit"],
 
     "@pkg/response": ["@pkg/response@workspace:packages/response"],
 
@@ -1584,11 +1746,15 @@
 
     "@pkg/rss": ["@pkg/rss@workspace:packages/rss"],
 
+    "@pkg/seo": ["@pkg/seo@workspace:packages/seo"],
+
     "@pkg/service-container": ["@pkg/service-container@workspace:packages/service-container"],
 
     "@pkg/session-storage-kv": ["@pkg/session-storage-kv@workspace:packages/session-storage-kv"],
 
     "@pkg/sitemap": ["@pkg/sitemap@workspace:packages/sitemap"],
+
+    "@pkg/strings": ["@pkg/strings@workspace:packages/strings"],
 
     "@pkg/typeid": ["@pkg/typeid@workspace:packages/typeid"],
 
@@ -1601,6 +1767,10 @@
     "@pkg/uuid": ["@pkg/uuid@workspace:packages/uuid"],
 
     "@pkg/validate": ["@pkg/validate@workspace:packages/validate"],
+
+    "@pkg/webhooks": ["@pkg/webhooks@workspace:packages/webhooks"],
+
+    "@pkg/workers-cache": ["@pkg/workers-cache@workspace:packages/workers-cache"],
 
     "@pkg/xml": ["@pkg/xml@workspace:packages/xml"],
 

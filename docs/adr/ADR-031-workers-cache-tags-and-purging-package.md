@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -334,8 +334,8 @@ Define a generic tagging interface with a Cloudflare implementation behind it.
 ## Current Progress
 
 - [ ] Phase 1: Verification
-- [ ] Phase 2: Tags And Functions
-- [ ] Phase 3: Middleware
+- [x] Phase 2: Tags And Functions
+- [x] Phase 3: Middleware
 - [ ] Phase 4: Adoption
 
 ## Notes
