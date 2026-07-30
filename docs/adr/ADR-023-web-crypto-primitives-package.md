@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -193,9 +193,9 @@ Use a WebAssembly Argon2 build for password hashing.
 
 ## Current Progress
 
-- [ ] Phase 1: Encoding, Hashing, HMAC
-- [ ] Phase 2: Password Hashing
-- [ ] Phase 3: TOTP And Sealing
+- [x] Phase 1: Encoding, Hashing, HMAC
+- [x] Phase 2: Password Hashing
+- [x] Phase 3: TOTP And Sealing
 - [ ] Phase 4: Cleanup
 
 ## Notes
