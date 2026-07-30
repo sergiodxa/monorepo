@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Cache } from "@pkg/cache";
+import { Cache } from "@pkg/kv-cache";
 import { createSingletonMiddleware } from "remix-utils/middleware/singleton";
 
 import { getBindings } from "./bindings";

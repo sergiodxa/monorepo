@@ -22,7 +22,7 @@ Cloudflare is also shipping Workers Cache, a regionally tiered cache placed in f
 | `apps/blog` and `apps/auth` locale API routes | `pretty-cache-header` for translation payloads                                                    |
 | `apps/uptime` locale API route                | Same                                                                                              |
 | `packages/http`                               | `content-type`, `negotiate`, `request`, `response`, `status-code` subpaths; nothing about caching |
-| `packages/cache`                              | A read-through data cache over Workers KV; unrelated to response caching                          |
+| `packages/kv-cache`                           | A read-through data cache over Workers KV; unrelated to response caching                          |
 
 ### What Remix v3 Already Provides
 
@@ -142,7 +142,7 @@ A merge helper over the `Vary` class, because content negotiation in `@pkg/http/
 
 - **No middleware in this ADR** - an automatic ETag middleware is even less compelling now that an edge cache absorbs most repeat requests; the primitives come first.
 - **Tags and purging live in a sibling package** - a route that caches and tags a response imports from two packages to build one `Headers` object, which is the accepted cost of keeping the specification layer vendor-free.
-- **`@pkg/cache` remains separate** - it is a read-through data cache over Workers KV. Response caching keyed by request is a different concern.
+- **`@pkg/kv-cache` remains separate** - it is a read-through data cache over Workers KV. Response caching keyed by request is a different concern.
 - **Existing headers keep working** - policies produce the same header values the current call sites produce, so behavior only changes where new policies or `conditional()` are adopted.
 
 ## Implementation Plan

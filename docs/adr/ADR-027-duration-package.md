@@ -18,7 +18,7 @@ Several packages proposed alongside this one need a duration argument. Defining 
 | ----------------------------------------- | --------------------------------------------------- |
 | `packages/result/src/retry.ts`            | `ms` dependency for backoff configuration           |
 | `apps/auth/app/config.ts`                 | `ms` dependency for lifetimes                       |
-| `packages/cache`                          | Numeric TTL in store write options                  |
+| `packages/kv-cache`                       | Numeric TTL in store write options                  |
 | `packages/session-storage-kv`             | Numeric session lifetime                            |
 | Cache header call sites                   | Numeric seconds inside a third-party string builder |
 | `apps/r3-uptime` cron grace and cooldowns | Inline millisecond arithmetic                       |

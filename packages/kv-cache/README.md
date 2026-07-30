@@ -1,4 +1,4 @@
-# @pkg/cache
+# @pkg/kv-cache
 
 Cache store abstraction for Cloudflare KV with a simple, consistent API.
 
@@ -16,7 +16,7 @@ The cache supports:
 ## Usage
 
 ```typescript
-import { Cache } from "@pkg/cache";
+import { Cache } from "@pkg/kv-cache";
 
 // Create a KV store instance
 let cache = new Cache.KVStore(env.KV, ctx.waitUntil.bind(ctx));
@@ -217,7 +217,7 @@ Create a cache middleware for React Router:
 
 ```typescript
 // app/middleware/cache.ts
-import { Cache } from "@pkg/cache";
+import { Cache } from "@pkg/kv-cache";
 import { getContext } from "./context-storage";
 
 export function getCache(): Cache.KVStore {

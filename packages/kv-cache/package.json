@@ -1,5 +1,5 @@
 {
-	"name": "@pkg/cache",
+	"name": "@pkg/kv-cache",
 	"version": "0.0.0",
 	"private": true,
 	"license": "MIT",

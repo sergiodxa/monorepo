@@ -201,7 +201,7 @@ Cache the sitemap to avoid regenerating on every request:
 
 ```typescript
 import { Sitemap } from "@pkg/sitemap";
-import { Cache } from "@pkg/cache";
+import { Cache } from "@pkg/kv-cache";
 
 export async function loader({ context }: Route.LoaderArgs) {
 	let cache = new Cache.KVStore(context.env.KV, context.waitUntil);
@@ -244,7 +244,7 @@ function generateLocalizedSitemap(locale: string, baseUrl: string) {
 ## Related Packages
 
 - [`@pkg/rss`](/packages/rss) - RSS feed generation
-- [`@pkg/cache`](/packages/cache) - KV cache for sitemap caching
+- [`@pkg/kv-cache`](/packages/kv-cache) - KV cache for sitemap caching
 
 ## Tips
 

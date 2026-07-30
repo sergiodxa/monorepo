@@ -282,7 +282,7 @@ Ship tags and purging beside the policy builder, since they are emitted on the s
 
 **Rejected because**: proximity at a call site is not a shared contract. `Cache-Tag` has no specification, purging is a runtime call, and including them would mean an app on any other runtime imports Cloudflare vocabulary to set a `max-age`.
 
-### 2. Add It To `@pkg/cache`
+### 2. Add It To `@pkg/kv-cache`
 
 Extend the existing cache package to cover response caching as well as its KV data cache.
 

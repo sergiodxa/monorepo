@@ -88,7 +88,7 @@ Run from the repository root:
 | [arrays](packages/arrays)                               | Array utility functions                         |
 | [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com     |
 | [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                       |
-| [cache](packages/cache)                                 | Cache helper utilities                          |
+| [kv-cache](packages/kv-cache)                           | Read-through cache store over Cloudflare KV     |
 | [cn](packages/cn)                                       | Class name utility                              |
 | [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1      |
 | [data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL |
