@@ -83,45 +83,46 @@ Run from the repository root:
 
 ## Packages
 
-| Package                                                 | Description                                     |
-| ------------------------------------------------------- | ----------------------------------------------- |
-| [arrays](packages/arrays)                               | Array utility functions                         |
-| [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com     |
-| [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                       |
-| [kv-cache](packages/kv-cache)                           | Read-through cache store over Cloudflare KV     |
-| [cn](packages/cn)                                       | Class name utility                              |
-| [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1      |
-| [data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL |
-| [db-helpers](packages/db-helpers)                       | Database helper utilities for Drizzle           |
-| [get-client-ip](packages/get-client-ip)                 | Extract client IP from requests                 |
-| [hooks](packages/hooks)                                 | Shared React hooks                              |
-| [hostname](packages/hostname)                           | Hostname parsing and validation utilities       |
-| [http](packages/http)                                   | HTTP helper utilities                           |
-| [i18n](packages/i18n)                                   | Internationalization utilities                  |
-| [iife](packages/iife)                                   | Immediately invoked function helper             |
-| [jobs](packages/jobs)                                   | Job queue utilities                             |
-| [location](packages/location)                           | URL-like path Location class                    |
-| [logger](packages/logger)                               | Request-scoped logging                          |
-| [lucide-remix](packages/lucide-remix)                   | Lucide icons for Remix UI                       |
-| [markdown](packages/markdown)                           | Markdown processing utilities                   |
-| [markdown-react](packages/markdown-react)               | React markdown rendering utilities              |
-| [markdown-remix](packages/markdown-remix)               | Remix markdown rendering utilities              |
-| [markdown-server](packages/markdown-server)             | Server-side markdown processing utilities       |
-| [oidc-client](packages/oidc-client)                     | OIDC client utilities                           |
-| [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                     |
-| [polar](packages/polar)                                 | Polar billing integration utilities             |
-| [r3-ui](packages/r3-ui)                                 | Remix v3 UI component library                   |
-| [r3-ui-router](packages/r3-ui-router)                   | SPA router for Remix UI apps                    |
-| [response](packages/response)                           | HTTP response utilities                         |
-| [result](packages/result)                               | Result type for error handling                  |
-| [rss](packages/rss)                                     | RSS feed utilities                              |
-| [service-container](packages/service-container)         | Dependency injection service container          |
-| [session-storage-kv](packages/session-storage-kv)       | Session storage adapter for Cloudflare KV       |
-| [sitemap](packages/sitemap)                             | Sitemap generation utilities                    |
-| [typeid](packages/typeid)                               | Type-safe prefixed id utilities                 |
-| [types](packages/types)                                 | Shared TypeScript types                         |
-| [u](packages/u)                                         | Tailwind-like Remix UI styling utilities        |
-| [ui](packages/ui)                                       | Shared React UI components                      |
-| [uuid](packages/uuid)                                   | UUID utilities                                  |
-| [validate](packages/validate)                           | Standard Schema validation utilities            |
-| [xml](packages/xml)                                     | XML generation utilities                        |
+| Package                                                 | Description                                                 |
+| ------------------------------------------------------- | ----------------------------------------------------------- |
+| [arrays](packages/arrays)                               | Array utility functions                                     |
+| [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com                 |
+| [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                                   |
+| [cn](packages/cn)                                       | Class name utility                                          |
+| [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1                  |
+| [data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL             |
+| [db-helpers](packages/db-helpers)                       | Database helper utilities for Drizzle                       |
+| [duration](packages/duration)                           | Typed duration strings converted to milliseconds or seconds |
+| [get-client-ip](packages/get-client-ip)                 | Extract client IP from requests                             |
+| [hooks](packages/hooks)                                 | Shared React hooks                                          |
+| [hostname](packages/hostname)                           | Hostname parsing and validation utilities                   |
+| [http](packages/http)                                   | HTTP helper utilities                                       |
+| [i18n](packages/i18n)                                   | Internationalization utilities                              |
+| [iife](packages/iife)                                   | Immediately invoked function helper                         |
+| [jobs](packages/jobs)                                   | Job queue utilities                                         |
+| [kv-cache](packages/kv-cache)                           | Read-through cache store over Cloudflare KV                 |
+| [location](packages/location)                           | URL-like path Location class                                |
+| [logger](packages/logger)                               | Request-scoped logging                                      |
+| [lucide-remix](packages/lucide-remix)                   | Lucide icons for Remix UI                                   |
+| [markdown](packages/markdown)                           | Markdown processing utilities                               |
+| [markdown-react](packages/markdown-react)               | React markdown rendering utilities                          |
+| [markdown-remix](packages/markdown-remix)               | Remix markdown rendering utilities                          |
+| [markdown-server](packages/markdown-server)             | Server-side markdown processing utilities                   |
+| [oidc-client](packages/oidc-client)                     | OIDC client utilities                                       |
+| [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                 |
+| [polar](packages/polar)                                 | Polar billing integration utilities                         |
+| [r3-ui](packages/r3-ui)                                 | Remix v3 UI component library                               |
+| [r3-ui-router](packages/r3-ui-router)                   | SPA router for Remix UI apps                                |
+| [response](packages/response)                           | HTTP response utilities                                     |
+| [result](packages/result)                               | Result type for error handling                              |
+| [rss](packages/rss)                                     | RSS feed utilities                                          |
+| [service-container](packages/service-container)         | Dependency injection service container                      |
+| [session-storage-kv](packages/session-storage-kv)       | Session storage adapter for Cloudflare KV                   |
+| [sitemap](packages/sitemap)                             | Sitemap generation utilities                                |
+| [typeid](packages/typeid)                               | Type-safe prefixed id utilities                             |
+| [types](packages/types)                                 | Shared TypeScript types                                     |
+| [u](packages/u)                                         | Tailwind-like Remix UI styling utilities                    |
+| [ui](packages/ui)                                       | Shared React UI components                                  |
+| [uuid](packages/uuid)                                   | UUID utilities                                              |
+| [validate](packages/validate)                           | Standard Schema validation utilities                        |
+| [xml](packages/xml)                                     | XML generation utilities                                    |

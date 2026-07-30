@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -39,7 +39,7 @@ Create `@pkg/duration`: a compile-time-checked duration string type and the conv
 ### 1. Typed Duration Strings
 
 ```ts
-export type DurationString = `${number} ${DurationUnit}` | `${number}${DurationUnitShort}`;
+export type DurationString = `${bigint} ${DurationUnit}` | `${bigint}${DurationUnitShort}`;
 export type DurationInput = number | DurationString;
 ```
 
@@ -50,6 +50,8 @@ toMs("5 minutes"); // 300000
 toMs("30s"); // 30000
 toMs("5 minuts"); // Type error
 ```
+
+The count is `${bigint}` rather than `${number}` because `${number}` also matches `"1.5h"`, `"5e3h"`, and `"0x10h"`, and fractional and exponent forms are meant to be rejected. `${bigint}` accepts integer digits only.
 
 A bare `number` is always milliseconds, matching `Date` arithmetic and the convention of the dependency being replaced. Packages that need another unit convert explicitly, so a seconds-based API cannot silently receive milliseconds.
 
@@ -98,6 +100,7 @@ The type becomes the shared vocabulary for the packages that need it: cache TTLs
 
 - **Template literal unions have a cost** - the union is large, and adding units multiplies it, so the unit list must stay short.
 - **Only a subset of `ms` syntax is supported** - forms like `"1.5h"` and unit-only strings such as `"hour"` are deliberately unsupported and become type errors at existing call sites.
+- **A duration string cannot be assembled from a variable** - ``toMs(`${count} minutes`)`` widens to `string` and fails to typecheck. Dynamic lengths use millisecond arithmetic instead, as in `count * toMs("1 minute")`, which is what the bare-number branch of `DurationInput` is for.
 - **Months and years are excluded** - they are not fixed lengths; anything calendar-based belongs in `@pkg/dates`.
 
 ### Neutral
@@ -152,7 +155,7 @@ Use `Milliseconds` and `Seconds` branded number types instead of strings.
 
 ## Current Progress
 
-- [ ] Phase 1: Types And Conversions
+- [x] Phase 1: Types And Conversions
 - [ ] Phase 2: Adoption
 
 ## Notes
