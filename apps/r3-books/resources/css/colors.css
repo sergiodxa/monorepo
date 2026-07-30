@@ -10,9 +10,9 @@
  * red — a form error — `success` green, and `warning` amber for completeness, since the
  * theme layer expects all five scales to exist even where a page never reaches for one.
  *
- * The two font stacks are the browser-native ones: no webfont is loaded, which is the
- * point on a page whose job is to render immediately. Headings take the serif face and
- * body copy the sans one.
+ * The font stacks are the browser-native ones: no webfont is loaded, which is the point on
+ * a page whose job is to render immediately. Headings take the serif face, body copy the
+ * sans one, and the sample chapter's code the mono one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,4 +86,10 @@
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial,
 		sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 	--ui-font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+	/* Only the sample chapter's code ever uses it, and like the other two it loads nothing:
+	the chapter has to render as fast as the pages selling it. */
+	--ui-font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+		monospace;
 }

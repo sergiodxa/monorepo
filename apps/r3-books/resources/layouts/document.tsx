@@ -23,6 +23,9 @@ import { font } from "@pkg/u/typography";
 
 import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";
+import parityDealsStyles from "~/resources/css/parity-deals.css?url";
+import prismStyles from "~/resources/css/prism.css?url";
+import proseStyles from "~/resources/css/prose.css?url";
 
 /**
  * The Cloudflare Insights beacon token. Kept verbatim: it identifies this site in the
@@ -91,6 +94,14 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-key="style-palette" />
 					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
+					{/* Three rule sets that cannot be mixins, because none of the elements they style
+					is written at a call site: the banner a third-party script injects, and the prose
+					and code the Markdown renderer emits. They are linked from every page rather than
+					only the two that use them — three small files on one shared cache entry beats a
+					second stylesheet request on the page that converts. */}
+					<link rel="stylesheet" href={parityDealsStyles} data-key="style-parity-deals" />
+					<link rel="stylesheet" href={proseStyles} data-key="style-prose" />
+					<link rel="stylesheet" href={prismStyles} data-key="style-prism" />
 					{/* `Seo` emits the `<title>` itself, along with the description, canonical
 					link, and both social card namespaces. */}
 					<Seo

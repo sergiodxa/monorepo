@@ -23,6 +23,8 @@ import checkout from "~/app/http/controllers/checkout";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
 import home from "~/app/http/controllers/home";
+import release from "~/app/http/controllers/release";
+import * as sample from "~/app/http/controllers/sample";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
@@ -60,7 +62,10 @@ export default function application() {
 	/* Mapped one leaf at a time: handing `router.map` a nested route map throws, so a
 	route group is spread rather than passed whole. */
 	router.map(routes.home, home);
+	router.map(routes.release, release);
 	router.map(routes.healthcheck, healthcheck);
+	router.map(routes.sample.index, sample.index);
+	router.map(routes.sample.action, sample.action);
 	router.map(routes.upgrade.index, upgrade.index);
 	router.map(routes.upgrade.action, upgrade.action);
 	router.map(routes.api.subscribe, subscribe);

@@ -1,0 +1,145 @@
+/*
+ * Syntax theme for the sample chapter's code fences. The fences are highlighted at parse
+ * time and rendered with token classes, so the colors have to be a stylesheet — there is no
+ * call site to hang a mixin off.
+ *
+ * The site has no accent color: it is black text on white, inverting to white on black, and
+ * a code block borrowing a rainbow theme would be the one thing on the page with a hue. So
+ * this theme spends the warm grey scale instead, and separates roles along two axes hue
+ * cannot help with:
+ *
+ * - Lightness tier, mirrored per scheme (light runs 500 → 950, dark runs 400 → 50), which
+ *   keeps tier ordering identical in both directions.
+ * - Weight and face, which is what lets four grey tiers carry a dozen token roles: a
+ *   keyword is a bold plain-text tier, a function name a semibold literal tier, and a
+ *   comment is the one italic thing in the block.
+ *
+ * `inserted` and `deleted` are the deliberate exception. They are the only tokens whose
+ * meaning *is* a color — a diff rendered in two greys cannot be read at all — so they take
+ * the palette's success and danger scales.
+ *
+ * The scheme switch is a bare `prefers-color-scheme` query rather than the theme layer's
+ * class-gated form: this site has no theme toggle and never will, since one would mean
+ * shipping its only client-side JavaScript.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+:root {
+	--book-code-text: var(--ui-color-neutral-950);
+	--book-code-quiet: var(--ui-color-neutral-500);
+	--book-code-punctuation: var(--ui-color-neutral-600);
+	--book-code-literal: var(--ui-color-neutral-700);
+	--book-code-name: var(--ui-color-neutral-800);
+	--book-code-inserted: var(--ui-color-success-700);
+	--book-code-deleted: var(--ui-color-danger-700);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--book-code-text: var(--ui-color-neutral-50);
+		--book-code-quiet: var(--ui-color-neutral-400);
+		--book-code-punctuation: var(--ui-color-neutral-400);
+		--book-code-literal: var(--ui-color-neutral-300);
+		--book-code-name: var(--ui-color-neutral-200);
+		--book-code-inserted: var(--ui-color-success-400);
+		--book-code-deleted: var(--ui-color-danger-400);
+	}
+}
+
+pre[class*="language-"],
+code[class*="language-"] {
+	color: var(--book-code-text);
+	font-family: var(--ui-font-mono);
+	direction: ltr;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	line-height: 1.6;
+	hyphens: none;
+	tab-size: 2;
+	text-shadow: none;
+}
+
+/* The fence's own element sets its surface, border, radius, and padding; only the type and
+color of the code inside it belong to this file. */
+pre[class*="language-"] > code[class*="language-"] {
+	display: block;
+	min-width: 100%;
+	background: none;
+	border: 0;
+	padding: 0;
+	font-size: inherit;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: var(--book-code-quiet);
+	font-style: italic;
+}
+
+.token.punctuation,
+.token.operator,
+.token.entity,
+.token.namespace {
+	color: var(--book-code-punctuation);
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.string,
+.token.char,
+.token.attr-name,
+.token.attr-value,
+.token.selector,
+.token.regex,
+.token.variable,
+.token.url,
+.token.builtin {
+	color: var(--book-code-literal);
+}
+
+.token.function,
+.token.class-name,
+.token.maybe-class-name,
+.token.parameter {
+	color: var(--book-code-name);
+	font-weight: 600;
+}
+
+.token.keyword,
+.token.atrule,
+.token.important {
+	color: var(--book-code-text);
+	font-weight: 700;
+}
+
+/* The two tokens a reader distinguishes by color alone, which is why they are split out of
+the literal group Prism's own theme keeps them in. */
+.token.inserted {
+	color: var(--book-code-inserted);
+}
+
+.token.deleted {
+	color: var(--book-code-deleted);
+}
+
+.token.bold {
+	font-weight: 700;
+}
+
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}

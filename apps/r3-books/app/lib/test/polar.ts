@@ -15,10 +15,24 @@ import type {
 	Discount,
 	Order,
 	PolarWebhookEvent,
+	Product as PolarProduct,
 } from "@pkg/polar";
 import type { Result } from "@pkg/result";
 
 import { PolarClient } from "@pkg/polar";
+
+/**
+ * Builds a product fixture carrying one price.
+ *
+ * The amount is in **cents**, as Polar reports it: a fixture written in dollars would make
+ * every price assertion pass while the page rendered a hundred times the real number.
+ *
+ * @param cents - The product's price, in cents.
+ * @returns A product the sales page can read a price off.
+ */
+export function makeProduct(cents: number): PolarProduct {
+	return { prices: [{ priceAmount: cents }] } as unknown as PolarProduct;
+}
 
 /** The fields of a discount the selection rules actually read. */
 export interface DiscountFixture {
@@ -26,6 +40,8 @@ export interface DiscountFixture {
 	id: string;
 	/** Display name, only ever logged. */
 	name?: string;
+	/** The amount taken off, in cents — the sales page subtracts it from the list price. */
+	amount?: number;
 	/** When the campaign opens; `null` means it always has. */
 	startsAt?: Date | null;
 	/** When the campaign closes; `null` means it never does. */
@@ -53,6 +69,7 @@ export function makeDiscount(fixture: DiscountFixture): Discount {
 	return {
 		id: fixture.id,
 		name: fixture.name ?? "Test discount",
+		amount: fixture.amount ?? 0,
 		startsAt: fixture.startsAt ?? null,
 		endsAt: fixture.endsAt ?? null,
 		maxRedemptions: fixture.maxRedemptions ?? null,
@@ -127,6 +144,8 @@ export function makeEvent(type: string): PolarWebhookEvent {
 
 /** How the fake should answer each lookup. */
 export interface FakePolarClientOptions {
+	/** Products `getProduct` answers with, keyed by Polar product id. */
+	products?: Record<string, PolarProduct>;
 	/** Discounts `listDiscounts` returns, in order. */
 	discounts?: Discount[];
 	/** Customers `findCustomerByEmail` knows, keyed by email. */
@@ -139,6 +158,12 @@ export interface FakePolarClientOptions {
 	webhook?: Result<PolarWebhookEvent, Error>;
 	/** When set, every read throws this instead of answering. */
 	throws?: Error;
+	/**
+	 * When set, only `listDiscounts` throws. The sales page reads products and discounts in
+	 * one pass, and its degraded path is precisely "the campaign lookup failed but the prices
+	 * came back", which a fake that fails every read cannot express.
+	 */
+	discountsThrow?: Error;
 }
 
 /**
@@ -161,8 +186,15 @@ export class FakePolarClient extends PolarClient {
 		this.options = options;
 	}
 
+	/** @returns The scripted product for this id, or a product priced at zero. */
+	override async getProduct(productId: string): Promise<PolarProduct> {
+		if (this.options.throws) throw this.options.throws;
+		return this.options.products?.[productId] ?? makeProduct(0);
+	}
+
 	/** @returns The scripted discount list. */
 	override async listDiscounts(): Promise<Discount[]> {
+		if (this.options.discountsThrow) throw this.options.discountsThrow;
 		if (this.options.throws) throw this.options.throws;
 		return this.options.discounts ?? [];
 	}

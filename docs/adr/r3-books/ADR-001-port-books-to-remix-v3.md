@@ -463,7 +463,7 @@ The book is shipped; the funnel could become a static page or move to a hosted p
 - [x] Phase 0: Scaffold and `@pkg/polar` extension
 - [x] Phase 1: Shell, home, and subscribe
 - [x] Phase 2: Checkout, upgrade, and the webhook
-- [ ] Phase 3: Release page and sample chapter
+- [x] Phase 3: Release page and sample chapter
 - [ ] Phase 4: Verification and cutover
 
 ### Phase 0 — done
@@ -630,6 +630,101 @@ not.
   to `/webhooks/polar` returns 200 and tags the buyer, while the same cross-origin POST to
   `/api/subscribe` returns 403. The second half is what proves the bypass is narrow rather
   than a disabled protection.
+
+### Phase 3 — done
+
+Verified: `bun format:fix`, `bun lint`, `bun run typecheck` (every workspace), `bun run test`
+(7651 repo-wide; **76 in this app**, up from 58), `bun run build`,
+`bunx wrangler deploy --dry-run`. The rendered HTML of both new pages was also read directly
+— markup, generated CSS rules, and head metadata — since neither can be seen in a browser
+from here.
+
+**Not verified, and the reason Phase 3's step 4 is not ticked off by this work:** no
+browser-based visual comparison against the live OLD APP has happened, at any width or in
+either color scheme. That comparison cannot be run from this environment, so it is Phase 4's
+job and should be treated as outstanding, not as a formality. In particular, nothing has
+looked at: the sales page at desktop and phone widths, the sample chapter's prose rhythm and
+code-fence theme (both written from scratch — see below), the ParityDeals banner overrides
+(they style DOM only the third-party script produces, so they are unexercised by every test
+here), and dark mode anywhere. Also unverified: any live Polar call — both prices and the
+discount come from a fake — so the cents-to-dollars derivation is proven against fixtures
+rather than against Polar's real product payload.
+
+- `GET /release` (`app/http/controllers/release.tsx`, `resources/views/release.tsx`): the
+  parallel product + discount read, the cents ÷ 100 derivation formatted with
+  `Intl.NumberFormat`, the `ppp` flag, and every section — hero, description, sample form,
+  testimonial, pricing with both packages and the upgrade call-out, author, FAQ, footer —
+  with `#hero`, `#description`, `#sample`, `#pricing`, `#author`, `#faq` preserved.
+- `GET`/`POST /sample` (`app/http/controllers/sample.tsx`, `resources/views/sample.tsx`): the
+  offer, then the chapter parsed by `@pkg/markdown-server` **once at module scope** and
+  rendered with `@pkg/markdown-remix`'s `renderToRemix`. Nothing is persisted; a reload shows
+  the offer again.
+- Copy moved into `resources/content/`: `frequent-questions.ts` and `release.ts`.
+  `resources/components/sample-chapter-section.tsx` is the offer, shared by both pages.
+- `resources/css/`: `parity-deals.css`, `prose.css`, `prism.css`, all linked from the
+  document layout. `app/lib/test/polar.ts` gained `makeProduct`, a `products` option, a
+  `getProduct` override, a `discountsThrow` option, and an `amount` on the discount fixture.
+
+**Where the spec turned out to be wrong, impossible, or incomplete.**
+
+- **`@pkg/u` has no `2xl` radius step.** `rounded("2xl")` compiles and resolves to
+  `var(--ui-radius-2xl, 0px)` — a square corner, silently. The scale runs `none`/`sm`/`md`/
+  `lg`/`xl`/`full`, so the upgrade call-out's `rounded-2xl` is written as the raw length
+  `rounded("1rem")`. Any other Tailwind class above `xl` will hit the same trap.
+- **The chapter's prose rules cannot be child selectors.** Markdoc renders the document as an
+  `<article>` and `@pkg/markdown-remix` wraps every fence in a `<div>`, so a `.prose > * + *`
+  rhythm styles those two wrappers and leaves the prose inside them unspaced. `prose.css`
+  uses depth-independent sibling rules over a named list of block elements instead, and the
+  view's own wrapper is a `<div class="prose">` rather than a second `<article>`.
+- **The code-fence theme is a new design, not a port.** `prism-theme-github`'s light/dark
+  pair has no equivalent here: this site's brand scale _is_ its neutral scale, so a borrowed
+  rainbow theme would be the only hue on the page. `prism.css` spends the warm grey scale
+  across four mirrored lightness tiers plus weight and face, keeping color for `inserted`/
+  `deleted` alone, where color is the meaning. It also needed `--ui-font-mono`, which
+  `colors.css` did not carry (nor does the theme layer define one), so that stack was added
+  there beside the sans and serif ones.
+- **The fence renderer owns its own surface**, so `prism.css` only sets type and token
+  colors; the `pre`'s background, border, radius, and padding come from the package's inline
+  styles. It also normalizes fence languages, so the chapter's `js` and `ts` fences render as
+  `language-javascript` and `language-typescript` — a test asserting `language-js` fails.
+- **§7's "validate the Polar product/price shapes" needed two different strictnesses.** The
+  price shape is parsed with `s.parse`, which throws: a page taking money must fail rather
+  than quote a number it does not understand. The discount is parsed with `s.parseSafe` and
+  an unparseable one falls back to the list price, because a campaign this page cannot read
+  is a worse offer, not a broken page — the same reason a failed campaign lookup only logs.
+  An **empty** price list is still read as `0`, exactly as the OLD APP's `?? 0` does.
+- **The discount's `endsAt` cannot be a required `Date`.** The OLD APP's `z.date()` would
+  reject an open-ended campaign, which is a perfectly ordinary campaign, so the schema takes
+  it as optional and nullable. It is validated and then never rendered: the "days left"
+  countdown stays deleted (defect #5), so the only field the page actually spends is
+  `amount`.
+- **The ParityDeals script moved into `<head>`, with `defer`.** The OLD APP renders it inside
+  the body; the layout's `head` prop exists for exactly this, and a head script without
+  `defer` would block the first paint of the page that converts. Position and timing both
+  change slightly as a result — worth a look in Phase 4, since the banner is injected above
+  the page content.
+- **The unlocked chapter is served `noindex, follow`.** `/sample` is one URL with two states
+  and only a POST reaches the second, so indexing it would advertise gated content a crawler
+  cannot fetch. The OLD APP had no per-page robots directive to port.
+- **§8's `Book` / `Product` + `Offer` is one `Book` node with two offers.** `seo.schema.book`
+  (added for this page) normalizes one offer or several, so the two packages are two ways to
+  buy one book rather than two nodes — a second node would advertise a second book. No
+  `faq` node was added: the FAQ pairs are on the page and could carry one, but that is a new
+  SEO decision rather than part of this port.
+- **Not all of the release copy became data.** The FAQ, the hero, the description blocks, the
+  testimonial, both package descriptions (as structured `PackageCopy` values), the upgrade
+  call-out, and the footer live in `resources/content/release.ts`. The author bio's two
+  paragraphs do not: each carries an inline anchor, and flattening a sentence with a link in
+  it into string fragments only moves markup somewhere it cannot be read. `PACKAGES` is
+  type-annotated rather than `satisfies`-checked, because an inferred tuple of two differently
+  shaped literals makes the optional fields unreadable from inside a loop.
+- **The sample section follows this app's spacing vocabulary, not the OLD APP's exact
+  classes.** It reuses `subscribe-form.tsx`, which already owns its own inline padding and
+  breakpoint behavior, so the OLD APP's `py-5 max-lg:px-5` on the section plus `lg:px-5` on
+  the header would double up. The section matches `upgrade.tsx` — the other heading-plus-form
+  page — instead. This is the most likely place for a visible difference from production.
+- **`form()`'s two-leaf shape applied to `/sample` as predicted**: the controller exports
+  named `index` and `action` actions and `bootstrap/app.tsx` maps each leaf.
 
 ## Notes
 

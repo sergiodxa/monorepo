@@ -1,0 +1,26 @@
+/*
+ * Overrides for the purchasing-power-parity banner. The banner's markup is injected at
+ * runtime by a third-party script, so these rules are the one thing on this site that
+ * cannot be a mixin: there is no call site to attach them to, and the elements do not
+ * exist when the document is rendered.
+ *
+ * The script ships a logo and reserves inline space for it. This site's banner is a line of
+ * text across the top of the sales page, so the logo is hidden and the space it reserved is
+ * taken back — the `!important` is answering the script's own inline padding, which is why
+ * it is here rather than being a smell.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+.parity-banner {
+	width: 100%;
+}
+
+.parity-banner-logo {
+	display: none;
+}
+
+.parity-banner.parity-banner-has-logo {
+	padding-left: 0 !important;
+}

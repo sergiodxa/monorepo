@@ -1,0 +1,174 @@
+/*
+ * Typographic rhythm for the sample chapter. Every element it styles is produced by the
+ * Markdown renderer rather than written at a call site, which is why this is a stylesheet
+ * and not a set of mixins: there is nowhere to put a `mix` on a heading the renderer emits.
+ *
+ * The rhythm is expressed in `em` throughout, so the whole chapter scales from the one
+ * `font-size` declared on `.prose` — the wide breakpoint steps that size up and every
+ * margin, measure, and indent follows it, instead of each rule needing its own breakpoint.
+ *
+ * Colors follow the rest of the site: body copy inherits the page's black-on-white (and
+ * white-on-black) rather than declaring a color, and only the deliberately quieter parts —
+ * a blockquote, a horizontal rule, a table border — reach for a grey step.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+.prose {
+	font-size: 1rem;
+	line-height: 1.75;
+}
+
+@media (min-width: 64rem) {
+	.prose {
+		font-size: 1.25rem;
+		line-height: 1.8;
+	}
+}
+
+/* Block rhythm: space above every block but the first, so no element needs to know what
+follows it and no margin is ever collapsed away.
+ *
+ * The blocks are named rather than matched with `*`, and the rules are depth-independent
+ * sibling selectors rather than child ones, because the renderer wraps the document in an
+ * element of its own and puts each code fence inside another — a `>` rule would style those
+ * wrappers and leave the prose inside them unspaced. */
+.prose :is(p, ul, ol, pre, blockquote, hr, table, figure, div, h1, h2, h3, h4) {
+	margin-block: 0;
+}
+
+.prose
+	:is(p, ul, ol, pre, blockquote, hr, table, figure, div, h1, h2, h3, h4)
+	+ :is(p, ul, ol, pre, blockquote, hr, table, figure, div, h1, h2, h3, h4) {
+	margin-block-start: 1.25em;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+	font-family: var(--ui-font-serif);
+	font-weight: 400;
+	text-wrap: balance;
+	line-height: 1.2;
+}
+
+.prose h1 {
+	font-size: 2.25em;
+	font-weight: 300;
+	line-height: 1.1;
+}
+
+.prose h2 {
+	font-size: 1.5em;
+}
+
+.prose h3 {
+	font-size: 1.25em;
+	font-weight: 500;
+}
+
+.prose h4 {
+	font-size: 1em;
+	font-weight: 600;
+}
+
+/* A heading belongs to what follows it, so it takes more space above than a paragraph does
+and gives up some of the space below. */
+.prose :is(h1, h2, h3, h4) + * {
+	margin-block-start: 0.6em;
+}
+
+.prose * + :is(h2, h3, h4) {
+	margin-block-start: 2em;
+}
+
+.prose :is(strong, b) {
+	font-weight: 600;
+}
+
+.prose a {
+	text-decoration-line: underline;
+	text-underline-offset: 3px;
+}
+
+.prose :is(ul, ol) {
+	padding-inline-start: 1.5em;
+}
+
+.prose ul {
+	list-style: disc;
+}
+
+.prose ol {
+	list-style: decimal;
+}
+
+.prose li + li {
+	margin-block-start: 0.5em;
+}
+
+.prose li > p + p {
+	margin-block-start: 0.75em;
+}
+
+.prose blockquote {
+	padding-inline-start: 1em;
+	border-inline-start: 2px solid var(--ui-color-neutral-300);
+	color: var(--ui-color-neutral-700);
+	font-style: italic;
+}
+
+.prose hr {
+	border: 0;
+	border-block-start: 1px solid var(--ui-color-neutral-300);
+}
+
+/* Inline code only. A fenced block's `<code>` sits inside a `<pre>` that owns its own
+surface, and the syntax theme resets these declarations for it. */
+.prose :not(pre) > code {
+	padding-inline: 0.25em;
+	padding-block: 0.125em;
+	border-radius: 0.125rem;
+	background-color: var(--ui-color-neutral-100);
+	font-family: var(--ui-font-mono);
+	font-size: 0.875em;
+}
+
+.prose img {
+	max-width: 100%;
+	height: auto;
+}
+
+.prose table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9em;
+}
+
+.prose :is(th, td) {
+	padding-inline: 0.5em;
+	padding-block: 0.375em;
+	border-block-end: 1px solid var(--ui-color-neutral-200);
+	text-align: left;
+}
+
+@media (prefers-color-scheme: dark) {
+	.prose blockquote {
+		border-inline-start-color: var(--ui-color-neutral-700);
+		color: var(--ui-color-neutral-300);
+	}
+
+	.prose hr {
+		border-block-start-color: var(--ui-color-neutral-700);
+	}
+
+	.prose :not(pre) > code {
+		background-color: var(--ui-color-neutral-800);
+	}
+
+	.prose :is(th, td) {
+		border-block-end-color: var(--ui-color-neutral-800);
+	}
+}
