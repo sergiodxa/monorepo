@@ -259,6 +259,32 @@ seo.schema.softwareApplication({
 });
 ```
 
+#### `seo.schema.book(input): SchemaOrg.Book`
+
+A page selling one book. Only the title and its author are required; every other property
+is one a sales page either knows or should leave out rather than invent. The byline
+behaves as `article`'s, a single cover image is normalized into a list, and `bookFormat`
+takes a schema.org enumeration URL so a typo cannot compile. Pass an array to `offers`
+when the book is sold as more than one package: each price is its own `Offer`, and a
+single offer is accepted and normalized into the same list.
+
+```typescript
+seo.schema.book({
+	name: "Álem",
+	author: { name: "Sergio", url: "/about" },
+	description: t("book.description"),
+	url: "/",
+	image: "/og.jpg",
+	bookFormat: "https://schema.org/EBook",
+	inLanguage: "es",
+	numberOfPages: 180,
+	offers: [
+		{ price: "29", priceCurrency: "USD", description: "Book", url: "/checkout" },
+		{ price: "49", priceCurrency: "USD", description: "Book and workshop", url: "/checkout/pro" },
+	],
+});
+```
+
 ### `Seo`
 
 `remix/ui` component emitting a page's whole head contribution: the `Seo.Meta` tag set,

@@ -298,3 +298,177 @@ describe("softwareApplication", () => {
 		expect(node.featureList).toEqual(["Full-text search", "Bulk export"]);
 	});
 });
+
+describe("book", () => {
+	test("declares the context and type", () => {
+		let node = builders().book({ name: "Álem", author: { name: "Sergio" } });
+
+		expect(node["@context"]).toBe("https://schema.org");
+		expect(node["@type"]).toBe("Book");
+	});
+
+	test("builds every property it was given", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio", url: "/about" },
+			description: "A book about the framework.",
+			url: "/",
+			image: "/og.jpg",
+			bookFormat: "https://schema.org/EBook",
+			inLanguage: "es",
+			numberOfPages: 180,
+			isbn: "978-3-16-148410-0",
+			datePublished: new Date("2026-07-29T10:00:00.000Z"),
+			publisher: { name: "Example Inc", logo: "/icon-512.png" },
+			offers: { price: "29", priceCurrency: "USD", description: "Full book", url: "/checkout" },
+		});
+
+		expect(node).toEqual({
+			"@context": "https://schema.org",
+			"@type": "Book",
+			name: "Álem",
+			author: { "@type": "Person", name: "Sergio", url: "https://example.com/about" },
+			description: "A book about the framework.",
+			url: "https://example.com/",
+			image: ["https://example.com/og.jpg"],
+			bookFormat: "https://schema.org/EBook",
+			inLanguage: "es",
+			numberOfPages: 180,
+			isbn: "978-3-16-148410-0",
+			datePublished: "2026-07-29T10:00:00.000Z",
+			publisher: {
+				"@type": "Organization",
+				name: "Example Inc",
+				logo: { "@type": "ImageObject", url: "https://example.com/icon-512.png" },
+			},
+			offers: [
+				{
+					"@type": "Offer",
+					price: "29",
+					priceCurrency: "USD",
+					description: "Full book",
+					url: "https://example.com/checkout",
+				},
+			],
+		});
+	});
+
+	test("builds the minimal node from a title and its author", () => {
+		let node = builders().book({ name: "Álem", author: { name: "Sergio" } });
+
+		expect(node).toEqual({
+			"@context": "https://schema.org",
+			"@type": "Book",
+			name: "Álem",
+			author: { "@type": "Person", name: "Sergio" },
+		});
+	});
+
+	test("omits properties it was given none of", () => {
+		let node = builders().book({ name: "Álem", author: { name: "Sergio" } });
+
+		expect(node).not.toHaveProperty("description");
+		expect(node).not.toHaveProperty("url");
+		expect(node).not.toHaveProperty("image");
+		expect(node).not.toHaveProperty("bookFormat");
+		expect(node).not.toHaveProperty("inLanguage");
+		expect(node).not.toHaveProperty("numberOfPages");
+		expect(node).not.toHaveProperty("isbn");
+		expect(node).not.toHaveProperty("datePublished");
+		expect(node).not.toHaveProperty("publisher");
+		expect(node).not.toHaveProperty("offers");
+	});
+
+	test("canonicalizes the sales page URL", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			url: "https://preview.workers.dev/books/alem/",
+		});
+
+		expect(node.url).toBe("https://example.com/books/alem");
+	});
+
+	test("normalizes one cover image into an absolute list", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			image: "/og.jpg",
+		});
+
+		expect(node.image).toEqual(["https://example.com/og.jpg"]);
+	});
+
+	test("keeps several cover images in the order given", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			image: ["/og.jpg", "https://cdn.example.net/cover.png"],
+		});
+
+		expect(node.image).toEqual(["https://example.com/og.jpg", "https://cdn.example.net/cover.png"]);
+	});
+
+	test("defaults the byline to a person", () => {
+		let node = builders().book({ name: "Álem", author: { name: "Sergio" } });
+
+		expect(node.author["@type"]).toBe("Person");
+	});
+
+	test("accepts an organizational byline", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Example Inc", kind: "Organization" },
+		});
+
+		expect(node.author["@type"]).toBe("Organization");
+	});
+
+	test("keeps a date-only string as given", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			datePublished: "2026-07-29",
+		});
+
+		expect(node.datePublished).toBe("2026-07-29");
+	});
+
+	test("builds one offer per package the book is sold as", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			offers: [
+				{ price: "29", priceCurrency: "USD", description: "Book" },
+				{ price: "49", priceCurrency: "USD", description: "Book and workshop" },
+			],
+		});
+
+		expect(node.offers).toEqual([
+			{ "@type": "Offer", price: "29", priceCurrency: "USD", description: "Book" },
+			{ "@type": "Offer", price: "49", priceCurrency: "USD", description: "Book and workshop" },
+		]);
+	});
+
+	test("canonicalizes an offer's checkout URL", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			offers: { price: "29", priceCurrency: "USD", url: "https://preview.workers.dev/checkout/" },
+		});
+
+		expect(node.offers?.[0]?.url).toBe("https://example.com/checkout");
+	});
+
+	test("keeps a zero price rather than dropping a free package", () => {
+		let node = builders().book({
+			name: "Álem",
+			author: { name: "Sergio" },
+			numberOfPages: 0,
+			offers: { price: "0", priceCurrency: "USD" },
+		});
+
+		expect(node.offers).toEqual([{ "@type": "Offer", price: "0", priceCurrency: "USD" }]);
+		expect(node.numberOfPages).toBe(0);
+	});
+});

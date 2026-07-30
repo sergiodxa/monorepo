@@ -33,10 +33,23 @@ export namespace SchemaOrg {
 		| Article
 		| BreadcrumbList
 		| FAQPage
-		| SoftwareApplication;
+		| SoftwareApplication
+		| Book;
 
 	/** A date accepted by a builder, normalized to an ISO 8601 string on output. */
 	export type DateInput = Date | string;
+
+	/**
+	 * The `BookFormatType` enumeration, spelled as the full schema.org URLs Google's
+	 * documentation uses, so a format can only be one of the values the vocabulary
+	 * defines instead of a free string a validator would reject.
+	 */
+	export type BookFormat =
+		| "https://schema.org/EBook"
+		| "https://schema.org/Paperback"
+		| "https://schema.org/Hardcover"
+		| "https://schema.org/AudiobookFormat"
+		| "https://schema.org/GraphicNovel";
 
 	/** The publisher or company behind the site. */
 	export interface Organization {
@@ -116,6 +129,25 @@ export namespace SchemaOrg {
 		featureList?: string[];
 	}
 
+	/** A book being sold, for the page whose subject is the book itself. */
+	export interface Book {
+		"@context": Context;
+		"@type": "Book";
+		name: string;
+		author: Byline;
+		description?: string;
+		url?: string;
+		image?: string[];
+		bookFormat?: BookFormat;
+		inLanguage?: string;
+		numberOfPages?: number;
+		isbn?: string;
+		datePublished?: string;
+		publisher?: Publisher;
+		/** Every package the book is sold as, so two prices need no second node. */
+		offers?: Offer[];
+	}
+
 	/** One position in a {@link BreadcrumbList}, numbered from 1. */
 	export interface ListItem {
 		"@type": "ListItem";
@@ -137,14 +169,14 @@ export namespace SchemaOrg {
 		text: string;
 	}
 
-	/** The byline of an {@link Article}: a person, or the organization itself. */
+	/** The byline of an {@link Article} or a {@link Book}: a person, or the organization itself. */
 	export interface Byline {
 		"@type": "Person" | "Organization";
 		name: string;
 		url?: string;
 	}
 
-	/** The organization that published an {@link Article}. */
+	/** The organization that published an {@link Article} or a {@link Book}. */
 	export interface Publisher {
 		"@type": "Organization";
 		name: string;
@@ -159,7 +191,10 @@ export namespace SchemaOrg {
 		height?: number;
 	}
 
-	/** What a {@link SoftwareApplication} costs, as schema.org's string-typed price. */
+	/**
+	 * What a {@link SoftwareApplication} or one package of a {@link Book} costs, as
+	 * schema.org's string-typed price.
+	 */
 	export interface Offer {
 		"@type": "Offer";
 		price: string;
@@ -249,6 +284,29 @@ export namespace SchemaOrg {
 		kind?: Byline["@type"];
 	}
 
+	/**
+	 * Input for the book builder. Only the title and its author are required: everything
+	 * else is a property a bookstore page either knows or has no honest value for.
+	 */
+	export interface BookInput {
+		name: string;
+		author: AuthorInput;
+		description?: string;
+		/** Sales page for the book, resolved through the canonical rules. */
+		url?: string;
+		/** One cover image or several, each resolved absolute. */
+		image?: string | string[];
+		/** schema.org book format, e.g. `"https://schema.org/EBook"`. */
+		bookFormat?: BookFormat;
+		inLanguage?: string;
+		numberOfPages?: number;
+		isbn?: string;
+		datePublished?: DateInput;
+		publisher?: PublisherInput;
+		/** One offer, or one per package the book is sold as. */
+		offers?: OfferInput | OfferInput[];
+	}
+
 	/** Input for an article's publisher. */
 	export interface PublisherInput {
 		name: string;
@@ -315,6 +373,8 @@ export interface SeoSchema {
 	faq(questions: SchemaOrg.QuestionInput[]): SchemaOrg.FAQPage;
 	/** Builds a `SoftwareApplication` node for a product or capability page. */
 	softwareApplication(input: SchemaOrg.SoftwareApplicationInput): SchemaOrg.SoftwareApplication;
+	/** Builds a `Book` node for the page selling one book, with an offer per package. */
+	book(input: SchemaOrg.BookInput): SchemaOrg.Book;
 }
 
 /**
@@ -390,6 +450,15 @@ function buildOffer(baseUrl: string, input: SchemaOrg.OfferInput): SchemaOrg.Off
 		...(input.description && { description: input.description }),
 		...(input.url && { url: canonicalUrl(baseUrl, input.url) }),
 	};
+}
+
+/**
+ * Resolves one offer, or a list of them, into the array a node uses when the same thing
+ * is sold as more than one package, so `offers` has one shape however it was passed.
+ */
+function toOfferList(baseUrl: string, offers: SchemaOrg.OfferInput | SchemaOrg.OfferInput[]) {
+	let list = Array.isArray(offers) ? offers : [offers];
+	return list.map((offer) => buildOffer(baseUrl, offer));
 }
 
 /**
@@ -499,6 +568,25 @@ export function createSchemaBuilders(options: SchemaBuilderOptions): SeoSchema {
 				...(input.url && { url: canonicalUrl(baseUrl, input.url) }),
 				...(input.offers && { offers: buildOffer(baseUrl, input.offers) }),
 				...(input.featureList && { featureList: input.featureList }),
+			};
+		},
+
+		book(input) {
+			return {
+				"@context": SCHEMA_CONTEXT,
+				"@type": "Book",
+				name: input.name,
+				author: buildByline(baseUrl, input.author),
+				...(input.description && { description: input.description }),
+				...(input.url && { url: canonicalUrl(baseUrl, input.url) }),
+				...(input.image && { image: toImageList(baseUrl, input.image) }),
+				...(input.bookFormat && { bookFormat: input.bookFormat }),
+				...(input.inLanguage && { inLanguage: input.inLanguage }),
+				...(input.numberOfPages !== undefined && { numberOfPages: input.numberOfPages }),
+				...(input.isbn && { isbn: input.isbn }),
+				...(input.datePublished && { datePublished: toIsoDate(input.datePublished) }),
+				...(input.publisher && { publisher: buildPublisher(baseUrl, input.publisher) }),
+				...(input.offers && { offers: toOfferList(baseUrl, input.offers) }),
 			};
 		},
 	};
