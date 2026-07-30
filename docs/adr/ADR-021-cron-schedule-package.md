@@ -41,7 +41,7 @@ Create `@pkg/cron`: a `Schedule` value object with `Result`-based parsing, time-
 ```ts
 let result = Schedule.parse("*/15 * * * *");
 if (isFailure(result)) return validationError(result.error);
-let schedule = result.value;
+let schedule = result.data;
 ```
 
 `Schedule.parse()` accepts the standard five-field syntax (minute, hour, day of month, month, day of week) with ranges, lists, steps, names for months and weekdays, and the common macros (`@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`). Anything outside that set fails with a `InvalidCronExpression` carrying the offending field and position, so validation messages can point at the mistake.

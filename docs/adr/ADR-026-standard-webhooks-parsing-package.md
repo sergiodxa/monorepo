@@ -56,7 +56,7 @@ Named exports keep the package tree-shakeable, so a module that only verifies pu
 let result = await Webhooks.verify(request, { secret: env.WEBHOOK_SECRET });
 if (isFailure(result)) return unauthorized();
 
-let { id, timestamp, payload } = result.value;
+let { id, timestamp, payload } = result.data;
 ```
 
 `verify()` reads the `webhook-id`, `webhook-timestamp`, and `webhook-signature` headers, recomputes `HMAC-SHA256` over `id.timestamp.body` with the decoded secret, and compares in constant time. It accepts multiple space-separated signature values so a sender mid-rotation still verifies, and it accepts an array of secrets for the receiver's own rotation:

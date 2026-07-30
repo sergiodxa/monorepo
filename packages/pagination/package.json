@@ -1,0 +1,22 @@
+{
+	"name": "@pkg/pagination",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/crypto": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/validate": "workspace:*",
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14"
+	}
+}

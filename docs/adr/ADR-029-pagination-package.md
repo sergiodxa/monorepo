@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -59,7 +59,6 @@ Because getters live on the prototype, `JSON.stringify()` would serialize an ins
 pagination.series();
 // [
 //   { type: "page", page: 1, current: false },
-//   { type: "gap" },
 //   { type: "page", page: 2, current: false },
 //   { type: "page", page: 3, current: true },
 //   { type: "page", page: 4, current: false },
@@ -102,7 +101,7 @@ page.items; // SelectMonitor[]
 page.pagination; // Pagination
 ```
 
-`byOffset()` counts the query, then executes it with `limit` and `offset` applied, and assembles both into a `Page<T>`.
+`byOffset()` calls `count()` on the query, then executes it with `limit` and `offset` applied, and assembles both into a `Page<T>`. `Query#count()` compiles to a `select count(*)` wrapping the composed query with `orderBy`, `limit`, and `offset` dropped, so the count matches the predicate exactly. Builder methods and terminals both clone rather than mutate, so the same query value serves the count and the fetch. It also accepts an optional `total` to skip the count when a caller already knows it.
 
 ```ts
 let page = await Pagination.byKeyset(db.query(pings).where({ monitor_id: monitorId }), {
@@ -117,6 +116,8 @@ let page = await Pagination.byKeyset(db.query(pings).where({ monitor_id: monitor
 page.items;
 page.cursors; // { next: string | null, prev: string | null }
 ```
+
+`byKeyset()` takes two options this ADR did not originally name. `unique` lets a caller declare that a single ordering column is already unique, since uniqueness is unobservable from inside the package and a one-key ordering is otherwise refused. `cursor` accepts a direction-tagged cursor and seeks whichever way that cursor points, because one bound parameter name cannot express both `prev` and `next` while `after` and `before` are separate options.
 
 `byKeyset()` owns the ordering, because it needs the sort keys both to build the seek predicate and to encode the cursor. It adds that predicate to whatever the query already carries and reads one row beyond the limit to learn whether a next page exists. Cursors encode the ordering key values with base64url from `@pkg/crypto` (ADR-023): opaque to clients, not secret, and a malformed cursor is a validation failure. Ordering must be deterministic, so a tiebreaker column is required.
 
@@ -144,7 +145,7 @@ A third strategy, `Pagination.byToken()`, covers stores that hand back their own
 let result = parsePageParams(ctx.url.searchParams, { perPage: 25, maxPerPage: 100 });
 ```
 
-Parsing goes through `@pkg/validate`, returning a `Result`: non-numeric pages, negative values, and oversized page sizes are handled once, with `maxPerPage` protecting against a client asking for everything.
+Parsing returns a `Result` synchronously, so a handler reads it without awaiting: non-numeric pages, negative values, and oversized page sizes are handled once, with `maxPerPage` protecting against a client asking for everything. It validates with `remix/data-schema` directly and fails with `ValidationError` from `@pkg/validate`, because that package's own `validate()` is asynchronous and a promise here would make every call site a latent bug.
 
 ### 5. Response Headers
 
@@ -260,7 +261,7 @@ export default createController(routes.app.team.monitors, {
 
 				let page = await Pagination.byOffset(
 					db.query(monitors).where({ team_id: ctx.team.id }).orderBy("created_at", "desc"),
-					{ page: params.value.page, perPage: params.value.perPage },
+					{ page: params.data.page, perPage: params.data.perPage },
 				);
 
 				if (isFailure(page)) {
@@ -272,8 +273,8 @@ export default createController(routes.app.team.monitors, {
 				headers.set("Cache-Control", Policies.private({ maxAge: "1 minute" }).toString());
 
 				return ctx.render(
-					<MonitorList monitors={page.value.items} series={page.value.pagination.series()} />,
-					{ headers: PAGING.paginate(headers, page.value, { url: ctx.url }) },
+					<MonitorList monitors={page.data.items} series={page.data.pagination.series()} />,
+					{ headers: PAGING.paginate(headers, page.data, { url: ctx.url }) },
 				);
 			},
 		},
@@ -294,8 +295,8 @@ export default createController(routes.app.team.monitors, {
 							["created_at", "desc"],
 							["id", "desc"],
 						],
-						after: params.value.cursor,
-						limit: params.value.perPage,
+						after: params.data.cursor,
+						limit: params.data.perPage,
 					},
 				);
 
@@ -305,8 +306,8 @@ export default createController(routes.app.team.monitors, {
 
 				let headers = new Headers();
 
-				return json(page.value.items.map(serializeEvent), {
-					headers: PAGING.paginate(headers, page.value, { url: ctx.url }),
+				return json(page.data.items.map(serializeEvent), {
+					headers: PAGING.paginate(headers, page.data, { url: ctx.url }),
 				});
 			},
 		},
@@ -411,8 +412,8 @@ What would remain is ergonomics, bought at the price of a context key that looks
 
 ## Current Progress
 
-- [ ] Phase 1: Value Object And Parsing
-- [ ] Phase 2: Query Helpers
+- [x] Phase 1: Value Object And Parsing
+- [x] Phase 2: Query Helpers
 - [ ] Phase 3: Headers And Adoption
 
 ## Notes

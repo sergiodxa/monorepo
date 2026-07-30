@@ -114,6 +114,7 @@ Run from the repository root:
 | [markdown-server](packages/markdown-server)             | Server-side markdown processing utilities                     |
 | [oidc-client](packages/oidc-client)                     | OIDC client utilities                                         |
 | [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                   |
+| [pagination](packages/pagination)                       | Offset and keyset pagination with Link headers                |
 | [polar](packages/polar)                                 | Polar billing integration utilities                           |
 | [r3-ui](packages/r3-ui)                                 | Remix v3 UI component library                                 |
 | [r3-ui-router](packages/r3-ui-router)                   | SPA router for Remix UI apps                                  |
