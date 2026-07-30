@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -191,8 +191,8 @@ Support GitHub, Stripe, and Standard Webhooks schemes behind one interface from 
 
 ## Current Progress
 
-- [ ] Phase 1: Core
-- [ ] Phase 2: Schema And Replay
+- [x] Phase 1: Core
+- [x] Phase 2: Schema And Replay
 - [ ] Phase 3: Adoption
 
 ## Notes
