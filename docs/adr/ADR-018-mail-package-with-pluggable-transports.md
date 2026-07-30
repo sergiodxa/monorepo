@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -369,10 +369,10 @@ Use `react-email` for authoring and rendering.
 
 ## Current Progress
 
-- [ ] Phase 1: Contract
-- [ ] Phase 2: Memory And Resend Transports
-- [ ] Phase 3: Middleware
-- [ ] Phase 4: Rendering And Layout Kit
+- [x] Phase 1: Contract
+- [x] Phase 2: Memory And Resend Transports
+- [x] Phase 3: Middleware
+- [x] Phase 4: Rendering And Layout Kit
 - [ ] Phase 5: Adoption On The Current Provider
 - [ ] Phase 6: MIME And Cloudflare Transport
 - [ ] Phase 7: Provider Switch

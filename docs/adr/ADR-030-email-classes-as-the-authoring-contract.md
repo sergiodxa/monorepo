@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -254,8 +254,8 @@ Make every email serializable so it can be enqueued and sent by a background job
 
 ## Current Progress
 
-- [ ] Phase 1: Contract
-- [ ] Phase 2: Locale And Recording
+- [x] Phase 1: Contract
+- [x] Phase 2: Locale And Recording
 - [ ] Phase 3: Adoption
 
 ## Notes

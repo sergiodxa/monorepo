@@ -1,0 +1,32 @@
+{
+	"name": "@pkg/mail",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./memory": "./src/memory.ts",
+		"./resend": "./src/resend.ts",
+		"./middleware": "./src/middleware.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/result": "workspace:*",
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"resend": "^6.18.0"
+	},
+	"peerDependencies": {
+		"resend": "^6.18.0"
+	},
+	"peerDependenciesMeta": {
+		"resend": {
+			"optional": true
+		}
+	}
+}

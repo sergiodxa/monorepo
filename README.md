@@ -105,6 +105,7 @@ Run from the repository root:
 | [location](packages/location)                           | URL-like path Location class                                  |
 | [logger](packages/logger)                               | Request-scoped logging                                        |
 | [lucide-remix](packages/lucide-remix)                   | Lucide icons for Remix UI                                     |
+| [mail](packages/mail)                                   | Transactional email with pluggable transports                 |
 | [markdown](packages/markdown)                           | Markdown processing utilities                                 |
 | [markdown-react](packages/markdown-react)               | React markdown rendering utilities                            |
 | [markdown-remix](packages/markdown-remix)               | Remix markdown rendering utilities                            |
@@ -128,4 +129,5 @@ Run from the repository root:
 | [ui](packages/ui)                                       | Shared React UI components                                    |
 | [uuid](packages/uuid)                                   | UUID utilities                                                |
 | [validate](packages/validate)                           | Standard Schema validation utilities                          |
+| [workers-cache](packages/workers-cache)                 | Cloudflare cache tags, purging and cache-status reads         |
 | [xml](packages/xml)                                     | XML generation utilities                                      |
