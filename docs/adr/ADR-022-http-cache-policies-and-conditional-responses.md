@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -216,7 +216,7 @@ Hash every response body in middleware and answer `304` transparently.
 ## Current Progress
 
 - [ ] Phase 1: Policies
-- [ ] Phase 2: Validators And Conditional
+- [x] Phase 2: Validators And Conditional
 - [ ] Phase 3: Adoption
 
 ## Notes

@@ -15,6 +15,7 @@ The package is organized into modules that can be imported independently:
 - `@pkg/http/response/json` - JSON responses with status codes
 - `@pkg/http/response/html` - HTML responses with status codes
 - `@pkg/http/negotiate` - Content negotiation utilities
+- `@pkg/http/cache` - Cache policies, validators, and conditional responses
 
 ## Usage
 
@@ -60,6 +61,26 @@ export async function handler(request: Request): Promise<Response> {
 		html: () => html(renderPage(data)),
 		default: () => json(data),
 	});
+}
+```
+
+### Cache Policies and Conditional Responses
+
+```typescript
+import { conditional, etag, Policies, vary } from "@pkg/http/cache";
+import { html } from "@pkg/http/response";
+import { isSuccess } from "@pkg/result";
+
+export async function handler(request: Request): Promise<Response> {
+	let body = await renderPage();
+
+	let headers = new Headers({ "Cache-Control": Policies.revalidate().toString() });
+	vary(headers, ["Accept-Language"]);
+
+	let tag = await etag(body, { weak: true });
+	if (isSuccess(tag)) headers.set("ETag", tag.data);
+
+	return await conditional(request, html(body, { headers }));
 }
 ```
 
@@ -501,6 +522,170 @@ let handlers: respond.Handlers = {
 };
 ```
 
+### `@pkg/http/cache`
+
+Standard HTTP caching: `Cache-Control` policies, validators, and conditional
+requests. It composes the typed header classes the framework already ships
+(`CacheControl`, `IfNoneMatch`, `IfMatch`, `Vary` from `remix/headers`) and adds
+only the layer above them. Vendor cache extensions such as cache tags and purge
+APIs are not part of this subpath.
+
+Every age is a `@pkg/duration` value, so `"1 hour"` reads as an hour at the call
+site and is converted to whole seconds internally.
+
+#### `policy(options?): CacheControl`
+
+Builds a `Cache-Control` value from a description of intent. Returns the
+framework's `CacheControl`, so the result composes with anything that accepts
+that type.
+
+```typescript
+import { policy } from "@pkg/http/cache";
+
+let headers = new Headers({
+	"Cache-Control": policy({
+		visibility: "public",
+		maxAge: "1 hour",
+		sMaxAge: "1 day",
+		staleWhileRevalidate: "1 week",
+		staleIfError: "1 week",
+	}),
+});
+// "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800"
+```
+
+**Options:** `visibility` (`"public" | "private"`), `maxAge`, `sMaxAge`,
+`staleWhileRevalidate`, `staleIfError`, `noCache`, `noStore`, `noTransform`,
+`mustRevalidate`, `proxyRevalidate`, `immutable`.
+
+`visibility` has no default. Where an edge cache sits in front of the origin,
+`public` is what allows one client's body to be served to another, so it is
+always written out rather than inferred.
+
+#### `Policies`
+
+The recurring policies, named after the outcome they produce.
+
+```typescript
+import { Policies } from "@pkg/http/cache";
+
+Policies.noStore(); // "no-store"
+Policies.private({ maxAge: "5 minutes" }); // "private, max-age=300"
+Policies.immutable(); // "public, max-age=31536000, immutable"
+Policies.revalidate(); // "private, no-cache"
+```
+
+- `noStore()` - nothing stores the response; for one-time payloads.
+- `private({ maxAge })` - only the requesting client stores it. The age is
+  required, because without one a browser applies its own heuristic freshness.
+- `immutable()` - correct only for URLs whose bytes cannot change, meaning
+  fingerprinted asset file names.
+- `revalidate()` - stored by its own client and revalidated with the origin
+  before every reuse. This is the policy for authenticated HTML, which is why it
+  includes `private`: a shared cache is bypassed neither by a session cookie nor
+  by `no-cache` alone.
+
+#### `etag(body, options?): Promise<Result<string, CryptoError>>`
+
+Derives a validator from the bytes of a payload: SHA-256 through `@pkg/crypto`,
+base64url, quoted. Pass `{ weak: true }` for content that varies in
+insignificant ways between renders, such as server-rendered HTML.
+
+```typescript
+import { etag } from "@pkg/http/cache";
+import { isSuccess } from "@pkg/result";
+
+let tag = await etag(body); // '"uU0nuZNNPgilLlLX2n2r-sSE7-N6U4DukIj3rOLvzek"'
+let weak = await etag(body, { weak: true }); // 'W/"uU0nuZNNPgilLlLX2n2r-…"'
+
+if (isSuccess(tag)) headers.set("ETag", tag.data);
+```
+
+Hashing costs CPU proportional to the payload, so this suits HTML and JSON
+responses rather than large bodies that are never revalidated.
+
+#### `lastModified(date): string`
+
+Formats a `Date` or epoch milliseconds as the HTTP-date a `Last-Modified`
+validator carries. HTTP dates hold whole seconds, so two writes in the same
+second share a validator; a content-derived `ETag` is the stronger choice when
+one is available.
+
+```typescript
+lastModified(new Date("2015-10-21T07:28:00Z")); // "Wed, 21 Oct 2015 07:28:00 GMT"
+```
+
+#### `ifModifiedSince(headers): Date | null`
+
+Reads the `If-Modified-Since` date from a request. Returns `null` when the header
+is absent or is not a valid HTTP-date, so callers send the full body rather than
+assert freshness they cannot prove. `remix/headers` does not cover this header,
+which is why it lives here.
+
+#### `isModifiedSince(modifiedAt, since): boolean`
+
+Whether a resource changed after the copy a client holds. Both times are compared
+as whole seconds, and a change in the same second as the client's copy counts as
+unmodified.
+
+#### `conditional(request, response): Promise<Response>`
+
+Downgrades a response to a `304` when the request's validators still describe it.
+`If-None-Match` is evaluated with weak comparison and decides on its own whenever
+present; `If-Modified-Since` is consulted only in its absence.
+
+```typescript
+import { conditional } from "@pkg/http/cache";
+
+let response = await conditional(request, html(body, { headers }));
+```
+
+Only a `GET` or `HEAD` answered with `200` is eligible; every other method and
+status passes through untouched. The `304` drops the body and keeps only
+`Cache-Control`, `Content-Location`, `Date`, `ETag`, `Expires`, and `Vary`.
+Repeating `Vary` matters: without it a shared cache can no longer tell which
+negotiated variant was validated.
+
+This stays worthwhile behind an edge cache. The cache decides whether the handler
+runs; a validator decides whether a body crosses the network to the client.
+
+#### `precondition(request, { etag }): Result<string, PreconditionFailedError>`
+
+Checks a write request's `If-Match` against the resource's current validator, so
+a client cannot overwrite a change it never saw. A request with no `If-Match`
+passes, `*` passes, and everything else is compared strongly, so weak tags fail.
+
+```typescript
+import { precondition } from "@pkg/http/cache";
+import { preconditionFailed } from "@pkg/http/response/html";
+import { isFailure } from "@pkg/result";
+
+let checked = precondition(request, { etag: current });
+if (isFailure(checked)) return preconditionFailed("<h1>Precondition Failed</h1>");
+```
+
+The failure is returned rather than thrown, so answering with a `412` stays the
+caller's decision.
+
+#### `vary(headers, names): Headers`
+
+Adds request header names to a response's `Vary`, merging into whatever is
+already there. The `Headers` object is mutated in place and returned, and names
+are normalized to lowercase.
+
+```typescript
+import { vary } from "@pkg/http/cache";
+
+let headers = new Headers({ Vary: "Accept-Encoding" });
+vary(headers, ["Accept-Language", "Cookie"]);
+headers.get("Vary"); // "accept-encoding, accept-language, cookie"
+```
+
+Each listed header multiplies the number of variants a shared cache stores for
+the URL, so the list is a cost rather than documentation. Varying on `Cookie`
+effectively disables shared caching for any request that carries one; a response
+that genuinely differs per user wants `Policies.private()` instead.
+
 ## Pattern: API Endpoint with Validation
 
 ```typescript
@@ -561,6 +746,8 @@ export async function handler(request: Request): Promise<Response> {
 - [`@pkg/response`](/packages/response) - React Router response helpers using `data()`
 - [`@pkg/validate`](/packages/validate) - Request validation with Zod schemas
 - [`@pkg/result`](/packages/result) - Result type for error handling
+- [`@pkg/crypto`](/packages/crypto) - WebCrypto primitives, used for `ETag` digests
+- [`@pkg/duration`](/packages/duration) - Duration values, used for every cache age
 
 ## Tips
 
@@ -569,3 +756,8 @@ export async function handler(request: Request): Promise<Response> {
 3. **Use `respond()` for content negotiation** - It handles Accept header parsing and 406 responses automatically.
 4. **Request factories default to POST** - Override with `{ method: "PUT" }` for other methods.
 5. **Redirect defaults to 307** - Use `redirect.Status.SeeOther` (303) for POST-Redirect-GET pattern.
+6. **Reach for a named policy first** - `Policies.revalidate()` and `Policies.private()` cover
+   user-specific responses; write `policy({ visibility: "public", … })` only when a shared cache
+   really may store the body, and review every one of those.
+7. **Set a validator before calling `conditional()`** - it compares against the response's own
+   `ETag` or `Last-Modified`, so without one there is nothing to answer a `304` from.

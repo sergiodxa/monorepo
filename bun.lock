@@ -636,6 +636,8 @@
         "@pkg/crypto": "workspace:*",
         "@pkg/duration": "workspace:*",
         "@pkg/location": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "remix": "3.0.0-beta.5",
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
