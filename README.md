@@ -114,6 +114,7 @@ Run from the repository root:
 | [oidc-client](packages/oidc-client)                     | OIDC client utilities                                         |
 | [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                   |
 | [polar](packages/polar)                                 | Polar billing integration utilities                           |
+| [rate-limit](packages/rate-limit)                       | Adapter-based rate limiting with standard headers             |
 | [r3-ui](packages/r3-ui)                                 | Remix v3 UI component library                                 |
 | [r3-ui-router](packages/r3-ui-router)                   | SPA router for Remix UI apps                                  |
 | [response](packages/response)                           | HTTP response utilities                                       |

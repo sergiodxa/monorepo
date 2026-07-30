@@ -1,0 +1,25 @@
+{
+	"name": "@pkg/rate-limit",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/duration": "workspace:*",
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/http": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260723.1",
+		"@types/bun": "^1.3.14"
+	}
+}

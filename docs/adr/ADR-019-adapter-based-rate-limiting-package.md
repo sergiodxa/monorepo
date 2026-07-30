@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -198,8 +198,8 @@ Emit `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`.
 
 ## Current Progress
 
-- [ ] Phase 1: Core
-- [ ] Phase 2: Adapters
+- [x] Phase 1: Core
+- [x] Phase 2: Adapters
 - [ ] Phase 3: Middleware And Adoption
 
 ## Notes
