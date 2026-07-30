@@ -1,0 +1,89 @@
+/*
+ * Raw --ui-color-{scale}-{step} palette scales and the two font-family stacks the
+ * semantic --ui-{tone}-* tokens are derived from. The theme layer ships no palette of
+ * its own, so an app has to declare these eleven-step scales itself.
+ *
+ * These are the exact scales the site has always used, carried over value-for-value so
+ * the pages render the same after the port: `neutral` is a warm near-achromatic grey
+ * (the page is black-on-white and white-on-black, with grey only for borders, muted
+ * copy, and the inverted button fill), `danger` is red for the one thing that is ever
+ * red — a form error — `success` green, and `warning` amber for completeness, since the
+ * theme layer expects all five scales to exist even where a page never reaches for one.
+ *
+ * The two font stacks are the browser-native ones: no webfont is loaded, which is the
+ * point on a page whose job is to render immediately. Headings take the serif face and
+ * body copy the sans one.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+:root {
+	--ui-color-neutral-50: oklch(98.5% 0.001 106.423);
+	--ui-color-neutral-100: oklch(97% 0.001 106.424);
+	--ui-color-neutral-200: oklch(92.3% 0.003 48.717);
+	--ui-color-neutral-300: oklch(86.9% 0.005 56.366);
+	--ui-color-neutral-400: oklch(70.9% 0.01 56.259);
+	--ui-color-neutral-500: oklch(55.3% 0.013 58.071);
+	--ui-color-neutral-600: oklch(44.4% 0.011 73.639);
+	--ui-color-neutral-700: oklch(37.4% 0.01 67.558);
+	--ui-color-neutral-800: oklch(26.8% 0.007 34.298);
+	--ui-color-neutral-900: oklch(21.6% 0.006 56.043);
+	--ui-color-neutral-950: oklch(14.7% 0.004 49.25);
+
+	/* The site has no accent color: its brand *is* the black-and-white typography, so
+	the brand scale points at the same warm greys rather than introducing a hue the
+	design never uses. */
+	--ui-color-brand-50: var(--ui-color-neutral-50);
+	--ui-color-brand-100: var(--ui-color-neutral-100);
+	--ui-color-brand-200: var(--ui-color-neutral-200);
+	--ui-color-brand-300: var(--ui-color-neutral-300);
+	--ui-color-brand-400: var(--ui-color-neutral-400);
+	--ui-color-brand-500: var(--ui-color-neutral-500);
+	--ui-color-brand-600: var(--ui-color-neutral-600);
+	--ui-color-brand-700: var(--ui-color-neutral-700);
+	--ui-color-brand-800: var(--ui-color-neutral-800);
+	--ui-color-brand-900: var(--ui-color-neutral-900);
+	--ui-color-brand-950: var(--ui-color-neutral-950);
+
+	--ui-color-danger-50: oklch(97.1% 0.013 17.38);
+	--ui-color-danger-100: oklch(93.6% 0.032 17.717);
+	--ui-color-danger-200: oklch(88.5% 0.062 18.334);
+	--ui-color-danger-300: oklch(80.8% 0.114 19.571);
+	--ui-color-danger-400: oklch(70.4% 0.191 22.216);
+	--ui-color-danger-500: oklch(63.7% 0.237 25.331);
+	--ui-color-danger-600: oklch(57.7% 0.245 27.325);
+	--ui-color-danger-700: oklch(50.5% 0.213 27.518);
+	--ui-color-danger-800: oklch(44.4% 0.177 26.899);
+	--ui-color-danger-900: oklch(39.6% 0.141 25.723);
+	--ui-color-danger-950: oklch(25.8% 0.092 26.042);
+
+	--ui-color-success-50: oklch(98.2% 0.018 155.826);
+	--ui-color-success-100: oklch(96.2% 0.044 156.743);
+	--ui-color-success-200: oklch(92.5% 0.084 155.995);
+	--ui-color-success-300: oklch(87.1% 0.15 154.449);
+	--ui-color-success-400: oklch(79.2% 0.209 151.711);
+	--ui-color-success-500: oklch(72.3% 0.219 149.579);
+	--ui-color-success-600: oklch(62.7% 0.194 149.214);
+	--ui-color-success-700: oklch(52.7% 0.154 150.069);
+	--ui-color-success-800: oklch(44.8% 0.119 151.328);
+	--ui-color-success-900: oklch(39.3% 0.095 152.535);
+	--ui-color-success-950: oklch(26.6% 0.065 152.934);
+
+	--ui-color-warning-50: oklch(98.7% 0.022 95.277);
+	--ui-color-warning-100: oklch(96.2% 0.059 95.617);
+	--ui-color-warning-200: oklch(92.4% 0.12 95.746);
+	--ui-color-warning-300: oklch(87.9% 0.169 91.605);
+	--ui-color-warning-400: oklch(82.8% 0.189 84.429);
+	--ui-color-warning-500: oklch(76.9% 0.188 70.08);
+	--ui-color-warning-600: oklch(66.6% 0.179 58.318);
+	--ui-color-warning-700: oklch(55.5% 0.163 48.998);
+	--ui-color-warning-800: oklch(47.3% 0.137 46.201);
+	--ui-color-warning-900: oklch(41.4% 0.112 45.904);
+	--ui-color-warning-950: oklch(27.9% 0.077 45.635);
+
+	--ui-font-sans:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial,
+		sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--ui-font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}

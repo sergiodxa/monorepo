@@ -460,11 +460,89 @@ The book is shipped; the funnel could become a static page or move to a hosted p
 
 ## Current Progress
 
-- [ ] Phase 0: Scaffold and `@pkg/polar` extension
-- [ ] Phase 1: Shell, home, and subscribe
+- [x] Phase 0: Scaffold and `@pkg/polar` extension
+- [x] Phase 1: Shell, home, and subscribe
 - [ ] Phase 2: Checkout, upgrade, and the webhook
 - [ ] Phase 3: Release page and sample chapter
 - [ ] Phase 4: Verification and cutover
+
+### Phase 0 — done
+
+Verified: `bun typecheck` (every workspace), `bun lint`, `bun run test`, `bun format:fix`,
+`bun run build`, `bunx wrangler deploy --dry-run`. Not verified: nothing deployed, no
+browser check (Phase 1 has the first page to look at).
+
+- `apps/r3-books` scaffolded from `templates/app` with the database pieces dropped:
+  `package.json`, `tsconfig.json`, `vite.config.ts` (port 3003), `wrangler.jsonc` (no
+  bindings, no `routes`, `placement: smart`, traces at 10%), `.env.example`,
+  `bootstrap/browser.ts`, `config/router-context.d.ts`.
+- `app/lib/container.ts` registers `Buttondown` and `PolarClient` as **`scoped`**, not
+  singletons — §2 asked for construction inside a request scope, and `scoped` is what
+  actually delivers that. Both factories validate their secret and throw with the
+  variable's name, so a missing secret fails inside the request that needed it rather
+  than at module load (defect #2), and `/healthcheck` answers regardless. §2's
+  "return a `Result`-shaped failure from the container factory" is not expressible
+  through `container.get`, so the throw is the mechanism.
+- `@pkg/polar` extended with `getProduct`, `listDiscounts`, `listOrders`, `parseWebhook`
+  (returning a `Result` with the validated event), and the checkout-options form — with
+  tests (50 pass) and README updates.
+  - **Deviation from §6**: the options form ships as a sibling method
+    `createCheckout(options)` returning `{ url, id }`, not as an overload of
+    `createCheckoutSession`. An overload set is an intersection of signatures, so adding
+    one breaks `apps/uptime`'s existing test double, which assigns a 3-arg function to
+    `createCheckoutSession`. A union-typed first parameter fails the same way. The
+    positional signature and every existing caller are untouched.
+
+### Phase 1 — done
+
+Verified: `bun typecheck`, `bun lint`, `bun run test` (21 tests in this app), `bun format:fix`,
+`bun run build`, `bunx wrangler deploy --dry-run`. Not verified: nothing deployed, and no
+side-by-side visual comparison against the OLD APP yet — the homepage was translated
+class-by-class from the source but not yet compared in a browser, which Phase 3 gates on.
+
+- `bootstrap/app.tsx` with the middleware chain of §2 — `asyncContext()`, request logger,
+  `formData()`, `cop({ insecureBypassPatterns: ["/webhooks/polar"] })`,
+  `renderWith(createHtmlRenderer)` — and no session middleware. `methodOverride()` was
+  dropped from the chain: every form here is a plain POST, so it has nothing to do.
+  The renderer installs no frame resolver, since the app renders no frames.
+- `resources/layouts/document.tsx`, `app/lib/seo.ts` over `@pkg/seo` (its first
+  consumer), and `resources/css/colors.css` carrying the site's exact palette scales and
+  font stacks across as `--ui-color-*` tokens.
+  - **§4.3 revised**: only _one_ global rule set actually needs a stylesheet — the
+    ParityDeals banner overrides, which style DOM the app does not render (added in
+    Phase 3 with the release page). `@pkg/u` has `autofill()` and `scrollBehavior()`
+    mixins, and `:user-invalid`/`:user-valid` are expressible with `u.when()`, so all
+    three are inline at their use site instead.
+  - `@pkg/seo` has no `book`/`product` schema builder yet, so §8's `Book`/`Product` +
+    `Offer` schema is deferred to Phase 3, where the release page needs it. The homepage
+    ships `website` + `organization`.
+- `resources/components/subscribe-form.tsx`: a plain `<form method="post">` with native
+  validation, `:user-invalid`/`:user-valid` borders, a server-rendered error slot, and no
+  spinner or disabled state (§4.4).
+- `GET /`, `POST /api/subscribe`, `GET /healthcheck`, the 404 default handler, and the
+  merged validator (defect #4).
+  - **Two corrections to §3/§7 found while implementing.** `remix/data-schema`'s checks
+    take no per-check `message` option — messages are customized through an `errorMap` at
+    parse time, which `@pkg/validate` does not pass through — so the visitor-facing
+    "Invalid email address" copy lives in the validator module as a constant the
+    controller shows for any issue. And `@pkg/http`'s `redirect()` defaults to **307**,
+    which preserves the method; every POST-redirect-GET here passes
+    `{ status: redirect.Status.SeeOther }` (303) or the browser re-POSTs to `/release`.
+- Tests: the subscribe happy path, the already-subscribed short-circuit, each Buttondown
+  error branch, the homepage re-render with an inline error, the homepage's canonical URL
+  and UTM pass-through, "no first-party JavaScript", `/healthcheck`, and the 404.
+  - **§12 revised on how the seams are mocked.** MSW cannot be used for router-level
+    tests: with its interceptors installed the router's form-data middleware sees an
+    empty body, so every POST fails validation before reaching the code under test.
+    Router-level tests replace clients through the container (`app/lib/test/router.ts`,
+    `app/lib/test/buttondown.ts`); MSW covers the clients themselves
+    (`app/services/buttondown.test.ts`), which is where request shape belongs. Neither
+    path stubs `globalThis.fetch`.
+- `.claude/launch.json` gained an `r3-books` entry on port 3003. `.oxfmtrc.json` needs no
+  change: the new app has no Tailwind stylesheet to point an override at.
+- Defect #9 fixed early (it belongs to this endpoint): a Buttondown failure with no
+  special-cased code now logs the upstream message and shows a generic
+  "Something went wrong, please try again."
 
 ## Notes
 

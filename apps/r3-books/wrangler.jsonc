@@ -1,0 +1,29 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "r3-books",
+	"main": "./bootstrap/worker.ts",
+	"compatibility_date": "2026-04-10",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3003 },
+	"placement": { "mode": "smart" },
+
+	// Traces are head-sampled at 10%: this is a marketing funnel whose homepage takes
+	// bot and crawler traffic, so full tracing is mostly noise.
+	"observability": {
+		"enabled": true,
+		"traces": { "enabled": true, "head_sampling_rate": 0.1 },
+	},
+
+	"assets": { "directory": "./build/client" },
+
+	// No `routes` entry yet: books.sergiodxa.com stays on the `books` worker until the
+	// cutover, so this worker is reachable only on its workers.dev subdomain.
+
+	// This worker has no storage at all — no D1, KV, R2, queue, cron, or Durable
+	// Object bindings. Its only state lives in Buttondown and Polar.
+
+	// Plain secrets (BUTTONDOWN_API_KEY, POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET) come
+	// from `.dev.vars` locally and `wrangler secret put` in production; only bindings
+	// need a wrangler.jsonc entry.
+}

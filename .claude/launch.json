@@ -20,6 +20,12 @@
 			"port": 3010
 		},
 		{
+			"name": "r3-books",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/r3-books", "dev"],
+			"port": 3003
+		},
+		{
 			"name": "blog",
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/blog", "dev", "--port", "3011"],

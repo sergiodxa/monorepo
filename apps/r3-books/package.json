@@ -1,0 +1,39 @@
+{
+	"name": "@apps/r3-books",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/http": "workspace:*",
+		"@pkg/location": "workspace:*",
+		"@pkg/logger": "workspace:*",
+		"@pkg/markdown-remix": "workspace:*",
+		"@pkg/markdown-server": "workspace:*",
+		"@pkg/polar": "workspace:*",
+		"@pkg/r3-ui": "workspace:*",
+		"@pkg/response": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/seo": "workspace:*",
+		"@pkg/service-container": "workspace:*",
+		"@pkg/u": "workspace:*",
+		"@pkg/validate": "workspace:*",
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.46.0",
+		"@total-typescript/ts-reset": "^0.6.1",
+		"@types/node": "^26.1.1",
+		"msw": "^2.12.4",
+		"typescript": "^6.0.3",
+		"vite": "^8.1.5",
+		"wrangler": "^4.113.0"
+	}
+}
