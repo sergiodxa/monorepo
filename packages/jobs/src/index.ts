@@ -1,9 +1,18 @@
+/**
+ * The base class every queue consumer extends. It derives a stable kebab-case
+ * identifier from the subclass name, runs `perform()` under a batched logger,
+ * translates thrown errors into ack/retry decisions, and pings an uptime monitor
+ * when the subclass declares one, so all jobs share one lifecycle and log shape.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Message } from "@cloudflare/workers-types";
 import type { JSONValue } from "@pkg/types";
 
 import { BatchedLogger } from "@pkg/logger";
+import { dasherize, underscore } from "@pkg/strings";
 import { ValidationError } from "@pkg/validate";
-import { dasherize, underscore } from "inflected";
 
 const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
 
@@ -27,6 +36,17 @@ export namespace Job {
 export abstract class Job {
 	static monitorId?: string;
 
+	/**
+	 * Runs one queued message through the job lifecycle: log start, `perform()`,
+	 * uptime ping, then ack. `RetryError` retries the message, `NonRetriableError`
+	 * and uptime failures ack it, and anything else is re-thrown for the platform.
+	 *
+	 * The log identifier is `job:<kebab-case subclass name>:<message id>`, derived
+	 * from the class name rather than written by hand so it stays stable across
+	 * deploys; renaming a subclass therefore renames it in logs and dashboards.
+	 *
+	 * @param options - The queue message plus the optional uptime token
+	 */
 	static async run<T extends Job>(
 		this: (new (options: Job.ConstructorOptions, body: JSONValue) => T) & { monitorId?: string },
 		options: Job.RunOptions,

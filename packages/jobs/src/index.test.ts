@@ -119,6 +119,33 @@ class UnexpectedErrorJob extends Job {
 	}
 }
 
+// Subclasses whose names exercise the casing edges of identifier derivation:
+// a trailing acronym, an acronym followed by a word, a single-letter/digit part,
+// and a run of capitals before a capitalized word.
+class CheckHTTPJob extends Job {
+	async perform(): Promise<void> {}
+}
+
+class SendSMSNotificationJob extends Job {
+	async perform(): Promise<void> {}
+}
+
+class SyncS3BucketJob extends Job {
+	async perform(): Promise<void> {}
+}
+
+class ABCDefJob extends Job {
+	async perform(): Promise<void> {}
+}
+
+class Check2FAJob extends Job {
+	async perform(): Promise<void> {}
+}
+
+class CleanJob extends Job {
+	async perform(): Promise<void> {}
+}
+
 describe(Job.name, () => {
 	describe("successful job without uptime", () => {
 		test("runs perform, acks message, and logs correctly", async () => {
@@ -323,6 +350,29 @@ describe(Job.name, () => {
 			let [identifier] = consoleInfoSpy.mock.calls[0];
 			expect(identifier).toMatch(/^job:successful-job:[a-f0-9-]+$/);
 		});
+
+		// The identifier reaches logs and uptime monitor ids, so these assert the
+		// exact strings the derivation has to keep producing, not just a shape.
+		let cases: Array<[typeof CleanJob, string]> = [
+			[CleanJob, "clean-job"],
+			[SuccessfulJobWithMonitor, "successful-job-with-monitor"],
+			[CheckHTTPJob, "check-http-job"],
+			[SendSMSNotificationJob, "send-sms-notification-job"],
+			[SyncS3BucketJob, "sync-s3-bucket-job"],
+			[ABCDefJob, "abc-def-job"],
+			[Check2FAJob, "check2-fa-job"],
+		];
+
+		for (let [job, expected] of cases) {
+			test(`derives the identifier of ${job.name} as job:${expected}:<message id>`, async () => {
+				let message = createMessage({ teamId: "team-123" });
+
+				await job.run({ message });
+
+				let [identifier] = consoleInfoSpy.mock.calls[0];
+				expect(identifier).toBe(`job:${expected}:${message.id}`);
+			});
+		}
 	});
 
 	describe("message attempts tracking", () => {

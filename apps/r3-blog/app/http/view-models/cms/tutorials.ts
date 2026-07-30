@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { parameterize } from "inflected";
+import { slugify } from "@pkg/strings";
 
 import routes from "~/routes/web";
 
@@ -225,7 +225,7 @@ export class TutorialViewModel {
 			published_at: this.parsePublishedAt(data.published_at),
 			meta: {
 				title: data.title,
-				slug: data.slug || parameterize(data.title),
+				slug: data.slug || slugify(data.title),
 				excerpt: data.excerpt,
 				tags: this.parseTags(data.tags),
 				content: data.content,

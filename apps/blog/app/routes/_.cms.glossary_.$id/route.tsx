@@ -10,6 +10,7 @@
 
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
+import { slugify } from "@pkg/strings";
 import {
 	Button,
 	Card,
@@ -23,7 +24,6 @@ import {
 	Toolbar,
 } from "@pkg/ui";
 import { validate } from "@pkg/validate";
-import { parameterize } from "inflected";
 import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
@@ -84,7 +84,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		);
 		succeeded(result, "Invalid form data");
 
-		let slug = parameterize(result.data.term);
+		let slug = slugify(result.data.term);
 
 		let db = getDB();
 		let user = requireUser();

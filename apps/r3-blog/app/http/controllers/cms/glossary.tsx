@@ -1,7 +1,7 @@
 /**
  * CMS controller for glossary-term CRUD. It renders index and edit/new HTML views and
  * handles create, update, and destroy actions, validating form data with the glossary
- * schema, deriving slugs from the term via `parameterize`, and using 303 redirects. It
+ * schema, deriving slugs from the term via `slugify`, and using 303 redirects. It
  * exists to manage glossary terms from the backoffice with in-context 404 fallback views.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,8 +11,8 @@
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { slugify } from "@pkg/strings";
 import { validate } from "@pkg/validate";
-import { parameterize } from "inflected";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
@@ -60,7 +60,7 @@ export default createController(routes.cms.glossary, {
 		/**
 		 * Validates form input, creates a glossary term, then sends a 303 redirect.
 		 *
-		 * Non-obvious behavior: when `slug` is omitted, it is derived from `term` via `parameterize`.
+		 * Non-obvious behavior: when `slug` is omitted, it is derived from `term` via `slugify`.
 		 * @param ctx Request context containing `FormData` and database bindings.
 		 * @returns Redirect to login, index fallback, or the created term edit route.
 		 */
@@ -78,7 +78,7 @@ export default createController(routes.cms.glossary, {
 				meta: {
 					term: result.data.term,
 					title: result.data.title,
-					slug: result.data.slug || parameterize(result.data.term),
+					slug: result.data.slug || slugify(result.data.term),
 					definition: result.data.definition,
 				},
 			});
@@ -193,7 +193,7 @@ export default createController(routes.cms.glossary, {
 				meta: {
 					term: result.data.term,
 					title: result.data.title,
-					slug: result.data.slug || parameterize(result.data.term),
+					slug: result.data.slug || slugify(result.data.term),
 					definition: result.data.definition,
 				},
 			});

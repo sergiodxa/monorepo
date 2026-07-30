@@ -1,7 +1,7 @@
 /**
  * Controls sidebar for the tutorial CMS editor, rendering the metadata form
  * fields (title, auto-generated slug, tags, excerpt, and publish date) inside a
- * Card. It derives the slug from the title via parameterize and drives publish
+ * Card. It derives the slug from the title via slugify and drives publish
  * scheduling with a DatePicker so authors can set or reschedule when a tutorial
  * goes live.
  *
@@ -11,6 +11,7 @@
 
 import { parseDate, today } from "@internationalized/date";
 import { useValue } from "@pkg/hooks";
+import { slugify } from "@pkg/strings";
 import {
 	Calendar,
 	Card,
@@ -24,7 +25,6 @@ import {
 	TextArea,
 	TextField,
 } from "@pkg/ui";
-import { parameterize } from "inflected";
 import { Dialog } from "react-aria-components";
 import { useHydrated } from "remix-utils/use-hydrated";
 
@@ -48,7 +48,7 @@ export function Controls({ tutorial }: ControlsProps) {
 		tutorial.title,
 	);
 
-	let slug = tutorial.slug || parameterize(title);
+	let slug = tutorial.slug || slugify(title);
 
 	return (
 		<Card className="h-fit max-w-sm">

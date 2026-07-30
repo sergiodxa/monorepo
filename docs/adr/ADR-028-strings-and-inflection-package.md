@@ -247,11 +247,12 @@ Match the replaced library's API with a mutable global rule registry.
 - [x] Phase 2: Title Case
 - [x] Phase 3: Slugs And Text Operations
 - [x] Phase 4: Markdown Plain Text
-- [ ] Phase 5: Adoption
+- [x] Phase 5: Adoption
 
 ## Notes
 
-- Slug parity must be verified against stored content before adoption; a changed slug breaks published URLs.
+- Slug parity was verified against stored content before adoption: all 69 live glossary terms reproduce their stored slug exactly, which matters because the glossary editor re-derives the slug from the term on every edit. Of 309 real post titles, five would slug differently going forward and `slugify` is the better answer in each — `parameterize` leaves a trailing dash on titles ending in `?`, preserves underscores, collapses only the first repeated-separator run, and reduces a non-Latin title to an empty string.
+- `toPlainText` feeds reading-time counts and the search index, so the blog calls it with `{ fences: true, images: true }`. With the defaults, fenced code is excluded and word counts fell by up to 71% on code-heavy posts, which would have halved displayed reading times and made code identifiers unsearchable. Callers wanting an excerpt opt back out.
 - The jobs package is the highest-value migration and the lowest-risk one, since it only needs `underscore` and `dasherize` over class names.
 - Titleize and humanize produce English display text and should not be used for user-facing copy in localized applications; those strings belong in the i18n layer.
 - `titleize()` is for authored English headings, not for text a user typed. Running it over user input rewrites what someone wrote, and a `special` list cannot know their intent.

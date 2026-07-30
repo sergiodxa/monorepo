@@ -10,6 +10,7 @@
 
 import { parseDate, today } from "@internationalized/date";
 import { useValue } from "@pkg/hooks";
+import { slugify } from "@pkg/strings";
 import {
 	Calendar,
 	Card,
@@ -23,7 +24,6 @@ import {
 	TextArea,
 	TextField,
 } from "@pkg/ui";
-import { parameterize } from "inflected";
 import { Dialog } from "react-aria-components";
 import { useHydrated } from "remix-utils/use-hydrated";
 
@@ -46,7 +46,7 @@ export function Controls({ article }: ControlsProps) {
 		article.title,
 	);
 
-	let slug = article.slug || parameterize(title);
+	let slug = article.slug || slugify(title);
 
 	return (
 		<Card className="h-fit max-w-sm">

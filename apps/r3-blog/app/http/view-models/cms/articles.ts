@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { parameterize } from "inflected";
+import { slugify } from "@pkg/strings";
 
 import routes from "~/routes/web";
 
@@ -240,7 +240,7 @@ export class ArticleViewModel {
 	/**
 	 * Normalizes posted CMS form values into repository input.
 	 *
-	 * Slugs default to a parameterized title and publish values are coerced
+	 * Slugs default to a slugified title and publish values are coerced
 	 * into ISO timestamps (or `null` when absent/invalid).
 	 * @param input CMS form payload collected from the request body.
 	 * @returns Persistable article metadata plus normalized publish timestamp.
@@ -252,7 +252,7 @@ export class ArticleViewModel {
 			published_at: this.parsePublishedAt(data.published_at),
 			meta: {
 				title: data.title,
-				slug: data.slug || parameterize(data.title),
+				slug: data.slug || slugify(data.title),
 				locale: data.locale,
 				excerpt: data.excerpt,
 				canonical_url: data.canonical_url,
