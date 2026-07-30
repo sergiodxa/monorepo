@@ -62,41 +62,40 @@ Define emails as classes implementing an `Email` interface, and let the mailer a
 export interface Email {
 	/** Recipient this email is addressed to, derived from the data it was constructed with. */
 	readonly to: Address | Address[];
-	/** Subject line, translated for the recipient. */
-	subject(ctx: EmailContext): string;
+	/** Subject line, already translated. */
+	readonly subject: string;
 	/** Body tree, rendered by the mailer into HTML and plain text. */
-	body(ctx: EmailContext): JSX.Element;
+	body(): JSX.Element;
 	/** Optional per-email overrides; the mailer's configuration supplies defaults. */
 	readonly replyTo?: Address | Address[];
 	readonly headers?: Record<string, string>;
 }
-
-export interface EmailContext {
-	/** Translator bound to the recipient's language. */
-	t: TFunction;
-	/** Language the email is being produced in. */
-	locale: string;
-}
 ```
 
-`Email` is an interface, so the contract is satisfiable by anything structurally compatible and matches the repository's preference for interfaces. The sender identity comes from the mailer's configuration and layout comes from the `Email.Layout` component used inside `body()`, which leaves the interface holding exactly the three things that vary per email.
+`Email` is an interface, so the contract is satisfiable by anything structurally compatible and matches the repository's preference for interfaces. The sender identity comes from the mailer's configuration and layout comes from the `Email.Layout` component used inside `body()`, which leaves the interface holding exactly the three things that vary per email: who it goes to, what it says, and what it looks like.
+
+Nothing here mentions i18n. A translated subject is a string by the time the mailer sees it, so `@pkg/mail` needs no translator, no locale resolution, and no dependency on `@pkg/i18n`.
 
 ### 2. An Email
 
+The constructor takes everything the email needs, including the translator and the locale it was bound to:
+
 ```tsx
 export class TeamInviteEmail implements Email {
-	constructor(private invite: { team: string; email: string; url: string }) {}
+	constructor(
+		private invite: { team: string; email: string; url: string; locale: string; t: TFunction },
+	) {}
 
 	get to() {
 		return { email: this.invite.email };
 	}
 
-	subject({ t }: EmailContext) {
-		return t("emails.teamInvite.subject", { team: this.invite.team });
+	get subject() {
+		return this.invite.t("emails.teamInvite.subject", { team: this.invite.team });
 	}
 
-	body(ctx: EmailContext) {
-		return <TeamInviteBody invite={this.invite} {...ctx} />;
+	body() {
+		return <TeamInviteBody invite={this.invite} />;
 	}
 }
 ```
@@ -110,9 +109,9 @@ await ctx.email.send(new TeamInviteEmail({ team, email, url }));
 ctx.email.later(new PasswordResetEmail(user));
 ```
 
-`Mailer.send()` and `Mailer.later()` accept `Message | Email`. Given an `Email`, the mailer resolves the locale, builds the `EmailContext`, calls `subject()` and `body()`, renders the body to HTML and plain text through the package's `render()`, and normalizes the result into the same `NormalizedMessage` a plain `Message` produces. Transports never learn that email classes exist.
+`Mailer.send()` and `Mailer.later()` accept `Message | Email`. Given an `Email`, the mailer reads `to` and `subject`, calls `body()`, renders it to HTML and plain text through the package's `render()`, and normalizes the result into the same `NormalizedMessage` a plain `Message` produces. Transports never learn that email classes exist.
 
-Discrimination between the two inputs is structural: a value with callable `subject` and `body` members is an `Email`, anything else is a `Message`. The two shapes cannot be confused accidentally, because a `Message` carries `subject` as a string.
+Discrimination between the two inputs is structural: a value with a callable `body` is an `Email`, anything else is a `Message`.
 
 Recipient overrides stay possible for the cases that need them, without weakening the default:
 
@@ -120,28 +119,31 @@ Recipient overrides stay possible for the cases that need them, without weakenin
 await ctx.email.send(new TeamInviteEmail(invite), { to: forwardedAddress });
 ```
 
-### 4. Locale Resolution
+### 4. The App Supplies The Translator
 
-The mailer resolves the locale in this order, and the chosen value is what `EmailContext.locale` reports:
+Choosing a recipient's language is application knowledge, so the app resolves it and hands the result to the constructor. Inside a request that translator comes from the i18n middleware; in a queue consumer or scheduled handler the app creates an instance for the locale it looked up.
 
-1. An explicit `locale` option on the send call.
-2. The recipient's stored preference, when the caller passes one.
-3. The request locale, supplied by the middleware from `ctx.locale`.
-4. The mailer's configured fallback.
+```ts
+// In a controller, for a recipient whose language is not the requester's.
+let t = await ctx.i18next.cloneInstance({ lng: invite.locale }).loadNamespaces("emails");
+await ctx.email.send(new TeamInviteEmail({ ...invite, locale: invite.locale, t }));
+```
 
-The order exists because the common mistake is silently sending in the sender's language. Making the request locale the third choice rather than the first means a caller who knows the recipient's language has an obvious place to say so, and a caller who does not gets a defensible default.
+Guidance for choosing that locale, in order of preference: the recipient's stored preference, the locale recorded on the record being acted on (an invite stores the language it was created in), then the app's fallback. The requester's own locale is the last resort, since the common mistake is sending in the sender's language rather than the reader's.
 
-### 5. Emails Hold Plain Data
+### 5. Emails Hold Loaded Data
 
-An email class is constructed with the fields it needs, already loaded. Holding only plain data keeps it testable without a database and keeps it serializable, which is what a future deferred delivery would require.
+An email class is constructed with the fields it needs, already loaded, so it holds no database handle and no service container and fetches nothing while rendering. That keeps it testable without a database.
+
+The translator is the one function it holds, and `locale` sits beside it as the serializable record of which language it produced. A future deferred delivery would enqueue the data with its `locale`, and the consumer would rebuild the translator and the instance from that.
 
 ### 6. Testing
 
 Emails are directly testable without a mailer:
 
 ```ts
-let email = new TeamInviteEmail({ team: "Acme", email: "user@example.com", url });
-assert.equal(email.subject({ t, locale: "en" }), "You've been invited to join Acme");
+let email = new TeamInviteEmail({ team: "Acme", email: "user@example.com", url, locale: "en", t });
+assert.equal(email.subject, "You've been invited to join Acme");
 ```
 
 And the mailer records the source object on sent messages, so send assertions identify the email by type instead of by copy:
@@ -158,6 +160,7 @@ That distinction matters: the string assertion passes when the wrong email is se
 
 - **An inventory exists** - `app/emails/` lists every email an app can send.
 - **Subjects get translated** - the last piece of hardcoded user-facing copy in the email path moves into the i18n layer.
+- **The mail package stays i18n-free** - a translated subject reaches it as a string, so it needs no translator, no locale resolution, and no i18n dependency.
 - **Recipient travels with its data** - the address is derived from the same object the content is derived from, so they cannot disagree.
 - **Data requirements are a typed constructor** - a missing or misordered field is a compile error rather than three interchangeable strings.
 - **Each email renders itself** - no repeated render-then-send sequence per call site.
@@ -169,6 +172,7 @@ That distinction matters: the string assertion passes when the wrong email is se
 - **This is a bet on volume** - three emails exist today, and for three emails functions would have been adequate. The pattern pays off at the count the authentication work implies.
 - **A file per email** - more modules than the current two helpers, and a class whose only members are a getter and two methods is a function in disguise for the simplest cases.
 - **`implements` enforces shape, not correctness** - nothing checks that an i18n key exists or that the body actually uses the data it was given.
+- **Locale choice has no guardrail in the package** - the app decides which language a recipient reads, so sending in the requester's language stays possible and is caught by review rather than by a type.
 - **JSX inside email classes** - the `app/emails/` directory holds `.tsx` modules that look like data but render markup.
 
 ### Neutral
@@ -184,7 +188,7 @@ That distinction matters: the string assertion passes when the wrong email is se
 **Priority:** Medium
 **Estimated Effort:** 2 hours
 
-1. Define `Email` and `EmailContext` in the mail package.
+1. Define `Email` in the mail package.
 2. Accept `Message | Email` in `send()` and `later()`, with structural discrimination and the send-time override options.
 
 ### Phase 2: Locale And Recording
@@ -230,7 +234,13 @@ One class per domain with a method per email, such as a `UserMailer` with `welco
 
 **Rejected because**: grouping forces the constructor data to be the union of what every method needs, so each method receives more than it uses and the type of the group is looser than the type of any one email. One class per email keeps each constructor precise.
 
-### 5. Serializable Emails For Deferred Delivery
+### 5. A Translator Factory In The Mailer
+
+Give the `Mailer` a `(locale) => Promise<TFunction>` factory and let it resolve the recipient's locale itself.
+
+**Rejected because**: it puts an i18n dependency and a locale policy inside a package whose job is delivery, and every caller outside a request would have to configure a factory before it could send anything. The app already knows which language a recipient reads, so it passes the translator it already has.
+
+### 6. Serializable Emails For Deferred Delivery
 
 Make every email serializable so it can be enqueued and sent by a background job.
 
@@ -254,4 +264,3 @@ Make every email serializable so it can be enqueued and sent by a background job
 - The i18n keys for every email belong under a single namespace prefix so a missing translation is easy to spot across locales.
 - The mailer resolves the locale once per send and reuses it for both `subject()` and `body()`, so a subject and body can never disagree about language.
 - An `Email` whose `to` derives from optional data should fail loudly at construction rather than produce a message with no recipient; validating in the constructor keeps the failure next to the mistake.
-- Open question: `EmailContext` carries a `t` bound to the resolved locale, and the mailer has to obtain one for a locale it chose. Inside a request the i18n middleware already provides an instance, but a queue consumer or scheduled handler has none, so the `Mailer` needs a translator factory in its configuration (something shaped like `(locale) => Promise<TFunction>`, supplied by `@pkg/i18n`). That factory is not part of ADR-018's configuration yet, and localized email from a job depends on it.

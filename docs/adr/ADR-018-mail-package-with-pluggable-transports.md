@@ -387,4 +387,3 @@ Use `react-email` for authoring and rendering.
 - `date` and `messageId` are explicit optional message fields rather than injected clock or id services, so tests stay deterministic without adding constructor seams.
 - Local development writes messages sent through the Cloudflare binding to the Wrangler temp email directory; `MemoryTransport` remains the mechanism for automated tests.
 - The switch should be verified with real deliveries, not only unit tests: header correctness, both body parts, and spam placement are only observable end to end.
-- Open question: the `Mailer` configuration covers transport and sender identity, and email classes (ADR-030) additionally need a translator for the locale the mailer resolves. Request paths can take one from the i18n middleware, but jobs and scheduled handlers cannot, so a translator factory belongs in this configuration. Its shape is unresolved and blocks localized email outside a request.
