@@ -121,6 +121,7 @@ Run from the repository root:
 | [seo](packages/seo)                                     | Canonical URLs, schema.org builders and head metadata         |
 | [session-storage-kv](packages/session-storage-kv)       | Session storage adapter for Cloudflare KV                     |
 | [sitemap](packages/sitemap)                             | Sitemap generation utilities                                  |
+| [strings](packages/strings)                             | Inflection, Chicago title case, slugs and grapheme-safe text  |
 | [typeid](packages/typeid)                               | Type-safe prefixed id utilities                               |
 | [types](packages/types)                                 | Shared TypeScript types                                       |
 | [u](packages/u)                                         | Tailwind-like Remix UI styling utilities                      |

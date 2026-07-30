@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -243,10 +243,10 @@ Match the replaced library's API with a mutable global rule registry.
 
 ## Current Progress
 
-- [ ] Phase 1: Inflection
-- [ ] Phase 2: Title Case
-- [ ] Phase 3: Slugs And Text Operations
-- [ ] Phase 4: Markdown Plain Text
+- [x] Phase 1: Inflection
+- [x] Phase 2: Title Case
+- [x] Phase 3: Slugs And Text Operations
+- [x] Phase 4: Markdown Plain Text
 - [ ] Phase 5: Adoption
 
 ## Notes
