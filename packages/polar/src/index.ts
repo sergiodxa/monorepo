@@ -4,8 +4,8 @@
  * Instance-based Polar billing client shared across the SaaS apps. Wraps the
  * official [`@polar-sh/sdk`](https://docs.polar.sh/api) so every app talks to
  * Polar through one type-safe, dependency-injectable surface: customers,
- * subscriptions, hosted checkout/portal sessions, usage-event ingestion, and
- * Standard-Webhooks signature verification.
+ * subscriptions, products, discounts, orders, hosted checkout/portal sessions,
+ * usage-event ingestion, and Standard-Webhooks signature verification/parsing.
  *
  * The client is constructed from configuration (`{ accessToken }`) rather than
  * reading environment variables itself, so it stays compatible with
@@ -14,17 +14,29 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Result } from "@pkg/result";
 import type { Checkout } from "@polar-sh/sdk/models/components/checkout.js";
 import type { Customer } from "@polar-sh/sdk/models/components/customer.js";
 import type { CustomerSession } from "@polar-sh/sdk/models/components/customersession.js";
+import type { Discount } from "@polar-sh/sdk/models/components/discount.js";
+import type { Order } from "@polar-sh/sdk/models/components/order.js";
+import type { Product } from "@polar-sh/sdk/models/components/product.js";
 import type { Subscription } from "@polar-sh/sdk/models/components/subscription.js";
 
+import { failure, success } from "@pkg/result";
 import { Polar } from "@polar-sh/sdk";
 import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 
 export { PolarError, WebhookVerificationError };
-export type { Checkout, Customer, CustomerSession, Subscription };
+export type { Checkout, Customer, CustomerSession, Discount, Order, Product, Subscription };
+
+/**
+ * Any webhook event the SDK can model, as returned by `validateEvent`. It is a
+ * discriminated union on `type`, so callers can narrow with
+ * `event.type === "order.paid"` and get a fully typed payload.
+ */
+export type PolarWebhookEvent = ReturnType<typeof validateEvent>;
 
 /**
  * Options accepted by the {@link PolarClient} constructor.
@@ -76,6 +88,42 @@ export interface CustomerUpdate {
 export interface SessionResult {
 	/** The Polar-hosted URL to redirect the customer to. */
 	url: string;
+}
+
+/**
+ * The result of {@link PolarClient.createCheckout}. Adds the checkout `id` on top
+ * of {@link SessionResult} so callers can log it and correlate it with the webhook
+ * events the checkout later produces.
+ */
+export interface CheckoutSessionResult extends SessionResult {
+	/** The Polar checkout id. */
+	id: string;
+}
+
+/**
+ * Options accepted by {@link PolarClient.createCheckout}, covering the checkout
+ * fields {@link PolarClient.createCheckoutSession} cannot express (`customerEmail`,
+ * `discountId`, `allowDiscountCodes`) and making `successUrl` optional for products
+ * that should land on Polar's own confirmation page.
+ */
+export interface CheckoutSessionOptions {
+	/** The Polar product ID to sell; sent as a single-product checkout. */
+	productId: string;
+	/** The Polar customer ID the checkout is for; omit to let Polar create one. */
+	customerId?: string;
+	/**
+	 * Email to pre-fill on the hosted checkout. `null` is accepted (and sent as
+	 * omitted) so callers can forward an optional query param without mapping it.
+	 */
+	customerEmail?: string | null;
+	/** A Polar discount ID to apply automatically to the checkout. */
+	discountId?: string;
+	/** Whether the customer may type a discount code during checkout. */
+	allowDiscountCodes?: boolean;
+	/** Absolute URL to redirect to after a successful checkout. */
+	successUrl?: string;
+	/** Additional key-value pairs stored on the checkout and surfaced on webhooks. */
+	metadata?: Record<string, string>;
 }
 
 /**
@@ -294,6 +342,73 @@ export class PolarClient {
 	}
 
 	/**
+	 * Get a product by ID, including its prices and benefits. Used to render a
+	 * price from Polar rather than hardcoding it in the app.
+	 *
+	 * @param productId - The Polar product ID.
+	 * @returns The product object.
+	 * @throws {PolarError} When the product does not exist or the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let product = await polar.getProduct(env.POLAR_PRODUCT_ID);
+	 * let [price] = product.prices;
+	 * ```
+	 */
+	async getProduct(productId: string): Promise<Product> {
+		return await this.client.products.get({ id: productId });
+	}
+
+	/**
+	 * List the organization's discounts, following pagination to completion. The
+	 * caller decides which one applies (date window, redemption limits, product
+	 * scope) — the client stays app-agnostic and does not filter.
+	 *
+	 * @param limit - Polar page size (1-100), defaulting to 12.
+	 * @returns Every discount, in the order Polar returns them.
+	 * @throws {PolarError} When the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let discounts = await polar.listDiscounts();
+	 * let applicable = discounts.find((discount) => isApplicable(discount, new Date()));
+	 * ```
+	 */
+	async listDiscounts(limit = 12): Promise<Discount[]> {
+		let result = await this.client.discounts.list({ limit });
+		let discounts: Discount[] = [];
+		for await (let page of result) discounts.push(...page.result.items);
+		return discounts;
+	}
+
+	/**
+	 * List orders, optionally filtered by customer and/or product, following
+	 * pagination to completion. Used to check whether a customer already bought a
+	 * given product before offering them an upgrade.
+	 *
+	 * @param options - The filters to apply; an empty object lists every order.
+	 * @param options.customerId - Only orders belonging to this Polar customer.
+	 * @param options.productId - Only orders for this Polar product.
+	 * @returns Every matching order.
+	 * @throws {PolarError} When the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let orders = await polar.listOrders({ customerId, productId });
+	 * if (orders.length === 0) return redirect(fullPriceCheckoutUrl);
+	 * ```
+	 */
+	async listOrders(options: { customerId?: string; productId?: string }): Promise<Order[]> {
+		let result = await this.client.orders.list({
+			customerId: options.customerId,
+			productId: options.productId,
+		});
+		let orders: Order[] = [];
+		for await (let page of result) orders.push(...page.result.items);
+		return orders;
+	}
+
+	/**
 	 * Create a hosted checkout session for a subscription.
 	 *
 	 * @param productId - The Polar product ID to sell.
@@ -329,6 +444,46 @@ export class PolarClient {
 			metadata,
 		});
 		return { url: checkout.url };
+	}
+
+	/**
+	 * Create a hosted checkout session from an options object, for the checkout
+	 * fields {@link createCheckoutSession} cannot express: a pre-filled
+	 * `customerEmail`, an automatically applied `discountId`, `allowDiscountCodes`,
+	 * and an optional `successUrl`. Also returns the checkout `id`, so a caller can
+	 * log it and correlate it with the webhook events the checkout produces.
+	 *
+	 * Kept as a sibling method rather than an overload of {@link createCheckoutSession}
+	 * so the positional signature stays exactly as callers (and their test doubles)
+	 * already see it.
+	 *
+	 * @param options - The checkout configuration.
+	 * @returns The hosted checkout `url` and the checkout `id`.
+	 * @throws {PolarError} When the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let { url, id } = await polar.createCheckout({
+	 * 	productId: env.POLAR_PRODUCT_ID,
+	 * 	customerEmail: url.searchParams.get("email"),
+	 * 	discountId: discount?.id,
+	 * 	allowDiscountCodes: false,
+	 * });
+	 * log.info("checkout_started", { checkoutId: id });
+	 * return redirect(url);
+	 * ```
+	 */
+	async createCheckout(options: CheckoutSessionOptions): Promise<CheckoutSessionResult> {
+		let checkout: Checkout = await this.client.checkouts.create({
+			products: [options.productId],
+			customerId: options.customerId,
+			customerEmail: options.customerEmail ?? undefined,
+			discountId: options.discountId,
+			allowDiscountCodes: options.allowDiscountCodes,
+			successUrl: options.successUrl,
+			metadata: options.metadata ?? {},
+		});
+		return { url: checkout.url, id: checkout.id };
 	}
 
 	/**
@@ -519,6 +674,52 @@ export class PolarClient {
 			// The signature verified but the SDK could not type the event (an event
 			// type it does not model); the security boundary passed, so accept it.
 			return true;
+		}
+	}
+
+	/**
+	 * Verify a Polar webhook signature and return the parsed event, so callers can
+	 * branch on `event.type` with full types instead of re-parsing the raw body
+	 * themselves. Complements {@link verifyWebhook}, which only proves authenticity.
+	 *
+	 * Fails **closed**: a missing/empty secret is a failure without calling the
+	 * verifier. The failure error distinguishes a rejected signature from an
+	 * authentic body the SDK could not model, so the caller can log them apart.
+	 *
+	 * @param request - The incoming webhook request, used for its headers.
+	 * @param rawBody - The exact raw request body used to compute the signature.
+	 * @param secret - The Polar webhook signing secret; when empty or `undefined`, parsing fails.
+	 * @returns `success(event)` with the validated event, or `failure(error)`.
+	 *
+	 * @example
+	 * ```ts
+	 * let result = polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+	 * if (isFailure(result)) return new Response(result.error.message, { status: 400 });
+	 * if (result.data.type === "order.paid") await tagCustomer(result.data.data.customer.email);
+	 * ```
+	 */
+	parseWebhook(
+		request: Request,
+		rawBody: string,
+		secret: string | undefined,
+	): Result<PolarWebhookEvent, Error> {
+		if (!secret) return failure(new Error("Missing Polar webhook secret"));
+
+		let headers: Record<string, string> = {};
+		request.headers.forEach((value, key) => {
+			headers[key] = value;
+		});
+
+		try {
+			return success(validateEvent(rawBody, headers, secret));
+		} catch (error) {
+			// A bad/missing signature is a WebhookVerificationError -> fail closed.
+			if (error instanceof WebhookVerificationError) {
+				return failure(new Error("Invalid Polar webhook signature"));
+			}
+			// The signature verified but the SDK could not validate/type the payload.
+			let message = error instanceof Error ? error.message : String(error);
+			return failure(new Error(`Invalid Polar webhook payload: ${message}`));
 		}
 	}
 }

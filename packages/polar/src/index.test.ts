@@ -41,6 +41,8 @@ let getExternalImpl: () => unknown = () => ({ id: "cus_1" });
 let listCustomersImpl: () => unknown[] = () => [{ id: "cus_1" }];
 let subscriptionsListImpl: () => unknown[][] = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
 let meterQuantitiesImpl: () => unknown = () => ({ quantities: [], total: 42 });
+let discountsListImpl: () => unknown[][] = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
+let ordersListImpl: () => unknown[][] = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 
 mock.module("@polar-sh/sdk", () => ({
 	Polar: class Polar {
@@ -94,10 +96,36 @@ mock.module("@polar-sh/sdk", () => ({
 				};
 			},
 		};
+		products = {
+			get: async (arg: unknown) => {
+				record("products.get", arg);
+				return { id: "prod_1", name: "Complete", prices: [] };
+			},
+		};
+		discounts = {
+			list: async (arg: unknown) => {
+				record("discounts.list", arg);
+				return {
+					async *[Symbol.asyncIterator]() {
+						for (let items of discountsListImpl()) yield { result: { items } };
+					},
+				};
+			},
+		};
+		orders = {
+			list: async (arg: unknown) => {
+				record("orders.list", arg);
+				return {
+					async *[Symbol.asyncIterator]() {
+						for (let items of ordersListImpl()) yield { result: { items } };
+					},
+				};
+			},
+		};
 		checkouts = {
 			create: async (arg: unknown) => {
 				record("checkouts.create", arg);
-				return { url: "https://polar.sh/checkout/1" };
+				return { id: "chk_1", url: "https://polar.sh/checkout/1" };
 			},
 		};
 		customerSessions = {
@@ -133,6 +161,8 @@ afterEach(() => {
 	listCustomersImpl = () => [{ id: "cus_1" }];
 	subscriptionsListImpl = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
 	meterQuantitiesImpl = () => ({ quantities: [], total: 42 });
+	discountsListImpl = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
+	ordersListImpl = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 });
 
 describe("PolarClient", () => {
@@ -352,6 +382,57 @@ describe("PolarClient", () => {
 		});
 	});
 
+	test("getProduct looks up by id", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		let product = await polar.getProduct("prod_1");
+		expect(product).toMatchObject({ id: "prod_1", name: "Complete" });
+		expect(calls["products.get"]).toEqual([{ id: "prod_1" }]);
+	});
+
+	describe("listDiscounts", () => {
+		test("flattens every page and defaults the limit to 12", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let discounts = await polar.listDiscounts();
+			expect(discounts).toEqual([{ id: "disc_1" }, { id: "disc_2" }]);
+			expect(calls["discounts.list"]).toEqual([{ limit: 12 }]);
+		});
+
+		test("forwards an explicit limit", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			await polar.listDiscounts(50);
+			expect(calls["discounts.list"]).toEqual([{ limit: 50 }]);
+		});
+
+		test("throws when the request fails", async () => {
+			discountsListImpl = () => {
+				throw new Error("network error");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			await expect(polar.listDiscounts()).rejects.toThrow("network error");
+		});
+	});
+
+	describe("listOrders", () => {
+		test("forwards the customer/product filters and flattens every page", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let orders = await polar.listOrders({ customerId: "cus_1", productId: "prod_1" });
+			expect(orders).toEqual([{ id: "ord_1" }, { id: "ord_2" }]);
+			expect(calls["orders.list"]).toEqual([{ customerId: "cus_1", productId: "prod_1" }]);
+		});
+
+		test("sends undefined for omitted filters", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			await polar.listOrders({});
+			expect(calls["orders.list"]).toEqual([{ customerId: undefined, productId: undefined }]);
+		});
+
+		test("returns an empty array when there are no orders", async () => {
+			ordersListImpl = () => [[]];
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.listOrders({ customerId: "cus_1" })).toEqual([]);
+		});
+	});
+
 	describe("createCheckoutSession", () => {
 		test("wraps productId in a products array and returns the url", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
@@ -393,6 +474,53 @@ describe("PolarClient", () => {
 					customerId: undefined,
 					successUrl: "https://app/ok",
 					metadata: { account_id: "a_1" },
+				},
+			]);
+		});
+	});
+
+	describe("createCheckout", () => {
+		test("forwards every option and returns url + id", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let result = await polar.createCheckout({
+				productId: "prod_1",
+				customerId: "cus_1",
+				customerEmail: "jane@example.com",
+				discountId: "disc_1",
+				allowDiscountCodes: false,
+				successUrl: "https://app/ok",
+				metadata: { account_id: "a_1" },
+			});
+			expect(result).toEqual({ url: "https://polar.sh/checkout/1", id: "chk_1" });
+			expect(calls["checkouts.create"]).toEqual([
+				{
+					products: ["prod_1"],
+					customerId: "cus_1",
+					customerEmail: "jane@example.com",
+					discountId: "disc_1",
+					allowDiscountCodes: false,
+					successUrl: "https://app/ok",
+					metadata: { account_id: "a_1" },
+				},
+			]);
+		});
+
+		test("maps a null customerEmail to undefined and defaults metadata", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			await polar.createCheckout({
+				productId: "prod_1",
+				customerEmail: null,
+				allowDiscountCodes: true,
+			});
+			expect(calls["checkouts.create"]).toEqual([
+				{
+					products: ["prod_1"],
+					customerId: undefined,
+					customerEmail: undefined,
+					discountId: undefined,
+					allowDiscountCodes: true,
+					successUrl: undefined,
+					metadata: {},
 				},
 			]);
 		});
@@ -557,6 +685,56 @@ describe("PolarClient", () => {
 			};
 			let polar = new PolarClient({ accessToken: "t" });
 			expect(polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
+		});
+	});
+
+	describe("parseWebhook", () => {
+		function req(headers: Record<string, string>): Request {
+			return new Request("https://app/webhook", { method: "POST", headers });
+		}
+
+		test("returns the validated event on success", () => {
+			validateEventImpl = () => ({ type: "order.paid", data: { id: "ord_1" } });
+			let polar = new PolarClient({ accessToken: "t" });
+			let result = polar.parseWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
+			expect(result.status).toBe("success");
+			if (result.status !== "success") throw new Error("expected success");
+			expect(result.data).toEqual({ type: "order.paid", data: { id: "ord_1" } });
+			expect(validateEventCalls).toHaveLength(1);
+			expect(validateEventCalls[0]!.body).toBe("raw-body");
+			expect(validateEventCalls[0]!.secret).toBe("whsec_1");
+			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_1");
+		});
+
+		test("fails closed without calling the verifier when the secret is missing", () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let result = polar.parseWebhook(req({}), "{}", undefined);
+			expect(result.status).toBe("failure");
+			if (result.status !== "failure") throw new Error("expected failure");
+			expect(result.error.message).toBe("Missing Polar webhook secret");
+			expect(validateEventCalls).toHaveLength(0);
+		});
+
+		test("fails with a signature error for a WebhookVerificationError", () => {
+			validateEventImpl = () => {
+				throw new MockWebhookVerificationError("bad signature");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			let result = polar.parseWebhook(req({}), "{}", "whsec_1");
+			expect(result.status).toBe("failure");
+			if (result.status !== "failure") throw new Error("expected failure");
+			expect(result.error.message).toBe("Invalid Polar webhook signature");
+		});
+
+		test("fails with a payload error for an SDK validation error", () => {
+			validateEventImpl = () => {
+				throw new MockSDKValidationError("Unknown event type");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			let result = polar.parseWebhook(req({}), "{}", "whsec_1");
+			expect(result.status).toBe("failure");
+			if (result.status !== "failure") throw new Error("expected failure");
+			expect(result.error.message).toBe("Invalid Polar webhook payload: Unknown event type");
 		});
 	});
 

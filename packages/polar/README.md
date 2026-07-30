@@ -14,6 +14,8 @@ the monorepo:
   `reportMAU` usage event.
 - **Metered page-view billing** (blog-saas): hosted checkout/portal sessions and a
   best-effort `ingestPageViews` usage event.
+- **One-time product sales**: products, discounts and orders, plus discounted
+  checkouts and parsed `order.paid` webhooks.
 
 The client takes its configuration through the constructor (`{ accessToken }`)
 rather than reading environment variables itself, so it composes with
@@ -118,6 +120,65 @@ Lists every subscription for a customer, following pagination to completion.
 
 Revokes a subscription immediately (ends entitlement now, not at period end).
 
+#### `getProduct(productId: string): Promise<Product>`
+
+Gets a product by ID, including its prices and benefits — for rendering a price from
+Polar instead of hardcoding it.
+
+**Returns:**
+
+- The product object.
+
+**Example:**
+
+```ts
+let product = await polar.getProduct(env.POLAR_PRODUCT_ID);
+let [price] = product.prices;
+```
+
+#### `listDiscounts(limit?: number): Promise<Discount[]>`
+
+Lists the organization's discounts, following pagination to completion. The client
+does not filter: deciding which discount applies (date window, redemption limits,
+product scope) is app business logic and stays at the call site.
+
+**Parameters:**
+
+- `limit`: Polar page size (1-100), defaults to `12`.
+
+**Returns:**
+
+- An array with every discount, in the order Polar returns them.
+
+**Example:**
+
+```ts
+let discounts = await polar.listDiscounts();
+let applicable = discounts.find((discount) => isApplicable(discount, new Date()));
+```
+
+#### `listOrders(options: { customerId?: string; productId?: string }): Promise<Order[]>`
+
+Lists orders, optionally filtered by customer and/or product, following pagination to
+completion. Use it to check whether a customer already bought a product before
+offering them an upgrade.
+
+**Parameters:**
+
+- `options.customerId`: Only orders belonging to this Polar customer.
+- `options.productId`: Only orders for this Polar product.
+
+**Returns:**
+
+- An array with every matching order (empty when there are none).
+
+**Example:**
+
+```ts
+let orders = await polar.listOrders({ customerId: customer.id, productId });
+if (orders.length === 0) return redirectDocument(fullPriceCheckoutUrl);
+```
+
 #### `createCheckoutSession(productId: string, customerId: string, successUrl: string, metadata?: Record<string, string>): Promise<SessionResult>`
 
 Creates a hosted checkout session for a subscription.
@@ -141,6 +202,42 @@ let { url } = await polar.createCheckoutSession(productId, customerId, successUr
 	account_id: accountId,
 });
 return redirect(url);
+```
+
+#### `createCheckout(options: CheckoutSessionOptions): Promise<CheckoutSessionResult>`
+
+Options-object form of `createCheckoutSession`, for the checkout fields the positional
+form cannot express. It is a sibling method rather than an overload so the positional
+signature stays exactly as existing callers (and their test doubles) already see it.
+
+**Parameters:**
+
+- `options.productId`: The Polar product ID to sell (sent as a single-product checkout).
+- `options.customerId`: The Polar customer ID; omit to let Polar create one.
+- `options.customerEmail`: Email to pre-fill on the hosted checkout; `null` is accepted
+  and sent as omitted, so an optional query param can be forwarded as-is.
+- `options.discountId`: A Polar discount ID applied automatically.
+- `options.allowDiscountCodes`: Whether the customer may type a discount code.
+- `options.successUrl`: Absolute URL to redirect to after a successful checkout;
+  omit to use Polar's own confirmation page.
+- `options.metadata`: Additional key-value pairs stored on the checkout.
+
+**Returns:**
+
+- `{ url, id }` — the hosted checkout URL plus the checkout ID (useful for logging
+  and correlating with the webhook events the checkout produces).
+
+**Example:**
+
+```ts
+let { url, id } = await polar.createCheckout({
+	productId: env.POLAR_PRODUCT_ID,
+	customerEmail: url.searchParams.get("email"),
+	discountId: discount?.id,
+	allowDiscountCodes: false,
+});
+log.info("checkout_started", { checkoutId: id });
+return redirectDocument(url);
 ```
 
 #### `createPortalSession(customerId: string): Promise<SessionResult>`
@@ -206,6 +303,36 @@ caller is expected to validate the payload shape itself.
 
 - `true` when the request is authentic, `false` otherwise.
 
+#### `parseWebhook(request: Request, rawBody: string, secret: string | undefined): Result<PolarWebhookEvent, Error>`
+
+Verifies the signature **and** returns the parsed event, so callers can branch on
+`event.type` with full types instead of re-parsing the raw body themselves.
+
+Fails **closed**: a missing/empty secret is a failure and the verifier is never
+called. The failure message distinguishes a rejected signature (`"Invalid Polar
+webhook signature"`) from an authentic body the SDK could not model (`"Invalid Polar
+webhook payload: …"`), so the two can be logged apart.
+
+**Parameters:**
+
+- `request`: The incoming webhook request, used for its headers.
+- `rawBody`: The exact raw request body used to compute the signature.
+- `secret`: The Polar webhook signing secret; when empty or `undefined`, parsing fails.
+
+**Returns:**
+
+- `success(event)` with the validated event, or `failure(error)`.
+
+**Example:**
+
+```ts
+let result = polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+if (isFailure(result)) return badRequest({ error: result.error.message });
+if (result.data.type === "order.paid") {
+	await tagCustomer(result.data.data.customer.email);
+}
+```
+
 ### Re-exports
 
 - `PolarError` — the SDK error thrown by API calls (re-exported from
@@ -251,8 +378,45 @@ interface SessionResult {
 }
 ```
 
-The SDK model types `Customer`, `Subscription`, `Checkout` and `CustomerSession`
-are re-exported for convenience.
+#### `CheckoutSessionResult`
+
+Returned by `createCheckout`.
+
+```ts
+interface CheckoutSessionResult extends SessionResult {
+	id: string;
+}
+```
+
+#### `CheckoutSessionOptions`
+
+```ts
+interface CheckoutSessionOptions {
+	productId: string;
+	customerId?: string;
+	customerEmail?: string | null;
+	discountId?: string;
+	allowDiscountCodes?: boolean;
+	successUrl?: string;
+	metadata?: Record<string, string>;
+}
+```
+
+#### `PolarWebhookEvent`
+
+Every webhook event the SDK can model, as returned by `validateEvent`. It is a
+discriminated union on `type`, so `event.type === "order.paid"` narrows the payload.
+
+```ts
+type PolarWebhookEvent = ReturnType<typeof validateEvent>;
+```
+
+The SDK model types `Customer`, `Subscription`, `Checkout`, `CustomerSession`,
+`Product`, `Discount` and `Order` are re-exported for convenience.
+
+> `Product` is Polar's product model. Apps that already have their own `Product`
+> symbol (e.g. an enum of product IDs) should alias the import:
+> `import type { Product as PolarProduct } from "@pkg/polar";`
 
 ## Pattern: Service-container singleton (DI)
 
@@ -306,4 +470,5 @@ if (isFailure(result)) return json({ error: "Invalid payload" }, { status: 400 }
 2. **Verify then validate** - `verifyWebhook` proves authenticity, not payload shape. Parse and validate the body afterwards before acting on it.
 3. **Fails closed** - `verifyWebhook` returns `false` for an empty secret or bad signature; it returns `true` for an authentic-but-unmodeled event so new Polar event types are not rejected.
 4. **`ingestPageViews` never throws** - It returns `false` on failure so a cron can retry; use `ingestEvents` directly when you want errors to propagate.
-5. **Pass IDs explicitly** - The client is app-agnostic: pass `productId` (e.g. from `env.POLAR_PRODUCT_ID`) and metadata keys at the call site rather than baking them in.
+5. **`parseWebhook` when you need the event** - Use `verifyWebhook` when a boolean is enough; use `parseWebhook` when you want to act on the typed event (`event.type === "order.paid"`) without re-parsing the body. Both fail closed on a missing secret.
+6. **Pass IDs explicitly** - The client is app-agnostic: pass `productId` (e.g. from `env.POLAR_PRODUCT_ID`) and metadata keys at the call site rather than baking them in.
