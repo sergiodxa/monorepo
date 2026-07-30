@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-30
+**Accepted** - 2026-07-30 (deployed 2026-07-30; soaking before the OLD APP is deleted)
 
 ## How To Use This Document
 
@@ -464,7 +464,7 @@ The book is shipped; the funnel could become a static page or move to a hosted p
 - [x] Phase 1: Shell, home, and subscribe
 - [x] Phase 2: Checkout, upgrade, and the webhook
 - [x] Phase 3: Release page and sample chapter
-- [ ] Phase 4: Verification and cutover
+- [x] Phase 4: Verification and cutover — deployed and serving; soak, signed-webhook replay, and cleanup outstanding
 
 ### Phase 0 — done
 
@@ -768,6 +768,57 @@ the sample chapter's prose rhythm and code-fence theme, both written from scratc
 ParityDeals banner overrides, which style DOM only the third-party script injects and which
 cannot be seen at all while `EARLY` is the active campaign; and the struck-through
 discounted price, which needs a non-`EARLY` campaign to appear.
+
+### Phase 4 — deployed, soaking
+
+**Deviation from the plan, at the owner's direction: there was no side-by-side worker.**
+The new code was deployed **as the `books` worker itself** rather than beside it as
+`r3-books`. Deploying under a new name would have meant provisioning the three secrets
+again and re-registering the Polar webhook against a second URL; deploying under the
+existing name inherits the secrets, the custom domain, and the webhook registration
+untouched. `apps/r3-books/wrangler.jsonc` therefore declares `name: "books"` and the
+`books.sergiodxa.com` custom domain, so a deploy can never silently drop the route.
+
+**Rollback is a version pin, not a domain move**: `wrangler rollback` to version
+`1cc10a61-7660-450b-8665-f95538bdf951`, which served production until the cutover. The
+port went out as version `8e468f90-9de6-422e-9293-ab62fb4bc3ec`.
+
+**One real bug the deploy caught that no test could.** §5's "parse the chapter once at
+module scope" is not possible on this runtime: the Workers platform forbids async I/O,
+timers, and random values in global scope, and the Markdown transform does enough of that
+to fail _upload-time validation_ — the script would not deploy at all. The parse is now
+memoized on first use inside the handler, which gets the same one-parse-per-isolate the
+module-scope version was after. Worth noting that every local gate passed with the broken
+version: `bun run test`, `bun run build`, and even `wrangler deploy --dry-run` all accept
+code the real upload rejects.
+
+**Verified on the live domain**, three passes: `/`, `/release`, `/sample`, `/upgrade`,
+`/healthcheck` all 200; an unmatched path 404s; `/release` quotes the same three live
+prices ($29 / $119 / $199) it did before the cutover; `/api/checkout/essentials` 303s to a
+real Polar checkout session; and `/webhooks/polar` rejects an unsigned POST with
+`Invalid Polar webhook signature` — **the first time the Standard-Webhooks boundary has
+been exercised for real anywhere in this repo**, which the Phase 2 notes flagged as
+outstanding. The owner separately confirmed the checkout hand-off to Polar and the sample
+chapter in a browser.
+
+The first request after upload returned a 500 for the 404 page and has never reproduced
+since; every subsequent request 404s correctly. Recorded rather than explained — a
+cold-start fault that survives one request only is worth watching for during the soak.
+
+**Still outstanding:**
+
+- A signed `order.paid` replay from Polar's dashboard, confirming the Buttondown tag lands.
+  Needs dashboard access, so it is the owner's step.
+- Dark mode beyond the homepage, the chapter's prose rhythm and fence theme, and the
+  ParityDeals overrides — the last of which cannot be seen at all while `EARLY` is the
+  active campaign, since that is exactly when the banner does not load.
+- **`apps/books` is still in the tree, and its `wrangler.jsonc` still claims the `books`
+  worker name.** Two configs now point at one worker, so a deploy from the old directory
+  would silently revert production. It is left in place deliberately as source-level
+  rollback insurance during the soak, and it is the first thing to delete after it.
+- After the soak: rename `apps/r3-books` → `apps/books`, drop the `apps/books` Tailwind
+  override from `.oxfmtrc.json`, update the root `README.md`, and mark this ADR
+  **Implemented**.
 
 ## Notes
 

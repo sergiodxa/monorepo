@@ -44,13 +44,31 @@ const INVALID_MESSAGE = "Invalid email address. \nPlease try with another email 
 const GENERIC_MESSAGE = "Something went wrong, please try again.";
 
 /**
- * The chapter, parsed once when the module loads. The file is bundled and never changes at
- * runtime, so parsing it per submission would spend the same work on every reader.
+ * The parsed chapter, memoized after the first request that needs it.
  *
- * It carries no frontmatter, hence the empty-object schema: the parser requires one, and
- * this file has nothing to declare.
+ * Parsing cannot happen at module load, even though the file is bundled and never changes:
+ * the Workers runtime forbids asynchronous I/O, timers, and random values in global scope,
+ * and the Markdown transform does enough of that to make the whole script fail to deploy —
+ * as a validation error at upload time, not as a runtime fault. So the work is deferred to
+ * the first reader and kept for every reader after them, which is the same one-parse-per
+ * isolate the module-scope version was after.
  */
-const CHAPTER = new Markdown({ frontmatter: s.object({}) }).parse(chapterSource);
+let chapter: ReturnType<Markdown<ReturnType<typeof chapterSchema>>["parse"]> | undefined;
+
+/** The chapter carries no frontmatter, and the parser requires a schema regardless. */
+function chapterSchema() {
+	return s.object({});
+}
+
+/**
+ * Parses the chapter, or returns the parse already done in this isolate.
+ *
+ * @returns The parse result, success or failure.
+ */
+function readChapter() {
+	chapter ??= new Markdown({ frontmatter: chapterSchema() }).parse(chapterSource);
+	return chapter;
+}
 
 /**
  * Renders the page in its locked state: the offer, the email field, and any error.
@@ -84,10 +102,12 @@ function renderForm(ctx: RequestContext, options: { error?: string; status?: num
  * @returns The rendered HTML response, or the form again if the chapter cannot be parsed.
  */
 function renderChapter(ctx: RequestContext) {
-	if (isFailure(CHAPTER)) {
+	let parsed = readChapter();
+
+	if (isFailure(parsed)) {
 		// Unreachable short of a malformed bundled file, but the reader is already subscribed
 		// at this point, so the honest answer is the page they came from and not a 500.
-		ctx.logger.error("sample_parse_failed", { error: CHAPTER.error.message });
+		ctx.logger.error("sample_parse_failed", { error: parsed.error.message });
 		return renderForm(ctx, { error: GENERIC_MESSAGE, status: 500 });
 	}
 
@@ -101,7 +121,7 @@ function renderChapter(ctx: RequestContext) {
 			<SampleView
 				action={routes.sample.action.href()}
 				attribution={readAttribution(ctx.url.searchParams)}
-				chapter={renderToRemix(CHAPTER.data.content)}
+				chapter={renderToRemix(parsed.data.content)}
 			/>
 		</DocumentLayout>,
 	);

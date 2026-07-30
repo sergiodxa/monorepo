@@ -1,6 +1,6 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-	"name": "r3-books",
+	"name": "books",
 	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2026-04-10",
 	"compatibility_flags": ["nodejs_compat"],
@@ -23,8 +23,11 @@
 	// shapes this app parses; it is a public value, not a secret, so it lives in `vars`.
 	"vars": { "BUTTONDOWN_API_VERSION": "2024-07-01" },
 
-	// No `routes` entry yet: books.sergiodxa.com stays on the `books` worker until the
-	// cutover, so this worker is reachable only on its workers.dev subdomain.
+	// This app deploys *as* the `books` worker rather than beside it, so the custom domain,
+	// the three secrets, and the Polar webhook URL registered against this domain all carry
+	// over untouched. The route is declared here so a deploy never drops it. Rollback is
+	// redeploying the previous version, not moving a domain.
+	"routes": [{ "pattern": "books.sergiodxa.com", "custom_domain": true }],
 
 	// This worker has no storage at all — no D1, KV, R2, queue, cron, or Durable
 	// Object bindings. Its only state lives in Buttondown and Polar.
