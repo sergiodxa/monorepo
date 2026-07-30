@@ -9,6 +9,8 @@ import YAML from "yaml";
 import { fence } from "./fence";
 
 export { fence, normalizeLanguage } from "./fence";
+export { toPlainText } from "./plain-text";
+export type { PlainTextOptions } from "./plain-text";
 
 /**
  * Error returned when frontmatter fails to parse or validate.

@@ -5,6 +5,7 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
+		".": "./src/index.ts",
 		"./server": "./src/server/index.ts",
 		"./client/react": "./src/client/react/index.ts",
 		"./client/remix": "./src/client/remix/index.ts",

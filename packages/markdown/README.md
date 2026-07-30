@@ -8,6 +8,7 @@ Type-safe Markdown parsing on the server with React and Remix renderers on the c
 
 The package is split by responsibility:
 
+- `@pkg/markdown` transforms markdown without rendering it, currently plain-text extraction
 - `@pkg/markdown/server` parses markdown and frontmatter only
 - `@pkg/markdown/client/react` renders content in React apps
 - `@pkg/markdown/client/remix` renders content in Remix apps
@@ -54,6 +55,22 @@ let content = result.data.content;
 let frontmatter = result.data.frontmatter;
 ```
 
+### Plain text from markdown
+
+```typescript
+import { toPlainText } from "@pkg/markdown";
+
+let text = toPlainText(`---
+title: Hello World
+---
+
+# Hello
+
+A [linked](https://example.com) paragraph with \`code\`.
+`);
+// "Hello\n\nA linked paragraph with code."
+```
+
 ### Client (React): render markdown
 
 ```tsx
@@ -90,6 +107,37 @@ export let links = () => [{ rel: "stylesheet", href: prismDark }];
 ```
 
 ## API
+
+### `toPlainText(markdown: string, options?: PlainTextOptions): string`
+
+Import from `@pkg/markdown`.
+
+Extracts the prose from a markdown document by walking the parsed AST, so the
+result is derived from what the parser identified rather than from a pass of
+regular expressions over the source. Frontmatter, reference definitions, link
+targets and titles, raw HTML tags, and comments are left out; headings,
+paragraphs, list items, table rows, and block quotes each become one block,
+separated by a blank line. Inline code is kept, since it is part of the sentence
+around it.
+
+**Parameters:**
+
+- `markdown`: Markdown source, with or without frontmatter
+- `options.fences`: Include the body of code blocks; defaults to `false`
+- `options.images`: Include image alternative text; defaults to `false`
+
+**Returns:**
+
+- The document's prose, blocks separated by a blank line
+
+**Example:**
+
+```typescript
+import { toPlainText } from "@pkg/markdown";
+
+let text = toPlainText(body);
+let indexed = toPlainText(body, { fences: true });
+```
 
 ### `Markdown<Schema>`
 
@@ -288,6 +336,20 @@ function Page({ content }: { content: Markdown.AST }) {
 }
 ```
 
+### Pattern: Excerpt and reading time from a post body
+
+Plain-text extraction is the step before any text measurement; keep the text
+operations themselves in a string utility so this package stays about markdown.
+
+```typescript
+import { toPlainText } from "@pkg/markdown";
+import { excerpt, wordCount } from "@pkg/strings";
+
+let text = toPlainText(body);
+let summary = excerpt(text, { length: 200 });
+let minutes = Math.ceil(wordCount(text) / 200);
+```
+
 ### Pattern: Frontmatter-only reads for list pages
 
 ```typescript
@@ -307,6 +369,7 @@ let metadata = result.data.frontmatter;
 - [`@pkg/result`](/packages/result) - Explicit success/failure handling
 - [`@pkg/validate`](/packages/validate) - Validation helpers with Standard Schema
 - [`@pkg/cn`](/packages/cn) - Class name composition used by renderers
+- [`@pkg/strings`](/packages/strings) - Excerpts, word counts, and slugs over the text `toPlainText()` returns
 
 ## Tips
 
@@ -315,3 +378,5 @@ let metadata = result.data.frontmatter;
 3. **Always load a Prism stylesheet** - Import `@pkg/markdown/styles/light.css` or `@pkg/markdown/styles/dark.css` in routes that render markdown.
 4. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests.
 5. **Prefer `Markdown.frontmatter` for index pages** - It is faster when you only need metadata and not full rendered content.
+6. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
+7. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.
