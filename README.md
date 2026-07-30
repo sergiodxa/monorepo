@@ -90,6 +90,7 @@ Run from the repository root:
 | [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                                     |
 | [cloudflare-mocks](packages/cloudflare-mocks)           | In-memory Cloudflare binding mocks for tests                  |
 | [cn](packages/cn)                                       | Class name utility                                            |
+| [cron](packages/cron)                                   | Cron schedules with zone-aware occurrences and descriptors    |
 | [crypto](packages/crypto)                               | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM |
 | [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1                    |
 | [data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL               |

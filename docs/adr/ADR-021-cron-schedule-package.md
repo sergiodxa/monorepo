@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -56,6 +56,11 @@ schedule.matches(date, { timeZone });
 ```
 
 The time zone is an explicit argument, matching the convention in `@pkg/dates` (ADR-020). A schedule is stored with the zone the user configured it in; evaluation happens in that zone and returns instants, so DST transitions do not silently shift a daily 09:00 job.
+
+Two DST rules follow from that, and both are chosen so a dead man's switch never expects nothing:
+
+- **A wall time the clock skips still runs**, carried past the jump rather than dropped. This matches Vixie cron, and it means a weekly schedule landing in a spring-forward gap fires an hour late instead of going a week without a run.
+- **A repeated wall time fires on the first pass only**, and `prev()` reports the same instant `next()` does. A schedule pinned to a wall-clock hour keeps that local time; one firing every hour keeps its spacing and runs in both passes, because those are different intentions.
 
 ### 3. Descriptions Are Structured Data
 
@@ -121,7 +126,7 @@ schedule.expectedBy(lastRun, { timeZone, grace });
 **Estimated Effort:** 4 hours
 
 1. `next`, `prev`, `matches` with explicit time zones.
-2. DST transition tests (spring forward skips, fall back does not double-fire).
+2. DST transition tests: a run whose wall time the clock skips is carried past the jump, and a repeated hour does not double-fire.
 3. Parity tests against the schedules currently stored by the uptime product.
 
 ### Phase 3: Description, Lateness, Adoption
@@ -161,9 +166,9 @@ Replace cron expressions in the product with a structured schedule builder.
 
 ## Current Progress
 
-- [ ] Phase 1: Parser
-- [ ] Phase 2: Occurrences
-- [ ] Phase 3: Description, Lateness, Adoption
+- [x] Phase 1: Parser
+- [x] Phase 2: Occurrences
+- [ ] Phase 3: Description, Lateness, Adoption (built; app adoption pending)
 
 ## Notes
 
