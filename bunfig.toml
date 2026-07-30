@@ -7,4 +7,10 @@ preload = ["./test/setup.ts"]
 # `templates/` is scaffolding for new apps (placeholder package name, no installed
 # dependencies), so its example specs can't resolve `remix/*` at the repo root.
 # Skip them; they run once a template has been copied into a real workspace.
-pathIgnorePatterns = ["**/templates/**"]
+# Bun resolves one `tsconfig.json` per invocation, from the working directory, so a
+# single run has one JSX runtime. The repo has two: the root sets `remix/ui`, while
+# `apps/auth`, `apps/blog`, `apps/books`, `apps/uptime`, `packages/ui`,
+# `packages/markdown-react`, and `packages/markdown` set `react`. A root run therefore
+# cannot compile a React app's `.tsx`, so workspaces whose tests import one are skipped
+# here and run in a second pass from their own directory — see the root `test` script.
+pathIgnorePatterns = ["**/templates/**", "**/apps/blog/**"]

@@ -8,17 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-// This app's `types` list is scoped to its runtime, so the test globals are
-// referenced here rather than added to every module's ambient type surface.
+import { describe, expect, test } from "bun:test";
 
-import { describe, expect, mock, test } from "bun:test";
-
-// The fence node pulls in JSX and Prism, which the repo-root JSX runtime cannot
-// resolve for this app, and `plain()` never touches it. Stubbing it keeps the
-// module importable here without changing what is under test.
-mock.module("~/components/md/fence", () => ({ fence: {} }));
-
-let { Markdown } = await import("./markdown");
+import { Markdown } from "./markdown";
 
 describe("Markdown.plain", () => {
 	test("keeps heading and paragraph prose, separating blocks by a blank line", () => {
