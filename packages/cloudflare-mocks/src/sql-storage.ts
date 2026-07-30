@@ -1,0 +1,231 @@
+/**
+ * Durable Object `SqlStorage` binding backed by an in-memory `bun:sqlite` database. It
+ * runs synchronously and honours `BEGIN`/`COMMIT`/`ROLLBACK` and `SAVEPOINT`, so code
+ * relying on real Durable Object transaction atomicity can be tested for real.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { Database } from "bun:sqlite";
+
+/** Value shapes SQLite accepts as a positional binding. */
+type SqliteBinding = string | number | null | Uint8Array;
+
+/** Options for {@link createSqlStorage}. */
+export interface SqlStorageMockOptions {
+	/**
+	 * Path of the SQLite file to open. Defaults to `:memory:`; pass a path only when a
+	 * test must inspect the database outside the process.
+	 */
+	filename?: string;
+}
+
+/**
+ * Single-pass cursor over the rows one `exec` produced.
+ *
+ * Reading is destructive, matching the platform: rows already consumed by `next()` or
+ * `toArray()` are gone, so a double read returns nothing rather than replaying.
+ * @template T Row shape the cursor yields.
+ */
+export class MockSqlStorageCursor<
+	T extends Record<string, SqlStorageValue>,
+> implements SqlStorageCursor<T> {
+	/** Result column names in declaration order. */
+	columnNames: string[];
+
+	#rows: T[];
+	#index = 0;
+	#rowsWritten: number;
+
+	/**
+	 * @param rows Rows the statement produced.
+	 * @param columnNames Result column names.
+	 * @param rowsWritten Rows the statement wrote, as reported by SQLite.
+	 */
+	constructor(rows: T[] = [], columnNames: string[] = [], rowsWritten = 0) {
+		this.#rows = rows;
+		this.columnNames = columnNames;
+		this.#rowsWritten = rowsWritten;
+	}
+
+	/** Rows consumed from this cursor so far. */
+	get rowsRead(): number {
+		return this.#index;
+	}
+
+	/** Rows the statement wrote; `0` for a read-only statement. */
+	get rowsWritten(): number {
+		return this.#rowsWritten;
+	}
+
+	/**
+	 * Advances the cursor by one row.
+	 * @returns The next row, or `{ done: true }` once the cursor is exhausted.
+	 */
+	next(): { done?: false; value: T } | { done: true; value?: never } {
+		if (this.#index >= this.#rows.length) return { done: true };
+
+		let value = this.#rows[this.#index] as T;
+		this.#index += 1;
+
+		return { value };
+	}
+
+	/**
+	 * Drains the cursor.
+	 * @returns Every row not yet consumed.
+	 */
+	toArray(): T[] {
+		let rows = this.#rows.slice(this.#index);
+		this.#index = this.#rows.length;
+		return rows;
+	}
+
+	/**
+	 * Reads the one row the statement was expected to produce.
+	 * @returns The single row.
+	 * @throws When the statement produced no rows or more than one.
+	 */
+	one(): T {
+		let rows = this.toArray();
+
+		if (rows.length !== 1) {
+			throw new Error(`Expected exactly one result, got ${String(rows.length)}`);
+		}
+
+		return rows[0] as T;
+	}
+
+	/**
+	 * Iterates remaining rows as positional value arrays instead of objects.
+	 * @template U Tuple shape of a row's values.
+	 */
+	raw<U extends SqlStorageValue[]>(): IterableIterator<U> {
+		let columnNames = this.columnNames;
+
+		return this.toArray()
+			.map((row) => columnNames.map((column) => row[column]) as U)
+			[Symbol.iterator]();
+	}
+
+	/** Iterates remaining rows, so a cursor can be spread or used in `for…of`. */
+	[Symbol.iterator](): IterableIterator<T> {
+		return this.toArray()[Symbol.iterator]();
+	}
+}
+
+/** Placeholder for the `Statement` constructor the binding exposes but never needs here. */
+export class MockSqlStorageStatement {}
+
+/**
+ * Creates a Durable Object `SqlStorage` binding over a fresh in-memory SQLite database.
+ *
+ * `exec` runs a single statement synchronously and returns a cursor, so transactions
+ * issued as SQL (`BEGIN`, `SAVEPOINT`) behave as they do inside a Durable Object.
+ * @param options Optional SQLite filename override.
+ * @returns A `SqlStorage` binding whose SQL really runs.
+ * @example let sql = createSqlStorage(); sql.exec("CREATE TABLE t (id INTEGER)");
+ */
+export function createSqlStorage(options?: SqlStorageMockOptions): SqlStorage {
+	let sqlite = new Database(options?.filename ?? ":memory:");
+
+	/** Reads a single numeric scalar out of SQLite, used for size and change counts. */
+	function readScalar(sql: string): number {
+		let row = sqlite.query(sql).get() as { value: number } | null;
+		return row ? Number(row.value) : 0;
+	}
+
+	/**
+	 * Runs one statement and returns a cursor over its rows.
+	 *
+	 * `rowsWritten` comes from the delta of SQLite's `total_changes()`, so a read-only
+	 * statement reports `0` instead of inheriting the previous write's count.
+	 *
+	 * A statement that returns no columns runs as a script when no bindings are given, so
+	 * a `;`-separated migration executes in full rather than silently dropping everything
+	 * after the first statement.
+	 * @param query One SQL statement, or a `;`-separated script when there are no bindings.
+	 * @param bindings Positional values for the statement's `?` placeholders.
+	 * @returns A single-pass cursor over the result rows.
+	 */
+	function exec<T extends Record<string, SqlStorageValue>>(
+		query: string,
+		...bindings: unknown[]
+	): SqlStorageCursor<T> {
+		let bound = bindings.map(toBinding);
+		let statement = sqlite.query(query);
+		let changesBefore = readScalar("SELECT total_changes() AS value");
+		let rows: T[] = [];
+
+		if (statement.columnNames.length > 0) {
+			rows = statement.all(...bound).map((row) => toRow<T>(row));
+		} else if (bound.length === 0) {
+			sqlite.run(query);
+		} else {
+			statement.run(...bound);
+		}
+
+		let written = readScalar("SELECT total_changes() AS value") - changesBefore;
+
+		return new MockSqlStorageCursor<T>(rows, [...statement.columnNames], written);
+	}
+
+	return {
+		exec,
+
+		/** Current database size in bytes, derived from SQLite's page accounting. */
+		get databaseSize(): number {
+			return readScalar(
+				"SELECT page_count * page_size AS value FROM pragma_page_count(), pragma_page_size()",
+			);
+		},
+
+		// The binding exposes both constructors purely so instances can be type-tested.
+		// They carry no behavior, so the mock's own classes stand in for them.
+		Cursor: MockSqlStorageCursor as unknown as typeof SqlStorageCursor,
+		Statement: MockSqlStorageStatement as unknown as typeof SqlStorageStatement,
+	};
+}
+
+/**
+ * Converts a SQLite row into the `SqlStorageValue` shape a cursor yields, replacing the
+ * byte views `bun:sqlite` returns for BLOB columns with `ArrayBuffer`.
+ */
+function toRow<T extends Record<string, SqlStorageValue>>(row: unknown): T {
+	if (typeof row !== "object" || row === null) return {} as T;
+
+	let converted: Record<string, SqlStorageValue> = {};
+
+	for (let [column, value] of Object.entries(row as Record<string, unknown>)) {
+		if (ArrayBuffer.isView(value)) {
+			let bytes = new Uint8Array(value.byteLength);
+			bytes.set(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+			converted[column] = bytes.buffer;
+			continue;
+		}
+
+		converted[column] = value as SqlStorageValue;
+	}
+
+	return converted as T;
+}
+
+/**
+ * Validates and converts one bound value.
+ *
+ * Durable Object SQL accepts only `null`, numbers, strings, and byte buffers; booleans
+ * are folded to `1`/`0` for convenience. Anything else throws, which is how a value that
+ * should have been JSON-encoded surfaces in a test instead of in production.
+ */
+function toBinding(value: unknown): SqliteBinding {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "boolean") return value ? 1 : 0;
+	if (typeof value === "number" || typeof value === "string") return value;
+	if (value instanceof ArrayBuffer) return new Uint8Array(value);
+
+	if (ArrayBuffer.isView(value)) {
+		return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+	}
+
+	throw new Error(`SqlStorage: type '${typeof value}' is not a supported binding value`);
+}

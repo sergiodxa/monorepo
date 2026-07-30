@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-07-29
+**Accepted** - 2026-07-29
 
 ## Background
 
@@ -170,8 +170,8 @@ Accept module mocking as the testing strategy.
 
 ## Current Progress
 
-- [ ] Phase 1: Storage
-- [ ] Phase 2: Messaging And Events
+- [x] Phase 1: Storage
+- [x] Phase 2: Messaging And Events
 - [ ] Phase 3: Runtime And Adoption
 
 ## Notes
