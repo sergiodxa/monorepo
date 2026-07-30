@@ -315,12 +315,12 @@ Retry a Result-returning async function with configurable backoff. Retries until
 **Example:**
 
 ```typescript
-let result = await retry(() => fetchData(url), { times: 3, delay: "100ms" });
+let result = await retry(() => fetchData(url), { times: 3, delay: 100 });
 
 // Only retry on network errors with exponential backoff
 let result = await retry(() => fetchData(url), {
 	times: 5,
-	delay: "1s",
+	delay: 1_000,
 	backoff: "exponential",
 	when: (error) => error instanceof NetworkError,
 });
@@ -361,7 +361,7 @@ Error thrown when all retry attempts have been exhausted.
 **Example:**
 
 ```typescript
-let result = await retry(() => fetchData(), { times: 3, delay: "100ms" });
+let result = await retry(() => fetchData(), { times: 3, delay: 100 });
 if (isFailure(result) && result.error instanceof RetryError) {
 	console.log(result.error.message); // "Failed after 3 attempts"
 }

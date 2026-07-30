@@ -9,8 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DurationInput } from "@pkg/duration";
 import type { Session, SessionStorage } from "remix/session";
 
+import { toSeconds } from "@pkg/duration";
 import { createSession } from "remix/session";
 
 import type { KVStore } from "./kv-store";
@@ -18,7 +20,7 @@ import type { KVStore } from "./kv-store";
 /**
  * Default KV TTL used when no custom session lifetime is provided.
  */
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
+const SESSION_TTL_SECONDS = toSeconds("365 days");
 
 /**
  * Default key prefix used to isolate session entries in KV.
@@ -39,9 +41,12 @@ export namespace KVSessionStorage {
 	 */
 	export interface Options {
 		/**
-		 * Session expiration in seconds for KV writes.
+		 * How long a saved session survives in KV. A bare number is whole seconds,
+		 * the unit this option has always used and the unit KV expiration counts,
+		 * so numeric call sites keep their exact lifetime; a duration string states
+		 * its own unit instead, making `3600` and `"1 hour"` equivalent.
 		 */
-		ttlSeconds?: number;
+		ttlSeconds?: DurationInput;
 
 		/**
 		 * Prefix prepended to every KV session key.
@@ -111,8 +116,14 @@ export class KVSessionStorage<
 		return this.#options.prefix ?? SESSION_PREFIX;
 	}
 
+	/**
+	 * Session lifetime in the whole seconds KV expiration counts, falling back to
+	 * the package default when the caller did not configure one.
+	 */
 	private get ttlSeconds() {
-		return this.#options.ttlSeconds ?? SESSION_TTL_SECONDS;
+		let ttl = this.#options.ttlSeconds ?? SESSION_TTL_SECONDS;
+		if (typeof ttl === "number") return ttl;
+		return toSeconds(ttl);
 	}
 
 	private key(sessionId: string) {

@@ -9,15 +9,28 @@
  */
 
 import { JWK } from "@edgefirst-dev/jwt";
-import ms from "ms";
+import { toMs } from "@pkg/duration";
 
 export const AUTH_SERVER_NAME = "Auth by Sergio Xalambrí";
 export const AUTH_SERVER_CLIENT_ID = "d12d3901-3cbe-468b-adf5-ac3d3e015728";
 export const ISSUER = "auth.sergiodxa.com";
 const ISSUER_HOST = "https://auth.sergiodxa.com";
-export const ID_TOKEN_TTL = ms("1 hour");
-export const ACCESS_TOKEN_TTL = ms("1 hour");
-export const AUTHZ_CODE_TTL = ms("10 minutes"); // RFC 6749 recommends max 10 minutes
+
+/**
+ * Lifetime of an issued ID token, in milliseconds for `Date` arithmetic.
+ */
+export const ID_TOKEN_TTL = toMs("1 hour");
+
+/**
+ * Lifetime of an issued access token, in milliseconds for `Date` arithmetic.
+ */
+export const ACCESS_TOKEN_TTL = toMs("1 hour");
+
+/**
+ * Lifetime of an authorization code, in milliseconds. Kept at the maximum RFC
+ * 6749 recommends, since a code is redeemed immediately after the redirect.
+ */
+export const AUTHZ_CODE_TTL = toMs("10 minutes");
 
 /**
  * Supported OAuth 2.0 / OIDC scopes

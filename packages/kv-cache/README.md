@@ -86,7 +86,7 @@ Write a value to the cache. Uses `waitUntil` for non-blocking writes.
 
 - `key`: The cache key
 - `value`: The string value to cache
-- `options.ttl`: Optional TTL in seconds
+- `options.ttl`: Optional TTL, either a number of seconds or a `@pkg/duration` string such as `"1 hour"`
 - `options.metadata`: Optional KV metadata
 
 **Example:**
@@ -137,7 +137,7 @@ Fetch-through pattern: read from cache, or compute and cache if missing.
 
 - `key`: The cache key
 - `fn`: Function to compute the value if not cached
-- `options.ttl`: Optional TTL in seconds
+- `options.ttl`: Optional TTL, either a number of seconds or a `@pkg/duration` string such as `"1 hour"`
 
 **Returns:**
 
@@ -204,7 +204,7 @@ await cache.read(user);
 
 ```typescript
 interface WriteOptions {
-	ttl?: number;
+	ttl?: DurationInput;
 	metadata?: Record<string, unknown>;
 }
 ```

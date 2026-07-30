@@ -156,10 +156,12 @@ Use `Milliseconds` and `Seconds` branded number types instead of strings.
 ## Current Progress
 
 - [x] Phase 1: Types And Conversions
-- [ ] Phase 2: Adoption
+- [x] Phase 2: Adoption
 
 ## Notes
 
+- `@pkg/result` must never depend on this package. This package depends on `@pkg/result` for its `Result`-returning `parse()`, so the reverse edge would be a cycle. `retry()` therefore takes plain milliseconds with named constants rather than a `DurationInput`, which is the one place in the monorepo a duration is expressed as a bare number by necessity rather than by choice.
+- The "a bare number is always milliseconds" convention governs new APIs. `@pkg/kv-cache` and `@pkg/session-storage-kv` predate this package with numeric options already denominated in seconds, feeding Cloudflare's `expirationTtl` directly, so a number keeps meaning seconds there and only duration strings are converted. Reinterpreting those numbers would have divided every existing TTL by a thousand, silently. Both options document their unit, and `ttlSeconds` carries it in the name.
 - Keep the unit list closed. Each added unit multiplies the template literal union, and editor performance degrades before correctness does.
 - Keep the function list closed too. Anything that takes a `Date` or produces a string for a reader belongs in `@pkg/dates`, and the test for a proposed addition is whether it could be mistaken for something that package already offers.
 - The package is dependency-free and touches no platform API, not even `Intl`.

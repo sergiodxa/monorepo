@@ -50,7 +50,7 @@ Creates a KV-backed session storage adapter.
 
 - `kv`: The `KVStore` to persist sessions in (a Cloudflare `KVNamespace` satisfies this).
 - `options.prefix?`: Prefix prepended to every KV key (default `"session:"`).
-- `options.ttlSeconds?`: KV expiration in seconds (default one year).
+- `options.ttlSeconds?`: KV expiration, either a number of seconds or a `@pkg/duration` string such as `"30 days"` (default one year).
 
 #### `storage.read(cookie: string | null): Promise<Session>`
 

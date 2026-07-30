@@ -1,3 +1,12 @@
+/**
+ * Unit tests for the retry helper. They cover the attempt budget, the `when`
+ * predicate, and the timing produced by each backoff strategy, so the delay
+ * math and the loop's exit conditions cannot regress.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { failure } from "./failure.js";
@@ -5,6 +14,12 @@ import { isFailure } from "./is-failure.js";
 import { isSuccess } from "./is-success.js";
 import { retry } from "./retry.js";
 import { success } from "./success.js";
+
+/**
+ * One second in milliseconds, the unit `retry`'s `delay` counts in, so delays
+ * written here keep their unit visible.
+ */
+const SECOND_MS = 1_000;
 
 describe(retry, () => {
 	test("returns success immediately if first attempt succeeds", async () => {
@@ -187,7 +202,7 @@ describe(retry, () => {
 		expect(delays[2]).toBeLessThan(230);
 	});
 
-	test("accepts string delay parsed by ms", async () => {
+	test("waits the delay expressed in milliseconds", async () => {
 		let timestamps: number[] = [];
 		await retry(
 			async () => {
@@ -197,7 +212,7 @@ describe(retry, () => {
 				}
 				return success("done");
 			},
-			{ times: 3, delay: "50ms", backoff: "constant" },
+			{ times: 3, delay: 50, backoff: "constant" },
 		);
 
 		let diff = timestamps[1] - timestamps[0];
@@ -205,7 +220,7 @@ describe(retry, () => {
 		expect(diff).toBeLessThan(100);
 	});
 
-	test("accepts string delay with seconds", async () => {
+	test("waits a delay composed from a named unit constant", async () => {
 		let start = Date.now();
 		await retry(
 			async () => {
@@ -214,10 +229,20 @@ describe(retry, () => {
 				}
 				return success("done");
 			},
-			{ times: 3, delay: "0.1s", backoff: "constant" },
+			{ times: 3, delay: 0.1 * SECOND_MS, backoff: "constant" },
 		);
 
 		let elapsed = Date.now() - start;
 		expect(elapsed).toBeGreaterThanOrEqual(90);
+	});
+
+	test("rejects a delay that is not a number", async () => {
+		// The cast bypasses the compile-time type on purpose: the guard exists for
+		// untyped callers, and a duration string is no longer accepted.
+		let delay = "100ms" as unknown as number;
+
+		await expect(retry(async () => success("done"), { times: 3, delay })).rejects.toThrow(
+			TypeError,
+		);
 	});
 });

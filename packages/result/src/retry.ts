@@ -1,4 +1,12 @@
-import ms from "ms";
+/**
+ * Retry helper for `Result`-returning async functions. It re-runs an operation
+ * until it succeeds, its attempt budget is spent, or a predicate declines the
+ * error, waiting a constant, linear, or exponential delay between attempts.
+ * Delays are plain milliseconds so this module stays dependency-free.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 
 import type { Result } from "./types.js";
 
@@ -6,12 +14,23 @@ import { failure } from "./failure.js";
 import { isSuccess } from "./is-success.js";
 
 /**
+ * Backoff strategy applied when a caller does not choose one.
+ */
+const DEFAULT_BACKOFF = "exponential";
+
+/**
+ * Factor the exponential strategy raises to the attempt number, so the delay
+ * doubles on every retry.
+ */
+const EXPONENTIAL_BACKOFF_FACTOR = 2;
+
+/**
  * Error thrown when all retry attempts have been exhausted.
  * Contains information about how many attempts were made before giving up.
  *
  * @example
  * ```ts
- * let result = await retry(() => fetchData(), { times: 3, delay: "100ms" });
+ * let result = await retry(() => fetchData(), { times: 3, delay: 100 });
  * if (isFailure(result) && result.error instanceof RetryError) {
  *   console.log(result.error.message); // "Failed after 3 attempts"
  * }
@@ -33,8 +52,12 @@ export namespace retry {
 	export interface Options<E extends Error> {
 		/** Maximum number of retry attempts */
 		times: number;
-		/** Delay between retries. Can be a number (ms) or a string parsed by ms (e.g. "100ms", "1s") */
-		delay: number | ms.StringValue;
+		/**
+		 * Base delay between retries, in milliseconds. Milliseconds keep this
+		 * module free of a duration parser; name the unit at the call site with a
+		 * module-level constant (e.g. `5 * SECOND_MS`) when the number is large.
+		 */
+		delay: number;
 		/**
 		 * Backoff strategy.
 		 * @default "exponential"
@@ -52,7 +75,7 @@ export namespace retry {
  * @param fn - Async function that returns a Result
  * @param options - Retry configuration
  * @param options.times - Maximum number of retry attempts
- * @param options.delay - Base delay between retries (number in ms or string like "100ms", "1s")
+ * @param options.delay - Base delay between retries, in milliseconds
  * @param options.backoff - Backoff strategy: "constant", "linear", or "exponential" (default: "exponential")
  * @param options.when - Optional predicate to decide if error should be retried
  * @returns The successful Result, or a Failure with RetryError after all attempts exhausted
@@ -61,7 +84,7 @@ export namespace retry {
  * ```ts
  * let result = await retry(
  *   () => fetchData(url),
- *   { times: 3, delay: "100ms" }
+ *   { times: 3, delay: 100 }
  * );
  * ```
  *
@@ -72,7 +95,7 @@ export namespace retry {
  *   () => fetchData(url),
  *   {
  *     times: 5,
- *     delay: "1s",
+ *     delay: 1000,
  *     backoff: "exponential",
  *     when: (error) => error instanceof NetworkError,
  *   }
@@ -84,8 +107,8 @@ export async function retry<T, E extends Error>(
 	options: retry.Options<E>,
 ): Promise<Result<T, E | RetryError>> {
 	if (options.times <= 0) throw new RangeError("Retry times must be greater than 0");
-	if (typeof options.delay !== "number" && typeof options.delay !== "string") {
-		throw new TypeError("Delay must be a number or a string");
+	if (typeof options.delay !== "number") {
+		throw new TypeError("Delay must be a number of milliseconds");
 	}
 
 	let attempts = 0;
@@ -96,23 +119,13 @@ export async function retry<T, E extends Error>(
 		attempts++;
 		if (options.when && !options.when(result.error, attempts)) break;
 
-		let delay: number;
-		if (options.backoff === "constant") {
-			if (typeof options.delay === "number") delay = options.delay;
-			else if (typeof options.delay === "string") delay = ms(options.delay);
-			else throw new TypeError("Delay must be a number or a string");
-		}
+		let backoff = options.backoff ?? DEFAULT_BACKOFF;
 
-		if (options.backoff === "linear") {
-			if (typeof options.delay === "number") delay = options.delay * attempts;
-			else if (typeof options.delay === "string") delay = ms(options.delay) * attempts;
-			else throw new TypeError("Delay must be a number or a string");
-		}
-
-		if (options.backoff === "exponential" || !options.backoff) {
-			if (typeof options.delay === "number") delay = options.delay * 2 ** (attempts - 1);
-			else if (typeof options.delay === "string") delay = ms(options.delay) * 2 ** (attempts - 1);
-			else throw new TypeError("Delay must be a number or a string");
+		// "constant" repeats the base delay, so it needs no adjustment.
+		let delay = options.delay;
+		if (backoff === "linear") delay = options.delay * attempts;
+		if (backoff === "exponential") {
+			delay = options.delay * EXPONENTIAL_BACKOFF_FACTOR ** (attempts - 1);
 		}
 
 		await new Promise((resolve) => setTimeout(resolve, delay));
