@@ -19,10 +19,13 @@ import { formData } from "remix/form-data-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import checkout from "~/app/http/controllers/checkout";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
 import home from "~/app/http/controllers/home";
 import subscribe from "~/app/http/controllers/subscribe";
+import * as upgrade from "~/app/http/controllers/upgrade";
+import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import logger from "~/app/http/middleware/logger";
 import routes from "~/routes/web";
 
@@ -54,9 +57,15 @@ export default function application() {
 		defaultHandler,
 	});
 
+	/* Mapped one leaf at a time: handing `router.map` a nested route map throws, so a
+	route group is spread rather than passed whole. */
 	router.map(routes.home, home);
 	router.map(routes.healthcheck, healthcheck);
+	router.map(routes.upgrade.index, upgrade.index);
+	router.map(routes.upgrade.action, upgrade.action);
 	router.map(routes.api.subscribe, subscribe);
+	router.map(routes.api.checkout, checkout);
+	router.map(routes.webhooks.polar, polarWebhook);
 
 	return router;
 }

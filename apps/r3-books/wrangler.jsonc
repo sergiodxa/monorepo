@@ -17,6 +17,12 @@
 
 	"assets": { "directory": "./build/client" },
 
+	// Buttondown picks an API version per request from the `x-api-version` header, and
+	// falls back to the newsletter's pinned version or, failing that, to whatever is
+	// latest. Pinning it here is what stops a provider release from changing the response
+	// shapes this app parses; it is a public value, not a secret, so it lives in `vars`.
+	"vars": { "BUTTONDOWN_API_VERSION": "2024-07-01" },
+
 	// No `routes` entry yet: books.sergiodxa.com stays on the `books` worker until the
 	// cutover, so this worker is reachable only on its workers.dev subdomain.
 

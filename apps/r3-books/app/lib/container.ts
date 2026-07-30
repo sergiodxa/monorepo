@@ -29,7 +29,14 @@ import { Buttondown } from "~/app/services/buttondown";
  */
 export const container = new ServiceContainer();
 
-container.scoped(Buttondown, () => new Buttondown({ apiKey: env.BUTTONDOWN_API_KEY }));
+container.scoped(
+	Buttondown,
+	() =>
+		new Buttondown({
+			apiKey: env.BUTTONDOWN_API_KEY,
+			apiVersion: env.BUTTONDOWN_API_VERSION,
+		}),
+);
 container.scoped(
 	PolarClient,
 	() => new PolarClient({ accessToken: requireSecret("POLAR_ACCESS_TOKEN") }),

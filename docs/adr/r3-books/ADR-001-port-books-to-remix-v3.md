@@ -462,7 +462,7 @@ The book is shipped; the funnel could become a static page or move to a hosted p
 
 - [x] Phase 0: Scaffold and `@pkg/polar` extension
 - [x] Phase 1: Shell, home, and subscribe
-- [ ] Phase 2: Checkout, upgrade, and the webhook
+- [x] Phase 2: Checkout, upgrade, and the webhook
 - [ ] Phase 3: Release page and sample chapter
 - [ ] Phase 4: Verification and cutover
 
@@ -543,6 +543,93 @@ class-by-class from the source but not yet compared in a browser, which Phase 3 
 - Defect #9 fixed early (it belongs to this endpoint): a Buttondown failure with no
   special-cased code now logs the upstream message and shows a generic
   "Something went wrong, please try again."
+
+### Phase 2 — done
+
+Verified: `bun format:fix`, `bun lint`, `bun run typecheck` (every workspace), `bun run test`
+(7633 repo-wide; 58 in this app, up from 21), `bun run build`, `bunx wrangler deploy --dry-run`
+(which now reports the one `vars` entry). Not verified: nothing is deployed, so no live Polar
+or Buttondown call has been made; no browser check of `/upgrade`; and **no real
+Standard-Webhooks signature has ever been verified end to end** — see the last bullet.
+
+- `app/data/product.ts` carries the `Product` and `Discounts` ids across verbatim, with the
+  upgrade discount moved in as `Discounts.UPGRADE` (defect #3). `Discounts` documents why
+  that one id is different in kind: it is handed out, never auto-applied, which is what the
+  selection rules encode by excluding it from the allow-list.
+- `app/services/discount.ts` ports `findApplicableDiscount` rule-for-rule and takes the
+  `PolarClient` as a parameter. The log event names (`discount_list_fetched`,
+  `discount_applied`, `discount_not_applicable`, `discount_fetch_error`) are unchanged.
+  Thirteen unit tests cover the happy path, an open-ended campaign, and every rejection
+  branch — not in the allow-list, the upgrade discount specifically, not started, ended,
+  redemptions exhausted, no products, a non-Complete product, a campaign covering Complete
+  _and_ Essentials, first-match ordering, an empty list, and a Polar failure (defect #8).
+- `GET /api/checkout/:type`, `GET`/`POST /upgrade`, and `POST /webhooks/polar`, all mapped
+  in `bootstrap/app.tsx`. `resources/views/upgrade.tsx` reuses `subscribe-form.tsx` and
+  keeps the OLD APP's heading, paragraph, and "Get Upgrade Link" label.
+- Defect #9's rule holds in the new controllers: no upstream text reaches a visitor. The
+  upgrade page's only visitor-facing failure is the validator's own copy; a Polar error
+  becomes an unhandled 500 rather than a page quoting Polar. The webhook does return the
+  provider-facing reason in its 400 body, which is correct — its caller is Polar, not a
+  reader, and Polar needs to know why to retry.
+
+**Defect #1 — decided: send the header, and declare the var.** Buttondown's versioning is
+explicit and header-based. Its docs state that "If a request includes a `header` with the key
+`X-API-Version`, Buttondown will use that value as the API version"; without one it falls back
+to "a _pinned_ version associated with the newsletter", and with no pin at all "Buttondown will
+use the latest version of the API" ([Versioning](https://docs.buttondown.com/api-versioning),
+[api-changelog](https://docs.buttondown.com/api-changelog), whose entries are flagged as
+introducing breaking changes and new API versions). The current version is `2026-04-01`, two
+years past the `2024-07-01` this client's request and error shapes were written against. So the
+unread var was not merely dead — leaving it unsent means a Buttondown release can change the
+response shapes `app/services/buttondown.ts` parses with no change here, and the first symptom
+would be subscribe failing. `Buttondown` now takes an optional `apiVersion` and sets
+`x-api-version` when given one; `BUTTONDOWN_API_VERSION: "2024-07-01"` is declared in
+`wrangler.jsonc` `vars` (a public value, not a secret) and in `.env.example`, and the container
+passes it through. Two client tests assert the header is sent when configured and absent when
+not.
+
+**Where the spec turned out to be wrong or impossible.**
+
+- **§3's one-controller-per-endpoint shape does not fit `form()`.** `form("/upgrade")` builds a
+  _route map_ with `index` (GET) and `action` (POST), not a single route, so
+  `routes.upgrade.index.href()` is the page URL and `app/http/controllers/upgrade.tsx` exports
+  two named actions instead of a default. `bootstrap/app.tsx` maps each leaf — passing the
+  group to `router.map` throws. `/sample` will need the same shape in Phase 3.
+- **`@pkg/response`'s `ok`/`badRequest` cannot be returned from a fetch-router action.** They
+  return a `DataWithResponseInit`, which is a React Router construct, not a `Response`; the
+  OLD APP's webhook could return them and this one cannot. The webhook uses `json()` from
+  `@pkg/http/response` with `Ok`/`BadRequest` from `@pkg/http/status-code`. Anything else in
+  this app still reaching for `@pkg/response` will hit the same wall.
+- **The checkout's external redirect is a 303, not the OLD APP's 302.** `redirect.Status` only
+  models 303/307/308, so 302 is not expressible without hand-building a `Response`. For a GET
+  redirect to an absolute Polar URL the two are interchangeable — both send the browser on with
+  a GET — and 303 was preferred over reconstructing the response by hand.
+- **§7's "validate the `:type` param" cannot be enforcing.** An unknown type has to fall
+  through to the Complete checkout (a stale or mistyped published link should still sell), so
+  the schema is parsed with `s.parseSafe` and only a successful parse of `essentials` takes the
+  Essentials branch. A malformed `?email=` is likewise dropped rather than rejected: Polar
+  would refuse the checkout outright, and losing a pre-filled field beats losing the sale.
+- **§12's Polar seam needed a fake plus fixture builders, and the fixtures cannot be literal.**
+  `app/lib/test/polar.ts` holds `FakePolarClient` (modeled on `FakeButtondown`) and
+  `makeDiscount` / `makeOrder` / `makeCustomer` / `makeOrderPaidEvent` / `makeEvent`. Polar's
+  response models carry dozens of currency, timestamp, and organization fields no branch here
+  reads, so each builder declares only the fields under test and widens to the SDK type. This
+  is the one deliberate type escape in the phase, and it is confined to test fixtures.
+- **Nothing anywhere verifies a real webhook signature.** `FakePolarClient.parseWebhook`
+  returns a scripted `Result`, and `packages/polar`'s own tests mock the SDK's `validateEvent`,
+  so the "bad signature is rejected" test proves the controller's branch, not the cryptography.
+  Building a genuinely signed request would mean constructing a payload that satisfies the
+  SDK's full `order.paid` validation. Phase 4's step 2 — replaying a signed event from Polar's
+  dashboard — is therefore the _first_ real exercise of this boundary, not a confirmation of
+  something already tested. Treat it as gating.
+- **The webhook's product → tier branch is now a lookup table** (`TIERS`) rather than the OLD
+  APP's `if`/`else if`. Behavior is identical, including the case the OLD APP left implicit: an
+  order for an unrecognized product is accepted with a 200 and tags nobody, which has its own
+  test so a future third product cannot silently start tagging as one of these two.
+- **The `cop()` bypass regression test asserts both directions**, as asked: a cross-origin POST
+  to `/webhooks/polar` returns 200 and tags the buyer, while the same cross-origin POST to
+  `/api/subscribe` returns 403. The second half is what proves the bypass is narrow rather
+  than a disabled protection.
 
 ## Notes
 

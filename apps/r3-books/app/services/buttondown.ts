@@ -17,6 +17,14 @@ import * as s from "remix/data-schema";
 const API_URL = "https://api.buttondown.com";
 
 /**
+ * Header Buttondown reads to pick the API version for a request. Without it the account's
+ * pinned version applies, and with no pin the *latest* version does — so an unsent header
+ * means a provider release can change the response shapes this client parses without any
+ * change here. Sending it pins the contract to the version this client was written for.
+ */
+const VERSION_HEADER = "x-api-version";
+
+/**
  * Buttondown's error envelope. Validated rather than trusted because the `code` is
  * what decides which message a visitor sees (`subscriber_blocked` and `email_invalid`
  * get their own copy, `email_already_exists` is a success path).
@@ -62,6 +70,11 @@ export class ButtondownError extends Error {
 export interface ButtondownOptions {
 	/** Buttondown API key, sent as a `Token` authorization header. */
 	apiKey: string;
+	/**
+	 * Buttondown API version to pin every request to, as a `YYYY-MM-DD` date. Omit to let
+	 * the account's own pinned version (or Buttondown's latest) decide.
+	 */
+	apiVersion?: string;
 }
 
 /**
@@ -80,6 +93,9 @@ export class Buttondown {
 	/** Buttondown API key used to authorize every request. */
 	private readonly apiKey: string;
 
+	/** API version pinned onto every request, when one was configured. */
+	private readonly apiVersion?: string;
+
 	/**
 	 * @param options - Client configuration.
 	 * @throws {Error} When the API key is missing, so a missing secret fails inside the
@@ -88,6 +104,7 @@ export class Buttondown {
 	constructor(options: ButtondownOptions) {
 		if (!options.apiKey) throw new Error("BUTTONDOWN_API_KEY is required");
 		this.apiKey = options.apiKey;
+		this.apiVersion = options.apiVersion;
 	}
 
 	/**
@@ -168,9 +185,16 @@ export class Buttondown {
 	 * @throws {Error} When Buttondown answers 403.
 	 */
 	private async request(method: string, path: string, body?: unknown): Promise<Response> {
+		let headers = new Headers({
+			authorization: `Token ${this.apiKey}`,
+			"content-type": Json,
+		});
+
+		if (this.apiVersion) headers.set(VERSION_HEADER, this.apiVersion);
+
 		let response = await fetch(new URL(path, API_URL), {
 			method,
-			headers: { authorization: `Token ${this.apiKey}`, "content-type": Json },
+			headers,
 			body: body === undefined ? undefined : JSON.stringify(body),
 		});
 

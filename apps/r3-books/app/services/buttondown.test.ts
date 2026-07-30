@@ -45,6 +45,37 @@ describe("Buttondown", () => {
 		expect(authorizations).toEqual(["Token key-1"]);
 	});
 
+	test("pins the API version when one is configured", async () => {
+		let versions: Array<string | null> = [];
+
+		server.use(
+			http.get(SUBSCRIBER_URL, ({ request }) => {
+				versions.push(request.headers.get("x-api-version"));
+				return HttpResponse.json({ email: "reader@example.com" });
+			}),
+		);
+
+		let pinned = new Buttondown({ apiKey: "key-1", apiVersion: "2024-07-01" });
+		await pinned.isSubscribed("reader@example.com");
+
+		expect(versions).toEqual(["2024-07-01"]);
+	});
+
+	test("sends no version header when none is configured", async () => {
+		let versions: Array<string | null> = [];
+
+		server.use(
+			http.get(SUBSCRIBER_URL, ({ request }) => {
+				versions.push(request.headers.get("x-api-version"));
+				return HttpResponse.json({ email: "reader@example.com" });
+			}),
+		);
+
+		await buttondown.isSubscribed("reader@example.com");
+
+		expect(versions).toEqual([null]);
+	});
+
 	test("isSubscribed reports an unknown subscriber", async () => {
 		server.use(http.get(SUBSCRIBER_URL, () => new HttpResponse(null, { status: 404 })));
 
