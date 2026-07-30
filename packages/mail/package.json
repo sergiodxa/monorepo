@@ -8,7 +8,8 @@
 		".": "./src/index.ts",
 		"./memory": "./src/memory.ts",
 		"./resend": "./src/resend.ts",
-		"./middleware": "./src/middleware.ts"
+		"./middleware": "./src/middleware.ts",
+		"./cloudflare": "./src/cloudflare.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

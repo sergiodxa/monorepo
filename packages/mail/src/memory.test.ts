@@ -113,4 +113,46 @@ describe("MemoryTransport", () => {
 		expect(transport.find((message) => message.email instanceof WelcomeEmail)).toBeDefined();
 		expect(transport.last?.email).toBeInstanceOf(WelcomeEmail);
 	});
+
+	test("assembles no MIME unless it was asked to, since most tests never read it", async () => {
+		let transport = new MemoryTransport();
+
+		await transport.send(createMessage());
+
+		expect(transport.lastMime).toBeUndefined();
+		expect(transport.deliveries[0]?.mime).toBeUndefined();
+		expect(transport.deliveries[0]?.message.subject).toBe("Hi");
+	});
+
+	test("records the assembled MIME message when MIME recording is on", async () => {
+		let transport = new MemoryTransport({ mime: true });
+
+		await transport.send(createMessage({ text: "Hi", html: "<p>Hi</p>" }));
+
+		expect(transport.lastMime).toContain("Content-Type: multipart/alternative;");
+		expect(transport.lastMime).toContain("Message-ID: <one@example.com>\r\n");
+		expect(transport.lastMime).toContain("Content-Type: text/html; charset=utf-8\r\n");
+		expect(transport.deliveries[0]?.mime).toBe(transport.lastMime);
+	});
+
+	test("keeps one MIME message per delivery, so a regression is traced to its send", async () => {
+		let transport = new MemoryTransport({ mime: true });
+
+		await transport.send(createMessage({ subject: "First" }));
+		await transport.send(createMessage({ subject: "Second" }));
+
+		expect(transport.deliveries[0]?.mime).toContain("Subject: First\r\n");
+		expect(transport.deliveries[1]?.mime).toContain("Subject: Second\r\n");
+		expect(transport.lastMime).toContain("Subject: Second\r\n");
+	});
+
+	test("forgets recorded MIME along with the deliveries it belonged to", async () => {
+		let transport = new MemoryTransport({ mime: true });
+
+		await transport.send(createMessage());
+		transport.clear();
+
+		expect(transport.deliveries).toHaveLength(0);
+		expect(transport.lastMime).toBeUndefined();
+	});
 });

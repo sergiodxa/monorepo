@@ -379,7 +379,11 @@ Use `react-email` for authoring and rendering.
 
 ## Notes
 
-- The exact binding name, recipient restrictions, and beta limits of Cloudflare's sending service must be confirmed in Phase 6; the `Transport` boundary exists so a surprise there stays contained and does not block Phases 1 through 5.
+- `EmailMessage` is injected through the transport's options rather than imported from `cloudflare:email`. A bare import does not typecheck inside this package, which has no `@cloudflare/workers-types`, and injecting it also keeps the platform shape out of the package: the transport treats the message as opaque and never reads a member, so the real constructor and a test double are equally assignable.
+- The binding accepts one envelope recipient per call, so a multi-recipient message becomes one `send` per recipient across `to`, `cc`, and `bcc`, deduped, sharing one body. Delivery can therefore be partially successful, and the `MailError` names the recipient it stopped on.
+- Boundary collision is prevented structurally rather than probabilistically: quoted-printable escapes a leading `-` as `=2D` and base64's alphabet contains no `-`, so no encoded body line can be read as a boundary delimiter. The generated token is checked against the encoded bodies as well.
+- An encoded word cannot be folded, so its size is budgeted against the header name and address rather than only the RFC 2047 limit. A first attempt emitted an 81-character `Subject:` line for exactly that reason.
+- The exact binding name, recipient restrictions, and beta limits of Cloudflare's sending service must be confirmed against live Cloudflare documentation and a real send; the `Transport` boundary exists so a surprise there stays contained and does not block Phases 1 through 5.
 - The middleware covers request paths only. Queue consumers and scheduled handlers have no request context, so they construct a `Mailer` directly with the same configuration; that duplication is the reason sender configuration is a plain object rather than middleware-internal state.
 - `ctx.email` reads as "the current user's email address" in an auth-heavy app. It is the name to use because it is what handlers will type, but the context augmentation's JSDoc must say plainly that it is a mailer.
 - Deferred sends flush after the response, which means they cannot influence it. Anything whose failure must change the response has to use `send()` and branch on the `Result`.

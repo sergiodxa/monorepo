@@ -14,18 +14,17 @@ Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and
 
 ### Entry points
 
-| Entry                  | Contents                                                             |
-| ---------------------- | -------------------------------------------------------------------- |
-| `@pkg/mail`            | Contracts, `Mailer`, `render()`, the `Email` contract and layout kit |
-| `@pkg/mail/memory`     | `MemoryTransport`, the recording fake for tests                      |
-| `@pkg/mail/resend`     | `ResendTransport`, for a provider that accepts structured fields     |
-| `@pkg/mail/middleware` | The router middleware that publishes `context.email`                 |
+| Entry                  | Contents                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `@pkg/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
+| `@pkg/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
+| `@pkg/mail/resend`     | `ResendTransport`, for a provider that accepts structured fields                    |
+| `@pkg/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
+| `@pkg/mail/middleware` | The router middleware that publishes `context.email`                                |
 
 Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's dependency into a bundle. `resend` is an **optional peer dependency**: apps that use `@pkg/mail/resend` already have it, and apps that do not never install it. Nothing outside that subpath imports it.
 
-### Not in this package yet
-
-A MIME builder (`buildMimeMessage()`) and a `CloudflareTransport` over the Workers email sending binding are deliberately absent. They are phases 5 and 6 of [ADR-018](/docs/adr/ADR-018-mail-package-with-pluggable-transports.md), and they depend on verifying the binding surface, recipient rules, and beta limits against current provider documentation. The `Transport` interface exists so that work stays contained: adding a raw-MIME transport later changes nothing in the mailer, the middleware, or any send site.
+The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import, so any raw-MIME transport can reuse it and its tests need no Workers environment.
 
 ## Usage
 
@@ -83,6 +82,28 @@ let mailer = new Mailer({
 
 let result = await mailer.send(new TeamInviteEmail(invite));
 ```
+
+### Sending through the Workers binding
+
+The Cloudflare transport takes the binding and the platform's `EmailMessage` class. The class is passed in rather than imported by the package, because `cloudflare:email` only resolves inside a Workers project and the package must typecheck and test outside one:
+
+```typescript
+import { CloudflareTransport } from "@pkg/mail/cloudflare";
+import { EmailMessage } from "cloudflare:email";
+import { env } from "cloudflare:workers";
+
+let transport = new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage });
+```
+
+The app declares the binding in `wrangler.jsonc`, where the name is the app's choice and must match the property read above:
+
+```jsonc
+{
+	"send_email": [{ "name": "SEND_EMAIL" }],
+}
+```
+
+The binding form decides what the transport may send: an entry with only a `name` allows any verified address, while `destination_address`, `allowed_destination_addresses`, and `allowed_sender_addresses` restrict recipients or senders, and a message outside those limits is refused at send time rather than at deploy time. Before the first real delivery the sending domain has to be verified for the zone, with SPF, DKIM, and DMARC records in place; without that, mail is either refused or silently filtered.
 
 ### Authoring an email as a class
 
@@ -211,6 +232,34 @@ Renders an email body tree to both body parts.
 let { html, text } = await render(<TeamInviteBody invite={invite} />);
 ```
 
+#### `buildMimeMessage(message: NormalizedMessage): string`
+
+Assembles a normalized message into a raw RFC 5322 message, for transports whose provider takes MIME instead of structured fields. It is a pure function of the message, so it is unit-testable on its own and reusable by any future raw-MIME transport.
+
+**Parameters:**
+
+- `message`: The normalized message a transport received
+
+**Returns:**
+
+- The complete message: folded headers, a blank line, and the body, with CRLF line endings throughout including the last line
+
+**Example:**
+
+```typescript
+let raw = buildMimeMessage(message); // "From: Example <no-reply@example.com>\r\n…"
+```
+
+What it guarantees:
+
+- **Structure** — both body parts produce `multipart/alternative` with the plain-text part first, which RFC 2046 reads as least to most preferred; a single part produces a single-part message with no boundary at all.
+- **Headers** — `From`, `To`, `Cc`, `Reply-To`, `Subject`, `Date`, `Message-ID`, `MIME-Version`, then the message's custom headers, then the `Content-*` headers. `Bcc` is deliberately absent, because those recipients are addressed by the envelope and writing them into the message would expose them to everyone else. A custom header repeating a derived name is dropped rather than emitted twice.
+- **Folding** — a header longer than 78 characters folds at an existing space, and the continuation line keeps that space, so unfolding restores the value character for character. A run longer than the limit with no space in it is left long, since folding inside a token would corrupt it.
+- **Encoded words** — a non-ASCII subject or display name becomes base64 RFC 2047 encoded words, chunked on character boundaries so no multi-byte character is split across two words, and sized so the line they sit on still fits the limit. A display name is encoded instead of quoted, because a quoted encoded word reaches the reader literally.
+- **Part encoding** — quoted-printable while text stays mostly ASCII, since the raw message then stays readable, and base64 once escaping would inflate the body more than base64 does.
+- **Boundaries** — the boundary carries a random UUID, is checked against the encoded bodies, and cannot be produced by either encoding: base64's alphabet has no `-`, and quoted-printable escapes a leading one, so no body line can be read as a delimiter.
+- **Line endings** — every break is CRLF, whatever the caller's bodies used, and both encodings wrap their output to 76 characters.
+
 #### `isEmail(value: Message | Email): value is Email`
 
 Reports whether a value is an `Email` rather than a plain `Message`. Discrimination is structural: a callable `body` is the one member only an email has.
@@ -333,12 +382,35 @@ interface SentMessage {
 
 Records every delivery instead of sending it, so tests assert on real behavior rather than on a mocked SDK module.
 
+##### `new MemoryTransport(options?: MemoryTransportOptions)`
+
+**Parameters:**
+
+- `options.mime?`: Assemble and record the raw MIME message for every delivery; off by default
+
+What an instance exposes:
+
 - **`transport.messages`** — every recorded delivery, oldest first
 - **`transport.last`** — the most recent delivery, or `undefined`
+- **`transport.deliveries`** — every delivery as `{ message, mime? }`, oldest first
+- **`transport.lastMime`** — the raw MIME of the most recent delivery, or `undefined`
 - **`transport.find(predicate)`** — the first delivery matching a predicate
 - **`transport.clear()`** — forgets every delivery, so one instance serves several tests
 
 Recorded messages are the normalized ones a provider would have received, so defaults, coerced address lists, and the derived text part are all visible.
+
+With `{ mime: true }` each delivery also carries the assembled MIME message, which makes a MIME regression assertable without a provider or a Workers environment:
+
+```typescript
+let transport = new MemoryTransport({ mime: true });
+let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" } });
+
+await mailer.send(new TeamInviteEmail(invite));
+
+expect(transport.lastMime).toContain("Content-Type: multipart/alternative;");
+```
+
+It is off by default because most tests assert on the normalized message, and assembling MIME for a test that never reads it is wasted work.
 
 ### `@pkg/mail/resend`
 
@@ -349,6 +421,55 @@ Recorded messages are the normalized ones a provider would have received, so def
 Maps a normalized message onto the provider's structured send call; no MIME assembly, because the provider does it. The client is injected rather than built from an API key, so credential handling and client lifetime stay in the app that already registers it through [`@pkg/service-container`](/packages/service-container).
 
 The provider reports API errors in its response rather than by throwing, so both shapes become the same `MailError` failure. The returned `messageId` is the provider's own when it gives one, and the message's generated `Message-ID` otherwise.
+
+### `@pkg/mail/cloudflare`
+
+#### `CloudflareTransport`
+
+##### `new CloudflareTransport(options: CloudflareTransportOptions)`
+
+Delivers through the Workers email sending binding. That binding takes a raw RFC 5322 message rather than structured fields, so the transport assembles one with `buildMimeMessage()` and hands it over unchanged.
+
+**Parameters:**
+
+- `options.binding`: The `send_email` binding declared in the app's Wrangler configuration
+- `options.EmailMessage`: The platform's `EmailMessage` class, which the app imports from `cloudflare:email`
+
+**Returns:**
+
+- Success carrying the message's own `Message-ID`, since the binding assigns none, or a `MailError` failure carrying the platform's rejection as `cause`
+
+**Example:**
+
+```typescript
+let transport = new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage });
+```
+
+**Why the constructor is a parameter.** `cloudflare:email` has no type declarations outside a Workers project, so a bare import of it fails this package's typecheck and would make the transport's tests need a Workers environment. Passing the class in costs the app one import and buys a transport that is exercised with an ordinary class in tests.
+
+**Multiple recipients.** The binding accepts one envelope recipient per message, so a message addressed to several people is sent once per recipient — `to`, then `cc`, then `bcc`, with duplicates dropped — carrying the same assembled body every time. The `To` and `Cc` headers still list everyone, and blind copies still appear in no header. Sends run in order and stop at the first rejection, so a multi-recipient failure can be partial; the error names the recipient it stopped on.
+
+#### What this package assumes about the platform
+
+```typescript
+type RawEmailMessage = object;
+
+interface RawEmailMessageConstructor {
+	new (from: string, to: string, raw: string): RawEmailMessage;
+}
+
+interface SendEmailBinding {
+	send(message: RawEmailMessage): Promise<void>;
+}
+```
+
+The binding surface is written from provider documentation, not from a verified deployment of this package. Three things are assumed:
+
+- **The binding name and shape** — an app-chosen name under `send_email` in `wrangler.jsonc`, exposed on `env` as an object with a single `send` method.
+- **The `send` signature** — `send(message): Promise<void>`, resolving on acceptance and rejecting on refusal, returning no provider identifier of its own.
+- **Recipient rules** — one envelope recipient per message, the sending domain verified for the zone, and destination or sender allowlists enforced at send time by the binding's declaration form.
+
+`SendEmailBinding`, `RawEmailMessageConstructor`, and `RawEmailMessage` in `src/cloudflare.ts` are the single seam those assumptions live behind, and they are declared locally rather than taken from an ambient global for exactly that reason: if the platform's surface turns out to differ, the correction is those three declarations and the one `send()` call that uses them. `RawEmailMessage` is deliberately opaque — the transport constructs one and hands it straight back to the binding without reading a member — so a change in the platform's own object shape cannot reach this package at all.
 
 ### `@pkg/mail/middleware`
 
@@ -407,7 +528,17 @@ let mailer = new Mailer({
 });
 ```
 
-Emails, services, and tests are untouched, which also makes the switch reversible.
+Moving to the binding is the same construction with the other transport, once the domain is verified and `send_email` is declared:
+
+```typescript
+let mailer = new Mailer({
+	transport: new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage }),
+	from: { email: "no-reply@example.com", name: "Example" },
+	replyTo: { email: "hello@example.com" },
+});
+```
+
+Emails, services, and tests are untouched, which also makes the switch reversible. The two providers do not fail identically, though: verification and recipient rules are stricter on the binding, so a message the structured-field provider accepted can come back as a `MailError` after the switch. Verify the first deliveries for real — headers, both body parts, and spam placement are only observable end to end.
 
 ## Related Packages
 
@@ -426,3 +557,7 @@ Emails, services, and tests are untouched, which also makes the switch reversibl
 6. **Validate what a deferred send can affect** — `later()` flushes after the response, so anything whose failure must change the response has to use `send()`.
 7. **Inline every style** — mail clients strip external and document stylesheets, which is why the layout kit takes colors as props instead of exposing class names.
 8. **Import a transport from its own subpath** — the root entry stays free of provider dependencies, so a bundle never resolves one the app does not use.
+9. **Assert MIME with `MemoryTransport({ mime: true })`** — it is the only way to catch a header or encoding regression in a test, and it needs no provider and no Workers environment.
+10. **Do not hand-assemble MIME beside the builder** — CRLF endings, folding, and encoded words are exactly where a hand-rolled message breaks, and a broken message is delivered wrong rather than reported wrong.
+11. **Watch a local send land** — `wrangler dev` writes messages sent through the binding to its temporary email directory, which is how the raw message gets read once before a real delivery.
+12. **Expect stricter refusals after the provider switch** — the binding enforces domain verification and its own recipient allowlists at send time, so branch on the `Result` at every send site before switching an app over.

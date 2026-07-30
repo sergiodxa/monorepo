@@ -20,6 +20,7 @@ export { MailError } from "./errors";
 export { formatAddress, toAddressList } from "./lib/address";
 export { htmlToText } from "./lib/html-to-text";
 export { isEmail, Mailer } from "./mailer";
+export { buildMimeMessage } from "./mime";
 export { render } from "./render";
 
 /**
