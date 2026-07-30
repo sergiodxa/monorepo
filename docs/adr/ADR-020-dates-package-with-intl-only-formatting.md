@@ -184,7 +184,7 @@ Use the library already present for date pickers as the general date layer.
 
 - [x] Phase 1: Core Operations
 - [x] Phase 2: Formatters
-- [x] Phase 3: Grid Helpers And Adoption
+- [ ] Phase 3: Grid Helpers And Adoption (helpers moved; adoption pending)
 
 ## Notes
 
