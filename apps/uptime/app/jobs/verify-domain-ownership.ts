@@ -1,8 +1,11 @@
 /**
- * Queued job that verifies a team's ownership of a custom domain by performing a
- * DNS-over-HTTPS TXT lookup on `_ping-verification.<hostname>` and matching the
- * expected token. On success it stamps the team domain's `verifiedAt`; on failure
- * it logs the outcome. It gates custom-domain features behind proven ownership.
+ * Background job that checks one team domain's DNS TXT record for the ownership
+ * token and marks it verified on a match. A DNS-over-HTTPS lookup of
+ * `_ping-verification.<hostname>` must return a TXT record whose value is
+ * the literal string `ping_<teamDomainId>` (the DNS-JSON API returns TXT record
+ * content JSON-quoted, hence comparing against `JSON.stringify(...)`). A miss isn't
+ * an error — `EnqueuePendingDomainsJob` retries every unverified domain again on the
+ * next sweep.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,120 +13,67 @@
 
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
+import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
 
-import database from "~/db/index";
-import * as schema from "~/db/schema";
+import TeamDomain from "~/app/data/team-domain";
+
+const DnsAnswerSchema = s.object({
+	Answer: s.optional(
+		s.array(
+			s.object({
+				name: s.string(),
+				type: s.number(),
+				TTL: s.number(),
+				data: s.string(),
+			}),
+		),
+	),
+});
+
+const VerifyDomainOwnershipJobSchema = s.object({ teamDomainId: s.string() });
 
 export class VerifyDomainOwnershipJob extends Job {
-	static schema = z.object({ teamDomainId: z.string() });
-
-	private static DNS_BASE_URL = new URL("https://cloudflare-dns.com/dns-query");
-	private static DNSResponseSchema = z.object({
-		Answer: z
-			.object({
-				name: z.string(),
-				type: z.number(),
-				TTL: z.number(),
-				data: z.string(),
-			})
-			.array()
-			.optional(),
-	});
+	static schema = VerifyDomainOwnershipJobSchema;
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, VerifyDomainOwnershipJob.schema);
-
 		if (isFailure(result)) {
+			this.logger.error("job.verify_domain_ownership.invalid_input", { input: this.input });
 			throw new Job.NonRetriableError("Invalid input", { cause: result.error });
 		}
 
-		let { teamDomainId } = result.data;
-		let db = database(env.DB);
+		let db = getServiceContainer().get(Database);
+		let domain = await TeamDomain.findById(db, result.data.teamDomainId);
+		if (!domain || domain.verified_at !== null) return;
 
-		this.logger.info("database.query", {
-			table: "teamDomains",
-			operation: "findFirst",
-			teamDomainId,
-		});
-
-		let teamDomain = await db.query.teamDomains.findFirst({
-			where(fields, operators) {
-				return operators.eq(fields.id, teamDomainId);
-			},
-		});
-
-		if (!teamDomain) {
-			return this.logger.info("job.verify-domain-ownership.skipped", {
-				teamDomainId,
-				reason: "not_found",
-			});
-		}
-
-		this.logger.info("dns.lookup", {
-			hostname: teamDomain.hostname,
-			teamDomainId,
-		});
-
-		let verified = await this.lookup(teamDomain.hostname, teamDomain.id);
-
-		if (verified) {
-			this.logger.info("database.update", {
-				table: "teamDomains",
-				teamDomainId,
-				field: "verifiedAt",
-			});
-
-			await db
-				.update(schema.teamDomains)
-				.set({ verifiedAt: new Date() })
-				.where(eq(schema.teamDomains.id, teamDomain.id));
-
-			this.logger.info("job.verify-domain-ownership.verified", {
-				teamDomainId,
-				hostname: teamDomain.hostname,
-			});
-		} else {
-			this.logger.info("job.verify-domain-ownership.failed", {
-				teamDomainId,
-				hostname: teamDomain.hostname,
-				reason: "dns_lookup_failed",
-			});
-		}
-	}
-
-	private async lookup(domain: string, expectedValue: string) {
-		let url = new URL(VerifyDomainOwnershipJob.DNS_BASE_URL);
-		url.searchParams.set("name", `_ping-verification.${domain}`);
+		let url = new URL("https://cloudflare-dns.com/dns-query");
+		url.searchParams.set("name", `_ping-verification.${domain.hostname}`);
 		url.searchParams.set("type", "TXT");
 
-		let headers = new Headers();
-		headers.set("Accept", "application/dns-json");
+		try {
+			let response = await fetch(url, { headers: { Accept: "application/dns-json" } });
+			let body = s.parse(DnsAnswerSchema, await response.json());
+			let expected = JSON.stringify(`ping_${domain.id}`);
+			let verified = (body.Answer ?? []).some((record) => record.data === expected);
 
-		let response = await fetch(url, { headers });
-
-		if (!response.ok) throw new Error(`Error fetching DNS: ${response.status}`);
-
-		let unparsedBody = await response.json();
-
-		this.logger.info("dns.lookup.response", { url: url.toString(), response: unparsedBody });
-
-		let body = VerifyDomainOwnershipJob.DNSResponseSchema.parse(unparsedBody);
-
-		this.logger.info("dns.lookup.parsedResponse", { url: url.toString(), response: body });
-
-		if (!body.Answer) {
-			this.logger.info("dns.lookup.noAnswer", { url: url.toString() });
-			return false;
+			if (verified) {
+				await TeamDomain.markVerified(db, domain.id);
+				this.logger.info("job.verify_domain_ownership.verified", { teamDomainId: domain.id });
+			} else {
+				this.logger.info("job.verify_domain_ownership.pending", { teamDomainId: domain.id });
+			}
+		} catch (error) {
+			this.logger.error("job.verify_domain_ownership.lookup_failed", {
+				teamDomainId: domain.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
-
-		return body.Answer.some((r) => r.data === JSON.stringify(`ping_${expectedValue}`));
 	}
 }
 
 export namespace VerifyDomainOwnershipJob {
-	export type Input = z.infer<typeof VerifyDomainOwnershipJob.schema>;
+	export type Input = s.InferOutput<typeof VerifyDomainOwnershipJobSchema>;
 }

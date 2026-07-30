@@ -1,1 +1,0 @@
-ALTER TABLE `alerts` ADD `name` text NOT NULL;

@@ -1,31 +1,29 @@
 /**
- * Scheduled maintenance job that deletes stale monitor result rows by delegating to
- * `Monitor.cleanResults`, then logs the number of rows removed. It exists to purge
- * old HTTP monitor check history so the results table does not grow without bound.
+ * Scheduled maintenance job that purges old `monitor_results` rows. That table exists
+ * as the "last checked" cache `Monitor.findDue` reads to schedule the next ping, plus
+ * the record of the last day or two of checks that `Monitor.countConsumedPingsByTeam`
+ * counts before the daily rollup reaches them — long-term analytics and history live
+ * in Analytics Engine — so retention is a plain age cutoff, kept comfortably longer
+ * than that counting window. A row whose `completed_at` is still `NULL` (an in-flight
+ * or pending check) is never matched by the cutoff and is left alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { Job } from "@pkg/jobs";
-import { env } from "cloudflare:workers";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
 
-import database from "~/db/index";
-import Monitor from "~/models/monitor";
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class CleanJob extends Job {
-	static override monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
-
 	async perform(): Promise<void> {
-		let db = database(env.DB);
+		let db = getServiceContainer().get(Database);
+		let cutoff = Date.now() - RETENTION_MS;
 
-		this.logger.info("database.delete", {
-			table: "monitorResults",
-			operation: "clean_old_results",
-		});
+		let result = await db.exec("DELETE FROM monitor_results WHERE completed_at < ?", [cutoff]);
 
-		let result = await Monitor.cleanResults(db);
-
-		this.logger.info("job.clean.completed", { rowsDeleted: result.meta.changes });
+		this.logger.info("job.clean.completed", { rowsDeleted: result.affectedRows ?? 0 });
 	}
 }

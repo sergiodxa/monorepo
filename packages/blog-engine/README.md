@@ -10,7 +10,7 @@ injects a `remix/data-table` `DatabaseAdapter`, OIDC credentials, and a cookie
 secret; everything a blog owner edits (title, theme, post types, posts, users,
 roles) lives in the blog's own SQL database.
 
-It generalizes the production `apps/r3-blog` code: a WordPress-style `posts` +
+It generalizes the production `apps/blog` code: a WordPress-style `posts` +
 `post_meta` (EAV) schema with runtime-defined post types whose field definitions
 drive a metadata codec, forms, validation, and rendering; a permission catalog with
 DB-stored roles; OIDC admin login; and OKLCH-derived theming. Rendering is SSR-only

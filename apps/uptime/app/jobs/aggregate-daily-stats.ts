@@ -1,8 +1,10 @@
 /**
- * Scheduled job that rolls up the previous day's raw HTTP and TCP check results
- * from Analytics Engine into per-monitor daily totals (checks, successes, failures,
- * average/max response time, derived status) and upserts them into the D1
- * `monitorDailyStats` table. It exists to precompute uptime summaries for reporting.
+ * Daily background job that rolls up the previous UTC day's checks into one
+ * `monitor_daily_stats` row per monitor — the source for the 365-day heatmap and
+ * long-term reporting (`docs/analytics.md`). HTTP aggregates come from Analytics
+ * Engine, since that's the only store HTTP results land in; DNS, TCP, and cron-job
+ * aggregates come from their own D1 result tables. All four monitor types are
+ * aggregated uniformly here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,132 +12,166 @@
 
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
-import { env } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
 
-import database from "~/db/index";
-import { monitorDailyStats } from "~/db/schema";
-import { queryAnalytics } from "~/services/analytics.server";
+import MonitorDailyStats, {
+	calculateDailyStatus,
+	getYesterdayDateUtc,
+	utcDayBounds,
+	type DailyStatsInput,
+} from "~/app/data/monitor-daily-stats";
+import { getHttpDailyAggregate } from "~/app/services/analytics";
 
-export namespace AggregateDailyStatsJob {
-	export interface Stats {
-		monitorId: string;
-		monitorType: "http" | "tcp";
-		totalChecks: number;
-		successfulChecks: number;
-		failedChecks: number;
-		avgResponseTimeMs: number;
-		maxResponseTimeMs: number;
-	}
+interface RawAggregateRow {
+	monitorId: string;
+	totalChecks: number;
+	successfulChecks: number;
+	avgResponseTimeMs: number | null;
+	maxResponseTimeMs: number | null;
 }
 
 export class AggregateDailyStatsJob extends Job {
-	static override monitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
-
 	async perform(): Promise<void> {
-		let db = database(env.DB);
-		let date = this.getYesterdayDate();
+		let db = getServiceContainer().get(Database);
+		let date = getYesterdayDateUtc();
 
-		this.logger.info("job.aggregate_daily_stats.date", { date });
+		let written = 0;
+		written += await this.aggregateHttp(db, date);
+		written += await this.aggregateD1(
+			db,
+			date,
+			"dns",
+			"dns_monitor_results",
+			"dns_monitor_id",
+			"ok",
+		);
+		written += await this.aggregateD1(
+			db,
+			date,
+			"tcp",
+			"tcp_monitor_results",
+			"tcp_monitor_id",
+			"up",
+		);
+		written += await this.aggregateCron(db, date);
 
-		// Query Analytics Engine for yesterday's data
-		let sql = `
-			SELECT
-				blob1 AS monitorId,
-				blob2 AS monitorType,
-				SUM(_sample_interval * double2) AS totalChecks,
-				SUMIf(_sample_interval * double2, blob3 = 'up') AS successfulChecks,
-				SUMIf(_sample_interval * double2, blob3 != 'up') AS failedChecks,
-				AVG(double1) AS avgResponseTimeMs,
-				MAX(double1) AS maxResponseTimeMs
-			FROM uptime_monitor_results
-			WHERE
-				timestamp >= toDateTime('${date} 00:00:00')
-				AND timestamp < toDateTime('${date} 00:00:00') + INTERVAL '1' DAY
-				AND blob2 IN ('http', 'tcp')
-			GROUP BY blob1, blob2
-		`;
+		this.logger.info("job.aggregate_daily_stats.completed", { date, written });
+	}
 
-		let result = await queryAnalytics<AggregateDailyStatsJob.Stats>(sql);
-
+	private async aggregateHttp(db: Database, date: string): Promise<number> {
+		let result = await getHttpDailyAggregate(date);
 		if (isFailure(result)) {
-			this.logger.error("job.aggregate_daily_stats.query_failed", {
+			this.logger.error("job.aggregate_daily_stats.http_failed", {
+				date,
 				error: result.error.message,
 			});
-			throw new Job.RetryError("Analytics query failed", { cause: result.error });
+			return 0;
 		}
 
-		let results = result.data;
-
-		this.logger.info("job.aggregate_daily_stats.queried", {
-			monitorCount: results.length,
-		});
-
-		if (results.length === 0) {
-			this.logger.info("job.aggregate_daily_stats.no_data", { date });
-			return;
-		}
-
-		// Upsert each monitor's stats into D1
-		for (let stats of results) {
-			let status = this.calculateStatus(stats.successfulChecks, stats.totalChecks);
-
-			await db
-				.delete(monitorDailyStats)
-				.where(
-					and(
-						eq(monitorDailyStats.monitorId, stats.monitorId),
-						eq(monitorDailyStats.monitorType, stats.monitorType),
-						eq(monitorDailyStats.date, date),
-					),
-				);
-
-			await db.insert(monitorDailyStats).values({
-				monitorId: stats.monitorId,
-				monitorType: stats.monitorType,
+		for (let row of result.data) {
+			await this.write(db, {
+				monitor_id: row.monitorId,
+				monitor_type: "http",
 				date,
-				totalChecks: Math.round(stats.totalChecks),
-				successfulChecks: Math.round(stats.successfulChecks),
-				failedChecks: Math.round(stats.failedChecks),
-				avgResponseTimeMs: Math.round(stats.avgResponseTimeMs),
-				maxResponseTimeMs: Math.round(stats.maxResponseTimeMs),
-				p95ResponseTimeMs: null,
-				status,
-			});
-
-			this.logger.info("job.aggregate_daily_stats.upserted", {
-				monitorId: stats.monitorId,
-				monitorType: stats.monitorType,
-				date,
-				status,
-				totalChecks: Math.round(stats.totalChecks),
+				total_checks: Math.round(row.totalChecks),
+				successful_checks: Math.round(row.successfulChecks),
+				avg_response_time_ms:
+					row.avgResponseTimeMs === null ? null : Math.round(row.avgResponseTimeMs),
+				max_response_time_ms:
+					row.maxResponseTimeMs === null ? null : Math.round(row.maxResponseTimeMs),
 			});
 		}
 
-		this.logger.info("job.aggregate_daily_stats.completed", {
-			date,
-			monitorsProcessed: results.length,
+		return result.data.length;
+	}
+
+	/** Aggregates a D1 result table whose rows carry a `status` and `response_time_ms`. */
+	private async aggregateD1(
+		db: Database,
+		date: string,
+		monitorType: "dns" | "tcp",
+		table: string,
+		monitorIdColumn: string,
+		healthyStatus: string,
+	): Promise<number> {
+		let { start, end } = utcDayBounds(date);
+
+		let result = await db.exec(
+			`SELECT
+				${monitorIdColumn} AS monitorId,
+				COUNT(*) AS totalChecks,
+				SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS successfulChecks,
+				AVG(response_time_ms) AS avgResponseTimeMs,
+				MAX(response_time_ms) AS maxResponseTimeMs
+			 FROM ${table}
+			 WHERE checked_at >= ? AND checked_at < ?
+			 GROUP BY ${monitorIdColumn}`,
+			[healthyStatus, start, end],
+		);
+
+		let rows = (result.rows ?? []) as unknown as RawAggregateRow[];
+		for (let row of rows) {
+			await this.write(db, {
+				monitor_id: row.monitorId,
+				monitor_type: monitorType,
+				date,
+				total_checks: row.totalChecks,
+				successful_checks: row.successfulChecks,
+				avg_response_time_ms:
+					row.avgResponseTimeMs === null ? null : Math.round(row.avgResponseTimeMs),
+				max_response_time_ms:
+					row.maxResponseTimeMs === null ? null : Math.round(row.maxResponseTimeMs),
+			});
+		}
+
+		return rows.length;
+	}
+
+	/** Cron-job pings have no response time; "successful" means the ping was on time. */
+	private async aggregateCron(db: Database, date: string): Promise<number> {
+		let { start, end } = utcDayBounds(date);
+
+		let result = await db.exec(
+			`SELECT
+				cron_job_monitor_id AS monitorId,
+				COUNT(*) AS totalChecks,
+				SUM(CASE WHEN was_on_time = 1 THEN 1 ELSE 0 END) AS successfulChecks
+			 FROM cron_job_pings
+			 WHERE created_at >= ? AND created_at < ?
+			 GROUP BY cron_job_monitor_id`,
+			[start, end],
+		);
+
+		let rows = (result.rows ?? []) as unknown as Array<{
+			monitorId: string;
+			totalChecks: number;
+			successfulChecks: number;
+		}>;
+
+		for (let row of rows) {
+			await this.write(db, {
+				monitor_id: row.monitorId,
+				monitor_type: "cron",
+				date,
+				total_checks: row.totalChecks,
+				successful_checks: row.successfulChecks,
+				avg_response_time_ms: null,
+				max_response_time_ms: null,
+			});
+		}
+
+		return rows.length;
+	}
+
+	private async write(
+		db: Database,
+		input: Omit<DailyStatsInput, "failed_checks" | "status">,
+	): Promise<void> {
+		await MonitorDailyStats.upsertDay(db, {
+			...input,
+			failed_checks: input.total_checks - input.successful_checks,
+			status: calculateDailyStatus(input.successful_checks, input.total_checks),
 		});
-	}
-
-	private calculateStatus(
-		successfulChecks: number,
-		totalChecks: number,
-	): "up" | "degraded" | "down" {
-		if (totalChecks === 0) return "down";
-		let successRate = successfulChecks / totalChecks;
-		if (successRate >= 1) return "up";
-		if (successRate >= 0.5) return "degraded";
-		return "down";
-	}
-
-	private getYesterdayDate(): string {
-		let now = new Date();
-		let yesterday = new Date(now);
-		yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-		let year = yesterday.getUTCFullYear();
-		let month = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
-		let day = String(yesterday.getUTCDate()).padStart(2, "0");
-		return `${year}-${month}-${day}`;
 	}
 }

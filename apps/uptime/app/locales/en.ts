@@ -93,6 +93,7 @@ export default {
 
 			nav: {
 				features: "Features",
+				compare: "Compare",
 				pricing: "Pricing",
 				docs: "Docs",
 
@@ -116,7 +117,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "Screenshot of an uptime monitoring dashboard showing two services with weekly heatmap charts. Each dot represents a check: green for success, yellow for mixed, red for failure, and gray for no data. Each monitor also displays uptime percentage, total checks, last check time, and 99th percentile response time",
+				alt: "Screenshot of the Uptime dashboard: a sidebar listing HTTP, DNS, and TCP monitors, cron jobs, alerts, maintenance, and status pages; summary cards for monthly ping usage, overall uptime percentage, and the slowest endpoint; per-type counts of monitors up and down; and a table of HTTP monitors with latency trend sparklines and status badges",
 			},
 
 			trustIndicators: {
@@ -428,12 +429,13 @@ export default {
 				list: {
 					first: {
 						title: "Base subscription",
-						description: "$5/month includes your first 5,000 pings",
+						description: "{{price}}/month includes your first {{included}} pings",
 					},
 
 					second: {
 						title: "Additional pings",
-						description: "$0.001 per ping after the first 5,000",
+						description:
+							"{{blockPrice}} per {{blockSize}} pings after that, billed in whole blocks",
 					},
 
 					third: {
@@ -464,7 +466,8 @@ export default {
 					baseSubscription: "Base subscription",
 					includes: "Includes first {{amount}} pings",
 					additionalPings: "Additional pings:",
-					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					additionalPingsCost:
+						"{{blocks}} × {{blockPrice}} per {{blockSize}} pings ({{pings}} over)",
 					totalCost: "Total monthly cost:",
 				},
 			},
@@ -558,7 +561,7 @@ export default {
 
 				seventeenth: {
 					q: "What happens if I exceed my plan’s limits?",
-					a: "You will be charged $1 for every 1,000 pings above the 5,000 included in your subscription.",
+					a: "Usage above the {{included}} pings included in your subscription is billed in whole blocks of {{blockSize}} at {{blockPrice}} each — a single ping over starts a new block.",
 				},
 
 				eighteenth: {
@@ -645,6 +648,52 @@ export default {
 			},
 		},
 
+		finalCta: {
+			body: "Create your first monitor in under 2 minutes. No credit card required to start.",
+		},
+
+		marketingPage: {
+			everythingBadge: "Deep Dive",
+			everythingTitle: "Everything you need",
+			everythingDescription:
+				"A closer look at what you get, from the first check to the alert that reaches you.",
+			howItWorksBadge: "Get started",
+			howItWorksTitle: "How it works",
+			howItWorksDescription: "Three steps from an empty dashboard to checks that run on their own.",
+			faqBadge: "FAQ",
+			faqTitle: "Frequently asked questions",
+			faqDescription: "The questions people ask most before they start monitoring.",
+			finalCtaTitle: "Start monitoring your services",
+		},
+
+		comparison: {
+			tableLabel: "Uptime vs {{competitor}}",
+			tableCategoryHeader: "Category",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Why teams switch to Uptime",
+			gettingStartedTitle: "Getting started",
+			finalCtaTitle: "Switch to Uptime",
+
+			honestTake: {
+				badge: "Honest take",
+				title: "When {{competitor}} might be better",
+				description:
+					"We believe in being transparent. Here's when {{competitor}} could be the right choice.",
+			},
+
+			pricing: {
+				badge: "Pricing",
+				title: "Real cost comparison",
+				description: "See how much you could save for a typical monitoring setup.",
+				tableLabel: "Cost comparison: Uptime vs {{competitor}}",
+				scenarioHeader: "Use case",
+				savingsHeader: "Savings",
+				savingsPerYear: "~{{amount}}/year",
+				footnote:
+					"Estimates based on typical usage patterns. {{competitor}} pricing can change and your actual cost depends on your setup.",
+			},
+		},
+
 		for: {
 			soloDevs: {
 				meta: {
@@ -685,7 +734,7 @@ export default {
 				meta: {
 					title: "Uptime for Indie Hackers | Simple Monitoring",
 					description:
-						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 5,000 pings.",
+						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 100,000 pings.",
 				},
 			},
 		},
@@ -698,6 +747,101 @@ export default {
 				description:
 					"Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí.",
 			},
+
+			lastUpdated: "Last updated: February 11, 2026",
+			title: "Terms of Service",
+
+			sections: {
+				introduction: {
+					title: "1. Introduction",
+					body: "Welcome to Uptime. These Terms of Service govern your use of our uptime monitoring service operated by Sergio Xalambrí. By accessing or using Uptime, you agree to be bound by these terms.",
+				},
+				serviceDescription: {
+					title: "2. Service Description",
+					body: "Uptime provides uptime and scheduled task monitoring services, including HTTP endpoint monitoring, DNS monitoring, TCP port monitoring, SSL certificate monitoring, and cron job monitoring. These services help you track the health of your services and scheduled tasks. We monitor your endpoints from multiple global regions and notify you when issues are detected.",
+				},
+				accountTerms: {
+					title: "3. Account Terms",
+					first: "You must provide accurate and complete information when creating an account.",
+					second:
+						"You are responsible for maintaining the security of your account credentials and for all activities that occur under your account.",
+					third:
+						"You must be at least 18 years old or have the legal authority to enter into this agreement on behalf of an organization.",
+					fourth: "You must notify us immediately of any unauthorized use of your account.",
+				},
+				acceptableUse: {
+					title: "4. Acceptable Use",
+					intro: "When using Uptime, you agree not to:",
+					first:
+						"Abuse, overload, or interfere with our service or attempt to circumvent any usage limits.",
+					second: "Monitor URLs or endpoints that you do not own or have authorization to monitor.",
+					third:
+						"Monitor cron jobs or scheduled tasks that you do not own or have authorization to monitor.",
+					fourth:
+						"Use cron job ping endpoints for purposes other than legitimate scheduled task monitoring.",
+					fifth: "Use the service for any illegal or unauthorized purpose.",
+					sixth: "Attempt to gain unauthorized access to our systems or other users' accounts.",
+					seventh: "Resell or redistribute the service without our written consent.",
+				},
+				paymentTerms: {
+					title: "5. Payment Terms",
+					first:
+						"Uptime operates on a usage-based billing model. You pay based on the number of monitors and check frequency you configure.",
+					second: "Subscriptions are managed and processed through Polar.",
+					third:
+						"Refunds are provided on a prorated basis for the unused portion of your subscription if you cancel.",
+					fourth:
+						"We reserve the right to change pricing with 30 days notice. Continued use after price changes constitutes acceptance.",
+				},
+				dataAndPrivacy: {
+					title: "6. Data and Privacy",
+					firstPrefix: "Your use of Uptime is also governed by our ",
+					firstLinkText: "Privacy Policy",
+					firstSuffix: ", which describes how we collect, use, and protect your data.",
+					second:
+						"Monitoring data is retained for 365 days. After this period, historical data is automatically deleted.",
+					third:
+						"You may request deletion of your data at any time by contacting us. Upon account termination, your data will be deleted within 30 days.",
+				},
+				serviceAvailability: {
+					title: "7. Service Availability",
+					first:
+						"We target 99.9% service availability, but this is a goal, not a guarantee. We do not offer service level agreements (SLAs) with financial remedies.",
+					second:
+						"We may perform scheduled maintenance with reasonable advance notice when possible. Emergency maintenance may occur without notice.",
+					third:
+						"We are not liable for any downtime, data loss, or damages resulting from service interruptions, whether planned or unplanned.",
+				},
+				limitationOfLiability: {
+					title: "8. Limitation of Liability",
+					first:
+						'Uptime is provided "as is" and "as available" without warranties of any kind, either express or implied.',
+					second:
+						"We do not guarantee that our service will detect all downtime events affecting your monitored endpoints. Monitoring is subject to network conditions and other factors outside our control.",
+					third:
+						"Our total liability to you for any claims arising from your use of the service is limited to the amount you paid us in the 12 months preceding the claim.",
+					fourth:
+						"We are not liable for any indirect, incidental, special, consequential, or punitive damages.",
+				},
+				termination: {
+					title: "9. Termination",
+					first:
+						"You may terminate your account at any time through your account settings or by contacting us.",
+					second:
+						"We may suspend or terminate your account if you violate these terms or for any other reason with reasonable notice.",
+					third:
+						"Upon termination, your access to the service will end and your data will be deleted within 30 days.",
+				},
+				changesToTerms: {
+					title: "10. Changes to Terms",
+					body: "We may update these Terms of Service from time to time. We will notify you of significant changes by email or through the service. Your continued use of Uptime after changes take effect constitutes acceptance of the revised terms.",
+				},
+				contact: {
+					title: "11. Contact",
+					prefix: "If you have questions about these Terms of Service, please contact us at ",
+					email: "hello@sergiodxa.com",
+				},
+			},
 		},
 		privacy: {
 			meta: {
@@ -705,7 +849,166 @@ export default {
 				description:
 					"Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service.",
 			},
+
+			lastUpdated: "Last updated: February 11, 2026",
+			title: "Privacy Policy",
+
+			sections: {
+				introduction: {
+					title: "1. Introduction",
+					first:
+						'This Privacy Policy describes how Uptime, operated by Sergio Xalambrí ("we", "us", or "our"), collects, uses, and protects your personal information when you use our uptime monitoring service.',
+					second:
+						"This policy applies to all users of our service and covers data collected through our website and monitoring platform.",
+				},
+				dataCollected: {
+					title: "2. Data We Collect",
+					accountData: {
+						title: "Account Data",
+						body: "When you sign up using GitHub authentication, we collect your email address and display name from your GitHub profile.",
+					},
+					monitoringData: {
+						title: "Monitoring Data",
+						body: "We collect data related to the monitors you create, including URLs you choose to monitor, response times, HTTP status codes, and uptime/downtime events.",
+					},
+					cronJobData: {
+						title: "Cron Job Monitoring Data",
+						intro: "For cron job (scheduled task) monitoring, we collect:",
+						first: "Ping timestamps (when your scheduled tasks report completion)",
+						second: "Source IP addresses of ping requests",
+						third: "User agent strings from ping requests",
+						fourth: "Schedule configuration (cron expressions, timezones, grace periods)",
+						outro:
+							"This data helps you track whether your scheduled tasks are running on time and enables us to alert you when expected pings are missed.",
+					},
+					usageData: {
+						title: "Usage Data",
+						body: "We collect analytics and log data about how you interact with our service, including page views, feature usage, and error logs.",
+					},
+					paymentData: {
+						title: "Payment Data",
+						body: "Payment processing is handled by Polar. We do not store your credit card information. We only receive confirmation of your subscription status and billing history from Polar.",
+					},
+				},
+				dataUsage: {
+					title: "3. How We Use Your Data",
+					first: {
+						label: "To provide the monitoring service:",
+						body: "We use your data to monitor your specified URLs and track their availability.",
+					},
+					second: {
+						label: "To send alerts and notifications:",
+						body: "We use your email to send you downtime alerts and status notifications.",
+					},
+					third: {
+						label: "To improve the service:",
+						body: "We analyze usage patterns to enhance features and fix issues.",
+					},
+					fourth: {
+						label: "To communicate with you:",
+						body: "We may send you service updates, security notices, and support messages.",
+					},
+				},
+				dataSharing: {
+					title: "4. Data Sharing",
+					noSell: "We do not sell your personal data.",
+					intro:
+						"We share data with the following third-party services that help us operate Uptime:",
+					first: { label: "Cloudflare:", body: "Infrastructure, hosting, and content delivery" },
+					second: { label: "Polar:", body: "Payment processing and subscription management" },
+					third: { label: "Resend:", body: "Email delivery for alerts and notifications" },
+					fourth: { label: "GitHub:", body: "Authentication services" },
+					outro:
+						"We may also disclose your data if required by law or to protect our rights and the safety of our users.",
+				},
+				dataRetention: {
+					title: "5. Data Retention",
+					first: { label: "Monitoring data:", body: "Retained for 365 days from collection" },
+					second: { label: "Account data:", body: "Retained until you delete your account" },
+					third: { label: "Logs:", body: "Retained for 30 days" },
+				},
+				rights: {
+					title: "6. Your Rights (GDPR)",
+					intro: "Under the General Data Protection Regulation (GDPR), you have the right to:",
+					first: {
+						label: "Access your data:",
+						body: "Request a copy of the personal data we hold about you",
+					},
+					second: {
+						label: "Correct your data:",
+						body: "Request correction of inaccurate personal data",
+					},
+					third: { label: "Delete your data:", body: "Request deletion of your personal data" },
+					fourth: { label: "Export your data:", body: "Receive your data in a portable format" },
+					fifth: {
+						label: "Object to processing:",
+						body: "Object to certain types of data processing",
+					},
+					outro:
+						"To exercise any of these rights, please contact us at the email address provided below.",
+				},
+				security: {
+					title: "7. Security",
+					intro: "We implement appropriate security measures to protect your data:",
+					first: {
+						label: "Encryption in transit:",
+						body: "All data is transmitted over HTTPS/TLS",
+					},
+					second: { label: "Encryption at rest:", body: "Stored data is encrypted" },
+					third: {
+						label: "Access controls:",
+						body: "Strict access controls limit who can access your data",
+					},
+					fourth: {
+						label: "Regular security reviews:",
+						body: "We regularly review our security practices",
+					},
+				},
+				cookies: {
+					title: "8. Cookies",
+					intro: "We use minimal cookies necessary for the service to function:",
+					first: {
+						label: "Session cookies:",
+						body: "Used for authentication and maintaining your logged-in state",
+					},
+					outro:
+						"We do not use tracking cookies, third-party advertising cookies, or any cookies for marketing purposes.",
+				},
+				childrensPrivacy: {
+					title: "9. Children's Privacy",
+					body: "Uptime is not intended for use by individuals under 18 years of age. We do not knowingly collect personal information from children under 18.",
+				},
+				internationalTransfers: {
+					title: "10. International Data Transfers",
+					first:
+						"Your data may be processed via Cloudflare's global network. If you are located in the European Union, your data may be transferred to and processed in the United States.",
+					second:
+						"We rely on Cloudflare's Standard Contractual Clauses and other appropriate safeguards to ensure your data is protected in accordance with GDPR requirements.",
+				},
+				changesToPolicy: {
+					title: "11. Changes to This Policy",
+					first:
+						'We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date.',
+					second:
+						"For significant changes, we will also send you an email notification if you have an account with us.",
+				},
+				contact: {
+					title: "12. Contact Us",
+					body: "If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:",
+					email: "privacy@sergiodxa.com",
+				},
+			},
 		},
+	},
+
+	notFound: {
+		title: "Page Not Found",
+		description: "The page you're looking for doesn't exist or may have moved.",
+		goBackHome: "Go back home",
+	},
+
+	errors: {
+		backHome: "Back home",
 	},
 
 	app: {
@@ -788,8 +1091,19 @@ export default {
 	},
 
 	statusPage: {
+		banner: {
+			operational: "All Systems Operational",
+			degraded: "Partial System Outage",
+			down: "Major System Outage",
+		},
+		status: {
+			operational: "Operational",
+			degraded: "Degraded",
+			down: "Down",
+			unknown: "Unknown",
+		},
 		heatmap: {
-			daysAgo: "30 days ago",
+			daysAgo: "90 days ago",
 			today: "Today",
 			legend: {
 				full: "100%",
@@ -807,6 +1121,13 @@ export default {
 			lastPing: "Last ping",
 			never: "Never",
 			schedule: "Schedule",
+		},
+		empty: {
+			description: "No services are configured for this status page.",
+		},
+		footer: {
+			lastUpdated: "Last updated {{date}}",
+			poweredBy: "Powered by Uptime",
 		},
 		error: {
 			title: "Status Page Not Found",
@@ -844,9 +1165,15 @@ export default {
 		},
 
 		item: {
+			type: "Type",
+			status: "Status",
 			caseSensitive: "Case sensitive",
+			enabled: "Enabled",
 			disabled: "Disabled",
+			yes: "Yes",
+			no: "No",
 			delete: "Delete",
+			deleteConfirmTitle: "Delete this content check?",
 		},
 
 		types: {
@@ -863,6 +1190,10 @@ export default {
 			description: "Description: {{description}}",
 			uri: "URI:",
 			tryAgain: "Please try again or contact support if the issue persists.",
+
+			signInFailedTitle: "Sign-in failed",
+			signInFailedGeneric: "The sign-in attempt could not be completed. Please try again.",
+			missingIdToken: "The identity provider did not return an ID token.",
 		},
 	},
 
@@ -975,6 +1306,10 @@ export default {
 				mixed: "Mixed",
 				noData: "No data",
 			},
+		},
+		copyButton: {
+			label: "Copy",
+			copied: "Copied!",
 		},
 	},
 
@@ -1370,6 +1705,7 @@ export default {
 					label: "Monthly Pings Usage",
 					value: "{{consumed}}<small> used</small>",
 					description: "Out of {{estimated}} estimated",
+					unavailable: "Estimate unavailable",
 				},
 
 				uptime: {
@@ -1405,6 +1741,11 @@ export default {
 					label: "Cron Jobs",
 					description: "{{healthy}} healthy / {{late}} late / {{missed}} missed",
 				},
+
+				sslMonitors: {
+					label: "SSL Monitors",
+					description: "{{valid}} valid, {{expiring}} expiring, {{expired}} expired",
+				},
 			},
 
 			tabs: {
@@ -1412,6 +1753,14 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cronJobs: "Cron Jobs",
+			},
+
+			loading: "Loading…",
+
+			panel: {
+				tabsLabel: "Monitor type",
+				tabPanelLabel: "{{tab}} monitors",
+				refresh: "Refresh",
 			},
 
 			error: {
@@ -1422,6 +1771,9 @@ export default {
 				},
 				table: {
 					message: "Failed to load monitors. Please try again.",
+				},
+				analytics: {
+					message: "Analytics data temporarily unavailable. Please retry later.",
 				},
 			},
 
@@ -1525,7 +1877,7 @@ export default {
 					region: {
 						label: "Region",
 						description: "The region from which the ping will run.",
-						placeholder: "wnam",
+						placeholder: "Select a region",
 						options: {
 							afr: "{{emoji}} Africa",
 							apac: "{{emoji}} Asia-Pacific",
@@ -1631,6 +1983,16 @@ export default {
 				cancel: "Cancel",
 				cta: "Save Changes",
 			},
+
+			ssl: {
+				title: "SSL certificate monitoring",
+				cta: "Save SSL settings",
+			},
+
+			dangerZone: {
+				title: "Danger zone",
+				delete: "Delete monitor",
+			},
 		},
 
 		monitor: {
@@ -1639,6 +2001,7 @@ export default {
 
 				action: {
 					play: "Run Monitor",
+					running: "Running…",
 					edit: "Edit Monitor",
 					refresh: "Refresh",
 				},
@@ -1657,6 +2020,7 @@ export default {
 					label: "Monthly Pings Usage",
 					value: "{{consumed}}<small> used</small>",
 					description: "Out of {{estimated}} estimated",
+					estimateUnavailable: "Estimate unavailable",
 				},
 
 				uptime: {
@@ -1702,6 +2066,7 @@ export default {
 			header: {
 				title: "Billing",
 			},
+			ownerOnly: "Only the team owner can view and manage billing for this team.",
 		},
 
 		members: {
@@ -1819,10 +2184,12 @@ export default {
 
 		acceptInvite: {
 			errors: {
+				pageTitle: "Invite unavailable",
 				notFound: "This invite does not exist.",
 				gone: "This invite has already been accepted.",
 				forbidden: "This invite was not meant for you.",
 				badRequest: "Somehow you don't have an email address. Try to login again.",
+				wrongEmail: "This invite was sent to {{email}}. Sign in with that email to accept it.",
 			},
 		},
 
@@ -1945,6 +2312,8 @@ export default {
 				cta: "Create Alert",
 			},
 
+			limitReached: "This team has reached the limit of {{limit}} alerts.",
+
 			form: {
 				fields: {
 					name: {
@@ -1953,9 +2322,14 @@ export default {
 						description: "A name to identify the alert.",
 					},
 
-					strategy: {
-						label: "Strategy",
-						description: "The strategy to use for the alert.",
+					scope: {
+						label: "Scope",
+						teamWide: "Team-wide (every monitor)",
+					},
+
+					channel: {
+						label: "Channel",
+						description: "The channel to use for the alert.",
 						options: {
 							webhook: "Webhook",
 							email: "Email",
@@ -1967,26 +2341,28 @@ export default {
 					config: {
 						webhook: {
 							url: {
-								label: "Webhook URL",
+								label: "URL",
 								placeholder: "https://example.com/webhook",
 								description: "The URL to send the alert payload to.",
 							},
 							secret: {
-								label: "Secret",
+								label: "Signing secret (optional)",
 								placeholder: "optional-secret",
 								description:
 									"An optional secret to include in the request headers. A `Webhook-Signature` header will be added with a HMAC SHA256 signature of the payload using this secret.",
 							},
+							signatureNote:
+								"When set, requests carry a <code>Webhook-Signature: sha256=<hex></code> header — an HMAC-SHA256 of the raw JSON body using this secret.",
 						},
 						email: {
 							to: {
-								label: "Email Address",
+								label: "Recipient",
 								placeholder: "cto@example.com",
 								description: "The email address to send the alert to.",
 							},
 
 							subjectPrefix: {
-								label: "Subject Prefix",
+								label: "Subject prefix (optional)",
 								placeholder: "[Uptime Alert]",
 								description:
 									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
@@ -1994,13 +2370,13 @@ export default {
 						},
 						slack: {
 							webhookUrl: {
-								label: "Slack Webhook URL",
+								label: "Webhook URL",
 								placeholder: "https://hooks.slack.com/services/...",
 								description:
 									"The Slack Incoming Webhook URL. Create one at api.slack.com/apps > Incoming Webhooks.",
 							},
 							channel: {
-								label: "Channel Override",
+								label: "Channel override (optional)",
 								placeholder: "#alerts",
 								description:
 									"Optional channel to post to instead of the webhook default. Include the # prefix.",
@@ -2008,7 +2384,7 @@ export default {
 						},
 						discord: {
 							webhookUrl: {
-								label: "Discord Webhook URL",
+								label: "Webhook URL",
 								placeholder: "https://discord.com/api/webhooks/...",
 								description:
 									"The Discord Webhook URL. Create one in Server Settings > Integrations > Webhooks.",
@@ -2041,6 +2417,17 @@ export default {
 							description: "Enter the number of minutes between alerts.",
 						},
 					},
+
+					cooldownMinutes: {
+						label: "Cooldown (minutes, 0 = no cooldown)",
+					},
+
+					legends: {
+						email: "Email settings",
+						webhook: "Webhook settings",
+						slack: "Slack settings",
+						discord: "Discord settings",
+					},
 				},
 
 				cta: "Create Alert",
@@ -2051,10 +2438,16 @@ export default {
 
 				columns: {
 					name: "Name",
+					scope: "Scope",
 					strategy: "Type",
 					notifyOnRecovery: "Recovery",
 					cooldown: "Cooldown",
 					actions: "Actions",
+				},
+
+				scope: {
+					unknownMonitor: "Unknown monitor",
+					teamWide: "Team-wide",
 				},
 
 				cooldown: {
@@ -2108,6 +2501,7 @@ export default {
 				columns: {
 					name: "Name",
 					slug: "URL",
+					services: "Services",
 					monitors: "Monitors",
 					visibility: "Visibility",
 					actions: "Actions",
@@ -2230,6 +2624,8 @@ export default {
 				},
 				confirmation: {
 					delete: "Are you sure you want to delete the monitor {{name}}?",
+					deleteDescription:
+						"This also deletes its content checks and check-result history. This can't be undone.",
 				},
 			},
 		},
@@ -2263,6 +2659,7 @@ export default {
 
 				disabled: "Disabled",
 				neverChecked: "Never",
+				notChecked: "Not checked",
 
 				actions: {
 					menu: "Actions Menu",
@@ -2386,6 +2783,12 @@ export default {
 				cancel: "Cancel",
 				cta: "Save Changes",
 			},
+
+			dangerZone: {
+				title: "Danger zone",
+				deleteMonitor: "Delete monitor",
+				deleteDescription: "This also deletes its check-result history. This can't be undone.",
+			},
 		},
 
 		dnsMonitorDetail: {
@@ -2398,6 +2801,9 @@ export default {
 					edit: "Edit",
 				},
 			},
+
+			uptimeHistory: "Uptime history",
+			notChecked: "Not checked",
 
 			info: {
 				domain: "Domain",
@@ -2472,10 +2878,16 @@ export default {
 					monitor: "Monitor",
 					status: "Status",
 					actions: "Actions",
+					scope: "Scope",
+					starts: "Starts",
+					ends: "Ends",
 				},
 
 				allMonitors: "All Monitors",
 				recurring: "Recurring",
+				unknownMonitor: "Unknown monitor",
+				endedEarly: "Ended early",
+				edit: "Edit",
 
 				status: {
 					active: "Active",
@@ -2561,6 +2973,74 @@ export default {
 				},
 
 				cta: "Schedule Maintenance",
+			},
+		},
+
+		editMaintenance: {
+			header: {
+				title: "Edit {{name}}",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+			},
+
+			endNow: {
+				cta: "End maintenance now",
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				delete: {
+					trigger: "Delete maintenance window",
+					confirmTitle: "Delete this maintenance window?",
+					confirmDescription: "This can't be undone.",
+					confirm: "Delete",
+				},
+			},
+		},
+
+		maintenanceWindows: {
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+					},
+
+					scope: {
+						label: "Scope",
+						allMonitors: "All monitors",
+					},
+
+					startsAt: {
+						label: "Starts at",
+					},
+
+					endsAt: {
+						label: "Ends at",
+					},
+
+					suppressAlerts: {
+						label: "Suppress alerts during this window",
+					},
+
+					showOnStatusPage: {
+						label: "Show on status page",
+					},
+
+					recurring: {
+						label: "Recurring",
+					},
+
+					recurringPattern: {
+						label: "Recurrence pattern (when recurring)",
+						placeholder: "weekly:monday:02:00-04:00",
+						description:
+							"daily:HH:MM-HH:MM, weekly:<day>:HH:MM-HH:MM, or monthly:<day-of-month>:HH:MM-HH:MM, in UTC.",
+					},
+				},
 			},
 		},
 
@@ -2723,6 +3203,28 @@ export default {
 			},
 		},
 
+		editAlert: {
+			header: {
+				title: "Edit Alert",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				delete: {
+					trigger: "Delete alert",
+					confirmTitle: "Delete this alert?",
+					confirmDescription: "This can't be undone.",
+					confirm: "Delete",
+				},
+			},
+		},
+
 		logout: {
 			title: "Are you sure you want to logout?",
 			cta: "Logout",
@@ -2745,19 +3247,35 @@ export default {
 				title: "Account",
 			},
 
+			form: {
+				actions: {
+					cancel: "Cancel",
+				},
+			},
+
 			profile: {
 				title: "Profile",
 				description: "Your personal information.",
+
+				card: {
+					title: "Profile Details",
+					description: "Your name, email address, and avatar.",
+				},
 			},
 
 			language: {
 				title: "Language Preference",
 				description: "Choose your preferred language for the interface.",
 
+				card: {
+					title: "Language",
+					description: "Applies across the dashboard and email notifications.",
+				},
+
 				form: {
 					fields: {
 						language: {
-							label: "Language",
+							label: "Preferred Language",
 							description:
 								"Select your preferred language. Auto-detect uses your browser settings.",
 							options: {
@@ -2950,6 +3468,10 @@ export default {
 					confirmation: {
 						revokeInvite: "Are you sure you want to revoke {{email}}'s invite?",
 					},
+
+					empty: {
+						description: "No pending invitations.",
+					},
 				},
 			},
 
@@ -2986,9 +3508,15 @@ export default {
 					confirmation: {
 						removeDomain: "Are you sure you want to remove {{hostname}} from the team?",
 					},
+
+					empty: {
+						description: "No verified domains yet.",
+					},
 				},
 
 				form: {
+					title: "Add Domain",
+
 					fields: {
 						hostname: {
 							label: "Domain",
@@ -3151,14 +3679,20 @@ export default {
 						label: "Port",
 						placeholder: "5432",
 						description: "The TCP port to check (1-65535).",
+						decrement: "Decrease port",
+						increment: "Increase port",
 					},
 					interval: {
 						label: "Check Interval",
 						description: "How often to check the port.",
+						decrement: "Decrease check interval",
+						increment: "Increase check interval",
 					},
 					timeout: {
 						label: "Connection Timeout",
 						description: "How long to wait for a connection before timing out.",
+						decrement: "Decrease connection timeout",
+						increment: "Increase connection timeout",
 					},
 				},
 				cta: "Create Monitor",
@@ -3197,14 +3731,20 @@ export default {
 						label: "Port",
 						placeholder: "5432",
 						description: "The TCP port to check (1-65535).",
+						decrement: "Decrease port",
+						increment: "Increase port",
 					},
 					interval: {
 						label: "Check Interval",
 						description: "How often to check the port.",
+						decrement: "Decrease check interval",
+						increment: "Increase check interval",
 					},
 					timeout: {
 						label: "Connection Timeout",
 						description: "How long to wait for a connection before timing out.",
+						decrement: "Decrease connection timeout",
+						increment: "Increase connection timeout",
 					},
 					isEnabled: {
 						label: "Enable monitoring",
@@ -3212,6 +3752,12 @@ export default {
 				},
 				cancel: "Cancel",
 				cta: "Save Changes",
+			},
+
+			danger: {
+				title: "Danger zone",
+				cta: "Delete monitor",
+				description: "This also deletes its check-result history. This can't be undone.",
 			},
 		},
 
@@ -3222,6 +3768,7 @@ export default {
 				},
 				action: {
 					edit: "Edit",
+					checkNow: "Check now",
 				},
 			},
 
@@ -3254,6 +3801,10 @@ export default {
 					label: "Total Checks",
 					description: "Number of checks performed",
 				},
+			},
+
+			history: {
+				title: "Uptime history",
 			},
 
 			results: {
@@ -3301,6 +3852,7 @@ export default {
 				title: "API Key '{{name}}' created!",
 				description: "Copy this key now. For security reasons, you won't be able to see it again.",
 				dismiss: "I've copied my key",
+				copyLabel: "Copy key",
 			},
 
 			form: {
@@ -3421,6 +3973,7 @@ export default {
 					missed: "Missed",
 					new: "New",
 				},
+				disabled: "Disabled",
 				actions: {
 					edit: "Edit",
 					delete: "Delete",
@@ -3480,6 +4033,8 @@ export default {
 					gracePeriod: {
 						label: "Grace Period",
 						description: "How long to wait after the expected time before marking as late.",
+						decrement: "Decrease grace period",
+						increment: "Increase grace period",
 						unit: {
 							minutes: "minutes",
 							seconds: "seconds",
@@ -3552,6 +4107,8 @@ export default {
 					gracePeriod: {
 						label: "Grace Period",
 						description: "How long to wait after the expected time before marking as late.",
+						decrement: "Decrease grace period",
+						increment: "Increase grace period",
 						unit: {
 							minutes: "minutes",
 							seconds: "seconds",
@@ -3573,6 +4130,17 @@ export default {
 				},
 				cancel: "Cancel",
 				cta: "Save Changes",
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				delete: {
+					trigger: "Delete monitor",
+					confirmTitle: "Delete this cron job monitor?",
+					confirmDescription: "This also deletes its ping history. This can't be undone.",
+					confirm: "Delete",
+				},
 			},
 		},
 
@@ -3616,12 +4184,21 @@ export default {
 				lastPing: {
 					label: "Last Ping",
 					description: "When the last ping was received",
+					never: "Never",
 				},
 				nextExpected: {
 					label: "Next Expected",
 					description: "When the next ping is expected",
 				},
 			},
+
+			ping: {
+				title: "Ping this monitor",
+				description:
+					"Have your job send a POST request here after it finishes. No authentication required — treat this URL as a secret.",
+			},
+
+			uptimeHistory: "Uptime history",
 
 			pings: {
 				title: "Ping History",
@@ -3680,10 +4257,6 @@ export default {
 			searchPlaceholder: "Search...",
 			openMenu: "Open menu",
 			closeMenu: "Close menu",
-		},
-
-		breadcrumb: {
-			home: "Home",
 		},
 
 		nav: {

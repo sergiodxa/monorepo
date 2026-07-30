@@ -1,1 +1,0 @@
-DROP INDEX `monitors_author_id_unique`;

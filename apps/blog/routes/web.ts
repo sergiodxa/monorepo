@@ -1,0 +1,46 @@
+/**
+ * Top-level route table for blog. Declares the public pages (feed, colors,
+ * sponsor, listings, individual posts, sitemap, WebFinger/avatar) and mounts the
+ * auth, RSS, and CMS sub-route trees so the router can resolve every URL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { get, route } from "remix/fetch-router/routes";
+
+import auth from "~/routes/auth";
+import cms from "~/routes/cms";
+import rss from "~/routes/rss";
+
+/**
+ * Registers the public site routes and mounts auth, RSS, and CMS sub-routers.
+ */
+export default route({
+	feed: get("/"),
+	colors: get("/colors"),
+	sponsor: get("/sponsor"),
+
+	wellKnown: route({
+		webFinger: get("/.well-known/webfinger"),
+		avatar: get("/.well-known/avatar"),
+	}),
+
+	sitemap: get("/sitemap.xml"),
+
+	healthcheck: get("/healthcheck"),
+
+	articles: get("/articles"),
+	tutorials: get("/tutorials"),
+	bookmarks: get("/bookmarks"),
+	glossary: get("/glossary"),
+
+	post: get("/:postType/:postSlug(.:ext)"),
+	postRelated: get("/frames/posts/:postType/:postSlug/related"),
+
+	auth,
+
+	rss,
+
+	cms: route("/cms", cms),
+});

@@ -29,28 +29,10 @@
 			}
 		},
 		{
-			"files": ["apps/blog/**/*.{js,jsx,ts,tsx}"],
-			"options": {
-				"experimentalTailwindcss": {
-					"stylesheet": "./apps/blog/app/styles.css",
-					"functions": ["cn"]
-				}
-			}
-		},
-		{
 			"files": ["apps/books/**/*.{js,jsx,ts,tsx}"],
 			"options": {
 				"experimentalTailwindcss": {
 					"stylesheet": "./apps/books/app/app.css",
-					"functions": ["cn"]
-				}
-			}
-		},
-		{
-			"files": ["apps/uptime/**/*.{js,jsx,ts,tsx}"],
-			"options": {
-				"experimentalTailwindcss": {
-					"stylesheet": "./apps/uptime/app/assets/styles.css",
 					"functions": ["cn"]
 				}
 			}

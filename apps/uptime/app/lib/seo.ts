@@ -1,85 +1,39 @@
 /**
- * SEO helpers for building React Router meta descriptors and JSON-LD structured data. It
- * exposes `generateMeta` to produce title, description, Open Graph, Twitter Card, and
- * canonical-URL tags with absolute URLs, plus schema builders for Organization, WebSite,
- * SoftwareApplication, and FAQ pages. It centralizes consistent metadata across routes.
+ * Structured-data builders for the public pages: schema.org JSON-LD objects a
+ * controller hands to `DocumentLayout`'s `seo.jsonLd`, plus the canonical base URL
+ * every absolute link in `<head>` is resolved against.
+ *
+ * These are plain object builders — no serialization, no escaping, no `<script>` of
+ * their own. `DocumentLayout` owns emitting them, so a controller only decides *which*
+ * schema describes its page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MetaDescriptor } from "react-router";
-
+/** Canonical origin every `<head>` URL (canonical link, `og:url`, schema `url`) is built against. */
 export const BASE_URL = "https://uptime.sergiodxa.com";
 
-export interface GenerateMetaOptions {
-	title: string;
-	description: string;
-	url: string;
-	/** OG image URL - commented out for now, uncomment when ready */
-	// image?: string;
-	type?: "website" | "article";
-	/** JSON-LD structured data to include */
-	jsonLd?: object | object[];
-}
+/** The product's own description, reused by the schemas that describe the site as a whole. */
+const SITE_DESCRIPTION =
+	"Usage-based uptime monitoring service. Monitor websites, APIs, DNS, SSL certificates, and cron jobs from multiple global regions.";
 
 /**
- * Generate standardized meta tags for SEO
- * Includes title, description, Open Graph, Twitter Cards, canonical URL, and JSON-LD
+ * Resolves a request URL to its canonical absolute form: same origin as
+ * {@link BASE_URL} regardless of which host served the request (custom domain, the
+ * `workers.dev` subdomain, a preview deployment), with the trailing slash dropped
+ * everywhere but the root so one page never advertises two canonical URLs.
+ *
+ * @example canonicalUrl("https://ping.workers.dev/features/monitors/") // "https://uptime.sergiodxa.com/features/monitors"
  */
-export function generateMeta(options: GenerateMetaOptions): MetaDescriptor[] {
-	let { title, description, url, type = "website", jsonLd } = options;
-
-	// Ensure URL is absolute
-	let absoluteUrl = url.startsWith("http") ? url : new URL(url, BASE_URL).toString();
-
-	// Remove trailing slash for consistency (except for root)
-	if (absoluteUrl !== BASE_URL + "/" && absoluteUrl.endsWith("/")) {
-		absoluteUrl = absoluteUrl.slice(0, -1);
-	}
-
-	let meta: MetaDescriptor[] = [
-		// Basic meta
-		{ title },
-		{ name: "description", content: description },
-
-		// Open Graph
-		{ property: "og:title", content: title },
-		{ property: "og:description", content: description },
-		{ property: "og:type", content: type },
-		{ property: "og:url", content: absoluteUrl },
-		{ property: "og:site_name", content: "Uptime" },
-
-		// Twitter Card
-		{ name: "twitter:card", content: "summary_large_image" },
-		{ name: "twitter:title", content: title },
-		{ name: "twitter:description", content: description },
-
-		// Canonical URL
-		{ tagName: "link", rel: "canonical", href: absoluteUrl },
-	];
-
-	// Uncomment when og:image is ready
-	// if (image) {
-	// 	let absoluteImage = image.startsWith("http") ? image : new URL(image, BASE_URL).toString();
-	// 	meta.push(
-	// 		{ property: "og:image", content: absoluteImage },
-	// 		{ name: "twitter:image", content: absoluteImage },
-	// 	);
-	// }
-
-	// Add JSON-LD structured data using React Router's built-in support
-	if (jsonLd) {
-		meta.push({ "script:ld+json": jsonLd });
-	}
-
-	return meta;
+export function canonicalUrl(url: string | URL): string {
+	let { pathname, search } = new URL(url);
+	let canonical = new URL(`${pathname}${search}`, BASE_URL).toString();
+	if (canonical !== `${BASE_URL}/` && canonical.endsWith("/")) return canonical.slice(0, -1);
+	return canonical;
 }
 
-/**
- * Organization schema for structured data (JSON-LD)
- * Use on homepage/root layout
- */
+/** `Organization` schema — the publisher behind the product. */
 export function getOrganizationSchema() {
 	return {
 		"@context": "https://schema.org",
@@ -91,24 +45,18 @@ export function getOrganizationSchema() {
 	};
 }
 
-/**
- * WebSite schema for structured data (JSON-LD)
- * Use on homepage
- */
+/** `WebSite` schema — for the homepage only, where the subject is the site itself. */
 export function getWebSiteSchema() {
 	return {
 		"@context": "https://schema.org",
 		"@type": "WebSite",
 		name: "Uptime",
 		url: BASE_URL,
-		description:
-			"Usage-based uptime monitoring service. Monitor websites, APIs, DNS, SSL certificates, and cron jobs from multiple global regions.",
+		description: SITE_DESCRIPTION,
 	};
 }
 
-/**
- * SoftwareApplication schema for feature pages
- */
+/** `SoftwareApplication` schema — for a page whose subject is the product or one of its capabilities. */
 export function getSoftwareApplicationSchema(options: {
 	name: string;
 	description: string;
@@ -132,7 +80,10 @@ export function getSoftwareApplicationSchema(options: {
 }
 
 /**
- * FAQPage schema for pages with FAQ sections
+ * `FAQPage` schema — for a page carrying a real FAQ section, so the questions can
+ * surface as rich results. Pass the same question/answer pairs the page renders;
+ * a schema describing answers a visitor can't find on the page is a violation of
+ * Google's structured-data policy, not just a mismatch.
  */
 export function getFAQSchema(faqs: Array<{ question: string; answer: string }>) {
 	return {
@@ -141,10 +92,7 @@ export function getFAQSchema(faqs: Array<{ question: string; answer: string }>) 
 		mainEntity: faqs.map((faq) => ({
 			"@type": "Question",
 			name: faq.question,
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: faq.answer,
-			},
+			acceptedAnswer: { "@type": "Answer", text: faq.answer },
 		})),
 	};
 }

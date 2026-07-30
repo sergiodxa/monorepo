@@ -1,2 +1,0 @@
-DROP VIEW `monitor_results_per_day`;--> statement-breakpoint
-CREATE VIEW `monitor_results_per_day` AS select "id", "created_at", "updated_at", "completed_at", "monitor_id", "response_status", "response_time_ms" from "monitor_results" where ("monitor_results"."completed_at" is not null and "monitor_results"."response_status" is not null and "monitor_results"."response_time_ms" is not null);

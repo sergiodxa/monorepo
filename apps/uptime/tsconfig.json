@@ -1,25 +1,30 @@
 {
 	"extends": "../../tsconfig.json",
 	"include": [
-		".react-router/types/**/*",
 		"app/**/*",
-		"app/**/.server/**/*",
-		"app/**/.client/**/*",
-		"db/**/*",
-		"worker-configuration.d.ts",
-		"react-router.config.ts",
-		"vite.config.ts"
+		"bootstrap/**/*",
+		"config/**/*.d.ts",
+		"database/**/*",
+		"infrastructure/**/*",
+		"resources/**/*",
+		"routes/**/*",
+		"vite.config.ts",
+		"worker-configuration.d.ts"
 	],
 	"compilerOptions": {
 		"noEmit": true,
+		"allowImportingTsExtensions": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "react",
-		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
-		"rootDirs": [".", "./.react-router/types"],
+		"jsxImportSource": "remix/ui",
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun"],
 		"paths": {
-			"~/*": ["./app/*"],
-			"~/db": ["./db"],
-			"~/db/*": ["./db/*"]
+			"~/app/*": ["./app/*"],
+			"~/bootstrap/*": ["./bootstrap/*"],
+			"~/config/*": ["./config/*"],
+			"~/database/*": ["./database/*"],
+			"~/infrastructure/*": ["./infrastructure/*"],
+			"~/resources/*": ["./resources/*"],
+			"~/routes/*": ["./routes/*"]
 		}
 	}
 }

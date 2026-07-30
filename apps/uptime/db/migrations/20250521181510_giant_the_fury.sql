@@ -1,1 +1,0 @@
-ALTER TABLE `monitors` ADD `timeout_seconds` integer DEFAULT 10 NOT NULL;

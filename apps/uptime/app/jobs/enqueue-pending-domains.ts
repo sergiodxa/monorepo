@@ -1,63 +1,37 @@
 /**
- * Scheduled job that finds every team domain still lacking a `verifiedAt` stamp
- * and batch-enqueues a `verifyDomainOwnership` message onto the queue for each one.
- * It acts as the periodic driver that keeps re-attempting DNS ownership checks so
- * pending domains eventually get verified without manual intervention.
+ * Background job that finds every team domain not yet verified and re-enqueues a
+ * `verifyDomainOwnership` message for each, batched into one queue call. Runs every
+ * 10 minutes so a domain the user just added — or one whose DNS record propagation
+ * is still catching up — keeps getting retried without the user doing anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { Job } from "@pkg/jobs";
-import { env, waitUntil } from "cloudflare:workers";
+import { getServiceContainer } from "@pkg/service-container";
+import { env } from "cloudflare:workers";
+import { Database } from "remix/data-table";
 
-import database from "~/db/index";
+import TeamDomain from "~/app/data/team-domain";
 
 export class EnqueuePendingDomainsJob extends Job {
-	static override monitorId = "9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c";
-
 	async perform(): Promise<void> {
-		let db = database(env.DB);
+		let db = getServiceContainer().get(Database);
+		let pending = await TeamDomain.listUnverified(db);
 
-		this.logger.info("database.query", {
-			table: "teamDomains",
-			operation: "select",
-			filter: "verifiedAt=null",
-		});
-
-		let teamDomains = await db.query.teamDomains.findMany({
-			where(fields, operators) {
-				return operators.isNull(fields.verifiedAt);
-			},
-		});
-
-		this.logger.info("database.query.complete", { count: teamDomains.length });
-
-		if (teamDomains.length === 0) {
-			return this.logger.info("job.enqueue-pending-domains.skipped", {
-				reason: "no_pending_domains",
-			});
+		if (pending.length === 0) {
+			this.logger.info("job.enqueue_pending_domains.none", {});
+			return;
 		}
 
-		this.logger.info("queue.send-batch", {
-			queue: "QUEUE",
-			messageType: "verifyDomainOwnership",
-			count: teamDomains.length,
-		});
-
-		waitUntil(
-			env.QUEUE.sendBatch(
-				teamDomains.map((teamDomain) => {
-					return {
-						body: { type: "verifyDomainOwnership", teamDomainId: teamDomain.id },
-						contentType: "json",
-					};
-				}),
-			),
+		await env.QUEUE.sendBatch(
+			pending.map((domain) => ({
+				body: { type: "verifyDomainOwnership", teamDomainId: domain.id },
+				contentType: "json",
+			})),
 		);
 
-		this.logger.info("job.enqueue-pending-domains.completed", {
-			domainsEnqueued: teamDomains.length,
-		});
+		this.logger.info("job.enqueue_pending_domains.enqueued", { count: pending.length });
 	}
 }

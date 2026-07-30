@@ -1,395 +1,64 @@
 /**
- * Hourly scheduled job that checks every enabled DNS monitor, resolves its record,
- * stores each result and updates the monitor's latest status/value, and fires
- * email, webhook, Slack, and Discord alerts when a record changes or errors.
- * It exists to detect DNS record drift and misconfigurations and notify teams.
+ * Background job that sweeps every enabled DNS monitor once per run on a fixed
+ * hourly cadence — DNS monitors are not staggered by their individual
+ * `interval_seconds`, unlike HTTP monitors. Resolves each domain, classifies the
+ * result, records it via `DnsMonitor.recordCheckResult`, and dispatches alerts on a
+ * changed/error result or a recovery back to ok.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
-import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+import { Resend } from "resend";
 
-import database from "~/db/index";
-import * as schema from "~/db/schema";
-import { recordAlertEvent } from "~/services/alert-cooldown";
-import { checkDns, type DnsRecordType } from "~/services/check-dns";
+import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
 
-/**
- * Job that checks all enabled DNS monitors.
- * Runs hourly to verify DNS records and detect changes.
- */
+import DnsMonitor from "~/app/data/dns-monitor";
+import { notifyDnsResult } from "~/app/services/alerts";
+import { checkDns } from "~/app/services/dns-check";
+
 export class CheckDnsJob extends Job {
-	static override monitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
-
 	async perform(): Promise<void> {
-		let db = database(env.DB);
-
-		// Get all enabled DNS monitors
-		let monitors = await db.query.dnsMonitors.findMany({
-			columns: {
-				id: true,
-				name: true,
-				domain: true,
-				recordType: true,
-				expectedValue: true,
-				lastValue: true,
-				teamId: true,
-			},
-			where(fields, operators) {
-				return operators.eq(fields.isEnabled, true);
-			},
-			with: {
-				team: {
-					columns: { id: true, ownerId: true },
-				},
-			},
-		});
-
-		this.logger.info("job.check-dns.monitors-loaded", { monitorCount: monitors.length });
+		let db = getServiceContainer().get(Database);
+		let resend = getServiceContainer().get(Resend);
+		let monitors = await DnsMonitor.listEnabled(db);
 
 		let successCount = 0;
 		let errorCount = 0;
 
 		for (let monitor of monitors) {
 			try {
-				await this.checkMonitorDns(db, monitor);
+				let result = await checkDns(
+					monitor.domain,
+					monitor.record_type as DnsRecordType,
+					monitor.expected_value,
+					monitor.last_value,
+				);
+				await DnsMonitor.recordCheckResult(db, monitor.id, result);
+				await notifyDnsResult(
+					db,
+					resend,
+					monitor,
+					monitor.last_status as DnsCheckStatus | null,
+					result,
+				);
 				successCount++;
-			} catch {
+			} catch (error) {
 				errorCount++;
+				this.logger.error("job.check_dns.monitor_failed", {
+					monitorId: monitor.id,
+					error: error instanceof Error ? error.message : String(error),
+				});
 			}
 		}
 
-		this.logger.info("job.check-dns.completed", {
-			monitorCount: monitors.length,
+		this.logger.info("job.check_dns.completed", {
+			total: monitors.length,
 			successCount,
 			errorCount,
 		});
-	}
-
-	private async checkMonitorDns(
-		db: ReturnType<typeof database>,
-		monitor: {
-			id: string;
-			name: string;
-			domain: string;
-			recordType: string;
-			expectedValue: string | null;
-			lastValue: string | null;
-			teamId: string;
-			team: { id: string; ownerId: string };
-		},
-	): Promise<void> {
-		let result = await checkDns(
-			monitor.domain,
-			monitor.recordType as DnsRecordType,
-			monitor.expectedValue,
-			monitor.lastValue,
-		);
-
-		// Store the result
-		await db.insert(schema.dnsMonitorResults).values({
-			dnsMonitorId: monitor.id,
-			status: result.status,
-			resolvedValue: result.resolvedValue,
-			responseTimeMs: result.responseTimeMs,
-			errorMessage: result.errorMessage,
-			checkedAt: new Date(),
-		});
-
-		// Update the monitor with the latest status
-		await db
-			.update(schema.dnsMonitors)
-			.set({
-				lastCheckedAt: new Date(),
-				lastStatus: result.status,
-				lastValue: result.resolvedValue,
-			})
-			.where(eq(schema.dnsMonitors.id, monitor.id));
-
-		this.logger.info("job.check-dns.monitor-checked", {
-			monitorId: monitor.id,
-			status: result.status,
-		});
-
-		// Send alerts if status is changed or error
-		if (result.status !== "ok") {
-			await this.sendDnsAlerts(db, monitor, result);
-		}
-	}
-
-	private async sendDnsAlerts(
-		db: ReturnType<typeof database>,
-		monitor: {
-			id: string;
-			name: string;
-			domain: string;
-			recordType: string;
-			teamId: string;
-			team: { id: string; ownerId: string };
-		},
-		result: {
-			status: string;
-			resolvedValue: string | null;
-			errorMessage?: string;
-		},
-	): Promise<void> {
-		// Get alerts configured for this team
-		let alerts = await db.query.alerts.findMany({
-			where(fields, operators) {
-				return operators.and(
-					operators.eq(fields.teamId, monitor.teamId),
-					operators.isNull(fields.monitorId), // Team-level alerts
-				);
-			},
-		});
-
-		if (alerts.length === 0) {
-			this.logger.info("job.check-dns.no-alerts-configured", {
-				monitorId: monitor.id,
-			});
-			return;
-		}
-
-		let resend = await import("~/clients/resend").then((m) => m.default);
-
-		let results = await Promise.allSettled(
-			alerts.map(async (alert) => {
-				let sentAt = new Date();
-				let eventType: "down" | "degraded" = result.status === "error" ? "down" : "degraded";
-				let snapshot = {
-					type: "dns" as const,
-					status: result.status,
-					resolvedValue: result.resolvedValue,
-					domain: monitor.domain,
-					recordType: monitor.recordType,
-				};
-
-				try {
-					if (alert.config.strategy === "email") {
-						let subject = this.getEmailSubject(
-							result.status,
-							monitor.name,
-							alert.config.config.subjectPrefix,
-						);
-
-						await resend.emails.send({
-							to: alert.config.config.to,
-							from: "Uptime <no-reply@uptime.sergiodxa.com>",
-							replyTo: "hello@sergiodxa.com",
-							subject,
-							text: this.getEmailBody(monitor, result),
-						});
-
-						this.logger.info("job.check-dns.alert-sent", {
-							monitorId: monitor.id,
-							alertId: alert.id,
-							alertType: "email",
-						});
-					}
-
-					if (alert.config.strategy === "webhook") {
-						let payload = {
-							type: "dns_change",
-							monitor: {
-								id: monitor.id,
-								name: monitor.name,
-								domain: monitor.domain,
-								recordType: monitor.recordType,
-							},
-							result: {
-								status: result.status,
-								resolvedValue: result.resolvedValue,
-								errorMessage: result.errorMessage,
-							},
-							timestamp: new Date().toISOString(),
-						};
-
-						let response = await fetch(alert.config.config.url, {
-							method: "POST",
-							headers: {
-								"Content-Type": Json,
-								...(alert.config.config.secret
-									? { "X-Webhook-Secret": alert.config.config.secret }
-									: {}),
-							},
-							body: JSON.stringify(payload),
-						});
-
-						if (!response.ok) {
-							throw new Error(`Webhook failed with status ${response.status}`);
-						}
-
-						this.logger.info("job.check-dns.alert-sent", {
-							monitorId: monitor.id,
-							alertId: alert.id,
-							alertType: "webhook",
-						});
-					}
-
-					if (alert.config.strategy === "slack") {
-						let message = this.getSlackMessage(monitor, result);
-
-						let response = await fetch(alert.config.config.webhookUrl, {
-							method: "POST",
-							headers: { "Content-Type": Json },
-							body: JSON.stringify({
-								text: message,
-								...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
-							}),
-						});
-
-						if (!response.ok) {
-							throw new Error(`Slack webhook failed with status ${response.status}`);
-						}
-
-						this.logger.info("job.check-dns.alert-sent", {
-							monitorId: monitor.id,
-							alertId: alert.id,
-							alertType: "slack",
-						});
-					}
-
-					if (alert.config.strategy === "discord") {
-						let message = this.getDiscordMessage(monitor, result);
-
-						let response = await fetch(alert.config.config.webhookUrl, {
-							method: "POST",
-							headers: { "Content-Type": Json },
-							body: JSON.stringify({ content: message }),
-						});
-
-						if (!response.ok) {
-							throw new Error(`Discord webhook failed with status ${response.status}`);
-						}
-
-						this.logger.info("job.check-dns.alert-sent", {
-							monitorId: monitor.id,
-							alertId: alert.id,
-							alertType: "discord",
-						});
-					}
-
-					await recordAlertEvent(db, {
-						alertId: alert.id,
-						monitorId: monitor.id,
-						eventType,
-						status: "sent",
-						sentAt,
-						monitorType: "dns",
-						monitorName: monitor.name,
-						snapshot,
-					});
-				} catch (error) {
-					let errorMessage = error instanceof Error ? error.message : String(error);
-					await recordAlertEvent(db, {
-						alertId: alert.id,
-						monitorId: monitor.id,
-						eventType,
-						status: "failed",
-						sentAt,
-						errorMessage,
-						monitorType: "dns",
-						monitorName: monitor.name,
-						snapshot,
-					});
-					throw error;
-				}
-			}),
-		);
-
-		let failed = results.filter((r) => r.status === "rejected");
-		if (failed.length > 0) {
-			this.logger.error("job.check-dns.some-alerts-failed", {
-				monitorId: monitor.id,
-				failedCount: failed.length,
-				totalCount: results.length,
-			});
-		}
-	}
-
-	private getEmailSubject(status: string, monitorName: string, subjectPrefix?: string): string {
-		let prefix = subjectPrefix ?? "[DNS ALERT]";
-
-		if (status === "error") {
-			return `${prefix} DNS check ERROR for ${monitorName}`;
-		}
-
-		return `${prefix} DNS record CHANGED for ${monitorName}`;
-	}
-
-	private getEmailBody(
-		monitor: { name: string; domain: string; recordType: string; team: { id: string } },
-		result: { status: string; resolvedValue: string | null; errorMessage?: string },
-	): string {
-		let statusMessage =
-			result.status === "error"
-				? `DNS check for ${monitor.name} failed with an error.`
-				: `The DNS ${monitor.recordType} record for ${monitor.domain} has changed.`;
-
-		let url = `https://uptime.sergiodxa.com/app/${monitor.team.id}/dns/${monitor.domain}`;
-
-		let body = `${statusMessage}
-
-Monitor: ${monitor.name}
-Domain: ${monitor.domain}
-Record Type: ${monitor.recordType}
-`;
-
-		if (result.resolvedValue) {
-			body += `Current Value: ${result.resolvedValue}\n`;
-		}
-
-		if (result.errorMessage) {
-			body += `Error: ${result.errorMessage}\n`;
-		}
-
-		body += `\nView monitor: ${url}`;
-
-		return body;
-	}
-
-	private getSlackMessage(
-		monitor: { name: string; domain: string; recordType: string },
-		result: { status: string; resolvedValue: string | null; errorMessage?: string },
-	): string {
-		let emoji = result.status === "error" ? ":x:" : ":warning:";
-		let statusText = result.status === "error" ? "ERROR" : "CHANGED";
-
-		let message = `${emoji} *DNS ${statusText}*: ${monitor.name}\n`;
-		message += `Domain: \`${monitor.domain}\` (${monitor.recordType})\n`;
-
-		if (result.resolvedValue) {
-			message += `Current Value: \`${result.resolvedValue}\`\n`;
-		}
-
-		if (result.errorMessage) {
-			message += `Error: ${result.errorMessage}\n`;
-		}
-
-		return message;
-	}
-
-	private getDiscordMessage(
-		monitor: { name: string; domain: string; recordType: string },
-		result: { status: string; resolvedValue: string | null; errorMessage?: string },
-	): string {
-		let statusText = result.status === "error" ? "ERROR" : "CHANGED";
-
-		let message = `**DNS ${statusText}**: ${monitor.name}\n`;
-		message += `Domain: \`${monitor.domain}\` (${monitor.recordType})\n`;
-
-		if (result.resolvedValue) {
-			message += `Current Value: \`${result.resolvedValue}\`\n`;
-		}
-
-		if (result.errorMessage) {
-			message += `Error: ${result.errorMessage}\n`;
-		}
-
-		return message;
 	}
 }

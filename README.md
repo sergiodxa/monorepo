@@ -68,18 +68,16 @@ Run from the repository root:
 
 ## Apps
 
-| App                           | Description                                    | URL                                                 |
-| ----------------------------- | ---------------------------------------------- | --------------------------------------------------- |
-| [auth](apps/auth)             | OAuth 2.0 / OIDC authorization server          | https://auth.sergiodxa.com                          |
-| [auth-saas](apps/auth-saas)   | Multi-tenant OIDC/OAuth2 identity platform     | https://auth.sergiodxa.com                          |
-| [blog](apps/blog)             | Personal blog and CMS                          | Retired, not deployed                               |
-| [blog-saas](apps/blog-saas)   | Multi-tenant blog platform                     | https://blog.sergiodxa.com                          |
-| [books](apps/books)           | Book landing page and sales funnel             | https://books.sergiodxa.com                         |
-| [pkmn](apps/pkmn)             | Monster-collecting game engine and browser UI  | Local app                                           |
-| [r3-blog](apps/r3-blog)       | Remix v3 SSR blog                              | https://sergiodxa.com                               |
-| [r3-gallery](apps/r3-gallery) | Client-only Remix UI photo gallery SPA         | https://r3-gallery.sergiodxa-cloudflare.workers.dev |
-| [r3-uptime](apps/r3-uptime)   | Remix v3 port of the uptime monitoring service | https://uptime.sergiodxa.com                        |
-| [uptime](apps/uptime)         | Infrastructure monitoring service              | Retired, not deployed                               |
+| App                           | Description                                   | URL                                                 |
+| ----------------------------- | --------------------------------------------- | --------------------------------------------------- |
+| [auth](apps/auth)             | OAuth 2.0 / OIDC authorization server         | https://auth.sergiodxa.com                          |
+| [auth-saas](apps/auth-saas)   | Multi-tenant OIDC/OAuth2 identity platform    | https://auth.sergiodxa.com                          |
+| [blog](apps/blog)             | Remix v3 SSR blog and CMS                     | https://sergiodxa.com                               |
+| [blog-saas](apps/blog-saas)   | Multi-tenant blog platform                    | https://blog.sergiodxa.com                          |
+| [books](apps/books)           | Book landing page and sales funnel            | https://books.sergiodxa.com                         |
+| [pkmn](apps/pkmn)             | Monster-collecting game engine and browser UI | Local app                                           |
+| [r3-gallery](apps/r3-gallery) | Client-only Remix UI photo gallery SPA        | https://r3-gallery.sergiodxa-cloudflare.workers.dev |
+| [uptime](apps/uptime)         | Uptime and infrastructure monitoring service  | https://uptime.sergiodxa.com                        |
 
 ## Packages
 

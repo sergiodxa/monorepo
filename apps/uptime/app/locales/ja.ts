@@ -21,6 +21,8 @@ export default {
 			nav: {
 				pricing: "料金",
 				features: "機能",
+				compare: "比較",
+				docs: "ドキュメント",
 
 				cta: {
 					in: "ダッシュボードを開く",
@@ -42,7 +44,7 @@ export default {
 			},
 
 			screenshot: {
-				alt: "2つのサービスと週間ヒートマップチャートを表示するUptime監視ダッシュボードのスクリーンショット。各ドットはチェックを表しています：緑は成功、黄色は混合、赤は失敗、グレーはデータなし。各モニターはUptime率、総チェック数、最終チェック時刻、99パーセンタイル応答時間も表示しています",
+				alt: "Uptimeダッシュボードのスクリーンショット。サイドバーにはHTTP・DNS・TCPモニター、cronジョブ、アラート、メンテナンス、ステータスページが並び、月間ping使用量・全体のUptime率・最も遅いエンドポイントの概要カード、種類ごとの稼働中および停止中のモニター数、そしてレイテンシ推移のスパークラインとステータスバッジを備えたHTTPモニターの一覧表が表示されています",
 			},
 
 			trustIndicators: {
@@ -200,12 +202,12 @@ export default {
 				list: {
 					first: {
 						title: "基本サブスクリプション",
-						description: "月額$5で最初の5,000回のpingを含む",
+						description: "月額{{price}}で最初の{{included}}回のpingを含む",
 					},
 
 					second: {
 						title: "追加ping",
-						description: "5,000回以降は1pingあたり$0.001",
+						description: "以降は{{blockSize}}pingごとに{{blockPrice}}（ブロック単位での課金）",
 					},
 
 					third: {
@@ -236,7 +238,8 @@ export default {
 					baseSubscription: "基本サブスクリプション",
 					includes: "最初の{{amount}}回のpingを含む",
 					additionalPings: "追加ping：",
-					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					additionalPingsCost:
+						"{{blocks}} × {{blockSize}}pingあたり{{blockPrice}}（超過{{pings}}）",
 					totalCost: "月額合計：",
 				},
 			},
@@ -330,7 +333,7 @@ export default {
 
 				seventeenth: {
 					q: "プランの制限を超えるとどうなりますか？",
-					a: "サブスクリプションに含まれる5,000回を超えるpingに対して、1,000pingごとに$1が課金されます。",
+					a: "サブスクリプションに含まれる{{included}}回を超える利用は、{{blockSize}}pingのブロック単位で1ブロックあたり{{blockPrice}}が課金されます（1回の超過でも1ブロック分）。",
 				},
 
 				eighteenth: {
@@ -403,6 +406,53 @@ export default {
 				},
 			},
 		},
+
+		comparison: {
+			tableLabel: "Uptime と {{competitor}} の比較",
+			tableCategoryHeader: "項目",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "チームが Uptime に移行する理由",
+			gettingStartedTitle: "はじめかた",
+			finalCtaTitle: "Uptime に移行する",
+
+			honestTake: {
+				badge: "正直な評価",
+				title: "{{competitor}} のほうが適している場合",
+				description:
+					"私たちは透明性を大切にしています。次のような場合は {{competitor}} が適した選択かもしれません。",
+			},
+
+			pricing: {
+				badge: "料金",
+				title: "実際のコスト比較",
+				description: "一般的な監視構成でどれだけ節約できるかをご確認ください。",
+				tableLabel: "コスト比較: Uptime と {{competitor}}",
+				scenarioHeader: "ユースケース",
+				savingsHeader: "削減額",
+				savingsPerYear: "年間~{{amount}}",
+				footnote:
+					"一般的な利用パターンに基づく概算です。{{competitor}} の料金は変更される場合があり、実際の費用は構成によって異なります。",
+			},
+		},
+
+		finalCta: {
+			body: "2分以内に最初のモニターを作成できます。開始にクレジットカードは不要です。",
+		},
+
+		marketingPage: {
+			everythingBadge: "詳しく見る",
+			everythingTitle: "必要なすべてを",
+			everythingDescription:
+				"最初のチェックから届くアラートまで、提供される内容を詳しくご紹介します。",
+			howItWorksBadge: "はじめに",
+			howItWorksTitle: "仕組み",
+			howItWorksDescription:
+				"空のダッシュボードから自動で走るチェックまで、3つのステップで完了します。",
+			faqBadge: "FAQ",
+			faqTitle: "よくある質問",
+			faqDescription: "監視を始める前によく寄せられる質問をまとめました。",
+			finalCtaTitle: "サービスの監視を始めましょう",
+		},
 	},
 
 	app: {
@@ -432,6 +482,7 @@ export default {
 						domains: "ドメイン",
 						members: "メンバー",
 						team: "チーム",
+						docs: "ドキュメント",
 						apiKeys: "APIキー",
 					},
 				},
@@ -484,8 +535,19 @@ export default {
 	},
 
 	statusPage: {
+		banner: {
+			operational: "すべてのシステムが正常に稼働中",
+			degraded: "部分的なシステム障害",
+			down: "重大なシステム障害",
+		},
+		status: {
+			operational: "稼働中",
+			degraded: "低下",
+			down: "ダウン",
+			unknown: "不明",
+		},
 		heatmap: {
-			daysAgo: "30日前",
+			daysAgo: "90日前",
 			today: "今日",
 			legend: {
 				full: "100%",
@@ -497,6 +559,19 @@ export default {
 				uptime: "{{percentage}}% 稼働率",
 				noData: "データなし",
 			},
+		},
+		cronJobs: {
+			title: "スケジュールされたジョブ",
+			lastPing: "最終Ping",
+			never: "なし",
+			schedule: "スケジュール",
+		},
+		empty: {
+			description: "このステータスページにはサービスが設定されていません。",
+		},
+		footer: {
+			lastUpdated: "最終更新: {{date}}",
+			poweredBy: "Uptime提供",
 		},
 		error: {
 			title: "ステータスページが見つかりません",
@@ -534,9 +609,15 @@ export default {
 		},
 
 		item: {
+			type: "タイプ",
+			status: "ステータス",
 			caseSensitive: "大文字小文字を区別",
+			enabled: "有効",
 			disabled: "無効",
+			yes: "はい",
+			no: "いいえ",
 			delete: "削除",
+			deleteConfirmTitle: "このコンテンツチェックを削除しますか？",
 		},
 
 		types: {
@@ -553,6 +634,10 @@ export default {
 			description: "説明: {{description}}",
 			uri: "URI:",
 			tryAgain: "もう一度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。",
+
+			signInFailedTitle: "サインインに失敗しました",
+			signInFailedGeneric: "サインインを完了できませんでした。もう一度お試しください。",
+			missingIdToken: "IDプロバイダーがIDトークンを返しませんでした。",
 		},
 	},
 
@@ -665,6 +750,10 @@ export default {
 				mixed: "混合",
 				noData: "データなし",
 			},
+		},
+		copyButton: {
+			label: "コピー",
+			copied: "コピーしました！",
 		},
 	},
 
@@ -1062,6 +1151,7 @@ export default {
 					label: "月間ping使用量",
 					value: "{{consumed}}<small> 使用済み</small>",
 					description: "推定{{estimated}}のうち",
+					unavailable: "推定値は利用できません",
 				},
 
 				uptime: {
@@ -1094,6 +1184,11 @@ export default {
 					value: { noData: "N/A" },
 					description: "過去24時間",
 				},
+
+				sslMonitors: {
+					label: "SSLモニター",
+					description: "{{valid}} 有効、{{expiring}} 期限間近、{{expired}} 期限切れ",
+				},
 			},
 
 			tabs: {
@@ -1101,6 +1196,28 @@ export default {
 				dns: "DNS",
 				tcp: "TCP",
 				cronJobs: "Cronジョブ",
+			},
+
+			loading: "読み込み中…",
+
+			panel: {
+				tabsLabel: "モニタータイプ",
+				tabPanelLabel: "{{tab}}モニター",
+				refresh: "更新",
+			},
+
+			error: {
+				card: {
+					label: "エラー",
+					value: "-",
+					description: "データの読み込みに失敗しました",
+				},
+				table: {
+					message: "モニターの読み込みに失敗しました。もう一度お試しください。",
+				},
+				analytics: {
+					message: "分析データは一時的に利用できません。しばらくしてからもう一度お試しください。",
+				},
 			},
 
 			table: {
@@ -1202,7 +1319,7 @@ export default {
 					region: {
 						label: "リージョン",
 						description: "pingが実行されるリージョン。",
-						placeholder: "wnam",
+						placeholder: "リージョンを選択",
 						options: {
 							afr: "{{emoji}} アフリカ",
 							apac: "{{emoji}} アジア太平洋",
@@ -1308,6 +1425,16 @@ export default {
 				cancel: "キャンセル",
 				cta: "変更を保存",
 			},
+
+			ssl: {
+				title: "SSL証明書の監視",
+				cta: "SSL設定を保存",
+			},
+
+			dangerZone: {
+				title: "危険ゾーン",
+				delete: "モニターを削除",
+			},
 		},
 
 		monitor: {
@@ -1316,6 +1443,7 @@ export default {
 
 				action: {
 					play: "モニターを実行",
+					running: "実行中…",
 					edit: "モニターを編集",
 					refresh: "更新",
 				},
@@ -1334,6 +1462,7 @@ export default {
 					label: "月間ping使用量",
 					value: "{{consumed}}<small> 使用済み</small>",
 					description: "推定{{estimated}}のうち",
+					estimateUnavailable: "見積もりが利用できません",
 				},
 
 				uptime: {
@@ -1379,6 +1508,7 @@ export default {
 			header: {
 				title: "請求",
 			},
+			ownerOnly: "このチームの請求情報を閲覧・管理できるのはチームオーナーのみです。",
 		},
 
 		members: {
@@ -1496,10 +1626,13 @@ export default {
 
 		acceptInvite: {
 			errors: {
+				pageTitle: "招待は無効です",
 				notFound: "この招待は存在しません。",
 				gone: "この招待は既に受け入れられています。",
 				forbidden: "この招待はあなた宛てではありません。",
 				badRequest: "メールアドレスが見つかりません。再度ログインしてください。",
+				wrongEmail:
+					"この招待は{{email}}宛に送信されました。そのメールアドレスでサインインして承諾してください。",
 			},
 		},
 
@@ -1621,6 +1754,8 @@ export default {
 				cta: "アラートを作成",
 			},
 
+			limitReached: "このチームはアラートの上限（{{limit}}件）に達しました。",
+
 			form: {
 				fields: {
 					name: {
@@ -1629,9 +1764,14 @@ export default {
 						description: "アラートを識別するための名前。",
 					},
 
-					strategy: {
-						label: "戦略",
-						description: "アラートに使用する戦略。",
+					scope: {
+						label: "対象範囲",
+						teamWide: "チーム全体（すべてのモニター）",
+					},
+
+					channel: {
+						label: "チャンネル",
+						description: "アラートに使用するチャンネル。",
 						options: {
 							webhook: "Webhook",
 							email: "メール",
@@ -1643,26 +1783,28 @@ export default {
 					config: {
 						webhook: {
 							url: {
-								label: "Webhook URL",
+								label: "URL",
 								placeholder: "https://example.com/webhook",
 								description: "アラートペイロードを送信するURL。",
 							},
 							secret: {
-								label: "シークレット",
+								label: "署名シークレット（任意）",
 								placeholder: "オプションのシークレット",
 								description:
 									"リクエストヘッダーに含めるオプションのシークレット。このシークレットを使用したペイロードのHMAC SHA256署名が`Webhook-Signature`ヘッダーとして追加されます。",
 							},
+							signatureNote:
+								"設定すると、リクエストに<code>Webhook-Signature: sha256=<hex></code>ヘッダーが付与されます。これはこのシークレットを使用した生のJSONボディのHMAC-SHA256です。",
 						},
 						email: {
 							to: {
-								label: "メールアドレス",
+								label: "受信者",
 								placeholder: "cto@example.com",
 								description: "アラートを送信するメールアドレス。",
 							},
 
 							subjectPrefix: {
-								label: "件名プレフィックス",
+								label: "件名プレフィックス（任意）",
 								placeholder: "[Uptimeアラート]",
 								description:
 									"メール件名に追加するオプションのプレフィックス。受信箱でアラートをフィルタリングするのに便利です。",
@@ -1670,13 +1812,13 @@ export default {
 						},
 						slack: {
 							webhookUrl: {
-								label: "Slack Webhook URL",
+								label: "Webhook URL",
 								placeholder: "https://hooks.slack.com/services/...",
 								description:
 									"Slackの受信Webhook URL。api.slack.com/apps > 受信Webhookで作成できます。",
 							},
 							channel: {
-								label: "チャンネルの上書き",
+								label: "チャンネルの上書き（任意）",
 								placeholder: "#alerts",
 								description:
 									"Webhookのデフォルトの代わりに投稿するオプションのチャンネル。#プレフィックスを含めてください。",
@@ -1684,7 +1826,7 @@ export default {
 						},
 						discord: {
 							webhookUrl: {
-								label: "Discord Webhook URL",
+								label: "Webhook URL",
 								placeholder: "https://discord.com/api/webhooks/...",
 								description:
 									"DiscordのWebhook URL。サーバー設定 > 連携サービス > Webhookで作成できます。",
@@ -1717,6 +1859,17 @@ export default {
 							description: "アラート間の分数を入力してください。",
 						},
 					},
+
+					cooldownMinutes: {
+						label: "クールダウン（分単位、0 = クールダウンなし）",
+					},
+
+					legends: {
+						email: "メール設定",
+						webhook: "Webhook設定",
+						slack: "Slack設定",
+						discord: "Discord設定",
+					},
 				},
 
 				cta: "アラートを作成",
@@ -1727,10 +1880,16 @@ export default {
 
 				columns: {
 					name: "名前",
+					scope: "対象範囲",
 					strategy: "タイプ",
 					notifyOnRecovery: "復旧通知",
 					cooldown: "クールダウン",
 					actions: "アクション",
+				},
+
+				scope: {
+					unknownMonitor: "不明なモニター",
+					teamWide: "チーム全体",
 				},
 
 				cooldown: {
@@ -1785,6 +1944,7 @@ export default {
 				columns: {
 					name: "名前",
 					slug: "URL",
+					services: "サービス",
 					monitors: "モニター",
 					visibility: "公開設定",
 					actions: "アクション",
@@ -1889,6 +2049,7 @@ export default {
 					actions: "アクション",
 				},
 				neverChecked: "未確認",
+				disabled: "無効",
 				actions: {
 					menu: "アクションメニュー",
 					view: "表示",
@@ -1903,6 +2064,8 @@ export default {
 				},
 				confirmation: {
 					delete: "モニター {{name}} を削除してもよろしいですか？",
+					deleteDescription:
+						"コンテンツチェックとチェック結果の履歴も削除されます。この操作は元に戻せません。",
 				},
 			},
 		},
@@ -1936,6 +2099,7 @@ export default {
 
 				disabled: "無効",
 				neverChecked: "未実行",
+				notChecked: "未確認",
 
 				actions: {
 					menu: "アクションメニュー",
@@ -2059,6 +2223,12 @@ export default {
 				cancel: "キャンセル",
 				cta: "変更を保存",
 			},
+
+			dangerZone: {
+				title: "危険な操作",
+				deleteMonitor: "モニターを削除",
+				deleteDescription: "チェック結果の履歴も削除されます。この操作は元に戻せません。",
+			},
 		},
 
 		dnsMonitorDetail: {
@@ -2071,6 +2241,9 @@ export default {
 					edit: "編集",
 				},
 			},
+
+			uptimeHistory: "稼働履歴",
+			notChecked: "未確認",
 
 			info: {
 				domain: "ドメイン",
@@ -2146,10 +2319,16 @@ export default {
 					monitor: "モニター",
 					status: "ステータス",
 					actions: "アクション",
+					scope: "範囲",
+					starts: "開始",
+					ends: "終了",
 				},
 
 				allMonitors: "すべてのモニター",
 				recurring: "繰り返し",
+				unknownMonitor: "不明なモニター",
+				endedEarly: "早期終了",
+				edit: "編集",
 
 				status: {
 					active: "実行中",
@@ -2236,6 +2415,74 @@ export default {
 				},
 
 				cta: "メンテナンスをスケジュール",
+			},
+		},
+
+		editMaintenance: {
+			header: {
+				title: "{{name}} を編集",
+			},
+
+			form: {
+				cta: "変更を保存",
+				cancel: "キャンセル",
+			},
+
+			endNow: {
+				cta: "メンテナンスを今すぐ終了",
+			},
+
+			danger: {
+				title: "危険な操作",
+
+				delete: {
+					trigger: "メンテナンスウィンドウを削除",
+					confirmTitle: "このメンテナンスウィンドウを削除しますか？",
+					confirmDescription: "この操作は元に戻せません。",
+					confirm: "削除",
+				},
+			},
+		},
+
+		maintenanceWindows: {
+			form: {
+				fields: {
+					name: {
+						label: "名前",
+					},
+
+					scope: {
+						label: "範囲",
+						allMonitors: "すべてのモニター",
+					},
+
+					startsAt: {
+						label: "開始時刻",
+					},
+
+					endsAt: {
+						label: "終了時刻",
+					},
+
+					suppressAlerts: {
+						label: "この期間中はアラートを抑制",
+					},
+
+					showOnStatusPage: {
+						label: "ステータスページに表示",
+					},
+
+					recurring: {
+						label: "繰り返し",
+					},
+
+					recurringPattern: {
+						label: "繰り返しパターン（繰り返しの場合）",
+						placeholder: "weekly:monday:02:00-04:00",
+						description:
+							"daily:HH:MM-HH:MM、weekly:<曜日>:HH:MM-HH:MM、または monthly:<日>:HH:MM-HH:MM（UTC）。",
+					},
+				},
 			},
 		},
 
@@ -2398,6 +2645,28 @@ export default {
 			},
 		},
 
+		editAlert: {
+			header: {
+				title: "アラートを編集",
+			},
+
+			form: {
+				cta: "変更を保存",
+				cancel: "キャンセル",
+			},
+
+			danger: {
+				title: "危険な操作",
+
+				delete: {
+					trigger: "アラートを削除",
+					confirmTitle: "このアラートを削除しますか？",
+					confirmDescription: "この操作は元に戻せません。",
+					confirm: "削除",
+				},
+			},
+		},
+
 		logout: {
 			title: "ログアウトしてもよろしいですか？",
 			cta: "ログアウト",
@@ -2420,19 +2689,35 @@ export default {
 				title: "アカウント",
 			},
 
+			form: {
+				actions: {
+					cancel: "キャンセル",
+				},
+			},
+
 			profile: {
 				title: "プロフィール",
 				description: "個人情報。",
+
+				card: {
+					title: "プロフィール詳細",
+					description: "お名前、メールアドレス、アバター。",
+				},
 			},
 
 			language: {
 				title: "言語設定",
 				description: "インターフェースの優先言語を選択してください。",
 
+				card: {
+					title: "言語",
+					description: "ダッシュボードとメール通知に適用されます。",
+				},
+
 				form: {
 					fields: {
 						language: {
-							label: "言語",
+							label: "優先言語",
 							description: "優先言語を選択してください。自動検出はブラウザの設定を使用します。",
 							options: {
 								auto: "自動検出",
@@ -2624,6 +2909,10 @@ export default {
 					confirmation: {
 						revokeInvite: "{{email}}の招待を取り消してもよろしいですか？",
 					},
+
+					empty: {
+						description: "保留中の招待はありません。",
+					},
 				},
 			},
 
@@ -2660,9 +2949,15 @@ export default {
 					confirmation: {
 						removeDomain: "{{hostname}}をチームから削除してもよろしいですか？",
 					},
+
+					empty: {
+						description: "確認済みドメインはまだありません。",
+					},
 				},
 
 				form: {
+					title: "ドメインを追加",
+
 					fields: {
 						hostname: {
 							label: "ドメイン",
@@ -2823,14 +3118,20 @@ export default {
 						label: "ポート",
 						placeholder: "5432",
 						description: "チェックするTCPポート（1-65535）。",
+						decrement: "ポートを減らす",
+						increment: "ポートを増やす",
 					},
 					interval: {
 						label: "チェック間隔",
 						description: "ポートをチェックする頻度。",
+						decrement: "チェック間隔を減らす",
+						increment: "チェック間隔を増やす",
 					},
 					timeout: {
 						label: "接続タイムアウト",
 						description: "タイムアウトまでに接続を待つ時間。",
+						decrement: "接続タイムアウトを減らす",
+						increment: "接続タイムアウトを増やす",
 					},
 				},
 				cta: "モニターを作成",
@@ -2869,14 +3170,20 @@ export default {
 						label: "ポート",
 						placeholder: "5432",
 						description: "チェックするTCPポート（1-65535）。",
+						decrement: "ポートを減らす",
+						increment: "ポートを増やす",
 					},
 					interval: {
 						label: "チェック間隔",
 						description: "ポートをチェックする頻度。",
+						decrement: "チェック間隔を減らす",
+						increment: "チェック間隔を増やす",
 					},
 					timeout: {
 						label: "接続タイムアウト",
 						description: "タイムアウトまでに接続を待つ時間。",
+						decrement: "接続タイムアウトを減らす",
+						increment: "接続タイムアウトを増やす",
 					},
 					isEnabled: {
 						label: "監視を有効化",
@@ -2884,6 +3191,12 @@ export default {
 				},
 				cancel: "キャンセル",
 				cta: "変更を保存",
+			},
+
+			danger: {
+				title: "危険ゾーン",
+				cta: "モニターを削除",
+				description: "これによりチェック結果の履歴も削除されます。この操作は取り消せません。",
 			},
 		},
 
@@ -2894,6 +3207,7 @@ export default {
 				},
 				action: {
 					edit: "編集",
+					checkNow: "今すぐチェック",
 				},
 			},
 
@@ -2928,6 +3242,10 @@ export default {
 				},
 			},
 
+			history: {
+				title: "Uptime履歴",
+			},
+
 			results: {
 				title: "チェック履歴",
 				description: "最近のTCP接続チェック結果",
@@ -2950,6 +3268,11 @@ export default {
 				},
 			},
 
+			docsLink: {
+				text: "APIキーの使い方については、こちらの",
+				link: "ドキュメント",
+			},
+
 			alert: {
 				subscription: {
 					title: "モニターが一時停止されています！",
@@ -2969,6 +3292,7 @@ export default {
 				description:
 					"今すぐこのキーをコピーしてください。セキュリティ上の理由から、再度表示することはできません。",
 				dismiss: "キーをコピーしました",
+				copyLabel: "キーをコピー",
 			},
 
 			form: {
@@ -3088,6 +3412,7 @@ export default {
 					missed: "未実行",
 					new: "新規",
 				},
+				disabled: "無効",
 				actions: {
 					edit: "編集",
 					delete: "削除",
@@ -3147,6 +3472,8 @@ export default {
 					gracePeriod: {
 						label: "猶予期間",
 						description: "遅延とマークする前に予定時刻からどれくらい待つか。",
+						decrement: "猶予期間を減らす",
+						increment: "猶予期間を増やす",
 						unit: {
 							minutes: "分",
 							seconds: "秒",
@@ -3219,6 +3546,8 @@ export default {
 					gracePeriod: {
 						label: "猶予期間",
 						description: "遅延とマークする前に予定時刻からどれくらい待つか。",
+						decrement: "猶予期間を減らす",
+						increment: "猶予期間を増やす",
 						unit: {
 							minutes: "分",
 							seconds: "秒",
@@ -3240,6 +3569,17 @@ export default {
 				},
 				cancel: "キャンセル",
 				cta: "変更を保存",
+			},
+
+			danger: {
+				title: "危険な操作",
+
+				delete: {
+					trigger: "モニターを削除",
+					confirmTitle: "このCronジョブモニターを削除しますか？",
+					confirmDescription: "Ping履歴も削除されます。この操作は元に戻せません。",
+					confirm: "削除",
+				},
 			},
 		},
 
@@ -3283,12 +3623,21 @@ export default {
 				lastPing: {
 					label: "最終Ping",
 					description: "最後のPingを受信した時刻",
+					never: "未受信",
 				},
 				nextExpected: {
 					label: "次回予定",
 					description: "次のPingが予定されている時刻",
 				},
 			},
+
+			ping: {
+				title: "このモニターにPingを送信",
+				description:
+					"ジョブが完了したら、ここにPOSTリクエストを送信してください。認証は不要です。このURLは秘密情報として扱ってください。",
+			},
+
+			uptimeHistory: "稼働履歴",
 
 			pings: {
 				title: "Ping履歴",
