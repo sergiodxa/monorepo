@@ -3,7 +3,7 @@
  * success/failure `Result` mapping, the KV-cached variant's cache-hit vs cache-miss
  * branching, the cache-key/TTL helpers, the ping-result write path, and every derived
  * dashboard query (team summaries' health-derivation rules, latest result, sparkline
- * ordering, and the daily aggregate). The Cloudflare bindings (`KV`, `PING_RESULTS`)
+ * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings (`KV`, `PING_RESULTS`)
  * are stubbed via `mock.module("cloudflare:workers", ...)` and the Analytics Engine
  * SQL HTTP API is stubbed via a mocked global `fetch`.
  *
@@ -32,6 +32,7 @@ let {
 	buildCacheKey,
 	getCacheTtl,
 	getHttpDailyAggregate,
+	getHttpP99ResponseTime,
 	getLatestHttpResult,
 	getMonitorSparkline,
 	getTeamHttpSparklines,
@@ -578,5 +579,114 @@ describe("getHttpDailyAggregate", () => {
 
 		let result = await getHttpDailyAggregate("2026-07-08");
 		expect(isFailure(result)).toBe(true);
+	});
+});
+
+describe("getHttpP99ResponseTime", () => {
+	/** The one-row shape the weighted-quantile query returns. */
+	function p99Response(p99ResponseTimeMs: number | null, totalChecks: number | null) {
+		return new Response(JSON.stringify({ data: [{ p99ResponseTimeMs, totalChecks }] }));
+	}
+
+	test("weights the quantile by _sample_interval over a 24-hour window", async () => {
+		let fetchMock = mock(async (..._args: unknown[]) => p99Response(410, 1200));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ teamId: "team-9" });
+
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data).toBe(410);
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		let body = init.body as string;
+		expect(body).toContain("quantileExactWeighted(0.99)(double1, _sample_interval)");
+		expect(body).toContain("SUM(_sample_interval * double2) AS totalChecks");
+		expect(body).toContain("timestamp >= NOW() - INTERVAL '24' HOUR");
+		expect(body).toContain("blob2 = 'http'");
+	});
+
+	test("scopes a team query by index1 and caches it under the team's p99 key", async () => {
+		let fetchMock = mock(async (..._args: unknown[]) => p99Response(250, 10));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		await getHttpP99ResponseTime({ teamId: "team-9" });
+
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(init.body as string).toContain("index1 = 'team-9'");
+		expect(kvGetMock).toHaveBeenCalledWith("cache:team-9:dashboard:v1:p99", "json");
+		expect(kvPutMock).toHaveBeenCalledWith(
+			"cache:team-9:dashboard:v1:p99",
+			JSON.stringify([{ p99ResponseTimeMs: 250, totalChecks: 10 }]),
+			{ expirationTtl: 60 },
+		);
+	});
+
+	test("reuses the cached row without re-querying Analytics Engine", async () => {
+		kvGetMock.mockImplementation(async () => [{ p99ResponseTimeMs: 99, totalChecks: 5 }]);
+		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ teamId: "team-1" });
+
+		expect(fetchMock).not.toHaveBeenCalled();
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data).toBe(99);
+	});
+
+	test("scopes a monitor query by blob1 and never touches the cache", async () => {
+		let fetchMock = mock(async (..._args: unknown[]) => p99Response(700, 42));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
+
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data).toBe(700);
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		let body = init.body as string;
+		expect(body).toContain("blob1 = 'monitor-1'");
+		expect(body).not.toContain("index1");
+		expect(kvGetMock).not.toHaveBeenCalled();
+		expect(kvPutMock).not.toHaveBeenCalled();
+	});
+
+	test("returns null when the window holds no checks, even though the aggregate returns a row", async () => {
+		globalThis.fetch = mock(async (..._args: unknown[]) =>
+			p99Response(0, 0),
+		) as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data).toBeNull();
+	});
+
+	test("returns null when the query comes back with no rows at all", async () => {
+		globalThis.fetch = mock(
+			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
+		) as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data).toBeNull();
+	});
+
+	test("returns a failure Result when the query fails", async () => {
+		globalThis.fetch = mock(
+			async (..._args: unknown[]) => new Response("nope", { status: 503 }),
+		) as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ monitorId: "monitor-1" });
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("degrades to a failure Result instead of throwing when the KV read throws", async () => {
+		kvGetMock.mockImplementation(async () => {
+			throw new Error("KV unavailable");
+		});
+		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		let result = await getHttpP99ResponseTime({ teamId: "team-1" });
+
+		expect(isFailure(result)).toBe(true);
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

@@ -14,14 +14,17 @@
 import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
+import { isFailure } from "@pkg/result";
 import { generateUUID } from "@pkg/uuid";
 import { env } from "cloudflare:workers";
 import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
 
+import type { HttpP99Scope } from "~/app/services/analytics";
 import type { InsertMonitor } from "~/database/schema";
 
 import Customer from "~/app/data/customer";
+import { getHttpP99ResponseTime } from "~/app/services/analytics";
 import {
 	cronJobMonitors,
 	dnsMonitors,
@@ -58,6 +61,12 @@ export interface MonitorStats {
 	total: number;
 	uptime: number | null;
 	lastCheck: number | null;
+	/**
+	 * The 99th-percentile response time in milliseconds over the **last 24 hours** — the
+	 * one figure here that comes from Analytics Engine rather than D1. `null` when the
+	 * window holds no checks, or when the Analytics Engine query failed, in which case
+	 * callers show a placeholder instead of a number.
+	 */
 	p99: number | null;
 }
 
@@ -204,20 +213,38 @@ export default class Monitor {
 
 	/** Computes total checks, uptime percentage, last-check time, and p99 response time for one monitor. */
 	static async getStatsById(db: Database, monitorId: string): Promise<MonitorStats> {
-		return await Monitor.getStats(db, "r.monitor_id = ?", [monitorId]);
+		return await Monitor.getStats(db, "r.monitor_id = ?", [monitorId], { monitorId });
 	}
 
 	/** Computes total checks, uptime percentage, last-check time, and p99 response time across a team. */
 	static async getStatsByTeamId(db: Database, teamId: string): Promise<MonitorStats> {
-		return await Monitor.getStats(db, "m.team_id = ?", [teamId]);
+		return await Monitor.getStats(db, "m.team_id = ?", [teamId], { teamId });
 	}
 
+	/**
+	 * One stats card, two stores:
+	 *
+	 * - `total`, `uptime` and `lastCheck` come from D1's `monitor_results`, because they
+	 *   are aggregates over "every check ever recorded" and each one costs a single row
+	 *   read: the query returns one row no matter how many it summarises.
+	 * - `p99` comes from Analytics Engine over a stated 24-hour window. As a D1 query it
+	 *   had to ship every stored response time to the Worker to index into the sorted
+	 *   array — tens of thousands of rows read per call, growing linearly with the team's
+	 *   monitor count, and a Worker memory ceiling at a few hundred monitors. Analytics
+	 *   Engine answers it as one query, and the fixed window makes the number comparable
+	 *   with itself instead of silently meaning "whatever `CleanJob` has not purged yet".
+	 *
+	 * The split means the p99 is the one figure here that depends on Analytics Engine, so
+	 * a failed query degrades it to `null` (callers render "—") rather than failing the
+	 * whole card.
+	 */
 	private static async getStats(
 		db: Database,
 		scopeClause: string,
 		scopeParams: string[],
+		p99Scope: HttpP99Scope,
 	): Promise<MonitorStats> {
-		let [statsResult, responseTimesResult] = await Promise.all([
+		let [statsResult, p99Result] = await Promise.all([
 			db.exec(
 				`SELECT
 					COUNT(*) AS total,
@@ -228,27 +255,16 @@ export default class Monitor {
 				 WHERE ${scopeClause} AND r.completed_at IS NOT NULL AND r.response_status IS NOT NULL`,
 				scopeParams,
 			),
-			db.exec(
-				`SELECT r.response_time_ms AS responseTimeMs
-				 FROM monitor_results r
-				 JOIN monitors m ON r.monitor_id = m.id
-				 WHERE ${scopeClause} AND r.response_time_ms IS NOT NULL
-				 ORDER BY r.response_time_ms ASC`,
-				scopeParams,
-			),
+			getHttpP99ResponseTime(p99Scope),
 		]);
 
 		let [row] = (statsResult.rows ?? []) as unknown as StatsRow[];
-		let responseTimes = (
-			(responseTimesResult.rows ?? []) as unknown as Array<{ responseTimeMs: number }>
-		).map((r) => r.responseTimeMs);
-		let p99Index = Math.floor(responseTimes.length * 0.99);
 
 		return {
 			total: row?.total ?? 0,
 			uptime: row?.uptime ?? null,
 			lastCheck: row?.lastCheck ?? null,
-			p99: responseTimes[p99Index] ?? null,
+			p99: isFailure(p99Result) ? null : p99Result.data,
 		};
 	}
 

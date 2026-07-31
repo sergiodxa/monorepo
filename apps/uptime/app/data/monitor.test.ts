@@ -4,7 +4,9 @@
  * scheduler runs every minute. `findDue`'s join/aggregation logic can't be
  * typo-checked by the type system, so it gets dedicated coverage for the
  * never-checked, interval-not-elapsed, interval-elapsed, and disabled-monitor
- * branches.
+ * branches. `getStats*` gets the same treatment for its two-store split: the D1
+ * aggregates against a real database, the Analytics Engine p99 against a stubbed service
+ * so the scope and the failure degradation are both observable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +14,12 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import type { Result } from "@pkg/result";
 import type { Database } from "remix/data-table";
+
+import { failure, success } from "@pkg/result";
+
+import type { HttpP99Scope } from "~/app/services/analytics";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
@@ -43,6 +50,17 @@ interface PingQueueMessage {
  */
 let queueSend = mock(async (_message: PingQueueMessage) => {});
 mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: queueSend } } }));
+
+/**
+ * `Monitor.getStats*` now reads its p99 from Analytics Engine (see the method's
+ * docblock). Stub the service so the D1 half of the card can be asserted without an HTTP
+ * round trip, and so the scope each entry point passes is observable; the SQL text itself
+ * is covered in `app/services/analytics.test.ts`.
+ */
+let p99Query = mock(
+	async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> => success(null),
+);
+mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
 let { PolarClient } = await import("@pkg/polar");
 let { default: Monitor } = await import("~/app/data/monitor");
@@ -724,5 +742,98 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 		});
 
 		expect(await Monitor.estimateConsumedPingsByTeam(db, team.id, date)).toBe(0);
+	});
+});
+
+describe("Monitor.getStats", () => {
+	/** A completed HTTP check, the row the D1 half of the stats card aggregates. */
+	async function createResult(db: Database, monitorId: string, responseStatus: number) {
+		await db.create(
+			monitorResults,
+			{
+				id: crypto.randomUUID(),
+				monitor_id: monitorId,
+				response_status: responseStatus,
+				response_time_ms: 100,
+				completed_at: 1_700_000_000_000,
+			},
+			{ touch: true },
+		);
+	}
+
+	test("takes total/uptime/lastCheck from D1 and the p99 from Analytics Engine", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		await createResult(db, monitor.id, 200);
+		await createResult(db, monitor.id, 500);
+
+		p99Query.mockClear();
+		p99Query.mockImplementation(async () => success(410));
+
+		let stats = await Monitor.getStatsByTeamId(db, team.id);
+
+		expect(stats.total).toBe(2);
+		expect(stats.uptime).toBe(50);
+		expect(stats.lastCheck).toBe(1_700_000_000_000);
+		expect(stats.p99).toBe(410);
+		expect(p99Query).toHaveBeenCalledWith({ teamId: team.id });
+	});
+
+	test("scopes the Analytics Engine query to the monitor for getStatsById", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		await createResult(db, monitor.id, 200);
+
+		p99Query.mockClear();
+		p99Query.mockImplementation(async () => success(120));
+
+		let stats = await Monitor.getStatsById(db, monitor.id);
+
+		expect(stats.total).toBe(1);
+		expect(stats.uptime).toBe(100);
+		expect(stats.p99).toBe(120);
+		expect(p99Query).toHaveBeenCalledWith({ monitorId: monitor.id });
+	});
+
+	test("degrades the p99 to null when Analytics Engine fails, keeping the D1 figures", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		await createResult(db, monitor.id, 200);
+
+		p99Query.mockClear();
+		p99Query.mockImplementation(async () => failure(new Error("Analytics query failed: 503")));
+
+		let stats = await Monitor.getStatsByTeamId(db, team.id);
+
+		expect(stats.total).toBe(1);
+		expect(stats.uptime).toBe(100);
+		expect(stats.p99).toBeNull();
+	});
+
+	test("reports zero checks and a null p99 for a team that has never been checked", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+
+		p99Query.mockClear();
+		p99Query.mockImplementation(async () => success(null));
+
+		let stats = await Monitor.getStatsByTeamId(db, team.id);
+
+		expect(stats.total).toBe(0);
+		expect(stats.uptime).toBeNull();
+		expect(stats.lastCheck).toBeNull();
+		expect(stats.p99).toBeNull();
 	});
 });

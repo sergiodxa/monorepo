@@ -245,6 +245,78 @@ export async function getSlowestResultForMonitor(
 	return success(result.data[0]?.maxResponseTimeMs ?? null);
 }
 
+/**
+ * What {@link getHttpP99ResponseTime} measures: a whole team's HTTP monitors, or one
+ * monitor on its own.
+ */
+export type HttpP99Scope = { teamId: string } | { monitorId: string };
+
+/** The single row {@link getHttpP99ResponseTime}'s query returns. */
+interface HttpP99Row {
+	p99ResponseTimeMs: number | null;
+	totalChecks: number | null;
+}
+
+/**
+ * The 99th-percentile response time over the last 24 hours, in milliseconds, for a whole
+ * team or for one monitor — `null` when the scope has no HTTP checks in range.
+ *
+ * `quantileExactWeighted(q)(column, weight)` is the spelling this account's SQL dialect
+ * documents; `quantileWeighted` exists only as a legacy `quantileWeighted(q, column,
+ * weight)` form, so the curried spelling is the safe one. `_sample_interval` is the
+ * weight for the same reason {@link getHttpDailyAggregate} uses it: Analytics Engine
+ * statistically samples at scale, so an unweighted quantile skews toward whichever rows
+ * survived sampling.
+ *
+ * The weighted check total comes back in the same query so "no checks at all" can be
+ * told apart from a real quantile — with nothing in range the aggregate still returns one
+ * row, and a `0` there means "empty", not "instant".
+ *
+ * The team-scoped query is cached in KV alongside the other dashboard queries; the
+ * single-monitor one isn't, matching {@link getSlowestResultForMonitor}.
+ */
+export async function getHttpP99ResponseTime(
+	scope: HttpP99Scope,
+): Promise<Result<number | null, Error>> {
+	let scopeClause =
+		"teamId" in scope ? `index1 = '${scope.teamId}'` : `blob1 = '${scope.monitorId}'`;
+
+	let sql = `
+		SELECT
+			quantileExactWeighted(0.99)(double1, _sample_interval) AS p99ResponseTimeMs,
+			SUM(_sample_interval * double2) AS totalChecks
+		FROM uptime_monitor_results
+		WHERE ${scopeClause} AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR
+	`;
+
+	/**
+	 * Wrapped in a try/catch on top of the one inside {@link queryAnalytics}: the cached
+	 * path reads KV before it ever reaches that guard, and a KV read can throw. This is
+	 * the only figure on a stats card whose other numbers come from D1, so anything that
+	 * goes wrong on the way to Analytics Engine has to degrade to one missing number
+	 * rather than take the whole card down.
+	 */
+	let result: Result<HttpP99Row[], Error>;
+	try {
+		result =
+			"teamId" in scope
+				? await queryAnalyticsCached<HttpP99Row>(
+						buildCacheKey(scope.teamId, "p99"),
+						getCacheTtl(60),
+						sql,
+					)
+				: await queryAnalytics<HttpP99Row>(sql);
+	} catch (error) {
+		return failure(error instanceof Error ? error : new Error(String(error)));
+	}
+
+	if (isFailure(result)) return result;
+
+	let [row] = result.data;
+	if (!row || !row.totalChecks) return success(null);
+	return success(row.p99ResponseTimeMs ?? null);
+}
+
 /** The last `limit` HTTP ping response times for one monitor, oldest first. */
 export async function getMonitorSparkline(
 	teamId: string,

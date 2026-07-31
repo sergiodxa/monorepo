@@ -2,8 +2,8 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
-§5 and §17 (medium).
+**Accepted** — implemented 2026-07-30. Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §5 and §17 (medium).
 
 ## Context
 
@@ -64,7 +64,7 @@ with the numbers beside it.
 exactly this shape of question over a time range without shipping rows to the Worker:
 
 ```sql
-SELECT quantileWeighted(0.99)(double1, _sample_interval) AS p99ResponseTimeMs
+SELECT quantileExactWeighted(0.99)(double1, _sample_interval) AS p99ResponseTimeMs
 FROM uptime_monitor_results
 WHERE index1 = '{teamId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR
 ```
@@ -74,6 +74,13 @@ it: Analytics Engine statistically samples at scale, so an unweighted quantile s
 exact quantile function against the account's SQL dialect before relying on it — the analytics
 service's docblock already warns that the dialect rejects things like `COUNT(*)`, so the
 available quantile spelling needs checking rather than assuming.
+
+> **Corrected during implementation.** This snippet originally read
+> `quantileWeighted(0.99)(double1, _sample_interval)`, which matches no documented signature and
+> would have failed. Cloudflare documents the curried form as
+> `quantileExactWeighted(q)(column, weight)`; `quantileWeighted` exists only as a legacy _flat_
+> `quantileWeighted(q, column, weight)`. The warning in the paragraph above was well placed — the
+> spelling did need checking, and the ADR's own guess was the wrong one.
 
 This makes the p99 **one AE read query ($0.000001) instead of ~40,000 D1 rows read ($0.00004)**
 — 40× cheaper today, and flat in volume rather than linear.
