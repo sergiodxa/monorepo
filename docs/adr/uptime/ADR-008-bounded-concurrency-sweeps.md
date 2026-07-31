@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §17 (high, plus the leaked-timer item at low). Prerequisite for
 [ADR-006](./ADR-006-honour-interval-seconds-for-tcp-and-dns.md).
 

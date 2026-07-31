@@ -1,11 +1,14 @@
 /**
  * Unit tests for `CheckSslJob.perform()`, covering the sweep-every-SSL-enabled-monitor
- * loop: persisting `calculateSslStatus`'s result onto the monitor row, passing each
- * monitor's own expiry settings into the calculation, and that one monitor's failure
- * doesn't stop the rest of the sweep. `calculateSslStatus` and `notifySslResult` are
- * mocked so each test controls the exact status/expiry outcome instead of depending on
- * wall-clock arithmetic — status classification and alert delivery have their own
- * tests.
+ * pass: persisting `calculateSslStatus`'s result onto the monitor row, passing each
+ * monitor's own expiry settings into the calculation, enqueuing a `notify` message only
+ * for a status a warning threshold covers, and that one monitor's failure doesn't stop the
+ * rest of the sweep.
+ *
+ * `calculateSslStatus` is mocked so each test controls the exact status/expiry outcome
+ * instead of depending on wall-clock arithmetic, and the `QUEUE` binding is faked so the
+ * enqueued messages can be asserted on. Status classification and alert delivery have
+ * their own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +21,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
+import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { InsertMonitor } from "~/database/schema";
 
@@ -39,53 +43,34 @@ let calculateSslStatusMock = mock(
 	},
 );
 
-interface NotifyCall {
-	monitorId: string;
-	status: SslStatus;
-	daysUntilExpiry: number | null;
-}
-
-let notifySslResultCalls: NotifyCall[] = [];
-let notifySslResultMock = mock(
-	async (
-		_db: unknown,
-		_resend: unknown,
-		monitor: { id: string },
-		status: SslStatus,
-		daysUntilExpiry: number | null,
-	) => {
-		notifySslResultCalls.push({ monitorId: monitor.id, status, daysUntilExpiry });
-	},
-);
+/** Every `notify` message body the sweep put on the queue, in order. */
+let enqueued: NotifyMessage[] = [];
+let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
+	for (let request of requests) enqueued.push(request.body);
+});
 
 /**
  * `~/app/data/monitor` (imported transitively by `./check-ssl`) reads `env` from
- * `cloudflare:workers` at module load. The repo-root `bunfig.toml` preload stubs this
- * automatically for `bun test` run from the repo root, but not when run from this
- * package's own directory (as instructed), so it's stubbed explicitly here too.
+ * `cloudflare:workers` at module load, and the sweep itself reads the `QUEUE` binding from
+ * it. The repo-root `bunfig.toml` preload stubs the module automatically for `bun test` run
+ * from the repo root, but its placeholder bindings aren't callable, so a real queue fake is
+ * provided here.
  */
 mock.module("cloudflare:workers", () => ({
-	env: new Proxy({} as Record<string, unknown>, { get: (_target, prop: string) => `test-${prop}` }),
+	env: new Proxy(
+		{ QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
+		{
+			get: (target: Record<string, unknown>, prop: string) =>
+				prop in target ? target[prop] : `test-${prop}`,
+		},
+	),
 }));
 
 let realSslInfoModule = await import("~/app/services/ssl-info");
-let realAlertsModule = await import("~/app/services/alerts");
 
 mock.module("~/app/services/ssl-info", () => ({
 	...realSslInfoModule,
 	calculateSslStatus: calculateSslStatusMock,
-}));
-/**
- * Every `notify*`/other export is spread from the real module here (not just
- * `notifySslResult` replaced) because `check-dns.test.ts`, `check-tcp.test.ts`, and
- * `check-cron-jobs.test.ts` mock this same module path — `bun test` shares one module
- * registry across files in a run, so a mock missing an export another file needs
- * (either "export not found", or silently getting a no-op stub instead of the real
- * implementation another file is trying to test) leaks into whichever file runs next.
- */
-mock.module("~/app/services/alerts", () => ({
-	...realAlertsModule,
-	notifySslResult: notifySslResultMock,
 }));
 
 let { CheckSslJob } = await import("./check-ssl");
@@ -126,12 +111,12 @@ beforeEach(() => {
 		return { status: "valid", daysUntilExpiry: 100 };
 	});
 	calculateCalls = [];
-	notifySslResultMock.mockClear();
-	notifySslResultCalls = [];
+	sendBatchMock.mockClear();
+	enqueued = [];
 });
 
 describe("CheckSslJob", () => {
-	test("re-evaluates SSL status and persists it onto the monitor row", async () => {
+	test("re-evaluates SSL status, persists it, and enqueues a notification for an expiring certificate", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 
@@ -143,15 +128,21 @@ describe("CheckSslJob", () => {
 		expect(updated?.ssl_status).toBe("expiring");
 		expect(updated?.ssl_last_checked_at).not.toBeNull();
 
-		expect(notifySslResultCalls).toHaveLength(1);
-		expect(notifySslResultCalls[0]!.monitorId).toBe(monitor.id);
-		expect(notifySslResultCalls[0]!.status).toBe("expiring");
-		expect(notifySslResultCalls[0]!.daysUntilExpiry).toBe(5);
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "ssl",
+				monitorId: monitor.id,
+				previousStatus: "unknown",
+				newStatus: "expiring",
+			},
+		]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_ssl.completed");
 		expect(completed?.total).toBe(1);
 		expect(completed?.successCount).toBe(1);
 		expect(completed?.errorCount).toBe(0);
+		expect(completed?.notified).toBe(1);
 	});
 
 	test("skips monitors without SSL monitoring enabled", async () => {
@@ -161,7 +152,18 @@ describe("CheckSslJob", () => {
 		await runJob(db);
 
 		expect(calculateSslStatusMock).not.toHaveBeenCalled();
-		expect(notifySslResultCalls).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
+	});
+
+	test("persists a valid certificate's status without enqueuing a notification", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+
+		await runJob(db);
+
+		let updated = await Monitor.findByIdForTeam(db, "team-1", monitor.id);
+		expect(updated?.ssl_status).toBe("valid");
+		expect(sendBatchMock).not.toHaveBeenCalled();
 	});
 
 	test("passes each monitor's own expiry settings into calculateSslStatus", async () => {
@@ -203,12 +205,12 @@ describe("CheckSslJob", () => {
 
 		calculateSslStatusMock.mockImplementation((expiresAt) => {
 			if (expiresAt === failing.ssl_expires_at) throw new Error("Unexpected expiry value");
-			return { status: "valid", daysUntilExpiry: 100 };
+			return { status: "expired", daysUntilExpiry: -1 };
 		});
 
 		let job = await runJob(db);
 
-		expect(notifySslResultCalls.map((call) => call.monitorId)).toEqual([healthy.id]);
+		expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_ssl.completed");
 		expect(completed?.total).toBe(2);

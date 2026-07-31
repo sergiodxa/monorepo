@@ -1,9 +1,13 @@
 /**
  * Unit tests for `CheckCronJobsJob.perform()`, covering the healthy → late → missed
- * status-transition sweep: the grace-period arithmetic that decides each transition,
- * which monitors `CronJobMonitor.listActionable` excludes from the sweep entirely, and
- * that `notifyCronJobResult` only fires on an actual transition. `notifyCronJobResult`
- * is mocked — alert delivery has its own tests.
+ * status-transition sweep: the grace-period arithmetic that decides each transition, which
+ * monitors `CronJobMonitor.listActionable` excludes from the sweep entirely, and that a
+ * `notify` message is enqueued only on an actual transition — carrying the status the
+ * monitor held before `updateStatus` overwrote it, which is what makes the transition
+ * classifiable downstream.
+ *
+ * The `QUEUE` binding is faked so the enqueued messages can be asserted on; alert delivery
+ * itself now happens in `NotifyJob` and has its own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,43 +20,20 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";
+import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { InsertCronJobMonitor } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { createTestDatabase } from "~/app/lib/test/db";
 
-interface NotifyCall {
-	monitorId: string;
-	previousStatus: CronJobStatus;
-	newStatus: CronJobStatus;
-}
+/** Every `notify` message body the sweep put on the queue, in order. */
+let enqueued: NotifyMessage[] = [];
+let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
+	for (let request of requests) enqueued.push(request.body);
+});
 
-let notifyCronJobResultCalls: NotifyCall[] = [];
-let notifyCronJobResultMock = mock(
-	async (
-		_db: unknown,
-		_resend: unknown,
-		monitor: { id: string },
-		previousStatus: CronJobStatus,
-		newStatus: CronJobStatus,
-	) => {
-		notifyCronJobResultCalls.push({ monitorId: monitor.id, previousStatus, newStatus });
-	},
-);
-
-let realAlertsModule = await import("~/app/services/alerts");
-
-/**
- * Every `notify*`/other export is spread from the real module here (not just
- * `notifyCronJobResult` replaced) because `check-dns.test.ts`, `check-tcp.test.ts`, and
- * `check-ssl.test.ts` mock this same module path — `bun test` shares one module
- * registry across files in a run, so a mock missing an export another file needs
- * (either "export not found", or silently getting a no-op stub instead of the real
- * implementation another file is trying to test) leaks into whichever file runs next.
- */
-mock.module("~/app/services/alerts", () => ({
-	...realAlertsModule,
-	notifyCronJobResult: notifyCronJobResultMock,
+mock.module("cloudflare:workers", () => ({
+	env: { QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
 }));
 
 let { CheckCronJobsJob } = await import("./check-cron-jobs");
@@ -88,8 +69,8 @@ async function seedMonitor(db: Database, overrides: Partial<InsertCronJobMonitor
 }
 
 beforeEach(() => {
-	notifyCronJobResultMock.mockClear();
-	notifyCronJobResultCalls = [];
+	sendBatchMock.mockClear();
+	enqueued = [];
 });
 
 describe("CheckCronJobsJob", () => {
@@ -107,8 +88,14 @@ describe("CheckCronJobsJob", () => {
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("late");
 
-		expect(notifyCronJobResultCalls).toEqual([
-			{ monitorId: monitor.id, previousStatus: "healthy", newStatus: "late" },
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "cron",
+				monitorId: monitor.id,
+				previousStatus: "healthy",
+				newStatus: "late",
+			},
 		]);
 
 		let completed = job.logger.events.find(
@@ -116,6 +103,7 @@ describe("CheckCronJobsJob", () => {
 		);
 		expect(completed?.total).toBe(1);
 		expect(completed?.transitioned).toBe(1);
+		expect(completed?.notified).toBe(1);
 	});
 
 	test("transitions a healthy monitor whose grace period has also elapsed directly to missed", async () => {
@@ -131,8 +119,14 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("missed");
-		expect(notifyCronJobResultCalls).toEqual([
-			{ monitorId: monitor.id, previousStatus: "healthy", newStatus: "missed" },
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "cron",
+				monitorId: monitor.id,
+				previousStatus: "healthy",
+				newStatus: "missed",
+			},
 		]);
 	});
 
@@ -149,8 +143,14 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("missed");
-		expect(notifyCronJobResultCalls).toEqual([
-			{ monitorId: monitor.id, previousStatus: "late", newStatus: "missed" },
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "cron",
+				monitorId: monitor.id,
+				previousStatus: "late",
+				newStatus: "missed",
+			},
 		]);
 	});
 
@@ -166,7 +166,7 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("healthy");
-		expect(notifyCronJobResultCalls).toHaveLength(0);
+		expect(sendBatchMock).not.toHaveBeenCalled();
 
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
@@ -184,7 +184,7 @@ describe("CheckCronJobsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(notifyCronJobResultCalls).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
 		);
@@ -197,10 +197,37 @@ describe("CheckCronJobsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(notifyCronJobResultCalls).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
 		);
 		expect(completed?.total).toBe(0);
+	});
+
+	test("transitions every due monitor in one sweep", async () => {
+		let { db } = createTestDatabase();
+		let now = Date.now();
+		let seeded = [];
+		for (let index = 0; index < 25; index++) {
+			seeded.push(
+				await seedMonitor(db, {
+					name: `Backup ${index}`,
+					status: "healthy",
+					next_expected_at: now - 10 * 60 * 1000,
+					grace_period_seconds: 300,
+				}),
+			);
+		}
+
+		let job = await runJob(db);
+
+		expect(enqueued.map((message) => message.monitorId).sort()).toEqual(
+			seeded.map((monitor) => monitor.id).sort(),
+		);
+
+		let completed = job.logger.events.find(
+			(event) => event.event === "job.check_cron_jobs.completed",
+		);
+		expect(completed?.transitioned).toBe(25);
 	});
 });

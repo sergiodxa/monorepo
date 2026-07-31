@@ -31,11 +31,20 @@ export async function checkTcpConnection(
 ): Promise<TcpCheckResult> {
 	let startedAt = performance.now();
 	let socket = connect({ hostname: host, port });
+	/**
+	 * Kept so the losing side of the race below can be cancelled. An uncleared timer
+	 * keeps the invocation alive for the whole `timeoutMs` even when the socket opened
+	 * in milliseconds, which is what made a sequential sweep cost `N × timeoutMs`
+	 * instead of `N × actual latency` (ADR-008).
+	 */
+	let timeout: ReturnType<typeof setTimeout> | undefined;
 
 	try {
 		let outcome = await Promise.race([
 			socket.opened.then(() => "connected" as const),
-			new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), timeoutMs)),
+			new Promise<typeof TIMED_OUT>((resolve) => {
+				timeout = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
+			}),
 		]);
 
 		let responseTimeMs = Math.round(performance.now() - startedAt);
@@ -56,6 +65,7 @@ export async function checkTcpConnection(
 			errorMessage: error instanceof Error ? error.message : String(error),
 		};
 	} finally {
+		clearTimeout(timeout);
 		await socket.close().catch(() => {});
 	}
 }

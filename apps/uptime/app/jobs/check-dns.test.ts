@@ -1,9 +1,13 @@
 /**
- * Unit tests for `CheckDnsJob.perform()`, covering the sweep-every-enabled-monitor
- * loop: result recording via `DnsMonitor.recordCheckResult`, forwarding the monitor's
- * previous `last_status` into `notifyDnsResult` for edge-triggered alerting, and that
- * one monitor's check failure doesn't stop the rest of the sweep. `checkDns` and
- * `notifyDnsResult` are mocked — DNS resolution and alert delivery have their own tests.
+ * Unit tests for `CheckDnsJob.perform()`, covering the sweep-every-enabled-monitor pass:
+ * result recording via `DnsMonitor.recordCheckResult`, the `notify` message it enqueues
+ * for an alert-worthy transition (carrying the monitor's pre-update `last_status` so the
+ * consumer can tell a recovery from a first-ever result), that a still-ok monitor enqueues
+ * nothing, and that one monitor's check failure doesn't stop the rest of the sweep.
+ *
+ * `checkDns` is mocked — DNS resolution has its own tests — and the `QUEUE` binding is
+ * faked so the enqueued messages can be asserted on. Alert delivery itself now happens in
+ * `NotifyJob`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +20,8 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import type { DnsCheckResult, DnsCheckStatus } from "~/app/services/dns-check";
+import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { DnsCheckResult } from "~/app/services/dns-check";
 import type { InsertDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -31,41 +36,19 @@ let checkDnsMock = mock(
 	): Promise<DnsCheckResult> => ({ status: "ok", resolvedValue: "1.2.3.4", responseTimeMs: 10 }),
 );
 
-interface NotifyCall {
-	monitorId: string;
-	previousStatus: DnsCheckStatus | null;
-	result: DnsCheckResult;
-}
+/** Every `notify` message body the sweep put on the queue, in order. */
+let enqueued: NotifyMessage[] = [];
+let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
+	for (let request of requests) enqueued.push(request.body);
+});
 
-let notifyDnsResultCalls: NotifyCall[] = [];
-let notifyDnsResultMock = mock(
-	async (
-		_db: unknown,
-		_resend: unknown,
-		monitor: { id: string },
-		previousStatus: DnsCheckStatus | null,
-		result: DnsCheckResult,
-	) => {
-		notifyDnsResultCalls.push({ monitorId: monitor.id, previousStatus, result });
-	},
-);
+mock.module("cloudflare:workers", () => ({
+	env: { QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
+}));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
-let realAlertsModule = await import("~/app/services/alerts");
 
 mock.module("~/app/services/dns-check", () => ({ ...realDnsCheckModule, checkDns: checkDnsMock }));
-/**
- * Every `notify*`/other export is spread from the real module here (not just
- * `notifyDnsResult` replaced) because `check-tcp.test.ts`, `check-cron-jobs.test.ts`,
- * and `check-ssl.test.ts` mock this same module path — `bun test` shares one module
- * registry across files in a run, so a mock missing an export another file needs
- * (either "export not found", or silently getting a no-op stub instead of the real
- * implementation another file is trying to test) leaks into whichever file runs next.
- */
-mock.module("~/app/services/alerts", () => ({
-	...realAlertsModule,
-	notifyDnsResult: notifyDnsResultMock,
-}));
 
 let { CheckDnsJob } = await import("./check-dns");
 
@@ -100,12 +83,12 @@ beforeEach(() => {
 		resolvedValue: "1.2.3.4",
 		responseTimeMs: 10,
 	}));
-	notifyDnsResultMock.mockClear();
-	notifyDnsResultCalls = [];
+	sendBatchMock.mockClear();
+	enqueued = [];
 });
 
 describe("CheckDnsJob", () => {
-	test("checks an enabled monitor, records the result, and notifies with no previous status", async () => {
+	test("checks an enabled monitor, records the result, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 
@@ -127,14 +110,21 @@ describe("CheckDnsJob", () => {
 		expect(results[0]!.status).toBe("changed");
 		expect(results[0]!.response_time_ms).toBe(42);
 
-		expect(notifyDnsResultCalls).toHaveLength(1);
-		expect(notifyDnsResultCalls[0]!.monitorId).toBe(monitor.id);
-		expect(notifyDnsResultCalls[0]!.previousStatus).toBeNull();
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "dns",
+				monitorId: monitor.id,
+				previousStatus: null,
+				newStatus: "changed",
+			},
+		]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
 		expect(completed?.total).toBe(1);
 		expect(completed?.successCount).toBe(1);
 		expect(completed?.errorCount).toBe(0);
+		expect(completed?.notified).toBe(1);
 	});
 
 	test("skips monitors with checking disabled", async () => {
@@ -144,23 +134,44 @@ describe("CheckDnsJob", () => {
 		await runJob(db);
 
 		expect(checkDnsMock).not.toHaveBeenCalled();
-		expect(notifyDnsResultCalls).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
 	});
 
-	test("forwards the monitor's previous last_status for edge-triggered alerting", async () => {
+	test("records a still-ok monitor without enqueuing a notification", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { last_status: "ok", last_value: "1.2.3.4" });
+
+		let job = await runJob(db);
+
+		let results = await DnsMonitor.listResults(db, monitor.id);
+		expect(results).toHaveLength(1);
+		expect(sendBatchMock).not.toHaveBeenCalled();
+
+		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
+		expect(completed?.notified).toBe(0);
+	});
+
+	test("carries the monitor's pre-update last_status so the consumer can detect a recovery", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "changed", last_value: "9.9.9.9" });
 
 		await runJob(db);
 
-		expect(notifyDnsResultCalls[0]!.monitorId).toBe(monitor.id);
-		expect(notifyDnsResultCalls[0]!.previousStatus).toBe("changed");
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "dns",
+				monitorId: monitor.id,
+				previousStatus: "changed",
+				newStatus: "ok",
+			},
+		]);
 	});
 
 	test("continues checking remaining monitors and counts an error when one check throws", async () => {
 		let { db } = createTestDatabase();
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
-		let healthy = await seedMonitor(db, { domain: "ok.example.com" });
+		let healthy = await seedMonitor(db, { domain: "ok.example.com", last_status: "error" });
 
 		checkDnsMock.mockImplementation(async (domain: string) => {
 			if (domain === "fails.example.com") throw new Error("DNS query failed");
@@ -169,7 +180,7 @@ describe("CheckDnsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(notifyDnsResultCalls.map((call) => call.monitorId)).toEqual([healthy.id]);
+		expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
 		expect(completed?.total).toBe(2);

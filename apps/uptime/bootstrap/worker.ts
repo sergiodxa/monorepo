@@ -28,6 +28,7 @@ import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
 import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
+import { NotifyJob } from "~/app/jobs/notify";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
 
@@ -56,6 +57,19 @@ const QueueMessageSchema = s.variant("type", {
 	checkTcp: s.object({ type: s.literal("checkTcp") }),
 	checkCronJobs: s.object({ type: s.literal("checkCronJobs") }),
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
+	/**
+	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
+	 * so the notification never runs on the sweep's critical path. The statuses are
+	 * validated loosely here (the set of valid values differs per monitor type) and
+	 * strictly by `NotifyJob` itself.
+	 */
+	notify: s.object({
+		type: s.literal("notify"),
+		monitorId: s.string(),
+		monitorType: s.enum_(["dns", "tcp", "cron", "ssl"]),
+		previousStatus: s.nullable(s.string()),
+		newStatus: s.string(),
+	}),
 });
 
 /** Whether the request arrived on a non-production host (local dev or workers.dev). */
@@ -204,6 +218,9 @@ export default {
 						break;
 					case "aggregateDailyStats":
 						waitUntil(AggregateDailyStatsJob.run({ message, uptime }));
+						break;
+					case "notify":
+						waitUntil(NotifyJob.run({ message, uptime }));
 						break;
 					default:
 						// Valid message, but this phase doesn't implement its job yet.

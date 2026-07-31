@@ -79,6 +79,9 @@ let {
 	notifyHttpResult,
 	notifySslResult,
 	notifyTcpResult,
+	shouldNotifyCronJobResult,
+	shouldNotifyDnsResult,
+	shouldNotifyTcpResult,
 } = await import("~/app/services/alerts");
 
 type Db = Awaited<ReturnType<typeof createTestDatabase>>["db"];
@@ -994,7 +997,6 @@ describe("notifyDnsResult", () => {
 		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), null, {
 			status: "ok",
 			resolvedValue: "1.2.3.4",
-			responseTimeMs: 20,
 		});
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
@@ -1008,7 +1010,6 @@ describe("notifyDnsResult", () => {
 		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "error", {
 			status: "ok",
 			resolvedValue: "1.2.3.4",
-			responseTimeMs: 20,
 		});
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -1024,7 +1025,6 @@ describe("notifyDnsResult", () => {
 		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "ok", {
 			status: "error",
 			resolvedValue: null,
-			responseTimeMs: 20,
 		});
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -1039,7 +1039,6 @@ describe("notifyDnsResult", () => {
 		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "ok", {
 			status: "changed",
 			resolvedValue: "9.9.9.9",
-			responseTimeMs: 20,
 		});
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -1287,5 +1286,55 @@ describe("notifySslResult", () => {
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect((call.snapshot as { hostname: string }).hostname).toBe("not-a-url");
+	});
+});
+
+/**
+ * The predicates the sweeps use to decide whether a transition is worth enqueuing a
+ * `notify` message for. They're the same rules the `notify*` helpers above apply, so these
+ * cases pin the policy down in one place rather than only through dispatch side effects.
+ */
+describe("shouldNotifyTcpResult", () => {
+	test("alerts on every non-up status", () => {
+		expect(shouldNotifyTcpResult(null, "down")).toBe(true);
+		expect(shouldNotifyTcpResult("up", "timeout")).toBe(true);
+		expect(shouldNotifyTcpResult("down", "down")).toBe(true);
+	});
+
+	test("alerts on up only as a recovery from a non-up status", () => {
+		expect(shouldNotifyTcpResult("timeout", "up")).toBe(true);
+		expect(shouldNotifyTcpResult("up", "up")).toBe(false);
+		expect(shouldNotifyTcpResult(null, "up")).toBe(false);
+	});
+});
+
+describe("shouldNotifyDnsResult", () => {
+	test("alerts on every non-ok status", () => {
+		expect(shouldNotifyDnsResult(null, "error")).toBe(true);
+		expect(shouldNotifyDnsResult("ok", "changed")).toBe(true);
+	});
+
+	test("alerts on ok only as a recovery from a non-ok status", () => {
+		expect(shouldNotifyDnsResult("changed", "ok")).toBe(true);
+		expect(shouldNotifyDnsResult("ok", "ok")).toBe(false);
+		expect(shouldNotifyDnsResult(null, "ok")).toBe(false);
+	});
+});
+
+describe("shouldNotifyCronJobResult", () => {
+	test("alerts on late and missed", () => {
+		expect(shouldNotifyCronJobResult("healthy", "late")).toBe(true);
+		expect(shouldNotifyCronJobResult("late", "missed")).toBe(true);
+	});
+
+	test("never alerts on a move to new", () => {
+		expect(shouldNotifyCronJobResult("missed", "new")).toBe(false);
+	});
+
+	test("alerts on healthy only as a recovery from late or missed", () => {
+		expect(shouldNotifyCronJobResult("missed", "healthy")).toBe(true);
+		expect(shouldNotifyCronJobResult("healthy", "healthy")).toBe(false);
+		expect(shouldNotifyCronJobResult("new", "healthy")).toBe(false);
+		expect(shouldNotifyCronJobResult(null, "healthy")).toBe(false);
 	});
 });

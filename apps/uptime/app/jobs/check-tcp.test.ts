@@ -1,11 +1,14 @@
 /**
- * Unit tests for `CheckTcpJob.perform()`, covering the sweep-every-enabled-monitor
- * loop: result recording via `TcpMonitor.recordCheckResult`, forwarding the monitor's
- * previous `last_status` into `notifyTcpResult` for edge-triggered alerting, and that
- * one monitor's check failure doesn't stop the rest of the sweep. `checkTcpConnection`
- * and `notifyTcpResult` are mocked — raw TCP connectivity (which needs
- * `cloudflare:sockets`, unavailable under `bun test`) and alert delivery have their own
- * tests.
+ * Unit tests for `CheckTcpJob.perform()`, covering the sweep-every-enabled-monitor pass:
+ * result recording via `TcpMonitor.recordCheckResult`, the `notify` message it enqueues
+ * for an alert-worthy transition (carrying the monitor's pre-update `last_status` so the
+ * consumer can tell a recovery from a first-ever result), that a healthy monitor enqueues
+ * nothing, and that one monitor's check failure doesn't stop the rest of the sweep.
+ *
+ * `checkTcpConnection` is mocked — raw TCP connectivity needs `cloudflare:sockets`, which
+ * is unavailable under `bun test` — and the `QUEUE` binding is faked so the enqueued
+ * messages can be asserted on. Alert delivery itself now happens in `NotifyJob` and has
+ * its own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +21,8 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
+import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
@@ -31,41 +35,17 @@ let checkTcpConnectionMock = mock(
 	}),
 );
 
-interface NotifyCall {
-	monitorId: string;
-	previousStatus: TcpCheckStatus | null;
-	result: TcpCheckResult;
-}
+/** Every `notify` message body the sweep put on the queue, in order. */
+let enqueued: NotifyMessage[] = [];
+let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
+	for (let request of requests) enqueued.push(request.body);
+});
 
-let notifyTcpResultCalls: NotifyCall[] = [];
-let notifyTcpResultMock = mock(
-	async (
-		_db: unknown,
-		_resend: unknown,
-		monitor: { id: string },
-		previousStatus: TcpCheckStatus | null,
-		result: TcpCheckResult,
-	) => {
-		notifyTcpResultCalls.push({ monitorId: monitor.id, previousStatus, result });
-	},
-);
-
-let realAlertsModule = await import("~/app/services/alerts");
-
+mock.module("cloudflare:workers", () => ({
+	env: { QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
+}));
 mock.module("~/app/services/tcp-check", () => ({
 	checkTcpConnection: checkTcpConnectionMock,
-}));
-/**
- * Every `notify*`/other export is spread from the real module here (not just
- * `notifyTcpResult` replaced) because `check-dns.test.ts`, `check-cron-jobs.test.ts`,
- * and `check-ssl.test.ts` mock this same module path — `bun test` shares one module
- * registry across files in a run, so a mock missing an export another file needs
- * (either "export not found", or silently getting a no-op stub instead of the real
- * implementation another file is trying to test) leaks into whichever file runs next.
- */
-mock.module("~/app/services/alerts", () => ({
-	...realAlertsModule,
-	notifyTcpResult: notifyTcpResultMock,
 }));
 
 let { CheckTcpJob } = await import("./check-tcp");
@@ -97,12 +77,12 @@ async function seedMonitor(db: Database, overrides: Partial<InsertTcpMonitor> = 
 beforeEach(() => {
 	checkTcpConnectionMock.mockReset();
 	checkTcpConnectionMock.mockImplementation(async () => ({ status: "up", responseTimeMs: 10 }));
-	notifyTcpResultMock.mockClear();
-	notifyTcpResultCalls = [];
+	sendBatchMock.mockClear();
+	enqueued = [];
 });
 
 describe("CheckTcpJob", () => {
-	test("checks an enabled monitor, records the result, and notifies with no previous status", async () => {
+	test("checks an enabled monitor, records the result, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 
@@ -122,14 +102,21 @@ describe("CheckTcpJob", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0]!.status).toBe("down");
 
-		expect(notifyTcpResultCalls).toHaveLength(1);
-		expect(notifyTcpResultCalls[0]!.monitorId).toBe(monitor.id);
-		expect(notifyTcpResultCalls[0]!.previousStatus).toBeNull();
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "tcp",
+				monitorId: monitor.id,
+				previousStatus: null,
+				newStatus: "down",
+			},
+		]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
 		expect(completed?.total).toBe(1);
 		expect(completed?.successCount).toBe(1);
 		expect(completed?.errorCount).toBe(0);
+		expect(completed?.notified).toBe(1);
 	});
 
 	test("skips monitors with checking disabled", async () => {
@@ -139,23 +126,44 @@ describe("CheckTcpJob", () => {
 		await runJob(db);
 
 		expect(checkTcpConnectionMock).not.toHaveBeenCalled();
-		expect(notifyTcpResultCalls).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
 	});
 
-	test("forwards the monitor's previous last_status for edge-triggered alerting", async () => {
+	test("records a still-up monitor without enqueuing a notification", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { last_status: "up", last_response_time_ms: 10 });
+
+		let job = await runJob(db);
+
+		let results = await TcpMonitor.listResults(db, monitor.id);
+		expect(results).toHaveLength(1);
+		expect(sendBatchMock).not.toHaveBeenCalled();
+
+		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
+		expect(completed?.notified).toBe(0);
+	});
+
+	test("carries the monitor's pre-update last_status so the consumer can detect a recovery", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { last_status: "timeout", last_response_time_ms: null });
 
 		await runJob(db);
 
-		expect(notifyTcpResultCalls[0]!.monitorId).toBe(monitor.id);
-		expect(notifyTcpResultCalls[0]!.previousStatus).toBe("timeout");
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "tcp",
+				monitorId: monitor.id,
+				previousStatus: "timeout",
+				newStatus: "up",
+			},
+		]);
 	});
 
 	test("continues checking remaining monitors and counts an error when one check throws", async () => {
 		let { db } = createTestDatabase();
-		let failing = await seedMonitor(db, { host: "fails.example.com" });
-		let healthy = await seedMonitor(db, { host: "ok.example.com" });
+		let failing = await seedMonitor(db, { host: "fails.example.com", last_status: "up" });
+		let healthy = await seedMonitor(db, { host: "ok.example.com", last_status: "down" });
 
 		checkTcpConnectionMock.mockImplementation(async (host: string) => {
 			if (host === "fails.example.com") throw new Error("Connection refused");
@@ -164,7 +172,7 @@ describe("CheckTcpJob", () => {
 
 		let job = await runJob(db);
 
-		expect(notifyTcpResultCalls.map((call) => call.monitorId)).toEqual([healthy.id]);
+		expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
 		expect(completed?.total).toBe(2);
@@ -173,7 +181,8 @@ describe("CheckTcpJob", () => {
 
 		/** The failing monitor's cached fields are untouched — recordCheckResult never ran for it. */
 		let failedRow = await TcpMonitor.findByIdForTeam(db, "team-1", failing.id);
-		expect(failedRow?.last_status).toBeNull();
+		expect(failedRow?.last_status).toBe("up");
+		expect(failedRow?.last_checked_at).toBeNull();
 
 		let failureEvent = job.logger.events.find(
 			(event) => event.event === "job.check_tcp.monitor_failed",

@@ -309,6 +309,51 @@ async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
 }
 
 /**
+ * Whether a monitor moving to its healthy state counts as a recovery. A
+ * `previousStatus` of `null` (never checked before) never does.
+ */
+function recovered<Status extends string>(previousStatus: Status | null, healthy: Status): boolean {
+	return previousStatus !== null && previousStatus !== healthy;
+}
+
+/**
+ * Whether a TCP result warrants an alert at all: every non-`up` result does, and an
+ * `up` one only when it's a genuine recovery.
+ *
+ * Exported so a sweep can decide whether a transition is worth enqueuing a `notify`
+ * message for (ADR-008) using the exact same policy {@link notifyTcpResult} applies —
+ * the sweep never has to duplicate the rule, and re-checking it in the consumer keeps a
+ * redelivered message harmless.
+ */
+export function shouldNotifyTcpResult(
+	previousStatus: TcpCheckStatus | null,
+	status: TcpCheckStatus,
+): boolean {
+	return status !== "up" || recovered(previousStatus, "up");
+}
+
+/** See {@link shouldNotifyTcpResult}; `ok` is the DNS-equivalent healthy state. */
+export function shouldNotifyDnsResult(
+	previousStatus: DnsCheckStatus | null,
+	status: DnsCheckStatus,
+): boolean {
+	return status !== "ok" || recovered(previousStatus, "ok");
+}
+
+/**
+ * See {@link shouldNotifyTcpResult}; `healthy` is the cron-job-equivalent state, and
+ * neither a monitor moving to `new` nor one recovering from `new` is alert-worthy.
+ */
+export function shouldNotifyCronJobResult(
+	previousStatus: CronJobStatus | null,
+	newStatus: CronJobStatus,
+): boolean {
+	if (newStatus === "new") return false;
+	if (newStatus !== "healthy") return true;
+	return recovered(previousStatus, "healthy") && previousStatus !== "new";
+}
+
+/**
  * Per-monitor-type policy on top of {@link dispatchAlerts}: alert on every non-healthy
  * result (cooldown is what prevents repeat spam), and only alert `up` on a genuine
  * recovery (the previous result was not healthy). A `previousStatus` of `null` (never
@@ -321,7 +366,7 @@ export async function notifyHttpResult(
 	previousStatus: "up" | "down" | "degraded" | "timeout" | null,
 	result: { status: "up" | "down" | "degraded"; responseStatus: number; responseTimeMs: number },
 ): Promise<void> {
-	let isRecovery = result.status === "up" && previousStatus !== null && previousStatus !== "up";
+	let isRecovery = result.status === "up" && recovered(previousStatus, "up");
 	if (result.status === "up" && !isRecovery) return;
 
 	await dispatchAlerts({
@@ -345,16 +390,23 @@ export async function notifyHttpResult(
 	});
 }
 
-/** See {@link notifyHttpResult}; `ok` is the DNS-equivalent healthy state. */
+/**
+ * See {@link notifyHttpResult}; `ok` is the DNS-equivalent healthy state.
+ *
+ * `result` is narrowed to the fields an alert actually reads, so a caller that
+ * reconstructs it from the monitor's cached columns (the `notify` queue consumer) isn't
+ * forced to invent a response time nothing renders.
+ */
 export async function notifyDnsResult(
 	db: Database,
 	resend: Resend,
 	monitor: SelectDnsMonitor,
 	previousStatus: DnsCheckStatus | null,
-	result: DnsCheckResult,
+	result: Pick<DnsCheckResult, "status" | "resolvedValue">,
 ): Promise<void> {
-	let isRecovery = result.status === "ok" && previousStatus !== null && previousStatus !== "ok";
-	if (result.status === "ok" && !isRecovery) return;
+	if (!shouldNotifyDnsResult(previousStatus, result.status)) return;
+	/** Only reachable with an `ok` status when the policy above found a recovery. */
+	let isRecovery = result.status === "ok";
 
 	await dispatchAlerts({
 		db,
@@ -385,8 +437,9 @@ export async function notifyTcpResult(
 	previousStatus: TcpCheckStatus | null,
 	result: TcpCheckResult,
 ): Promise<void> {
-	let isRecovery = result.status === "up" && previousStatus !== null && previousStatus !== "up";
-	if (result.status === "up" && !isRecovery) return;
+	if (!shouldNotifyTcpResult(previousStatus, result.status)) return;
+	/** Only reachable with an `up` status when the policy above found a recovery. */
+	let isRecovery = result.status === "up";
 
 	await dispatchAlerts({
 		db,
@@ -417,13 +470,9 @@ export async function notifyCronJobResult(
 	previousStatus: CronJobStatus | null,
 	newStatus: CronJobStatus,
 ): Promise<void> {
-	let isRecovery =
-		newStatus === "healthy" &&
-		previousStatus !== null &&
-		previousStatus !== "healthy" &&
-		previousStatus !== "new";
-	if (newStatus === "healthy" && !isRecovery) return;
-	if (newStatus === "new") return;
+	if (!shouldNotifyCronJobResult(previousStatus, newStatus)) return;
+	/** Only reachable with a `healthy` status when the policy above found a recovery. */
+	let isRecovery = newStatus === "healthy";
 
 	await dispatchAlerts({
 		db,

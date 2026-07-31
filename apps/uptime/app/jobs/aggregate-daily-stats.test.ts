@@ -23,6 +23,7 @@ import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import type { DailyStatsInput } from "~/app/data/monitor-daily-stats";
 import type { HttpDailyAggregate } from "~/app/services/analytics";
 
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -34,6 +35,31 @@ let getHttpDailyAggregateMock = mock(
 
 mock.module("~/app/services/analytics", () => ({
 	getHttpDailyAggregate: getHttpDailyAggregateMock,
+}));
+
+/**
+ * Monitor ids whose write must fail, so the "one bad row doesn't cost the rest their
+ * stats" guarantee can be exercised. `MonitorDailyStats` is subclassed rather than
+ * object-spread because class statics are non-enumerable, and every method other than
+ * `upsertDay` has to keep working.
+ */
+let failingWrites = new Set<string>();
+let realDailyStatsModule = await import("~/app/data/monitor-daily-stats");
+
+class FakeMonitorDailyStats extends realDailyStatsModule.default {
+	static override async upsertDay(db: Database, input: DailyStatsInput) {
+		if (failingWrites.has(input.monitor_id)) throw new Error(`write failed: ${input.monitor_id}`);
+		/**
+		 * `super`, not `realDailyStatsModule.default`: the module's `default` binding is live,
+		 * so once the mock below is installed that name resolves back to this class.
+		 */
+		return await super.upsertDay(db, input);
+	}
+}
+
+mock.module("~/app/data/monitor-daily-stats", () => ({
+	...realDailyStatsModule,
+	default: FakeMonitorDailyStats,
 }));
 
 let { AggregateDailyStatsJob } = await import("./aggregate-daily-stats");
@@ -77,6 +103,7 @@ function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[
 beforeEach(() => {
 	getHttpDailyAggregateMock.mockReset();
 	getHttpDailyAggregateMock.mockImplementation(async () => success([]));
+	failingWrites.clear();
 });
 
 describe("AggregateDailyStatsJob", () => {
@@ -199,6 +226,37 @@ describe("AggregateDailyStatsJob", () => {
 		expect(rows[0]!.failed_checks).toBe(1);
 		expect(rows[0]!.avg_response_time_ms).toBeNull();
 		expect(rows[0]!.max_response_time_ms).toBeNull();
+	});
+
+	test("one monitor's failed write is logged and skipped, and doesn't cost the rest their stats", async () => {
+		let { db } = createTestDatabase();
+		failingWrites.add("http-2");
+		getHttpDailyAggregateMock.mockImplementation(async () =>
+			success(
+				["http-1", "http-2", "http-3"].map((monitorId) => ({
+					monitorId,
+					totalChecks: 10,
+					successfulChecks: 10,
+					avgResponseTimeMs: 100,
+					maxResponseTimeMs: 100,
+				})),
+			),
+		);
+
+		let job = await runJob(db);
+
+		let written = await db.findMany(monitorDailyStats, { where: { monitor_type: "http" } });
+		expect(written.map((row) => row.monitor_id).sort()).toEqual(["http-1", "http-3"]);
+
+		let completed = job.logger.events.find(
+			(event) => event.event === "job.aggregate_daily_stats.completed",
+		);
+		expect(completed?.written).toBe(2);
+
+		let failedEvent = job.logger.events.find(
+			(event) => event.event === "job.aggregate_daily_stats.write_failed",
+		);
+		expect(failedEvent?.monitorId).toBe("http-2");
 	});
 
 	test("re-running the job replaces the day's row instead of duplicating it", async () => {

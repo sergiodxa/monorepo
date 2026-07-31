@@ -6,6 +6,10 @@
  * aggregates come from their own D1 result tables. All four monitor types are
  * aggregated uniformly here.
  *
+ * Rows are written in bounded-concurrency batches rather than one at a time, matching the
+ * monitor sweeps (ADR-008). One monitor's failed write is logged and counted instead of
+ * abandoning the rest of the roll-up.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -21,6 +25,7 @@ import MonitorDailyStats, {
 	utcDayBounds,
 	type DailyStatsInput,
 } from "~/app/data/monitor-daily-stats";
+import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { getHttpDailyAggregate } from "~/app/services/analytics";
 
 interface RawAggregateRow {
@@ -69,8 +74,9 @@ export class AggregateDailyStatsJob extends Job {
 			return 0;
 		}
 
-		for (let row of result.data) {
-			await this.write(db, {
+		return await this.writeAll(
+			db,
+			result.data.map((row) => ({
 				monitor_id: row.monitorId,
 				monitor_type: "http",
 				date,
@@ -80,10 +86,8 @@ export class AggregateDailyStatsJob extends Job {
 					row.avgResponseTimeMs === null ? null : Math.round(row.avgResponseTimeMs),
 				max_response_time_ms:
 					row.maxResponseTimeMs === null ? null : Math.round(row.maxResponseTimeMs),
-			});
-		}
-
-		return result.data.length;
+			})),
+		);
 	}
 
 	/** Aggregates a D1 result table whose rows carry a `status` and `response_time_ms`. */
@@ -111,8 +115,10 @@ export class AggregateDailyStatsJob extends Job {
 		);
 
 		let rows = (result.rows ?? []) as unknown as RawAggregateRow[];
-		for (let row of rows) {
-			await this.write(db, {
+
+		return await this.writeAll(
+			db,
+			rows.map((row) => ({
 				monitor_id: row.monitorId,
 				monitor_type: monitorType,
 				date,
@@ -122,10 +128,8 @@ export class AggregateDailyStatsJob extends Job {
 					row.avgResponseTimeMs === null ? null : Math.round(row.avgResponseTimeMs),
 				max_response_time_ms:
 					row.maxResponseTimeMs === null ? null : Math.round(row.maxResponseTimeMs),
-			});
-		}
-
-		return rows.length;
+			})),
+		);
 	}
 
 	/** Cron-job pings have no response time; "successful" means the ping was on time. */
@@ -149,8 +153,9 @@ export class AggregateDailyStatsJob extends Job {
 			successfulChecks: number;
 		}>;
 
-		for (let row of rows) {
-			await this.write(db, {
+		return await this.writeAll(
+			db,
+			rows.map((row) => ({
 				monitor_id: row.monitorId,
 				monitor_type: "cron",
 				date,
@@ -158,10 +163,37 @@ export class AggregateDailyStatsJob extends Job {
 				successful_checks: row.successfulChecks,
 				avg_response_time_ms: null,
 				max_response_time_ms: null,
+			})),
+		);
+	}
+
+	/**
+	 * Writes every row in bounded-concurrency batches, returning how many landed. A single
+	 * row's failure is logged and skipped rather than aborting the day's roll-up, so one
+	 * bad monitor can't cost every monitor behind it its daily stats.
+	 */
+	private async writeAll(
+		db: Database,
+		inputs: Array<Omit<DailyStatsInput, "failed_checks" | "status">>,
+	): Promise<number> {
+		let settled = await mapWithConcurrency(inputs, (input) => this.write(db, input));
+		let written = 0;
+
+		for (let outcome of settled) {
+			if (outcome.ok) {
+				written++;
+				continue;
+			}
+
+			this.logger.error("job.aggregate_daily_stats.write_failed", {
+				monitorId: outcome.item.monitor_id,
+				monitorType: outcome.item.monitor_type,
+				date: outcome.item.date,
+				error: outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
 			});
 		}
 
-		return rows.length;
+		return written;
 	}
 
 	private async write(

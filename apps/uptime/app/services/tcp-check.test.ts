@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 
 /** A minimal stand-in for the Workers `Socket` shape `checkTcpConnection` relies on. */
 interface FakeSocket {
@@ -90,6 +90,33 @@ describe("checkTcpConnection", () => {
 		await checkTcpConnection("example.com", 443, 5);
 
 		expect(closeCalls).toHaveLength(1);
+	});
+
+	test("cancels the timeout timer once the socket opens, so a fast check doesn't hold the invocation open", async () => {
+		let clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
+		nextSocket = fakeSocket(Promise.resolve());
+
+		try {
+			await checkTcpConnection("example.com", 443, 30_000);
+
+			expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+			expect(clearTimeoutSpy.mock.calls[0]?.[0]).toBeDefined();
+		} finally {
+			clearTimeoutSpy.mockRestore();
+		}
+	});
+
+	test("cancels the timeout timer when the connection fails before it fires", async () => {
+		let clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
+		nextSocket = fakeSocket(Promise.reject(new Error("Connection refused")));
+
+		try {
+			await checkTcpConnection("example.com", 9999, 30_000);
+
+			expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+		} finally {
+			clearTimeoutSpy.mockRestore();
+		}
 	});
 
 	test("does not throw when closing the socket itself fails", async () => {
