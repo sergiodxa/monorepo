@@ -2,7 +2,8 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30 (part 1; the `findDue` index cleanup is deferred to
+after ADR-003). Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §5 (finding 2) and §17 (medium). Smallest cost win in the app relative to effort.
 
 ## Context

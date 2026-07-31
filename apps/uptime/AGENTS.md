@@ -13,6 +13,8 @@ Rules are written following RFC 2119, which defines the keywords "MUST", "MUST N
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and application bootstrap in `bootstrap/app.tsx`.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).
 - MUST read database access from request context with `ctx.get(Database)` in HTTP handlers.
+- MUST review generated migration SQL before committing it, since the generator re-emits index definitions that were previously dropped on purpose.
+- MUST NOT reintroduce a `<table>_id_unique` index on a column already declared `PRIMARY KEY`; SQLite maintains an automatic unique index for the primary key, so the explicit one only adds a written row per insert and per delete. Delete those statements from generated migrations.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
 - SHOULD narrow unknown values with type guards, schema validation, or explicit interfaces instead of unsafe assertions.
