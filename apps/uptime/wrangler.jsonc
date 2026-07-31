@@ -73,4 +73,16 @@
 	],
 
 	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" }],
+
+	// Caller budget for the public, unauthenticated cron-job ping endpoint (see
+	// `app/http/controllers/api/cron-job-ping.ts`). This binding, not KV, because it
+	// bills nothing per call: a KV read plus write per counted request would cost
+	// several times the request being protected, so the protection would cost more
+	// than the abuse. `namespace_id` is a Worker-local identifier, not an account
+	// resource, so nothing has to be provisioned for it; `period` accepts only 10 or
+	// 60. `limit`/`period` are duplicated as constants in the controller, which is
+	// where the reasoning for the numbers lives — the binding reports neither back.
+	"ratelimits": [
+		{ "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+	],
 }

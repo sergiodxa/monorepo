@@ -4,12 +4,17 @@
  * at all. Resolves every attached HTTP/DNS/TCP/cron-job monitor's current status and
  * 365-day heatmap, and combines them into one page-level status.
  *
+ * The response carries a cache policy (see {@link withCachePolicy}), because this is
+ * the one page whose traffic spikes exactly when the origin is least able to absorb
+ * it: an incident is when everybody reloads a status page at once.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle } from "remix/ui";
 
+import { conditional, etag, policy, vary } from "@pkg/http/cache";
 import { notFound } from "@pkg/http/response/html";
 import {
 	CircleCheckBigIcon,
@@ -56,6 +61,25 @@ import {
 import { badgeVariant } from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/**
+ * How long any cache may reuse the rendered page, in milliseconds.
+ *
+ * Sixty seconds is not a preference: `getTeamHttpSummaries` reads through a KV cache
+ * with exactly this TTL, so the page cannot be made staler than the data source it
+ * renders. It is also the quantum the page's own "last updated" line is rounded to,
+ * which is what keeps the `ETag` stable for as long as the policy claims the bytes
+ * are.
+ */
+const CACHE_WINDOW_MS = 60_000;
+
+/**
+ * How long a stale copy may be served while one request refreshes it, in
+ * milliseconds. Five minutes of cover is what turns an incident's traffic spike into
+ * cache hits with a single origin request behind them, and degrades a slow origin to
+ * slightly-old numbers rather than to no page at all.
+ */
+const STALE_WHILE_REVALIDATE_MS = 300_000;
 
 const BANNER_MIX: Record<ServiceStatus, ReturnType<typeof combine>> = {
 	operational: combine([bg("success.tint"), border("success.border"), fg("success.emphasis")]),
@@ -389,7 +413,16 @@ export default createAction(
 		let formatUptime = (percentage: string) =>
 			ctx.i18next.t("statusPage.heatmap.tooltip.uptime", { percentage });
 
-		return ctx.render(
+		/**
+		 * The moment the page reports as its own, rounded down to the start of the
+		 * current {@link CACHE_WINDOW_MS}. Rounding is what makes the page honest and
+		 * cacheable at once: a viewer reading a cached copy is told the time the numbers
+		 * are from rather than the time their request arrived, and because the bytes then
+		 * stop changing every millisecond, a repeat viewer's `ETag` still matches.
+		 */
+		let renderedAt = new Date(Math.floor(Date.now() / CACHE_WINDOW_MS) * CACHE_WINDOW_MS);
+
+		let response = await ctx.render(
 			<DocumentLayout
 				title={page.title}
 				locale={ctx.locale}
@@ -515,7 +548,7 @@ export default createAction(
 					)}
 
 					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: new Date().toLocaleString() })}{" "}
+						{ctx.i18next.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })}{" "}
 						·{" "}
 						<a
 							href={routes.home.href()}
@@ -527,5 +560,55 @@ export default createAction(
 				</main>
 			</DocumentLayout>,
 		);
+
+		return await withCachePolicy(ctx.request, response);
 	}),
 );
+
+/**
+ * Gives a rendered page its HTTP cache policy and answers a still-current client copy
+ * with a `304`.
+ *
+ * This is what turns "one origin hit per view" into "one origin hit per minute per
+ * page, plus `304`s", which is the shape a status page should have. The two savings
+ * are separate: `Cache-Control` decides whether a request reaches the Worker at all,
+ * while the `ETag` decides whether a body crosses the network to a viewer who is
+ * revalidating a copy they already hold.
+ *
+ * `Vary` is not optional at `public` visibility. The markup is translated per viewer
+ * from the `language` cookie and then `Accept-Language`, so a shared cache told to
+ * ignore both could hand one viewer another viewer's language. Varying on `Cookie`
+ * does cost hit rate for anyone carrying one, which for this route is only the
+ * signed-in owner: an anonymous viewer sends no cookie and shares the one hot entry.
+ *
+ * The body is buffered rather than streamed because an entity tag is a digest of the
+ * bytes, and there is nothing to hash until they all exist. Nothing here streams
+ * usefully in any case — every query the page renders from is awaited before the
+ * first element is produced.
+ *
+ * @param request - The incoming request, carrying the viewer's validators.
+ * @param response - The rendered page.
+ * @returns The page with its policy and validator, or a `304` carrying no body.
+ */
+async function withCachePolicy(request: Request, response: Response): Promise<Response> {
+	let body = await response.text();
+
+	let headers = new Headers(response.headers);
+	headers.set(
+		"Cache-Control",
+		policy({
+			visibility: "public",
+			maxAge: CACHE_WINDOW_MS,
+			staleWhileRevalidate: STALE_WHILE_REVALIDATE_MS,
+		}).toString(),
+	);
+	vary(headers, ["Accept-Language", "Cookie"]);
+
+	// Weak, because the page is re-rendered per request rather than served from a
+	// stored artifact: it identifies a semantically equivalent render, which is
+	// exactly what `renderedAt`'s rounding to the cache window makes it.
+	let tag = await etag(body, { weak: true });
+	if (!isFailure(tag)) headers.set("ETag", tag.data);
+
+	return await conditional(request, new Response(body, { status: response.status, headers }));
+}

@@ -255,6 +255,7 @@
         "@pkg/markdown-server": "workspace:*",
         "@pkg/polar": "workspace:*",
         "@pkg/r3-ui": "workspace:*",
+        "@pkg/rate-limit": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/session-storage-kv": "workspace:*",

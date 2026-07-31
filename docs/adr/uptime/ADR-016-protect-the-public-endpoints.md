@@ -2,7 +2,8 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30. Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §12 and §17 (low). Low cost per hit, attacker-reachable in volume.
 
 ## Context
@@ -60,9 +61,7 @@ router.map(
 	createAction(routes.api.cronJobPing, {
 		middleware: [
 			rateLimit({
-				adapter: new KVAdapter({
-					/* limit, window */
-				}),
+				adapter: new CloudflareAdapter(env.RATE_LIMITER),
 				prefix: "cron-ping",
 				// key defaults to the client IP
 			}),
@@ -95,8 +94,12 @@ rather than just this one. Rate limiting bounds the blast radius; ADR-017 lowers
 ### 3. Give the status page an HTTP cache policy
 
 ```ts
-// public, short-lived, revalidatable
-return policy(response, { visibility: "public", maxAge: 60, staleWhileRevalidate: 300 });
+// public, short-lived, revalidatable — `policy()` takes options and returns a
+// `remix/headers` CacheControl, which the caller sets on the response itself
+response.headers.set(
+	"cache-control",
+	String(policy({ visibility: "public", maxAge: 60, staleWhileRevalidate: 300 })),
+);
 ```
 
 Sixty seconds matches the KV cache TTL the underlying AE query already uses, so the page cannot

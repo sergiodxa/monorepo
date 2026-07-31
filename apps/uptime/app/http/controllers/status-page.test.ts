@@ -10,6 +10,12 @@
  * `fetch()` against the Analytics Engine SQL API, so `globalThis.fetch` is stubbed
  * too.
  *
+ * The last two cases cover the response's cache policy rather than its markup: the
+ * headers it advertises, and the `304` a viewer holding a current copy gets back.
+ * Both depend on the rendered "last updated" timestamp being rounded to the cache
+ * window — without that, the body would differ on every render and the validator
+ * would never match.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -87,7 +93,7 @@ async function createFixture() {
 }
 
 /** Sends a GET request through a minimal router mapping the public status page route. */
-async function get(db: Database, slug: string): Promise<Response> {
+async function get(db: Database, slug: string, headers?: HeadersInit): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
@@ -99,9 +105,31 @@ async function get(db: Database, slug: string): Promise<Response> {
 		handler: publicStatusPageModule as RequestHandler<any>,
 	});
 
-	let request = new Request(new URL(routes.statusPage.href({ slug }), "https://uptime.test"));
+	let request = new Request(new URL(routes.statusPage.href({ slug }), "https://uptime.test"), {
+		headers,
+	});
 
 	return container.scope(() => router.fetch(request));
+}
+
+/** Creates a public status page with no monitors attached, for the cache-header cases. */
+async function createPublicPage(db: Database, teamId: string, slug: string) {
+	return await db.create(
+		statusPages,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name: "Acme Status",
+			slug,
+			title: "Acme Status",
+			description: null,
+			logo_url: null,
+			custom_domain: null,
+			is_public: true,
+			show_overall_status: true,
+		},
+		{ touch: true, returnRow: true },
+	);
 }
 
 describe("GET /status/:slug", () => {
@@ -241,5 +269,52 @@ describe("GET /status/:slug", () => {
 		expect(body).toContain(
 			'<meta name="description" content="Live availability for every Acme service." />',
 		);
+	});
+
+	test("serves a public, revalidatable cache policy with a validator", async () => {
+		let { db, team } = await createFixture();
+		let page = await createPublicPage(db, team.id, "acme-cache");
+
+		globalThis.fetch = mock(async () => {
+			return new Response(JSON.stringify({ data: [] }));
+		}) as unknown as typeof fetch;
+
+		let response = await get(db, page.slug);
+
+		expect(response.status).toBe(200);
+		// 60 seconds is the KV TTL of the Analytics Engine query behind the page, so the
+		// page can never be served staler than its own data source.
+		expect(response.headers.get("Cache-Control")).toBe(
+			"public, max-age=60, stale-while-revalidate=300",
+		);
+		// Both dimensions the markup is translated on, so a shared cache cannot hand one
+		// viewer another viewer's language.
+		expect(response.headers.get("Vary")).toBe("accept-language, cookie");
+		expect(response.headers.get("ETag")).toMatch(/^W\/".+"$/);
+	});
+
+	test("answers a viewer holding the current copy with a 304 and no body", async () => {
+		let { db, team } = await createFixture();
+		let page = await createPublicPage(db, team.id, "acme-conditional");
+
+		globalThis.fetch = mock(async () => {
+			return new Response(JSON.stringify({ data: [] }));
+		}) as unknown as typeof fetch;
+
+		let first = await get(db, page.slug);
+		let tag = first.headers.get("ETag");
+		expect(tag).not.toBeNull();
+		expect(await first.text()).not.toBe("");
+
+		// The rendered timestamp is rounded to the cache window, so a second render
+		// inside that window is byte-identical and the viewer's tag still matches.
+		let second = await get(db, page.slug, tag === null ? undefined : { "If-None-Match": tag });
+
+		expect(second.status).toBe(304);
+		expect(second.headers.get("ETag")).toBe(tag);
+		expect(second.headers.get("Cache-Control")).toBe(
+			"public, max-age=60, stale-while-revalidate=300",
+		);
+		expect(await second.text()).toBe("");
 	});
 });

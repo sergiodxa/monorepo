@@ -447,7 +447,9 @@ export default function application(options: application.Options) {
 	);
 
 	// Public, unauthenticated: the cron-job ping endpoint (see its controller's
-	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`).
+	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`, and for the
+	// per-caller budget it bakes into its own `createAction()` middleware in place of
+	// the auth chain every other route is bounded by).
 	router.map(routes.api.cronJobPing, cronJobPing);
 
 	// Bearer-API-key-gated REST API. Each file with 2+ actions is wired through a
