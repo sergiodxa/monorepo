@@ -2,9 +2,9 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-30 (part 1; the `findDue` index cleanup is deferred to
-after ADR-003). Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
-§5 (finding 2) and §17 (medium). Smallest cost win in the app relative to effort.
+**Accepted** — implemented 2026-07-31 (both parts). Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §5 (finding 2) and §17
+(medium). Smallest cost win in the app relative to effort.
 
 ## Context
 
@@ -88,6 +88,24 @@ The four-column covering index exists for the materialised subquery; `created_at
 serves nothing the composite cannot. Replacing both with one `(monitor_id, created_at)` index
 keeps `Monitor.listResults`' paginated newest-first query indexed and takes
 `monitor_results` from four indexes to two — insert and delete drop from 5 rows written to 3.
+
+### Implementation note (2026-07-31, part 2)
+
+Only the `created_at_idx` drop shipped
+(`20260731100800_drop_find_due_indexes.sql`). `EXPLAIN QUERY PLAN` over every remaining
+`monitor_results` query showed the four-column composite is not scheduler-only: it also
+serves `Monitor.listResults`, `Monitor.getStats*` (index-only), `countConsumedPingsByTeam`,
+and `/api/v1/status`. Dropping it for `(monitor_id, created_at)` costs that last one its
+ordering — `ORDER BY completed_at DESC LIMIT 1` goes from 31 virtual-machine steps to
+171,694 on 10,080 rows, once per monitor per request, as a `SEARCH` that nothing logs. So
+the composite stays and no new index was added: `monitor_results` ends at three indexes and
+4 rows written per insert, not the 2 and 3 above (which also predate ADR-020's
+`completed_at_idx`).
+
+Two read wins are left on the table and are the owner's call, not this ADR's: adding
+`created_at` as a trailing column to the composite makes `countConsumedPingsByTeam`
+index-only, and pointing `/api/v1/status` at `created_at` instead of `completed_at` would
+free `(monitor_id, created_at)` to replace the composite after all.
 
 ## Consequences
 

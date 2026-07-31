@@ -20,12 +20,10 @@
 -- generator never emitted a duplicate for it, so it has nothing to drop. `IF EXISTS` keeps
 -- the migration re-runnable if a database is missing one of them.
 --
--- Deferred to a follow-up migration (ADR-010, second half of the Decision): dropping
--- `monitor_results_monitor_completed_at_response_status_response_time_idx` and
--- `monitor_results_created_at_idx` and replacing them with a single
--- `(monitor_id, created_at)` index. Those two exist to serve the `Monitor.findDue` query,
--- and must not be dropped until ADR-003 has removed that query — otherwise the scheduler
--- degrades from a covering-index scan to a full table scan and gets worse, not cheaper.
+-- ADR-010's second half landed in `20260731100800_drop_find_due_indexes.sql`, once ADR-003
+-- had moved scheduling off this table: it drops `monitor_results_created_at_idx` and keeps
+-- the four-column composite, which turned out to serve four live queries rather than only
+-- `Monitor.findDue`.
 
 DROP INDEX IF EXISTS `alerts_id_unique`;
 DROP INDEX IF EXISTS `cron_job_monitors_id_unique`;
