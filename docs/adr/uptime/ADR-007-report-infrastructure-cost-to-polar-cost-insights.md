@@ -2,9 +2,37 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Turns the cost model in
+**Accepted** — implemented 2026-07-31. Turns the cost model in
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) from a one-off analysis into a
-continuously measured, per-customer figure delivered to Polar. No code written yet.
+continuously measured, per-customer figure delivered to Polar.
+
+Phases 0–4 of §10 are in place. Phase 5 — the first monthly reconciliation against
+Cloudflare's own analytics — needs a month of production data and is an operational
+follow-up, not code. Every recommendation in §11 was taken as written.
+
+Four things landed differently from the text above, each for a stated reason:
+
+- **The ledger reuses ADR-019's accumulator instead of owning a second
+  `AsyncLocalStorage`** (§3). There is one `onStatement` slot on the D1 adapter and
+  `recordD1Statement` already occupied it; a second async-local store counting the same
+  statements would be duplicated work on the hot path for no extra information. The ledger
+  now _holds_ the `Job.Usage` object `Job.run` reports on `job.completed`, and reads its
+  row counts once at flush — so instrumenting cost added no per-statement work at all.
+- **`index1` is the team, not the owner** (§6). Resolving a team's owner at flush time
+  would be a D1 read per unit of work, which contradicts §9's zero-D1-writes-and-reads
+  budget for the instrument. The reporting job resolves team → owner once a day from D1,
+  which it has to do anyway to name the Polar customer.
+- **No `direct`/`shared` split in the recording API** (§3). Every unit of work in this app
+  consumes its per-team resources in proportion to the same weights its fixed cost is split
+  by — a sweep's per-monitor writes and its one claim both scale with monitors swept per
+  team — so one `record` plus one `apportion` expresses all of it, and a second "direct"
+  path would only be a way of writing the same number twice.
+- **Retention is charged when it happens, not prepaid at insert** (§5). The statement
+  observer measures `CleanJob`'s `DELETE`s for real, so prepaying would double-count. The
+  bulk delete cannot say whose rows it removed, so it is apportioned by monitors per team.
+
+`blob3`'s monitor type was dropped as redundant: `blob1`'s source already names the job, and
+every job serves exactly one monitor type.
 
 ## Context
 

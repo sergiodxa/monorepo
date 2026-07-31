@@ -194,13 +194,14 @@ describe("DnsMonitor.claimDue", () => {
 		expect(await DnsMonitor.claimDue(db, scheduledAt)).toEqual([]);
 	});
 
-	test("projects only the columns a check reads", async () => {
+	test("projects only the columns a check reads, plus the team that pays for it", async () => {
 		let monitor = await createMonitor({ expected_value: "1.2.3.4" });
 
 		let [claimed] = await DnsMonitor.claimDue(db, Date.now() + 1000);
 
 		expect(claimed).toEqual({
 			id: monitor.id,
+			team_id: monitor.team_id,
 			domain: "a.example.com",
 			record_type: "A",
 			expected_value: "1.2.3.4",

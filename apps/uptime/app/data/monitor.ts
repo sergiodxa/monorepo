@@ -16,7 +16,6 @@ import type { Database } from "remix/data-table";
 
 import { isFailure } from "@pkg/result";
 import { generateUUID } from "@pkg/uuid";
-import { env } from "cloudflare:workers";
 import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
 
@@ -24,6 +23,7 @@ import type { HttpP99Scope } from "~/app/services/analytics";
 import type { InsertMonitor, MonitorStatus } from "~/database/schema";
 
 import Subscription from "~/app/data/subscription";
+import { sendQueueMessage } from "~/app/lib/queue";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
 import {
@@ -161,7 +161,7 @@ export default class Monitor {
 	static async ping(db: Database, monitorId: string, ownerId: string): Promise<boolean> {
 		if ((await Subscription.stateFor(db, ownerId)) === "inactive") return false;
 
-		await env.QUEUE.send({
+		await sendQueueMessage({
 			type: "checkHttp",
 			id: `${monitorId}:manual:${generateUUID()}`,
 			monitorId,
@@ -206,18 +206,19 @@ export default class Monitor {
 	 * second and later deliveries of the same minute's cron (this trigger fires more than
 	 * once per minute — see {@link scheduledJobId}) find nothing due and enqueue nothing.
 	 *
-	 * One statement, and only monitor ids. It used to resolve each claimed monitor's team
-	 * owner too, so the scheduler could ask Polar whether that owner was still paying —
-	 * but entitlement now lives in `next_due_at` itself, set and cleared by the Polar
-	 * webhook, so an unentitled owner's monitors are never claimed in the first place and
-	 * there is nobody left to look up.
+	 * One statement, and only the monitor id and its team. It used to resolve each claimed
+	 * monitor's team owner too, so the scheduler could ask Polar whether that owner was still
+	 * paying — but entitlement now lives in `next_due_at` itself, set and cleared by the
+	 * Polar webhook, so an unentitled owner's monitors are never claimed in the first place
+	 * and there is nobody left to look up. `team_id` comes back because the scheduler's own
+	 * cost is apportioned across the teams whose monitors were due (ADR-007 §5), and the
+	 * `RETURNING` projection is where that denominator is free.
 	 *
 	 * The `monitor_results` primary-key dedupe stays as the backstop for a delivery that
 	 * races the claim in some way this does not cover — see {@link scheduledJobId}.
 	 */
-	static async findDue(db: Database, scheduledAt: number): Promise<string[]> {
-		let rows = await claimDue(db, monitors, ["id"], scheduledAt);
-		return rows.map((row) => row.id);
+	static async findDue(db: Database, scheduledAt: number) {
+		return await claimDue(db, monitors, ["id", "team_id"], scheduledAt);
 	}
 
 	/**

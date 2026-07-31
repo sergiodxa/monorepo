@@ -25,7 +25,9 @@ import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import Team from "~/app/data/team";
 import { deleteOlderThan } from "~/app/lib/retention";
+import { apportionCost } from "~/app/services/cost";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -77,6 +79,16 @@ export class CleanJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let now = Date.now();
+
+		/**
+		 * Retention is charged when it happens, split by monitors per team (ADR-007 §5).
+		 * Prepaying it at insert instead — charging each result row for the delete it will
+		 * later cause — would double-count against these `DELETE`s, which the statement
+		 * observer measures for real; and a single bulk `DELETE` cannot say whose rows it
+		 * removed, so monitor count is the closest available proxy for the volume each team
+		 * put in.
+		 */
+		apportionCost(await Team.countMonitorsByTeam(db));
 
 		let rowsDeleted = 0;
 		let reachedCeiling = false;

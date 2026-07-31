@@ -11,6 +11,7 @@
 import { renderToString } from "remix/ui/server";
 import { Resend } from "resend";
 
+import { recordCost } from "~/app/services/cost";
 import TeamInviteEmail from "~/resources/views/emails/team-invite";
 
 const EMAIL_FROM = "Uptime <no-reply@uptime.sergiodxa.com>";
@@ -24,6 +25,9 @@ export async function sendInviteEmail(
 	url: string,
 ) {
 	let html = await renderToString(<TeamInviteEmail team={teamName} url={url} />);
+
+	// Counted before the send: a rejected send is a billed one.
+	recordCost("emailSent");
 
 	await resend.emails.send({
 		from: EMAIL_FROM,

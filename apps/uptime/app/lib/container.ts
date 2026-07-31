@@ -4,8 +4,8 @@
  * shared {@link PolarClient} singleton for billing. Controllers, middleware, and jobs
  * resolve their dependencies from this container rather than constructing them.
  *
- * It also connects the database's per-statement row counts to the job logger
- * (ADR-019), which is what makes D1 cost measurable per job type.
+ * It also connects the database's per-statement row counts to the cost ledger (ADR-019,
+ * ADR-007), which is what makes D1 cost measurable — and priceable — per job type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +20,7 @@ import { env } from "cloudflare:workers";
 import { createDatabase, Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import { recordD1Statement, trackD1Usage } from "~/app/lib/d1-usage";
+import { recordD1Statement, trackJobCost } from "~/app/services/cost";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
 /**
@@ -36,11 +36,13 @@ export const container = new ServiceContainer();
 /**
  * Every job's D1 row counts are attributed to that job (ADR-019): `Job.run` wraps a
  * job's lifecycle in this tracker, so the statements it issues land on its own
- * `job.completed` log line instead of being pooled across a queue batch. Registered
- * here because this module is what the worker imports to build the container, and it
- * is the only place that knows both the database and the accumulator.
+ * `job.completed` log line instead of being pooled across a queue batch — and, since the
+ * accumulator is the cost ledger (ADR-007), get priced and recorded for that job's teams
+ * when the job ends. Registered here because this module is what the worker imports to
+ * build the container, and it is the only place that knows both the database and the
+ * ledger.
  */
-setJobUsageTracker(trackD1Usage);
+setJobUsageTracker(trackJobCost);
 
 /**
  * `now` is overridden to epoch-ms because `database/schema.ts` declares timestamp

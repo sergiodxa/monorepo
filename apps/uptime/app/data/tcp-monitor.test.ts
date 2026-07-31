@@ -174,7 +174,7 @@ describe("TcpMonitor.claimDue", () => {
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
 	});
 
-	test("projects only the columns a check reads", async () => {
+	test("projects only the columns a check reads, plus the team that pays for it", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
 
@@ -182,6 +182,7 @@ describe("TcpMonitor.claimDue", () => {
 
 		expect(claimed).toEqual({
 			id: monitor.id,
+			team_id: monitor.team_id,
 			host: "db.example.com",
 			port: 5432,
 			timeout_ms: monitor.timeout_ms,

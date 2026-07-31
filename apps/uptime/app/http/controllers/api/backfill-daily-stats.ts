@@ -10,10 +10,10 @@
  */
 
 import { Accepted } from "@pkg/http/status-code";
-import { env } from "cloudflare:workers";
 import { createAction } from "remix/fetch-router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { sendQueueMessage } from "~/app/lib/queue";
 import { apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -21,7 +21,7 @@ import routes from "~/routes/web";
 export const backfillDailyStatsCreate = createAction(routes.api.v1.backfillDailyStats, {
 	middleware: [requireApiKey("monitors:write")],
 	handler: async () => {
-		await env.QUEUE.send({ type: "aggregateDailyStats" });
+		await sendQueueMessage({ type: "aggregateDailyStats" });
 		return apiSuccess({ status: "queued" }, Accepted);
 	},
 });

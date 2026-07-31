@@ -25,8 +25,12 @@ const RESULT_HISTORY_LIMIT = 50;
 /**
  * What a claimed monitor's check needs to read. Adding a column the check uses is one edit
  * here: {@link ClaimedTcpMonitor} and {@link TcpMonitor.claimDue}'s return type both follow.
+ *
+ * `team_id` is not read by the check itself: the sweep apportions its own cost across the
+ * teams whose monitors it swept (ADR-007 §5), and the `RETURNING` projection is where that
+ * denominator costs nothing.
  */
-const CLAIM_COLUMNS = ["id", "host", "port", "timeout_ms", "last_status"] as const;
+const CLAIM_COLUMNS = ["id", "team_id", "host", "port", "timeout_ms", "last_status"] as const;
 
 /** A TCP monitor claimed for a check, projected to the columns the check reads. */
 export type ClaimedTcpMonitor = Pick<SelectTcpMonitor, (typeof CLAIM_COLUMNS)[number]>;

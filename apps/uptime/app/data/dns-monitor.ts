@@ -28,9 +28,14 @@ const RESULT_HISTORY_LIMIT = 50;
 /**
  * What a claimed monitor's check needs to read. Adding a column the check uses is one edit
  * here: {@link ClaimedDnsMonitor} and {@link DnsMonitor.claimDue}'s return type both follow.
+ *
+ * `team_id` is not read by the check itself: the sweep apportions its own cost across the
+ * teams whose monitors it swept (ADR-007 §5), and the `RETURNING` projection is where that
+ * denominator costs nothing.
  */
 const CLAIM_COLUMNS = [
 	"id",
+	"team_id",
 	"domain",
 	"record_type",
 	"expected_value",

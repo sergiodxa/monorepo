@@ -61,6 +61,31 @@ export default class Team {
 		return await db.findOne(memberships, { where: { team_id: teamId, subject_id: subjectId } });
 	}
 
+	/**
+	 * How many monitors each team has, of every type, as one grouped query.
+	 *
+	 * This is the denominator for apportioning a platform-wide sweep's cost — a daily
+	 * roll-up, a retention pass — across the teams that caused it (ADR-007 §5). Those jobs
+	 * do work that is genuinely proportional to monitor count and genuinely impossible to
+	 * split after the fact: a single bulk `DELETE` cannot say whose rows it removed.
+	 *
+	 * A team with no monitors is absent rather than present with zero, which is what the
+	 * apportionment wants — it caused none of the work.
+	 */
+	static async countMonitorsByTeam(db: Database): Promise<Map<string, number>> {
+		let result = await db.exec(
+			`SELECT team_id AS teamId, COUNT(*) AS count
+			   FROM (SELECT team_id FROM monitors
+			         UNION ALL SELECT team_id FROM tcp_monitors
+			         UNION ALL SELECT team_id FROM dns_monitors
+			         UNION ALL SELECT team_id FROM cron_job_monitors)
+			  GROUP BY team_id`,
+		);
+
+		let rows = (result.rows ?? []) as unknown as { teamId: string; count: number }[];
+		return new Map(rows.map((row) => [row.teamId, Number(row.count)]));
+	}
+
 	/** Lists every membership row for a team. */
 	static async listMembersByTeam(db: Database, teamId: string) {
 		return await db.findMany(memberships, { where: { team_id: teamId } });

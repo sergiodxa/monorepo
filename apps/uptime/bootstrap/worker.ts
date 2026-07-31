@@ -6,6 +6,12 @@
  * the work queue and for the dead-letter queue both, since one handler serves every queue
  * the worker consumes. Re-exports the `GeoFetchDO` Durable Object class its binding needs.
  *
+ * Each of the three handlers is also where a unit of work's cost ledger begins and ends
+ * (ADR-007 §3): `fetch` and `scheduled` open one directly, while a queue batch's jobs get
+ * one each from the usage tracker — a batch is a single invocation running up to ten jobs
+ * concurrently, and one ledger between them would pool their cost into a number that
+ * answers nothing.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -30,8 +36,17 @@ import { DeadLetterJob } from "~/app/jobs/dead-letter";
 import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
+import { ReportCostsJob } from "~/app/jobs/report-costs";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
+import { sendQueueBatch, sendQueueMessage } from "~/app/lib/queue";
+import {
+	apportionCostByTeam,
+	CostLedger,
+	countedKv,
+	setQueueBatchSize,
+	trackCost,
+} from "~/app/services/cost";
 
 import application from "./app";
 
@@ -59,6 +74,7 @@ const QueueMessageSchema = s.variant("type", {
 	checkCronJobs: s.object({ type: s.literal("checkCronJobs") }),
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
 	reconcileSubscriptions: s.object({ type: s.literal("reconcileSubscriptions") }),
+	reportCosts: s.object({ type: s.literal("reportCosts") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -91,6 +107,103 @@ function isSecureHost(request: Request): boolean {
 	return true;
 }
 
+/**
+ * Enqueues the work one cron delivery implies. Split out of the `scheduled` handler so the
+ * whole of it — including the claim whose result decides the delivery's cost attribution —
+ * runs inside one cost ledger.
+ * @param controller The trigger being dispatched.
+ */
+async function dispatchCron(controller: ScheduledController): Promise<void> {
+	// Every minute: enqueue a `checkHttp` message for every monitor due for a check,
+	// plus a sweep of cron-job monitors for late/missed transitions and the TCP and DNS
+	// sweeps, which claim only the monitors their own `interval_seconds` has made due.
+	if (controller.cron === "* * * * *") {
+		let db = getServiceContainer().get(Database);
+		/**
+		 * Claims the monitors that are due, advancing each one's next due time as it
+		 * does, so the later deliveries of this same minute's cron find nothing left to
+		 * enqueue.
+		 *
+		 * Nothing here asks about billing any more (ADR-005). Revoking a subscription
+		 * unschedules that owner's monitors the moment the webhook lands, so `next_due_at`
+		 * already carries the answer and a claimed monitor is by construction one that is
+		 * allowed to run. This used to ask Polar once per distinct owner per delivery —
+		 * 43,200 × K requests a month as one wide `Promise.all` burst — through a call that
+		 * returns `false` on any error, so a Polar outage silently stopped every customer's
+		 * monitoring.
+		 */
+		let due = await Monitor.findDue(db, controller.scheduledTime);
+
+		/**
+		 * The claim, this invocation, and the four sweep messages below are all caused
+		 * collectively by whoever was due, so they are split by due monitors per team
+		 * (ADR-007 §5). Note what that means on a quiet platform: a customer with a single
+		 * 1-minute monitor absorbs nearly the whole scan. That is not an artifact — it is
+		 * the signal ADR-003 exists to remove.
+		 */
+		apportionCostByTeam(due.map((monitor) => monitor.team_id));
+
+		if (due.length > 0) {
+			waitUntil(
+				sendQueueBatch(
+					due.map((monitor) => ({
+						type: "checkHttp",
+						/**
+						 * Deliberately one id per monitor per minute, not per delivery — see
+						 * `Monitor.scheduledJobId` for why this cron fires more than once a
+						 * minute and what collides when it does.
+						 */
+						id: Monitor.scheduledJobId(monitor.id, controller.scheduledTime),
+						monitorId: monitor.id,
+						scheduledAt: controller.scheduledTime,
+					})),
+				),
+			);
+		}
+		waitUntil(sendQueueMessage({ type: "checkCronJobs" }));
+		/**
+		 * Every minute rather than the 5-minute and hourly triggers these used to have,
+		 * because a monitor's `interval_seconds` can be as fine as 60 and a coarser
+		 * delivery made the finer setting unreachable. Both jobs claim before they check,
+		 * so a delivery with nothing due costs one indexed range that matches no rows.
+		 */
+		waitUntil(sendQueueMessage({ type: "checkTcp" }));
+		waitUntil(sendQueueMessage({ type: "checkDns" }));
+	}
+
+	// Every 10 minutes: re-enqueue verification for every unverified team domain.
+	if (controller.cron === "*/10 * * * *") {
+		waitUntil(sendQueueMessage({ type: "enqueuePendingDomains" }));
+	}
+
+	// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
+	if (controller.cron === "0 0 * * *") {
+		waitUntil(sendQueueMessage({ type: "clean" }));
+		waitUntil(sendQueueMessage({ type: "cleanCronJobPings" }));
+	}
+
+	// Daily at 1 AM UTC: roll up yesterday's checks into `monitor_daily_stats`.
+	if (controller.cron === "0 1 * * *") {
+		waitUntil(sendQueueMessage({ type: "aggregateDailyStats" }));
+	}
+
+	// Daily at 2 AM UTC: repair the subscription projection against Polar, in case a
+	// webhook was missed. The one Polar query left on the billing path.
+	if (controller.cron === "0 2 * * *") {
+		waitUntil(sendQueueMessage({ type: "reconcileSubscriptions" }));
+	}
+
+	// Daily at 3 AM UTC: price yesterday's recorded cost per team and report it to Polar.
+	if (controller.cron === "0 3 * * *") {
+		waitUntil(sendQueueMessage({ type: "reportCosts" }));
+	}
+
+	// Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor.
+	if (controller.cron === "0 6 * * *") {
+		waitUntil(sendQueueMessage({ type: "checkSsl" }));
+	}
+}
+
 export default {
 	/**
 	 * Handles incoming Worker requests by opening a container scope and forwarding the
@@ -99,94 +212,29 @@ export default {
 	async fetch(request: Request) {
 		return await container.scope(async () => {
 			let app = application({
-				kv: env.KV,
+				kv: countedKv(env.KV),
 				cookieSecret: env.COOKIE_SESSION_SECRET,
 				secure: isSecureHost(request),
 			});
-			return await app.fetch(request);
+			/**
+			 * Which team a request is for is settled downstream — `requireTeam` for the app,
+			 * the status-page controller for a public one — so the ledger opens unattributed
+			 * and is told once the request has resolved whose it is. One that never does (a
+			 * marketing page, a 404) is platform cost, which is the truth.
+			 */
+			return await trackCost(new CostLedger({ handler: "fetch" }), () => app.fetch(request));
 		});
 	},
 
 	/** Dispatches cron triggers. Only the crons this phase's jobs need are handled. */
 	async scheduled(controller) {
 		await container.scope(async () => {
-			// Every minute: enqueue a `checkHttp` message for every monitor due for a check,
-			// plus a sweep of cron-job monitors for late/missed transitions and the TCP and DNS
-			// sweeps, which claim only the monitors their own `interval_seconds` has made due.
-			if (controller.cron === "* * * * *") {
-				let db = getServiceContainer().get(Database);
-				/**
-				 * Claims the monitors that are due, advancing each one's next due time as it
-				 * does, so the later deliveries of this same minute's cron find nothing left to
-				 * enqueue.
-				 *
-				 * Nothing here asks about billing any more (ADR-005). Revoking a subscription
-				 * unschedules that owner's monitors the moment the webhook lands, so `next_due_at`
-				 * already carries the answer and a claimed monitor is by construction one that is
-				 * allowed to run. This used to ask Polar once per distinct owner per delivery —
-				 * 43,200 × K requests a month as one wide `Promise.all` burst — through a call that
-				 * returns `false` on any error, so a Polar outage silently stopped every customer's
-				 * monitoring.
-				 */
-				let due = await Monitor.findDue(db, controller.scheduledTime);
-
-				if (due.length > 0) {
-					waitUntil(
-						env.QUEUE.sendBatch(
-							due.map((monitorId) => ({
-								body: {
-									type: "checkHttp",
-									/**
-									 * Deliberately one id per monitor per minute, not per delivery — see
-									 * `Monitor.scheduledJobId` for why this cron fires more than once a
-									 * minute and what collides when it does.
-									 */
-									id: Monitor.scheduledJobId(monitorId, controller.scheduledTime),
-									monitorId,
-									scheduledAt: controller.scheduledTime,
-								},
-								contentType: "json",
-							})),
-						),
-					);
-				}
-				waitUntil(env.QUEUE.send({ type: "checkCronJobs" }));
-				/**
-				 * Every minute rather than the 5-minute and hourly triggers these used to have,
-				 * because a monitor's `interval_seconds` can be as fine as 60 and a coarser
-				 * delivery made the finer setting unreachable. Both jobs claim before they check,
-				 * so a delivery with nothing due costs one indexed range that matches no rows.
-				 */
-				waitUntil(env.QUEUE.send({ type: "checkTcp" }));
-				waitUntil(env.QUEUE.send({ type: "checkDns" }));
-			}
-
-			// Every 10 minutes: re-enqueue verification for every unverified team domain.
-			if (controller.cron === "*/10 * * * *") {
-				waitUntil(env.QUEUE.send({ type: "enqueuePendingDomains" }));
-			}
-
-			// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
-			if (controller.cron === "0 0 * * *") {
-				waitUntil(env.QUEUE.send({ type: "clean" }));
-				waitUntil(env.QUEUE.send({ type: "cleanCronJobPings" }));
-			}
-
-			// Daily at 1 AM UTC: roll up yesterday's checks into `monitor_daily_stats`.
-			if (controller.cron === "0 1 * * *") {
-				waitUntil(env.QUEUE.send({ type: "aggregateDailyStats" }));
-			}
-
-			// Daily at 2 AM UTC: repair the subscription projection against Polar, in case a
-			// webhook was missed. The one Polar query left on the billing path.
-			if (controller.cron === "0 2 * * *") {
-				waitUntil(env.QUEUE.send({ type: "reconcileSubscriptions" }));
-			}
-
-			// Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor.
-			if (controller.cron === "0 6 * * *") {
-				waitUntil(env.QUEUE.send({ type: "checkSsl" }));
-			}
+			/**
+			 * One ledger for the whole delivery. Only the every-minute trigger has teams to
+			 * attribute to — it learns them from the claim below — so the daily triggers record
+			 * their invocation and their queue write as platform cost, which is what they are.
+			 */
+			await trackCost(new CostLedger({ handler: "scheduled" }), () => dispatchCron(controller));
 		});
 	},
 
@@ -196,6 +244,13 @@ export default {
 	 */
 	async queue(batch) {
 		await container.scope(async () => {
+			/**
+			 * The batch is one Worker invocation running every message in it, so each job owns
+			 * one share of the single request it is billed as. Set before the loop below
+			 * constructs any job's ledger, which is the moment each one reads it.
+			 */
+			setQueueBatchSize(batch.messages.length);
+
 			/**
 			 * Both queues' batches arrive at this one handler, so the dead-letter batches are
 			 * separated out first. They carry the bodies of messages that already failed, in
@@ -261,6 +316,9 @@ export default {
 						break;
 					case "reconcileSubscriptions":
 						waitUntil(ReconcileSubscriptionsJob.run({ message, uptime }));
+						break;
+					case "reportCosts":
+						waitUntil(ReportCostsJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

@@ -36,6 +36,7 @@ import type {
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow from "~/app/data/maintenance-window";
+import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
@@ -83,8 +84,16 @@ export interface DispatchAlertsParams {
 	dashboardUrl: string;
 }
 
-/** Runs the full alert pipeline for one monitor status transition. */
+/**
+ * Runs the full alert pipeline for one monitor status transition.
+ *
+ * This is also the one place every alerting path passes through, so it is where the unit of
+ * work running it is told whose team it is for (ADR-007 §5) — before the maintenance-window
+ * check can return early, because the lookups leading up to that point are cost too.
+ */
 export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void> {
+	apportionCostByTeam([params.teamId]);
+
 	let isHttpMonitor = params.monitorType === "http" || params.monitorType === "ssl";
 	let maintenanceMonitorType: MaintenanceMonitorKind =
 		params.monitorType === "http" || params.monitorType === "ssl" ? "http" : params.monitorType;
@@ -270,11 +279,20 @@ async function deliver(
 	}
 }
 
+/**
+ * Sends one alert email through Resend.
+ *
+ * Counted before the send rather than after, because a rejected send is still a billed
+ * one — and email is by far the most expensive thing this app does, at roughly 26× the
+ * cost of the HTTP check that triggered it.
+ */
 async function deliverEmail(
 	config: { to: string; subjectPrefix: string },
 	message: Message,
 	resend: Resend,
 ): Promise<void> {
+	recordCost("emailSent");
+
 	let subject = config.subjectPrefix
 		? `${config.subjectPrefix} ${message.subject}`
 		: message.subject;

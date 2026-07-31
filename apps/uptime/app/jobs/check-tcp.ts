@@ -32,6 +32,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyTcpResult } from "~/app/services/alerts";
+import { apportionCostByTeam } from "~/app/services/cost";
 import { checkTcpConnection } from "~/app/services/tcp-check";
 
 export class CheckTcpJob extends Job {
@@ -44,6 +45,12 @@ export class CheckTcpJob extends Job {
 		 * seconds. Nothing downstream keys off it, unlike the HTTP sweep's per-minute job id.
 		 */
 		let monitors = await TcpMonitor.claimDue(db, Date.now());
+		/**
+		 * The sweep's fixed cost — the claim, the invocation, its share of the batch — is
+		 * split across the teams whose monitors it took, in proportion to how many it took
+		 * from each (ADR-007 §5). A delivery that claimed nothing is platform cost.
+		 */
+		apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
 		let notifications: NotifyMessage[] = [];
 		let successCount = 0;

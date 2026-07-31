@@ -24,12 +24,15 @@ import type { SelectMonitor } from "~/database/schema";
 import Monitor from "~/app/data/monitor";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { apportionCostByTeam } from "~/app/services/cost";
 import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 
 export class CheckSslJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let monitors = await Monitor.listSslEnabled(db);
+		// The sweep exists for these monitors, so it is split by how many each team has.
+		apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
 		let notifications: NotifyMessage[] = [];
 		let successCount = 0;

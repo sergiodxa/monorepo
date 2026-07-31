@@ -19,6 +19,7 @@ import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
 import TeamDomain from "~/app/data/team-domain";
+import { apportionCostByTeam } from "~/app/services/cost";
 
 const DnsAnswerSchema = s.object({
 	Answer: s.optional(
@@ -48,6 +49,9 @@ export class VerifyDomainOwnershipJob extends Job {
 		let db = getServiceContainer().get(Database);
 		let domain = await TeamDomain.findById(db, result.data.teamDomainId);
 		if (!domain || domain.verified_at !== null) return;
+
+		// Verifying a domain is work one team asked for by adding it.
+		apportionCostByTeam([domain.team_id]);
 
 		let url = new URL("https://cloudflare-dns.com/dns-query");
 		url.searchParams.set("name", `_ping-verification.${domain.hostname}`);

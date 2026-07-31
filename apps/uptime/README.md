@@ -12,8 +12,11 @@ team and access management, API v1, and the marketing site/docs/sitemap.
 
 The current `wrangler.jsonc` is configured with the production `uptime.sergiodxa.com`
 route, queue consumer, cron triggers, D1 database, KV namespace, Durable Object,
-Workflow, and Analytics Engine dataset. Re-run verification before each deploy;
-the historical phase notes live in the ADR linked above.
+Workflow, and two Analytics Engine datasets: `uptime_monitor_results` for HTTP ping
+results and `uptime_costs` for the per-team infrastructure cost the daily reporting
+cron forwards to Polar. Neither dataset needs provisioning — the first write creates
+it. Re-run verification before each deploy; the historical phase notes live in the ADR
+linked above.
 
 ## Development
 

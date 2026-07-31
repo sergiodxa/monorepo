@@ -21,6 +21,8 @@ import type { Result } from "@pkg/result";
 import { failure, isFailure, success } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
+import { recordCost } from "~/app/services/cost";
+
 /** Minimum KV cache TTL, in seconds. */
 const MIN_CACHE_TTL_SECONDS = 60;
 /** Maximum KV cache TTL, in seconds. */
@@ -56,9 +58,14 @@ export interface SparklinePoint {
  * transient failure must degrade to `failure(...)` for that one query, not crash
  * the whole page with an uncaught exception.
  *
+ * Counted as one billable Analytics Engine query whether it answers or fails, which is
+ * what makes the monitors list's query-per-monitor visible in the cost figures rather than
+ * only in the code.
  * @param sql SQL query text (the account's Analytics Engine SQL dialect).
  */
 export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
+	recordCost("aeQuery");
+
 	try {
 		let response = await fetch(
 			`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
@@ -85,17 +92,24 @@ export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>
 	}
 }
 
-/** {@link queryAnalytics}, cached in KV under `cacheKey` for `ttlSeconds`. */
+/**
+ * {@link queryAnalytics}, cached in KV under `cacheKey` for `ttlSeconds`.
+ *
+ * The KV operations are counted here rather than through `countedKv`, because this reads
+ * the binding directly instead of the instrumented one the router is handed.
+ */
 export async function queryAnalyticsCached<T>(
 	cacheKey: string,
 	ttlSeconds: number,
 	sql: string,
 ): Promise<Result<T[], Error>> {
+	recordCost("kvRead");
 	let cached = await env.KV.get<T[]>(cacheKey, "json");
 	if (cached) return success(cached);
 
 	let result = await queryAnalytics<T>(sql);
 	if (!isFailure(result)) {
+		recordCost("kvMutation");
 		await env.KV.put(cacheKey, JSON.stringify(result.data), { expirationTtl: ttlSeconds });
 	}
 	return result;
@@ -111,7 +125,10 @@ export function getCacheTtl(minIntervalSeconds: number): number {
 	return Math.max(MIN_CACHE_TTL_SECONDS, Math.min(MAX_CACHE_TTL_SECONDS, minIntervalSeconds));
 }
 
-/** Writes one HTTP ping result as an Analytics Engine data point. */
+/**
+ * Writes one HTTP ping result as an Analytics Engine data point, counted against the check
+ * that produced it.
+ */
 export function writeHttpPingResult(params: {
 	monitorId: string;
 	teamId: string;
@@ -120,6 +137,7 @@ export function writeHttpPingResult(params: {
 	responseStatus: number;
 	expectedStatus: number;
 }): void {
+	recordCost("aeDataPoint");
 	env.PING_RESULTS.writeDataPoint({
 		blobs: [params.monitorId, "http", params.status],
 		doubles: [params.responseTimeMs, 1, params.responseStatus, params.expectedStatus],

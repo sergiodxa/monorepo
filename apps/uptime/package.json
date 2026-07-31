@@ -31,6 +31,7 @@
 		"@pkg/service-container": "workspace:*",
 		"@pkg/session-storage-kv": "workspace:*",
 		"@pkg/sitemap": "workspace:*",
+		"@pkg/strings": "workspace:*",
 		"@pkg/u": "workspace:*",
 		"@pkg/uuid": "workspace:*",
 		"@pkg/validate": "workspace:*",
@@ -43,6 +44,7 @@
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/node": "^26.1.1",
 		"i18next": "^26.3.6",
+		"msw": "^2.15.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.1.5",
 		"wrangler": "^4.113.0"

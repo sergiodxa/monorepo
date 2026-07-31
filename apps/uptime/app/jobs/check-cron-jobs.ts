@@ -25,11 +25,19 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyCronJobResult } from "~/app/services/alerts";
+import { apportionCostByTeam } from "~/app/services/cost";
 
 export class CheckCronJobsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let monitors = await CronJobMonitor.listActionable(db);
+		/**
+		 * The evaluation sweep produces no billable ping, so its cost has nowhere else to
+		 * land: it is split across the teams whose cron monitors were actionable this minute
+		 * (ADR-007 §5).
+		 */
+		apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
+
 		let now = Date.now();
 
 		let notifications: NotifyMessage[] = [];

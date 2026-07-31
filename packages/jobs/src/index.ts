@@ -69,9 +69,25 @@ export namespace Job {
 	 * inside it are attributed to this job and not to a sibling job from the same queue
 	 * batch. The host app owns the accumulation mechanism (an async-local store over
 	 * its database adapter's statement observer); this package only asks to be told
-	 * when a job starts and stops.
+	 * when a job starts and stops, and which job it is.
 	 */
-	export type UsageTracker = <T>(usage: Usage, body: () => Promise<T>) => Promise<T>;
+	export type UsageTracker = <T>(
+		usage: Usage,
+		body: () => Promise<T>,
+		context: UsageContext,
+	) => Promise<T>;
+
+	/**
+	 * Which job a {@link UsageTracker} has been handed.
+	 *
+	 * An accumulator that only counts needs nothing from this; one that attributes what it
+	 * counted has to be able to say what the work was, and the job's own identifier is the
+	 * answer a caller would otherwise have to thread through every `run()` call.
+	 */
+	export interface UsageContext {
+		/** Stable kebab-case identifier for the job class, e.g. `check-http-job`. */
+		job: string;
+	}
 
 	export interface ConstructorOptions {
 		uptime?: UptimeOptions;
@@ -108,11 +124,12 @@ export abstract class Job {
 		options: Job.RunOptions,
 	): Promise<void> {
 		let tracker = usageTracker;
+		let identifier = dasherize(underscore(this.name));
 		let usage: Job.Usage = { statements: 0, rowsRead: 0, rowsWritten: 0, durationMs: 0 };
-		let run = () => Job.#lifecycle(this, options, tracker ? usage : undefined);
+		let run = () => Job.#lifecycle(this, identifier, options, tracker ? usage : undefined);
 
 		if (!tracker) return await run();
-		return await tracker(usage, run);
+		return await tracker(usage, run, { job: identifier });
 	}
 
 	/**
@@ -120,6 +137,8 @@ export abstract class Job {
 	 * `perform()`, the uptime ping, ack/retry, and the log flush — runs inside the
 	 * registered usage tracker's scope rather than only part of it.
 	 * @param constructor The `Job` subclass being run.
+	 * @param identifier The subclass's kebab-case identifier, derived once by
+	 * {@link Job.run} so the log id and the usage context cannot spell it two ways.
 	 * @param options The queue message plus the optional uptime token.
 	 * @param usage Live usage counters to report on `job.completed`, or `undefined`
 	 * when nothing is tracking this job.
@@ -129,10 +148,11 @@ export abstract class Job {
 			monitorId?: string;
 			name: string;
 		},
+		identifier: string,
 		options: Job.RunOptions,
 		usage: Job.Usage | undefined,
 	): Promise<void> {
-		let id = `job:${dasherize(underscore(constructor.name))}:${options.message.id}`;
+		let id = `job:${identifier}:${options.message.id}`;
 		let uptime = { token: options.uptime, monitorId: constructor.monitorId };
 		let logger = new BatchedLogger(id);
 

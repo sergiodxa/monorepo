@@ -10,10 +10,11 @@
 
 import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
 import TeamDomain from "~/app/data/team-domain";
+import { sendQueueBatch } from "~/app/lib/queue";
+import { apportionCostByTeam } from "~/app/services/cost";
 
 export class EnqueuePendingDomainsJob extends Job {
 	async perform(): Promise<void> {
@@ -25,12 +26,15 @@ export class EnqueuePendingDomainsJob extends Job {
 			return;
 		}
 
-		await env.QUEUE.sendBatch(
-			pending.map((domain) => ({
-				body: { type: "verifyDomainOwnership", teamDomainId: domain.id },
-				contentType: "json",
-			})),
+		await sendQueueBatch(
+			pending.map((domain) => ({ type: "verifyDomainOwnership", teamDomainId: domain.id })),
 		);
+
+		/**
+		 * The sweep exists because these domains are pending, so its cost belongs to the teams
+		 * that own them; a delivery with nothing pending returns above and is platform cost.
+		 */
+		apportionCostByTeam(pending.map((domain) => domain.team_id));
 
 		this.logger.info("job.enqueue_pending_domains.enqueued", { count: pending.length });
 	}

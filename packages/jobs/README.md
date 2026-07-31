@@ -117,7 +117,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 let storage = new AsyncLocalStorage<Job.Usage>();
 
-setJobUsageTracker((usage, body) => storage.run(usage, body));
+setJobUsageTracker((usage, body, context) => {
+	console.log("tracking", context.job);
+	return storage.run(usage, body);
+});
 
 // Wherever the database reports a statement's cost:
 function recordStatement(rowsRead: number, rowsWritten: number) {
@@ -198,8 +201,20 @@ interface Usage {
 #### `Job.UsageTracker`
 
 ```typescript
-type UsageTracker = <T>(usage: Usage, body: () => Promise<T>) => Promise<T>;
+type UsageTracker = <T>(usage: Usage, body: () => Promise<T>, context: UsageContext) => Promise<T>;
 ```
+
+#### `Job.UsageContext`
+
+```typescript
+interface UsageContext {
+	/** Stable kebab-case identifier for the job class, e.g. `check-http-job`. */
+	job: string;
+}
+```
+
+A tracker that only counts can ignore it; one that attributes what it counted needs to be
+able to say what the work was.
 
 #### `Job.ConstructorOptions`
 

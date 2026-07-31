@@ -130,6 +130,16 @@ function toBinding(value: unknown): SQLQueryBindings {
 	return String(value);
 }
 
+/**
+ * The ids `Monitor.findDue` claimed. The claim returns each monitor's team as well, since
+ * the scheduler apportions its own cost across the teams whose monitors were due, and every
+ * assertion here is about which monitors moved.
+ */
+async function dueIds(db: Database, scheduledAt: number) {
+	let due = await Monitor.findDue(db, scheduledAt);
+	return due.map((row) => row.id);
+}
+
 /** Inserts a team row so `findDue`'s join to `teams` has an owner to resolve. */
 async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> = {}) {
 	return await db.create(
@@ -414,7 +424,7 @@ describe("Monitor.findDue", () => {
 			interval_seconds: 60,
 		});
 
-		let due = await Monitor.findDue(db, Date.now() + 1000);
+		let due = await dueIds(db, Date.now() + 1000);
 		expect(due).toEqual([monitor.id]);
 	});
 
@@ -429,8 +439,8 @@ describe("Monitor.findDue", () => {
 
 		// The two deliveries this cron really produces: same minute, ~7s apart.
 		let first = Date.now() + 1000;
-		expect(await Monitor.findDue(db, first)).toHaveLength(1);
-		expect(await Monitor.findDue(db, first + 7000)).toEqual([]);
+		expect(await dueIds(db, first)).toHaveLength(1);
+		expect(await dueIds(db, first + 7000)).toEqual([]);
 	});
 
 	test("claims the monitor again once its next due time arrives", async () => {
@@ -443,9 +453,9 @@ describe("Monitor.findDue", () => {
 		});
 
 		let scheduledAt = Date.now() + 1000;
-		await Monitor.findDue(db, scheduledAt);
+		await dueIds(db, scheduledAt);
 
-		expect(await Monitor.findDue(db, scheduledAt + 60_000)).toEqual([monitor.id]);
+		expect(await dueIds(db, scheduledAt + 60_000)).toEqual([monitor.id]);
 	});
 
 	test("advances the due time from the previous one, so latency can't cause drift", async () => {
@@ -461,7 +471,7 @@ describe("Monitor.findDue", () => {
 
 		// Claimed 1.5s late, as a real delivery is. The next due time is still the
 		// anchor plus exactly one interval, not the claim time plus one.
-		await Monitor.findDue(db, anchor + 1500);
+		await dueIds(db, anchor + 1500);
 
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 60_000);
 	});
@@ -480,9 +490,9 @@ describe("Monitor.findDue", () => {
 		// An hour of missed ticks: the due time skips to the first interval boundary
 		// strictly after now rather than replaying the sixty it slept through.
 		let scheduledAt = anchor + 60 * 60_000;
-		expect(await Monitor.findDue(db, scheduledAt)).toHaveLength(1);
+		expect(await dueIds(db, scheduledAt)).toHaveLength(1);
 		expect(await nextDueAt(db, monitor.id)).toBe(scheduledAt + 60_000);
-		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
+		expect(await dueIds(db, scheduledAt)).toEqual([]);
 	});
 
 	test("keeps the cadence on interval boundaries when the claim lands mid-interval", async () => {
@@ -498,7 +508,7 @@ describe("Monitor.findDue", () => {
 
 		// 7 minutes late on a 5-minute monitor: two whole intervals have passed, so the
 		// next due time is the anchor plus two, which is 3 minutes out.
-		await Monitor.findDue(db, anchor + 7 * 60_000);
+		await dueIds(db, anchor + 7 * 60_000);
 
 		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
 	});
@@ -514,7 +524,7 @@ describe("Monitor.findDue", () => {
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 
 		expect(await nextDueAt(db, monitor.id)).toBeNull();
-		expect(await Monitor.findDue(db, Date.now() + 60 * 60_000)).toEqual([]);
+		expect(await dueIds(db, Date.now() + 60 * 60_000)).toEqual([]);
 	});
 
 	test("claims a re-enabled monitor again on the next tick", async () => {
@@ -528,7 +538,7 @@ describe("Monitor.findDue", () => {
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 		await Monitor.updateById(db, monitor.id, { enabled_at: Date.now() });
 
-		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([monitor.id]);
+		expect(await dueIds(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
 
 	/**
@@ -546,7 +556,7 @@ describe("Monitor.findDue", () => {
 		});
 		plans.length = 0;
 
-		expect(await Monitor.findDue(db, Date.now() + 1000)).toHaveLength(1);
+		expect(await dueIds(db, Date.now() + 1000)).toHaveLength(1);
 
 		let steps = plans.flat();
 		expect(steps.filter((step) => step.startsWith("SCAN "))).toEqual([]);
@@ -566,7 +576,7 @@ describe("Monitor.findDue", () => {
 			url: "https://b.example.com",
 		});
 
-		let due = await Monitor.findDue(db, Date.now() + 1000);
+		let due = await dueIds(db, Date.now() + 1000);
 
 		expect(due).toContainEqual(a.id);
 		expect(due).toContainEqual(b.id);
@@ -592,7 +602,7 @@ describe("Monitor.updateById scheduling", () => {
 
 		await Monitor.updateById(db, monitor.id, { interval_seconds: 60 });
 
-		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([monitor.id]);
+		expect(await dueIds(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
 
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
@@ -629,7 +639,7 @@ describe("Monitor.updateById scheduling", () => {
 		let updated = await Monitor.updateById(db, monitor.id, { interval_seconds: 120 });
 
 		expect(updated.next_due_at).toBeNull();
-		expect(await Monitor.findDue(db, Date.now() + 60 * 60_000)).toEqual([]);
+		expect(await dueIds(db, Date.now() + 60 * 60_000)).toEqual([]);
 	});
 });
 

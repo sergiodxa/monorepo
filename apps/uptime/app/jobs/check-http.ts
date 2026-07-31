@@ -52,6 +52,7 @@ import Monitor from "~/app/data/monitor";
 import { DO_WALL_TIME_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
 import { notifyHttpResult } from "~/app/services/alerts";
 import { writeHttpPingResult } from "~/app/services/analytics";
+import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { monitorContentChecks, monitorResults, monitors } from "~/database/schema";
 
 const MS_PER_SECOND = 1000;
@@ -170,12 +171,29 @@ export class CheckHttpJob extends Job {
 			return;
 		}
 
+		/**
+		 * Everything this delivery costs belongs to this monitor's team, including the two
+		 * statements above that ran before the team was known — which is why attribution is
+		 * declared once here and settled at flush rather than passed to each recording site
+		 * (ADR-007 §5).
+		 */
+		apportionCostByTeam([monitor.team_id]);
+
 		let contentChecks = await db.findMany(monitorContentChecks, {
 			where: { monitor_id: job.monitorId, is_enabled: true },
 		});
 		let hasContentChecks = contentChecks.length > 0;
 
 		let outcome = await this.fetchMonitor(monitor, hasContentChecks);
+		/**
+		 * The Durable Object bills for wall time, and the header is a documented LOWER BOUND
+		 * on the billed window — see {@link DO_WALL_TIME_HEADER} — so this understates rather
+		 * than invents. `null` means the object never reported one (this side's timeout
+		 * aborted the call), and there is nothing honest to charge for a window nobody
+		 * measured.
+		 */
+		recordCost("doDurationMs", outcome.doWallTimeMs ?? 0);
+
 		let contentChecksPassed =
 			!hasContentChecks || ContentCheck.evaluate(contentChecks, outcome.body);
 		let status = classify(monitor, outcome, contentChecksPassed);
@@ -271,6 +289,9 @@ export class CheckHttpJob extends Job {
 		/** A content check needs the body, so HEAD becomes GET to retrieve one. */
 		let method = hasContentChecks && monitor.method === "HEAD" ? "GET" : monitor.method;
 		let signal = AbortSignal.timeout(monitor.timeout_seconds * MS_PER_SECOND);
+
+		// Counted before the call, because a request that fails part-way is still billed.
+		recordCost("doRequest");
 
 		try {
 			let response = await stub.fetch(monitor.url, { method, signal });

@@ -25,8 +25,10 @@ import MonitorDailyStats, {
 	utcDayBounds,
 	type DailyStatsInput,
 } from "~/app/data/monitor-daily-stats";
+import Team from "~/app/data/team";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { getHttpDailyAggregate } from "~/app/services/analytics";
+import { apportionCost } from "~/app/services/cost";
 
 interface RawAggregateRow {
 	monitorId: string;
@@ -40,6 +42,13 @@ export class AggregateDailyStatsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let date = getYesterdayDateUtc();
+
+		/**
+		 * The roll-up's cost is split by monitors per team (ADR-007 §5): it writes one row
+		 * per monitor, and the four aggregate queries it writes them from cannot be
+		 * attributed any other way.
+		 */
+		apportionCost(await Team.countMonitorsByTeam(db));
 
 		let written = 0;
 		written += await this.aggregateHttp(db, date);

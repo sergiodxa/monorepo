@@ -251,15 +251,33 @@ cancellation.
 
 #### `ingestEvents(events: IngestEvent[]): Promise<void>`
 
-Ingests one or more usage events for metered billing.
+Ingests one or more usage events for metered billing, or for Polar Cost Insights when the
+events carry a `cost`. Sent in chunks of 100 events per request, so a caller reporting a
+whole day hands over one array.
+
+Identify the customer with either `customerId` or `externalCustomerId`; an event naming
+neither throws.
 
 **Example:**
 
 ```ts
 await polar.ingestEvents([
 	{ customerId, name: "page_views", metadata: { views: 42, day: "2026-07-04" } },
+	{
+		externalCustomerId: ownerId,
+		name: "infra.cost.daily",
+		externalId: `infra_cost:${teamId}:${day}`,
+		cost: { amount: (0.0034767).toFixed(9), currency: "usd" },
+		metadata: { team_id: teamId, day },
+	},
 ]);
 ```
+
+#### `ingestEventsSafe(events: IngestEvent[]): Promise<boolean>`
+
+`ingestEvents`, best-effort: returns `false` instead of throwing, so a reporting cron can
+log the failure and let its next run resend the same events. Idempotent when every event
+carries an `externalId`.
 
 #### `reportMAU(customerId: string, mau: number, entityId: string, month: string): Promise<void>`
 
@@ -354,12 +372,30 @@ interface PolarClientOptions {
 
 ```ts
 interface IngestEvent {
-	customerId: string;
+	/** Mutually exclusive with `externalCustomerId`; one of the two is required. */
+	customerId?: string;
+	externalCustomerId?: string;
 	name: string;
 	metadata?: Record<string, string | number | boolean>;
+	/** Sent as `metadata._cost` for Polar Cost Insights. */
+	cost?: EventCost;
 	timestamp?: Date;
+	externalId?: string;
 }
 ```
+
+#### `EventCost`
+
+```ts
+interface EventCost {
+	/** The amount in **cents**, as a plain decimal string (e.g. `"0.003476700"`). */
+	amount: string;
+	currency: "usd";
+}
+```
+
+`amount` is a string because JS renders floats below `1e-6` in exponential notation, which
+Polar's parser rejects — and per-unit infrastructure costs are routinely that small.
 
 #### `CustomerUpdate`
 

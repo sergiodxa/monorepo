@@ -12,7 +12,7 @@ import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { env, waitUntil } from "cloudflare:workers";
+import { waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -23,6 +23,7 @@ import {
 	RemoveDomainSchema,
 	RetryDomainVerificationSchema,
 } from "~/app/http/validators/team-domain";
+import { sendQueueMessage } from "~/app/lib/queue";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/add-domain */
@@ -46,7 +47,7 @@ export const addDomain = createAction(routes.teamAdminActions.domain.add, async 
 	}
 
 	let domain = existing ?? (await TeamDomain.create(db, ctx.team.id, hostname));
-	waitUntil(env.QUEUE.send({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
+	waitUntil(sendQueueMessage({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
 
 	session?.flash("toast", {
 		intent: "success",
@@ -98,7 +99,7 @@ export const retryDomainVerification = createAction(
 		if (!domain) return notFound("Not Found");
 
 		if (domain.verified_at === null) {
-			waitUntil(env.QUEUE.send({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
+			waitUntil(sendQueueMessage({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
 		}
 
 		session?.flash("toast", { intent: "success", message: "Verification retried." });

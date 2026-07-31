@@ -51,6 +51,7 @@ import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { canonicalUrl } from "~/app/lib/seo";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
+import { apportionCostByTeam } from "~/app/services/cost";
 import {
 	computeOverallStatus,
 	deriveCronStatus,
@@ -304,6 +305,9 @@ export default createAction(
 
 		let page = await StatusPage.findBySlugPublic(db, slug);
 		if (!page) return notFound("Not Found");
+
+		// A public status-page view is cost the team owning the page caused (ADR-007 §5).
+		apportionCostByTeam([page.team_id]);
 
 		let attachments = await StatusPage.listAttachments(db, page.id);
 

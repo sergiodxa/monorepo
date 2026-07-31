@@ -23,6 +23,12 @@
 			"0 0 * * *", // Every day at midnight - cleanup
 			"0 1 * * *", // Every day at 1 AM UTC - aggregate daily stats
 			"0 2 * * *", // Every day at 2 AM UTC - reconcile Polar subscriptions
+			// Every day at 3 AM UTC - report yesterday's per-team infrastructure cost to
+			// Polar Cost Insights. Three hours past the UTC day boundary, so any data point
+			// written late in the day has certainly landed in Analytics Engine, and on its
+			// own hour rather than sharing 01:00 or 02:00 so a failure in the daily roll-up
+			// or the subscription reconciliation neither delays nor is delayed by this.
+			"0 3 * * *",
 			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
 		],
 	},
@@ -98,7 +104,15 @@
 		},
 	],
 
-	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" }],
+	// `uptime_costs` is the cost ledger's staging buffer (ADR-007 §6): one data point per
+	// team per unit of work, holding measured *quantities* rather than money, so a rate-card
+	// correction can be re-applied across the whole retained window. Priced and forwarded to
+	// Polar daily, which is the store of record — Analytics Engine keeps three months, so
+	// nothing here is an archive. A dataset needs no provisioning; the first write creates it.
+	"analytics_engine_datasets": [
+		{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" },
+		{ "binding": "COSTS", "dataset": "uptime_costs" },
+	],
 
 	// Caller budget for the public, unauthenticated cron-job ping endpoint (see
 	// `app/http/controllers/api/cron-job-ping.ts`). This binding, not KV, because it

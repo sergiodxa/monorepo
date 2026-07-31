@@ -12,17 +12,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { env } from "cloudflare:workers";
-
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 import type { CronJobStatus } from "~/database/schema";
 
-import { chunk } from "~/app/lib/concurrency";
-
-/** Most messages Cloudflare Queues accepts in a single `sendBatch` call. */
-const QUEUE_BATCH_LIMIT = 100;
+import { sendQueueBatch } from "~/app/lib/queue";
 
 /** Monitor kinds whose sweeps hand notification off to the queue. */
 export type NotifyMonitorType = "dns" | "tcp" | "cron" | "ssl";
@@ -66,11 +61,9 @@ export type NotifyMessage =
 	  };
 
 /**
- * Enqueues every notification a sweep produced, in batches the queue accepts. Sending
- * nothing is a no-op, so callers don't have to guard an empty sweep.
+ * Enqueues every notification a sweep produced. Sending nothing is a no-op, so callers
+ * don't have to guard an empty sweep.
  */
 export async function enqueueNotifications(messages: NotifyMessage[]): Promise<void> {
-	for (let batch of chunk(messages, QUEUE_BATCH_LIMIT)) {
-		await env.QUEUE.sendBatch(batch.map((body) => ({ body, contentType: "json" })));
-	}
+	await sendQueueBatch(messages);
 }

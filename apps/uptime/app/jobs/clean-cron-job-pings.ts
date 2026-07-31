@@ -23,7 +23,9 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
+import Team from "~/app/data/team";
 import { deleteOlderThan, redactOlderThan } from "~/app/lib/retention";
+import { apportionCost } from "~/app/services/cost";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -41,6 +43,9 @@ export class CleanCronJobPingsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let now = Date.now();
+
+		// Charged when it happens and split by monitors per team, as `CleanJob` explains.
+		apportionCost(await Team.countMonitorsByTeam(db));
 
 		let deleted = await deleteOlderThan(
 			db,

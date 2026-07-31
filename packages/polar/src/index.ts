@@ -19,6 +19,8 @@ import type { Checkout } from "@polar-sh/sdk/models/components/checkout.js";
 import type { Customer } from "@polar-sh/sdk/models/components/customer.js";
 import type { CustomerSession } from "@polar-sh/sdk/models/components/customersession.js";
 import type { Discount } from "@polar-sh/sdk/models/components/discount.js";
+import type { EventCreateCustomer } from "@polar-sh/sdk/models/components/eventcreatecustomer.js";
+import type { EventCreateExternalCustomer } from "@polar-sh/sdk/models/components/eventcreateexternalcustomer.js";
 import type { Order } from "@polar-sh/sdk/models/components/order.js";
 import type { Product } from "@polar-sh/sdk/models/components/product.js";
 import type { Subscription } from "@polar-sh/sdk/models/components/subscription.js";
@@ -107,17 +109,56 @@ export interface PolarClientOptions {
 }
 
 /**
+ * Most events Polar accepts in one ingestion request.
+ *
+ * Polar documents no batch limit, so this is a conservative self-imposed one:
+ * {@link PolarClient.ingestEvents} splits a larger array across requests rather than
+ * discovering the real ceiling as a rejected body. Safe to resend a whole chunk after a
+ * partial failure as long as every event carries an `externalId`, which Polar
+ * deduplicates on.
+ */
+const INGEST_CHUNK_SIZE = 100;
+
+/**
+ * A cost to attach to an ingested event, read by Polar's Cost Insights and Metrics API
+ * and combined with the customer's revenue into cost, gross profit and LTV per customer.
+ *
+ * `amount` is **cents** — `100` is one dollar — and a **string** rather than a number on
+ * purpose: JS renders any float below 1e-6 in exponential notation
+ * (`(1e-7).toString() === "1e-7"`), which is not a number Polar's parser accepts, and a
+ * per-unit infrastructure cost is routinely that small. Format it with `toFixed`.
+ */
+export interface EventCost {
+	/** The amount in **cents**, as a plain decimal string (e.g. `"0.003476700"`). */
+	amount: string;
+	/** The currency; Polar supports only `usd`. */
+	currency: "usd";
+}
+
+/**
  * A single usage event to ingest into Polar's events API.
+ *
+ * Exactly one of `customerId` and `externalCustomerId` identifies the customer. Both are
+ * optional here because either satisfies Polar, and an app that keys customers by its own
+ * id (an OIDC subject, a tenant id) never has to resolve the Polar-internal one first.
  *
  * @see https://docs.polar.sh/api-reference/events/ingest
  */
 export interface IngestEvent {
-	/** The Polar customer the event belongs to. */
-	customerId: string;
+	/** The Polar customer the event belongs to. Mutually exclusive with `externalCustomerId`. */
+	customerId?: string;
+	/** The app-owned external id of the customer. Mutually exclusive with `customerId`. */
+	externalCustomerId?: string;
 	/** The event name, matching a configured meter (e.g. `"mau"`, `"page_views"`). */
 	name: string;
 	/** Arbitrary metadata stored with the event; used by meters for aggregation. */
 	metadata?: Record<string, string | number | boolean>;
+	/**
+	 * Cost to attach to this event for Polar Cost Insights, sent as `metadata._cost`.
+	 * Kept out of `metadata` in this interface because the nesting is Polar's wire
+	 * convention rather than something a caller should have to know.
+	 */
+	cost?: EventCost;
 	/** When the event happened. Defaults to Polar's ingestion time when omitted. */
 	timestamp?: Date;
 	/**
@@ -184,6 +225,33 @@ export interface CheckoutSessionOptions {
 	successUrl?: string;
 	/** Additional key-value pairs stored on the checkout and surfaced on webhooks. */
 	metadata?: Record<string, string>;
+}
+
+/**
+ * Maps one {@link IngestEvent} onto the SDK payload for it, picking
+ * `EventCreateCustomer` or `EventCreateExternalCustomer` from whichever id the caller
+ * supplied and nesting `cost` under the `_cost` metadata key Cost Insights reads.
+ *
+ * @param event - The event to send.
+ * @returns The SDK-shaped event.
+ * @throws {Error} When the event identifies no customer, which Polar would reject with a
+ * validation error naming neither field.
+ */
+function toIngestPayload(event: IngestEvent): EventCreateCustomer | EventCreateExternalCustomer {
+	let metadata = event.cost ? { ...event.metadata, _cost: event.cost } : event.metadata;
+	let common = {
+		name: event.name,
+		metadata,
+		timestamp: event.timestamp,
+		externalId: event.externalId,
+	};
+
+	if (event.externalCustomerId !== undefined) {
+		return { ...common, externalCustomerId: event.externalCustomerId };
+	}
+	if (event.customerId !== undefined) return { ...common, customerId: event.customerId };
+
+	throw new Error(`Event "${event.name}" names neither a customerId nor an externalCustomerId`);
 }
 
 /**
@@ -629,10 +697,17 @@ export class PolarClient {
 	}
 
 	/**
-	 * Ingest one or more usage events for metered billing.
+	 * Ingest one or more usage events for metered billing, or for Cost Insights when the
+	 * events carry a `cost`.
+	 *
+	 * Sent in chunks of {@link INGEST_CHUNK_SIZE}, so a caller reporting a day's worth of
+	 * events per customer hands over one array and never has to know Polar's request
+	 * shape. A chunk that fails throws with the earlier chunks already accepted; give
+	 * every event an `externalId` and re-sending the whole array is a no-op for those.
 	 *
 	 * @param events - The events to ingest.
 	 * @throws {PolarError} When the request fails.
+	 * @throws {Error} When an event names neither a customer nor an external customer.
 	 *
 	 * @example
 	 * ```ts
@@ -642,15 +717,33 @@ export class PolarClient {
 	 * ```
 	 */
 	async ingestEvents(events: IngestEvent[]): Promise<void> {
-		await this.client.events.ingest({
-			events: events.map((event) => ({
-				customerId: event.customerId,
-				name: event.name,
-				metadata: event.metadata,
-				timestamp: event.timestamp,
-				externalId: event.externalId,
-			})),
-		});
+		for (let index = 0; index < events.length; index += INGEST_CHUNK_SIZE) {
+			let chunk = events.slice(index, index + INGEST_CHUNK_SIZE);
+			await this.client.events.ingest({ events: chunk.map(toIngestPayload) });
+		}
+	}
+
+	/**
+	 * {@link ingestEvents}, best-effort: returns `false` instead of throwing so a reporting
+	 * cron can log the failure and let its next run resend the same events rather than
+	 * failing the job that produced them. Idempotent when every event carries an
+	 * `externalId`, since Polar deduplicates on it.
+	 *
+	 * @param events - The events to ingest.
+	 * @returns `true` when every chunk was accepted, `false` when any request failed.
+	 *
+	 * @example
+	 * ```ts
+	 * if (!(await polar.ingestEventsSafe(events))) log.error("cost.ingest_failed");
+	 * ```
+	 */
+	async ingestEventsSafe(events: IngestEvent[]): Promise<boolean> {
+		try {
+			await this.ingestEvents(events);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/**

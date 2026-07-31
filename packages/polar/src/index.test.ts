@@ -593,6 +593,79 @@ describe("PolarClient", () => {
 		]);
 	});
 
+	test("ingestEvents keys on externalCustomerId when that is the id given", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		await polar.ingestEvents([{ externalCustomerId: "owner-1", name: "infra.cost.daily" }]);
+		// `customerId` must be absent, not undefined: the SDK picks the payload variant from
+		// which field is present, and sending both is a validation error.
+		expect(calls["events.ingest"]).toEqual([
+			{
+				events: [
+					{
+						externalCustomerId: "owner-1",
+						name: "infra.cost.daily",
+						metadata: undefined,
+						timestamp: undefined,
+						externalId: undefined,
+					},
+				],
+			},
+		]);
+	});
+
+	test("ingestEvents nests cost under the _cost metadata key Cost Insights reads", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		await polar.ingestEvents([
+			{
+				externalCustomerId: "owner-1",
+				name: "infra.cost.daily",
+				metadata: { team_id: "team-1" },
+				cost: { amount: "0.003476700", currency: "usd" },
+			},
+		]);
+		let [call] = calls["events.ingest"] as { events: { metadata: unknown }[] }[];
+		expect(call?.events[0]?.metadata).toEqual({
+			team_id: "team-1",
+			// A string, because `(1e-7).toString()` is `"1e-7"` and Polar cannot parse that.
+			_cost: { amount: "0.003476700", currency: "usd" },
+		});
+	});
+
+	test("ingestEvents throws when an event identifies no customer", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		await expect(polar.ingestEvents([{ name: "infra.cost.daily" }])).rejects.toThrow(
+			/names neither a customerId nor an externalCustomerId/,
+		);
+	});
+
+	test("ingestEvents splits more than 100 events across requests", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		let events = Array.from({ length: 250 }, (_unused, index) => ({
+			externalCustomerId: `owner-${index}`,
+			name: "infra.cost.daily",
+		}));
+
+		await polar.ingestEvents(events);
+
+		let requests = calls["events.ingest"] as { events: unknown[] }[];
+		expect(requests.map((request) => request.events.length)).toEqual([100, 100, 50]);
+	});
+
+	describe("ingestEventsSafe", () => {
+		test("returns true when every chunk is accepted", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.ingestEventsSafe([{ customerId: "cus_1", name: "e" }])).toBe(true);
+		});
+
+		test("returns false instead of throwing so a cron can retry on its next run", async () => {
+			ingestImpl = () => {
+				throw new Error("boom");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.ingestEventsSafe([{ customerId: "cus_1", name: "e" }])).toBe(false);
+		});
+	});
+
 	test("reportMAU emits a single mau event with tenant_id/month/count", async () => {
 		let polar = new PolarClient({ accessToken: "t" });
 		await polar.reportMAU("cus_1", 1200, "t_1", "2026-07");

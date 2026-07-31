@@ -18,6 +18,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";
+import { apportionCostByTeam } from "~/app/services/cost";
 
 declare module "remix/fetch-router" {
 	interface RequestContext {
@@ -56,6 +57,10 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	ctx.team = team;
 	ctx.membership = membership;
 	ctx.teams = teams;
+
+	// The request is for this team, so everything it costs — including the three lookups
+	// above — belongs to it (ADR-007 §5).
+	apportionCostByTeam([team.id]);
 
 	return next();
 };

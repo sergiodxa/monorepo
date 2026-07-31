@@ -525,6 +525,22 @@ describe("job usage tracking", () => {
 		});
 	});
 
+	test("tells the tracker which job it is handling, spelled as the log identifier is", async () => {
+		let contexts: string[] = [];
+		setJobUsageTracker((usage, body, context) => {
+			contexts.push(context.job);
+			return storage.run(usage, body);
+		});
+
+		await QueryingJob.run({ message: createMessage({}) });
+
+		// The same string the log id is built from, so a tracker that attributes cost per job
+		// type and a dashboard grouping by log id cannot disagree about the name.
+		expect(contexts).toEqual(["querying-job"]);
+		let [identifier] = consoleInfoSpy.mock.calls[0];
+		expect(String(identifier).split(":")[1]).toBe("querying-job");
+	});
+
 	test("attributes concurrent jobs separately instead of pooling their totals", async () => {
 		setJobUsageTracker((usage, body) => storage.run(usage, body));
 
