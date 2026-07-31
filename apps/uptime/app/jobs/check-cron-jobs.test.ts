@@ -2,9 +2,10 @@
  * Unit tests for `CheckCronJobsJob.perform()`, covering the healthy → late → missed
  * status-transition sweep: the grace-period arithmetic that decides each transition, which
  * monitors `CronJobMonitor.listActionable` excludes from the sweep entirely, and that a
- * `notify` message is enqueued only on an actual transition — carrying the status the
- * monitor held before `updateStatus` overwrote it, which is what makes the transition
- * classifiable downstream.
+ * `notify` message is enqueued only on an actual transition the monitor asked to hear about
+ * — carrying the status the monitor held before `updateStatus` overwrote it, which is what
+ * makes the transition classifiable downstream. A monitor with `alert_on_late` off still
+ * transitions to `late`; it just never reaches the queue.
  *
  * The `QUEUE` binding is faked so the enqueued messages can be asserted on; alert delivery
  * itself now happens in `NotifyJob` and has its own tests.
@@ -79,6 +80,7 @@ describe("CheckCronJobsJob", () => {
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
+			alert_on_late: true,
 			next_expected_at: now - 1000,
 			grace_period_seconds: 300,
 		});
@@ -104,6 +106,59 @@ describe("CheckCronJobsJob", () => {
 		expect(completed?.total).toBe(1);
 		expect(completed?.transitioned).toBe(1);
 		expect(completed?.notified).toBe(1);
+	});
+
+	test("records the late transition but enqueues nothing when alert_on_late is off", async () => {
+		let { db } = createTestDatabase();
+		let now = Date.now();
+		let monitor = await seedMonitor(db, {
+			status: "healthy",
+			alert_on_late: false,
+			next_expected_at: now - 1000,
+			grace_period_seconds: 300,
+		});
+
+		let job = await runJob(db);
+
+		/**
+		 * The status still moves — `missed` is reached from `late`, so suppressing the
+		 * transition would break the timeline; only the notification is withheld.
+		 */
+		let updated = await CronJobMonitor.findById(db, monitor.id);
+		expect(updated?.status).toBe("late");
+
+		expect(enqueued).toHaveLength(0);
+		expect(sendBatchMock).not.toHaveBeenCalled();
+
+		let completed = job.logger.events.find(
+			(event) => event.event === "job.check_cron_jobs.completed",
+		);
+		expect(completed?.transitioned).toBe(1);
+		expect(completed?.notified).toBe(0);
+		expect(completed?.errorCount).toBe(0);
+	});
+
+	test("still enqueues the missed transition of a monitor with alert_on_late off", async () => {
+		let { db } = createTestDatabase();
+		let now = Date.now();
+		let monitor = await seedMonitor(db, {
+			status: "late",
+			alert_on_late: false,
+			next_expected_at: now - 10 * 60 * 1000,
+			grace_period_seconds: 300,
+		});
+
+		await runJob(db);
+
+		expect(enqueued).toEqual([
+			{
+				type: "notify",
+				monitorType: "cron",
+				monitorId: monitor.id,
+				previousStatus: "late",
+				newStatus: "missed",
+			},
+		]);
 	});
 
 	test("transitions a healthy monitor whose grace period has also elapsed directly to missed", async () => {

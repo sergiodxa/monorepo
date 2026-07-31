@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §17 (medium). A promise the UI makes and the code does not keep.
 
 ## Context
@@ -106,3 +106,29 @@ would break the `missed` timeline, because `missed` is reached from `healthy` **
 - Existing tests assert `alert_on_late: false` in fixtures while expecting late alerts to
   dispatch; those expectations invert. `app/services/alerts.test.ts:1138` and
   `app/jobs/check-cron-jobs.test.ts:82` are the two that matter.
+
+## Implementation outcome
+
+Two things came out differently from the Decision above, both because
+[ADR-008](./ADR-008-bounded-concurrency-sweeps.md) landed first and moved notification onto a
+queue.
+
+**The check lives in `shouldNotifyCronJobResult`, not in `notifyCronJobResult`.** ADR-008
+extracted the edge-trigger policy into that predicate and made the sweep call it to decide
+whether to _enqueue_ a `notify` message at all. Putting the flag check only in
+`notifyCronJobResult` would still enqueue a message purely so the consumer could drop it. The
+predicate gates all three callers at once — and that turned up a path this ADR missed:
+`app/http/controllers/api/cron-job-ping.ts` calls `notifyCronJobResult(..., "late")` for a
+late _ping_, which was a second unconditional source of `late` alerts independent of the
+sweep. So this is not "a two-line change in one function"; it is a one-branch change in one
+predicate, plus its call sites.
+
+**`skipped_disabled` was not implemented**, despite being marked **Recommended** above. It is
+in genuine conflict with the placement, not merely more work: `AlertEvent.record` needs an
+`alert_id` per row, so recording a suppression means resolving the team's alerts. In the sweep
+that puts an `Alert.listTeamWide` query back inside the one-minute budget — precisely the cost
+ADR-008 removed — and in the consumer it requires enqueueing the message the predicate exists
+to avoid. It also needs a schema change, since `alert_events.status` is a closed
+`c.enum(["sent", "skipped_cooldown", "failed"])`, which contradicts this ADR's own "no schema
+or migration change" claim. If the history row is wanted, it belongs in a follow-up with a
+migration, a case in `alert-history.tsx`'s tone map, and a label in all six locale files.

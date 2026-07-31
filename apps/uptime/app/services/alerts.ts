@@ -343,12 +343,20 @@ export function shouldNotifyDnsResult(
 /**
  * See {@link shouldNotifyTcpResult}; `healthy` is the cron-job-equivalent state, and
  * neither a monitor moving to `new` nor one recovering from `new` is alert-worthy.
+ *
+ * `late` is the single opt-in transition: it's an early warning, so it only notifies when
+ * the monitor has `alert_on_late` set. `missed` — the actual failure — always notifies, and
+ * so does a recovery, including a recovery from a `late` the monitor was never told about:
+ * the status transition still happens and is still what a later `missed` is reached from,
+ * so what the flag withholds is the notification, never the state.
  */
 export function shouldNotifyCronJobResult(
 	previousStatus: CronJobStatus | null,
 	newStatus: CronJobStatus,
+	monitor: Pick<SelectCronJobMonitor, "alert_on_late">,
 ): boolean {
 	if (newStatus === "new") return false;
+	if (newStatus === "late") return monitor.alert_on_late;
 	if (newStatus !== "healthy") return true;
 	return recovered(previousStatus, "healthy") && previousStatus !== "new";
 }
@@ -462,7 +470,11 @@ export async function notifyTcpResult(
 	});
 }
 
-/** See {@link notifyHttpResult}; `healthy` is the cron-job-equivalent state, `new` never recovers. */
+/**
+ * See {@link notifyHttpResult}; `healthy` is the cron-job-equivalent state, `new` never
+ * recovers, and a `late` transition is suppressed unless the monitor opted into it — see
+ * {@link shouldNotifyCronJobResult} for why that lives in the predicate.
+ */
 export async function notifyCronJobResult(
 	db: Database,
 	resend: Resend,
@@ -470,7 +482,7 @@ export async function notifyCronJobResult(
 	previousStatus: CronJobStatus | null,
 	newStatus: CronJobStatus,
 ): Promise<void> {
-	if (!shouldNotifyCronJobResult(previousStatus, newStatus)) return;
+	if (!shouldNotifyCronJobResult(previousStatus, newStatus, monitor)) return;
 	/** Only reachable with a `healthy` status when the policy above found a recovery. */
 	let isRecovery = newStatus === "healthy";
 

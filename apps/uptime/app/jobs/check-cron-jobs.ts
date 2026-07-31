@@ -95,7 +95,9 @@ export class CheckCronJobsJob extends Job {
 		let previousStatus = monitor.status;
 		await CronJobMonitor.updateStatus(db, monitor.id, newStatus);
 
-		if (!shouldNotifyCronJobResult(previousStatus, newStatus)) return { notification: null };
+		if (!shouldNotifyCronJobResult(previousStatus, newStatus, monitor)) {
+			return { notification: null };
+		}
 
 		return {
 			notification: {
