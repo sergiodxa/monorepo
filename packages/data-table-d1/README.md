@@ -151,5 +151,17 @@ let provider = createOidcProvider({
 
 1. **Prefer `RETURNING` over insert ids** - `returning` is enabled by default; rely on it rather than D1's `last_row_id` where possible.
 2. **Transactions are not atomic; savepoints are unsupported** - D1 has no `BEGIN`/`COMMIT`/`ROLLBACK`, so `transaction()` does not roll back on failure (see the warning above). Make all-or-nothing writes a single SQL statement, and don't rely on nested savepoints.
-3. **Apply migrations with `wrangler d1 migrations apply`** - Use D1's own migration tooling (or the adapter's `executeScript` at boot) rather than expecting the adapter to journal schema changes.
-4. **Reuse the adapter** - Build it once per isolate instead of per request.
+3. **A raw write with `RETURNING` yields its rows** - `db.exec()` decides whether to read rows back by inspecting the SQL, so `UPDATE ... RETURNING` and `DELETE ... RETURNING` return `rows` as well as `affectedRows`. This is what makes an atomic claim expressible - a single statement that both computes per-row values and reports which rows it touched, with no read-then-write race:
+
+   ```ts
+   // Claims due rows and reports exactly the ones this caller won.
+   let claimed = await db.exec(
+   	`UPDATE jobs SET run_at = run_at + interval WHERE run_at <= ? RETURNING id`,
+   	[now],
+   );
+   ```
+
+   The typed builder cannot express this, because its `changes` are bound values rather than SQL expressions. `affectedRows` is identical to what the same statement reports without the clause.
+
+4. **Apply migrations with `wrangler d1 migrations apply`** - Use D1's own migration tooling (or the adapter's `executeScript` at boot) rather than expecting the adapter to journal schema changes.
+5. **Reuse the adapter** - Build it once per isolate instead of per request.

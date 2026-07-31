@@ -162,7 +162,8 @@ export function createD1DatabaseAdapter(
 				operation.kind === "count" ||
 				operation.kind === "exists" ||
 				hasReturningClause(operation) ||
-				(operation.kind === "raw" && isReadOnlyRawSql(statement.text));
+				(operation.kind === "raw" &&
+					(isReadOnlyRawSql(statement.text) || hasRawReturningClause(statement.text)));
 
 			if (shouldReadRows) {
 				let result = (await prepared.all()) as D1StatementResult;
@@ -851,6 +852,25 @@ function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
 }
 
+/**
+ * Whether a raw statement carries a `RETURNING` clause, and therefore yields rows even
+ * though it starts with a write keyword.
+ *
+ * Without this, a raw `UPDATE … RETURNING` would be dispatched to `run()` and silently
+ * drop the rows it was written to produce — which makes an atomic claim (a write that
+ * both computes per-row values and reports which rows it touched) impossible to express
+ * through the escape hatch. The typed builder cannot express one either, because its
+ * `changes` are bound values rather than expressions.
+ *
+ * A false positive is harmless: `all()` executes a write exactly as `run()` does and
+ * returns no rows for a statement that produces none. So the loose word-boundary test is
+ * deliberate — being wrong costs nothing, while missing a real `RETURNING` loses data the
+ * caller asked for.
+ */
+function hasRawReturningClause(sql: string): boolean {
+	return /\breturning\b/i.test(sql);
+}
+
 /** Returns the names of a table's `c.json()`-typed columns. */
 function getJsonColumnNames(table: StatementTable): Set<string> {
 	let definitions = getTableColumnDefinitions(table);
@@ -971,6 +991,13 @@ function normalizeAffectedRowsForReader(
 			return meta.changes;
 		}
 		return rows.length;
+	}
+	// A raw statement reaches this path either read-only or as a write with `RETURNING`.
+	// Reporting `meta.changes` keeps `affectedRows` identical to what the `run()` path
+	// gives the same statement without the clause, so adding `RETURNING` to a raw write
+	// never changes what the caller reads back.
+	if (kind === "raw") {
+		return meta?.changes;
 	}
 	return undefined;
 }

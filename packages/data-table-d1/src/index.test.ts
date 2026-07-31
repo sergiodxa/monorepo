@@ -263,6 +263,44 @@ describe("createD1DatabaseAdapter", () => {
 		expect(await db.count(users)).toBe(1);
 	});
 
+	test("db.exec() with a raw UPDATE ... RETURNING yields the rows it moved", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.create(users, { id: 2, email: "two@example.com" });
+
+		let result = await db.exec(
+			"UPDATE users SET email = email || ? WHERE id = ? RETURNING id, email",
+			[".updated", 1],
+		);
+
+		expect(result.rows).toEqual([{ id: 1, email: "one@example.com.updated" }]);
+		// `affectedRows` must match what the same statement without `RETURNING` reports, so
+		// adding the clause never changes what an existing caller reads back.
+		expect(result.affectedRows).toBe(1);
+	});
+
+	test("a raw UPDATE ... RETURNING that matches nothing yields no rows", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+
+		let result = await db.exec("UPDATE users SET email = ? WHERE id = ? RETURNING id", [
+			"nobody@example.com",
+			999,
+		]);
+
+		expect(result.rows).toEqual([]);
+		expect(result.affectedRows).toBe(0);
+	});
+
+	test("a raw DELETE ... RETURNING yields the deleted rows", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.create(users, { id: 2, email: "two@example.com" });
+
+		let result = await db.exec("DELETE FROM users WHERE id = ? RETURNING id, email", [2]);
+
+		expect(result.rows).toEqual([{ id: 2, email: "two@example.com" }]);
+		expect(result.affectedRows).toBe(1);
+		expect(await db.count(users)).toBe(1);
+	});
+
 	test("c.json() columns round-trip through create/findOne without throwing", async () => {
 		await db.exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, config TEXT)");
 

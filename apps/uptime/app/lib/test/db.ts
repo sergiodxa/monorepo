@@ -929,7 +929,7 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
 	}
 
 	if (operation.kind === "raw") {
-		return isReadOnlyRawSql(operation.sql.text);
+		return isReadOnlyRawSql(operation.sql.text) || hasRawReturningClause(operation.sql.text);
 	}
 
 	return operation.returning !== undefined;
@@ -942,6 +942,16 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
+}
+
+/**
+ * Whether a raw statement carries a `RETURNING` clause, and so yields rows despite
+ * starting with a write keyword. Mirrors `@pkg/data-table-d1` exactly — the two must
+ * agree, or an atomic `UPDATE … RETURNING` claim would return rows in one engine and
+ * nothing in the other, which is a difference tests could never catch.
+ */
+function hasRawReturningClause(sql: string): boolean {
+	return /\breturning\b/i.test(sql);
 }
 
 function isWriteOperationKind(kind: DataManipulationRequest["operation"]["kind"]): boolean {
