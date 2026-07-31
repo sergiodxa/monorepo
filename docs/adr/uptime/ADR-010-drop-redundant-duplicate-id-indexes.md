@@ -17,7 +17,7 @@ CREATE TABLE `monitor_results` (
 ```
 
 On a normal rowid table, SQLite implements a `TEXT PRIMARY KEY` with an automatic unique
-index. The migrations then create a *second* unique index on the same column:
+index. The migrations then create a _second_ unique index on the same column:
 
 ```sql
 CREATE UNIQUE INDEX `monitor_results_id_unique` ON `monitor_results` (`id`);
@@ -47,12 +47,12 @@ It costs on every write. Per D1's billing: "Indexes will add an additional writt
 writes include the indexed column, as there are two rows written: one to the table itself, and
 one to the index." So each duplicate is **+1 row written per insert and +1 per delete**:
 
-| Path | Rows written today | Without the duplicate | Saving per execution |
-|---|---:|---:|---|
-| HTTP: insert `monitor_results` + retention delete | 10 | 8 | $0.000002 — **6% of expected HTTP cost** |
-| TCP / DNS: insert result + update monitor | 6 | 5 | $0.000001 — **17% of their cost** |
-| Cron: insert ping + update monitor + retention delete | 12 | 10 | $0.000002 — **16% of cost** |
-| Alerting: insert `alert_events` | 6 | 5 | $0.000001 per alert event |
+| Path                                                  | Rows written today | Without the duplicate | Saving per execution                     |
+| ----------------------------------------------------- | -----------------: | --------------------: | ---------------------------------------- |
+| HTTP: insert `monitor_results` + retention delete     |                 10 |                     8 | $0.000002 — **6% of expected HTTP cost** |
+| TCP / DNS: insert result + update monitor             |                  6 |                     5 | $0.000001 — **17% of their cost**        |
+| Cron: insert ping + update monitor + retention delete |                 12 |                    10 | $0.000002 — **16% of cost**              |
+| Alerting: insert `alert_events`                       |                  6 |                     5 | $0.000001 per alert event                |
 
 ## Decision
 
@@ -70,7 +70,7 @@ DROP INDEX `cron_job_monitors_id_unique`;
 Before dropping each one, confirm the table's primary key really is the same single column and
 that SQLite created an autoindex for it — `SELECT name, tbl_name FROM sqlite_master WHERE type
 = 'index'` against the target database, not against the local file. A table whose `id` is
-*not* declared `PRIMARY KEY`, or a composite key, would make the explicit index load-bearing.
+_not_ declared `PRIMARY KEY`, or a composite key, would make the explicit index load-bearing.
 `monitor_daily_stats` shows the generator did not apply the pattern uniformly, so check rather
 than assume.
 
@@ -105,4 +105,4 @@ keeps `Monitor.listResults`' paginated newest-first query indexed and takes
   not silently reintroduce the pattern.
 - Sequencing: the duplicate drops are independent and can ship immediately. The
   `findDue`-only index drops must wait for ADR-003, or the scheduler's query becomes a table
-  scan instead of a covering-index scan and gets *worse*.
+  scan instead of a covering-index scan and gets _worse_.

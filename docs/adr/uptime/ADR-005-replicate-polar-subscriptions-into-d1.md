@@ -11,7 +11,10 @@ The every-minute scheduler settles billing before enqueuing, so a queued check i
 that is allowed to run. It does that by asking Polar, live, on every cron delivery:
 
 ```ts
-let subscribed = await Customer.filterActiveSubscribers(polar, due.map((m) => m.ownerId));
+let subscribed = await Customer.filterActiveSubscribers(
+	polar,
+	due.map((m) => m.ownerId),
+);
 let payable = due.filter((monitor) => subscribed.has(monitor.ownerId));
 ```
 
@@ -20,7 +23,9 @@ request **per distinct owner per delivery**:
 
 ```ts
 let results = await Promise.all(
-  distinct.map(async (ownerId) => [ownerId, await Customer.hasActiveSubscription(polar, ownerId)] as const),
+	distinct.map(
+		async (ownerId) => [ownerId, await Customer.hasActiveSubscription(polar, ownerId)] as const,
+	),
 );
 ```
 
@@ -45,12 +50,12 @@ when things stop. Nothing alerts on it; the scheduler logs nothing on an empty `
 
 Four call sites depend on this answer:
 
-| Call site | Frequency | Latency-sensitive? |
-|---|---|---|
-| `bootstrap/worker.ts` scheduler, via `filterActiveSubscribers` | 43,200 × K / month | no — background |
-| `app/http/controllers/app/team/monitor-card-usage.tsx:43` | every monitor-detail page view | yes — blocks a frame |
-| `app/http/controllers/app/team/checkout.tsx:79` | on the checkout action | no — user-initiated |
-| `app/data/monitor.ts:134` (`Monitor.ping`) | manual "run now" | mildly |
+| Call site                                                      | Frequency                      | Latency-sensitive?   |
+| -------------------------------------------------------------- | ------------------------------ | -------------------- |
+| `bootstrap/worker.ts` scheduler, via `filterActiveSubscribers` | 43,200 × K / month             | no — background      |
+| `app/http/controllers/app/team/monitor-card-usage.tsx:43`      | every monitor-detail page view | yes — blocks a frame |
+| `app/http/controllers/app/team/checkout.tsx:79`                | on the checkout action         | no — user-initiated  |
+| `app/data/monitor.ts:134` (`Monitor.ping`)                     | manual "run now"               | mildly               |
 
 ## Decision
 
@@ -150,10 +155,10 @@ Polar.
 The dashboard does check this often, so KV is a fair question. On the numbers it loses to D1
 here:
 
-| Read path | Cost per read | Notes |
-|---|---:|---|
+| Read path                       |    Cost per read | Notes                                        |
+| ------------------------------- | ---------------: | -------------------------------------------- |
 | D1 indexed lookup (2 rows read) | **$0.000000002** | request already touches D1 via `requireTeam` |
-| KV read | $0.000000500 | **250× more expensive** |
+| KV read                         |     $0.000000500 | **250× more expensive**                      |
 
 The one hot read is `monitor-card-usage.tsx`, and it is a fragment that already runs
 `requireUser` + `requireTeam` — both of which hit D1 — and then calls
@@ -185,7 +190,7 @@ place.
   only new billing events, which reconciliation catches.
 - **The 1,000-wide subrequest burst disappears** from the scheduler entirely.
 - **No staleness window on the hot path.** Unlike a TTL cache, state changes the moment the
-  webhook lands. The only staleness is a *missed* webhook, bounded by the reconciliation
+  webhook lands. The only staleness is a _missed_ webhook, bounded by the reconciliation
   interval and detected by it.
 - **New attack surface**: an unauthenticated public endpoint. It must verify signatures via
   `polar.parseWebhook` and reject on failure; `POLAR_WEBHOOK_SECRET` becomes a required secret

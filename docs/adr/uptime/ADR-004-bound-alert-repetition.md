@@ -4,7 +4,7 @@
 
 **Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §8 and §17 (critical). Second-highest-priority item in that ADR, and the only one that
-addresses an *unbounded* cost.
+addresses an _unbounded_ cost.
 
 ## Context
 
@@ -34,12 +34,12 @@ So a monitor checked every minute that is down sends **one email per minute, ind
 for any alert created without explicitly setting a cooldown — which is every alert created
 through the form's default.
 
-| Outage length | `cooldown_minutes` | Emails | Resend | Cloudflare Email |
-|---|---|---:|---:|---:|
-| 30 minutes | 0 (default) | 31 | $0.0279 | $0.0109 |
-| 30 minutes | 15 | 3 | $0.0027 | $0.0011 |
-| 24 hours | 0 (default) | 1,441 | $1.2969 | $0.5044 |
-| 7 days | 0 (default) | 10,081 | **$9.0729** | $3.5284 |
+| Outage length | `cooldown_minutes` | Emails |      Resend | Cloudflare Email |
+| ------------- | ------------------ | -----: | ----------: | ---------------: |
+| 30 minutes    | 0 (default)        |     31 |     $0.0279 |          $0.0109 |
+| 30 minutes    | 15                 |      3 |     $0.0027 |          $0.0011 |
+| 24 hours      | 0 (default)        |  1,441 |     $1.2969 |          $0.5044 |
+| 7 days        | 0 (default)        | 10,081 | **$9.0729** |          $3.5284 |
 
 A single week-long outage on one 1-minute monitor with one email alert costs more than the
 entire $5 subscription, and more than the account's whole monthly infrastructure bill. It is
@@ -66,7 +66,7 @@ ALTER TABLE `alerts` ADD COLUMN `cooldown_minutes_v2` integer NOT NULL DEFAULT 1
 In practice: change the schema default, change the validator's default in
 `app/http/validators/alert.ts`, and change the form's `defaultValue`. Fifteen minutes is
 chosen because it is short enough that a genuine state change reaches the user quickly and
-long enough that a day-long outage produces 96 emails rather than 1,441. Keep `0` a *legal*
+long enough that a day-long outage produces 96 emails rather than 1,441. Keep `0` a _legal_
 value so a user can explicitly opt into every-check notification; just stop it being what
 they get by accident.
 
@@ -104,11 +104,11 @@ that, the cap looks like dropped alerts.
 - **Email volume drops roughly 10× for a typical incident**, which is the larger lever on
   email spend than switching transport
   ([ADR-016 does not cover this](./ADR-016-protect-the-public-endpoints.md); the transport
-  question is noted in ADR-002 §18 and should be decided *after* this change, because a 10×
+  question is noted in ADR-002 §18 and should be decided _after_ this change, because a 10×
   volume reduction matters more than a 2.6× rate reduction).
 - **Existing alert rows keep `cooldown_minutes = 0`** unless backfilled. A schema default
   only affects new rows. Decide explicitly: either backfill `UPDATE alerts SET
-  cooldown_minutes = 15 WHERE cooldown_minutes = 0` — which silently changes behaviour users
+cooldown_minutes = 15 WHERE cooldown_minutes = 0` — which silently changes behaviour users
   may be relying on — or leave them and rely on the per-incident cap, which is why the cap
   is part of this ADR rather than a follow-up. **Recommended: leave existing rows, ship the
   cap.**

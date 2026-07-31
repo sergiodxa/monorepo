@@ -35,16 +35,16 @@ throw new Job.RetryError("HTTP check failed before a result was recorded", { cau
 
 A monitored endpoint that times out, refuses the connection, or returns the wrong status is a
 valid monitoring result: stored, alerted on, acked. That is the right split. But it means a
-retry-exhausted message is always an *infrastructure* failure — precisely the class worth knowing
+retry-exhausted message is always an _infrastructure_ failure — precisely the class worth knowing
 about — and it vanishes.
 
 **Malformed messages.** The consumer acks anything that fails schema validation:
 
 ```ts
 if (!result.success) {
-  logger.error("queue.invalid_message", { body: message.body });
-  message.ack();
-  continue;
+	logger.error("queue.invalid_message", { body: message.body });
+	message.ack();
+	continue;
 }
 ```
 

@@ -24,12 +24,12 @@ for (let monitor of monitors) {
 `CheckTcpJob`, `CheckDnsJob`, `CheckCronJobsJob`, and `CheckSslJob` share that shape. Per-
 monitor latency adds up against a fixed interval budget:
 
-| Job | Cadence | Per-monitor worst case | Monitors before the sweep overruns |
-|---|---|---:|---:|
-| `CheckTcpJob` | 5 min | `timeout_ms`, default 5,000 ms | **~60** |
-| `CheckDnsJob` | 1 hour | DoH round trip, ~200 ms | ~18,000 |
-| `CheckCronJobsJob` | **1 min** | up to 4 D1 statements + an email send | **~200** |
-| `CheckSslJob` | 1 day | 3 D1 statements + possible email | very large |
+| Job                | Cadence   |                Per-monitor worst case | Monitors before the sweep overruns |
+| ------------------ | --------- | ------------------------------------: | ---------------------------------: |
+| `CheckTcpJob`      | 5 min     |        `timeout_ms`, default 5,000 ms |                            **~60** |
+| `CheckDnsJob`      | 1 hour    |               DoH round trip, ~200 ms |                            ~18,000 |
+| `CheckCronJobsJob` | **1 min** | up to 4 D1 statements + an email send |                           **~200** |
+| `CheckSslJob`      | 1 day     |      3 D1 statements + possible email |                         very large |
 
 TCP is the nearest wall: sixty unreachable monitors platform-wide is enough for sweeps to
 overlap, and overlapping sweeps double-check every monitor and double-write every result.
@@ -45,15 +45,15 @@ Two smaller defects compound it:
 
 ```ts
 let outcome = await Promise.race([
-  socket.opened.then(() => "connected" as const),
-  new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), timeoutMs)),
+	socket.opened.then(() => "connected" as const),
+	new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), timeoutMs)),
 ]);
 ```
 
 The pending `setTimeout` keeps the invocation alive for the full `timeout_ms` even when the
 socket opens in 20 ms. Workers bills CPU, not wall clock, so this costs nothing — but in a
 sequential loop it means every TCP check takes `timeout_ms`, not its actual latency. It turns
-a 5-minute budget for 60 fast monitors into a 5-minute budget for 60 *slow* ones.
+a 5-minute budget for 60 fast monitors into a 5-minute budget for 60 _slow_ ones.
 
 `AggregateDailyStatsJob` has the same sequential shape for its `await this.write(db, ...)` per
 monitor per day, on a daily budget — far more headroom, same pattern.
@@ -71,7 +71,7 @@ sweep wall time. Do this first; it is the cheapest fix in this ADR by a wide mar
 ```ts
 // conceptually
 for (let chunk of chunks(monitors, CONCURRENCY)) {
-  await Promise.allSettled(chunk.map((monitor) => checkOne(monitor)));
+	await Promise.allSettled(chunk.map((monitor) => checkOne(monitor)));
 }
 ```
 
@@ -87,7 +87,7 @@ and up to five D1 statements from the critical path of every sweep, and it means
 outage delays notifications instead of stalling the sweep that detects them.
 
 This also fixes a correctness wrinkle: today a slow email send inside `CheckCronJobsJob`
-delays the *evaluation* of every monitor after it in the loop, so an incident can make the
+delays the _evaluation_ of every monitor after it in the loop, so an incident can make the
 system slower to notice further incidents.
 
 ## Implementation notes

@@ -46,7 +46,7 @@ HTTP path in [ADR-004](./ADR-004-bound-alert-repetition.md) — but it is 100% w
 user declined it.
 
 Worth noting the default direction: `alert_on_late` defaults to `false`, so the current
-behaviour is louder than the schema's intent for *every* existing monitor, not just ones
+behaviour is louder than the schema's intent for _every_ existing monitor, not just ones
 where a user changed the setting.
 
 ## Decision
@@ -75,12 +75,12 @@ Three properties this preserves deliberately:
 
 - **`missed` always alerts.** It is the actual failure signal; `late` is an early warning.
   Gating `missed` on a flag named `alert_on_late` would be surprising.
-- **Recovery always alerts** when `notify_on_recovery` is set, including recovery *from* a
+- **Recovery always alerts** when `notify_on_recovery` is set, including recovery _from_ a
   `late` state. A user who did not want the warning still wants to know the job came back if
   they were told it was missed.
 - **The state transition still happens.** `CheckCronJobsJob` calls `updateStatus` before
   notifying, so `late` is still recorded, still visible on the dashboard, and still the basis
-  for the later `missed` transition. This suppresses the *notification*, not the state.
+  for the later `missed` transition. This suppresses the _notification_, not the state.
 
 That last point is the one to get right: gating the transition instead of the notification
 would break the `missed` timeline, because `missed` is reached from `healthy` **or** `late` and
@@ -90,7 +90,7 @@ would break the `missed` timeline, because `missed` is reached from `healthy` **
 
 - **The toggle starts working.** Users who left it at the default stop receiving late alerts
   — a behaviour change for every existing cron monitor, and one that reduces notifications.
-  Needs a changelog line: "cron monitors no longer send 'late' alerts unless *Alert on late* is
+  Needs a changelog line: "cron monitors no longer send 'late' alerts unless _Alert on late_ is
   enabled", because someone currently relying on those alerts will notice them stop.
 - **Halves notification volume for a cron-monitor incident** in the default configuration:
   one `missed` email instead of `late` + `missed`. ~$0.0009 and 6 `alert_events` rows saved

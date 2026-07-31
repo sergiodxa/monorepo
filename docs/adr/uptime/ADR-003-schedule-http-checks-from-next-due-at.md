@@ -49,7 +49,7 @@ index on `enabled_at`. The query runs once per every-minute cron delivery.
 > copy of the local D1 database file, because that is where the real schema and index set live.
 > D1 runs its own SQLite build, so the exact plan text and the planner's choices may differ in
 > production. What does **not** depend on the planner: `MAX(completed_at) … GROUP BY
-> monitor_id` over an unfiltered table has to read every row of it, by any strategy. Confirm on
+monitor_id` over an unfiltered table has to read every row of it, by any strategy. Confirm on
 > D1 directly with `wrangler d1 execute DB --remote --command "EXPLAIN QUERY PLAN …"`, and
 > treat `meta.rows_read` from a real response as the authoritative number — see
 > [ADR-019](./ADR-019-instrument-d1-rows-and-do-wall-time.md).
@@ -62,7 +62,7 @@ Three separate problems follow.
 no economy of scale to grow into: the per-ping figure does not fall as volume rises.
 
 **Drift.** The predicate compares against `MAX(completed_at)`, and `completed_at` is stamped
-*after* the probe returns. Each check's due time therefore slides forward by its own latency
+_after_ the probe returns. Each check's due time therefore slides forward by its own latency
 plus queue delay. A check completing at 12:00:01.5 is not due at the 12:01:00 delivery, so a
 1-minute monitor silently becomes a 2-minute monitor unless the duplicate cron delivery
 (~7 s later, see `Monitor.scheduledJobId`) happens to rescue it. The product under-delivers
@@ -134,7 +134,7 @@ backstop and costs nothing when it never fires.
   multiplier largely disappears from the cost model. The Polar call also drops to once per
   minute per owner with work to do, rather than once per delivery.
 - **The configured interval becomes authoritative.** A 1-minute monitor is checked every
-  minute. Measured ping consumption will *rise* toward the dashboard's projection, which is
+  minute. Measured ping consumption will _rise_ toward the dashboard's projection, which is
   a billing increase for existing customers — worth a changelog note, and worth checking
   against the allowance analysis in ADR-002 §14 before shipping.
 - **A lost message now costs one interval, not zero.** Today an unacked, undelivered message

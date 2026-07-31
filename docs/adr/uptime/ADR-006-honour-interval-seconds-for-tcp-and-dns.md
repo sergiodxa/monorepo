@@ -26,14 +26,14 @@ the form, the REST API, and the ping projection.
 
 The bill and the work therefore disagree, in both directions:
 
-| Configured interval | Projected pings/month | Actual executions/month | Error |
-|---|---:|---:|---|
-| DNS, 5 minutes | 8,927 | 743 | billed **12× more** than performed |
-| DNS, 1 hour (default) | 743 | 743 | correct by coincidence |
-| DNS, 1 day | 30 | 743 | performed **25× more** than billed |
-| TCP, 1 minute (default) | 44,639 | 8,927 | billed **5× more** than performed |
-| TCP, 5 minutes | 8,927 | 8,927 | correct by coincidence |
-| TCP, 1 hour | 743 | 8,927 | performed **12× more** than billed |
+| Configured interval     | Projected pings/month | Actual executions/month | Error                              |
+| ----------------------- | --------------------: | ----------------------: | ---------------------------------- |
+| DNS, 5 minutes          |                 8,927 |                     743 | billed **12× more** than performed |
+| DNS, 1 hour (default)   |                   743 |                     743 | correct by coincidence             |
+| DNS, 1 day              |                    30 |                     743 | performed **25× more** than billed |
+| TCP, 1 minute (default) |                44,639 |                   8,927 | billed **5× more** than performed  |
+| TCP, 5 minutes          |                 8,927 |                   8,927 | correct by coincidence             |
+| TCP, 1 hour             |                   743 |                   8,927 | performed **12× more** than billed |
 
 Only the value that happens to match the sweep cadence is right. A user who sets a DNS
 monitor to 5 minutes is overcharged twelvefold for checks that never happen; a user who sets
@@ -84,7 +84,7 @@ the fixed cadences. This is a smaller change and makes the bill honest immediate
 because it removes a capability users already believe they have and already see in the UI,
 and because per-monitor intervals are the normal shape of this product — HTTP has them, and
 the ping model is built around them. It remains the correct fallback if scheduling parity is
-deferred: the bug is *the disagreement*, and either side can be moved to fix it.
+deferred: the bug is _the disagreement_, and either side can be moved to fix it.
 
 ## Consequences
 

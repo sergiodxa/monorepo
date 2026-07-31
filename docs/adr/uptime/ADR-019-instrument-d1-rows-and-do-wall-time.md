@@ -14,11 +14,11 @@ behind rows written, and modelled bands for Worker CPU and Durable Object durati
 inputs carry enough uncertainty to move its conclusions, and all three are measurable today
 without adding a single billable operation:
 
-| Unknown | Assumed | Why it matters |
-|---|---|---|
-| D1 rows read per statement | 20,180 per HTTP ping | **58% of expected HTTP cost.** Derived from a plan captured with the host `sqlite3` against the local database file; D1 runs its own SQLite build. |
-| D1 rows written per statement | 10 per HTTP ping | 29% of expected cost. Derived from counting indexes, including SQLite's implicit primary-key indexes. |
-| DO billed wall clock | 250 ms (band 50–1,000) | Sets the DO duration line, and the timeout case is 40× the typical one. `X-Response-Time` measures the *probe*, not the billed window. |
+| Unknown                       | Assumed                | Why it matters                                                                                                                                     |
+| ----------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1 rows read per statement    | 20,180 per HTTP ping   | **58% of expected HTTP cost.** Derived from a plan captured with the host `sqlite3` against the local database file; D1 runs its own SQLite build. |
+| D1 rows written per statement | 10 per HTTP ping       | 29% of expected cost. Derived from counting indexes, including SQLite's implicit primary-key indexes.                                              |
+| DO billed wall clock          | 250 ms (band 50–1,000) | Sets the DO duration line, and the timeout case is 40× the typical one. `X-Response-Time` measures the _probe_, not the billed window.             |
 
 Two further unknowns — K, the number of every-minute cron deliveries per minute, and the real
 check rate per monitor — are answerable from Cloudflare's own analytics with no code change at
@@ -26,8 +26,8 @@ all, and are listed under Non-decisions below so this ADR does not duplicate met
 already exists.
 
 The point of this ADR is the narrow set of things Cloudflare's analytics **cannot** attribute:
-per-statement and per-job-type breakdowns. The dashboard reports rows read per *database*; what is
-needed is rows read per *query*, so a regression can be traced to the statement that caused it.
+per-statement and per-job-type breakdowns. The dashboard reports rows read per _database_; what is
+needed is rows read per _query_, so a regression can be traced to the statement that caused it.
 
 ## Decision
 
@@ -41,9 +41,9 @@ Every D1 response carries `meta.rows_read` and `meta.rows_written`, and
 let result = (await prepared.all()) as D1StatementResult;
 // ...
 return {
-  rows,
-  affectedRows: normalizeAffectedRowsForReader(operation.kind, rows, result.meta),
-  insertId: normalizeInsertIdForReader(operation.kind, operation, rows, result.meta),
+	rows,
+	affectedRows: normalizeAffectedRowsForReader(operation.kind, rows, result.meta),
+	insertId: normalizeInsertIdForReader(operation.kind, operation, rows, result.meta),
 };
 ```
 
@@ -52,7 +52,9 @@ consumer can receive them without the package taking a logging dependency:
 
 ```ts
 createD1DatabaseAdapter(env.DB, {
-  onStatement({ kind, table, rowsRead, rowsWritten, durationMs }) { /* ... */ },
+	onStatement({ kind, table, rowsRead, rowsWritten, durationMs }) {
+		/* ... */
+	},
 });
 ```
 
@@ -119,16 +121,16 @@ in CI rather than in a bill six months later. This is the durable value of the w
 Deliberately **not** implemented in the app, because the platform already answers them and
 duplicating metering costs the operations it measures:
 
-| Question | Where to get it |
-|---|---|
-| K — cron deliveries per minute | Workers Metrics filtered to the `scheduled` handler, or GraphQL `workersInvocationsAdaptive` grouped by event type; divide by 43,200 |
-| Actual checks per monitor per month | The dashboard's own `consumed` vs `estimated` figures, or an Analytics Engine query over `uptime_monitor_results` |
-| Queue batch sizes and retry rate | Queues Metrics, or `queueConsumerMetricsAdaptiveGroups`. `batch.messages.length` and `message.attempts` are already available in the handler, and `Job.run` already logs `attempts` |
-| Worker CPU per script | Workers Metrics CPU-time distribution; `workersInvocationsAdaptive` exposes `cpuTime` per invocation |
-| Aggregate D1 rows read/written | `d1AnalyticsAdaptiveGroups` |
-| KV operations | KV Metrics per namespace |
-| Email sends | `SELECT status, COUNT(*) FROM alert_events WHERE sent_at >= ? GROUP BY status`, cross-checked against Resend's dashboard |
-| Per-type monitor counts | `SELECT COUNT(*)` per monitor table — worth an internal endpoint, since sweep cost per execution is `1/N` in each |
+| Question                            | Where to get it                                                                                                                                                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| K — cron deliveries per minute      | Workers Metrics filtered to the `scheduled` handler, or GraphQL `workersInvocationsAdaptive` grouped by event type; divide by 43,200                                                |
+| Actual checks per monitor per month | The dashboard's own `consumed` vs `estimated` figures, or an Analytics Engine query over `uptime_monitor_results`                                                                   |
+| Queue batch sizes and retry rate    | Queues Metrics, or `queueConsumerMetricsAdaptiveGroups`. `batch.messages.length` and `message.attempts` are already available in the handler, and `Job.run` already logs `attempts` |
+| Worker CPU per script               | Workers Metrics CPU-time distribution; `workersInvocationsAdaptive` exposes `cpuTime` per invocation                                                                                |
+| Aggregate D1 rows read/written      | `d1AnalyticsAdaptiveGroups`                                                                                                                                                         |
+| KV operations                       | KV Metrics per namespace                                                                                                                                                            |
+| Email sends                         | `SELECT status, COUNT(*) FROM alert_events WHERE sent_at >= ? GROUP BY status`, cross-checked against Resend's dashboard                                                            |
+| Per-type monitor counts             | `SELECT COUNT(*)` per monitor table — worth an internal endpoint, since sweep cost per execution is `1/N` in each                                                                   |
 
 ## Consequences
 

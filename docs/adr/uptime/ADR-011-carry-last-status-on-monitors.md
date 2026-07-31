@@ -75,7 +75,7 @@ Keep `getLatestHttpResult` — it is also used by `http-monitors.tsx` to render 
 current status badge. But once `monitors.last_status` exists, that N+1 (one uncached AE query
 per monitor per page view, ADR-002 §12) can read the column instead, which removes the last
 caller and the function with it. Doing both together is the cleaner change: one column
-retires one per-check query *and* one per-page-view N+1.
+retires one per-check query _and_ one per-page-view N+1.
 
 Order of writes matters. The status column must be updated **after** the result is committed,
 in the same place `next_due_at` is advanced, so a job that fails before committing does not

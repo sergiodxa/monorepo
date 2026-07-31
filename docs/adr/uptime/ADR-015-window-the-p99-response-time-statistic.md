@@ -31,8 +31,8 @@ No `LIMIT`, no time window. Three problems, in increasing severity:
 
 **Rows read.** For `getStatsByTeamId` the scope is `m.team_id = ?`, so it reads every row for
 every monitor the team owns, within `monitor_results`' 7-day retention. For the reference
-account that is ~40,000 rows per call — $0.00004, which is *more than a whole healthy HTTP
-check* — and it grows linearly with the team's monitor count and check frequency.
+account that is ~40,000 rows per call — $0.00004, which is _more than a whole healthy HTTP
+check_ — and it grows linearly with the team's monitor count and check frequency.
 
 **Memory and CPU.** All of those rows are materialised into a Worker array and mapped. At
 40,000 rows that is fine; at a team with 100 one-minute monitors it is ~1,000,000 rows over 7
@@ -44,7 +44,7 @@ happens to leave behind — and it will silently mean something different the mo
 changes. Two calls a week apart cover different windows. The number is not comparable with
 itself.
 
-There is a further wrinkle: `ORDER BY r.response_time_ms ASC` sorts by *value*, not time, so the
+There is a further wrinkle: `ORDER BY r.response_time_ms ASC` sorts by _value_, not time, so the
 `monitor_results_monitor_completed_at_response_status_response_time_idx` index cannot serve the
 ordering for a filtered scope — SQLite sorts the result set. That sort is the expensive part at
 scale.

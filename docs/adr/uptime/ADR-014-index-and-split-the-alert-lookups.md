@@ -14,7 +14,7 @@ indexed; the second is not.
 
 ```ts
 return await db.findMany(alerts, {
-  where: and(eq("team_id", teamId), or(eq("monitor_id", monitorId), isNull("monitor_id"))),
+	where: and(eq("team_id", teamId), or(eq("monitor_id", monitorId), isNull("monitor_id"))),
 });
 ```
 
@@ -56,12 +56,12 @@ correct and bounded.
 At current scale this costs nothing measurable: ~10 rows scanned, $0.00000001. The problem is
 the growth curve. Rows read per alerting result is `total alerts across all tenants`, so:
 
-| Tenants × alerts each | Rows scanned per alerting result | Cost per result |
-|---:|---:|---:|
-| 1 × 10 | 10 | $0.00000001 |
-| 100 × 5 | 500 | $0.0000005 |
-| 1,000 × 5 | 5,000 | $0.000005 |
-| 10,000 × 5 | 50,000 | $0.00005 — **1.4× a whole healthy HTTP check** |
+| Tenants × alerts each | Rows scanned per alerting result |                                Cost per result |
+| --------------------: | -------------------------------: | ---------------------------------------------: |
+|                1 × 10 |                               10 |                                    $0.00000001 |
+|               100 × 5 |                              500 |                                     $0.0000005 |
+|             1,000 × 5 |                            5,000 |                                      $0.000005 |
+|            10,000 × 5 |                           50,000 | $0.00005 — **1.4× a whole healthy HTTP check** |
 
 It is also worst exactly when it matters least affordable: a broad incident takes many monitors
 down at once, and each down result scans the whole table. Latency, not cost, is what bites

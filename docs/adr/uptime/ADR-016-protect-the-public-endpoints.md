@@ -14,15 +14,15 @@ Two routes are reachable without authentication. Both are deliberate; neither is
 `POST /api/v1/cron-jobs/:cronJobId/ping` is unauthenticated by design — the controller's
 docblock is explicit that "a scheduled job's `curl` call is the entire integration" and that the
 monitor's own id is the bearer secret. That is a reasonable design. What is missing is a limit on
-the *caller*:
+the _caller_:
 
 ```ts
 if (monitor.last_ping_at !== null && Date.now() - monitor.last_ping_at < RATE_LIMIT_MS) {
-  return tooManyRequests({ error: "Rate limit exceeded. Max 1 ping per minute." });
+	return tooManyRequests({ error: "Rate limit exceeded. Max 1 ping per minute." });
 }
 ```
 
-The limit is enforced **per monitor**, from `last_ping_at`, and only *after* the request has
+The limit is enforced **per monitor**, from `last_ping_at`, and only _after_ the request has
 already:
 
 1. run the full global middleware stack — including `createInstance()` +
@@ -40,7 +40,7 @@ For an invalid id it is the same cost minus nothing — the lookup still runs.
 `GET /:slug` (`app/http/controllers/status-page.tsx`) is public and serves
 `getTeamHttpSummaries(page.team_id)`, which is KV-cached with a 60-second TTL via
 `queryAnalyticsCached`. So the expensive part is bounded already: at most one AE query per team
-per minute. Each *view* still costs a Worker request, the middleware stack, a D1 lookup for the
+per minute. Each _view_ still costs a Worker request, the middleware stack, a D1 lookup for the
 page and its monitor associations, and a KV read — ~$0.0000008. The response carries **no HTTP
 cache headers**, so every viewer, and every refresh, is an origin hit.
 
@@ -56,22 +56,24 @@ cache headers**, so every viewer, and every refresh, is an origin hit.
 
 ```ts
 router.map(
-  routes.api.cronJobPing,
-  createAction(routes.api.cronJobPing, {
-    middleware: [
-      rateLimit({
-        adapter: new KVAdapter({ /* limit, window */ }),
-        prefix: "cron-ping",
-        // key defaults to the client IP
-      }),
-    ],
-    handler: cronJobPing,
-  }),
+	routes.api.cronJobPing,
+	createAction(routes.api.cronJobPing, {
+		middleware: [
+			rateLimit({
+				adapter: new KVAdapter({
+					/* limit, window */
+				}),
+				prefix: "cron-ping",
+				// key defaults to the client IP
+			}),
+		],
+		handler: cronJobPing,
+	}),
 );
 ```
 
 Keep the existing per-monitor `last_ping_at` check — it enforces the product rule ("max 1 ping
-per minute" per monitor) and must stay. The new limiter enforces a *caller* rule, which is the
+per minute" per monitor) and must stay. The new limiter enforces a _caller_ rule, which is the
 one that bounds abuse. Two limits, two purposes.
 
 Adapter choice matters: `KVAdapter` costs a KV read plus a write per counted request
@@ -127,7 +129,7 @@ a KV read. Revisit only if abuse shows up.
   from one egress IP could be limited as one caller. Set the limit well above plausible
   legitimate use (the per-monitor rule already caps useful throughput at 1/minute/monitor, so
   the caller limit only needs to stop abuse, not shape traffic), and consider keying on the
-  monitor id *in addition to* the IP so one noisy tenant cannot exhaust another's budget.
+  monitor id _in addition to_ the IP so one noisy tenant cannot exhaust another's budget.
 - **A cached status page can show stale state for up to 60 seconds.** Acceptable and already
   true — the KV-cached AE query has the same TTL — but it should be stated on the page rather
   than implied.

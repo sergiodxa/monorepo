@@ -4,7 +4,7 @@
 
 **Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §6 and §17 (high). A throughput ceiling, not a cost problem — the current design is the
-*cheaper* one.
+_cheaper_ one.
 
 ## Context
 
@@ -14,8 +14,8 @@
 let locationHint = monitor.location_hint as DurableObjectLocationHint;
 let id = env.GEO_FETCH.idFromName(monitor.location_hint);
 let namespace = EU_LOCATION_HINTS.has(monitor.location_hint)
-  ? env.GEO_FETCH.jurisdiction("eu")
-  : env.GEO_FETCH;
+	? env.GEO_FETCH.jurisdiction("eu")
+	: env.GEO_FETCH;
 let stub = namespace.get(id, { locationHint });
 ```
 
@@ -29,7 +29,7 @@ This has one genuine benefit and two genuine problems.
 **The benefit — duration amortisation.** DO duration is billed per object as wall-clock time
 while it cannot hibernate. Concurrent requests to the same object overlap in one billed
 window: four monitors probing through the same object over a 250 ms window cost 250 ms of
-duration in total, not 1,000 ms. Per-ping DO duration cost therefore *falls* as regional
+duration in total, not 1,000 ms. Per-ping DO duration cost therefore _falls_ as regional
 density rises. This is why the current design is cheap, and why sharding is a deliberate
 trade rather than a pure win.
 

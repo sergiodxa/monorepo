@@ -11,23 +11,23 @@
 
 ```ts
 return async (context, next) => {
-  let session = context.has(Session) ? context.get(Session) : undefined;
-  let locale = await detector.detect(context.request, session);
+	let session = context.has(Session) ? context.get(Session) : undefined;
+	let locale = await detector.detect(context.request, session);
 
-  let instance = createInstance();
-  for (let plugin of options.plugins ?? []) instance.use(plugin);
+	let instance = createInstance();
+	for (let plugin of options.plugins ?? []) instance.use(plugin);
 
-  await instance.init({
-    supportedLngs: options.detection.supportedLanguages,
-    fallbackLng: options.detection.fallbackLanguage,
-    ...options.i18next,
-    lng: locale,
-  });
+	await instance.init({
+		supportedLngs: options.detection.supportedLanguages,
+		fallbackLng: options.detection.fallbackLanguage,
+		...options.i18next,
+		lng: locale,
+	});
 
-  context.locale = locale;
-  context.i18next = instance;
+	context.locale = locale;
+	context.i18next = instance;
 
-  return next();
+	return next();
 };
 ```
 
@@ -60,7 +60,7 @@ at 3 / 8 / 20 ms largely because of this, against 1 / 3 / 8 ms for the check job
 
 In money it is small — at the expected 8 ms and $0.02 per million CPU-ms, ~$0.00000016 per
 request, ~2% of a heartbeat's cost and ~$0.009/month for the reference account. It is listed as
-low severity for that reason. But it scales with *every inbound request*, including ones that
+low severity for that reason. But it scales with _every inbound request_, including ones that
 never render a page, and CPU is the metric with the least headroom relative to its included quota
 as request volume grows.
 
@@ -84,13 +84,15 @@ resource store per request while keeping per-request language isolation:
 // module scope: initialised once per isolate, on first use
 let shared: Promise<i18n> | undefined;
 function sharedInstance(options) {
-  shared ??= (async () => {
-    let instance = createInstance();
-    for (let plugin of options.plugins ?? []) instance.use(plugin);
-    await instance.init({ /* every supported language, no `lng` */ });
-    return instance;
-  })();
-  return shared;
+	shared ??= (async () => {
+		let instance = createInstance();
+		for (let plugin of options.plugins ?? []) instance.use(plugin);
+		await instance.init({
+			/* every supported language, no `lng` */
+		});
+		return instance;
+	})();
+	return shared;
 }
 
 // per request: no re-init, no shared mutable language
@@ -118,7 +120,7 @@ bundles, not one.
 
 This requires the resources to be addressable per language — trivially true, since they are six
 separate module imports. The trade is bundle-level: all six are still imported and therefore still
-in the Worker bundle, so this reduces *CPU*, not bundle size. Reducing bundle size would need
+in the Worker bundle, so this reduces _CPU_, not bundle size. Reducing bundle size would need
 dynamic `import()` per locale, which is a larger change with its own cold-start trade-offs and is
 out of scope here.
 

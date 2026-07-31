@@ -18,8 +18,8 @@ const EU_LOCATION_HINTS = new Set(["eeur", "enam"]);
 let locationHint = monitor.location_hint as DurableObjectLocationHint;
 let id = env.GEO_FETCH.idFromName(monitor.location_hint);
 let namespace = EU_LOCATION_HINTS.has(monitor.location_hint)
-  ? env.GEO_FETCH.jurisdiction("eu")
-  : env.GEO_FETCH;
+	? env.GEO_FETCH.jurisdiction("eu")
+	: env.GEO_FETCH;
 let stub = namespace.get(id, { locationHint });
 ```
 
@@ -37,10 +37,10 @@ the **EU**, and:
 - its probe originates from Europe, not North America;
 - `response_time_ms` — the whole reason `GeoFetchDO` exists — measures the wrong continent;
 - the region selector in the UI silently does not do what it says for that one option;
-- `wnam`, the *default*, is unaffected, so this is invisible unless someone picks `enam`.
+- `wnam`, the _default_, is unaffected, so this is invisible unless someone picks `enam`.
 
 The listed intent is "GDPR compliance", which is a coherent goal — but the mechanism does not
-serve it either. Jurisdiction pinning controls where the *Durable Object* runs, and this object
+serve it either. Jurisdiction pinning controls where the _Durable Object_ runs, and this object
 holds no personal data: it proxies a fetch, measures elapsed time, and returns. It has no
 storage, no alarms, and no state that survives the request. The personal data in this system —
 `cron_job_pings.source_ip`, `cron_job_pings.user_agent`, session payloads, alert recipient

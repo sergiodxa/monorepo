@@ -14,11 +14,11 @@ Two retention jobs exist, and between them they cover two tables:
 
 Three tables that grow with monitor activity have **no retention job at all**:
 
-| Table | Written per | Rows written each | Purged by |
-|---|---|---:|---|
-| `dns_monitor_results` | DNS execution | 5 | nothing |
-| `tcp_monitor_results` | TCP execution | 5 | nothing |
-| `alert_events` | alert delivery, cooldown skip, or failure | 6 | nothing |
+| Table                 | Written per                               | Rows written each | Purged by |
+| --------------------- | ----------------------------------------- | ----------------: | --------- |
+| `dns_monitor_results` | DNS execution                             |                 5 | nothing   |
+| `tcp_monitor_results` | TCP execution                             |                 5 | nothing   |
+| `alert_events`        | alert delivery, cooldown skip, or failure |                 6 | nothing   |
 
 Storage is the smaller half of the problem. The larger half is that all three are read by
 queries whose cost scales with table size:
@@ -85,7 +85,7 @@ surface: `source_ip` kept for a year is a privacy decision as much as a cost one
   newly-covered tables becomes 90 days × write rate, independent of account age.
 - **Storage cost stays negligible** either way at current volume — the reference account's
   total D1 storage is ~0.4 GB against a 5 GB included allowance. This ADR is about the
-  *query* cost that grows with those tables and about not discovering the problem at 100×
+  _query_ cost that grows with those tables and about not discovering the problem at 100×
   volume.
 - **Adds rows written**: 5–6 per deleted row, deferred by the retention window. That cost is
   already modelled in ADR-002's per-execution tables for `monitor_results` and
