@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n, InitOptions, Module, NewableModule } from "i18next";
+import type { i18n, InitOptions, Module, NewableModule, Resource } from "i18next";
 import type { Middleware } from "remix/fetch-router";
 
 import { createInstance } from "i18next";
@@ -36,12 +36,13 @@ export interface I18nextMiddlewareOptions {
 	/**
 	 * i18next init options for the per-request instance. `supportedLngs` and
 	 * `fallbackLng` default to the detection configuration so both layers stay
-	 * in sync, and `lng` is always overridden with the detected language.
+	 * in sync, `lng` is always overridden with the detected language, and
+	 * `resources` is narrowed to the bundles that language can resolve through.
 	 */
 	i18next?: Omit<InitOptions, "detection">;
 	/**
-	 * i18next plugins (e.g. a backend that loads translations) registered on
-	 * the per-request instance before it initializes.
+	 * i18next plugins (e.g. a backend that loads translations) registered on the
+	 * per-request instance before it initializes.
 	 */
 	plugins?: NewableModule<Module>[] | Module[];
 }
@@ -51,10 +52,16 @@ export interface I18nextMiddlewareOptions {
  * dedicated i18next instance for the request, exposing both as
  * `context.locale` and `context.i18next`.
  *
- * When the session middleware runs earlier in the chain, the detector reads
- * the language from the live request session instead of loading it from
- * storage a second time. Initialization awaits the instance's initial
- * namespace load, so backend-plugin translations are ready when handlers run.
+ * The language is resolved before the instance exists, so the instance is built
+ * over only the bundles that language can resolve through — its own and the
+ * fallback's — instead of every supported language. Nothing is shared between
+ * requests: one instance per request is what keeps a concurrent request in
+ * another language from ever seeing this one's.
+ *
+ * When the session middleware runs earlier in the chain, the detector reads the
+ * language from the live request session instead of loading it from storage a
+ * second time. Initialization awaits the instance's initial namespace load, so
+ * backend-plugin translations are ready when handlers run.
  *
  * @param options - Middleware configuration; see {@link I18nextMiddlewareOptions}.
  * @returns A middleware that populates `context.locale` and `context.i18next`.
@@ -75,6 +82,11 @@ export default function i18next(options: I18nextMiddlewareOptions): Middleware {
 			supportedLngs: options.detection.supportedLanguages,
 			fallbackLng: options.detection.fallbackLanguage,
 			...options.i18next,
+			resources: pickResources(
+				options.i18next?.resources,
+				locale,
+				options.detection.fallbackLanguage,
+			),
 			lng: locale,
 		});
 
@@ -83,4 +95,43 @@ export default function i18next(options: I18nextMiddlewareOptions): Middleware {
 
 		return next();
 	};
+}
+
+/**
+ * Narrows inline resources to the bundles `locale` can resolve through: itself,
+ * the fallback language, and each one's primary subtag (an `en-US` request
+ * resolves through an `en` bundle). Every other language is dropped, so a
+ * request never pays to attach bundles it cannot serve.
+ *
+ * Returns `undefined` when no resources were configured, since i18next only
+ * consults a backend plugin while `resources` is unset.
+ *
+ * @param resources - Inline resources from the middleware configuration, if any.
+ * @param locale - The language detected for the request.
+ * @param fallbackLanguage - The language i18next falls back to for missing keys.
+ * @returns The narrowed resources, or `undefined` when there are none.
+ */
+function pickResources(
+	resources: Resource | undefined,
+	locale: string,
+	fallbackLanguage: string,
+): Resource | undefined {
+	if (!resources) return undefined;
+
+	let candidates = new Set([
+		locale,
+		locale.split("-")[0],
+		fallbackLanguage,
+		fallbackLanguage.split("-")[0],
+	]);
+
+	let picked: Resource = {};
+
+	for (let candidate of candidates) {
+		if (!candidate) continue;
+		let bundle = resources[candidate];
+		if (bundle) picked[candidate] = bundle;
+	}
+
+	return picked;
 }

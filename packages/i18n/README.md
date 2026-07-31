@@ -8,6 +8,8 @@ Every request needs an answer to "which language does this user want?" before an
 
 Translation itself is delegated to i18next. The middleware in `@pkg/i18n/middleware` creates and initializes a dedicated i18next instance per request — registered plugins (such as a backend that loads translation files) run before handlers do — and exposes it as `context.i18next` alongside `context.locale`. A per-request instance means concurrent requests in different languages never share mutable language state, which matters in a Workers runtime where one isolate serves many requests.
 
+Because the language is resolved before the instance is built, that instance is only ever given the bundles the request can resolve through: the detected language's and the fallback language's. An app that supports six languages therefore attaches two bundles per request instead of six, without giving up the per-request instance that keeps the languages isolated.
+
 The root entry (`@pkg/i18n`) has no router dependency, so the detector and locale helpers can also be used outside middleware (e.g. in background jobs or non-router handlers).
 
 Rendering translations through `remix/ui` is a separate concern from detecting and loading them, so it lives at its own entry point, `@pkg/i18n/ui`: an `IntlProvider` that publishes a live i18next instance through context, and a `Trans` component for translations containing markup.
@@ -143,12 +145,12 @@ A page rendered entirely client-side (no server round trip, so no `run()`/`clien
 
 ### `i18next(options: I18nextMiddlewareOptions): Middleware`
 
-Default export of `@pkg/i18n/middleware`. Creates a middleware that detects the request language, initializes a dedicated i18next instance for the request, and sets both on the request context as `context.locale` and `context.i18next`. Initialization awaits the instance's initial namespace load, so translations loaded by a backend plugin are ready by the time handlers run.
+Default export of `@pkg/i18n/middleware`. Creates a middleware that detects the request language, initializes a dedicated i18next instance for the request over that language's bundle and the fallback's, and sets both on the request context as `context.locale` and `context.i18next`. Initialization awaits the instance's initial namespace load, so translations loaded by a backend plugin are ready by the time handlers run.
 
 **Parameters:**
 
 - `options.detection`: Language detection configuration; see [`LanguageDetectorOptions`](#languagedetectoroptions)
-- `options.i18next`: i18next [init options](https://www.i18next.com/overview/configuration-options) for the per-request instance. `supportedLngs` and `fallbackLng` default to the detection configuration; `lng` is always overridden with the detected language
+- `options.i18next`: i18next [init options](https://www.i18next.com/overview/configuration-options) for the per-request instance. `supportedLngs` and `fallbackLng` default to the detection configuration; `lng` is always overridden with the detected language; `resources` is narrowed to the detected language's bundle plus the fallback language's (and their primary subtags, so an `en-US` request still resolves through an `en` bundle), so the other languages' bundles are never attached
 - `options.plugins`: i18next plugins (backends, post-processors) registered on the per-request instance before it initializes
 
 **Returns:**
@@ -424,8 +426,9 @@ let detector = new LanguageDetector({
 2. **Let the middleware derive `supportedLngs` and `fallbackLng`** - They default to the detection configuration, so only set them in the `i18next` options when they intentionally differ.
 3. **Detection never throws** - Methods missing their configuration are skipped and unsupported values are ignored, so `context.locale` is always safe to use as a supported language.
 4. **Use `getClientLocales` for formatting, the detector for content** - Formatting should honor the client's exact regional preference (`en-GB` dates) even when the app only ships `en` translations.
-5. **The instance is per-request** - Do not cache `context.i18next` in module scope; sharing one instance across requests leaks one user's language into another's response.
-6. **`Trans` takes `i18nKey`, not `key`** - `key` is `remix/ui`'s own reconciliation prop and is stripped before a component ever sees its props.
-7. **Pick a `components` key that isn't a real HTML void element** - `link`, `br`, `img`, `hr`, and the rest of that list are parsed as self-closing regardless of how the translation wrote them, since the underlying parser checks tag names against the real HTML void-element list, not against `components`. A tag meant to wrap children needs a different name (`articleLink`, not `link`).
-8. **Register one instance with `setIntl`, not one `IntlProvider` per island** - every independently hydrated island has no ancestor context to read, but client-side there's exactly one user per page, so a single module-scoped default is safe. Reach for `IntlProvider` client-side only to override that default for one specific subtree.
-9. **`IntlProvider` re-renders on `changeLanguage()`/a namespace loading, client-side only** - it subscribes through `handle.queueTask`, which the server renderer never runs, so nothing subscribes to anything server-side. Don't call `i18n.changeLanguage()` mid-request on the server either way — a request's language is resolved once, before rendering starts, and rendering streams, so anything already sent would keep the old language while anything rendered after the call wouldn't.
+5. **Only the detected language and the fallback are attached** - `context.i18next.t(key, { lng })` for any other supported language finds no bundle, because the request's instance is built over those two only. Translate through an instance of your own when a request genuinely needs a third language.
+6. **The instance is per-request** - Do not cache `context.i18next` in module scope; sharing one instance across requests leaks one user's language into another's response.
+7. **`Trans` takes `i18nKey`, not `key`** - `key` is `remix/ui`'s own reconciliation prop and is stripped before a component ever sees its props.
+8. **Pick a `components` key that isn't a real HTML void element** - `link`, `br`, `img`, `hr`, and the rest of that list are parsed as self-closing regardless of how the translation wrote them, since the underlying parser checks tag names against the real HTML void-element list, not against `components`. A tag meant to wrap children needs a different name (`articleLink`, not `link`).
+9. **Register one instance with `setIntl`, not one `IntlProvider` per island** - every independently hydrated island has no ancestor context to read, but client-side there's exactly one user per page, so a single module-scoped default is safe. Reach for `IntlProvider` client-side only to override that default for one specific subtree.
+10. **`IntlProvider` re-renders on `changeLanguage()`/a namespace loading, client-side only** - it subscribes through `handle.queueTask`, which the server renderer never runs, so nothing subscribes to anything server-side. Don't call `i18n.changeLanguage()` mid-request on the server either way — a request's language is resolved once, before rendering starts, and rendering streams, so anything already sent would keep the old language while anything rendered after the call wouldn't.

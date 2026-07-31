@@ -2,7 +2,8 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30 (decisions 2 and 3; decision 1 rejected). Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §7 and §17 (low). Affects `@pkg/i18n`, so it is not scoped to this app alone — see Scope.
 
 ## Context
@@ -136,6 +137,12 @@ This is the cheapest of the three and the one with the clearest boundary: `route
 `routes.api.cronJobPing` do not need it. Note the ordering constraint — the detector reads the
 session when available, so `i18n` must still come after `createSessionMiddleware` wherever it is
 registered.
+
+**Implementation outcome.** Decisions 2 and 3 shipped; **decision 1 was deliberately not taken**.
+Keeping `createInstance()` per request preserves the language isolation the current design already
+guarantees with no shared mutable state to leak a language across requests, and attaching only the
+two bundles a request can resolve through captures the bulk of the CPU saving without that risk —
+which is the order of preference the Consequences below already argue for.
 
 ## Consequences
 

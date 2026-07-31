@@ -1,10 +1,11 @@
 /**
  * Application bootstrap that assembles the uptime fetch-router. It registers the
  * core middleware stack (async context, logging, form data, method override, session,
- * auth, cross-origin protection, HTML rendering), mounts the web routes with their
- * auth guards, and wires a request-scoped SSR renderer that resolves and follows
- * nested frame redirects. It exists as the composition root shared by the worker and
- * any other runtime entry point.
+ * auth, language resolution for the HTML surface, cross-origin protection, HTML
+ * rendering), mounts the web routes with their auth guards, and wires a
+ * request-scoped SSR renderer that resolves and follows nested frame redirects. It
+ * exists as the composition root shared by the worker and any other runtime entry
+ * point.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -135,6 +136,7 @@ import maintenanceWindowEdit from "~/app/http/controllers/app/team/maintenance-w
 import maintenanceWindowNew from "~/app/http/controllers/app/team/maintenance-window-new";
 import maintenanceWindows from "~/app/http/controllers/app/team/maintenance-windows";
 import monitorCardHeatmap from "~/app/http/controllers/app/team/monitor-card-heatmap";
+import monitorCardP99ResponseTime from "~/app/http/controllers/app/team/monitor-card-p99-response-time";
 import monitorCardSlowestResult from "~/app/http/controllers/app/team/monitor-card-slowest-result";
 import monitorCardUptime from "~/app/http/controllers/app/team/monitor-card-uptime";
 import monitorCardUsage from "~/app/http/controllers/app/team/monitor-card-usage";
@@ -175,6 +177,14 @@ import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
 
+/**
+ * Path prefix of the JSON surface. Requests under it carry their own bearer-token
+ * auth (see `requireApiKey`), are called server-to-server, and answer with JSON
+ * that is never translated — so both cross-origin protection and language
+ * resolution are scoped around this one boundary.
+ */
+const API_PATH_PREFIX = "/api/";
+
 namespace application {
 	export interface Options {
 		/** KV namespace backing session storage. */
@@ -198,16 +208,28 @@ export default function application(options: application.Options) {
 		methodOverride(),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
-		i18n,
-		// `/api/` carries its own bearer-token auth (see `requireApiKey`) and is called
-		// server-to-server, so cross-origin protection doesn't apply to it.
-		cop({ insecureBypassPatterns: ["/api/{path...}"] }),
+		// Stays after the session middleware, whose session the language detector reads
+		// the stored language from, and skips the JSON surface: resolving a language and
+		// building an i18next instance is wasted work for a response nothing translates,
+		// the unauthenticated cron-ping endpoint included.
+		htmlOnly(i18n),
+		// Cross-origin protection doesn't apply to the JSON surface either.
+		cop({ insecureBypassPatterns: [`${API_PATH_PREFIX}{path...}`] }),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
 	let router = createRouter({
 		middleware: globalMiddleware,
-		defaultHandler,
+		/**
+		 * Renders the translated 404 page for unmatched paths. A path under
+		 * {@link API_PATH_PREFIX} that matches no route still lands here, and `htmlOnly`
+		 * skipped language resolution for it, so resolve the language for that one case
+		 * before rendering instead of translating through an absent `ctx.i18next`.
+		 */
+		defaultHandler(context) {
+			if (!context.url.pathname.startsWith(API_PATH_PREFIX)) return defaultHandler(context);
+			return i18n(context, async () => defaultHandler(context));
+		},
 	});
 
 	router.map(routes.home, home);
@@ -250,6 +272,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.monitors.cards.slowestResult, monitorCardSlowestResult);
 	router.map(routes.app.team.monitors.cards.uptime, monitorCardUptime);
 	router.map(routes.app.team.monitors.cards.heatmap, monitorCardHeatmap);
+	router.map(routes.app.team.monitors.cards.p99ResponseTime, monitorCardP99ResponseTime);
 	router.map(routes.app.team.dnsMonitors.index, dnsMonitors);
 	router.map(routes.app.team.dnsMonitors.new, dnsMonitorNew);
 	router.map(routes.app.team.dnsMonitors.show, dnsMonitorShow);
@@ -471,6 +494,22 @@ export default function application(options: application.Options) {
 	router.map(routes.api.v1.apiKeys.destroy, apiKeyDestroy);
 
 	return router;
+}
+
+/**
+ * Scopes a global middleware to the HTML surface: requests under
+ * {@link API_PATH_PREFIX} skip it and go straight to the rest of the chain. Use it
+ * for work only a rendered page benefits from, so the JSON surface never pays for
+ * it; middleware the API also needs stays in the chain unwrapped.
+ *
+ * @param middleware - The middleware to run for everything outside `/api/`.
+ * @returns A middleware that either delegates to it or continues the chain.
+ */
+function htmlOnly(middleware: Middleware): Middleware {
+	return (context, next) => {
+		if (context.url.pathname.startsWith(API_PATH_PREFIX)) return next();
+		return middleware(context, next);
+	};
 }
 
 /** Creates a request-scoped renderer for server-side HTML responses. */
