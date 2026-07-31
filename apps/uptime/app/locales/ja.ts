@@ -512,8 +512,6 @@ export default {
 			uptime: "Uptime",
 			totalChecks: "総チェック数",
 			lastCheck: "最終チェック",
-			p99ResponseTime: "P99応答時間",
-			p99ResponseTimeValue: "{{value}}",
 			neverRan: "N/A",
 		},
 
@@ -654,8 +652,6 @@ export default {
 				uptime: "Uptime",
 				totalChecks: "総チェック数",
 				lastCheck: "最終チェック",
-				p99ResponseTime: "P99応答時間",
-				p99ResponseTimeValue: "{{value}} ms",
 				neverRan: "N/A",
 			},
 
@@ -1473,6 +1469,12 @@ export default {
 				slowestResult: {
 					label: "最も遅い結果",
 					description: "過去24時間",
+				},
+
+				p99ResponseTime: {
+					label: "P99応答時間",
+					value: "{{value}} ms",
+					description: "p99、過去24時間",
 				},
 			},
 

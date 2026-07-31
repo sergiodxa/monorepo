@@ -97,6 +97,7 @@ export default route({
 				cards: {
 					usage: get("/app/:team/monitors/:monitorId/cards/usage"),
 					slowestResult: get("/app/:team/monitors/:monitorId/cards/slowest-result"),
+					p99ResponseTime: get("/app/:team/monitors/:monitorId/cards/p99-response-time"),
 					uptime: get("/app/:team/monitors/:monitorId/cards/uptime"),
 					heatmap: get("/app/:team/monitors/:monitorId/cards/heatmap"),
 				},

@@ -137,6 +137,14 @@ export default createAction(routes.app.team.monitors.show, {
 								fallback={<StatCardSkeleton count={1} />}
 							/>
 							<Frame
+								name="monitor-card-p99-response-time"
+								src={routes.app.team.monitors.cards.p99ResponseTime.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
 								name="monitor-card-uptime"
 								src={routes.app.team.monitors.cards.uptime.href({
 									team: ctx.team.slug,

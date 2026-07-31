@@ -522,8 +522,6 @@ export default {
 			uptime: "Uptime",
 			totalChecks: "Verificaciones totales",
 			lastCheck: "Última verificación",
-			p99ResponseTime: "Tiempo de respuesta P99",
-			p99ResponseTimeValue: "{{value}}",
 			neverRan: "N/D",
 		},
 
@@ -665,8 +663,6 @@ export default {
 				uptime: "Uptime",
 				totalChecks: "Verificaciones totales",
 				lastCheck: "Última verificación",
-				p99ResponseTime: "Tiempo de respuesta P99",
-				p99ResponseTimeValue: "{{value}} ms",
 				neverRan: "N/D",
 			},
 
@@ -1489,6 +1485,12 @@ export default {
 				slowestResult: {
 					label: "Resultado más lento",
 					description: "En las últimas 24 horas",
+				},
+
+				p99ResponseTime: {
+					label: "Tiempo de respuesta P99",
+					value: "{{value}} ms",
+					description: "p99, últimas 24 h",
 				},
 			},
 

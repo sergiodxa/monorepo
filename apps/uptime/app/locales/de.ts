@@ -524,8 +524,6 @@ export default {
 			uptime: "Uptime",
 			totalChecks: "Gesamtprüfungen",
 			lastCheck: "Letzte Prüfung",
-			p99ResponseTime: "P99 Antwortzeit",
-			p99ResponseTimeValue: "{{value}}",
 			neverRan: "N/V",
 		},
 
@@ -668,8 +666,6 @@ export default {
 				uptime: "Uptime",
 				totalChecks: "Gesamtprüfungen",
 				lastCheck: "Letzte Prüfung",
-				p99ResponseTime: "P99 Antwortzeit",
-				p99ResponseTimeValue: "{{value}} ms",
 				neverRan: "N/V",
 			},
 
@@ -1499,6 +1495,12 @@ export default {
 				slowestResult: {
 					label: "Langsamstes Ergebnis",
 					description: "In den letzten 24 Stunden",
+				},
+
+				p99ResponseTime: {
+					label: "P99 Antwortzeit",
+					value: "{{value}} ms",
+					description: "p99, letzte 24 Std.",
 				},
 			},
 
