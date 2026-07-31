@@ -8,6 +8,10 @@
  * (100% = up, 0% = down, otherwise degraded) rather than a joined "latest row" lookup.
  * See `docs/adr/uptime/ADR-001-analytics-engine-migration.md` for the dataset schema.
  *
+ * Everything here is an aggregate over a window. A monitor's *single most recent* result
+ * deliberately isn't: that lives on the `monitors` row (`last_status`/`last_checked_at`),
+ * since both readers already hold the row and asking here cost an uncached round trip.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -35,34 +39,6 @@ export interface HttpMonitorSummary {
 	successfulChecks: number;
 	maxResponseTimeMs: number;
 	health: MonitorHealth;
-}
-
-/** A monitor's single most recent check (see {@link getLatestHttpResult}). */
-export interface LatestHttpResult {
-	status: PingStatus;
-	responseTimeMs: number;
-	responseStatus: number;
-	timestamp: string;
-}
-
-/** A monitor's status as derived from its single most recent HTTP result (see {@link calculateMonitorStatus}). */
-export type MonitorStatus = "up" | "degraded" | "down" | "unknown";
-
-/**
- * Derives a monitor's status from its latest result: `unknown` with no result yet (or
- * a null response status), `down` when the response status doesn't match what's
- * expected, `degraded` once the response time reaches the configured threshold, `up`
- * otherwise.
- */
-export function calculateMonitorStatus(
-	latestResult: LatestHttpResult | null,
-	expectedStatus: number,
-	degradedAfterMs: number,
-): MonitorStatus {
-	if (!latestResult || latestResult.responseStatus == null) return "unknown";
-	if (latestResult.responseStatus !== expectedStatus) return "down";
-	if (latestResult.responseTimeMs >= degradedAfterMs) return "degraded";
-	return "up";
 }
 
 /** One point in a monitor's recent latency sparkline (see {@link getMonitorSparkline}). */
@@ -209,24 +185,6 @@ export async function getTeamHttpSummaries(
 			health: deriveHealth(row.totalChecks, row.downChecks, row.degradedChecks),
 		})),
 	);
-}
-
-/** A monitor's single most recent HTTP check, or `null` when it has none in range. */
-export async function getLatestHttpResult(
-	teamId: string,
-	monitorId: string,
-): Promise<Result<LatestHttpResult | null, Error>> {
-	let sql = `
-		SELECT blob3 AS status, double1 AS responseTimeMs, double3 AS responseStatus, timestamp
-		FROM uptime_monitor_results
-		WHERE index1 = '${teamId}' AND blob1 = '${monitorId}' AND blob2 = 'http'
-		ORDER BY timestamp DESC
-		LIMIT 1
-	`;
-
-	let result = await queryAnalytics<LatestHttpResult>(sql);
-	if (isFailure(result)) return result;
-	return success(result.data[0] ?? null);
 }
 
 /** One monitor's slowest response time over the last 24 hours, in milliseconds, or `null` when it has no checks in range. */

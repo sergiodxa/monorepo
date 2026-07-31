@@ -20,6 +20,7 @@ import { createAction } from "remix/fetch-router";
 
 import Customer from "~/app/data/customer";
 import Monitor from "~/app/data/monitor";
+import Subscription from "~/app/data/subscription";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import StatCard from "~/resources/components/stat-card";
@@ -33,6 +34,9 @@ import routes from "~/routes/web";
  * active subscription or that specific fetch failed, since "usage unavailable" must
  * never be shown to the user as "0 used" — matches the dashboard usage card's own
  * convention for the exact same figures, scoped down to one monitor.
+ *
+ * The subscription check reads the D1 projection rather than asking Polar (ADR-005), so
+ * this fragment makes one Polar request instead of two.
  */
 async function getMonitorPingUsage(
 	db: Database,
@@ -40,7 +44,7 @@ async function getMonitorPingUsage(
 	team: { id: string; owner_id: string },
 	monitorId: string,
 ): Promise<{ consumed: number | null; estimated: number | null }> {
-	let hasActiveSubscription = await Customer.hasActiveSubscription(polar, team.owner_id);
+	let hasActiveSubscription = await Subscription.isActive(db, team.owner_id);
 	if (!hasActiveSubscription) return { consumed: null, estimated: null };
 
 	let now = new Date();

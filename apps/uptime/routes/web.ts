@@ -240,6 +240,17 @@ export default route({
 		updateLanguage: post("/actions/update-language"),
 	},
 
+	/**
+	 * Inbound webhooks from third parties. Grouped under one path prefix because that
+	 * prefix is what exempts them from cross-origin protection and language resolution in
+	 * `bootstrap/app.tsx` — a sender proves itself with a signature over the request body,
+	 * so neither an `Origin` header nor a session applies. Every leaf here is
+	 * unauthenticated by the auth chain's standards and must verify its own signature.
+	 */
+	webhooks: {
+		polar: post("/webhooks/polar"),
+	},
+
 	api: {
 		/**
 		 * Public, unauthenticated (see its controller's docblock) — kept separate from

@@ -159,6 +159,41 @@ describe("alertHistory", () => {
 		expect(body).toContain("Sent");
 	});
 
+	test("labels an event the per-incident cap suppressed", async () => {
+		let { db, team, membership } = await createFixture();
+		let alert = await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "CTO Alert",
+				notify_on_recovery: true,
+				cooldown_minutes: 15,
+				config: WEBHOOK_CONFIG,
+			},
+			{ touch: true, returnRow: true },
+		);
+		await db.create(
+			alertEvents,
+			{
+				id: crypto.randomUUID(),
+				sent_at: Date.now(),
+				alert_id: alert.id,
+				monitor_id: crypto.randomUUID(),
+				event_type: "down",
+				status: "skipped_cap",
+				monitor_type: "http",
+				monitor_name: "Homepage",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("Skipped (Repeat Limit)");
+	});
+
 	test("falls back to the unknown-monitor label when the event has no resolved monitor name", async () => {
 		let { db, team, membership } = await createFixture();
 		/**

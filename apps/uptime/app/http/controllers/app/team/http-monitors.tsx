@@ -1,10 +1,9 @@
 /**
- * HTTP monitors list controller. Lists the team's monitors, each paired with its
- * single most recent Analytics Engine result (see `getLatestHttpResult` in
- * `app/services/analytics.ts`), fetched one query per monitor in parallel via
- * `Promise.all` — the same "one query per monitor, run in parallel" pattern this app
- * already uses elsewhere for per-row Analytics Engine data. From that latest result, a
- * per-monitor status (up/degraded/down/unknown) is derived via `calculateMonitorStatus`.
+ * HTTP monitors list controller. Lists the team's monitors, each row's badge and check
+ * time coming from the columns the last check cached on the monitor row, so the page is
+ * one indexed query. It used to run an uncached Analytics Engine "latest result" query per
+ * monitor instead — an N+1 that grew with the team's monitor count. A monitor with no
+ * cached status has never been checked and renders as `unknown`.
  * Requires `requireUser` + `requireTeam`.
  *
  * The table is `@pkg/r3-ui`'s `Table` compound, and each row's delete confirmation is
@@ -30,7 +29,6 @@ import {
 } from "@pkg/lucide-remix";
 import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/r3-ui";
 import { menuKeys } from "@pkg/r3-ui/mixins";
-import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
@@ -40,32 +38,22 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-import type { MonitorStatus } from "~/app/services/analytics";
-import type { SelectMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { calculateMonitorStatus, getLatestHttpResult } from "~/app/services/analytics";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-interface MonitorRow {
-	monitor: SelectMonitor;
-	status: MonitorStatus;
-	responseTimeMs: number | null;
-	lastCheckedAt: string | null;
-}
-
-const STATUS_BADGE_TONE: Record<MonitorStatus, BadgeTone> = {
+/** Keyed by `monitors.last_status`; anything else (never checked) falls back to neutral. */
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",
 	degraded: "degraded",
 	down: "down",
-	unknown: "neutral",
 };
 
 /** GET /app/:team/http — the team's HTTP monitors list. */
@@ -77,22 +65,6 @@ export default createAction(routes.app.team.monitors.index, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
-
-		let latestResults = await Promise.all(
-			monitors.map((monitor) => getLatestHttpResult(ctx.team.id, monitor.id)),
-		);
-
-		let rows: MonitorRow[] = monitors.map((monitor, index) => {
-			let latestResult = latestResults[index]!;
-			let latest = isFailure(latestResult) ? null : latestResult.data;
-
-			return {
-				monitor,
-				status: calculateMonitorStatus(latest, monitor.expected_status, monitor.degraded_after_ms),
-				responseTimeMs: latest?.responseTimeMs ?? null,
-				lastCheckedAt: latest?.timestamp ?? null,
-			};
-		});
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · HTTP monitors`}>
@@ -117,7 +89,7 @@ export default createAction(routes.app.team.monitors.index, {
 					}
 				>
 					<div>
-						{rows.length === 0 ? (
+						{monitors.length === 0 ? (
 							<Empty>
 								<Empty.Icon>
 									<MonitorIcon size={24} strokeWidth={1.5} />
@@ -161,7 +133,8 @@ export default createAction(routes.app.team.monitors.index, {
 										</Table.Row>
 									</Table.Header>
 									<Table.Body>
-										{rows.map(({ monitor, status, responseTimeMs, lastCheckedAt }) => {
+										{monitors.map((monitor) => {
+											let status = monitor.last_status ?? "unknown";
 											let deleteDialogId = `delete-monitor-${monitor.id}`;
 											let titleId = `${deleteDialogId}-title`;
 											let descriptionId = `${deleteDialogId}-description`;
@@ -194,20 +167,20 @@ export default createAction(routes.app.team.monitors.index, {
 														<code>{monitor.url}</code>
 													</Table.Cell>
 													<Table.Cell>
-														<Badge {...badgeVariant(STATUS_BADGE_TONE[status])}>
+														<Badge {...badgeVariant(STATUS_BADGE_TONE[status] ?? "neutral")}>
 															{ctx.i18next.t(`page.httpMonitors.table.status.${status}`)}
 														</Badge>
 													</Table.Cell>
 													<Table.Cell>
-														{responseTimeMs !== null ? (
-															<span>{responseTimeMs}ms</span>
+														{monitor.last_response_time_ms !== null ? (
+															`${monitor.last_response_time_ms}ms`
 														) : (
 															<span mix={[fg("neutral.muted")]}>-</span>
 														)}
 													</Table.Cell>
 													<Table.Cell>
-														{lastCheckedAt !== null ? (
-															new Date(lastCheckedAt).toLocaleString()
+														{monitor.last_checked_at !== null ? (
+															new Date(monitor.last_checked_at).toLocaleString()
 														) : (
 															<span mix={[fg("neutral.muted")]}>
 																{ctx.i18next.t("page.httpMonitors.table.neverChecked")}

@@ -3085,6 +3085,9 @@ export default {
 				status: {
 					sent: "Sent",
 					skipped_cooldown: "Skipped (Cooldown)",
+					skipped_cap: "Skipped (Repeat Limit)",
+					// Fallback label for a suppression reason with no label of its own yet.
+					skipped: "Skipped",
 					failed: "Failed",
 				},
 			},

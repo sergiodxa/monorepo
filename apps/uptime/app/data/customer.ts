@@ -12,8 +12,7 @@ import type { PolarClient } from "@pkg/polar";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
 
-/** The Polar product id a paying team's owner must hold an active subscription to. */
-const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
+import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 
 /** The Polar meter id tracking ingested `ping` usage events. */
 const PING_METER_ID = "22fabd9b-8b03-4cc2-8981-230717267cd5";
@@ -32,29 +31,6 @@ export default class Customer {
 		if (customer.externalId) return customer;
 
 		return await polar.updateCustomer(customer.id, { externalId: idToken.subject });
-	}
-
-	/** Whether the team owner (by external id) has an active monitoring subscription. */
-	static async hasActiveSubscription(polar: PolarClient, ownerId: string): Promise<boolean> {
-		return await polar.hasActiveSubscription(ownerId, SUBSCRIPTION_PRODUCT_ID);
-	}
-
-	/**
-	 * Narrows `ownerIds` to those with an active monitoring subscription, asking Polar
-	 * once per distinct owner. The scheduler calls this every minute against every owner
-	 * with a monitor due, where the same owner usually appears many times over.
-	 */
-	static async filterActiveSubscribers(
-		polar: PolarClient,
-		ownerIds: string[],
-	): Promise<Set<string>> {
-		let distinct = [...new Set(ownerIds)];
-		let results = await Promise.all(
-			distinct.map(
-				async (ownerId) => [ownerId, await Customer.hasActiveSubscription(polar, ownerId)] as const,
-			),
-		);
-		return new Set(results.filter(([, isActive]) => isActive).map(([ownerId]) => ownerId));
 	}
 
 	/**

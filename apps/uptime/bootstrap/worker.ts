@@ -2,21 +2,20 @@
  * Cloudflare Worker entry point for the uptime app. Its `fetch` handler resolves
  * the session cookie secret, opens a service-container scope, builds the application
  * router, and forwards the request to it. Its `scheduled` handler dispatches cron
- * triggers, and its `queue` handler validates and runs the matching background job.
- * Re-exports the `GeoFetchDO` Durable Object class its binding needs.
+ * triggers, and its `queue` handler validates and runs the matching background job — for
+ * the work queue and for the dead-letter queue both, since one handler serves every queue
+ * the worker consumes. Re-exports the `GeoFetchDO` Durable Object class its binding needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { logger } from "@pkg/logger";
-import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
-import Customer from "~/app/data/customer";
 import Monitor from "~/app/data/monitor";
 import { GeoFetchDO } from "~/app/do/geo-fetch";
 import { AggregateDailyStatsJob } from "~/app/jobs/aggregate-daily-stats";
@@ -27,8 +26,10 @@ import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
+import { DeadLetterJob } from "~/app/jobs/dead-letter";
 import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { NotifyJob } from "~/app/jobs/notify";
+import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
 
@@ -57,6 +58,7 @@ const QueueMessageSchema = s.variant("type", {
 	checkTcp: s.object({ type: s.literal("checkTcp") }),
 	checkCronJobs: s.object({ type: s.literal("checkCronJobs") }),
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
+	reconcileSubscriptions: s.object({ type: s.literal("reconcileSubscriptions") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -71,6 +73,14 @@ const QueueMessageSchema = s.variant("type", {
 		newStatus: s.string(),
 	}),
 });
+
+/**
+ * Name of the dead-letter queue, as declared in `wrangler.jsonc` (ADR-018). This worker
+ * consumes two queues and the platform delivers both to the single `queue` handler below,
+ * so the name has to exist in code as well as in config: `MessageBatch.queue` carries it,
+ * and it is the only thing that says which queue a batch came from.
+ */
+const DEAD_LETTER_QUEUE = "ping-dlq";
 
 /** Whether the request arrived on a non-production host (local dev or workers.dev). */
 function isSecureHost(request: Request): boolean {
@@ -101,35 +111,29 @@ export default {
 	async scheduled(controller) {
 		await container.scope(async () => {
 			// Every minute: enqueue a `checkHttp` message for every monitor due for a check,
-			// plus a sweep of cron-job monitors for late/missed transitions.
+			// plus a sweep of cron-job monitors for late/missed transitions and the TCP and DNS
+			// sweeps, which claim only the monitors their own `interval_seconds` has made due.
 			if (controller.cron === "* * * * *") {
 				let db = getServiceContainer().get(Database);
 				/**
 				 * Claims the monitors that are due, advancing each one's next due time as it
 				 * does, so the later deliveries of this same minute's cron find nothing left to
-				 * enqueue. The subscription filter below therefore runs after the claim: a
-				 * non-subscribed owner's monitors have their due time advanced without being
-				 * checked, which is correct in effect — they aren't paying for the check — at
-				 * the cost of up to one interval of delay after they subscribe.
+				 * enqueue.
+				 *
+				 * Nothing here asks about billing any more (ADR-005). Revoking a subscription
+				 * unschedules that owner's monitors the moment the webhook lands, so `next_due_at`
+				 * already carries the answer and a claimed monitor is by construction one that is
+				 * allowed to run. This used to ask Polar once per distinct owner per delivery —
+				 * 43,200 × K requests a month as one wide `Promise.all` burst — through a call that
+				 * returns `false` on any error, so a Polar outage silently stopped every customer's
+				 * monitoring.
 				 */
 				let due = await Monitor.findDue(db, controller.scheduledTime);
 
-				/**
-				 * Billing is settled here rather than in the consumer, so an enqueued check is
-				 * always one that's allowed to run. Polar is asked once per distinct owner,
-				 * not once per due monitor.
-				 */
-				let polar = getServiceContainer().get(PolarClient);
-				let subscribed = await Customer.filterActiveSubscribers(
-					polar,
-					due.map((monitor) => monitor.ownerId),
-				);
-				let payable = due.filter((monitor) => subscribed.has(monitor.ownerId));
-
-				if (payable.length > 0) {
+				if (due.length > 0) {
 					waitUntil(
 						env.QUEUE.sendBatch(
-							payable.map((monitor) => ({
+							due.map((monitorId) => ({
 								body: {
 									type: "checkHttp",
 									/**
@@ -137,8 +141,8 @@ export default {
 									 * `Monitor.scheduledJobId` for why this cron fires more than once a
 									 * minute and what collides when it does.
 									 */
-									id: Monitor.scheduledJobId(monitor.monitorId, controller.scheduledTime),
-									monitorId: monitor.monitorId,
+									id: Monitor.scheduledJobId(monitorId, controller.scheduledTime),
+									monitorId,
 									scheduledAt: controller.scheduledTime,
 								},
 								contentType: "json",
@@ -147,21 +151,19 @@ export default {
 					);
 				}
 				waitUntil(env.QUEUE.send({ type: "checkCronJobs" }));
-			}
-
-			// Every 5 minutes: sweep every enabled TCP monitor.
-			if (controller.cron === "*/5 * * * *") {
+				/**
+				 * Every minute rather than the 5-minute and hourly triggers these used to have,
+				 * because a monitor's `interval_seconds` can be as fine as 60 and a coarser
+				 * delivery made the finer setting unreachable. Both jobs claim before they check,
+				 * so a delivery with nothing due costs one indexed range that matches no rows.
+				 */
 				waitUntil(env.QUEUE.send({ type: "checkTcp" }));
+				waitUntil(env.QUEUE.send({ type: "checkDns" }));
 			}
 
 			// Every 10 minutes: re-enqueue verification for every unverified team domain.
 			if (controller.cron === "*/10 * * * *") {
 				waitUntil(env.QUEUE.send({ type: "enqueuePendingDomains" }));
-			}
-
-			// Every hour: sweep every enabled DNS monitor.
-			if (controller.cron === "0 * * * *") {
-				waitUntil(env.QUEUE.send({ type: "checkDns" }));
 			}
 
 			// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
@@ -175,6 +177,12 @@ export default {
 				waitUntil(env.QUEUE.send({ type: "aggregateDailyStats" }));
 			}
 
+			// Daily at 2 AM UTC: repair the subscription projection against Polar, in case a
+			// webhook was missed. The one Polar query left on the billing path.
+			if (controller.cron === "0 2 * * *") {
+				waitUntil(env.QUEUE.send({ type: "reconcileSubscriptions" }));
+			}
+
 			// Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor.
 			if (controller.cron === "0 6 * * *") {
 				waitUntil(env.QUEUE.send({ type: "checkSsl" }));
@@ -182,9 +190,22 @@ export default {
 		});
 	},
 
-	/** Validates and runs the matching background job for each queued message. */
+	/**
+	 * Validates and runs the matching background job for each queued message, for both of
+	 * the queues this worker consumes: `ping` and its dead-letter queue.
+	 */
 	async queue(batch) {
 		await container.scope(async () => {
+			/**
+			 * Both queues' batches arrive at this one handler, so the dead-letter batches are
+			 * separated out first. They carry the bodies of messages that already failed, in
+			 * two different ways, and none of the routing below applies to them.
+			 */
+			if (batch.queue === DEAD_LETTER_QUEUE) {
+				for (let message of batch.messages) DeadLetterJob.run(message);
+				return;
+			}
+
 			let uptime = env.UPTIME_CRON_API_KEY;
 
 			for (let message of batch.messages) {
@@ -192,6 +213,17 @@ export default {
 
 				if (!result.success) {
 					logger.error("queue.invalid_message", { body: message.body });
+
+					/**
+					 * Sent to the dead-letter queue explicitly rather than by `message.retry()`:
+					 * a body that matched no schema won't match one on the fourth delivery
+					 * either, so retrying would spend three redeliveries to arrive at the same
+					 * queue. Acking on its own is what used to happen here, and it discarded the
+					 * payload. The `invalid` wrapper is what tells `DeadLetterJob` this body
+					 * failed validation rather than exhausted its retries.
+					 */
+					await env.DLQ.send({ invalid: message.body }, { contentType: "json" });
+
 					message.ack();
 					continue;
 				}
@@ -226,6 +258,9 @@ export default {
 						break;
 					case "aggregateDailyStats":
 						waitUntil(AggregateDailyStatsJob.run({ message, uptime }));
+						break;
+					case "reconcileSubscriptions":
+						waitUntil(ReconcileSubscriptionsJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

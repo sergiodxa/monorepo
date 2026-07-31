@@ -1,7 +1,8 @@
 /**
  * Unit tests for the alert-dispatch pipeline: maintenance-window suppression,
  * candidate resolution (monitor-specific + team-wide for HTTP/SSL, team-wide-only for
- * everything else), cooldown skipping, delivery success/failure recording, the
+ * everything else), cooldown skipping, the per-incident send cap and the suppression
+ * totals a recovery message reports, delivery success/failure recording, the
  * per-strategy delivery mechanics (email/webhook/Slack/Discord, including the webhook
  * HMAC signature), the recovery/notify-on-recovery branching in every `notify*`
  * helper, and the cron-job `alert_on_late` opt-in that suppresses a `late` notification
@@ -32,6 +33,8 @@ let listForHttpMonitorMock = mock(async (..._args: unknown[]) => [] as SelectAle
 let listTeamWideMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
 let recordMock = mock(async (..._args: unknown[]) => ({}) as unknown);
 let isInCooldownMock = mock(async (..._args: unknown[]) => false);
+let countSentSinceRecoveryMock = mock(async (..._args: unknown[]) => 0);
+let summarizeIncidentMock = mock(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
 
 /**
  * `bun:test`'s `mock.module` patches the shared module registry for the lifetime of
@@ -59,6 +62,8 @@ beforeAll(async () => {
 		static override record =
 			recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
 		static override isInCooldown = isInCooldownMock;
+		static override countSentSinceRecovery = countSentSinceRecoveryMock;
+		static override summarizeIncident = summarizeIncidentMock;
 	}
 
 	await mock.module("~/app/data/alert", () => ({ default: FakeAlert }));
@@ -126,10 +131,14 @@ beforeEach(() => {
 	listTeamWideMock.mockClear();
 	recordMock.mockClear();
 	isInCooldownMock.mockClear();
+	countSentSinceRecoveryMock.mockClear();
+	summarizeIncidentMock.mockClear();
 	listForHttpMonitorMock.mockImplementation(async () => []);
 	listTeamWideMock.mockImplementation(async () => []);
 	recordMock.mockImplementation(async () => ({}));
 	isInCooldownMock.mockImplementation(async () => false);
+	countSentSinceRecoveryMock.mockImplementation(async () => 0);
+	summarizeIncidentMock.mockImplementation(async () => ({ sent: 0, suppressed: 0 }));
 	globalThis.fetch = mock(
 		async (..._args: unknown[]) => new Response(null, { status: 200 }),
 	) as unknown as typeof fetch;
@@ -480,6 +489,176 @@ describe("dispatchAlerts — cooldown", () => {
 		});
 
 		expect(isInCooldownMock).toHaveBeenCalledWith(db, "alert-7", "monitor-1", "degraded", 15);
+	});
+});
+
+describe("dispatchAlerts — per-incident send cap", () => {
+	test("skips delivery and records skipped_cap once the incident is at the cap", async () => {
+		let { db } = createTestDatabase();
+		let alert = makeAlert({ id: "alert-9" });
+		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 10);
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "down",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(countSentSinceRecoveryMock).toHaveBeenCalledWith(db, "alert-9", "monitor-1", "down", 10);
+		expect(send).not.toHaveBeenCalled();
+		expect(recordMock).toHaveBeenCalledTimes(1);
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.status).toBe("skipped_cap");
+		expect(call.error_message).toBeNull();
+		expect(call.snapshot).toEqual(httpSnapshot);
+	});
+
+	test("delivers while the incident is still below the cap", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 9);
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "down",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(send).toHaveBeenCalledTimes(1);
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.status).toBe("sent");
+	});
+
+	test("never caps a recovery, and doesn't even count for one", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 10);
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "up",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(countSentSinceRecoveryMock).not.toHaveBeenCalled();
+		expect(send).toHaveBeenCalledTimes(1);
+	});
+
+	test("caps SSL reminders too, since they repeat without a recovery to end them", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 10);
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "ssl",
+			monitorName: "Homepage",
+			eventType: "degraded",
+			snapshot: {
+				type: "ssl",
+				status: "expiring",
+				expiresAt: null,
+				daysUntilExpiry: 3,
+				hostname: "example.com",
+			},
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(send).not.toHaveBeenCalled();
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.status).toBe("skipped_cap");
+	});
+});
+
+describe("dispatchAlerts — recovery reports what was suppressed", () => {
+	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert({ id: "alert-11" })]);
+		summarizeIncidentMock.mockImplementation(async () => ({ sent: 10, suppressed: 300 }));
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "up",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
+		let payload = send.mock.calls[0]?.[0] as { text: string };
+		expect(payload.text).toContain("10 sent, 300 suppressed");
+	});
+
+	test("leaves a recovery message alone when nothing was suppressed", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		summarizeIncidentMock.mockImplementation(async () => ({ sent: 1, suppressed: 0 }));
+		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(send),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "up",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		let payload = send.mock.calls[0]?.[0] as { text: string };
+		expect(payload.text).not.toContain("suppressed");
+	});
+
+	test("doesn't summarize an incident for a non-recovery event", async () => {
+		let { db } = createTestDatabase();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await dispatchAlerts({
+			db,
+			resend: makeResend(),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "down",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(summarizeIncidentMock).not.toHaveBeenCalled();
 	});
 });
 
@@ -888,6 +1067,9 @@ function makeHttpMonitor(overrides: Partial<SelectMonitor> = {}): SelectMonitor 
 		ssl_issuer: null,
 		ssl_last_checked_at: null,
 		ssl_status: "unknown",
+		last_status: null,
+		last_checked_at: null,
+		last_response_time_ms: null,
 		...overrides,
 	};
 }
@@ -985,6 +1167,7 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 		record_type: "A",
 		expected_value: null,
 		interval_seconds: 3600,
+		next_due_at: null,
 		is_enabled: true,
 		last_checked_at: null,
 		last_status: null,
@@ -1060,6 +1243,7 @@ function makeTcpMonitor(overrides: Partial<SelectTcpMonitor> = {}): SelectTcpMon
 		port: 5432,
 		timeout_ms: 5000,
 		interval_seconds: 60,
+		next_due_at: null,
 		is_enabled: true,
 		last_checked_at: null,
 		last_status: null,

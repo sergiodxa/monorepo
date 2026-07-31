@@ -2,8 +2,9 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
-§17 (medium). Needs a product decision before an implementation — see Open question.
+**Accepted** — implemented 2026-07-31. Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §17 (medium). Needs a product
+decision before an implementation — see Open question.
 
 ## Context
 
@@ -105,3 +106,85 @@ coverage, which is why a one-character-class mistake in a `Set` literal survived
 - Interacts with [ADR-009](./ADR-009-shard-the-geofetch-durable-object-namespace.md): sharding
   changes the object id but not the jurisdiction branch, so the two are independent and can land
   in either order.
+
+## Implementation outcome
+
+Implemented 2026-07-31 in `apps/uptime/app/jobs/check-http.ts`. `EU_LOCATION_HINTS` is now
+`new Set(["eeur", "weur"])` and the docblock states what the pin does and does not do instead of
+citing "GDPR compliance": that a jurisdiction constrains where the object runs, that this object
+holds no personal data, and that whether the pin belongs here at all is still the open product
+question above. The branch stays, reading 2 is not taken, and nothing here answers the
+compliance question.
+
+`app/jobs/check-http.test.ts` gained a `CheckHttpJob EU jurisdiction` suite: one test walking all
+nine accepted `location_hint` values and asserting the pinned set is exactly `weur` and `eeur`,
+and one asserting an `enam` monitor probes with `locationHint: "enam"` and no jurisdiction. Both
+fail if `enam` goes back into the set.
+
+### The second bug: the id was minted from the wrong namespace
+
+The branch had a second defect, independent of which hints are in the set. The id was minted off
+the base namespace and then handed to `get()` on the jurisdictional subnamespace:
+
+```ts
+let id = env.GEO_FETCH.idFromName(name); // no jurisdiction
+let namespace = EU_LOCATION_HINTS.has(monitor.location_hint)
+	? env.GEO_FETCH.jurisdiction("eu") // jurisdiction "eu"
+	: env.GEO_FETCH;
+let stub = namespace.get(id, { locationHint });
+```
+
+Cloudflare's
+[Durable Objects data-location reference](https://developers.cloudflare.com/durable-objects/reference/data-location/)
+settles this, and it is not merely ineffective — it is an error:
+
+- A jurisdiction is a property of the **id**, stamped on by the namespace that minted it. The
+  page's own example asserts `env.MY_DURABLE_OBJECT.idFromName("my-name")` and
+  `env.MY_DURABLE_OBJECT.jurisdiction("eu").idFromName("my-name")` are different ids, and the
+  [id API reference](https://developers.cloudflare.com/durable-objects/api/id/#jurisdiction)
+  asserts the first has `jurisdiction === undefined` and the second `"eu"`.
+- "You will run into an error if the jurisdiction on your `DurableObjectNamespace` and the
+  jurisdiction on `DurableObjectId` are different."
+- The one exemption is one-directional: "You will not run into an error if the
+  `DurableObjectNamespace` is not associated with a jurisdiction." So a jurisdictionless id
+  handed to the EU subnamespace is the failing direction; the documented pattern is the reverse —
+  mint from the subnamespace and `get` from either.
+
+So the verdict is not "silently ignores the jurisdiction". Every check for a hint in
+`EU_LOCATION_HINTS` threw at `get()`, which sits ahead of `fetchMonitor`'s `try`, so it
+propagated as an infrastructure fault and became a `Job.RetryError` — a redelivery loop that
+could never commit a result. That was `eeur` and `enam` monitors before this change. Confirmed by
+reverting the fix under the test suite: three tests fail, all with `RetryError`.
+
+The fix is to choose the namespace first and mint the id from it, which is one statement moved:
+
+```ts
+let namespace = EU_LOCATION_HINTS.has(monitor.location_hint)
+	? env.GEO_FETCH.jurisdiction("eu")
+	: env.GEO_FETCH;
+let id = namespace.idFromName(
+	`${monitor.location_hint}:${shardFor(monitor.id, SHARDS_PER_REGION)}`,
+);
+let stub = namespace.get(id, { locationHint });
+```
+
+The test fake for `env.GEO_FETCH` now models the documented rule — ids carry the jurisdiction of
+the namespace that minted them, and `get` throws on a mismatch — rather than accepting any id.
+That is what makes this regression visible from any test that probes a European region, and it is
+why the ADR-009 sharding test using `weur` also fails against the old code. A dedicated test
+pins the corrected behaviour directly: an `eeur` monitor's id carries jurisdiction `"eu"`, its
+name is still the sharded `eeur:<0-7>`, and the check commits a result.
+
+Since a monitor's object id in a European region changes (a jurisdictional id is a different id),
+those monitors get a fresh `GeoFetchDO` instance — immaterial, because the object is stateless
+and the previous id could not be reached at all.
+
+### Not changed
+
+- The open question is left open. `weur` and `eeur` keep the pin; whether a jurisdiction is the
+  right mechanism at all still needs the product/compliance answer, and dropping the pin is the
+  change that needs it.
+- No cost-model movement: no D1 statement was added, removed or reshaped, and the ADR-019 §4
+  budget (5 statements, 5 rows, no `SCAN`) is unchanged and still passing.
+- The affected-accounts and changelog concerns in Consequences are moot — the app has one user,
+  the owner, and breaking changes are acceptable.

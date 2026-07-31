@@ -2527,6 +2527,8 @@ export default {
 				status: {
 					sent: "送信済み",
 					skipped_cooldown: "スキップ（クールダウン）",
+					skipped_cap: "スキップ（繰り返し上限）",
+					skipped: "スキップ",
 					failed: "失敗",
 				},
 			},

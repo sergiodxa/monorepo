@@ -28,9 +28,13 @@ import routes from "~/routes/web";
 
 const HISTORY_LIMIT = 100;
 
+/**
+ * Only the two statuses that aren't neutral are listed: every suppression reason
+ * (`skipped_cooldown`, `skipped_cap`, and whichever `skipped_*` comes next) falls through
+ * to the neutral default, so adding one doesn't need an edit here.
+ */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	sent: "up",
-	skipped_cooldown: "neutral",
 	failed: "down",
 };
 
@@ -129,7 +133,12 @@ export default createAction(routes.app.team.alerts.history, {
 												</Table.Cell>
 												<Table.Cell>
 													<Badge {...badgeVariant(STATUS_BADGE_TONE[event.status] ?? "neutral")}>
-														{ctx.i18next.t(`page.alertHistory.table.status.${event.status}`)}
+														{/* A status with no label of its own falls back to the generic
+														    "Skipped" one rather than rendering its key. */}
+														{ctx.i18next.t([
+															`page.alertHistory.table.status.${event.status}`,
+															"page.alertHistory.table.status.skipped",
+														])}
 													</Badge>
 													{event.error_message && (
 														<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>

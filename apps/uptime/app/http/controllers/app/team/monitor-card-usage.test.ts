@@ -2,8 +2,9 @@
  * Tests for the monitor detail page "Monthly Pings Usage" stat-card fragment
  * controller. `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env`
  * at module load, and a fake `PolarClient` stands in for the real Polar SDK client so
- * `Customer.hasActiveSubscription`/`Customer.getUsagePerMonthForMonitor` never make a
- * network call. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly,
+ * `Customer.getUsagePerMonthForMonitor` never makes a network call. Whether the owner is
+ * subscribed is seeded into the `subscriptions` projection rather than stubbed on the
+ * client (ADR-005), since that is where the controller reads it from. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly,
  * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain,
  * following the template in `dashboard-card-usage.test.ts`.
  *
@@ -30,6 +31,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
+import { createActiveSubscription } from "~/app/lib/test/polar";
 import en from "~/app/locales/en";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -143,10 +145,7 @@ async function send(
 describe("monitor-card-usage", () => {
 	test("renders unavailable usage when the team owner has no active subscription", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		let polar = {
-			hasActiveSubscription: mock(async () => false),
-			getMeterUsage: mock(async () => 0),
-		} as unknown as PolarClient;
+		let polar = { getMeterUsage: mock(async () => 0) } as unknown as PolarClient;
 
 		let response = await send(db, team, membership, monitor.id, polar);
 		expect(response.status).toBe(200);
@@ -158,10 +157,8 @@ describe("monitor-card-usage", () => {
 
 	test("renders the usage stat when the team owner has an active subscription", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		let polar = {
-			hasActiveSubscription: mock(async () => true),
-			getMeterUsage: mock(async () => 42),
-		} as unknown as PolarClient;
+		let polar = { getMeterUsage: mock(async () => 42) } as unknown as PolarClient;
+		await createActiveSubscription(db, team.owner_id);
 
 		let response = await send(db, team, membership, monitor.id, polar);
 		expect(response.status).toBe(200);
@@ -173,10 +170,7 @@ describe("monitor-card-usage", () => {
 
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		let polar = {
-			hasActiveSubscription: mock(async () => false),
-			getMeterUsage: mock(async () => 0),
-		} as unknown as PolarClient;
+		let polar = { getMeterUsage: mock(async () => 0) } as unknown as PolarClient;
 
 		let response = await send(db, team, membership, crypto.randomUUID(), polar);
 		expect(response.status).toBe(404);

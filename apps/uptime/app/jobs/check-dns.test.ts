@@ -1,6 +1,8 @@
 /**
- * Unit tests for `CheckDnsJob.perform()`, covering the sweep-every-enabled-monitor pass:
- * result recording via `DnsMonitor.recordCheckResult`, the `notify` message it enqueues
+ * Unit tests for `CheckDnsJob.perform()`, covering the claim-the-due-monitors pass: which
+ * monitors a run picks up (only those their own `interval_seconds` has made due, and each of
+ * them once however often the cron is delivered), result recording via
+ * `DnsMonitor.recordCheckResult`, the `notify` message it enqueues
  * for an alert-worthy transition (carrying the monitor's pre-update `last_status` so the
  * consumer can tell a recovery from a first-ever result), that a still-ok monitor enqueues
  * nothing, and that one monitor's check failure doesn't stop the rest of the sweep.
@@ -26,6 +28,7 @@ import type { InsertDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { dnsMonitors } from "~/database/schema";
 
 let checkDnsMock = mock(
 	async (
@@ -135,6 +138,31 @@ describe("CheckDnsJob", () => {
 
 		expect(checkDnsMock).not.toHaveBeenCalled();
 		expect(enqueued).toHaveLength(0);
+	});
+
+	test("skips a monitor whose configured interval hasn't come round yet", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { interval_seconds: 3600 });
+		await db.update(
+			dnsMonitors,
+			monitor.id,
+			{ next_due_at: Date.now() + 30 * 60_000 },
+			{ touch: false },
+		);
+
+		await runJob(db);
+
+		expect(checkDnsMock).not.toHaveBeenCalled();
+	});
+
+	test("checks a monitor once however many times the minute's cron is delivered", async () => {
+		let { db } = createTestDatabase();
+		await seedMonitor(db, { interval_seconds: 3600 });
+
+		await runJob(db);
+		await runJob(db);
+
+		expect(checkDnsMock).toHaveBeenCalledTimes(1);
 	});
 
 	test("records a still-ok monitor without enqueuing a notification", async () => {

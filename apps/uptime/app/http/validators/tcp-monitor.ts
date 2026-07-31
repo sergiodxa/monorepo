@@ -23,8 +23,13 @@ const tcpMonitorFields = {
 	host: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	port: f.field(coerce.number().pipe(checks.min(1), checks.max(65_535))),
 	timeout_ms: f.field(s.defaulted(coerce.number().pipe(checks.min(100), checks.max(60_000)), 5000)),
+	/**
+	 * Floored at 60 seconds, matching the HTTP monitor form: checks are delivered by an
+	 * every-minute cron, so an interval finer than a minute is not schedulable and would
+	 * be billed for checks that could never run (ADR-006).
+	 */
 	interval_seconds: f.field(
-		s.defaulted(coerce.number().pipe(checks.min(10), checks.max(86_400)), 300),
+		s.defaulted(coerce.number().pipe(checks.min(60), checks.max(86_400)), 300),
 	),
 };
 

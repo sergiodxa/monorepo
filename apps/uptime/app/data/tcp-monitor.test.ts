@@ -1,14 +1,18 @@
 /**
  * Unit tests for the `TcpMonitor` data-access model: CRUD scoped to a team, the
  * delete cascade over `tcp_monitor_results`, the results history limit/ordering,
- * and `recordCheckResult`'s dual write (history insert plus cached-field update)
- * staying in sync.
+ * `recordCheckResult`'s dual write (history insert plus cached-field update) staying in
+ * sync, and the `next_due_at` scheduling — the raw-SQL `claimDue` claim each sweep runs and
+ * the create/edit writes that keep the column consistent with whether and how often a
+ * monitor should be checked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { describe, expect, test } from "bun:test";
+
+import type { Database } from "remix/data-table";
 
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
@@ -42,6 +46,22 @@ describe("TcpMonitor.create", () => {
 		 * columns as 0/1, not real booleans — assert truthiness, not strict `true`.
 		 */
 		expect(monitor.is_enabled).toBeTruthy();
+		// Due immediately, so the first check runs on the next tick rather than a whole
+		// interval later.
+		expect(monitor.next_due_at).not.toBeNull();
+		expect(monitor.next_due_at).toBeLessThanOrEqual(Date.now());
+	});
+
+	test("leaves a monitor created with checking disabled unscheduled", async () => {
+		let { db } = createTestDatabase();
+
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ is_enabled: false }),
+		);
+
+		expect(monitor.next_due_at).toBeNull();
 	});
 });
 
@@ -76,20 +96,164 @@ describe("TcpMonitor.listByTeam", () => {
 	});
 });
 
-describe("TcpMonitor.listEnabled", () => {
-	test("lists only enabled TCP monitors, across every team", async () => {
+/**
+ * `claimDue` is a claim, not a query: it takes the monitors whose `next_due_at` has arrived
+ * and advances that column in the same call, so what matters is the state it leaves behind.
+ * Every case below therefore calls it more than once, or inspects `next_due_at` afterwards,
+ * rather than asserting on a single return value.
+ */
+describe("TcpMonitor.claimDue", () => {
+	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
+	async function nextDueAt(db: Database, monitorId: string) {
+		let monitor = await db.findOne(tcpMonitors, { where: { id: monitorId } });
+		return monitor?.next_due_at ?? null;
+	}
+
+	test("claims a newly created monitor on the first tick after it exists", async () => {
 		let { db } = createTestDatabase();
-		let enabled = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
+		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
+
+		let claimed = await TcpMonitor.claimDue(db, Date.now() + 1000);
+		expect(claimed.map((row) => row.id)).toEqual([monitor.id]);
+	});
+
+	test("never claims a monitor with checking disabled", async () => {
+		let { db } = createTestDatabase();
 		let disabled = await TcpMonitor.create(
 			db,
 			crypto.randomUUID(),
 			tcpMonitorInput({ is_enabled: false }),
 		);
 
-		let rows = await TcpMonitor.listEnabled(db);
-		let ids = rows.map((row) => row.id);
-		expect(ids).toContain(enabled.id);
-		expect(ids).not.toContain(disabled.id);
+		expect(await nextDueAt(db, disabled.id)).toBeNull();
+		expect(await TcpMonitor.claimDue(db, Date.now() + 24 * 60 * 60_000)).toEqual([]);
+	});
+
+	test("never claims the same monitor twice in the same minute", async () => {
+		let { db } = createTestDatabase();
+		await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput({ interval_seconds: 60 }));
+
+		// The two deliveries this cron really produces: same minute, ~7s apart.
+		let first = Date.now() + 1000;
+		expect(await TcpMonitor.claimDue(db, first)).toHaveLength(1);
+		expect(await TcpMonitor.claimDue(db, first + 7000)).toEqual([]);
+	});
+
+	test("honours the configured interval instead of the sweep's cadence", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ interval_seconds: 3600 }),
+		);
+		let anchor = Date.now();
+		await db.update(tcpMonitors, monitor.id, { next_due_at: anchor }, { touch: false });
+
+		await TcpMonitor.claimDue(db, anchor);
+
+		// An hourly monitor is claimed once an hour, however often the sweep runs.
+		expect(await TcpMonitor.claimDue(db, anchor + 30 * 60_000)).toEqual([]);
+		expect(await TcpMonitor.claimDue(db, anchor + 60 * 60_000)).toHaveLength(1);
+	});
+
+	test("advances the due time by whole intervals from the previous one", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ interval_seconds: 300 }),
+		);
+		let anchor = Date.now();
+		await db.update(tcpMonitors, monitor.id, { next_due_at: anchor }, { touch: false });
+
+		// 7 minutes late on a 5-minute monitor: two whole intervals have passed, so the next
+		// due time is the anchor plus two rather than the claim time plus one, and the
+		// intervals it slept through are not replayed.
+		await TcpMonitor.claimDue(db, anchor + 7 * 60_000);
+
+		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
+	});
+
+	test("projects only the columns a check reads", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
+
+		let [claimed] = await TcpMonitor.claimDue(db, Date.now() + 1000);
+
+		expect(claimed).toEqual({
+			id: monitor.id,
+			host: "db.example.com",
+			port: 5432,
+			timeout_ms: monitor.timeout_ms,
+			last_status: null,
+		});
+	});
+});
+
+describe("TcpMonitor.updateById scheduling", () => {
+	test("re-anchors the schedule when the interval changes", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ interval_seconds: 3600 }),
+		);
+		// Pushed an hour out by a claim, so a shorter interval must bring it back.
+		await db.update(
+			tcpMonitors,
+			monitor.id,
+			{ next_due_at: Date.now() + 3_600_000 },
+			{ touch: false },
+		);
+
+		await TcpMonitor.updateById(db, monitor.id, { interval_seconds: 60 });
+
+		expect(await TcpMonitor.claimDue(db, Date.now() + 1000)).toHaveLength(1);
+	});
+
+	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ interval_seconds: 60 }),
+		);
+		let scheduled = Date.now() + 3_600_000;
+		await db.update(tcpMonitors, monitor.id, { next_due_at: scheduled }, { touch: false });
+
+		// The web form resubmits the unchanged interval on every edit, so neither a rename nor
+		// a same-value interval may restart the cadence.
+		let renamed = await TcpMonitor.updateById(db, monitor.id, {
+			name: "Renamed",
+			interval_seconds: 60,
+		});
+
+		expect(renamed.next_due_at).toBe(scheduled);
+	});
+
+	test("unschedules a disabled monitor and reschedules a re-enabled one", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
+
+		let disabled = await TcpMonitor.updateById(db, monitor.id, { is_enabled: false });
+		expect(disabled.next_due_at).toBeNull();
+		expect(await TcpMonitor.claimDue(db, Date.now() + 24 * 60 * 60_000)).toEqual([]);
+
+		await TcpMonitor.updateById(db, monitor.id, { is_enabled: true });
+		expect(await TcpMonitor.claimDue(db, Date.now() + 1000)).toHaveLength(1);
+	});
+
+	test("keeps a disabled monitor unscheduled when its interval changes", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await TcpMonitor.create(
+			db,
+			crypto.randomUUID(),
+			tcpMonitorInput({ is_enabled: false, interval_seconds: 60 }),
+		);
+
+		let updated = await TcpMonitor.updateById(db, monitor.id, { interval_seconds: 120 });
+
+		expect(updated.next_due_at).toBeNull();
 	});
 });
 

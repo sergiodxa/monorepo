@@ -2544,6 +2544,8 @@ export default {
 				status: {
 					sent: "Inviato",
 					skipped_cooldown: "Saltato (Cooldown)",
+					skipped_cap: "Saltato (Limite di ripetizioni)",
+					skipped: "Saltato",
 					failed: "Fallito",
 				},
 			},

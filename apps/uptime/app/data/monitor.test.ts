@@ -29,6 +29,7 @@ import {
 	createBunSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
+import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
 import {
 	cronJobMonitors,
 	cronJobPings,
@@ -71,19 +72,7 @@ let p99Query = mock(
 );
 mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
-let { PolarClient } = await import("@pkg/polar");
 let { default: Monitor } = await import("~/app/data/monitor");
-
-/** A `PolarClient` whose subscription lookup is forced to `hasActiveSubscription`. */
-function fakePolar(hasActiveSubscription: boolean) {
-	let client = new PolarClient({ accessToken: "t" });
-	(
-		client as unknown as {
-			hasActiveSubscription: InstanceType<typeof PolarClient>["hasActiveSubscription"];
-		}
-	).hasActiveSubscription = async () => hasActiveSubscription;
-	return client;
-}
 
 /**
  * Builds a test database that records the query plan SQLite chose for every statement
@@ -317,9 +306,11 @@ describe("Monitor.deleteById", () => {
 describe("Monitor.ping", () => {
 	test("enqueues a checkHttp message with a job id derived from the monitor id", async () => {
 		queueSend.mockClear();
+		let { db } = createTestDatabase();
 		let monitorId = crypto.randomUUID();
+		await createActiveSubscription(db, "owner-1");
 
-		expect(await Monitor.ping(fakePolar(true), monitorId, "owner-1")).toBe(true);
+		expect(await Monitor.ping(db, monitorId, "owner-1")).toBe(true);
 
 		expect(queueSend).toHaveBeenCalledTimes(1);
 		let message = queueSend.mock.calls[0]?.[0];
@@ -329,12 +320,28 @@ describe("Monitor.ping", () => {
 		expect(typeof message?.scheduledAt).toBe("number");
 	});
 
-	test("enqueues nothing when the team owner has no active subscription", async () => {
+	test("enqueues nothing when the team owner is known to be unsubscribed", async () => {
 		queueSend.mockClear();
+		let { db } = createTestDatabase();
+		await createRevokedSubscription(db, "owner-1");
 
-		expect(await Monitor.ping(fakePolar(false), crypto.randomUUID(), "owner-1")).toBe(false);
+		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-1")).toBe(false);
 
 		expect(queueSend).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * Fails open, which is the behaviour ADR-005 inverted: a missed webhook leaves the
+	 * projection empty, and refusing on that basis would be the read-time subscription gate
+	 * the ADR removed.
+	 */
+	test("enqueues when the owner's subscription state is unknown", async () => {
+		queueSend.mockClear();
+		let { db } = createTestDatabase();
+
+		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-nobody")).toBe(true);
+
+		expect(queueSend).toHaveBeenCalledTimes(1);
 	});
 
 	test("gives two cron deliveries in the same minute one shared job id", async () => {
@@ -370,8 +377,11 @@ describe("Monitor.ping", () => {
 		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
 
-		await Monitor.ping(fakePolar(true), monitorId, "owner-1");
-		await Monitor.ping(fakePolar(true), monitorId, "owner-1");
+		let { db } = createTestDatabase();
+		await createActiveSubscription(db, "owner-1");
+
+		await Monitor.ping(db, monitorId, "owner-1");
+		await Monitor.ping(db, monitorId, "owner-1");
 
 		let [first, second] = queueSend.mock.calls.map((call) => call[0]?.id);
 		expect(first).not.toBe(second);
@@ -405,7 +415,7 @@ describe("Monitor.findDue", () => {
 		});
 
 		let due = await Monitor.findDue(db, Date.now() + 1000);
-		expect(due).toEqual([{ monitorId: monitor.id, ownerId: team.owner_id }]);
+		expect(due).toEqual([monitor.id]);
 	});
 
 	test("never claims the same monitor twice in the same minute", async () => {
@@ -435,9 +445,7 @@ describe("Monitor.findDue", () => {
 		let scheduledAt = Date.now() + 1000;
 		await Monitor.findDue(db, scheduledAt);
 
-		expect(await Monitor.findDue(db, scheduledAt + 60_000)).toEqual([
-			{ monitorId: monitor.id, ownerId: team.owner_id },
-		]);
+		expect(await Monitor.findDue(db, scheduledAt + 60_000)).toEqual([monitor.id]);
 	});
 
 	test("advances the due time from the previous one, so latency can't cause drift", async () => {
@@ -520,9 +528,7 @@ describe("Monitor.findDue", () => {
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 		await Monitor.updateById(db, monitor.id, { enabled_at: Date.now() });
 
-		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([
-			{ monitorId: monitor.id, ownerId: team.owner_id },
-		]);
+		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
 
 	/**
@@ -562,8 +568,8 @@ describe("Monitor.findDue", () => {
 
 		let due = await Monitor.findDue(db, Date.now() + 1000);
 
-		expect(due).toContainEqual({ monitorId: a.id, ownerId: teamA.owner_id });
-		expect(due).toContainEqual({ monitorId: b.id, ownerId: teamB.owner_id });
+		expect(due).toContainEqual(a.id);
+		expect(due).toContainEqual(b.id);
 	});
 });
 
@@ -586,9 +592,7 @@ describe("Monitor.updateById scheduling", () => {
 
 		await Monitor.updateById(db, monitor.id, { interval_seconds: 60 });
 
-		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([
-			{ monitorId: monitor.id, ownerId: team.owner_id },
-		]);
+		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
 
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {

@@ -168,6 +168,7 @@ import privacy from "~/app/http/controllers/privacy";
 import sitemap from "~/app/http/controllers/sitemap";
 import statusPageController from "~/app/http/controllers/status-page";
 import terms from "~/app/http/controllers/terms";
+import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
@@ -184,6 +185,21 @@ import routes from "~/routes/web";
  * resolution are scoped around this one boundary.
  */
 const API_PATH_PREFIX = "/api/";
+
+/**
+ * Path prefix of the inbound-webhook surface. A sender proves itself with a signature
+ * over the raw request body (see `webhooks/polar.ts`), so it has neither a session nor an
+ * `Origin` to satisfy, and its responses are machine-read JSON.
+ */
+const WEBHOOK_PATH_PREFIX = "/webhooks/";
+
+/**
+ * Every prefix whose requests are machine-to-machine. They share one list because they
+ * need the same three exemptions — no cross-origin protection, no language resolution, no
+ * translated 404 — and adding a surface should be one edit here rather than three
+ * `startsWith` checks that can drift apart.
+ */
+const MACHINE_PATH_PREFIXES = [API_PATH_PREFIX, WEBHOOK_PATH_PREFIX];
 
 namespace application {
 	export interface Options {
@@ -209,25 +225,29 @@ export default function application(options: application.Options) {
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
 		auth as Middleware,
 		// Stays after the session middleware, whose session the language detector reads
-		// the stored language from, and skips the JSON surface: resolving a language and
+		// the stored language from, and skips the machine surfaces: resolving a language and
 		// building an i18next instance is wasted work for a response nothing translates,
-		// the unauthenticated cron-ping endpoint included.
+		// the unauthenticated cron-ping and webhook endpoints included.
 		htmlOnly(i18n),
-		// Cross-origin protection doesn't apply to the JSON surface either.
-		cop({ insecureBypassPatterns: [`${API_PATH_PREFIX}{path...}`] }),
+		// Cross-origin protection doesn't apply to the machine surfaces either. A webhook
+		// sender authenticates by signing the request body, which is a stronger claim than an
+		// `Origin` header, and has no browser to send one from.
+		cop({
+			insecureBypassPatterns: MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
+		}),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
 	let router = createRouter({
 		middleware: globalMiddleware,
 		/**
-		 * Renders the translated 404 page for unmatched paths. A path under
-		 * {@link API_PATH_PREFIX} that matches no route still lands here, and `htmlOnly`
+		 * Renders the translated 404 page for unmatched paths. A path under one of the
+		 * {@link MACHINE_PATH_PREFIXES} that matches no route still lands here, and `htmlOnly`
 		 * skipped language resolution for it, so resolve the language for that one case
 		 * before rendering instead of translating through an absent `ctx.i18next`.
 		 */
 		defaultHandler(context) {
-			if (!context.url.pathname.startsWith(API_PATH_PREFIX)) return defaultHandler(context);
+			if (!isMachinePath(context.url.pathname)) return defaultHandler(context);
 			return i18n(context, async () => defaultHandler(context));
 		},
 	});
@@ -452,6 +472,11 @@ export default function application(options: application.Options) {
 	// the auth chain every other route is bounded by).
 	router.map(routes.api.cronJobPing, cronJobPing);
 
+	// Inbound webhooks. Outside every auth guard and outside `cop` (via
+	// `MACHINE_PATH_PREFIXES` above) because the sender's proof is its signature over the
+	// request body, which each controller verifies before doing anything.
+	router.map(routes.webhooks.polar, polarWebhook);
+
 	// Bearer-API-key-gated REST API. Each file with 2+ actions is wired through a
 	// single `createController()` call keyed by that file's own exported route-map
 	// object (e.g. `monitorRoutes`), so read/write methods on the same resource can
@@ -498,18 +523,23 @@ export default function application(options: application.Options) {
 	return router;
 }
 
+/** Whether a path belongs to one of the machine surfaces rather than the HTML one. */
+function isMachinePath(pathname: string): boolean {
+	return MACHINE_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 /**
- * Scopes a global middleware to the HTML surface: requests under
- * {@link API_PATH_PREFIX} skip it and go straight to the rest of the chain. Use it
- * for work only a rendered page benefits from, so the JSON surface never pays for
- * it; middleware the API also needs stays in the chain unwrapped.
+ * Scopes a global middleware to the HTML surface: requests under one of the
+ * {@link MACHINE_PATH_PREFIXES} skip it and go straight to the rest of the chain. Use it
+ * for work only a rendered page benefits from, so the JSON surfaces never pay for it;
+ * middleware they also need stays in the chain unwrapped.
  *
- * @param middleware - The middleware to run for everything outside `/api/`.
+ * @param middleware - The middleware to run for everything outside those prefixes.
  * @returns A middleware that either delegates to it or continues the chain.
  */
 function htmlOnly(middleware: Middleware): Middleware {
 	return (context, next) => {
-		if (context.url.pathname.startsWith(API_PATH_PREFIX)) return next();
+		if (isMachinePath(context.url.pathname)) return next();
 		return middleware(context, next);
 	};
 }

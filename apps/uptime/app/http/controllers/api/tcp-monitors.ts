@@ -46,7 +46,7 @@ const CreateTcpMonitorSchema = s.object({
 	host: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	port: s.number().pipe(checks.min(1), checks.max(65_535)),
 	timeoutMs: s.defaulted(s.number().pipe(checks.min(100), checks.max(60_000)), 5000),
-	intervalSeconds: s.defaulted(s.number().pipe(checks.min(10), checks.max(86_400)), 60),
+	intervalSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 60),
 	isEnabled: s.defaulted(s.boolean(), true),
 });
 

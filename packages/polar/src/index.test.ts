@@ -150,7 +150,14 @@ mock.module("@polar-sh/sdk", () => ({
 }));
 
 // Import after mocks are registered so the client picks up the fakes.
-let { PolarClient, PolarError, WebhookVerificationError } = await import("./index.ts");
+let {
+	ACTIVE_SUBSCRIPTION_STATUSES,
+	isActiveSubscriptionStatus,
+	PolarClient,
+	PolarError,
+	subscriptionFromEvent,
+	WebhookVerificationError,
+} = await import("./index.ts");
 
 afterEach(() => {
 	calls = Object.create(null);
@@ -316,6 +323,18 @@ describe("PolarClient", () => {
 			await expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow(
 				"network error",
 			);
+		});
+	});
+
+	describe("listActiveSubscriptionsByProduct", () => {
+		test("queries by product and active:true, flattening every page", async () => {
+			subscriptionsListImpl = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
+			let polar = new PolarClient({ accessToken: "t" });
+
+			let subscriptions = await polar.listActiveSubscriptionsByProduct("prod_1");
+
+			expect(subscriptions).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
+			expect(calls["subscriptions.list"]).toEqual([{ productId: "prod_1", active: true }]);
 		});
 	});
 
@@ -741,5 +760,63 @@ describe("PolarClient", () => {
 	test("re-exports PolarError and WebhookVerificationError", () => {
 		expect(typeof PolarError).toBe("function");
 		expect(typeof WebhookVerificationError).toBe("function");
+	});
+});
+
+describe("isActiveSubscriptionStatus", () => {
+	test("counts exactly the statuses Polar's own active filter returns", () => {
+		expect(ACTIVE_SUBSCRIPTION_STATUSES).toEqual(["active", "trialing"]);
+		expect(isActiveSubscriptionStatus("active")).toBe(true);
+		expect(isActiveSubscriptionStatus("trialing")).toBe(true);
+	});
+
+	test("rejects every other status, `canceled` included", () => {
+		for (let status of ["canceled", "past_due", "unpaid", "incomplete", "incomplete_expired"]) {
+			expect(isActiveSubscriptionStatus(status)).toBe(false);
+		}
+	});
+});
+
+describe("subscriptionFromEvent", () => {
+	/**
+	 * Events are built by round-tripping through `parseWebhook` rather than as object
+	 * literals: that is where a real caller gets one, and the union is 35 payload types
+	 * wide, so a literal would need a cast to stand in for any of them.
+	 */
+	function parse(event: { type: string; data: unknown }) {
+		validateEventImpl = () => event;
+		let polar = new PolarClient({ accessToken: "t" });
+		let result = polar.parseWebhook(
+			new Request("https://app/webhook", { method: "POST" }),
+			"{}",
+			"whsec_1",
+		);
+		if (result.status !== "success") throw new Error("expected success");
+		return result.data;
+	}
+
+	test("returns the subscription for every subscription lifecycle event", () => {
+		let types = [
+			"subscription.created",
+			"subscription.updated",
+			"subscription.active",
+			"subscription.canceled",
+			"subscription.uncanceled",
+			"subscription.past_due",
+			"subscription.revoked",
+		];
+
+		for (let type of types) {
+			expect(subscriptionFromEvent(parse({ type, data: { id: "sub_1" } }))).toEqual({
+				id: "sub_1",
+			});
+		}
+	});
+
+	test("returns null for events carrying something else", () => {
+		expect(subscriptionFromEvent(parse({ type: "order.paid", data: { id: "ord_1" } }))).toBeNull();
+		expect(
+			subscriptionFromEvent(parse({ type: "checkout.updated", data: { id: "chk_1" } })),
+		).toBeNull();
 	});
 });

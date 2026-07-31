@@ -1,10 +1,9 @@
 /**
  * Tests for the HTTP monitors list page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` (and `~/app/services/analytics`, which this controller
- * uses for each row's latest result) reads `env` at module load — following the exact
+ * because `~/app/data/monitor` reads `env` at module load — following the exact
  * pattern established in `app/http/controllers/actions/monitors.test.ts` — and the
- * global `fetch` is mocked so `getLatestHttpResult`'s Analytics Engine SQL API call
- * never hits the network. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
+ * global `fetch` is mocked so a stray network call would be visible rather than silent;
+ * the page itself no longer makes one. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
  * seeded directly by a fake middleware standing in for the real `auth`/`requireUser`/
  * `requireTeam` chain, matching the same template's `seedTeam` helper.
  *
@@ -147,7 +146,32 @@ describe("httpMonitors", () => {
 		let body = await response.text();
 		expect(body).toContain("Homepage");
 		expect(body).toContain("https://example.com");
+		// A monitor with no cached status has never been checked.
 		expect(body).toContain("Unknown");
 		expect(body).toContain("Never");
+	});
+
+	test("badges each monitor with the status its last check cached on the row", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+				last_status: "degraded",
+				last_checked_at: Date.UTC(2026, 6, 30),
+				last_response_time_ms: 842,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+		expect(body).toContain("Degraded");
+		expect(body).toContain("842ms");
+		expect(body).not.toContain("Never");
 	});
 });

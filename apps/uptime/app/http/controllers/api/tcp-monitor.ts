@@ -48,7 +48,7 @@ const UpdateTcpMonitorSchema = s.object({
 	host: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	port: s.optional(s.number().pipe(checks.min(1), checks.max(65_535))),
 	timeoutMs: s.optional(s.number().pipe(checks.min(100), checks.max(60_000))),
-	intervalSeconds: s.optional(s.number().pipe(checks.min(10), checks.max(86_400))),
+	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
 	isEnabled: s.optional(s.boolean()),
 });
 

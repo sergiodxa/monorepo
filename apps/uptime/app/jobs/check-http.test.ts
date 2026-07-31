@@ -7,18 +7,21 @@
  * monitored endpoint must not.
  *
  * `env.GEO_FETCH`'s Durable Object stub is faked to control the region-hinted fetch per
- * test, and the database is a real in-memory SQLite one so the primary-key collision
- * that backs idempotency is genuinely exercised rather than simulated.
+ * test — and to record which object id the job derived, which is how the shard a check
+ * lands on and the jurisdiction it is pinned to are asserted — and the database is a real
+ * in-memory SQLite one so the primary-key collision that backs idempotency is genuinely
+ * exercised rather than simulated.
  *
  * Neither `~/app/services/analytics` nor `~/app/services/alerts` is mocked: analytics is
  * observed through the `PING_RESULTS` binding it writes to, and alert dispatch runs for
  * real against the test database and is observed through the `alert_events` rows it
  * leaves behind — which is what makes the "no duplicate alert" assertions meaningful.
- * `globalThis.fetch` stands in for the Analytics Engine SQL API and webhook delivery.
+ * `globalThis.fetch` stands in for webhook delivery, and for the Analytics Engine SQL API
+ * the check no longer needs to ask anything of.
  *
  * Two of the suites are about cost rather than correctness (ADR-019): that the job
  * logs the Durable Object's billed wall time next to the probe's response time instead
- * of conflating them, and that one healthy check still costs the four indexed D1
+ * of conflating them, and that one healthy check still costs the five indexed D1
  * statements it is supposed to cost.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -56,11 +59,54 @@ let doFetchMock = mock(
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
 let doStub = { fetch: doFetchMock };
-let fakeGeoFetchNamespace = {
-	idFromName: (name: string) => ({ name }),
-	jurisdiction: () => fakeGeoFetchNamespace,
-	get: () => doStub,
-};
+
+/** An object id as the fake namespace mints it: the derived name plus its jurisdiction. */
+interface FakeObjectId {
+	name: string;
+	jurisdiction: string | undefined;
+}
+
+/** One `get` the job made: the id it probed through and the region it asked for. */
+interface Probe extends FakeObjectId {
+	locationHint: string | undefined;
+}
+
+/** Records the object names the job derives, which is what the sharding suite asserts. */
+let idFromNameMock = mock(
+	(name: string, jurisdiction?: string): FakeObjectId => ({ name, jurisdiction }),
+);
+/** The probes the job issued, in order, one per `get`. */
+let probes: Probe[] = [];
+
+/**
+ * A fake `DurableObjectNamespace`, optionally restricted to a jurisdiction.
+ *
+ * A jurisdiction is a property of the *id*, stamped on by whichever (sub)namespace minted
+ * it, and `get` errors when the id's jurisdiction differs from the namespace's — see
+ * https://developers.cloudflare.com/durable-objects/reference/data-location/. That rule is
+ * modelled here rather than accepting any id, because it is the whole reason the EU branch
+ * has to mint its id from the subnamespace instead of from `env.GEO_FETCH` (ADR-013).
+ * @param jurisdiction Jurisdiction this namespace is restricted to, none when omitted.
+ * @returns A stand-in for `env.GEO_FETCH` handing out {@link doStub}.
+ */
+function makeGeoFetchNamespace(jurisdiction?: string) {
+	return {
+		idFromName: (name: string) => idFromNameMock(name, jurisdiction),
+		jurisdiction: (value: string) => makeGeoFetchNamespace(value),
+		get(id: FakeObjectId, options?: { locationHint?: string }) {
+			if (id.jurisdiction !== jurisdiction) {
+				throw new Error(
+					`Jurisdiction mismatch: id ${id.jurisdiction ?? "none"}, namespace ${jurisdiction ?? "none"}`,
+				);
+			}
+
+			probes.push({ ...id, locationHint: options?.locationHint });
+			return doStub;
+		},
+	};
+}
+
+let fakeGeoFetchNamespace = makeGeoFetchNamespace();
 
 /** Records the data points `writeHttpPingResult` sends to Analytics Engine. */
 let writeDataPointMock = mock((_point: { blobs: string[] }) => {});
@@ -164,13 +210,12 @@ function lastRecordedStatus(): string | undefined {
 	return calls[calls.length - 1]?.[0]?.blobs[2];
 }
 
-/**
- * Rows the stubbed Analytics Engine SQL API returns, which is how `getLatestHttpResult`
- * reads the status this check is transitioning from. Set per test; empty means "this
- * monitor has never been checked".
- */
-let analyticsRows: unknown[] = [];
-/** Set to make the Analytics Engine read fail instead of answering. */
+/** The `GeoFetchDO` object names the job asked for, one per probe it issued. */
+function derivedObjectNames(): string[] {
+	return idFromNameMock.mock.calls.map(([name]) => name);
+}
+
+/** Set to make the Analytics Engine SQL API fail instead of answering. */
 let analyticsUnavailable = false;
 let realFetch = globalThis.fetch;
 
@@ -180,14 +225,15 @@ beforeEach(() => {
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
 	writeDataPointMock.mockClear();
-	analyticsRows = [];
+	idFromNameMock.mockClear();
+	probes.length = 0;
 	analyticsUnavailable = false;
 	realFetch = globalThis.fetch;
 	globalThis.fetch = (async (input: unknown) => {
 		// Webhook alert deliveries go through the same global; only the SQL API is canned.
 		if (!String(input).includes("analytics_engine")) return new Response("ok", { status: 200 });
 		if (analyticsUnavailable) throw new Error("analytics unavailable");
-		return new Response(JSON.stringify({ data: analyticsRows }), { status: 200 });
+		return new Response(JSON.stringify({ data: [] }), { status: 200 });
 	}) as never;
 });
 
@@ -345,6 +391,104 @@ describe("CheckHttpJob content checks", () => {
 		await runJob(db, monitor.id);
 
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("HEAD");
+	});
+});
+
+/**
+ * Which `GeoFetchDO` instance a check probes through (ADR-009). The region still comes
+ * from the monitor's location hint, but the object id is sharded within that region so a
+ * region's probing isn't serialized through a single object — while staying stable per
+ * monitor, because a monitor that moved shards would show a step change in its response
+ * times that nothing the user did explains.
+ */
+describe("CheckHttpJob Durable Object sharding", () => {
+	test("probes through a shard of the monitor's region", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { location_hint: "weur" });
+
+		await runJob(db, monitor.id);
+
+		// The region is still the location hint; eight shards per region, hence 0-7.
+		expect(derivedObjectNames()).toEqual([expect.stringMatching(/^weur:[0-7]$/)]);
+	});
+
+	test("sends a monitor to the same shard on every check", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+
+		await runJob(db, monitor.id, { jobId: `${monitor.id}:1700000000000` });
+		await runJob(db, monitor.id, { jobId: `${monitor.id}:1700000060000` });
+
+		let [first, second] = derivedObjectNames();
+		expect(second).toBe(first);
+	});
+
+	test("spreads monitors across the shards instead of collapsing onto one", async () => {
+		let { db } = createTestDatabase();
+
+		// Fixed ids so this asserts the hash's spread rather than which uuids came up.
+		for (let index = 0; index < 8; index++) {
+			let monitor = await seedMonitor(db, { id: `monitor-${index}` });
+			await runJob(db, monitor.id);
+		}
+
+		let shards = new Set(derivedObjectNames().map((name) => name.split(":")[1]));
+		expect(shards.size).toBeGreaterThanOrEqual(4);
+	});
+});
+
+/**
+ * Which regions get an EU-pinned Durable Object, and that the id it probes through was
+ * minted by the namespace it is handed to (ADR-013). A jurisdiction is a hard constraint
+ * on where the object runs while a location hint is only a preference, so a hint pinned to
+ * the wrong jurisdiction probes from the wrong continent and records a `response_time_ms`
+ * for it — which is what `enam` in the set did, uncaught, because none of this was covered.
+ */
+describe("CheckHttpJob EU jurisdiction", () => {
+	/** Every value `monitors.location_hint` accepts. */
+	const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
+
+	test("pins Europe's two hints to the EU jurisdiction and no others", async () => {
+		let { db } = createTestDatabase();
+		let pinned: string[] = [];
+
+		for (let hint of LOCATION_HINTS) {
+			let monitor = await seedMonitor(db, { location_hint: hint });
+			probes.length = 0;
+
+			await runJob(db, monitor.id);
+
+			if (probes[0]?.jurisdiction === "eu") pinned.push(hint);
+		}
+
+		expect(pinned).toEqual(["weur", "eeur"]);
+	});
+
+	test("probes an 'enam' monitor from North America rather than the EU", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { location_hint: "enam" });
+
+		await runJob(db, monitor.id);
+
+		// Eastern *North America*: the region it asked for, and no jurisdiction to
+		// override it. Pinning it to the EU moved the probe to another continent, and
+		// every response time it recorded with it.
+		expect(probes[0]?.locationHint).toBe("enam");
+		expect(probes[0]?.jurisdiction).toBeUndefined();
+	});
+
+	test("mints an EU-pinned monitor's id from the EU subnamespace", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { location_hint: "eeur" });
+
+		await runJob(db, monitor.id);
+
+		// An id minted off the base namespace carries no jurisdiction, and handing that to
+		// the EU subnamespace's `get` is the mismatch the real binding rejects — which
+		// turned every check in a European region into a retry that could only spin.
+		expect(probes[0]?.jurisdiction).toBe("eu");
+		expect(probes[0]?.name).toMatch(/^eeur:[0-7]$/);
+		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 });
 
@@ -631,14 +775,24 @@ describe("CheckHttpJob Durable Object wall time", () => {
  *
  * What is pinned, and why those numbers:
  *
- * - **N = 4 statements**, one per thing the job has to know or record: the
+ * - **N = 5 statements**, one per thing the job has to know or record: the
  *   at-least-once duplicate check on `monitor_results`, the monitor row, its enabled
- *   content checks, and the insert of the result. A healthy `up` check dispatches no
+ *   content checks, the insert of the result, and the write-back of the status that
+ *   result put the monitor in. A healthy `up` check dispatches no
  *   alerts (`notifyHttpResult` returns early unless the check is a recovery or not
  *   `up`), so nothing in the alert pipeline runs, and Analytics Engine is not D1.
- * - **M = 4 rows**, at most one per statement: every statement is a point lookup
+ *
+ *   It was 4 until ADR-011 moved recovery detection off Analytics Engine and onto a
+ *   `monitors.last_status` column, which has to be maintained by a statement of its own —
+ *   the scheduler's claim is a different write with a different trigger, so there was
+ *   nothing to ride on. That trades one D1 statement per check for one Analytics Engine
+ *   query per check, roughly a wash; the saving that paid for it is on the read side,
+ *   where the monitors list dropped one uncached Analytics Engine query per monitor per
+ *   page view.
+ * - **M = 5 rows**, at most one per statement: every statement is a point lookup
  *   through a unique or composite index, so it either finds its row or finds nothing.
- *   A healthy check actually returns 2 (the monitor row and the inserted result).
+ *   A healthy check actually returns 3 (the monitor row, the inserted result, and the
+ *   monitor row the status write updates).
  * - **No statement may `SCAN` a table.** This is the assertion that really bounds rows
  *   read: rows read scales with table size the moment a plan degrades to a scan, and
  *   that cannot be seen by counting rows returned. D1's own planner has the final say —
@@ -651,11 +805,11 @@ describe("CheckHttpJob Durable Object wall time", () => {
  */
 describe("CheckHttpJob cost model", () => {
 	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
-	const MAX_STATEMENTS = 4;
+	const MAX_STATEMENTS = 5;
 	/** Row budget for one healthy HTTP check: at most one row per statement. */
-	const MAX_ROWS = 4;
+	const MAX_ROWS = 5;
 
-	test("a healthy check costs no more than 4 statements and 4 rows", async () => {
+	test("a healthy check costs no more than 5 statements and 5 rows", async () => {
 		let { db, statements } = createObservedDatabase();
 		let monitor = await seedMonitor(db);
 		statements.length = 0;
@@ -668,12 +822,14 @@ describe("CheckHttpJob cost model", () => {
 			"select",
 			"select",
 			"insert",
+			"update",
 		]);
 
 		let rows = statements.reduce((total, statement) => total + statement.rows, 0);
 		expect(rows).toBeLessThanOrEqual(MAX_ROWS);
-		// The monitor row read, plus the result row written back with RETURNING.
-		expect(rows).toBe(2);
+		// The monitor row read, the result row written back with RETURNING, and the monitor
+		// row the cached-status write updates.
+		expect(rows).toBe(3);
 	});
 
 	test("every statement resolves through an index instead of scanning a table", async () => {
@@ -734,11 +890,8 @@ describe("CheckHttpJob cost model", () => {
 describe("CheckHttpJob alerting", () => {
 	test("alerts a recovery when the previous check was down and this one is up", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await seedMonitor(db);
+		let monitor = await seedMonitor(db, { last_status: "down" });
 		await seedAlert(db, monitor.id);
-		analyticsRows = [
-			{ status: "down", responseTimeMs: 0, responseStatus: 500, timestamp: "2026-01-01" },
-		];
 
 		await runJob(db, monitor.id);
 
@@ -749,22 +902,20 @@ describe("CheckHttpJob alerting", () => {
 
 	test("doesn't alert an 'up' check that isn't a recovery", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await seedMonitor(db);
+		let monitor = await seedMonitor(db, { last_status: "up" });
 		await seedAlert(db, monitor.id);
-		analyticsRows = [
-			{ status: "up", responseTimeMs: 1, responseStatus: 200, timestamp: "2026-01-01" },
-		];
 
 		await runJob(db, monitor.id);
 
 		expect(await db.findMany(alertEvents, { where: { monitor_id: monitor.id } })).toHaveLength(0);
 	});
 
-	test("treats an unavailable Analytics Engine as no previous status", async () => {
+	test("treats a never-checked monitor as no previous status", async () => {
 		let { db } = createTestDatabase();
+		// A fresh monitor's `last_status` is NULL, which is why no backfill is needed.
 		let monitor = await seedMonitor(db);
 		await seedAlert(db, monitor.id);
-		analyticsUnavailable = true;
+		expect(monitor.last_status).toBeNull();
 
 		await runJob(db, monitor.id);
 
@@ -773,23 +924,49 @@ describe("CheckHttpJob alerting", () => {
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 
-	test("reads the previous status before recording this check's own data point", async () => {
+	test("an unavailable Analytics Engine no longer affects recovery detection", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await seedMonitor(db);
-		let order: string[] = [];
-		writeDataPointMock.mockImplementation(() => {
-			order.push("write");
-		});
-		let realFetch = globalThis.fetch;
-		globalThis.fetch = (async (input: unknown) => {
-			if (String(input).includes("analytics_engine")) order.push("read");
-			return new Response(JSON.stringify({ data: [] }), { status: 200 });
-		}) as never;
+		let monitor = await seedMonitor(db, { last_status: "down" });
+		await seedAlert(db, monitor.id);
+		// The previous status comes from the monitor row now, so the SQL API being down
+		// cannot silence a recovery the way it used to.
+		analyticsUnavailable = true;
 
 		await runJob(db, monitor.id);
-		globalThis.fetch = realFetch;
-		writeDataPointMock.mockImplementation(() => {});
 
-		expect(order).toEqual(["read", "write"]);
+		let events = await db.findMany(alertEvents, { where: { monitor_id: monitor.id } });
+		expect(events).toHaveLength(1);
+		expect(events[0]?.event_type).toBe("up");
+	});
+});
+
+describe("CheckHttpJob cached status", () => {
+	test("caches the check's status and time on the monitor row", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { degraded_after_ms: 10 });
+
+		await runJob(db, monitor.id);
+
+		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
+		expect(updated?.last_status).toBe("degraded");
+		expect(updated?.last_checked_at).not.toBeNull();
+		expect(updated?.last_response_time_ms).not.toBeNull();
+	});
+
+	test("doesn't cache a status for a check that never committed a result", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+		// An unavailable Durable Object taught us nothing about the endpoint, so the row
+		// must not come away claiming a check happened.
+		doFetchMock.mockImplementation(async () => {
+			throw new Error("Durable Object reset because its code was updated");
+		});
+
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+
+		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
+		expect(updated?.last_status).toBeNull();
+		expect(updated?.last_checked_at).toBeNull();
+		expect(updated?.last_response_time_ms).toBeNull();
 	});
 });

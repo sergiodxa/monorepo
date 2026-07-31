@@ -1,9 +1,15 @@
 /**
- * Background job that sweeps every enabled DNS monitor once per run on a fixed
- * hourly cadence — DNS monitors are not staggered by their individual
- * `interval_seconds`, unlike HTTP monitors. Resolves each domain, classifies the
- * result, records it via `DnsMonitor.recordCheckResult`, and enqueues a `notify` message
- * for a changed/error result or a recovery back to ok.
+ * Background job that claims the DNS monitors whose configured `interval_seconds` has come
+ * round and checks those, rather than sweeping every enabled monitor on a cadence of its own
+ * (ADR-006). Resolves each domain, classifies the result, records it via
+ * `DnsMonitor.recordCheckResult`, and enqueues a `notify` message for a changed/error result
+ * or a recovery back to ok.
+ *
+ * Delivered every minute, which is the finest interval a monitor can be configured with.
+ * Running that often is cheaper than the old hourly full sweep, not more expensive: the claim
+ * is an indexed range that matches nothing in most minutes, and it is also what stops the
+ * several deliveries a single minute's cron produces from checking the same monitor more
+ * than once.
  *
  * Monitors are resolved in bounded-concurrency batches rather than one at a time, and
  * alerts are dispatched by the `notify` consumer rather than inline, so the sweep's wall
@@ -17,9 +23,9 @@ import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import type { ClaimedDnsMonitor } from "~/app/data/dns-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
-import type { SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
@@ -30,7 +36,13 @@ import { checkDns } from "~/app/services/dns-check";
 export class CheckDnsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
-		let monitors = await DnsMonitor.listEnabled(db);
+		/**
+		 * Claimed as of now rather than as of the cron's `scheduledTime`: the claim advances
+		 * each monitor from its own previous due time, so what this instant decides is only
+		 * which monitors are owed a check, and the queue hop between the trigger and here is
+		 * seconds. Nothing downstream keys off it, unlike the HTTP sweep's per-minute job id.
+		 */
+		let monitors = await DnsMonitor.claimDue(db, Date.now());
 
 		let notifications: NotifyMessage[] = [];
 		let successCount = 0;
@@ -67,7 +79,7 @@ export class CheckDnsJob extends Job {
 	 * warrants or `null` when it isn't alert-worthy. The previous status is read before
 	 * the write, since that's what makes a recovery detectable.
 	 */
-	private async check(db: Database, monitor: SelectDnsMonitor): Promise<NotifyMessage | null> {
+	private async check(db: Database, monitor: ClaimedDnsMonitor): Promise<NotifyMessage | null> {
 		/** Both columns are declared as plain text enums, so their value sets are asserted here. */
 		let previousStatus = monitor.last_status as DnsCheckStatus | null;
 		let result = await checkDns(

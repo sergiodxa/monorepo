@@ -2,7 +2,7 @@
  * Unit tests for the Analytics Engine service: the raw SQL query helper and its
  * success/failure `Result` mapping, the KV-cached variant's cache-hit vs cache-miss
  * branching, the cache-key/TTL helpers, the ping-result write path, and every derived
- * dashboard query (team summaries' health-derivation rules, latest result, sparkline
+ * dashboard query (team summaries' health-derivation rules, sparkline
  * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings (`KV`, `PING_RESULTS`)
  * are stubbed via `mock.module("cloudflare:workers", ...)` and the Analytics Engine
  * SQL HTTP API is stubbed via a mocked global `fetch`.
@@ -33,7 +33,6 @@ let {
 	getCacheTtl,
 	getHttpDailyAggregate,
 	getHttpP99ResponseTime,
-	getLatestHttpResult,
 	getMonitorSparkline,
 	getTeamHttpSparklines,
 	getTeamHttpSummaries,
@@ -365,56 +364,6 @@ describe("getTeamHttpSummaries", () => {
 				health: "degraded",
 			},
 		]);
-	});
-});
-
-describe("getLatestHttpResult", () => {
-	test("returns the single most recent result for the monitor", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								status: "up",
-								responseTimeMs: 42,
-								responseStatus: 200,
-								timestamp: "2026-07-09T00:00:00Z",
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
-
-		let result = await getLatestHttpResult("team-1", "monitor-1");
-		if (isFailure(result)) throw new Error("expected success");
-		expect(result.data).toEqual({
-			status: "up",
-			responseTimeMs: 42,
-			responseStatus: 200,
-			timestamp: "2026-07-09T00:00:00Z",
-		});
-	});
-
-	test("returns null when the monitor has no results in range", async () => {
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
-
-		let result = await getLatestHttpResult("team-1", "monitor-1");
-		if (isFailure(result)) throw new Error("expected success");
-		expect(result.data).toBeNull();
-	});
-
-	test("is never cached (queries Analytics Engine directly, bypassing KV)", async () => {
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
-
-		await getLatestHttpResult("team-1", "monitor-1");
-
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(kvGetMock).not.toHaveBeenCalled();
-		expect(kvPutMock).not.toHaveBeenCalled();
 	});
 });
 

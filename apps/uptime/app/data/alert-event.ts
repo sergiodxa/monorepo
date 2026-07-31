@@ -1,7 +1,7 @@
 /**
- * Data-access model for alert delivery history (`alert_events`): recording outcomes
- * and the cooldown check `app/services/alerts.ts` uses to decide whether an alert may
- * fire again yet.
+ * Data-access model for alert delivery history (`alert_events`): recording outcomes,
+ * the cooldown check `app/services/alerts.ts` uses to decide whether an alert may fire
+ * again yet, and the per-incident send count that bounds how many times it ever can.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,14 +10,14 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
-import { and, eq, gte } from "remix/data-table";
+import { and, eq, gt, gte, inList, ne } from "remix/data-table";
 
 import type { AlertEventSnapshot, InsertAlertEvent, SelectAlertEvent } from "~/database/schema";
 
 import { alertEvents } from "~/database/schema";
 
 export default class AlertEvent {
-	/** Records a delivery outcome (sent, skipped for cooldown, or failed). */
+	/** Records a delivery outcome (sent, skipped for one of the `skipped_*` reasons, or failed). */
 	static async record(
 		db: Database,
 		input: Omit<InsertAlertEvent, "id" | "created_at" | "sent_at"> & {
@@ -57,6 +57,83 @@ export default class AlertEvent {
 		});
 
 		return recent.length > 0;
+	}
+
+	/**
+	 * When `alertId` last recorded a recovery for `monitorId`, or `0` when it never has —
+	 * which is the lower bound the incident queries below want anyway: everything counts.
+	 */
+	private static async lastRecoveryAt(
+		db: Database,
+		alertId: string,
+		monitorId: string,
+	): Promise<number> {
+		let [recovery] = await db.findMany(alertEvents, {
+			where: and(eq("alert_id", alertId), eq("monitor_id", monitorId), eq("event_type", "up")),
+			orderBy: ["sent_at", "desc"],
+			limit: 1,
+		});
+
+		return recovery?.sent_at ?? 0;
+	}
+
+	/**
+	 * How many notifications `alertId` has already sent for `monitorId`+`eventType` in the
+	 * current incident — the `sent` events after the pair's last recovery.
+	 *
+	 * Counted through a `limit`-bounded read instead of `COUNT(*)`, because the caller only
+	 * needs to know whether a ceiling is reached: both statements seek into
+	 * `alert_events_alert_monitor_event_sent_idx` and neither one reads the whole incident.
+	 */
+	static async countSentSinceRecovery(
+		db: Database,
+		alertId: string,
+		monitorId: string,
+		eventType: SelectAlertEvent["event_type"],
+		limit: number,
+	): Promise<number> {
+		let since = await AlertEvent.lastRecoveryAt(db, alertId, monitorId);
+
+		let sent = await db.findMany(alertEvents, {
+			where: and(
+				eq("alert_id", alertId),
+				eq("monitor_id", monitorId),
+				eq("event_type", eventType),
+				eq("status", "sent"),
+				gt("sent_at", since),
+			),
+			limit,
+		});
+
+		return sent.length;
+	}
+
+	/**
+	 * Delivery totals for the incident `alertId` is about to report a recovery for: every
+	 * non-recovery event after the pair's previous recovery, split into the ones that were
+	 * notified and the ones cooldown or the per-incident cap held back. The recovery email
+	 * reports both, so a capped incident doesn't look like alerts were dropped.
+	 */
+	static async summarizeIncident(
+		db: Database,
+		alertId: string,
+		monitorId: string,
+	): Promise<{ sent: number; suppressed: number }> {
+		let since = await AlertEvent.lastRecoveryAt(db, alertId, monitorId);
+
+		let incident = and(
+			eq("alert_id", alertId),
+			eq("monitor_id", monitorId),
+			ne("event_type", "up"),
+			gt("sent_at", since),
+		);
+
+		let sent = await db.count(alertEvents, { where: and(incident, eq("status", "sent")) });
+		let suppressed = await db.count(alertEvents, {
+			where: and(incident, inList("status", ["skipped_cooldown", "skipped_cap"])),
+		});
+
+		return { sent, suppressed };
 	}
 
 	/** Lists the most recent alert-delivery events for a team's alerts, newest first. */

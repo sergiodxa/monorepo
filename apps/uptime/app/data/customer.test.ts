@@ -15,9 +15,7 @@ import type { Customer as PolarCustomer, PolarClient, Subscription } from "@pkg/
 
 import IdToken from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
-
-/** The Polar product id `Customer` gates the monitoring subscription on. Mirrors the module-private `SUBSCRIPTION_PRODUCT_ID` constant in `app/data/customer.ts`. */
-const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
+import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 
 /** The subset of `PolarClient` that `Customer` actually calls. */
 type FakePolarClient = Pick<
@@ -134,27 +132,6 @@ describe("Customer.findOrCreate", () => {
 		let customer = await Customer.findOrCreate(polar, idToken);
 		expect(customer).toEqual(created);
 		expect(createCalls).toEqual([{ email: "user@example.com", name: "User One" }]);
-	});
-});
-
-describe("Customer.hasActiveSubscription", () => {
-	test("delegates to polar.hasActiveSubscription with the monitoring product id", async () => {
-		let calls: Array<{ externalCustomerId: string; productId: string }> = [];
-		let polar = fakePolar({
-			hasActiveSubscription: async (externalCustomerId, productId) => {
-				calls.push({ externalCustomerId, productId });
-				return true;
-			},
-		});
-
-		expect(await Customer.hasActiveSubscription(polar, "owner-1")).toBe(true);
-		expect(calls).toEqual([{ externalCustomerId: "owner-1", productId: SUBSCRIPTION_PRODUCT_ID }]);
-	});
-
-	test("returns false when there's no active subscription", async () => {
-		let polar = fakePolar({ hasActiveSubscription: async () => false });
-
-		expect(await Customer.hasActiveSubscription(polar, "owner-1")).toBe(false);
 	});
 });
 

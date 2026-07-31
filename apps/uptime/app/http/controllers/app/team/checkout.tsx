@@ -21,9 +21,11 @@ import { media } from "@pkg/u/responsive";
 import { pb, pi } from "@pkg/u/size";
 import { fontSize, textAlign } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Customer from "~/app/data/customer";
+import Subscription from "~/app/data/subscription";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -34,7 +36,7 @@ import routes from "~/routes/web";
 /** GET /app/:team/checkout — redirects the owner to Polar-hosted billing. */
 export default createAction(routes.app.team.checkout, {
 	middleware: [requireUser, requireTeam],
-	handler: inject([PolarClient] as const, async (polar) => {
+	handler: inject([Database, PolarClient] as const, async (db, polar) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -76,7 +78,9 @@ export default createAction(routes.app.team.checkout, {
 			);
 		}
 
-		let hasActiveSubscription = await Customer.hasActiveSubscription(polar, ctx.team.owner_id);
+		// The D1 projection, not Polar (ADR-005): an unknown answer sends the owner to
+		// checkout, which is the recoverable half of getting this wrong.
+		let hasActiveSubscription = await Subscription.isActive(db, ctx.team.owner_id);
 
 		let url = hasActiveSubscription
 			? await Customer.portal(polar, ctx.team.owner_id)

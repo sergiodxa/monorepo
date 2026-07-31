@@ -1,7 +1,8 @@
 /**
  * Unit tests for the `AlertEvent` data-access model: recording delivery outcomes, the
- * cooldown check `app/services/alerts.ts` uses to gate re-firing, and the recent-events
- * listing used by the alerts UI.
+ * cooldown check `app/services/alerts.ts` uses to gate re-firing, the per-incident send
+ * count and totals that bound and explain that repetition, and the recent-events listing
+ * used by the alerts UI.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +11,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import type { Database, DataManipulationOperation, DataManipulationResult } from "remix/data-table";
+
+import type { SelectAlertEvent } from "~/database/schema";
 
 import AlertEvent from "~/app/data/alert-event";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -87,6 +90,27 @@ beforeEach(() => {
 	db = createTestDatabase().db;
 	patchJsonColumns(db, ["snapshot"]);
 });
+
+/**
+ * Records one event for `alert-1`/`monitor-1` backdated by `agoMs`, so a whole incident
+ * can be laid out in order — `record()` always stamps `Date.now()`.
+ */
+async function recordAt(
+	agoMs: number,
+	event_type: SelectAlertEvent["event_type"],
+	status: SelectAlertEvent["status"],
+): Promise<void> {
+	let row = await AlertEvent.record(db, {
+		alert_id: "alert-1",
+		monitor_id: "monitor-1",
+		event_type,
+		status,
+		error_message: null,
+		monitor_type: "http",
+		monitor_name: "My site",
+	});
+	await db.update(alertEvents, row.id, { sent_at: Date.now() - agoMs });
+}
 
 describe("AlertEvent.record", () => {
 	test("records a sent event and returns the created row", async () => {
@@ -310,5 +334,67 @@ describe("AlertEvent.listByAlertIds", () => {
 
 		let events = await AlertEvent.listByAlertIds(db, ["alert-1"], 2);
 		expect(events).toHaveLength(2);
+	});
+});
+
+describe("AlertEvent.countSentSinceRecovery", () => {
+	test("returns 0 when the pair has no events at all", async () => {
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(0);
+	});
+
+	test("counts every sent event when the pair has never recovered", async () => {
+		await recordAt(3000, "down", "sent");
+		await recordAt(2000, "down", "sent");
+
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(2);
+	});
+
+	test("counts only the sent events after the last recovery", async () => {
+		await recordAt(5000, "down", "sent");
+		await recordAt(4000, "down", "sent");
+		await recordAt(3000, "up", "sent");
+		await recordAt(2000, "down", "sent");
+
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(1);
+	});
+
+	test("ignores suppressed and failed attempts, and other event types", async () => {
+		await recordAt(4000, "down", "skipped_cooldown");
+		await recordAt(3000, "down", "skipped_cap");
+		await recordAt(2000, "down", "failed");
+		await recordAt(1000, "degraded", "sent");
+
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(0);
+	});
+
+	test("stops counting at the limit instead of reading the whole incident", async () => {
+		for (let index = 0; index < 5; index++) await recordAt(5000 - index * 100, "down", "sent");
+
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 3)).toBe(3);
+	});
+});
+
+describe("AlertEvent.summarizeIncident", () => {
+	test("reports zero for a monitor with no history", async () => {
+		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+			sent: 0,
+			suppressed: 0,
+		});
+	});
+
+	test("splits the current incident into sent and suppressed, ignoring the previous one", async () => {
+		await recordAt(9000, "down", "sent");
+		await recordAt(8000, "down", "skipped_cooldown");
+		await recordAt(7000, "up", "sent");
+		await recordAt(6000, "down", "sent");
+		await recordAt(5000, "down", "skipped_cooldown");
+		await recordAt(4000, "down", "skipped_cap");
+		await recordAt(3000, "degraded", "skipped_cap");
+		await recordAt(2000, "down", "failed");
+
+		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+			sent: 1,
+			suppressed: 3,
+		});
 	});
 });

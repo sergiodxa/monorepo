@@ -50,7 +50,9 @@ TCP monitors check whether a server accepts a raw TCP connection on a specific h
 
 - Port range should support `1` through `65535`.
 - Timeout should support at least `100` through `60000` ms.
-- Interval should support at least `10` through `86400` seconds.
+- Interval should support `60` through `86400` seconds. The floor is 60 because that is the
+  finest cadence the scheduler can deliver, so a shorter interval could be configured and
+  billed for but never actually run.
 - Monitors are enabled by default.
 
 ## Important Behavior Notes

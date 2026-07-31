@@ -2554,6 +2554,8 @@ export default {
 				status: {
 					sent: "Envoyé",
 					skipped_cooldown: "Ignoré (Délai)",
+					skipped_cap: "Ignoré (Limite de répétitions)",
+					skipped: "Ignoré",
 					failed: "Échoué",
 				},
 			},

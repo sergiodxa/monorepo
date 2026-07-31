@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-31. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §17 (critical). Not a Cloudflare cost — a hard scaling wall and an availability bug.
 
 ## Context

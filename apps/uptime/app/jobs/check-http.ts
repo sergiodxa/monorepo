@@ -3,9 +3,14 @@
  * its enabled content checks, performs a region-hinted fetch through `GeoFetchDO`,
  * classifies the result
  * (up/degraded/down) against the expected status, degraded threshold, and content
- * checks, records it to both `monitor_results` and Analytics Engine, and dispatches
+ * checks, records it to both `monitor_results` and Analytics Engine, caches its outcome
+ * on the monitor row, and dispatches
  * alerts on a down/degraded result or a recovery back to up. Usage ingestion is not
  * wired up yet.
+ *
+ * Whether a result is a recovery depends on what the previous check said, which is read
+ * off the monitor row's `last_status` rather than queried from Analytics Engine, and
+ * written back once the result is committed.
  *
  * Nothing here decides when the next check happens: the scheduler advances a monitor's
  * next due time when it claims it, not when the check completes, so a slow probe can't
@@ -15,8 +20,8 @@
  * primary key. That row is the commit point: everything before it is safe to redo, so a
  * redelivery short-circuits on the id before re-hitting the monitored endpoint and the
  * primary key itself rejects a delivery that raced another one. Everything after it —
- * the analytics data point and alert dispatch — is best-effort, because a redelivery
- * would short-circuit rather than repeat it.
+ * the analytics data point, the cached status on the monitor row, and alert dispatch — is
+ * best-effort, because a redelivery would short-circuit rather than repeat it.
  *
  * Only infrastructure faults (D1, the Durable Object, an unexpected exception) ask the
  * queue to redeliver. A monitored endpoint that times out, refuses the connection, or
@@ -40,17 +45,47 @@ import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import type { SelectMonitor } from "~/database/schema";
+import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
+import Monitor from "~/app/data/monitor";
 import { DO_WALL_TIME_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
 import { notifyHttpResult } from "~/app/services/alerts";
-import { getLatestHttpResult, writeHttpPingResult } from "~/app/services/analytics";
+import { writeHttpPingResult } from "~/app/services/analytics";
 import { monitorContentChecks, monitorResults, monitors } from "~/database/schema";
 
 const MS_PER_SECOND = 1000;
-/** Location hints that route through the EU jurisdiction for GDPR compliance. */
-const EU_LOCATION_HINTS = new Set(["eeur", "enam"]);
+/**
+ * Location hints whose `GeoFetchDO` is pinned to Cloudflare's EU jurisdiction, which is
+ * Europe's two hints and nothing else (ADR-013).
+ *
+ * A jurisdiction is a hard constraint on where the object runs; a location hint is only a
+ * preference, and the jurisdiction wins when they disagree. `enam` — eastern *North
+ * America* — was in this set, so a monitor asking to be probed from North America was
+ * probed from Europe and its `response_time_ms` measured the wrong continent.
+ *
+ * Whether the pin belongs here at all is deliberately still open. It cannot be an
+ * obligation about stored personal data: this object has no storage, no alarms and no
+ * state that outlives the request — it proxies a fetch, times it, and returns — while the
+ * personal data in this system lives in D1 and KV, neither of which is
+ * jurisdiction-scoped. ADR-013 records the product question; until it is answered the two
+ * European hints keep the pin, because dropping it is the change that needs the answer.
+ */
+const EU_LOCATION_HINTS = new Set(["eeur", "weur"]);
+
+/**
+ * How many `GeoFetchDO` instances share the probing for one location hint (ADR-009).
+ *
+ * A single Durable Object is a single-threaded actor, so without this every monitor in a
+ * region queues behind one object and one hung target degrades the whole region. Eight
+ * raises that ceiling ~8× while leaving enough monitors per shard for concurrent probes
+ * to keep amortising the object's billed duration window.
+ *
+ * A constant rather than configuration on purpose: changing it re-hashes every monitor
+ * onto a different object, which puts a step change in every latency series for no reason
+ * a user can see, so it should be a deliberate code change with a changelog note.
+ */
+const SHARDS_PER_REGION = 8;
 
 const CheckHttpJobSchema = s.object({
 	/**
@@ -146,18 +181,32 @@ export class CheckHttpJob extends Job {
 		let status = classify(monitor, outcome, contentChecksPassed);
 
 		/**
-		 * Read before writing this check's own data point, otherwise the "previous"
-		 * status would be the one we're about to record and no transition would ever be
-		 * detected. An unavailable Analytics Engine degrades to `null` (never a recovery)
-		 * rather than failing the check.
+		 * The status this check is transitioning from, off the row already loaded above, and
+		 * read before the write below overwrites it — this check is about to become the last
+		 * one. `null` (never checked) is never a recovery. The column is declared as a plain
+		 * text enum, so its value set is asserted here.
 		 */
-		let previous = await getLatestHttpResult(monitor.team_id, job.monitorId);
-		let previousStatus = isFailure(previous) ? null : (previous.data?.status ?? null);
+		let previousStatus = monitor.last_status as MonitorStatus | null;
 
 		let committed = await this.record(db, job, outcome);
 		if (!committed) {
 			this.logger.info("job.check_http.duplicate", { jobId: job.id, monitorId: job.monitorId });
 			return;
+		}
+
+		try {
+			/**
+			 * Swallowed for the same reason alert dispatch below is: past the commit point a
+			 * redelivery short-circuits on the job id instead of reaching here, so throwing
+			 * would ask for a retry that can only spin. The columns then keep the previous
+			 * check's status, which is at worst a recovery alerted one check late.
+			 */
+			await Monitor.recordCheckStatus(db, job.monitorId, status, outcome.responseTimeMs);
+		} catch (error) {
+			this.logger.error("job.check_http.status_write_failed", {
+				monitorId: job.monitorId,
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
 
 		writeHttpPingResult({
@@ -189,8 +238,10 @@ export class CheckHttpJob extends Job {
 	}
 
 	/**
-	 * Fetches the monitor's URL through the `GeoFetchDO` instance pinned to its
-	 * configured region, which is what measures the response time.
+	 * Fetches the monitor's URL through a `GeoFetchDO` instance pinned to its configured
+	 * region, which is what measures the response time. Which of that region's
+	 * {@link SHARDS_PER_REGION} instances is decided by {@link shardFor}, so the monitor
+	 * always probes through the same one.
 	 *
 	 * Throws only when the Durable Object itself is unavailable, which is an
 	 * infrastructure fault the queue should retry rather than a statement about the
@@ -203,10 +254,18 @@ export class CheckHttpJob extends Job {
 		hasContentChecks: boolean,
 	): Promise<CheckOutcome> {
 		let locationHint = monitor.location_hint as DurableObjectLocationHint;
-		let id = env.GEO_FETCH.idFromName(monitor.location_hint);
+		/**
+		 * The namespace is chosen before the id is minted, because a jurisdiction is a
+		 * property of the id: the same name yields a different id in each jurisdiction, and
+		 * `get` errors when the id's jurisdiction and the namespace's differ. Minting off
+		 * `env.GEO_FETCH` and then calling `get` on the EU subnamespace is that mismatch.
+		 */
 		let namespace = EU_LOCATION_HINTS.has(monitor.location_hint)
 			? env.GEO_FETCH.jurisdiction("eu")
 			: env.GEO_FETCH;
+		let id = namespace.idFromName(
+			`${monitor.location_hint}:${shardFor(monitor.id, SHARDS_PER_REGION)}`,
+		);
 		let stub = namespace.get(id, { locationHint });
 
 		/** A content check needs the body, so HEAD becomes GET to retrieve one. */
@@ -286,9 +345,9 @@ export class CheckHttpJob extends Job {
 	private async notify(
 		db: Database,
 		monitor: SelectMonitor,
-		previousStatus: "up" | "down" | "degraded" | "timeout" | null,
+		previousStatus: MonitorStatus | "timeout" | null,
 		outcome: CheckOutcome,
-		status: "up" | "down" | "degraded",
+		status: MonitorStatus,
 	): Promise<void> {
 		try {
 			let resend = getServiceContainer().get(Resend);
@@ -310,12 +369,33 @@ export namespace CheckHttpJob {
 	export type Input = s.InferOutput<typeof CheckHttpJobSchema>;
 }
 
+/**
+ * Which of `shards` objects within a region a monitor's probes go through.
+ *
+ * FNV-1a over the id, which is all this needs: an even spread over a handful of buckets
+ * and, more importantly, the same answer for the same monitor forever. A monitor that
+ * drifted between shards would show a step change in its response times that nothing the
+ * user did explains, so this is derived from the id and never from a counter, the clock,
+ * or randomness.
+ */
+function shardFor(id: string, shards: number): number {
+	let hash = 0x811c9dc5;
+
+	for (let index = 0; index < id.length; index++) {
+		hash ^= id.charCodeAt(index);
+		// `Math.imul` because the FNV prime overflows a double's exact integer range.
+		hash = Math.imul(hash, 0x01000193);
+	}
+
+	return (hash >>> 0) % shards;
+}
+
 /** Classifies a check as up/degraded/down per `docs/http-monitors.md`'s status model. */
 function classify(
 	monitor: { expected_status: number; degraded_after_ms: number },
 	outcome: CheckOutcome,
 	contentChecksPassed: boolean,
-): "up" | "down" | "degraded" {
+): MonitorStatus {
 	if (outcome.failed) return "down";
 	if (outcome.responseStatus !== monitor.expected_status) return "down";
 	if (!contentChecksPassed) return "down";

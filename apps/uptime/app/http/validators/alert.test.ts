@@ -122,13 +122,24 @@ describe("CreateAlertSchema", () => {
 		}
 	});
 
+	/**
+	 * `cooldown_minutes` defaults to 15, not 0 (ADR-004). Zero is still a legal value a user
+	 * can choose, but it must not be what they get by accident: at 0 a down monitor on a
+	 * 1-minute interval emails every minute for as long as it stays down.
+	 */
 	test("defaults notify_on_recovery and cooldown_minutes when omitted", () => {
 		let result = s.parseSafe(CreateAlertSchema, baseFormData());
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.value.notify_on_recovery).toBe(false);
-			expect(result.value.cooldown_minutes).toBe(0);
+			expect(result.value.cooldown_minutes).toBe(15);
 		}
+	});
+
+	test("still accepts an explicit cooldown of 0", () => {
+		let result = s.parseSafe(CreateAlertSchema, baseFormData({ cooldown_minutes: "0" }));
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.value.cooldown_minutes).toBe(0);
 	});
 
 	test("leaves monitor_id undefined when omitted, since it is optional", () => {

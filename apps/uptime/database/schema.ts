@@ -158,6 +158,15 @@ export type InsertUserPreferences = InsertRow<typeof userPreferences>;
 
 // HTTP monitors
 
+/**
+ * What a completed HTTP check classifies a monitor as — the value set of
+ * `monitors.last_status`, and what the check pipeline passes around. Declared here, next
+ * to the column, so adding a status is one edit rather than one per repeated union.
+ */
+export const monitorStatuses = ["up", "down", "degraded"] as const;
+
+export type MonitorStatus = (typeof monitorStatuses)[number];
+
 export const monitors = table({
 	name: "monitors",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -194,6 +203,19 @@ export const monitors = table({
 			.enum(["unknown", "valid", "expiring", "expired", "error"])
 			.nullable()
 			.default("unknown"),
+		/**
+		 * What the last completed check classified this monitor as, when it completed, and
+		 * how long it took. A **cache**, written by the consumer after the result is
+		 * committed: the Analytics Engine result stream stays authoritative for history and
+		 * aggregation, and these exist only so transition detection and the list row cost no
+		 * query. When the two disagree, believe the stream — the same relationship
+		 * `dns_monitors.last_value` has with `dns_monitor_results`, and the same trio
+		 * `tcp_monitors` already carries. `NULL` means "never checked", which recovery
+		 * detection reads as not-a-recovery, so no backfill is needed.
+		 */
+		last_status: c.enum(monitorStatuses).nullable(),
+		last_checked_at: c.integer().nullable(),
+		last_response_time_ms: c.integer().nullable(),
 	},
 });
 
@@ -250,6 +272,14 @@ export const dnsMonitors = table({
 		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS"]),
 		expected_value: c.text().nullable(),
 		interval_seconds: c.integer().default(3600),
+		/**
+		 * When this monitor's next check is due, or `null` when it isn't scheduled at all.
+		 * The sweep claims monitors by advancing this from its own previous value by whole
+		 * intervals, which is what makes `interval_seconds` authoritative instead of the
+		 * sweep's own cadence (ADR-006). Same column, same meaning, on all three monitor
+		 * tables.
+		 */
+		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
 		last_status: c.enum(["ok", "changed", "error"]).nullable(),
@@ -291,6 +321,8 @@ export const tcpMonitors = table({
 		port: c.integer(),
 		timeout_ms: c.integer().default(5000),
 		interval_seconds: c.integer().default(60),
+		/** When this monitor's next check is due, or `null` when it isn't scheduled at all — see `dns_monitors.next_due_at`. */
+		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
 		last_status: c.enum(["up", "down", "timeout"]).nullable(),
@@ -410,7 +442,10 @@ export const alerts = table({
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		notify_on_recovery: c.boolean().default(true),
-		cooldown_minutes: c.integer().default(0), // 0 = no cooldown
+		// 0 is still legal (notify on every check) but is no longer the default: an
+		// unthrottled alert on a 1-minute monitor is one email per minute for as long as
+		// the outage lasts (ADR-004).
+		cooldown_minutes: c.integer().default(15),
 		config: c.json() as ColumnBuilder<AlertConfig>,
 	},
 });
@@ -450,6 +485,16 @@ export type AlertEventSnapshot =
 			hostname: string;
 	  };
 
+/**
+ * What became of one alert delivery attempt. Declared here, next to the column, so the
+ * value set is a real union rather than `string` — the alert pipeline and the history view
+ * both branch on it. Every reason an alert was recorded without being delivered is named
+ * `skipped_*`, which is what lets both of them treat suppressions as a group.
+ */
+export const alertEventStatuses = ["sent", "skipped_cooldown", "skipped_cap", "failed"] as const;
+
+export type AlertEventStatus = (typeof alertEventStatuses)[number];
+
 export const alertEvents = table({
 	name: "alert_events",
 	timestamps: { createdAt: "created_at" },
@@ -460,7 +505,7 @@ export const alertEvents = table({
 		alert_id: c.text(),
 		monitor_id: c.text(),
 		event_type: c.enum(["down", "up", "degraded"]),
-		status: c.enum(["sent", "skipped_cooldown", "failed"]),
+		status: c.enum(alertEventStatuses),
 		error_message: c.text().nullable(),
 		monitor_type: c.enum(["http", "dns", "tcp", "cron", "ssl"]).nullable(),
 		monitor_name: c.text().nullable(),
@@ -623,3 +668,50 @@ export const monitorDailyStats = table({
 
 export type SelectMonitorDailyStats = TableRow<typeof monitorDailyStats>;
 export type InsertMonitorDailyStats = InsertRow<typeof monitorDailyStats>;
+
+// Billing
+
+/**
+ * A **projection** of Polar's subscription state, written only by the Polar webhook and
+ * the daily reconciliation sweep (ADR-005). Polar stays authoritative for money; these
+ * rows exist so authorisation costs one indexed read instead of one API call, which is
+ * what lets the every-minute scheduler ask nothing at all.
+ *
+ * Nothing else may write here, and a drift between this table and Polar is never fixed by
+ * editing a row: reconciliation reads Polar and repairs the projection in the one
+ * direction that keeps the two convergent. Rows are kept after a subscription ends —
+ * `status` records how it ended, and the absence of any row for a customer is what
+ * "we have never learned anything about them" means (see `Subscription.stateFor`).
+ */
+export const subscriptions = table({
+	name: "subscriptions",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		/**
+		 * The OIDC subject the Polar customer is linked to by `Customer.findOrCreate`, which
+		 * equals `teams.owner_id` — so authorisation needs no join hop from a team to its
+		 * billing identity.
+		 */
+		external_customer_id: c.text(),
+		polar_subscription_id: c.text(),
+		polar_product_id: c.text(),
+		/** Polar's own status string, not an app enum — see `isActiveSubscriptionStatus`. */
+		status: c.text(),
+		current_period_end: c.integer().nullable(),
+		revoked_at: c.integer().nullable(),
+		/**
+		 * When Polar last modified the subscription, from the payload itself. This is the
+		 * version stamp the upsert orders events by: Polar retries deliveries and events can
+		 * arrive out of order, and `updated_at` above is when *this app* wrote the row, which
+		 * is always later than the payload and so can't order two payloads against each
+		 * other.
+		 */
+		polar_modified_at: c.integer(),
+	},
+});
+
+export type SelectSubscription = TableRow<typeof subscriptions>;
+export type InsertSubscription = InsertRow<typeof subscriptions>;

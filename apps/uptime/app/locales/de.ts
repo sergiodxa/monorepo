@@ -2563,6 +2563,8 @@ export default {
 				status: {
 					sent: "Gesendet",
 					skipped_cooldown: "Übersprungen (Cooldown)",
+					skipped_cap: "Übersprungen (Wiederholungslimit)",
+					skipped: "Übersprungen",
 					failed: "Fehlgeschlagen",
 				},
 			},

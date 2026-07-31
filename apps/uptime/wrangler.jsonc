@@ -10,14 +10,19 @@
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
 
+	// The every-minute trigger delivers every monitor sweep: HTTP, cron jobs, TCP and DNS.
+	// TCP had its own `*/5 * * * *` and DNS its own `0 * * * *` until each one's
+	// `interval_seconds` became authoritative (ADR-006), which left those two triggers
+	// setting a ceiling on how fine an interval was reachable and nothing else. Each sweep
+	// now claims only the monitors that are due, so the finer delivery reads an indexed range
+	// that matches nothing in most minutes instead of every enabled row every time.
 	"triggers": {
 		"crons": [
-			"* * * * *", // Every minute - uptime monitors + cron job monitors
-			"*/5 * * * *", // Every 5 minutes - TCP monitors
+			"* * * * *", // Every minute - uptime + cron job + TCP + DNS monitors
 			"*/10 * * * *", // Every 10 minutes - domain verification
-			"0 * * * *", // Every hour - DNS monitors
 			"0 0 * * *", // Every day at midnight - cleanup
 			"0 1 * * *", // Every day at 1 AM UTC - aggregate daily stats
+			"0 2 * * *", // Every day at 2 AM UTC - reconcile Polar subscriptions
 			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
 		],
 	},
@@ -25,7 +30,8 @@
 	"routes": [{ "pattern": "uptime.sergiodxa.com", "custom_domain": true }],
 
 	// Plain secrets (COOKIE_SESSION_SECRET, CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
-	// RESEND_API_TOKEN, UPTIME_CRON_API_KEY, CLOUDFLARE_ACCOUNT_ID/ANALYTICS_TOKEN) are
+	// POLAR_WEBHOOK_SECRET, RESEND_API_TOKEN, UPTIME_CRON_API_KEY,
+	// CLOUDFLARE_ACCOUNT_ID/ANALYTICS_TOKEN) are
 	// set via `.dev.vars` locally and `wrangler secret put` in production — same as the
 	// OLD APP (`apps/uptime/app/cookies.ts` reads `env.COOKIE_SESSION_SECRET` directly)
 	// and `apps/auth-saas`. Not declared here; only bindings need a wrangler.jsonc entry.
@@ -51,9 +57,29 @@
 	// R2 bucket bindings can be added here when needed
 	"r2_buckets": [],
 
+	// Without a `dead_letter_queue` an exhausted message is discarded, and nothing records
+	// that a scheduled check was never performed. `CheckHttpJob` only retries infrastructure
+	// faults — a monitored endpoint being down is a stored result, not an error — so an
+	// exhausted message is always the class worth knowing about, and since scheduling claims
+	// a monitor's next due time up front it doesn't come back on the next tick either: the
+	// monitor just misses that interval, silently. `max_retries` is stated even though 3 is
+	// the default because it and the DLQ are one policy ("three attempts, then dead-letter"),
+	// not two settings, so neither half is inherited invisibly.
+	//
+	// `ping-dlq` needs `wrangler queues create ping-dlq` before any deploy that references
+	// it, or the deploy fails. Its consumer records and never retries, which is a property of
+	// the handler always acking rather than of a retry setting here. The `DLQ` producer
+	// binding is for bodies that fail schema validation: they go straight there instead of
+	// spending three redeliveries on a payload no redelivery can fix.
 	"queues": {
-		"consumers": [{ "queue": "ping" }],
-		"producers": [{ "binding": "QUEUE", "queue": "ping" }],
+		"consumers": [
+			{ "queue": "ping", "dead_letter_queue": "ping-dlq", "max_retries": 3 },
+			{ "queue": "ping-dlq" },
+		],
+		"producers": [
+			{ "binding": "QUEUE", "queue": "ping" },
+			{ "binding": "DLQ", "queue": "ping-dlq" },
+		],
 	},
 
 	"durable_objects": {

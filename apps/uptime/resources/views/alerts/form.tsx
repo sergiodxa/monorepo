@@ -164,7 +164,7 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 						name="cooldown_minutes"
 						min={0}
 						max={1440}
-						defaultValue={alert?.cooldown_minutes ?? 0}
+						defaultValue={alert?.cooldown_minutes ?? 15}
 					/>
 				</Field>
 			</>

@@ -5,8 +5,9 @@
  * every qualifying event it: skips entirely when an active, suppressing maintenance
  * window covers the monitor; otherwise resolves the applicable alerts
  * (monitor-specific + team-wide for HTTP, team-wide only for other monitor types —
- * see `app/data/alert.ts`), skips any alert still in cooldown, delivers the rest
- * (email/webhook/Slack/Discord), and records every outcome to `alert_events`.
+ * see `app/data/alert.ts`), skips any alert still in cooldown or already at the
+ * per-incident send cap, delivers the rest (email/webhook/Slack/Discord), and records
+ * every outcome to `alert_events`.
  * Cooldown and recovery notifications, and a real HMAC-SHA256 signature on webhook
  * deliveries, are enforced uniformly for every monitor type.
  *
@@ -40,6 +41,14 @@ import routes from "~/routes/web";
 
 const EMAIL_FROM = "Uptime <no-reply@uptime.sergiodxa.com>";
 const EMAIL_REPLY_TO = "hello@sergiodxa.com";
+
+/**
+ * Ceiling on the notifications one alert sends for the same monitor and event type in a
+ * single incident (ADR-004). Cooldown throttles the rate but doesn't bound the total, and
+ * `cooldown_minutes: 0` stays a legal choice — without a ceiling, a down monitor checked
+ * every minute is one email per minute for as long as the outage lasts.
+ */
+const MAX_CONSECUTIVE_SENDS = 10;
 
 /**
  * Production origin for links inside alert messages. Background jobs have no request
@@ -97,54 +106,86 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 	await Promise.allSettled(applicable.map((alert) => deliverOne(alert, params)));
 }
 
+/**
+ * Every reason an alert is recorded without being delivered — by convention every
+ * `alert_events.status` of `skipped_*`, which is also what lets the history view tone and
+ * label them as a group instead of enumerating them.
+ */
+type SuppressionReason = Extract<SelectAlertEvent["status"], `skipped_${string}`>;
+
+/**
+ * Why this alert must not be delivered right now, or `null` to deliver it. Both current
+ * reasons bound repetition on different axes: cooldown bounds the rate, the cap bounds the
+ * total — a `cooldown_minutes` of 0 is legal, and a level-triggered down alert would
+ * otherwise repeat for as long as the outage lasts (ADR-004). A recovery is edge-triggered
+ * and is what ends the incident the cap counts against, so it's never capped itself.
+ *
+ * A third reason belongs here as another branch: add the `skipped_*` value to
+ * `alert_events.status` and return it, and recording, toning, and labelling it follow.
+ */
+async function suppressionReason(
+	alert: SelectAlert,
+	params: DispatchAlertsParams,
+): Promise<SuppressionReason | null> {
+	let inCooldown = await AlertEvent.isInCooldown(
+		params.db,
+		alert.id,
+		params.monitorId,
+		params.eventType,
+		alert.cooldown_minutes,
+	);
+	if (inCooldown) return "skipped_cooldown";
+
+	if (params.eventType === "up") return null;
+
+	let sent = await AlertEvent.countSentSinceRecovery(
+		params.db,
+		alert.id,
+		params.monitorId,
+		params.eventType,
+		MAX_CONSECUTIVE_SENDS,
+	);
+	if (sent >= MAX_CONSECUTIVE_SENDS) return "skipped_cap";
+
+	return null;
+}
+
 async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Promise<void> {
-	if (
-		await AlertEvent.isInCooldown(
-			params.db,
-			alert.id,
-			params.monitorId,
-			params.eventType,
-			alert.cooldown_minutes,
-		)
-	) {
-		await AlertEvent.record(params.db, {
+	/** Every exit from here records one outcome for this alert, and only one. */
+	function record(status: SelectAlertEvent["status"], errorMessage: string | null) {
+		return AlertEvent.record(params.db, {
 			alert_id: alert.id,
 			monitor_id: params.monitorId,
 			event_type: params.eventType,
-			status: "skipped_cooldown",
-			error_message: null,
+			status,
+			error_message: errorMessage,
 			monitor_type: params.monitorType,
 			monitor_name: params.monitorName,
 			snapshot: params.snapshot,
 		});
+	}
+
+	let suppressed = await suppressionReason(alert, params);
+	if (suppressed) {
+		await record(suppressed, null);
 		return;
 	}
 
 	let message = buildMessage(params);
 
+	/** Without this a capped incident is indistinguishable from alerts having been dropped. */
+	if (params.eventType === "up") {
+		let incident = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
+		if (incident.suppressed > 0) {
+			message.text += `\n\nNotifications for this incident: ${incident.sent} sent, ${incident.suppressed} suppressed by cooldown and the ${MAX_CONSECUTIVE_SENDS}-per-incident limit.`;
+		}
+	}
+
 	try {
 		await deliver(alert, message, params);
-		await AlertEvent.record(params.db, {
-			alert_id: alert.id,
-			monitor_id: params.monitorId,
-			event_type: params.eventType,
-			status: "sent",
-			error_message: null,
-			monitor_type: params.monitorType,
-			monitor_name: params.monitorName,
-			snapshot: params.snapshot,
-		});
+		await record("sent", null);
 	} catch (error) {
-		await AlertEvent.record(params.db, {
-			alert_id: alert.id,
-			monitor_id: params.monitorId,
-			event_type: params.eventType,
-			status: "failed",
-			error_message: error instanceof Error ? error.message : String(error),
-			monitor_type: params.monitorType,
-			monitor_name: params.monitorName,
-			snapshot: params.snapshot,
-		});
+		await record("failed", error instanceof Error ? error.message : String(error));
 	}
 }
 
@@ -514,7 +555,9 @@ export async function notifyCronJobResult(
  * Unlike the other `notify*` helpers, this isn't edge-triggered — it fires every day
  * {@link shouldAlertOnSslStatus} says to, matching `docs/ssl-monitoring.md`'s "alerts
  * happen around key warning thresholds... and again on expiry" (repeated reminders,
- * not a one-time transition). Per-alert cooldown is what bounds the repetition.
+ * not a one-time transition). Per-alert cooldown throttles the repetition and
+ * {@link MAX_CONSECUTIVE_SENDS} bounds it — a certificate nobody renews is otherwise one
+ * email a day forever. SSL never dispatches an `up` event, so nothing resets that count.
  */
 export async function notifySslResult(
 	db: Database,

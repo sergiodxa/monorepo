@@ -24,7 +24,8 @@ const alertFields = {
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	monitor_id: f.field(s.optional(s.string())),
 	notify_on_recovery: f.field(s.defaulted(coerce.boolean(), false)),
-	cooldown_minutes: f.field(s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), 0)),
+	/** 0 is legal (notify on every check) but 15 is the default — see ADR-004. */
+	cooldown_minutes: f.field(s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), 15)),
 	email_to: f.field(s.optional(s.string())),
 	email_subject_prefix: f.field(s.optional(s.string())),
 	webhook_url: f.field(s.optional(s.string())),

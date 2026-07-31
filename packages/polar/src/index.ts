@@ -39,6 +39,66 @@ export type { Checkout, Customer, CustomerSession, Discount, Order, Product, Sub
 export type PolarWebhookEvent = ReturnType<typeof validateEvent>;
 
 /**
+ * The subscription statuses Polar itself counts as active, i.e. the ones its
+ * `subscriptions.list({ active: true })` filter returns. Exported because an app that
+ * stores subscription state of its own has to answer "is this active?" against its own
+ * copy, and the answer has to be the same one Polar would give — otherwise the local
+ * projection and the API disagree and a reconciliation pass repairs rows forever.
+ *
+ * `canceled` is deliberately absent: Polar keeps a cancelled-at-period-end subscription
+ * at `active` until the period actually ends, so entitlement follows the status and not
+ * the `subscription.canceled` event.
+ */
+export const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const;
+
+/**
+ * Whether a Polar subscription status grants entitlement. Takes a plain `string` so it
+ * can be asked of a status read back out of a database as well as of a live
+ * subscription — {@link ACTIVE_SUBSCRIPTION_STATUSES} is the definition either way.
+ *
+ * @param status - A Polar subscription status string.
+ * @returns `true` when Polar would count the subscription as active.
+ */
+export function isActiveSubscriptionStatus(status: string): boolean {
+	return ACTIVE_SUBSCRIPTION_STATUSES.some((active) => active === status);
+}
+
+/**
+ * The subscription carried by a webhook event, or `null` for every event that carries
+ * something else (an order, a checkout, a benefit grant…).
+ *
+ * This is the narrowing half of {@link PolarClient.parseWebhook}: the parsed event is a
+ * union of ~35 payload types discriminated on `type`, and a caller that only cares about
+ * subscription state would otherwise repeat the list of subscription event types itself.
+ * Which event types carry a `Subscription` is a fact about Polar, so it lives here.
+ *
+ * @param event - A verified webhook event from {@link PolarClient.parseWebhook}.
+ * @returns The event's subscription, or `null` when it isn't a subscription event.
+ *
+ * @example
+ * ```ts
+ * let result = polar.parseWebhook(request, body, secret);
+ * if (isFailure(result)) return new Response(result.error.message, { status: 400 });
+ * let subscription = subscriptionFromEvent(result.data);
+ * if (!subscription) return new Response(null, { status: 200 });
+ * ```
+ */
+export function subscriptionFromEvent(event: PolarWebhookEvent): Subscription | null {
+	switch (event.type) {
+		case "subscription.created":
+		case "subscription.updated":
+		case "subscription.active":
+		case "subscription.canceled":
+		case "subscription.uncanceled":
+		case "subscription.past_due":
+		case "subscription.revoked":
+			return event.data;
+		default:
+			return null;
+	}
+}
+
+/**
  * Options accepted by the {@link PolarClient} constructor.
  */
 export interface PolarClientOptions {
@@ -326,6 +386,30 @@ export class PolarClient {
 		for await (let page of result) {
 			subscriptions.push(...page.result.items.filter((sub) => sub.productId === productId));
 		}
+		return subscriptions;
+	}
+
+	/**
+	 * Lists every active subscription to a product across the whole organization,
+	 * following pagination to completion. The organization-wide counterpart to
+	 * {@link listActiveSubscriptions}, for a reconciliation pass that repairs a local
+	 * projection of subscription state: it answers "who is paying right now?" in one
+	 * paginated walk instead of one point read per customer.
+	 *
+	 * @param productId - The Polar product id to filter to.
+	 * @returns Every active subscription to that product.
+	 * @throws {PolarError} When the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let active = await polar.listActiveSubscriptionsByProduct(PRODUCT_ID);
+	 * for (let subscription of active) await Subscription.upsert(db, subscription);
+	 * ```
+	 */
+	async listActiveSubscriptionsByProduct(productId: string): Promise<Subscription[]> {
+		let result = await this.client.subscriptions.list({ productId, active: true });
+		let subscriptions: Subscription[] = [];
+		for await (let page of result) subscriptions.push(...page.result.items);
 		return subscriptions;
 	}
 

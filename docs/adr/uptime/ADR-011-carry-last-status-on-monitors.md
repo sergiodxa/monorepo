@@ -2,8 +2,8 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
-§7 and §17 (medium).
+**Accepted** — implemented 2026-07-31. Follows from
+[ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §7 and §17 (medium).
 
 ## Context
 
@@ -62,6 +62,15 @@ no extra rows read — and writes the new status in the same `UPDATE` that
 [ADR-003](./ADR-003-schedule-http-checks-from-next-due-at.md) already introduces for
 `next_due_at`. So this ADR adds **zero statements** on top of ADR-003 and removes one AE query.
 
+> **Wrong as shipped.** ADR-003 landed its claim as a scheduler-side `UPDATE … RETURNING` in
+> `Monitor.findDue`, which fires once per cron tick for every due monitor — not once per check
+> in the consumer. There was no consumer-side write to ride on, so `last_status` needed its own
+> `UPDATE monitors`: **+1 statement and +1 row written per check**, which roughly cancels the
+> per-check AE query saving. The paragraph below anticipated exactly this ("`last_status` must
+> still be written in the consumer, not the scheduler"); it is the "zero statements" arithmetic
+> that was optimistic, not the design. The change still pays for itself — see the corrected
+> Consequences.
+
 ```ts
 // before: an HTTP round trip to the AE SQL API
 let previous = await getLatestHttpResult(monitor.team_id, job.monitorId);
@@ -103,6 +112,14 @@ scheduler — they are two different writes with two different triggers.
 - **Backfill is unnecessary.** A `NULL` `last_status` means "never checked", which
   `notifyHttpResult` already treats as not-a-recovery — the same semantics as today's `null`
   from a failed or empty AE query. Existing monitors self-heal on their first check.
-- Depends on ADR-003 to be free. Landed alone it needs its own `UPDATE monitors` statement
-  (+1 statement, +1 row written, ≈$0.000001) which roughly cancels the AE query saving — so
-  **do not ship this before ADR-003**; there is no benefit until the write it rides on exists.
+- ~~Depends on ADR-003 to be free.~~ **Corrected.** ADR-003's write lives in the scheduler, so
+  there was never a consumer-side write to ride on: this costs **+1 statement and +1 row written
+  per check** regardless of ordering, roughly cancelling the per-check AE saving. What justifies
+  it is the read side and the failure modes, not per-ping cost — the monitors-list N+1 goes from
+  N uncached AE queries per page view to zero, an `api.cloudflare.com` round trip leaves the
+  critical path between probe and commit, and recovery detection stops degrading when Analytics
+  Engine is unavailable. The per-check cost is a wash; the page-view saving is not.
+- `last_response_time_ms` was added alongside the two columns above. It is not in the Decision,
+  but without it the monitors list's Response Time column had no source once the per-monitor AE
+  query was deleted, and it rides the same `UPDATE` for no extra statement — the same trio
+  `tcp_monitors` already carries.

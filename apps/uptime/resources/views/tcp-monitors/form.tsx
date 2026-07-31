@@ -82,7 +82,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						<NumberField.Input
 							id="tcp-monitor-interval-seconds"
 							name="interval_seconds"
-							min={10}
+							min={60}
 							max={86_400}
 							defaultValue={monitor?.interval_seconds ?? 300}
 						/>

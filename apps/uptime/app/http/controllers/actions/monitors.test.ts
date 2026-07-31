@@ -15,7 +15,6 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
-import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
@@ -27,6 +26,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
+import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -86,17 +86,6 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** A `PolarClient` whose subscription lookup is forced to `hasActiveSubscription`. */
-function fakePolar(hasActiveSubscription: boolean) {
-	let client = new PolarClient({ accessToken: "t" });
-	(
-		client as unknown as {
-			hasActiveSubscription: InstanceType<typeof PolarClient>["hasActiveSubscription"];
-		}
-	).hasActiveSubscription = async () => hasActiveSubscription;
-	return client;
-}
-
 /** Sends a form request through a minimal router mapping a single action route. */
 async function send(
 	db: Database,
@@ -106,11 +95,9 @@ async function send(
 	handler: RequestHandler<any>,
 	method: string,
 	params: Record<string, string>,
-	hasActiveSubscription = true,
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(PolarClient, fakePolar(hasActiveSubscription));
 
 	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
@@ -357,8 +344,9 @@ describe("playMonitor", () => {
 		expect(queueSend).toHaveBeenCalledTimes(1);
 	});
 
-	test("queues nothing when the team owner has no active subscription", async () => {
+	test("queues nothing when the team owner is known to be unsubscribed", async () => {
 		let { db, team, membership } = await createFixture();
+		await createRevokedSubscription(db, team.owner_id);
 		let monitor = await db.create(
 			monitors,
 			{
@@ -381,7 +369,6 @@ describe("playMonitor", () => {
 			playMonitor as RequestHandler<any>,
 			"POST",
 			{ monitor_id: monitor.id },
-			false,
 		);
 
 		expect(response.status).toBe(303);

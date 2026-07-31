@@ -3,6 +3,8 @@
  * needed — this controller only touches `~/app/data/customer`, which wraps
  * `@pkg/polar` and has no queue-binding dependency. A fake `PolarClient` stands
  * in for the real one, stubbing every method `~/app/data/customer.ts` calls.
+ * Whether the owner is subscribed is seeded into the `subscriptions` projection
+ * instead of stubbed on the client (ADR-005), since that is where it is read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,6 +29,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
+import { createActiveSubscription } from "~/app/lib/test/polar";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -110,7 +113,6 @@ async function renderCheckout(
 
 function createFakePolar(overrides: Partial<Record<string, unknown>> = {}): PolarClient {
 	return {
-		hasActiveSubscription: mock(async () => false),
 		getExternalCustomer: mock(async () => ({ id: "cus_1" })),
 		createCheckoutSession: mock(async () => ({ url: "https://polar.sh/checkout/123" })),
 		createPortalSession: mock(async () => ({ url: "https://polar.sh/portal/123" })),
@@ -144,7 +146,6 @@ describe("checkout page", () => {
 			{ touch: true, returnRow: true },
 		);
 		let polar = createFakePolar({
-			hasActiveSubscription: mock(async () => false),
 			getExternalCustomer: mock(async () => ({ id: "cus_1" })),
 			createCheckoutSession: mock(async () => ({ url: "https://polar.sh/checkout/123" })),
 		});
@@ -163,10 +164,11 @@ describe("checkout page", () => {
 			{ touch: true, returnRow: true },
 		);
 		let polar = createFakePolar({
-			hasActiveSubscription: mock(async () => true),
 			getExternalCustomer: mock(async () => ({ id: "cus_1" })),
 			createPortalSession: mock(async () => ({ url: "https://polar.sh/portal/123" })),
 		});
+		// Entitlement comes from the D1 projection now, not from a Polar lookup (ADR-005).
+		await createActiveSubscription(db, team.owner_id);
 
 		let response = await renderCheckout(db, team, membership, polar);
 
