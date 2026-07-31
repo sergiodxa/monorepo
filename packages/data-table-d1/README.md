@@ -63,6 +63,9 @@ D1 binding.
   (`AdapterCapabilityOverrides` from `remix/data-table`). Defaults: `returning`,
   `upsert`, and `transactionalDdl` are `true`; `savepoints` and `migrationLock` are
   `false`.
+- `options.onStatement`: Optional `D1StatementObserver` called after every executed
+  statement with `{ kind, table, rowsRead, rowsWritten, durationMs }`, taken from the
+  `meta` D1 already returns. See the pattern below.
 
 **Returns:**
 
@@ -74,6 +77,36 @@ D1 binding.
 let adapter = createD1DatabaseAdapter(env.DB);
 let db = createDatabase(adapter);
 ```
+
+## Pattern: Attributing D1 rows read and written per query
+
+Every D1 response carries `meta.rows_read`, `meta.rows_written`, and `meta.duration`,
+and the adapter already reads `meta` to normalise `affectedRows`/`insertId`.
+`onStatement` hands those numbers to the caller instead of discarding them, so an app
+can attribute row counts to the query or unit of work that caused them — a breakdown
+per _query_, which Cloudflare's per-_database_ analytics cannot give. It costs no
+extra statement and no extra billable operation:
+
+```typescript
+let usage = { statements: 0, rowsRead: 0, rowsWritten: 0 };
+
+let db = createDatabase(
+	createD1DatabaseAdapter(env.DB, {
+		onStatement({ rowsRead, rowsWritten }) {
+			usage.statements += 1;
+			usage.rowsRead += rowsRead;
+			usage.rowsWritten += rowsWritten;
+		},
+	}),
+);
+```
+
+Keep the observer cheap: it runs once per statement, on the hot path. It is allowed
+to throw — the adapter swallows anything it throws rather than failing the statement
+it was measuring — but a throwing observer records nothing. Statements that throw are
+not reported (D1 returns no `meta` for them), and neither are the adapter's own
+schema probes (`hasTable`, `hasColumn`, `executeScript`). Row counts are `0` whenever
+D1 omits the corresponding `meta` field rather than being estimated.
 
 ## Pattern: Caching the database per isolate
 

@@ -24,6 +24,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { column as c, createDatabase, table } from "remix/data-table";
 
+import type { D1StatementObservation, D1StatementObserver } from "./index";
+
 import { createD1DatabaseAdapter } from "./index";
 
 /**
@@ -45,13 +47,15 @@ function createD1Shim(db: BunSqlite): D1Database {
 				return statement;
 			},
 			all() {
+				let before = readTotalChanges(db);
 				let results = db.query(text).all(...bound) as Record<string, unknown>[];
-				let meta = readMeta(db);
+				let meta = readMeta(db, results.length, readTotalChanges(db) - before);
 				return Promise.resolve({ results, meta });
 			},
 			run() {
+				let before = readTotalChanges(db);
 				db.query(text).run(...bound);
-				let meta = readMeta(db);
+				let meta = readMeta(db, 0, readTotalChanges(db) - before);
 				return Promise.resolve({ results: [], meta });
 			},
 		};
@@ -69,14 +73,91 @@ function createD1Shim(db: BunSqlite): D1Database {
 }
 
 /**
- * Reads the change count and last insert id after a statement, shaped like D1 meta.
- * @param db Open `bun:sqlite` database.
- * @returns D1-style `{ changes, last_row_id }` metadata.
+ * Fixed `meta.duration` the shim reports, so a test can tell a duration that was
+ * passed through from D1's own metadata apart from one measured locally.
  */
-function readMeta(db: BunSqlite): { changes: number; last_row_id: number } {
+const SHIM_DURATION_MS = 1.5;
+
+/**
+ * Reads the change count and last insert id after a statement, shaped like D1 meta,
+ * plus the `rows_read`/`rows_written`/`duration` fields D1 reports and the adapter's
+ * `onStatement` observer surfaces. `rows_read` is the number of rows the statement
+ * returned, which is as close as a `bun:sqlite` shim can get to D1's "rows read from
+ * tables and indexes" — the shim can pin the plumbing, not the planner.
+ * @param db Open `bun:sqlite` database.
+ * @param rowsRead Rows the statement returned.
+ * @param rowsWritten Rows the statement wrote, measured as a `total_changes()` delta
+ * because SQLite's `changes()` reports the _previous_ write's count for a statement
+ * that only read rows.
+ * @returns D1-style statement metadata.
+ */
+function readMeta(
+	db: BunSqlite,
+	rowsRead: number,
+	rowsWritten: number,
+): {
+	changes: number;
+	last_row_id: number;
+	rows_read: number;
+	rows_written: number;
+	duration: number;
+} {
 	let changes = db.query("SELECT changes() as changes").get() as { changes: number };
 	let lastId = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
-	return { changes: changes.changes, last_row_id: lastId.id };
+	return {
+		changes: changes.changes,
+		last_row_id: lastId.id,
+		rows_read: rowsRead,
+		rows_written: rowsWritten,
+		duration: SHIM_DURATION_MS,
+	};
+}
+
+/**
+ * Reads SQLite's cumulative change counter for the connection.
+ * @param db Open `bun:sqlite` database.
+ * @returns Total rows changed since the connection opened.
+ */
+function readTotalChanges(db: BunSqlite): number {
+	let row = db.query("SELECT total_changes() as total").get() as { total: number };
+	return row.total;
+}
+
+/**
+ * A `D1Database` shim whose statements report no metadata at all, standing in for a
+ * D1 build (or a future one) that omits the row counters.
+ * @param db Open `bun:sqlite` database.
+ * @returns An object matching the `D1Database` surface, with empty statement meta.
+ */
+function createMetalessD1Shim(db: BunSqlite): D1Database {
+	function prepare(text: string) {
+		let bound: SQLQueryBindings[] = [];
+
+		let statement = {
+			bind(...values: unknown[]) {
+				bound = values as SQLQueryBindings[];
+				return statement;
+			},
+			all() {
+				let results = db.query(text).all(...bound) as Record<string, unknown>[];
+				return Promise.resolve({ results, meta: {} });
+			},
+			run() {
+				db.query(text).run(...bound);
+				return Promise.resolve({ results: [], meta: {} });
+			},
+		};
+
+		return statement;
+	}
+
+	return {
+		prepare,
+		exec(sql: string) {
+			db.run(sql);
+			return Promise.resolve({ count: 0, duration: 0 });
+		},
+	} as unknown as D1Database;
 }
 
 let users = table({
@@ -209,6 +290,118 @@ describe("createD1DatabaseAdapter", () => {
 		// The Durable Object adapter (@pkg/data-table-sqlstorage) rolls this back;
 		// D1 cannot. If this ever starts returning 0, the adapter gained real
 		// atomicity and the docs/tests should be revisited.
+		expect(await db.count(users)).toBe(1);
+	});
+});
+
+describe("createD1DatabaseAdapter onStatement", () => {
+	/**
+	 * Builds a database whose adapter reports every statement into `observations`.
+	 * @param onStatement Observer to install, defaulting to one that records.
+	 * @returns The `db` handle and the array the observer appends to.
+	 */
+	function setupObserved(onStatement?: D1StatementObserver) {
+		let observations: D1StatementObservation[] = [];
+		let sqlite = new BunSqlite(":memory:");
+		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+
+		let db = createDatabase(
+			createD1DatabaseAdapter(createD1Shim(sqlite), {
+				onStatement:
+					onStatement ??
+					((observation) => {
+						observations.push(observation);
+					}),
+			}),
+		);
+
+		return { db, observations };
+	}
+
+	test("reports one observation per executed statement", async () => {
+		let { db, observations } = setupObserved();
+
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.findOne(users, { where: { id: 1 } });
+
+		expect(observations).toHaveLength(2);
+		expect(observations.map((observation) => observation.kind)).toEqual(["insert", "select"]);
+		expect(observations.map((observation) => observation.table)).toEqual(["users", "users"]);
+	});
+
+	test("surfaces the rows read, rows written, and duration D1 reported", async () => {
+		let { db, observations } = setupObserved();
+
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.create(users, { id: 2, email: "two@example.com" });
+		observations.length = 0;
+
+		await db.findMany(users);
+
+		expect(observations).toHaveLength(1);
+		expect(observations[0]?.rowsRead).toBe(2);
+		expect(observations[0]?.rowsWritten).toBe(0);
+		// Passed through from `meta.duration` rather than timed by the adapter.
+		expect(observations[0]?.durationMs).toBe(1.5);
+	});
+
+	test("counts a write's rows written from meta rather than from returned rows", async () => {
+		let { db, observations } = setupObserved();
+
+		await db.create(users, { id: 1, email: "one@example.com" });
+
+		expect(observations[0]?.rowsWritten).toBe(1);
+	});
+
+	test("reports a raw statement with no table", async () => {
+		let { db, observations } = setupObserved();
+
+		await db.exec("SELECT 1 as one");
+
+		expect(observations).toHaveLength(1);
+		expect(observations[0]?.kind).toBe("raw");
+		expect(observations[0]?.table).toBeUndefined();
+	});
+
+	test("reports zeros when D1 omits the counters instead of guessing", async () => {
+		let observations: D1StatementObservation[] = [];
+		let sqlite = new BunSqlite(":memory:");
+		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+		let db = createDatabase(
+			createD1DatabaseAdapter(createMetalessD1Shim(sqlite), {
+				onStatement: (observation) => observations.push(observation),
+			}),
+		);
+
+		await db.create(users, { id: 1, email: "one@example.com" });
+
+		expect(observations[0]?.rowsRead).toBe(0);
+		expect(observations[0]?.rowsWritten).toBe(0);
+		expect(observations[0]?.durationMs).toBe(0);
+	});
+
+	test("an observer that throws does not fail the statement it was measuring", async () => {
+		let { db } = setupObserved(() => {
+			throw new Error("logging blew up");
+		});
+
+		let created = await db.create(
+			users,
+			{ id: 7, email: "seven@example.com" },
+			{ returnRow: true },
+		);
+
+		expect(created.email).toBe("seven@example.com");
+		expect(await db.count(users)).toBe(1);
+	});
+
+	test("an adapter without an observer behaves exactly as before", async () => {
+		let sqlite = new BunSqlite(":memory:");
+		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+		let db = createDatabase(createD1DatabaseAdapter(createD1Shim(sqlite)));
+
+		await db.create(users, { id: 1, email: "one@example.com" });
+
 		expect(await db.count(users)).toBe(1);
 	});
 });

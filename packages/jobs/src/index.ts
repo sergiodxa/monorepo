@@ -16,11 +16,62 @@ import { ValidationError } from "@pkg/validate";
 
 const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
 
+/**
+ * The registered usage tracker, if the host app installed one. Module-level rather
+ * than an option on `run()` so a worker's queue handler doesn't have to thread
+ * instrumentation through every `Job.run(...)` call site.
+ */
+let usageTracker: Job.UsageTracker | undefined;
+
+/**
+ * Registers the tracker `Job.run` wraps every job in, enabling the `usage` field on
+ * `job.completed`. Call it once while the app boots; call it with `undefined` to turn
+ * the instrumentation back off.
+ *
+ * Jobs run untracked by default, and a tracker that throws or misbehaves can only
+ * affect the job it wraps, so this stays opt-in per app.
+ * @param tracker Tracker that scopes an accumulator to one job's execution.
+ * @example setJobUsageTracker((usage, body) => storage.run(usage, body));
+ */
+export function setJobUsageTracker(tracker: Job.UsageTracker | undefined): void {
+	usageTracker = tracker;
+}
+
 export namespace Job {
 	export interface UptimeOptions {
 		token?: string;
 		monitorId?: string;
 	}
+
+	/**
+	 * Database work one job did, accumulated while it ran and reported on its
+	 * `job.completed` event.
+	 *
+	 * Counters are mutated in place by whatever the host app registered through
+	 * {@link setJobUsageTracker}, so reading them is always reading the live totals for
+	 * that job — which is what makes per-job-type attribution possible from the one
+	 * batched log line a job already emits, with no extra query and no extra billable
+	 * operation.
+	 */
+	export interface Usage {
+		/** Statements executed. */
+		statements: number;
+		/** Rows read from tables and indexes. */
+		rowsRead: number;
+		/** Rows written to tables and indexes. */
+		rowsWritten: number;
+		/** Milliseconds the database reported for those statements, summed. */
+		durationMs: number;
+	}
+
+	/**
+	 * Runs `body` with `usage` as the active accumulator, so statements issued anywhere
+	 * inside it are attributed to this job and not to a sibling job from the same queue
+	 * batch. The host app owns the accumulation mechanism (an async-local store over
+	 * its database adapter's statement observer); this package only asks to be told
+	 * when a job starts and stops.
+	 */
+	export type UsageTracker = <T>(usage: Usage, body: () => Promise<T>) => Promise<T>;
 
 	export interface ConstructorOptions {
 		uptime?: UptimeOptions;
@@ -45,17 +96,47 @@ export abstract class Job {
 	 * from the class name rather than written by hand so it stays stable across
 	 * deploys; renaming a subclass therefore renames it in logs and dashboards.
 	 *
+	 * When a tracker is registered with {@link setJobUsageTracker}, the whole
+	 * lifecycle runs inside it and `job.completed` carries a `usage` field with the
+	 * statements and rows this one job's database work cost — per-job-type cost
+	 * attribution out of a log line the job already emitted.
+	 *
 	 * @param options - The queue message plus the optional uptime token
 	 */
 	static async run<T extends Job>(
 		this: (new (options: Job.ConstructorOptions, body: JSONValue) => T) & { monitorId?: string },
 		options: Job.RunOptions,
 	): Promise<void> {
-		let id = `job:${dasherize(underscore(this.name))}:${options.message.id}`;
-		let uptime = { token: options.uptime, monitorId: this.monitorId };
+		let tracker = usageTracker;
+		let usage: Job.Usage = { statements: 0, rowsRead: 0, rowsWritten: 0, durationMs: 0 };
+		let run = () => Job.#lifecycle(this, options, tracker ? usage : undefined);
+
+		if (!tracker) return await run();
+		return await tracker(usage, run);
+	}
+
+	/**
+	 * The job lifecycle itself, split out of {@link Job.run} so the whole of it —
+	 * `perform()`, the uptime ping, ack/retry, and the log flush — runs inside the
+	 * registered usage tracker's scope rather than only part of it.
+	 * @param constructor The `Job` subclass being run.
+	 * @param options The queue message plus the optional uptime token.
+	 * @param usage Live usage counters to report on `job.completed`, or `undefined`
+	 * when nothing is tracking this job.
+	 */
+	static async #lifecycle<T extends Job>(
+		constructor: (new (options: Job.ConstructorOptions, body: JSONValue) => T) & {
+			monitorId?: string;
+			name: string;
+		},
+		options: Job.RunOptions,
+		usage: Job.Usage | undefined,
+	): Promise<void> {
+		let id = `job:${dasherize(underscore(constructor.name))}:${options.message.id}`;
+		let uptime = { token: options.uptime, monitorId: constructor.monitorId };
 		let logger = new BatchedLogger(id);
 
-		let job = new this({ uptime, logger }, options.message.body as JSONValue);
+		let job = new constructor({ uptime, logger }, options.message.body as JSONValue);
 
 		try {
 			logger.info("job.started", {
@@ -71,6 +152,8 @@ export abstract class Job {
 			logger.info("job.completed", {
 				id: options.message.id,
 				attempts: options.message.attempts,
+				/** Copied, not referenced, so the logged totals can't drift afterwards. */
+				usage: usage ? { ...usage } : undefined,
 			});
 		} catch (error) {
 			if (error instanceof Job.RetryError) {

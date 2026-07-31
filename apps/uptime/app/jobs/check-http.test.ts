@@ -16,18 +16,30 @@
  * leaves behind — which is what makes the "no duplicate alert" assertions meaningful.
  * `globalThis.fetch` stands in for the Analytics Engine SQL API and webhook delivery.
  *
+ * Two of the suites are about cost rather than correctness (ADR-019): that the job
+ * logs the Durable Object's billed wall time next to the probe's response time instead
+ * of conflating them, and that one healthy check still costs the four indexed D1
+ * statements it is supposed to cost.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
+import type { DataManipulationRequest, DatabaseAdapter } from "remix/data-table";
 
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { createDatabase, Database } from "remix/data-table";
 import { Resend } from "resend";
 
-import { createTestDatabase } from "~/app/lib/test/db";
+import {
+	applyMigrations,
+	createBunSqliteDatabaseAdapter,
+	createTestDatabase,
+} from "~/app/lib/test/db";
 import {
 	alertEvents,
 	alerts,
@@ -35,6 +47,8 @@ import {
 	monitorResults,
 	monitors,
 } from "~/database/schema";
+
+import type { SQLQueryBindings } from "bun:sqlite";
 
 /** The `GeoFetchDO` stub the job calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = mock(
@@ -459,6 +473,261 @@ describe("CheckHttpJob error handling", () => {
 		expect(
 			logger.events.find((entry) => entry.event === "job.check_http.alert_failed"),
 		).toBeDefined();
+	});
+});
+
+/**
+ * One statement the job asked the database for, with the plan SQLite chose for it.
+ */
+interface ObservedStatement {
+	kind: string;
+	sql: string;
+	/** Rows the statement returned, or rows it reported changing for a write. */
+	rows: number;
+	/** `EXPLAIN QUERY PLAN` detail lines, which name the index (or scan) chosen. */
+	plan: string[];
+}
+
+/**
+ * Builds a test database that records every statement executed through it, together
+ * with the query plan SQLite chose, so a test can assert what one job costs.
+ *
+ * The adapter is wrapped rather than replaced, so the SQL, the bindings, and the plan
+ * are the real ones the production adapter would send to D1 — `@pkg/data-table-d1`
+ * and this test adapter compile identical SQLite statements from the same operations.
+ * @returns The `db` handle and the array statements are appended to.
+ */
+function createObservedDatabase() {
+	let statements: ObservedStatement[] = [];
+	let sqliteDb = new SqliteDatabase(":memory:");
+	applyMigrations(sqliteDb);
+
+	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let observed: DatabaseAdapter = {
+		...adapter,
+		async execute(request: DataManipulationRequest) {
+			let result = await adapter.execute(request);
+			let compiled = adapter.compileSql(request.operation)[0];
+
+			statements.push({
+				kind: request.operation.kind,
+				sql: compiled?.text ?? "",
+				rows: result.rows?.length ?? result.affectedRows ?? 0,
+				plan: explain(sqliteDb, compiled?.text ?? "", compiled?.values ?? []),
+			});
+
+			return result;
+		},
+	};
+
+	return { db: createDatabase(observed, { now: () => Date.now() }), statements };
+}
+
+/**
+ * Asks SQLite how it intends to run a statement.
+ *
+ * Returns an empty plan for anything SQLite won't explain (an `INSERT` of literal
+ * values has no interesting plan) rather than failing the test that asked.
+ * @param sqliteDb Open `bun:sqlite` database with the schema applied.
+ * @param sql Statement text as compiled for D1.
+ * @param values Bindings for the statement.
+ * @returns One string per plan step, e.g. `SEARCH monitors USING INDEX ...`.
+ */
+function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): string[] {
+	try {
+		let rows = sqliteDb.query(`EXPLAIN QUERY PLAN ${sql}`).all(...values.map(toBinding)) as {
+			detail?: string;
+		}[];
+		return rows.map((row) => row.detail ?? "");
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * The plan steps that read a whole table instead of searching it.
+ *
+ * These are what make rows read scale with table size, which is the property the cost
+ * model depends on and the one counting returned rows cannot see.
+ * @param statements Statements recorded by {@link createObservedDatabase}.
+ * @returns One entry per scanning plan step, empty when every statement uses an index.
+ */
+function tableScans(statements: ObservedStatement[]): string[] {
+	return statements.flatMap((statement) =>
+		statement.plan.filter((step) => step.startsWith("SCAN ")),
+	);
+}
+
+/** Narrows a compiled binding to something `bun:sqlite` accepts. */
+function toBinding(value: unknown): SQLQueryBindings {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") return value;
+	if (typeof value === "number") return value;
+	if (typeof value === "bigint") return value;
+	if (typeof value === "boolean") return value ? 1 : 0;
+	if (value instanceof Uint8Array) return value;
+	return String(value);
+}
+
+describe("CheckHttpJob Durable Object wall time", () => {
+	test("logs the object's reported wall time alongside the probe's response time", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+		doFetchMock.mockImplementation(
+			async () =>
+				new Response("OK", {
+					status: 200,
+					headers: { "X-Response-Time": "12", "X-DO-Wall-Time": "37.5" },
+				}),
+		);
+
+		let logger = await runJob(db, monitor.id);
+
+		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
+		// Two numbers, not one conflated one: 12ms is what the monitored site's users
+		// experience, 37.5ms is (a lower bound on) what the Durable Object bills for.
+		expect(completed?.responseTimeMs).toBe(12);
+		expect(completed?.doWallTimeMs).toBe(37.5);
+	});
+
+	test("keeps the wall time of an unreachable probe, which is the expensive case", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+		doFetchMock.mockImplementation(
+			async () =>
+				new Response(null, {
+					status: 204,
+					headers: { "X-Probe-Outcome": "unreachable", "X-DO-Wall-Time": "10000" },
+				}),
+		);
+
+		let logger = await runJob(db, monitor.id);
+
+		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
+		expect(completed?.responseTimeMs).toBeNull();
+		expect(completed?.doWallTimeMs).toBe(10_000);
+	});
+
+	test("reports no wall time rather than zero when the object didn't measure one", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db);
+		doFetchMock.mockImplementation(
+			async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		);
+
+		let logger = await runJob(db, monitor.id);
+
+		let completed = logger.events.find((entry) => entry.event === "job.check_http.completed");
+		// A measurement that didn't happen is not a handler that took no time.
+		expect(completed?.doWallTimeMs).toBeNull();
+	});
+});
+
+/**
+ * The cost model of one HTTP check, asserted (ADR-019 §4). ADR-002 derives the cost of
+ * an HTTP ping mostly from its D1 rows read, and the single worst regression that
+ * analysis found was a query that reads a whole table to answer a question about a few
+ * rows. These tests turn that into a CI failure instead of a bill six months later.
+ *
+ * What is pinned, and why those numbers:
+ *
+ * - **N = 4 statements**, one per thing the job has to know or record: the
+ *   at-least-once duplicate check on `monitor_results`, the monitor row, its enabled
+ *   content checks, and the insert of the result. A healthy `up` check dispatches no
+ *   alerts (`notifyHttpResult` returns early unless the check is a recovery or not
+ *   `up`), so nothing in the alert pipeline runs, and Analytics Engine is not D1.
+ * - **M = 4 rows**, at most one per statement: every statement is a point lookup
+ *   through a unique or composite index, so it either finds its row or finds nothing.
+ *   A healthy check actually returns 2 (the monitor row and the inserted result).
+ * - **No statement may `SCAN` a table.** This is the assertion that really bounds rows
+ *   read: rows read scales with table size the moment a plan degrades to a scan, and
+ *   that cannot be seen by counting rows returned. D1's own planner has the final say —
+ *   ADR-019 §3 re-checks these plans against production — but a plan that scans here
+ *   will scan there.
+ *
+ * Rows *written* are deliberately not asserted: they are driven by how many indexes
+ * cover the written table, which SQLite reports nowhere useful. That number now comes
+ * from production instead, through the `usage` field this ADR added to `job.completed`.
+ */
+describe("CheckHttpJob cost model", () => {
+	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
+	const MAX_STATEMENTS = 4;
+	/** Row budget for one healthy HTTP check: at most one row per statement. */
+	const MAX_ROWS = 4;
+
+	test("a healthy check costs no more than 4 statements and 4 rows", async () => {
+		let { db, statements } = createObservedDatabase();
+		let monitor = await seedMonitor(db);
+		statements.length = 0;
+
+		await runJob(db, monitor.id);
+
+		expect(statements).toHaveLength(MAX_STATEMENTS);
+		expect(statements.map((statement) => statement.kind)).toEqual([
+			"select",
+			"select",
+			"select",
+			"insert",
+		]);
+
+		let rows = statements.reduce((total, statement) => total + statement.rows, 0);
+		expect(rows).toBeLessThanOrEqual(MAX_ROWS);
+		// The monitor row read, plus the result row written back with RETURNING.
+		expect(rows).toBe(2);
+	});
+
+	test("every statement resolves through an index instead of scanning a table", async () => {
+		let { db, statements } = createObservedDatabase();
+		let monitor = await seedMonitor(db);
+		await seedContentCheck(db, monitor.id, "expected-token");
+		statements.length = 0;
+
+		await runJob(db, monitor.id);
+
+		// A `findDue`-shaped query — the regression ADR-002 §16 is most afraid of —
+		// shows up here as a `SCAN <table>` step and fails this assertion.
+		expect(tableScans(statements)).toEqual([]);
+	});
+
+	test("the cost of a healthy check doesn't grow with the size of the tables", async () => {
+		let { db, statements } = createObservedDatabase();
+		let monitor = await seedMonitor(db);
+
+		// Enough unrelated rows that a plan which scanned instead of searching would
+		// read hundreds of them rather than one.
+		for (let index = 0; index < 50; index++) await seedMonitor(db);
+		for (let index = 0; index < 200; index++) {
+			await db.create(
+				monitorResults,
+				{
+					id: `filler:${index}`,
+					monitor_id: monitor.id,
+					response_status: 200,
+					response_time_ms: 10,
+					completed_at: 1_600_000_000_000 + index,
+				} as never,
+				{ touch: true },
+			);
+		}
+		statements.length = 0;
+
+		await runJob(db, monitor.id);
+
+		expect(statements).toHaveLength(MAX_STATEMENTS);
+		let rows = statements.reduce((total, statement) => total + statement.rows, 0);
+		expect(rows).toBeLessThanOrEqual(MAX_ROWS);
+		expect(tableScans(statements)).toEqual([]);
+	});
+
+	test("the scan guard has teeth: a query without a usable index is reported", async () => {
+		let { db, statements } = createObservedDatabase();
+		statements.length = 0;
+
+		// `monitors.name` is deliberately unindexed, so this is what a regression looks
+		// like to the assertions above.
+		await db.findMany(monitors, { where: { name: "Example site" } });
+
+		expect(tableScans(statements)).toEqual(["SCAN monitors"]);
 	});
 });
 

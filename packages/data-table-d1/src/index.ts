@@ -12,14 +12,57 @@ import type {
 
 import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
-interface D1AdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
+/**
+ * What one executed statement cost, as reported by D1 itself.
+ *
+ * Every D1 response already carries these numbers and the adapter already reads
+ * `meta` to normalize `affectedRows`/`insertId`, so surfacing them costs nothing —
+ * no extra statement, no extra billable operation. They are the per-statement
+ * breakdown Cloudflare's own analytics cannot give: the dashboard reports rows read
+ * per _database_, while a cost regression has to be traced to the _query_ that
+ * caused it.
+ */
+export interface D1StatementObservation {
+	/** Operation kind the statement came from (`select`, `insert`, `raw`, …). */
+	kind: DataManipulationOperation["kind"];
+	/** Table the operation targets, or `undefined` for a `raw` statement. */
+	table: string | undefined;
+	/** `meta.rows_read`: rows D1 read from tables and indexes, 0 when unreported. */
+	rowsRead: number;
+	/** `meta.rows_written`: rows D1 wrote to tables and indexes, 0 when unreported. */
+	rowsWritten: number;
+	/** `meta.duration`: milliseconds D1 reports for the statement, 0 when unreported. */
+	durationMs: number;
 }
 
-/** Minimal D1 metadata used to normalize adapter results. */
+/**
+ * Receives one {@link D1StatementObservation} per executed statement.
+ *
+ * This runs on the hot path, once per statement, so an implementation must stay
+ * cheap. It may throw without consequence — the adapter swallows anything it throws
+ * rather than failing the statement it was only measuring — but a throwing observer
+ * silently records nothing.
+ */
+export type D1StatementObserver = (observation: D1StatementObservation) => void;
+
+interface D1AdapterOptions {
+	capabilities?: AdapterCapabilityOverrides;
+	/**
+	 * Optional observer called after every statement the adapter executes, with the
+	 * row counts D1 reported for it. Purely additive: leave it out and the adapter
+	 * behaves exactly as before, which is why this package needs no logging
+	 * dependency of its own to make per-query cost attribution possible.
+	 */
+	onStatement?: D1StatementObserver;
+}
+
+/** Minimal D1 metadata used to normalize adapter results and report statement cost. */
 interface D1Meta {
 	changes?: number;
 	last_row_id?: number;
+	rows_read?: number;
+	rows_written?: number;
+	duration?: number;
 }
 
 /** Shape returned by D1 `.all()` and `.run()` calls. */
@@ -56,7 +99,8 @@ interface D1PreparedQuery {
  * relying on `transaction()`. The Durable Object adapter
  * (`@pkg/data-table-sqlstorage`) does provide real atomic transactions.
  * @param db D1 binding used to prepare and execute SQL.
- * @param options Optional capability overrides for adapter feature flags.
+ * @param options Optional capability overrides for adapter feature flags, plus an
+ * optional {@link D1StatementObserver} for per-statement row counts.
  * @returns A `DatabaseAdapter` implementation for D1.
  */
 export function createD1DatabaseAdapter(
@@ -65,6 +109,8 @@ export function createD1DatabaseAdapter(
 ): DatabaseAdapter {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
+	/** Read once so the hot path is a closure variable check, not a property lookup. */
+	let onStatement = options?.onStatement;
 
 	function assertTransaction(token: TransactionToken): void {
 		if (!transactions.has(token.id)) {
@@ -120,6 +166,7 @@ export function createD1DatabaseAdapter(
 
 			if (shouldReadRows) {
 				let result = (await prepared.all()) as D1StatementResult;
+				if (onStatement) observeStatement(onStatement, operation, result.meta);
 				let rows = normalizeRows(result.results ?? []);
 				rows = decodeJsonColumns(operation, rows);
 
@@ -135,6 +182,7 @@ export function createD1DatabaseAdapter(
 			}
 
 			let result = (await prepared.run()) as D1StatementResult;
+			if (onStatement) observeStatement(onStatement, operation, result.meta);
 
 			return {
 				affectedRows: normalizeAffectedRowsForRun(operation.kind, result),
@@ -226,6 +274,41 @@ export function createD1DatabaseAdapter(
 			throw new Error("D1 adapter savepoints are not supported");
 		},
 	};
+}
+
+// Statement observation
+
+/**
+ * Reports one executed statement's D1-reported cost to `onStatement`.
+ *
+ * Only ever called when an observer was configured, so an adapter without one
+ * allocates nothing extra. Anything the observer throws is swallowed: it exists to
+ * measure the statement, and instrumentation that fails the query it was measuring
+ * would be worse than no instrumentation at all.
+ *
+ * Statements that throw are not reported, because D1 returns no `meta` for them, and
+ * neither are the adapter's own schema probes (`hasTable`, `hasColumn`,
+ * `executeScript`) which run at migration time rather than on a request path.
+ * @param onStatement Observer configured on the adapter.
+ * @param operation Operation the statement was compiled from.
+ * @param meta D1's metadata for the statement, if it reported any.
+ */
+function observeStatement(
+	onStatement: D1StatementObserver,
+	operation: DataManipulationOperation,
+	meta: D1Meta | undefined,
+): void {
+	try {
+		onStatement({
+			kind: operation.kind,
+			table: operation.kind === "raw" ? undefined : getTableName(operation.table),
+			rowsRead: typeof meta?.rows_read === "number" ? meta.rows_read : 0,
+			rowsWritten: typeof meta?.rows_written === "number" ? meta.rows_written : 0,
+			durationMs: typeof meta?.duration === "number" ? meta.duration : 0,
+		});
+	} catch {
+		// Instrumentation must never fail the statement it was measuring.
+	}
 }
 
 // SQL Compilation

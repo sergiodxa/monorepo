@@ -39,7 +39,7 @@ import { Resend } from "resend";
 import type { SelectMonitor } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
-import { PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
+import { DO_WALL_TIME_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
 import { notifyHttpResult } from "~/app/services/alerts";
 import { getLatestHttpResult, writeHttpPingResult } from "~/app/services/analytics";
 import { monitorContentChecks, monitorResults, monitors } from "~/database/schema";
@@ -66,6 +66,13 @@ const CheckHttpJobSchema = s.object({
 interface CheckOutcome {
 	responseStatus: number | null;
 	responseTimeMs: number | null;
+	/**
+	 * How long the Durable Object's handler ran, which is the billing metric, against
+	 * `responseTimeMs`'s product metric (ADR-019 §2). A LOWER BOUND on the billed
+	 * window — see {@link DO_WALL_TIME_HEADER}. `null` when the object never reported
+	 * one, which is the case when this side's timeout aborted the call.
+	 */
+	doWallTimeMs: number | null;
 	body: string;
 	failed: boolean;
 }
@@ -74,6 +81,7 @@ interface CheckOutcome {
 const UNREACHABLE: CheckOutcome = {
 	responseStatus: null,
 	responseTimeMs: null,
+	doWallTimeMs: null,
 	body: "",
 	failed: true,
 };
@@ -159,12 +167,20 @@ export class CheckHttpJob extends Job {
 
 		await this.notify(db, monitor, previousStatus, outcome, status);
 
+		/**
+		 * `responseTimeMs` and `doWallTimeMs` are logged side by side rather than
+		 * conflated: the first is what the monitored site's users experience, the second is
+		 * what the Durable Object bills for — a lower bound on it, see
+		 * {@link DO_WALL_TIME_HEADER}. Content checks and large response bodies widen the
+		 * second without touching the first, which is currently invisible.
+		 */
 		this.logger.info("job.check_http.completed", {
 			jobId: job.id,
 			monitorId: job.monitorId,
 			status,
 			responseStatus: outcome.responseStatus,
 			responseTimeMs: outcome.responseTimeMs,
+			doWallTimeMs: outcome.doWallTimeMs,
 		});
 	}
 
@@ -196,14 +212,21 @@ export class CheckHttpJob extends Job {
 		try {
 			let response = await stub.fetch(monitor.url, { method, signal });
 
-			// The object reached us but couldn't reach the monitor: a `down` result.
-			if (response.headers.get(PROBE_OUTCOME_HEADER) === "unreachable") return UNREACHABLE;
+			/**
+			 * The object reached us but couldn't reach the monitor: a `down` result. Its
+			 * wall time is kept anyway — a probe that failed still occupied the object, and
+			 * that is the expensive case worth watching.
+			 */
+			if (response.headers.get(PROBE_OUTCOME_HEADER) === "unreachable") {
+				return { ...UNREACHABLE, doWallTimeMs: readWallTime(response) };
+			}
 
 			let body = hasContentChecks ? await response.text().catch(() => "") : "";
 
 			return {
 				responseStatus: response.status,
 				responseTimeMs: Number(response.headers.get("X-Response-Time") ?? 0),
+				doWallTimeMs: readWallTime(response),
 				body,
 				failed: false,
 			};
@@ -294,6 +317,21 @@ function classify(
 	if (!contentChecksPassed) return "down";
 	if ((outcome.responseTimeMs ?? 0) >= monitor.degraded_after_ms) return "degraded";
 	return "up";
+}
+
+/**
+ * Reads the Durable Object's reported handler duration off a probe response.
+ *
+ * Returns `null` rather than 0 when the header is missing or unparseable, because a
+ * measurement that didn't happen and a handler that took no time are different facts
+ * and averaging the two would understate the billed window further than it already is.
+ */
+function readWallTime(response: Response): number | null {
+	let header = response.headers.get(DO_WALL_TIME_HEADER);
+	if (header === null) return null;
+
+	let value = Number(header);
+	return Number.isFinite(value) ? value : null;
 }
 
 /** Whether `error` is SQLite rejecting an insert whose primary key is already taken. */

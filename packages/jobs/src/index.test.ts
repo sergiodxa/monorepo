@@ -9,6 +9,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import { Message } from "@cloudflare/workers-types";
 import { isFailure } from "@pkg/result";
@@ -18,7 +19,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { z } from "zod";
 
-import { Job } from "./index";
+import { Job, setJobUsageTracker } from "./index";
 
 const UPTIME_URL = "https://uptime.sergiodxa.com";
 const MONITOR_ID = "test-monitor-123";
@@ -460,5 +461,105 @@ describe(Job.name, () => {
 			let [, logData] = consoleErrorSpy.mock.calls[0];
 			expect(logData.events[1].event).toBe("job.non-retriable");
 		});
+	});
+});
+
+/**
+ * Usage tracking, the mechanism behind per-job-type database cost attribution: the
+ * host app registers a tracker that scopes an accumulator to one job, its database
+ * adapter's statement observer adds to whichever accumulator is active, and
+ * `job.completed` reports the totals.
+ *
+ * The tracker here is the same async-local shape the app uses, so these also pin that
+ * concurrently running jobs are attributed separately rather than sharing a total.
+ */
+describe("job usage tracking", () => {
+	let storage = new AsyncLocalStorage<Job.Usage>();
+
+	/** Stands in for a database adapter's per-statement observer. */
+	function recordStatement(rowsRead: number, rowsWritten: number): void {
+		let usage = storage.getStore();
+		if (!usage) return;
+		usage.statements += 1;
+		usage.rowsRead += rowsRead;
+		usage.rowsWritten += rowsWritten;
+		usage.durationMs += 0.5;
+	}
+
+	class QueryingJob extends Job {
+		async perform(): Promise<void> {
+			recordStatement(3, 0);
+			// Awaited between statements: the accumulator has to survive a microtask
+			// boundary, which is the whole reason the tracker owns the scope.
+			await Promise.resolve();
+			recordStatement(0, 2);
+		}
+	}
+
+	afterEach(() => setJobUsageTracker(undefined));
+
+	test("reports no usage field when no tracker is registered", async () => {
+		await QueryingJob.run({ message: createMessage({}) });
+
+		let [, logData] = consoleInfoSpy.mock.calls[0];
+		let completed = logData.events.find(
+			(event: { event: string }) => event.event === "job.completed",
+		);
+		expect(completed.usage).toBeUndefined();
+	});
+
+	test("reports the statements and rows one job's work cost", async () => {
+		setJobUsageTracker((usage, body) => storage.run(usage, body));
+
+		await QueryingJob.run({ message: createMessage({}) });
+
+		let [, logData] = consoleInfoSpy.mock.calls[0];
+		let completed = logData.events.find(
+			(event: { event: string }) => event.event === "job.completed",
+		);
+		expect(completed.usage).toEqual({
+			statements: 2,
+			rowsRead: 3,
+			rowsWritten: 2,
+			durationMs: 1,
+		});
+	});
+
+	test("attributes concurrent jobs separately instead of pooling their totals", async () => {
+		setJobUsageTracker((usage, body) => storage.run(usage, body));
+
+		class BusyJob extends Job {
+			async perform(): Promise<void> {
+				recordStatement(10, 0);
+				await Promise.resolve();
+				recordStatement(10, 0);
+			}
+		}
+
+		await Promise.all([
+			QueryingJob.run({ message: createMessage({}) }),
+			BusyJob.run({ message: createMessage({}) }),
+		]);
+
+		let byIdentifier = new Map<string, { statements: number; rowsRead: number }>();
+		for (let [identifier, logData] of consoleInfoSpy.mock.calls) {
+			let completed = logData.events.find(
+				(event: { event: string }) => event.event === "job.completed",
+			);
+			byIdentifier.set(String(identifier).split(":")[1] ?? "", completed.usage);
+		}
+
+		expect(byIdentifier.get("querying-job")?.rowsRead).toBe(3);
+		expect(byIdentifier.get("busy-job")?.rowsRead).toBe(20);
+		expect(byIdentifier.get("busy-job")?.statements).toBe(2);
+	});
+
+	test("still runs the job when a tracker is registered and then removed", async () => {
+		setJobUsageTracker((usage, body) => storage.run(usage, body));
+		setJobUsageTracker(undefined);
+
+		await QueryingJob.run({ message: createMessage({}) });
+
+		expect(ackMock).toHaveBeenCalledTimes(1);
 	});
 });

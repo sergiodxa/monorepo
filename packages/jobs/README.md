@@ -95,9 +95,43 @@ Executes the job with full lifecycle management.
 1. Creates a `BatchedLogger` with identifier `job:{job-name}:{message-id}`
 2. Logs `job.started` with message ID and attempt count
 3. Calls `perform()` on the job instance
-4. On success: pings uptime (if configured), acks message, logs `job.completed`
+4. On success: pings uptime (if configured), acks message, logs `job.completed` (with a `usage` field when a tracker is registered — see `setJobUsageTracker`)
 5. On error: handles based on error type (see Error Classes below)
 6. Always flushes the logger in `finally`
+
+#### `setJobUsageTracker(tracker: Job.UsageTracker | undefined): void`
+
+Registers a tracker that `Job.run` wraps every job's whole lifecycle in, so the app
+can attribute database work to the job that caused it. When one is registered,
+`job.completed` gains a `usage` field with `{ statements, rowsRead, rowsWritten,
+durationMs }`; without one, jobs run exactly as before and no field is added.
+
+The tracker owns the accumulation mechanism — this package never touches a database.
+The intended shape is an async-local store fed by the database adapter's own
+per-statement observer, which keeps concurrently running jobs from the same queue
+batch attributed separately:
+
+```typescript
+import { Job, setJobUsageTracker } from "@pkg/jobs";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+let storage = new AsyncLocalStorage<Job.Usage>();
+
+setJobUsageTracker((usage, body) => storage.run(usage, body));
+
+// Wherever the database reports a statement's cost:
+function recordStatement(rowsRead: number, rowsWritten: number) {
+	let usage = storage.getStore();
+	if (!usage) return; // Not inside a tracked job — e.g. a request path.
+	usage.statements += 1;
+	usage.rowsRead += rowsRead;
+	usage.rowsWritten += rowsWritten;
+}
+```
+
+Call it once while the app boots, and with `undefined` to turn tracking back off.
+Totals are reported on `job.completed` only — a job that retried or failed reports no
+usage, since a partial total from an aborted run would be misleading.
 
 #### `abstract perform(): Promise<void>`
 
@@ -148,6 +182,23 @@ interface RunOptions {
 	message: Message<unknown>;
 	uptime?: string; // Bearer token for uptime service
 }
+```
+
+#### `Job.Usage`
+
+```typescript
+interface Usage {
+	statements: number;
+	rowsRead: number;
+	rowsWritten: number;
+	durationMs: number;
+}
+```
+
+#### `Job.UsageTracker`
+
+```typescript
+type UsageTracker = <T>(usage: Usage, body: () => Promise<T>) => Promise<T>;
 ```
 
 #### `Job.ConstructorOptions`
