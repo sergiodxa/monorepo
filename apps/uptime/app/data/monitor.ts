@@ -1,7 +1,7 @@
 /**
  * Data-access model for HTTP monitors. Exposes CRUD over the `monitors` table scoped
- * to a team, enqueuing a subscription-gated on-demand check, the scheduling
- * query the `scheduled` handler uses every minute to find monitors due for a check,
+ * to a team, enqueuing a subscription-gated on-demand check, the claim the `scheduled`
+ * handler runs every minute to take the monitors that are due for a check,
  * and the two monthly ping-consumption figures the dashboard's usage card shows side
  * by side across every monitor type (HTTP, DNS, TCP, cron): the pings already
  * consumed, counted from the daily rollup plus the days it hasn't reached yet, and
@@ -77,7 +77,12 @@ interface StatsRow {
 }
 
 export default class Monitor {
-	/** Creates a monitor for a team, enabled immediately. */
+	/**
+	 * Creates a monitor for a team, enabled immediately and scheduled for its first
+	 * check on the next cron tick — `next_due_at` is stamped with now rather than with
+	 * now plus the interval, so a new monitor reports a status straight away instead of
+	 * after one silent interval.
+	 */
 	static async create(db: Database, teamId: string, authorId: string, input: InsertMonitor) {
 		return await db.create(
 			monitors,
@@ -86,6 +91,7 @@ export default class Monitor {
 				team_id: teamId,
 				author_id: authorId,
 				enabled_at: Date.now(),
+				next_due_at: Date.now(),
 				...input,
 			},
 			{ touch: true, returnRow: true },
@@ -123,9 +129,49 @@ export default class Monitor {
 		});
 	}
 
-	/** Updates a monitor's editable fields. */
+	/**
+	 * Updates a monitor's editable fields, keeping `next_due_at` consistent with them.
+	 *
+	 * Scheduling lives entirely in `next_due_at` (see {@link findDue}), so an update that
+	 * changes whether or how often a monitor should be checked has to move it in the same
+	 * write — otherwise a re-enabled monitor would never be picked up and a disabled one
+	 * would keep being claimed.
+	 */
 	static async updateById(db: Database, monitorId: string, changes: Partial<InsertMonitor>) {
-		return await db.update(monitors, monitorId, changes, { touch: true });
+		let nextDueAt = await Monitor.nextDueAtForChanges(db, monitorId, changes);
+
+		return await db.update(
+			monitors,
+			monitorId,
+			nextDueAt === undefined ? changes : { ...changes, next_due_at: nextDueAt },
+			{ touch: true },
+		);
+	}
+
+	/**
+	 * The `next_due_at` an update implies, or `undefined` when the update can't have
+	 * changed the schedule and the column must be left where the scheduler put it.
+	 *
+	 * An `enabled_at` in the changes settles it without reading anything: disabling
+	 * unschedules the monitor, enabling makes it due on the next tick. An interval change
+	 * on its own is the only case that has to look at the stored row, for two reasons — a
+	 * disabled monitor must stay unscheduled, and the web form resubmits
+	 * `interval_seconds` on every edit, so re-anchoring the cadence unconditionally would
+	 * restart it every time the monitor is renamed.
+	 */
+	private static async nextDueAtForChanges(
+		db: Database,
+		monitorId: string,
+		changes: Partial<InsertMonitor>,
+	): Promise<number | null | undefined> {
+		if (changes.enabled_at !== undefined) return changes.enabled_at === null ? null : Date.now();
+		if (changes.interval_seconds === undefined) return undefined;
+
+		let monitor = await db.findOne(monitors, { where: { id: monitorId } });
+		if (!monitor) return undefined;
+		if (monitor.interval_seconds === changes.interval_seconds) return undefined;
+
+		return monitor.enabled_at === null ? null : Date.now();
 	}
 
 	/** Deletes a monitor. */
@@ -157,41 +203,104 @@ export default class Monitor {
 	 *
 	 * Keyed on the minute containing `scheduledAt` rather than on `scheduledAt` itself,
 	 * because the every-minute cron is delivered more than once per minute with a
-	 * different `scheduledTime` each time (observed ~7s apart in production).
-	 * {@link findDue} can't filter the second delivery out on its own — the first check
-	 * hasn't written its `completed_at` yet, so the monitor still reads as due — and a
-	 * raw timestamp would hand the two deliveries different ids and let both run. One id
-	 * per minute makes the second collide with the first instead. Safe because the
-	 * minimum `interval_seconds` is 60, so no monitor can legitimately owe two checks
-	 * inside the same minute.
+	 * different `scheduledTime` each time (observed ~7s apart in production), and a raw
+	 * timestamp would hand the two deliveries different ids and let both run. One id per
+	 * minute makes the second collide with the first instead. Safe because the minimum
+	 * `interval_seconds` is 60, so no monitor can legitimately owe two checks inside the
+	 * same minute.
+	 *
+	 * {@link findDue}'s claim is what normally stops the second delivery from enqueuing
+	 * anything at all, so this collision should never fire. It stays as the correctness
+	 * backstop for a delivery that raced the claim, and costs nothing when it doesn't.
 	 */
 	static scheduledJobId(monitorId: string, scheduledAt: number): string {
 		return `${monitorId}:${Math.floor(scheduledAt / MS_PER_MINUTE)}`;
 	}
 
 	/**
-	 * Finds every enabled monitor due for a check: one whose interval has elapsed since
-	 * its last completed result (or that has never completed one). Runs as a single
-	 * query joining the monitor's team owner and latest `monitor_results` row, since
-	 * checking each monitor individually would be an N+1 query every minute.
+	 * Claims every monitor due for a check as of `scheduledAt` and returns them, having
+	 * already advanced each one's next due time. "Due" is `next_due_at IS NOT NULL AND
+	 * next_due_at <= scheduledAt`, which is the whole predicate: `next_due_at` is NULL
+	 * exactly when a monitor isn't scheduled, so it subsumes the `enabled_at IS NOT NULL`
+	 * check and one index on `next_due_at` serves the query.
+	 *
+	 * This used to recompute each monitor's last completion from `monitor_results`
+	 * (`MAX(completed_at) … GROUP BY monitor_id`), which no index can satisfy — SQLite had
+	 * to read every row of a table holding 7 days of history, once per cron delivery, and
+	 * that was 97% of the app's D1 rows read. It also compared against `completed_at`,
+	 * stamped *after* the probe returns, so every check's due time slid forward by its own
+	 * latency and a 1-minute monitor quietly became a 2-minute one.
+	 *
+	 * Claiming fixes both. The due time advances **from its own previous value**, by whole
+	 * intervals until strictly past `scheduledAt`:
+	 *
+	 * ```text
+	 * next = previous_next_due_at
+	 * while next <= scheduledAt: next += interval_seconds * 1000
+	 * ```
+	 *
+	 * which the UPDATE below writes in closed form as `previous + interval *
+	 * (⌊(scheduledAt - previous) / interval⌋ + 1)` — SQLite's `/` is integer division and
+	 * both operands are non-negative, so it floors. Advancing by whole intervals keeps the
+	 * cadence anchored to the schedule instead of to completion times, and stopping at the
+	 * first value past `scheduledAt` prevents a catch-up storm: a monitor left unscheduled
+	 * for an hour gets one check, not sixty.
+	 *
+	 * Because the due time moves here rather than when the check completes, the second and
+	 * later deliveries of the same minute's cron (this trigger fires more than once per
+	 * minute — see {@link scheduledJobId}) find nothing due and enqueue nothing.
+	 *
+	 * One statement, not a read followed by a write. That distinction is the whole point:
+	 * `RETURNING` reports the rows this `UPDATE` actually moved, so two deliveries racing
+	 * in the same instant cannot both come away with the same monitor — the loser's
+	 * `next_due_at <= ?` guard no longer matches and it claims nothing. A read-then-write
+	 * pair would hand both deliveries the same rows and enqueue the work twice, which is
+	 * exactly the duplicate this ADR exists to remove.
+	 *
+	 * The owner lookup is a second statement rather than a join, because `RETURNING` can
+	 * only project columns of the updated table. It is an indexed point lookup per
+	 * distinct team, and teams are far fewer than monitors.
+	 *
+	 * The `monitor_results` primary-key dedupe stays as the backstop for a delivery that
+	 * races the claim in some way this does not cover — see {@link scheduledJobId}.
 	 */
 	static async findDue(db: Database, scheduledAt: number): Promise<DueMonitor[]> {
-		let result = await db.exec(
-			`SELECT m.id AS monitorId, t.owner_id AS ownerId
-			 FROM monitors m
-			 JOIN teams t ON t.id = m.team_id
-			 LEFT JOIN (
-			   SELECT monitor_id, MAX(completed_at) AS last_completed_at
-			   FROM monitor_results
-			   WHERE completed_at IS NOT NULL
-			   GROUP BY monitor_id
-			 ) r ON r.monitor_id = m.id
-			 WHERE m.enabled_at IS NOT NULL
-			   AND (r.last_completed_at IS NULL OR r.last_completed_at + (m.interval_seconds * 1000) <= ?)`,
-			[scheduledAt],
+		let claimed = await db.exec(
+			`UPDATE monitors
+			    SET next_due_at = next_due_at
+			          + (interval_seconds * 1000)
+			          * (((? - next_due_at) / (interval_seconds * 1000)) + 1),
+			        updated_at = ?
+			  WHERE next_due_at IS NOT NULL
+			    AND next_due_at <= ?
+			RETURNING id AS monitorId, team_id AS teamId`,
+			[scheduledAt, Date.now(), scheduledAt],
 		);
 
-		return (result.rows ?? []) as unknown as DueMonitor[];
+		let rows = (claimed.rows ?? []) as unknown as { monitorId: string; teamId: string }[];
+		if (rows.length === 0) return [];
+
+		let teamIds = [...new Set(rows.map((row) => row.teamId))];
+		let owners = await db.exec(
+			`SELECT id, owner_id AS ownerId FROM teams WHERE id IN (${teamIds.map(() => "?").join(", ")})`,
+			teamIds,
+		);
+
+		let ownerByTeam = new Map(
+			((owners.rows ?? []) as unknown as { id: string; ownerId: string }[]).map((team) => [
+				team.id,
+				team.ownerId,
+			]),
+		);
+
+		return rows.flatMap((row) => {
+			let ownerId = ownerByTeam.get(row.teamId);
+			// A claimed monitor whose team vanished between the two statements has nobody to
+			// bill and nobody to notify, so it is dropped rather than enqueued. Its due time
+			// has already advanced, which is correct — there is nothing to reschedule for.
+			if (ownerId === undefined) return [];
+			return [{ monitorId: row.monitorId, ownerId }];
+		});
 	}
 
 	/** Lists a monitor's most recent completed results, newest first, with pagination. */

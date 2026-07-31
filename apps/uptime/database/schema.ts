@@ -166,6 +166,13 @@ export const monitors = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		enabled_at: c.integer().nullable(),
+		/**
+		 * When this monitor's next check is due, or `null` when it isn't scheduled at all
+		 * (disabled, or never enabled). The scheduler claims monitors by advancing this
+		 * from its own previous value by whole intervals, which is what keeps the cadence
+		 * anchored to the schedule rather than to each check's completion time.
+		 */
+		next_due_at: c.integer().nullable(),
 		team_id: c.text(),
 		author_id: c.text(),
 		name: c.text(),

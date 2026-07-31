@@ -1,10 +1,11 @@
 /**
  * Unit tests for the `Monitor` data-access model: CRUD scoped to a team, the SSL
- * cross-team listing, and — most importantly — the raw-SQL `findDue` query the
- * scheduler runs every minute. `findDue`'s join/aggregation logic can't be
- * typo-checked by the type system, so it gets dedicated coverage for the
- * never-checked, interval-not-elapsed, interval-elapsed, and disabled-monitor
- * branches. `getStats*` gets the same treatment for its two-store split: the D1
+ * cross-team listing, and — most importantly — the raw-SQL `findDue` claim the
+ * scheduler runs every minute. Its SQL can't be typo-checked by the type system and it
+ * mutates the rows it returns, so it gets dedicated coverage of the claim semantics:
+ * one claim per due monitor per minute, a due time that advances from the schedule
+ * rather than from the claim, no catch-up storm after an outage, and a disabled monitor
+ * that is never claimed. `getStats*` gets the same treatment for its two-store split: the D1
  * aggregates against a real database, the Analytics Engine p99 against a stubbed service
  * so the scope and the failure degradation are both observable.
  *
@@ -12,16 +13,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Database as SqliteDatabase } from "bun:sqlite";
 import { describe, expect, mock, test } from "bun:test";
 
 import type { Result } from "@pkg/result";
-import type { Database } from "remix/data-table";
+import type { DataManipulationRequest, Database, DatabaseAdapter } from "remix/data-table";
 
 import { failure, success } from "@pkg/result";
+import { createDatabase } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
 
-import { createTestDatabase } from "~/app/lib/test/db";
+import {
+	applyMigrations,
+	createBunSqliteDatabaseAdapter,
+	createTestDatabase,
+} from "~/app/lib/test/db";
 import {
 	cronJobMonitors,
 	cronJobPings,
@@ -34,6 +41,8 @@ import {
 	tcpMonitors,
 	teams,
 } from "~/database/schema";
+
+import type { SQLQueryBindings } from "bun:sqlite";
 
 /** The message body `Monitor.ping` passes to `env.QUEUE.send(...)`. */
 interface PingQueueMessage {
@@ -76,6 +85,62 @@ function fakePolar(hasActiveSubscription: boolean) {
 	return client;
 }
 
+/**
+ * Builds a test database that records the query plan SQLite chose for every statement
+ * executed through it, so a test can assert how a query is resolved rather than only
+ * what it returns.
+ *
+ * The adapter is wrapped rather than replaced, so the SQL and bindings explained are the
+ * real ones the production adapter would send to D1 — both compile identical SQLite
+ * statements from the same operations.
+ * @returns The `db` handle and the array of per-statement plan step lists.
+ */
+function createPlanRecordingDatabase() {
+	let plans: string[][] = [];
+	let sqliteDb = new SqliteDatabase(":memory:");
+	applyMigrations(sqliteDb);
+
+	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+	let observed: DatabaseAdapter = {
+		...adapter,
+		async execute(request: DataManipulationRequest) {
+			let compiled = adapter.compileSql(request.operation)[0];
+			let result = await adapter.execute(request);
+			plans.push(explain(sqliteDb, compiled?.text ?? "", compiled?.values ?? []));
+			return result;
+		},
+	};
+
+	return { db: createDatabase(observed, { now: () => Date.now() }), plans };
+}
+
+/**
+ * Asks SQLite how it intends to run a statement, returning one string per plan step
+ * (e.g. `SEARCH monitors USING INDEX ...`). Returns nothing for a statement SQLite
+ * won't explain, rather than failing the test that asked.
+ */
+function explain(sqliteDb: SqliteDatabase, sql: string, values: unknown[]): string[] {
+	try {
+		let rows = sqliteDb.query(`EXPLAIN QUERY PLAN ${sql}`).all(...values.map(toBinding)) as {
+			detail?: string;
+		}[];
+		return rows.map((row) => row.detail ?? "");
+	} catch {
+		return [];
+	}
+}
+
+/** Narrows a compiled binding to something `bun:sqlite` accepts. */
+function toBinding(value: unknown): SQLQueryBindings {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") return value;
+	if (typeof value === "number") return value;
+	if (typeof value === "bigint") return value;
+	if (typeof value === "boolean") return value ? 1 : 0;
+	if (value instanceof Uint8Array) return value;
+	return String(value);
+}
+
 /** Inserts a team row so `findDue`'s join to `teams` has an owner to resolve. */
 async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> = {}) {
 	return await db.create(
@@ -107,6 +172,10 @@ describe("Monitor.create", () => {
 		expect(monitor.url).toBe("https://example.com");
 		expect(monitor.enabled_at).not.toBeNull();
 		expect(monitor.id).toMatch(/^[0-9a-f-]{36}$/);
+		// Due immediately, so the first check runs on the next tick rather than a whole
+		// interval later.
+		expect(monitor.next_due_at).not.toBeNull();
+		expect(monitor.next_due_at).toBeLessThanOrEqual(Date.now());
 	});
 });
 
@@ -309,8 +378,24 @@ describe("Monitor.ping", () => {
 	});
 });
 
+/**
+ * `findDue` is a claim, not a query: it takes the monitors whose `next_due_at` has
+ * arrived and advances that column in the same call, so what matters is the state it
+ * leaves behind. Every case below therefore calls it more than once, or inspects
+ * `next_due_at` afterwards, rather than asserting on a single return value.
+ *
+ * `monitor_results` is deliberately absent from this suite. Completion times no longer
+ * take part in scheduling at all, which is the point of the change: a check's own
+ * latency can't push the next one out.
+ */
 describe("Monitor.findDue", () => {
-	test("a monitor with no completed result is due", async () => {
+	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
+	async function nextDueAt(db: Database, monitorId: string) {
+		let monitor = await db.findOne(monitors, { where: { id: monitorId } });
+		return monitor?.next_due_at ?? null;
+	}
+
+	test("claims a newly created monitor on the first tick after it exists", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let monitor = await Monitor.create(db, team.id, "author-1", {
@@ -319,103 +404,98 @@ describe("Monitor.findDue", () => {
 			interval_seconds: 60,
 		});
 
-		let due = await Monitor.findDue(db, Date.now());
+		let due = await Monitor.findDue(db, Date.now() + 1000);
 		expect(due).toEqual([{ monitorId: monitor.id, ownerId: team.owner_id }]);
 	});
 
-	test("a monitor whose interval hasn't elapsed since its last completed result is not due", async () => {
+	test("never claims the same monitor twice in the same minute", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let scheduledAt = Date.now();
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		await Monitor.create(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: scheduledAt - 30_000,
-			response_status: 200,
-			response_time_ms: 42,
-		});
 
-		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
+		// The two deliveries this cron really produces: same minute, ~7s apart.
+		let first = Date.now() + 1000;
+		expect(await Monitor.findDue(db, first)).toHaveLength(1);
+		expect(await Monitor.findDue(db, first + 7000)).toEqual([]);
 	});
 
-	test("a monitor whose interval has elapsed since its last completed result is due", async () => {
+	test("claims the monitor again once its next due time arrives", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let scheduledAt = Date.now();
 		let monitor = await Monitor.create(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: scheduledAt - 90_000,
-			response_status: 200,
-			response_time_ms: 42,
-		});
 
-		expect(await Monitor.findDue(db, scheduledAt)).toEqual([
+		let scheduledAt = Date.now() + 1000;
+		await Monitor.findDue(db, scheduledAt);
+
+		expect(await Monitor.findDue(db, scheduledAt + 60_000)).toEqual([
 			{ monitorId: monitor.id, ownerId: team.owner_id },
 		]);
 	});
 
-	test("uses the most recent completed result, not an older one", async () => {
+	test("advances the due time from the previous one, so latency can't cause drift", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let scheduledAt = Date.now();
 		let monitor = await Monitor.create(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		/** Old enough to be due on its own, but a more recent completed result exists. */
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: scheduledAt - 500_000,
-			response_status: 200,
-			response_time_ms: 42,
-		});
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: scheduledAt - 10_000,
-			response_status: 200,
-			response_time_ms: 42,
-		});
+		let anchor = Date.now();
+		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
+		// Claimed 1.5s late, as a real delivery is. The next due time is still the
+		// anchor plus exactly one interval, not the claim time plus one.
+		await Monitor.findDue(db, anchor + 1500);
+
+		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 60_000);
+	});
+
+	test("a monitor left unscheduled for an hour is claimed once, not sixty times", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "Homepage",
+			url: "https://example.com",
+			interval_seconds: 60,
+		});
+		let anchor = Date.now();
+		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
+
+		// An hour of missed ticks: the due time skips to the first interval boundary
+		// strictly after now rather than replaying the sixty it slept through.
+		let scheduledAt = anchor + 60 * 60_000;
+		expect(await Monitor.findDue(db, scheduledAt)).toHaveLength(1);
+		expect(await nextDueAt(db, monitor.id)).toBe(scheduledAt + 60_000);
 		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
 	});
 
-	test("a pending (not yet completed) result doesn't count as a completed check", async () => {
+	test("keeps the cadence on interval boundaries when the claim lands mid-interval", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let scheduledAt = Date.now();
 		let monitor = await Monitor.create(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
-			interval_seconds: 60,
+			interval_seconds: 300,
 		});
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: null,
-			response_status: null,
-			response_time_ms: null,
-		});
+		let anchor = Date.now();
+		await db.update(monitors, monitor.id, { next_due_at: anchor }, { touch: false });
 
-		expect(await Monitor.findDue(db, scheduledAt)).toEqual([
-			{ monitorId: monitor.id, ownerId: team.owner_id },
-		]);
+		// 7 minutes late on a 5-minute monitor: two whole intervals have passed, so the
+		// next due time is the anchor plus two, which is 3 minutes out.
+		await Monitor.findDue(db, anchor + 7 * 60_000);
+
+		expect(await nextDueAt(db, monitor.id)).toBe(anchor + 10 * 60_000);
 	});
 
-	test("a disabled monitor is never due, even with no completed result", async () => {
+	test("never claims a disabled monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let monitor = await Monitor.create(db, team.id, "author-1", {
@@ -425,28 +505,127 @@ describe("Monitor.findDue", () => {
 		});
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 
-		expect(await Monitor.findDue(db, Date.now())).toEqual([]);
+		expect(await nextDueAt(db, monitor.id)).toBeNull();
+		expect(await Monitor.findDue(db, Date.now() + 60 * 60_000)).toEqual([]);
 	});
 
-	test("a disabled monitor is never due, even past its interval", async () => {
+	test("claims a re-enabled monitor again on the next tick", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let scheduledAt = Date.now();
 		let monitor = await Monitor.create(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await db.create(monitorResults, {
-			id: crypto.randomUUID(),
-			monitor_id: monitor.id,
-			completed_at: scheduledAt - 90_000,
-			response_status: 200,
-			response_time_ms: 42,
+		await Monitor.updateById(db, monitor.id, { enabled_at: null });
+		await Monitor.updateById(db, monitor.id, { enabled_at: Date.now() });
+
+		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([
+			{ monitorId: monitor.id, ownerId: team.owner_id },
+		]);
+	});
+
+	/**
+	 * The claim's whole justification is its query plan (ADR-003): the query it replaced
+	 * had to read every row of `monitor_results` to answer a question about a handful of
+	 * monitors, which was 97% of the app's D1 rows read. Rows returned can't see that —
+	 * only the plan can — so this asserts the plan directly.
+	 */
+	test("claims through the next_due_at index instead of scanning a table", async () => {
+		let { db, plans } = createPlanRecordingDatabase();
+		let team = await createTeam(db);
+		await Monitor.create(db, team.id, "author-1", {
+			name: "Homepage",
+			url: "https://example.com",
+		});
+		plans.length = 0;
+
+		expect(await Monitor.findDue(db, Date.now() + 1000)).toHaveLength(1);
+
+		let steps = plans.flat();
+		expect(steps.filter((step) => step.startsWith("SCAN "))).toEqual([]);
+		expect(steps.some((step) => step.includes("monitors_next_due_at_idx"))).toBe(true);
+	});
+
+	test("never claims a monitor belonging to no team, and resolves the owner of one that does", async () => {
+		let { db } = createTestDatabase();
+		let teamA = await createTeam(db);
+		let teamB = await createTeam(db);
+		let a = await Monitor.create(db, teamA.id, "author-1", {
+			name: "A",
+			url: "https://a.example.com",
+		});
+		let b = await Monitor.create(db, teamB.id, "author-1", {
+			name: "B",
+			url: "https://b.example.com",
+		});
+
+		let due = await Monitor.findDue(db, Date.now() + 1000);
+
+		expect(due).toContainEqual({ monitorId: a.id, ownerId: teamA.owner_id });
+		expect(due).toContainEqual({ monitorId: b.id, ownerId: teamB.owner_id });
+	});
+});
+
+describe("Monitor.updateById scheduling", () => {
+	test("re-anchors the schedule when the interval changes", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "Homepage",
+			url: "https://example.com",
+			interval_seconds: 3600,
+		});
+		// Pushed an hour out by a claim, so a shorter interval must bring it back.
+		await db.update(
+			monitors,
+			monitor.id,
+			{ next_due_at: Date.now() + 3_600_000 },
+			{ touch: false },
+		);
+
+		await Monitor.updateById(db, monitor.id, { interval_seconds: 60 });
+
+		expect(await Monitor.findDue(db, Date.now() + 1000)).toEqual([
+			{ monitorId: monitor.id, ownerId: team.owner_id },
+		]);
+	});
+
+	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "Homepage",
+			url: "https://example.com",
+			interval_seconds: 60,
+		});
+		let scheduled = Date.now() + 3_600_000;
+		await db.update(monitors, monitor.id, { next_due_at: scheduled }, { touch: false });
+
+		// The web form resubmits the unchanged interval on every edit, so neither a rename
+		// nor a same-value interval may restart the cadence.
+		let renamed = await Monitor.updateById(db, monitor.id, {
+			name: "Renamed",
+			interval_seconds: 60,
+		});
+
+		expect(renamed.next_due_at).toBe(scheduled);
+	});
+
+	test("keeps a disabled monitor unscheduled when its interval changes", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "Homepage",
+			url: "https://example.com",
+			interval_seconds: 60,
 		});
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 
-		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
+		let updated = await Monitor.updateById(db, monitor.id, { interval_seconds: 120 });
+
+		expect(updated.next_due_at).toBeNull();
+		expect(await Monitor.findDue(db, Date.now() + 60 * 60_000)).toEqual([]);
 	});
 });
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Accepted** — implemented 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §5 (finding 1), §11 (drift), and §15 (change 1). Highest-priority item in that ADR.
 
 ## Context

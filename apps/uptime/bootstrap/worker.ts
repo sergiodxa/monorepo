@@ -104,6 +104,14 @@ export default {
 			// plus a sweep of cron-job monitors for late/missed transitions.
 			if (controller.cron === "* * * * *") {
 				let db = getServiceContainer().get(Database);
+				/**
+				 * Claims the monitors that are due, advancing each one's next due time as it
+				 * does, so the later deliveries of this same minute's cron find nothing left to
+				 * enqueue. The subscription filter below therefore runs after the claim: a
+				 * non-subscribed owner's monitors have their due time advanced without being
+				 * checked, which is correct in effect — they aren't paying for the check — at
+				 * the cost of up to one interval of delay after they subscribe.
+				 */
 				let due = await Monitor.findDue(db, controller.scheduledTime);
 
 				/**

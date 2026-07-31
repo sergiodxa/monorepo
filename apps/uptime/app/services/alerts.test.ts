@@ -3,8 +3,9 @@
  * candidate resolution (monitor-specific + team-wide for HTTP/SSL, team-wide-only for
  * everything else), cooldown skipping, delivery success/failure recording, the
  * per-strategy delivery mechanics (email/webhook/Slack/Discord, including the webhook
- * HMAC signature), and the recovery/notify-on-recovery branching in every `notify*`
- * helper. `Alert` and `AlertEvent` are mocked because their `config`/`snapshot`
+ * HMAC signature), the recovery/notify-on-recovery branching in every `notify*`
+ * helper, and the cron-job `alert_on_late` opt-in that suppresses a `late` notification
+ * without suppressing the transition. `Alert` and `AlertEvent` are mocked because their `config`/`snapshot`
  * columns are untyped JSON text columns this test harness's SQLite adapter can't bind
  * object values into — mocking isolates the orchestration logic in `alerts.ts` (this
  * file's subject) from that unrelated data-layer gap. `MaintenanceWindow` has no JSON
@@ -870,6 +871,7 @@ function makeHttpMonitor(overrides: Partial<SelectMonitor> = {}): SelectMonitor 
 		created_at: Date.now(),
 		updated_at: Date.now(),
 		enabled_at: Date.now(),
+		next_due_at: null,
 		team_id: "team-1",
 		author_id: "author-1",
 		name: "Homepage",
@@ -1200,7 +1202,11 @@ describe("notifyCronJobResult", () => {
 		await notifyCronJobResult(
 			db,
 			makeResend(),
-			makeCronJobMonitor({ last_ping_at: lastPingAt, next_expected_at: nextExpectedAt }),
+			makeCronJobMonitor({
+				alert_on_late: true,
+				last_ping_at: lastPingAt,
+				next_expected_at: nextExpectedAt,
+			}),
 			"healthy",
 			"late",
 		);
@@ -1213,6 +1219,54 @@ describe("notifyCronJobResult", () => {
 		expect((call.snapshot as { nextExpectedAt: string }).nextExpectedAt).toBe(
 			new Date(nextExpectedAt).toISOString(),
 		);
+	});
+
+	test("does not dispatch a 'late' transition when the monitor's alert_on_late is off", async () => {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyCronJobResult(
+			db,
+			makeResend(),
+			makeCronJobMonitor({ alert_on_late: false }),
+			"healthy",
+			"late",
+		);
+
+		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(recordMock).not.toHaveBeenCalled();
+	});
+
+	test("still dispatches 'missed' when alert_on_late is off", async () => {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyCronJobResult(
+			db,
+			makeResend(),
+			makeCronJobMonitor({ alert_on_late: false }),
+			"late",
+			"missed",
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("down");
+	});
+
+	test("still dispatches a recovery from a suppressed 'late' when alert_on_late is off", async () => {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyCronJobResult(
+			db,
+			makeResend(),
+			makeCronJobMonitor({ alert_on_late: false }),
+			"late",
+			"healthy",
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("up");
 	});
 
 	test("formats a null last-ping/next-expected as null in the snapshot", async () => {
@@ -1322,19 +1376,34 @@ describe("shouldNotifyDnsResult", () => {
 });
 
 describe("shouldNotifyCronJobResult", () => {
-	test("alerts on late and missed", () => {
-		expect(shouldNotifyCronJobResult("healthy", "late")).toBe(true);
-		expect(shouldNotifyCronJobResult("late", "missed")).toBe(true);
+	/** A monitor that opted into late warnings. */
+	let alerting = { alert_on_late: true };
+	/** The schema default: late warnings declined. */
+	let silent = { alert_on_late: false };
+
+	test("alerts on late only when the monitor opted in", () => {
+		expect(shouldNotifyCronJobResult("healthy", "late", alerting)).toBe(true);
+		expect(shouldNotifyCronJobResult("healthy", "late", silent)).toBe(false);
+	});
+
+	test("alerts on missed regardless of alert_on_late", () => {
+		expect(shouldNotifyCronJobResult("late", "missed", silent)).toBe(true);
+		expect(shouldNotifyCronJobResult("healthy", "missed", silent)).toBe(true);
+		expect(shouldNotifyCronJobResult("late", "missed", alerting)).toBe(true);
 	});
 
 	test("never alerts on a move to new", () => {
-		expect(shouldNotifyCronJobResult("missed", "new")).toBe(false);
+		expect(shouldNotifyCronJobResult("missed", "new", alerting)).toBe(false);
 	});
 
 	test("alerts on healthy only as a recovery from late or missed", () => {
-		expect(shouldNotifyCronJobResult("missed", "healthy")).toBe(true);
-		expect(shouldNotifyCronJobResult("healthy", "healthy")).toBe(false);
-		expect(shouldNotifyCronJobResult("new", "healthy")).toBe(false);
-		expect(shouldNotifyCronJobResult(null, "healthy")).toBe(false);
+		expect(shouldNotifyCronJobResult("missed", "healthy", silent)).toBe(true);
+		expect(shouldNotifyCronJobResult("healthy", "healthy", silent)).toBe(false);
+		expect(shouldNotifyCronJobResult("new", "healthy", silent)).toBe(false);
+		expect(shouldNotifyCronJobResult(null, "healthy", silent)).toBe(false);
+	});
+
+	test("alerts on a recovery from a late the monitor was never notified about", () => {
+		expect(shouldNotifyCronJobResult("late", "healthy", silent)).toBe(true);
 	});
 });

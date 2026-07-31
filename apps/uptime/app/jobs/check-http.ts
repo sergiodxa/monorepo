@@ -3,9 +3,13 @@
  * its enabled content checks, performs a region-hinted fetch through `GeoFetchDO`,
  * classifies the result
  * (up/degraded/down) against the expected status, degraded threshold, and content
- * checks, records it to both the `monitor_results` "last checked" cache (see
- * `Monitor.findDue`) and Analytics Engine, and dispatches alerts on a down/degraded
- * result or a recovery back to up. Usage ingestion is not wired up yet.
+ * checks, records it to both `monitor_results` and Analytics Engine, and dispatches
+ * alerts on a down/degraded result or a recovery back to up. Usage ingestion is not
+ * wired up yet.
+ *
+ * Nothing here decides when the next check happens: the scheduler advances a monitor's
+ * next due time when it claims it, not when the check completes, so a slow probe can't
+ * push its own cadence out.
  *
  * The queue delivers at least once, so the job id doubles as the `monitor_results`
  * primary key. That row is the commit point: everything before it is safe to redo, so a
