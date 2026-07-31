@@ -436,12 +436,12 @@ per-day as §6, so merging would cost nothing in volume.
 The reason to separate them is that **cost and usage have different denominators**. There is
 real cost that produces no ping at all:
 
-| Cost with no corresponding ping | Source |
-| --- | --- |
-| Dashboard, API and public status-page requests | ADR-002 §12 — "not per ping" |
+| Cost with no corresponding ping                                                                                                                                                                  | Source                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Dashboard, API and public status-page requests                                                                                                                                                   | ADR-002 §12 — "not per ping"                                      |
 | Duplicate cron deliveries at `K > 1`: queue operations, the `findDue` scan and the Polar gate calls all multiply, while the minute-bucketed job id collides on the `monitor_results` primary key | ADR-002 §13, point 2 — "Cost rises with K; billed usage does not" |
-| The cron evaluation sweep | ADR-002 §10 — "Evaluation sweeps = not billed as pings at all" |
-| An unsubscribed owner's dashboard use — the scheduler gates them out of checks entirely | `Customer.filterActiveSubscribers` |
+| The cron evaluation sweep                                                                                                                                                                        | ADR-002 §10 — "Evaluation sweeps = not billed as pings at all"    |
+| An unsubscribed owner's dashboard use — the scheduler gates them out of checks entirely                                                                                                          | `Customer.filterActiveSubscribers`                                |
 
 So a team can have a day with real cost and zero pings, and `_cost` riding a ping event would
 have nowhere to put it. Two further reasons point the same way: cost tracking would otherwise

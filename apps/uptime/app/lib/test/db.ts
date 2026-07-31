@@ -207,13 +207,14 @@ export function createBunSqliteDatabaseAdapter(
 /**
  * Neither `bun:sqlite` nor D1's binder accepts a plain object/array as a bound
  * value, but `c.json()` columns (e.g. `alerts.config`, `alert_events.snapshot`,
- * `api_keys.scopes`) are always given real JS values at the model layer. The
- * production database adapter has this exact same gap (it never serializes/
- * deserializes `json`-typed columns either), so a write with a real object throws
- * there too — this is a real latent bug, not something specific to this test
- * adapter. Encoding/decoding here keeps model and controller tests able to
- * exercise JSON columns at all; it does not paper over the production bug, which
- * is tracked separately.
+ * `api_keys.scopes`) are always given real JS values at the model layer, so every
+ * adapter has to encode on the way in and decode on the way out.
+ *
+ * The production adapters do exactly the same thing, with the same helpers under the
+ * same names. This is therefore a faithful copy of production behaviour, not a
+ * test-only workaround papering over a gap — a JSON column that round-trips here
+ * round-trips there. Keep the three copies in step: a change to the encoding rules
+ * belongs in all of them at once, or in one shared helper they all call.
  *
  * Column names declared `c.json()` on `table`, resolved from its metadata.
  */
