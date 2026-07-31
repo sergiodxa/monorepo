@@ -251,6 +251,78 @@ describe("Alert.listForHttpMonitor", () => {
 			new Set([teamWide.id, monitorSpecific.id]),
 		);
 	});
+
+	test("puts monitor-scoped alerts before team-wide ones", async () => {
+		let teamWide = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "Team wide",
+			config: emailConfig,
+		});
+		let monitorSpecific = await Alert.create(db, "team-1", {
+			monitor_id: "monitor-1",
+			name: "Monitor 1",
+			config: emailConfig,
+		});
+
+		let alerts = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		expect(alerts.map((alert) => alert.id)).toEqual([monitorSpecific.id, teamWide.id]);
+	});
+
+	test("finds the team's alerts and never another team's", async () => {
+		let ours = await Alert.create(db, "team-1", {
+			monitor_id: "monitor-1",
+			name: "Ours",
+			config: emailConfig,
+		});
+		let oursTeamWide = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "Ours, team wide",
+			config: emailConfig,
+		});
+		let theirs = await Alert.create(db, "team-2", {
+			monitor_id: "monitor-1",
+			name: "Theirs",
+			config: emailConfig,
+		});
+		let theirsTeamWide = await Alert.create(db, "team-2", {
+			monitor_id: null,
+			name: "Theirs, team wide",
+			config: emailConfig,
+		});
+
+		let found = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		let ids = found.map((alert) => alert.id);
+
+		expect(ids).toContain(ours.id);
+		expect(ids).toContain(oursTeamWide.id);
+		expect(ids).not.toContain(theirs.id);
+		expect(ids).not.toContain(theirsTeamWide.id);
+	});
+
+	test("keeps every alert's notify_on_recovery flag for downstream filtering", async () => {
+		await Alert.create(db, "team-1", {
+			monitor_id: "monitor-1",
+			name: "Recovery on",
+			config: emailConfig,
+		});
+		let silent = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "Recovery off",
+			config: emailConfig,
+		});
+		await Alert.updateById(db, silent.id, { notify_on_recovery: false });
+
+		let alerts = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		expect(alerts.filter((alert) => alert.notify_on_recovery).map((alert) => alert.name)).toEqual([
+			"Recovery on",
+		]);
+	});
+
+	test("returns an empty array when the team has no applicable alerts", async () => {
+		await Alert.create(db, "team-2", { monitor_id: null, name: "Other", config: emailConfig });
+
+		expect(await Alert.listForHttpMonitor(db, "team-1", "monitor-1")).toEqual([]);
+	});
 });
 
 describe("Alert.listTeamWide", () => {

@@ -13,7 +13,6 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
-import { and, eq, isNull, or } from "remix/data-table";
 
 import type { InsertAlert } from "~/database/schema";
 
@@ -62,12 +61,25 @@ export default class Alert {
 
 	/**
 	 * Finds the alerts applicable to an HTTP monitor's check result: the team's
-	 * monitor-specific alert for it, plus every team-wide alert.
+	 * monitor-specific alerts for it, plus every team-wide alert.
+	 *
+	 * Deliberately two statements instead of one `monitor_id = ? OR monitor_id IS NULL`
+	 * disjunction: SQLite cannot satisfy an `OR` across two different conditions on the
+	 * same column with one index scan, so the single-statement form degrades to a full
+	 * scan of every alert row of every team. Split, each half is an index seek on
+	 * `alerts_team_monitor_idx (team_id, monitor_id)` returning a handful of rows, and
+	 * both run concurrently so the extra statement costs no latency.
+	 *
+	 * Monitor-scoped rows come first so the more specific alerts keep their current
+	 * precedence if a caller ever stops treating the list as unordered.
 	 */
 	static async listForHttpMonitor(db: Database, teamId: string, monitorId: string) {
-		return await db.findMany(alerts, {
-			where: and(eq("team_id", teamId), or(eq("monitor_id", monitorId), isNull("monitor_id"))),
-		});
+		let [monitorScoped, teamWide] = await Promise.all([
+			db.findMany(alerts, { where: { team_id: teamId, monitor_id: monitorId } }),
+			db.findMany(alerts, { where: { team_id: teamId, monitor_id: null } }),
+		]);
+
+		return [...monitorScoped, ...teamWide];
 	}
 
 	/** Finds the team-wide alerts applicable to a DNS, TCP, or cron-job check result. */

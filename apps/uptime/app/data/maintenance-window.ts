@@ -14,7 +14,6 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
-import { and, eq, isNull, or } from "remix/data-table";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
@@ -107,20 +106,31 @@ export default class MaintenanceWindow {
 	 * Whether an active, alert-suppressing maintenance window covers a monitor right
 	 * now. Only HTTP monitors can be individually targeted; other monitor types only
 	 * ever match team-wide windows.
+	 *
+	 * The HTTP path is deliberately two statements instead of one
+	 * `monitor_id = ? OR monitor_id IS NULL` disjunction: SQLite cannot satisfy an `OR`
+	 * across two different conditions on the same column with one index scan, so the
+	 * single-statement form falls back to seeking `team_id` alone and reading every one
+	 * of that team's windows. Split, each half is a seek on
+	 * `maintenance_windows_team_monitor_idx (team_id, monitor_id)`, and both run
+	 * concurrently so the extra statement costs no latency.
 	 */
 	static async isSuppressing(
 		db: Database,
 		params: { teamId: string; monitorId: string; monitorType: MaintenanceMonitorKind },
 	): Promise<boolean> {
-		let where =
+		let [monitorScoped, teamWide] = await Promise.all([
 			params.monitorType === "http"
-				? and(
-						eq("team_id", params.teamId),
-						or(eq("monitor_id", params.monitorId), isNull("monitor_id")),
-					)
-				: and(eq("team_id", params.teamId), isNull("monitor_id"));
+				? db.findMany(maintenanceWindows, {
+						where: { team_id: params.teamId, monitor_id: params.monitorId },
+					})
+				: Promise.resolve<SelectMaintenanceWindow[]>([]),
+			db.findMany(maintenanceWindows, {
+				where: { team_id: params.teamId, monitor_id: null },
+			}),
+		]);
 
-		let candidates = await db.findMany(maintenanceWindows, { where });
+		let candidates = [...monitorScoped, ...teamWide];
 		let now = Date.now();
 
 		return candidates.some(
