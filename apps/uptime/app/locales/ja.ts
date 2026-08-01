@@ -753,6 +753,40 @@ export default {
 		},
 	},
 
+	cron: {
+		error: {
+			empty: "cron 式を入力してください。",
+			"field-count": "cron 式には「分・時・日・月・曜日」の 5 つのフィールドが必要です。",
+			"seconds-not-supported":
+				"秒は指定できません。分から始まる 5 フィールド形式を使用してください。",
+			"unknown-macro":
+				"その省略形は使用できません。@hourly、@daily、@weekly、@monthly、@yearly のいずれかを使用してください。",
+			syntax: "いずれかのフィールドが値・範囲・リスト・間隔のいずれでもありません。",
+			"unknown-name":
+				"月または曜日の名前を認識できません。JAN や MON のような 3 文字の略称を使用してください。",
+			"out-of-range": "いずれかの値がそのフィールドで許可された範囲を超えています。",
+			"reversed-range": "範囲の開始が終了より後になっています。",
+			"invalid-step": "間隔は 0 より大きい整数で指定してください。",
+			"impossible-date": "指定された月にその日は存在しません。",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute_other: "{{count}} 分ごと",
+			hour_other: "{{count}} 時間ごと",
+		},
+		hourly: {
+			onTheHour: "毎時",
+			atMinutes: "毎時 {{minutes}} 分",
+		},
+		daily: "毎日 {{times}}",
+		weekly: "毎週{{days}} {{times}}",
+		monthly: "毎月 {{days}} 日 {{times}}",
+		yearly: "毎年 {{months}}{{days}} 日 {{times}}",
+		expression: "カスタムスケジュール ({{expression}})",
+	},
+
 	actions: {
 		addDomain: {
 			errors: {
@@ -3460,19 +3494,6 @@ export default {
 						placeholder: "0 * * * *",
 						description: "Cronスケジュール式（例：'0 * * * *'は毎時）。",
 					},
-					preset: {
-						label: "一般的なプリセット",
-						description: "一般的なスケジュールを選択するか、カスタム式を入力してください。",
-						options: {
-							custom: "カスタム",
-							everyMinute: "毎分",
-							every5Minutes: "5分ごと",
-							every15Minutes: "15分ごと",
-							everyHour: "毎時",
-							everyDay: "毎日深夜",
-							everyWeek: "毎週（日曜深夜）",
-						},
-					},
 					gracePeriod: {
 						label: "猶予期間",
 						description: "遅延とマークする前に予定時刻からどれくらい待つか。",
@@ -3533,19 +3554,6 @@ export default {
 						label: "Cron式",
 						placeholder: "0 * * * *",
 						description: "Cronスケジュール式（例：'0 * * * *'は毎時）。",
-					},
-					preset: {
-						label: "一般的なプリセット",
-						description: "一般的なスケジュールを選択するか、カスタム式を入力してください。",
-						options: {
-							custom: "カスタム",
-							everyMinute: "毎分",
-							every5Minutes: "5分ごと",
-							every15Minutes: "15分ごと",
-							everyHour: "毎時",
-							everyDay: "毎日深夜",
-							everyWeek: "毎週（日曜深夜）",
-						},
 					},
 					gracePeriod: {
 						label: "猶予期間",

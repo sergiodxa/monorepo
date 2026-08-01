@@ -46,6 +46,7 @@ import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { describeSchedule } from "~/app/lib/cron-text";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
 import { badgeVariant } from "~/resources/components/badge";
 import RefreshFrameButton from "~/resources/components/refresh-frame-button";
@@ -152,7 +153,7 @@ namespace DashboardPanel {
 			  }
 			| {
 					tab: "cron-jobs";
-					cronJobMonitors: SelectCronJobMonitor[];
+					cronJobRows: CronJobRow[];
 					copy: {
 						emptyTitle: string;
 						emptyDescription: string;
@@ -254,7 +255,7 @@ function DashboardPanel(handle: Handle<DashboardPanel.Props>) {
 						<TcpTable team={props.team} monitors={props.tcpMonitors} copy={props.copy} />
 					)}
 					{props.tab === "cron-jobs" && (
-						<CronJobsTable team={props.team} monitors={props.cronJobMonitors} copy={props.copy} />
+						<CronJobsTable team={props.team} rows={props.cronJobRows} copy={props.copy} />
 					)}
 				</div>
 			</>
@@ -507,10 +508,20 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 	};
 }
 
+/**
+ * A cron-job monitor together with its schedule already described in the viewer's
+ * language: the tables here take no request context, so the sentence is built by the
+ * controller rather than inside the component.
+ */
+interface CronJobRow {
+	monitor: SelectCronJobMonitor;
+	schedule: string;
+}
+
 namespace CronJobsTable {
 	export interface Props {
 		team: { slug: string };
-		monitors: SelectCronJobMonitor[];
+		rows: CronJobRow[];
 		copy: {
 			emptyTitle: string;
 			emptyDescription: string;
@@ -524,9 +535,9 @@ namespace CronJobsTable {
 
 function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 	return () => {
-		let { team, monitors, copy } = handle.props;
+		let { team, rows, copy } = handle.props;
 
-		if (monitors.length === 0) {
+		if (rows.length === 0) {
 			return (
 				<Empty>
 					<Empty.Icon>
@@ -555,7 +566,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
-						{monitors.map((monitor) => (
+						{rows.map(({ monitor, schedule }) => (
 							<Table.Row key={monitor.id}>
 								<Table.Cell>
 									<a
@@ -568,9 +579,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 										{monitor.name}
 									</a>
 								</Table.Cell>
-								<Table.Cell>
-									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
-								</Table.Cell>
+								<Table.Cell>{schedule}</Table.Cell>
 								<Table.Cell>
 									<Badge {...badgeVariant(CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>
 										{copy.statusLabels[monitor.status] ?? monitor.status}
@@ -668,11 +677,18 @@ export default createAction(routes.app.team.dashboard.panel, {
 
 		if (type === "cron-jobs") {
 			let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
+			let cronJobRows: CronJobRow[] = cronJobMonitors.map((monitor) => ({
+				monitor,
+				schedule: describeSchedule(monitor.cron_expression, {
+					locale: ctx.locale,
+					t: ctx.i18next.t,
+				}),
+			}));
 			return ctx.render(
 				<DashboardPanel
 					tab="cron-jobs"
 					team={ctx.team}
-					cronJobMonitors={cronJobMonitors}
+					cronJobRows={cronJobRows}
 					tabLabels={tabLabels}
 					tabsListLabel={tabsListLabel}
 					panelLabel={panelLabel}

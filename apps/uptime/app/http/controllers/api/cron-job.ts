@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Schedule } from "@pkg/cron";
 import { BadRequest, NotFound } from "@pkg/http/status-code";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
@@ -106,14 +107,16 @@ export default createController(cronJobRoutes, {
 
 				if (result.data.cronExpression !== undefined) {
 					let timezone = result.data.timezone ?? existing.timezone;
-					try {
-						CronJobMonitor.validateCronExpression(result.data.cronExpression, timezone);
-					} catch {
-						return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
+					// The failure's message names the reason, the field at fault, and the
+					// character index inside the expression the client sent.
+					let schedule = Schedule.parse(result.data.cronExpression);
+					if (isFailure(schedule)) {
+						return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
 					}
-					changes.cron_expression = result.data.cronExpression;
+					// Stored normalized, so one schedule has one spelling in the database.
+					changes.cron_expression = schedule.data.toString();
 					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-						result.data.cronExpression,
+						changes.cron_expression,
 						timezone,
 					);
 				} else if (

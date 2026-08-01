@@ -34,6 +34,8 @@ Ping history also tracks whether each individual ping was on time.
 ## Scheduling Rules
 
 - The cron expression and timezone define when runs are expected.
+- Only the five standard fields are accepted: a seconds field, and the non-standard `L`, `W`, `#` and `?` extensions, are rejected with a reason the form can explain.
+- A submitted expression is stored normalized (macros expanded, names resolved to numbers), so one schedule has one spelling.
 - The grace period defines how much lateness is tolerated.
 - If alert-on-late is disabled, the job may still become late, but notifications wait until it becomes missed.
 
@@ -48,7 +50,7 @@ Ping history also tracks whether each individual ping was on time.
 - Current status
 - Last ping time
 - Next expected run time
-- Human-readable schedule
+- Human-readable schedule, in the viewer's language
 - Raw cron expression
 - Grace period
 - Timezone

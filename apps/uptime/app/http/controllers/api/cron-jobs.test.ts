@@ -203,7 +203,10 @@ describe("POST /api/v1/cron-jobs", () => {
 		expect(response.status).toBe(400);
 		let body = (await response.json()) as { error: { code: string; message: string } };
 		expect(body.error.code).toBe("VALIDATION_ERROR");
-		expect(body.error.message).toBe("Invalid cron expression");
+		// The message names the reason and the index inside the expression the client sent,
+		// so a client can point at the mistake instead of guessing which field was wrong.
+		expect(body.error.message).toContain("field-count");
+		expect(body.error.message).toContain("not a cron expression");
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {

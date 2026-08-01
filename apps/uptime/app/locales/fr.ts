@@ -764,6 +764,43 @@ export default {
 		},
 	},
 
+	cron: {
+		error: {
+			empty: "Saisissez une expression cron.",
+			"field-count":
+				"Une expression cron doit comporter exactement cinq champs : minute, heure, jour du mois, mois et jour de la semaine.",
+			"seconds-not-supported":
+				"Les secondes ne sont pas prises en charge. Utilisez le format à cinq champs, en commençant par la minute.",
+			"unknown-macro":
+				"Ce raccourci n'est pas pris en charge. Utilisez @hourly, @daily, @weekly, @monthly ou @yearly.",
+			syntax: "L'un des champs n'est ni une valeur, ni une plage, ni une liste, ni un pas.",
+			"unknown-name":
+				"L'un des noms de mois ou de jour n'est pas reconnu. Utilisez des abréviations de trois lettres comme JAN ou MON.",
+			"out-of-range": "L'une des valeurs est en dehors de la plage autorisée pour son champ.",
+			"reversed-range": "L'une des plages commence après sa fin.",
+			"invalid-step": "Un pas doit être un nombre entier supérieur à zéro.",
+			"impossible-date": "Ce jour du mois n'existe jamais dans le mois auquel il est associé.",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute_one: "Chaque minute",
+			minute_other: "Toutes les {{count}} minutes",
+			hour_one: "Chaque heure",
+			hour_other: "Toutes les {{count}} heures",
+		},
+		hourly: {
+			onTheHour: "Chaque heure",
+			atMinutes: "Chaque heure à la minute {{minutes}}",
+		},
+		daily: "Chaque jour à {{times}}",
+		weekly: "Chaque {{days}} à {{times}}",
+		monthly: "Chaque mois le {{days}} à {{times}}",
+		yearly: "Chaque année le {{days}} {{months}} à {{times}}",
+		expression: "Planification personnalisée ({{expression}})",
+	},
+
 	actions: {
 		addDomain: {
 			errors: {
@@ -3497,20 +3534,6 @@ export default {
 						placeholder: "0 * * * *",
 						description: "L'expression de planification cron (ex. '0 * * * *' pour chaque heure).",
 					},
-					preset: {
-						label: "Préréglages Courants",
-						description:
-							"Sélectionnez une planification courante ou entrez une expression personnalisée.",
-						options: {
-							custom: "Personnalisé",
-							everyMinute: "Chaque minute",
-							every5Minutes: "Toutes les 5 minutes",
-							every15Minutes: "Toutes les 15 minutes",
-							everyHour: "Chaque heure",
-							everyDay: "Chaque jour à minuit",
-							everyWeek: "Chaque semaine (dimanche minuit)",
-						},
-					},
 					gracePeriod: {
 						label: "Période de Grâce",
 						description:
@@ -3572,20 +3595,6 @@ export default {
 						label: "Expression Cron",
 						placeholder: "0 * * * *",
 						description: "L'expression de planification cron (ex. '0 * * * *' pour chaque heure).",
-					},
-					preset: {
-						label: "Préréglages Courants",
-						description:
-							"Sélectionnez une planification courante ou entrez une expression personnalisée.",
-						options: {
-							custom: "Personnalisé",
-							everyMinute: "Chaque minute",
-							every5Minutes: "Toutes les 5 minutes",
-							every15Minutes: "Toutes les 15 minutes",
-							everyHour: "Chaque heure",
-							everyDay: "Chaque jour à minuit",
-							everyWeek: "Chaque semaine (dimanche minuit)",
-						},
 					},
 					gracePeriod: {
 						label: "Période de Grâce",

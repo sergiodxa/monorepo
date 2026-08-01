@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Schedule } from "@pkg/cron";
 import { BadRequest, Created } from "@pkg/http/status-code";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
@@ -85,17 +86,19 @@ export default createController(cronJobsRoutes, {
 					);
 				}
 
-				try {
-					CronJobMonitor.validateCronExpression(result.data.cronExpression, result.data.timezone);
-				} catch {
-					return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
+				// The failure's message names the reason, the field at fault, and the
+				// character index inside the expression the client sent.
+				let schedule = Schedule.parse(result.data.cronExpression);
+				if (isFailure(schedule)) {
+					return apiError("VALIDATION_ERROR", schedule.error.message, BadRequest);
 				}
 
 				let db = getServiceContainer().get(Database);
 				let cronJob = await CronJobMonitor.create(db, ctx.apiTeam.id, {
 					name: result.data.name,
 					description: result.data.description ?? null,
-					cron_expression: result.data.cronExpression,
+					// Stored normalized, so one schedule has one spelling in the database.
+					cron_expression: schedule.data.toString(),
 					grace_period_seconds: result.data.gracePeriodSeconds,
 					timezone: result.data.timezone,
 					alert_on_late: result.data.alertOnLate,

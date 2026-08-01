@@ -1,12 +1,14 @@
 /**
  * Form actions for cron-job monitor create/update/delete. Each follows the validate →
  * mutate → flash → redirect pattern: on validation failure the visitor is sent back to
- * the form with an error toast; on success, to the monitor (or list).
+ * the form with an error toast, translated and — for a rejected cron expression — naming
+ * why the parser refused it; on success, to the monitor (or list).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Schedule } from "@pkg/cron";
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
@@ -22,10 +24,8 @@ import {
 	CronJobIdSchema,
 	UpdateCronJobSchema,
 } from "~/app/http/validators/cron-job";
+import { invalidCronMessage } from "~/app/lib/cron-text";
 import routes from "~/routes/web";
-
-const INVALID_CRON_MESSAGE = "Please enter a valid cron expression.";
-const GENERIC_ERROR_MESSAGE = "Please check the cron job details and try again.";
 
 /** POST /actions/:team/create-cron-job */
 export const createCronJob = createAction(routes.actions.cronJob.create, async (ctx) => {
@@ -33,7 +33,10 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", { intent: "error", message: GENERIC_ERROR_MESSAGE });
+		session?.flash("toast", {
+			intent: "error",
+			message: ctx.i18next.t("actions.createCronJob.errors.generic"),
+		});
 		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
@@ -41,10 +44,12 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 
 	let { description, is_enabled, ...values } = result.data;
 
-	try {
-		CronJobMonitor.validateCronExpression(values.cron_expression, values.timezone);
-	} catch {
-		session?.flash("toast", { intent: "error", message: INVALID_CRON_MESSAGE });
+	let schedule = Schedule.parse(values.cron_expression);
+	if (isFailure(schedule)) {
+		session?.flash("toast", {
+			intent: "error",
+			message: invalidCronMessage(schedule.error, ctx.i18next.t),
+		});
 		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
@@ -53,11 +58,16 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 	let db = getServiceContainer().get(Database);
 	let monitor = await CronJobMonitor.create(db, ctx.team.id, {
 		...values,
+		// Stored normalized, so one schedule has one spelling in the database and in logs.
+		cron_expression: schedule.data.toString(),
 		description: description || null,
 		enabled_at: is_enabled ? Date.now() : null,
 	});
 
-	session?.flash("toast", { intent: "success", message: `Cron job "${monitor.name}" created.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.i18next.t("actions.createCronJob.success", { name: monitor.name }),
+	});
 	return redirect(
 		routes.app.team.cronJobs.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
@@ -70,7 +80,10 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", { intent: "error", message: GENERIC_ERROR_MESSAGE });
+		session?.flash("toast", {
+			intent: "error",
+			message: ctx.i18next.t("actions.updateCronJob.errors.generic"),
+		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
 				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
@@ -84,32 +97,41 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let existing = await CronJobMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	try {
-		CronJobMonitor.validateCronExpression(values.cron_expression, values.timezone);
-	} catch {
-		session?.flash("toast", { intent: "error", message: INVALID_CRON_MESSAGE });
+	let schedule = Schedule.parse(values.cron_expression);
+	if (isFailure(schedule)) {
+		session?.flash("toast", {
+			intent: "error",
+			message: invalidCronMessage(schedule.error, ctx.i18next.t),
+		});
 		return redirect(
 			routes.app.team.cronJobs.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}
 
+	// Compared normalized, so re-saving the same schedule spelled differently isn't
+	// treated as a reschedule.
+	let cronExpression = schedule.data.toString();
 	let wasEnabled = existing.enabled_at !== null;
 	let scheduleChanged =
-		existing.cron_expression !== values.cron_expression || existing.timezone !== values.timezone;
+		existing.cron_expression !== cronExpression || existing.timezone !== values.timezone;
 
 	await CronJobMonitor.updateById(db, monitor_id, {
 		...values,
+		cron_expression: cronExpression,
 		description: description || null,
 		enabled_at: is_enabled ? (wasEnabled ? existing.enabled_at : Date.now()) : null,
 		next_expected_at: is_enabled
 			? scheduleChanged || !wasEnabled
-				? CronJobMonitor.calculateNextExpected(values.cron_expression, values.timezone)
+				? CronJobMonitor.calculateNextExpected(cronExpression, values.timezone)
 				: existing.next_expected_at
 			: null,
 	});
 
-	session?.flash("toast", { intent: "success", message: "Cron job updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.i18next.t("actions.updateCronJob.success", { name: values.name }),
+	});
 	return redirect(
 		routes.app.team.cronJobs.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
@@ -133,7 +155,10 @@ export const deleteCronJob = createAction(routes.actions.cronJob.delete, async (
 
 	await CronJobMonitor.deleteById(db, result.data.monitor_id);
 
-	session?.flash("toast", { intent: "success", message: `Cron job "${existing.name}" deleted.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.i18next.t("actions.deleteCronJob.success", { name: existing.name }),
+	});
 	return redirect(routes.app.team.cronJobs.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});

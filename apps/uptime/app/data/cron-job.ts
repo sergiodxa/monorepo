@@ -1,7 +1,7 @@
 /**
  * Data-access model for cron-job monitors (dead man's switch monitoring): CRUD over
- * `cron_job_monitors`, its `cron_job_pings` history, cron-expression scheduling via
- * `cron-parser`, and the single `recordPing` write path the public ping endpoint uses.
+ * `cron_job_monitors`, its `cron_job_pings` history, cron-expression scheduling with
+ * `@pkg/cron`, and the single `recordPing` write path the public ping endpoint uses.
  * The monitor's own `id` doubles as its public ping-URL identifier — see
  * `docs/cron-job-monitoring.md`; there is no separate secret token.
  *
@@ -11,8 +11,9 @@
 
 import type { Database } from "remix/data-table";
 
+import { Schedule } from "@pkg/cron";
+import { isFailure } from "@pkg/result";
 import { generateUUID } from "@pkg/uuid";
-import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";
@@ -151,86 +152,35 @@ export default class CronJobMonitor {
 		);
 	}
 
-	/** Computes the next expected run time for a cron expression in a timezone. */
-	static calculateNextExpected(cronExpression: string, timezone: string, from?: Date): number {
-		let interval = CronExpressionParser.parse(cronExpression, {
-			currentDate: from ?? new Date(),
-			tz: timezone,
-		});
-		return interval.next().toDate().getTime();
-	}
+	/**
+	 * The next expected run for a cron expression evaluated in a timezone, as epoch
+	 * milliseconds — the value `next_expected_at` holds and the late/missed sweep
+	 * compares against.
+	 *
+	 * `null` when there is no answer to store: an expression that no longer parses, or
+	 * a `timezone` the runtime doesn't know (the column is free-form text, so a stale
+	 * zone name is reachable). Both leave the monitor unscheduled rather than writing a
+	 * timestamp that isn't a time.
+	 *
+	 * @param cronExpression - The monitor's schedule.
+	 * @param timezone - IANA zone the schedule's wall-clock fields are read in.
+	 * @param from - Where the search starts, exclusive; defaults to now.
+	 * @returns The next run in epoch milliseconds, or `null`.
+	 *
+	 * @example
+	 * CronJobMonitor.calculateNextExpected("0 9 * * *", "America/New_York");
+	 */
+	static calculateNextExpected(
+		cronExpression: string,
+		timezone: string,
+		from?: Date,
+	): number | null {
+		let parsed = Schedule.parse(cronExpression);
+		if (isFailure(parsed)) return null;
 
-	/** Throws if `cronExpression` isn't a valid 5-field cron expression. */
-	static validateCronExpression(cronExpression: string, timezone: string): void {
-		CronExpressionParser.parse(cronExpression, { tz: timezone });
-	}
+		let next = parsed.data.next({ from: from ?? new Date(), timeZone: timezone });
+		if (Number.isNaN(next.getTime())) return null;
 
-	/** Renders a cron expression as a short human-readable schedule description. */
-	static describeCronExpression(cronExpression: string): string {
-		let shortcuts: Record<string, string> = {
-			"@yearly": "Every year on January 1st at midnight",
-			"@annually": "Every year on January 1st at midnight",
-			"@monthly": "Every month on the 1st at midnight",
-			"@weekly": "Every Sunday at midnight",
-			"@daily": "Every day at midnight",
-			"@midnight": "Every day at midnight",
-			"@hourly": "Every hour",
-		};
-		let shortcut = shortcuts[cronExpression];
-		if (shortcut) return shortcut;
-
-		let parts = cronExpression.trim().split(/\s+/);
-		if (parts.length !== 5) return genericDescription(cronExpression);
-
-		let [minute = "", hour = "", dayOfMonth = "", month = "", dayOfWeek = ""] = parts;
-
-		if (cronExpression === "* * * * *") return "Every minute";
-
-		if (hour === "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-			if (minute === "0") return "Every hour";
-			if (minute === "*") return "Every minute";
-			if (minute.includes("/")) return `Every ${minute.split("/")[1]} minutes`;
-			if (/^\d+$/.test(minute)) return `Every hour at minute ${minute}`;
-		}
-
-		if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
-			if (minute === "0" && hour === "0") return "Every day at midnight";
-			if (minute === "0" && /^\d+$/.test(hour)) return `Every day at ${hour}:00`;
-			if (/^\d+$/.test(minute) && /^\d+$/.test(hour)) {
-				return `Every day at ${hour}:${minute.padStart(2, "0")}`;
-			}
-		}
-
-		if (dayOfMonth === "*" && month === "*" && dayOfWeek !== "*") {
-			let weekdayNames = [
-				"Sunday",
-				"Monday",
-				"Tuesday",
-				"Wednesday",
-				"Thursday",
-				"Friday",
-				"Saturday",
-			];
-			let weekdayName = /^\d+$/.test(dayOfWeek)
-				? (weekdayNames[Number(dayOfWeek)] ?? dayOfWeek)
-				: dayOfWeek;
-			if (minute === "0" && hour === "0") return `Every ${weekdayName} at midnight`;
-			if (minute === "0" && /^\d+$/.test(hour)) return `Every ${weekdayName} at ${hour}:00`;
-		}
-
-		if (month === "*" && dayOfWeek === "*" && /^\d+$/.test(dayOfMonth)) {
-			if (minute === "0" && hour === "0") return `Monthly on day ${dayOfMonth} at midnight`;
-		}
-
-		return genericDescription(cronExpression);
-	}
-}
-
-function genericDescription(cronExpression: string): string {
-	try {
-		let next = CronExpressionParser.parse(cronExpression).next().toDate();
-		return `Scheduled (next: ${next.toISOString()})`;
-	} catch {
-		return "Custom schedule";
+		return next.getTime();
 	}
 }

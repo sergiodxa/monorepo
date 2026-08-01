@@ -21,6 +21,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { describeSchedule } from "~/app/lib/cron-text";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -122,7 +123,10 @@ export default createAction(routes.app.team.cronJobs.index, {
 													)}
 												</Table.Cell>
 												<Table.Cell>
-													{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
+													{describeSchedule(monitor.cron_expression, {
+														locale: ctx.locale,
+														t: ctx.i18next.t,
+													})}
 												</Table.Cell>
 												<Table.Cell>
 													<Badge {...badgeVariant(STATUS_BADGE_TONE[monitor.status] ?? "neutral")}>

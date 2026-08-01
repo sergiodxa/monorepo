@@ -27,6 +27,7 @@ import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { describeSchedule } from "~/app/lib/cron-text";
 import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import AppShell from "~/resources/layouts/app-shell";
@@ -115,7 +116,10 @@ export default createAction(routes.app.team.cronJobs.show, {
 									{ctx.i18next.t("page.cronJobDetail.info.schedule")}
 								</div>
 								<div mix={[fontSize("1.5rem"), weight(700), leading("2rem")]}>
-									{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
+									{describeSchedule(monitor.cron_expression, {
+										locale: ctx.locale,
+										t: ctx.i18next.t,
+									})}
 								</div>
 								<code>{monitor.cron_expression}</code>
 							</div>

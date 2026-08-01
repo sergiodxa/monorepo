@@ -14,9 +14,9 @@
 
 import type { Database } from "remix/data-table";
 
+import { Schedule } from "@pkg/cron";
 import { isFailure } from "@pkg/result";
 import { generateUUID } from "@pkg/uuid";
-import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
@@ -48,8 +48,12 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  */
 const RAW_PING_WINDOW_DAYS = 2;
 
-/** Safety cap on cron occurrences counted per job, guarding against a pathological expression. */
-const MAX_CRON_OCCURRENCES_PER_MONTH = 100_000;
+/**
+ * Safety cap on cron occurrences counted per job. Sub-minute schedules are rejected at
+ * parse time, so the real ceiling is the 44,640 runs an every-minute schedule produces
+ * in a 31-day month; anything reaching this cap is pathological and stops being counted.
+ */
+const MAX_CRON_OCCURRENCES_PER_MONTH = 45_000;
 
 /** Aggregate uptime/response-time stats for a monitor (or a team's monitors). */
 export interface MonitorStats {
@@ -415,8 +419,8 @@ export default class Monitor {
 	 * Estimates a team's total ping consumption for the calendar month containing
 	 * `date`, across every monitor type: HTTP/DNS/TCP monitors are projected as
 	 * `monthMilliseconds / intervalMs` (how many checks their interval would produce
-	 * over the whole month), and cron jobs are counted by walking their cron
-	 * expression's occurrences with `cron-parser`. This is a projection based on
+	 * over the whole month), and cron jobs are counted by walking their schedule's
+	 * occurrences through the month. This is a projection based on
 	 * current settings, not what the team has actually consumed so far (which is what
 	 * {@link countConsumedPingsByTeam} counts) — the dashboard shows both side by side.
 	 */
@@ -446,25 +450,28 @@ export default class Monitor {
 			0,
 		);
 
+		let endTime = end.getTime();
 		let cronPings = 0;
 		for (let job of teamCronJobs) {
-			try {
-				let interval = CronExpressionParser.parse(job.cron_expression, {
-					currentDate: start,
-					tz: job.timezone ?? "UTC",
-				});
+			// Skip jobs whose expression no longer parses rather than fail the whole estimate.
+			let parsed = Schedule.parse(job.cron_expression);
+			if (isFailure(parsed)) continue;
 
-				let occurrences = 0;
-				let next = interval.next();
-				while (next.toDate() <= end) {
-					occurrences++;
-					if (occurrences > MAX_CRON_OCCURRENCES_PER_MONTH) break;
-					next = interval.next();
-				}
-				cronPings += occurrences;
-			} catch {
-				// Skip jobs with an unparsable cron expression rather than fail the whole estimate.
+			let timeZone = job.timezone ?? "UTC";
+			let cursor = start.getTime();
+			let occurrences = 0;
+
+			// Walked one run at a time so the search stops at the end of the month: asking
+			// for the cap up front would step a daily job over a century of occurrences.
+			while (occurrences < MAX_CRON_OCCURRENCES_PER_MONTH) {
+				let next = parsed.data.next({ from: new Date(cursor), timeZone }).getTime();
+				// An unknown stored zone yields an invalid date, and counts as no runs.
+				if (Number.isNaN(next) || next > endTime) break;
+				occurrences++;
+				cursor = next;
 			}
+
+			cronPings += occurrences;
 		}
 
 		return Math.round(httpPings + dnsPings + tcpPings + cronPings);

@@ -17,6 +17,7 @@ import { formData } from "remix/form-data-middleware";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -45,7 +46,9 @@ async function postCronJobAction(
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	// The real chain resolves the language for `/actions/*` too, and these actions flash
+	// translated toasts, so `ctx.i18next` has to be there.
+	let router = createRouter({ middleware: [asyncContext(), formData(), i18n] });
 	/**
 	 * Casts `router.map` itself (rather than its arguments) so this helper can map
 	 * several differently-shaped routes without losing type-checking elsewhere.
@@ -126,6 +129,24 @@ describe("POST /actions/:team/create-cron-job", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.cronJobs.show.href({ team: team.slug, monitorId: created!.id }),
 		);
+	});
+
+	test("stores the expression normalized, so one schedule has one spelling", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postCronJobAction(
+			createCronJob,
+			routes.actions.cronJob.create,
+			team,
+			membership,
+			db,
+			cronJobBody({ cron_expression: " @daily " }),
+		);
+
+		let created = await db.findOne(cronJobMonitors, { where: { team_id: team.id } });
+		expect(created?.cron_expression).toBe("0 0 * * *");
 	});
 
 	test("rejects a blank name and redirects to the new-cron-job form without creating a row", async () => {

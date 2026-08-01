@@ -767,6 +767,43 @@ export default {
 		},
 	},
 
+	cron: {
+		error: {
+			empty: "Geben Sie einen Cron-Ausdruck ein.",
+			"field-count":
+				"Ein Cron-Ausdruck braucht genau fünf Felder: Minute, Stunde, Tag des Monats, Monat und Wochentag.",
+			"seconds-not-supported":
+				"Sekunden werden nicht unterstützt. Verwenden Sie das Format mit fünf Feldern, beginnend mit der Minute.",
+			"unknown-macro":
+				"Diese Kurzform wird nicht unterstützt. Verwenden Sie @hourly, @daily, @weekly, @monthly oder @yearly.",
+			syntax: "Eines der Felder ist weder ein Wert noch ein Bereich, eine Liste oder ein Schritt.",
+			"unknown-name":
+				"Einer der Monats- oder Wochentagsnamen ist unbekannt. Verwenden Sie dreibuchstabige Abkürzungen wie JAN oder MON.",
+			"out-of-range": "Einer der Werte liegt außerhalb des für sein Feld erlaubten Bereichs.",
+			"reversed-range": "Einer der Bereiche beginnt nach seinem Ende.",
+			"invalid-step": "Ein Schritt muss eine ganze Zahl größer als null sein.",
+			"impossible-date": "Dieser Tag des Monats kommt im angegebenen Monat nie vor.",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute_one: "Jede Minute",
+			minute_other: "Alle {{count}} Minuten",
+			hour_one: "Jede Stunde",
+			hour_other: "Alle {{count}} Stunden",
+		},
+		hourly: {
+			onTheHour: "Jede Stunde",
+			atMinutes: "Jede Stunde zur Minute {{minutes}}",
+		},
+		daily: "Täglich um {{times}}",
+		weekly: "Jeden {{days}} um {{times}}",
+		monthly: "Monatlich am {{days}}. um {{times}}",
+		yearly: "Jährlich am {{days}}. {{months}} um {{times}}",
+		expression: "Individueller Zeitplan ({{expression}})",
+	},
+
 	actions: {
 		addDomain: {
 			errors: {
@@ -3519,20 +3556,6 @@ export default {
 						placeholder: "0 * * * *",
 						description: "Der Cron-Zeitplanausdruck (z.B. '0 * * * *' für jede Stunde).",
 					},
-					preset: {
-						label: "Häufige Voreinstellungen",
-						description:
-							"Wählen Sie einen häufigen Zeitplan oder geben Sie einen benutzerdefinierten Ausdruck ein.",
-						options: {
-							custom: "Benutzerdefiniert",
-							everyMinute: "Jede Minute",
-							every5Minutes: "Alle 5 Minuten",
-							every15Minutes: "Alle 15 Minuten",
-							everyHour: "Jede Stunde",
-							everyDay: "Täglich um Mitternacht",
-							everyWeek: "Wöchentlich (Sonntag Mitternacht)",
-						},
-					},
 					gracePeriod: {
 						label: "Karenzzeit",
 						description:
@@ -3596,20 +3619,6 @@ export default {
 						label: "Cron-Ausdruck",
 						placeholder: "0 * * * *",
 						description: "Der Cron-Zeitplanausdruck (z.B. '0 * * * *' für jede Stunde).",
-					},
-					preset: {
-						label: "Häufige Voreinstellungen",
-						description:
-							"Wählen Sie einen häufigen Zeitplan oder geben Sie einen benutzerdefinierten Ausdruck ein.",
-						options: {
-							custom: "Benutzerdefiniert",
-							everyMinute: "Jede Minute",
-							every5Minutes: "Alle 5 Minuten",
-							every15Minutes: "Alle 15 Minuten",
-							everyHour: "Jede Stunde",
-							everyDay: "Täglich um Mitternacht",
-							everyWeek: "Wöchentlich (Sonntag Mitternacht)",
-						},
 					},
 					gracePeriod: {
 						label: "Karenzzeit",

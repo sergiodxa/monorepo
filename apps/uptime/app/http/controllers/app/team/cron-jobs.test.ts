@@ -137,7 +137,7 @@ describe("cronJobs", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Nightly Backup");
-		expect(body).toContain("Every day at midnight");
+		expect(body).toContain("Every day at 00:00");
 		expect(body).toContain("Healthy");
 	});
 

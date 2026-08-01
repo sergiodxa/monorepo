@@ -1,8 +1,8 @@
 /**
  * Unit tests for the `CronJobMonitor` data-access model: team-scoped CRUD over
  * cron-job monitors, ping-history recording via the single `recordPing` write path,
- * the scheduled-sweep query `listActionable`, and the pure cron-expression helpers
- * (`calculateNextExpected`, `validateCronExpression`, `describeCronExpression`).
+ * the scheduled-sweep query `listActionable`, and `calculateNextExpected`, including
+ * the two inputs that leave a monitor unscheduled instead of throwing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -373,57 +373,24 @@ describe("CronJobMonitor.calculateNextExpected", () => {
 		let utc = CronJobMonitor.calculateNextExpected("0 9 * * *", "UTC", from);
 		let ny = CronJobMonitor.calculateNextExpected("0 9 * * *", "America/New_York", from);
 
-		expect(new Date(utc).toISOString()).toBe("2026-01-06T09:00:00.000Z");
-		expect(new Date(ny).toISOString()).toBe("2026-01-05T14:00:00.000Z");
-	});
-});
-
-describe("CronJobMonitor.validateCronExpression", () => {
-	test("does not throw for a valid expression", () => {
-		expect(() => CronJobMonitor.validateCronExpression("0 0 * * *", "UTC")).not.toThrow();
+		expect(utc).not.toBeNull();
+		expect(ny).not.toBeNull();
+		expect(new Date(utc ?? 0).toISOString()).toBe("2026-01-06T09:00:00.000Z");
+		expect(new Date(ny ?? 0).toISOString()).toBe("2026-01-05T14:00:00.000Z");
 	});
 
-	test("throws for an invalid expression", () => {
-		expect(() => CronJobMonitor.validateCronExpression("not-a-cron", "UTC")).toThrow();
-	});
-});
-
-describe("CronJobMonitor.describeCronExpression", () => {
-	test("uses the named shortcuts", () => {
-		expect(CronJobMonitor.describeCronExpression("@daily")).toBe("Every day at midnight");
-		expect(CronJobMonitor.describeCronExpression("@hourly")).toBe("Every hour");
-		expect(CronJobMonitor.describeCronExpression("@weekly")).toBe("Every Sunday at midnight");
-	});
-
-	test("describes every-minute and every-hour patterns", () => {
-		expect(CronJobMonitor.describeCronExpression("* * * * *")).toBe("Every minute");
-		expect(CronJobMonitor.describeCronExpression("0 * * * *")).toBe("Every hour");
-		expect(CronJobMonitor.describeCronExpression("*/15 * * * *")).toBe("Every 15 minutes");
-		expect(CronJobMonitor.describeCronExpression("5 * * * *")).toBe("Every hour at minute 5");
-	});
-
-	test("describes daily patterns", () => {
-		expect(CronJobMonitor.describeCronExpression("0 0 * * *")).toBe("Every day at midnight");
-		expect(CronJobMonitor.describeCronExpression("0 9 * * *")).toBe("Every day at 9:00");
-		expect(CronJobMonitor.describeCronExpression("30 9 * * *")).toBe("Every day at 9:30");
-	});
-
-	test("describes weekly patterns", () => {
-		expect(CronJobMonitor.describeCronExpression("0 0 * * 1")).toBe("Every Monday at midnight");
-		expect(CronJobMonitor.describeCronExpression("0 9 * * 1")).toBe("Every Monday at 9:00");
-	});
-
-	test("describes monthly patterns", () => {
-		expect(CronJobMonitor.describeCronExpression("0 0 15 * *")).toBe(
-			"Monthly on day 15 at midnight",
+	test("accepts the macros the parser expands", () => {
+		let from = new Date("2026-01-05T10:00:00Z");
+		expect(CronJobMonitor.calculateNextExpected("@daily", "UTC", from)).toBe(
+			new Date("2026-01-06T00:00:00.000Z").getTime(),
 		);
 	});
 
-	test("falls back to a generic 'Scheduled' description for valid but unmatched expressions", () => {
-		expect(CronJobMonitor.describeCronExpression("0 0 1 1 1")).toMatch(/^Scheduled \(next: .+\)$/);
+	test("returns null for an expression that doesn't parse, rather than throwing", () => {
+		expect(CronJobMonitor.calculateNextExpected("not-a-cron", "UTC")).toBeNull();
 	});
 
-	test("falls back to 'Custom schedule' for expressions that fail to parse", () => {
-		expect(CronJobMonitor.describeCronExpression("not-a-cron")).toBe("Custom schedule");
+	test("returns null for a timezone the runtime doesn't know, rather than storing NaN", () => {
+		expect(CronJobMonitor.calculateNextExpected("0 0 * * *", "Mars/Olympus_Mons")).toBeNull();
 	});
 });

@@ -1309,6 +1309,43 @@ export default {
 		},
 	},
 
+	cron: {
+		error: {
+			empty: "Enter a cron expression.",
+			"field-count":
+				"A cron expression needs exactly five fields: minute, hour, day of month, month, and day of week.",
+			"seconds-not-supported":
+				"Seconds are not supported. Use the five-field format, starting with the minute.",
+			"unknown-macro":
+				"That shorthand is not supported. Use @hourly, @daily, @weekly, @monthly, or @yearly.",
+			syntax: "One of the fields is not a value, a range, a list, or a step.",
+			"unknown-name":
+				"One of the month or weekday names is not recognized. Use three-letter abbreviations such as JAN or MON.",
+			"out-of-range": "One of the values is outside the range its field allows.",
+			"reversed-range": "One of the ranges starts after it ends.",
+			"invalid-step": "A step must be a whole number greater than zero.",
+			"impossible-date": "That day of the month never happens in the month it is paired with.",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute_one: "Every minute",
+			minute_other: "Every {{count}} minutes",
+			hour_one: "Every hour",
+			hour_other: "Every {{count}} hours",
+		},
+		hourly: {
+			onTheHour: "Every hour",
+			atMinutes: "Every hour at minute {{minutes}}",
+		},
+		daily: "Every day at {{times}}",
+		weekly: "Every {{days}} at {{times}}",
+		monthly: "Every month on day {{days}} at {{times}}",
+		yearly: "Every year on {{months}} {{days}} at {{times}}",
+		expression: "Custom schedule ({{expression}})",
+	},
+
 	actions: {
 		addDomain: {
 			errors: {
@@ -4022,19 +4059,6 @@ export default {
 						placeholder: "0 * * * *",
 						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
 					},
-					preset: {
-						label: "Common Presets",
-						description: "Select a common schedule or enter a custom expression.",
-						options: {
-							custom: "Custom",
-							everyMinute: "Every minute",
-							every5Minutes: "Every 5 minutes",
-							every15Minutes: "Every 15 minutes",
-							everyHour: "Every hour",
-							everyDay: "Every day at midnight",
-							everyWeek: "Every week (Sunday midnight)",
-						},
-					},
 					gracePeriod: {
 						label: "Grace Period",
 						description: "How long to wait after the expected time before marking as late.",
@@ -4095,19 +4119,6 @@ export default {
 						label: "Cron Expression",
 						placeholder: "0 * * * *",
 						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
-					},
-					preset: {
-						label: "Common Presets",
-						description: "Select a common schedule or enter a custom expression.",
-						options: {
-							custom: "Custom",
-							everyMinute: "Every minute",
-							every5Minutes: "Every 5 minutes",
-							every15Minutes: "Every 15 minutes",
-							everyHour: "Every hour",
-							everyDay: "Every day at midnight",
-							everyWeek: "Every week (Sunday midnight)",
-						},
 					},
 					gracePeriod: {
 						label: "Grace Period",

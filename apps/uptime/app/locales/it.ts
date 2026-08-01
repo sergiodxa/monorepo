@@ -761,6 +761,43 @@ export default {
 		},
 	},
 
+	cron: {
+		error: {
+			empty: "Inserisca un'espressione cron.",
+			"field-count":
+				"Un'espressione cron richiede esattamente cinque campi: minuto, ora, giorno del mese, mese e giorno della settimana.",
+			"seconds-not-supported":
+				"I secondi non sono supportati. Usi il formato a cinque campi, iniziando dal minuto.",
+			"unknown-macro":
+				"Questa abbreviazione non è supportata. Usi @hourly, @daily, @weekly, @monthly o @yearly.",
+			syntax: "Uno dei campi non è un valore, un intervallo, un elenco o un passo.",
+			"unknown-name":
+				"Uno dei nomi di mese o di giorno non è riconosciuto. Usi abbreviazioni di tre lettere come JAN o MON.",
+			"out-of-range": "Uno dei valori è fuori dall'intervallo consentito per il suo campo.",
+			"reversed-range": "Uno degli intervalli inizia dopo la sua fine.",
+			"invalid-step": "Un passo deve essere un numero intero maggiore di zero.",
+			"impossible-date": "Quel giorno del mese non esiste nel mese a cui è abbinato.",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute_one: "Ogni minuto",
+			minute_other: "Ogni {{count}} minuti",
+			hour_one: "Ogni ora",
+			hour_other: "Ogni {{count}} ore",
+		},
+		hourly: {
+			onTheHour: "Ogni ora",
+			atMinutes: "Ogni ora al minuto {{minutes}}",
+		},
+		daily: "Ogni giorno alle {{times}}",
+		weekly: "Ogni {{days}} alle {{times}}",
+		monthly: "Ogni mese il giorno {{days}} alle {{times}}",
+		yearly: "Ogni anno il {{days}} {{months}} alle {{times}}",
+		expression: "Pianificazione personalizzata ({{expression}})",
+	},
+
 	actions: {
 		addDomain: {
 			errors: {
@@ -3484,20 +3521,6 @@ export default {
 						placeholder: "0 * * * *",
 						description: "L'espressione di pianificazione cron (es. '0 * * * *' per ogni ora).",
 					},
-					preset: {
-						label: "Preimpostazioni Comuni",
-						description:
-							"Selezioni una pianificazione comune o inserisca un'espressione personalizzata.",
-						options: {
-							custom: "Personalizzato",
-							everyMinute: "Ogni minuto",
-							every5Minutes: "Ogni 5 minuti",
-							every15Minutes: "Ogni 15 minuti",
-							everyHour: "Ogni ora",
-							everyDay: "Ogni giorno a mezzanotte",
-							everyWeek: "Ogni settimana (domenica mezzanotte)",
-						},
-					},
 					gracePeriod: {
 						label: "Periodo di Grazia",
 						description:
@@ -3559,20 +3582,6 @@ export default {
 						label: "Espressione Cron",
 						placeholder: "0 * * * *",
 						description: "L'espressione di pianificazione cron (es. '0 * * * *' per ogni ora).",
-					},
-					preset: {
-						label: "Preimpostazioni Comuni",
-						description:
-							"Selezioni una pianificazione comune o inserisca un'espressione personalizzata.",
-						options: {
-							custom: "Personalizzato",
-							everyMinute: "Ogni minuto",
-							every5Minutes: "Ogni 5 minuti",
-							every15Minutes: "Ogni 15 minuti",
-							everyHour: "Ogni ora",
-							everyDay: "Ogni giorno a mezzanotte",
-							everyWeek: "Ogni settimana (domenica mezzanotte)",
-						},
 					},
 					gracePeriod: {
 						label: "Periodo di Grazia",
