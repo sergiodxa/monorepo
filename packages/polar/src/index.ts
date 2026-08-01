@@ -11,10 +11,18 @@
  * reading environment variables itself, so it stays compatible with
  * `@pkg/service-container` (ADR-008) and is trivial to test.
  *
+ * Nothing in this module imports the vendor SDK eagerly: it builds ~700 zod schemas
+ * at module scope, which is over a megabyte of bundle and tens of milliseconds of
+ * Worker startup CPU paid by every isolate, including the ones that never bill
+ * anything. {@link PolarClient} is therefore SDK-free until a method is called — the
+ * class stays cheap to import as a dependency-injection token — and the SDK is loaded
+ * once per instance through {@link PolarClient.sdk}.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { Result } from "@pkg/result";
+import type { Polar } from "@polar-sh/sdk";
 import type { Checkout } from "@polar-sh/sdk/models/components/checkout.js";
 import type { Customer } from "@polar-sh/sdk/models/components/customer.js";
 import type { CustomerSession } from "@polar-sh/sdk/models/components/customersession.js";
@@ -26,19 +34,44 @@ import type { Product } from "@polar-sh/sdk/models/components/product.js";
 import type { Subscription } from "@polar-sh/sdk/models/components/subscription.js";
 
 import { failure, success } from "@pkg/result";
-import { Polar } from "@polar-sh/sdk";
 import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
-import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 
-export { PolarError, WebhookVerificationError };
+// PolarError is the one SDK value worth importing eagerly: its module is a bare
+// Error subclass with no schema imports, so callers can keep catching it by class.
+export { PolarError };
 export type { Checkout, Customer, CustomerSession, Discount, Order, Product, Subscription };
 
 /**
- * Any webhook event the SDK can model, as returned by `validateEvent`. It is a
+ * The error the SDK's verifier throws for a bad or missing signature. Type-only: the
+ * module that defines it is the schema-heavy webhook parser, so a value re-export
+ * would pull the whole vendor model layer back into every importer's startup path.
+ * {@link PolarClient.verifyWebhook} and {@link PolarClient.parseWebhook} already turn
+ * it into `false`/`failure`, which is what callers branch on.
+ */
+export type { WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
+
+/**
+ * Any webhook event the SDK can model, as returned by its `validateEvent`. It is a
  * discriminated union on `type`, so callers can narrow with
  * `event.type === "order.paid"` and get a fully typed payload.
  */
-export type PolarWebhookEvent = ReturnType<typeof validateEvent>;
+export type PolarWebhookEvent = ReturnType<
+	typeof import("@polar-sh/sdk/webhooks.js").validateEvent
+>;
+
+/**
+ * The vendor SDK as {@link PolarClient} uses it: one configured API client plus the
+ * webhook verifier and the error it throws, resolved together by
+ * {@link PolarClient.sdk} on first use.
+ */
+interface PolarSdk {
+	/** The configured SDK client every API method delegates to. */
+	client: Polar;
+	/** Verifies a Standard Webhooks signature and parses the payload, or throws. */
+	validateEvent: typeof import("@polar-sh/sdk/webhooks.js").validateEvent;
+	/** The class `validateEvent` throws for a rejected signature specifically. */
+	WebhookVerificationError: typeof import("@polar-sh/sdk/webhooks.js").WebhookVerificationError;
+}
 
 /**
  * The subscription statuses Polar itself counts as active, i.e. the ones its
@@ -79,7 +112,7 @@ export function isActiveSubscriptionStatus(status: string): boolean {
  *
  * @example
  * ```ts
- * let result = polar.parseWebhook(request, body, secret);
+ * let result = await polar.parseWebhook(request, body, secret);
  * if (isFailure(result)) return new Response(result.error.message, { status: 400 });
  * let subscription = subscriptionFromEvent(result.data);
  * if (!subscription) return new Response(null, { status: 200 });
@@ -271,11 +304,21 @@ function toIngestPayload(event: IngestEvent): EventCreateCustomer | EventCreateE
  * ```
  */
 export class PolarClient {
-	/** The underlying SDK client, created once from the access token. */
-	private readonly client: Polar;
+	/** The access token, held until the SDK is actually loaded and configured. */
+	private readonly accessToken: string;
 
 	/**
-	 * Create a new Polar client.
+	 * The in-flight or settled SDK load, so concurrent first calls share one import
+	 * and one client rather than racing to build the schemas twice. A rejection is
+	 * memoized too: in a bundled Worker the module is already there, so a failed
+	 * import means a broken deployment and retrying it per call would only hide that.
+	 */
+	private loading: Promise<PolarSdk> | undefined;
+
+	/**
+	 * Create a new Polar client. Constructing one performs no work and loads no
+	 * vendor code, so an app can hold an instance (or reference the class as a
+	 * service-container token) without paying the SDK's startup cost.
 	 *
 	 * @param options - Client configuration.
 	 * @param options.accessToken - The Polar API access token.
@@ -286,7 +329,27 @@ export class PolarClient {
 	 * ```
 	 */
 	constructor(options: PolarClientOptions) {
-		this.client = new Polar({ accessToken: options.accessToken });
+		this.accessToken = options.accessToken;
+	}
+
+	/**
+	 * The vendor SDK, imported and configured on first use and memoized after.
+	 *
+	 * Every method that talks to Polar goes through here, which is what keeps the
+	 * import out of module scope: the bundler splits it into a chunk that an isolate
+	 * only ever evaluates if it actually reaches a billing code path.
+	 *
+	 * @returns The configured client, verifier, and verification error class.
+	 */
+	private sdk(): Promise<PolarSdk> {
+		return (this.loading ??= Promise.all([
+			import("@polar-sh/sdk"),
+			import("@polar-sh/sdk/webhooks.js"),
+		]).then(([{ Polar }, { validateEvent, WebhookVerificationError }]) => ({
+			client: new Polar({ accessToken: this.accessToken }),
+			validateEvent,
+			WebhookVerificationError,
+		})));
 	}
 
 	/**
@@ -310,7 +373,8 @@ export class PolarClient {
 		name: string | null = null,
 		metadata: Record<string, string> = {},
 	): Promise<Customer> {
-		return await this.client.customers.create({
+		let { client } = await this.sdk();
+		return await client.customers.create({
 			email,
 			name: name ?? undefined,
 			metadata,
@@ -325,7 +389,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the customer does not exist or the request fails.
 	 */
 	async getCustomer(customerId: string): Promise<Customer> {
-		return await this.client.customers.get({ id: customerId });
+		let { client } = await this.sdk();
+		return await client.customers.get({ id: customerId });
 	}
 
 	/**
@@ -336,7 +401,8 @@ export class PolarClient {
 	 */
 	async getExternalCustomer(externalId: string): Promise<Customer | null> {
 		try {
-			return await this.client.customers.getExternal({ externalId });
+			let { client } = await this.sdk();
+			return await client.customers.getExternal({ externalId });
 		} catch {
 			return null;
 		}
@@ -350,7 +416,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the request fails.
 	 */
 	async findCustomerByEmail(email: string): Promise<Customer | null> {
-		let pages = await this.client.customers.list({ email });
+		let { client } = await this.sdk();
+		let pages = await client.customers.list({ email });
 		for await (let page of pages) {
 			let customer = page.result.items.at(0);
 			if (customer) return customer;
@@ -367,7 +434,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the request fails.
 	 */
 	async updateCustomer(customerId: string, updates: CustomerUpdate): Promise<Customer> {
-		return await this.client.customers.update({
+		let { client } = await this.sdk();
+		return await client.customers.update({
 			id: customerId,
 			customerUpdate: {
 				name: updates.name,
@@ -385,7 +453,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the subscription does not exist or the request fails.
 	 */
 	async getSubscription(subscriptionId: string): Promise<Subscription> {
-		return await this.client.subscriptions.get({ id: subscriptionId });
+		let { client } = await this.sdk();
+		return await client.subscriptions.get({ id: subscriptionId });
 	}
 
 	/**
@@ -396,7 +465,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the request fails.
 	 */
 	async listSubscriptions(customerId: string): Promise<Subscription[]> {
-		let result = await this.client.subscriptions.list({ customerId });
+		let { client } = await this.sdk();
+		let result = await client.subscriptions.list({ customerId });
 		let subscriptions: Subscription[] = [];
 		for await (let page of result) subscriptions.push(...page.result.items);
 		return subscriptions;
@@ -414,7 +484,8 @@ export class PolarClient {
 	 */
 	async hasActiveSubscription(externalCustomerId: string, productId: string): Promise<boolean> {
 		try {
-			let result = await this.client.subscriptions.list({
+			let { client } = await this.sdk();
+			let result = await client.subscriptions.list({
 				externalCustomerId,
 				active: true,
 			});
@@ -446,7 +517,8 @@ export class PolarClient {
 		externalCustomerId: string,
 		productId: string,
 	): Promise<Subscription[]> {
-		let result = await this.client.subscriptions.list({
+		let { client } = await this.sdk();
+		let result = await client.subscriptions.list({
 			externalCustomerId,
 			active: true,
 		});
@@ -475,7 +547,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async listActiveSubscriptionsByProduct(productId: string): Promise<Subscription[]> {
-		let result = await this.client.subscriptions.list({ productId, active: true });
+		let { client } = await this.sdk();
+		let result = await client.subscriptions.list({ productId, active: true });
 		let subscriptions: Subscription[] = [];
 		for await (let page of result) subscriptions.push(...page.result.items);
 		return subscriptions;
@@ -490,7 +563,8 @@ export class PolarClient {
 	 * @throws {PolarError} When the request fails.
 	 */
 	async revokeSubscription(subscriptionId: string): Promise<Subscription> {
-		return await this.client.subscriptions.revoke({ id: subscriptionId });
+		let { client } = await this.sdk();
+		return await client.subscriptions.revoke({ id: subscriptionId });
 	}
 
 	/**
@@ -508,7 +582,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async getProduct(productId: string): Promise<Product> {
-		return await this.client.products.get({ id: productId });
+		let { client } = await this.sdk();
+		return await client.products.get({ id: productId });
 	}
 
 	/**
@@ -527,7 +602,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async listDiscounts(limit = 12): Promise<Discount[]> {
-		let result = await this.client.discounts.list({ limit });
+		let { client } = await this.sdk();
+		let result = await client.discounts.list({ limit });
 		let discounts: Discount[] = [];
 		for await (let page of result) discounts.push(...page.result.items);
 		return discounts;
@@ -551,7 +627,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async listOrders(options: { customerId?: string; productId?: string }): Promise<Order[]> {
-		let result = await this.client.orders.list({
+		let { client } = await this.sdk();
+		let result = await client.orders.list({
 			customerId: options.customerId,
 			productId: options.productId,
 		});
@@ -589,7 +666,8 @@ export class PolarClient {
 		successUrl: string,
 		metadata: Record<string, string> = {},
 	): Promise<SessionResult> {
-		let checkout: Checkout = await this.client.checkouts.create({
+		let { client } = await this.sdk();
+		let checkout: Checkout = await client.checkouts.create({
 			products: [productId],
 			customerId,
 			successUrl,
@@ -626,7 +704,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async createCheckout(options: CheckoutSessionOptions): Promise<CheckoutSessionResult> {
-		let checkout: Checkout = await this.client.checkouts.create({
+		let { client } = await this.sdk();
+		let checkout: Checkout = await client.checkouts.create({
 			products: [options.productId],
 			customerId: options.customerId,
 			customerEmail: options.customerEmail ?? undefined,
@@ -653,7 +732,8 @@ export class PolarClient {
 	 * ```
 	 */
 	async createPortalSession(customerId: string): Promise<SessionResult> {
-		let session: CustomerSession = await this.client.customerSessions.create({ customerId });
+		let { client } = await this.sdk();
+		let session: CustomerSession = await client.customerSessions.create({ customerId });
 		return { url: session.customerPortalUrl };
 	}
 
@@ -685,7 +765,8 @@ export class PolarClient {
 		range: { start: Date; end: Date },
 		metadata: Record<string, string> = {},
 	): Promise<number> {
-		let { total } = await this.client.meters.quantities({
+		let { client } = await this.sdk();
+		let { total } = await client.meters.quantities({
 			externalCustomerId,
 			startTimestamp: range.start,
 			endTimestamp: range.end,
@@ -717,9 +798,10 @@ export class PolarClient {
 	 * ```
 	 */
 	async ingestEvents(events: IngestEvent[]): Promise<void> {
+		let { client } = await this.sdk();
 		for (let index = 0; index < events.length; index += INGEST_CHUNK_SIZE) {
 			let chunk = events.slice(index, index + INGEST_CHUNK_SIZE);
-			await this.client.events.ingest({ events: chunk.map(toIngestPayload) });
+			await client.events.ingest({ events: chunk.map(toIngestPayload) });
 		}
 	}
 
@@ -829,12 +911,18 @@ export class PolarClient {
 	 * @example
 	 * ```ts
 	 * let body = await request.text();
-	 * if (!polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET)) {
+	 * if (!(await polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET))) {
 	 * 	return new Response("invalid signature", { status: 401 });
 	 * }
 	 * ```
 	 */
-	verifyWebhook(request: Request, rawBody: string, secret: string | undefined): boolean {
+	async verifyWebhook(
+		request: Request,
+		rawBody: string,
+		secret: string | undefined,
+	): Promise<boolean> {
+		// Checked before loading the verifier, so a misconfigured deployment rejects
+		// webhooks without ever evaluating the vendor's schema module.
 		if (!secret) return false;
 
 		let headers: Record<string, string> = {};
@@ -842,12 +930,14 @@ export class PolarClient {
 			headers[key] = value;
 		});
 
+		let sdk = await this.sdk();
+
 		try {
-			validateEvent(rawBody, headers, secret);
+			sdk.validateEvent(rawBody, headers, secret);
 			return true;
 		} catch (error) {
 			// A bad/missing signature is a WebhookVerificationError -> fail closed.
-			if (error instanceof WebhookVerificationError) return false;
+			if (error instanceof sdk.WebhookVerificationError) return false;
 			// The signature verified but the SDK could not type the event (an event
 			// type it does not model); the security boundary passed, so accept it.
 			return true;
@@ -870,16 +960,18 @@ export class PolarClient {
 	 *
 	 * @example
 	 * ```ts
-	 * let result = polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+	 * let result = await polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
 	 * if (isFailure(result)) return new Response(result.error.message, { status: 400 });
 	 * if (result.data.type === "order.paid") await tagCustomer(result.data.data.customer.email);
 	 * ```
 	 */
-	parseWebhook(
+	async parseWebhook(
 		request: Request,
 		rawBody: string,
 		secret: string | undefined,
-	): Result<PolarWebhookEvent, Error> {
+	): Promise<Result<PolarWebhookEvent, Error>> {
+		// Checked before loading the verifier, so a misconfigured deployment rejects
+		// webhooks without ever evaluating the vendor's schema module.
 		if (!secret) return failure(new Error("Missing Polar webhook secret"));
 
 		let headers: Record<string, string> = {};
@@ -887,11 +979,13 @@ export class PolarClient {
 			headers[key] = value;
 		});
 
+		let sdk = await this.sdk();
+
 		try {
-			return success(validateEvent(rawBody, headers, secret));
+			return success(sdk.validateEvent(rawBody, headers, secret));
 		} catch (error) {
 			// A bad/missing signature is a WebhookVerificationError -> fail closed.
-			if (error instanceof WebhookVerificationError) {
+			if (error instanceof sdk.WebhookVerificationError) {
 				return failure(new Error("Invalid Polar webhook signature"));
 			}
 			// The signature verified but the SDK could not validate/type the payload.

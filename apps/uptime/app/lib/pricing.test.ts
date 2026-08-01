@@ -122,4 +122,19 @@ describe("the English copy formatters", () => {
 		expect(formatPings(100_000)).toBe("100,000");
 		expect(formatPings(10_000)).toBe("10,000");
 	});
+
+	test("produces the exact strings the copy quoted before the formatters dropped Intl", () => {
+		// These four are the only values `resources/content/marketing.ts` interpolates,
+		// and the literals are what `toLocaleString("en-US", …)` returned for them. The
+		// formatters group digits by hand now — to keep ICU out of Worker startup — so
+		// this asserts the swap was byte-for-byte, not merely close.
+		expect(formatUsd(BASE_PRICE_USD)).toBe("$5");
+		expect(formatUsd(PRICE_PER_BLOCK_USD)).toBe("$1");
+		expect(formatPings(INCLUDED_PINGS)).toBe("100,000");
+		expect(formatPings(PINGS_PER_BLOCK)).toBe("10,000");
+
+		// Grouping has to survive past one separator, which no real input reaches yet.
+		expect(formatPings(1_234_567)).toBe("1,234,567");
+		expect(formatUsd(1_234_567.5)).toBe("$1,234,567.50");
+	});
 });

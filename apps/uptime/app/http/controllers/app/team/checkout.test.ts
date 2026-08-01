@@ -1,10 +1,15 @@
 /**
- * Tests for the billing checkout entry point. No `cloudflare:workers` mock is
- * needed — this controller only touches `~/app/data/customer`, which wraps
- * `@pkg/polar` and has no queue-binding dependency. A fake `PolarClient` stands
- * in for the real one, stubbing every method `~/app/data/customer.ts` calls.
- * Whether the owner is subscribed is seeded into the `subscriptions` projection
- * instead of stubbed on the client (ADR-005), since that is where it is read from.
+ * Tests for the billing checkout entry point. A fake `PolarClient` stands in for the
+ * real one, stubbing every method `~/app/data/customer.ts` calls. Whether the owner is
+ * subscribed is seeded into the `subscriptions` projection instead of stubbed on the
+ * client (ADR-005), since that is where it is read from.
+ *
+ * `cloudflare:workers` has to be mocked, and the controller imported after that mock is
+ * registered: reading the projection reaches `~/app/services/cost.ts`, which touches the
+ * `COSTS` binding at module load. Without the mock this file passes only when some other
+ * test file happens to have registered its own `cloudflare:workers` mock first — `bun:test`
+ * patches the module registry process-wide, not per file — so it fails on its own and
+ * passes in a full run, which is the worst of both.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +39,15 @@ import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-import * as checkoutModule from "./checkout";
+mock.module("cloudflare:workers", () => ({
+	env: {
+		COSTS: { writeDataPoint: () => {} },
+		PING_RESULTS: { writeDataPoint: () => {} },
+		QUEUE: { send: async () => {} },
+	},
+}));
+
+let checkoutModule = await import("./checkout");
 
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {

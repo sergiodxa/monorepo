@@ -53,8 +53,8 @@ function event(type: string, options: PolarSubscriptionOptions = {}): PolarWebho
 }
 
 /** A `PolarClient` whose `parseWebhook` is forced to one outcome. */
-function fakePolar(outcome: ReturnType<PolarClient["parseWebhook"]>): PolarClient {
-	let fake = { parseWebhook: () => outcome };
+function fakePolar(outcome: Awaited<ReturnType<PolarClient["parseWebhook"]>>): PolarClient {
+	let fake = { parseWebhook: async () => outcome };
 	return fake as unknown as PolarClient;
 }
 

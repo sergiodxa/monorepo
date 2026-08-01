@@ -109,26 +109,59 @@ export function monthlyCostForUsage(usage: Usage): CostBreakdown {
 }
 
 /**
+ * Groups a run of digits with `,` every three, en-US style (`"100000"` → `"100,000"`).
+ *
+ * Hand-rolled rather than `Intl.NumberFormat`/`toLocaleString` on purpose: the two
+ * formatters below are called while the marketing content module is *evaluating*, and
+ * the first `Intl` call in a Worker pays a one-time ICU initialisation that lands
+ * entirely in measured startup time — ~7ms of it, for these few strings. Both
+ * formatters have to stay `Intl`-free for that to hold, since whichever ran first
+ * would pay the initialisation and leave the other looking free. Anything reached from
+ * a request handler may use `Intl` freely; only module-scope calls cost startup.
+ *
+ * A leading `-` rides along in the leftmost group, so signed input stays intact.
+ */
+function groupDigits(digits: string): string {
+	// Walk from the right, so the short group ends up leftmost ("1,234", not "123,4").
+	let grouped = "";
+
+	for (let end = digits.length; end > 0; end -= 3) {
+		let chunk = digits.slice(Math.max(0, end - 3), end);
+		grouped = grouped ? `${chunk},${grouped}` : chunk;
+	}
+
+	return grouped;
+}
+
+/**
  * Formats a USD amount for the English-only marketing content in
  * `resources/content/marketing.ts`, dropping the cents on whole amounts (`"$5"`,
  * not `"$5.00"`). Anything rendered through a view formats with the visitor's own
  * locale via `Intl.NumberFormat` instead — this exists only so the content file
  * can quote these numbers without hardcoding them.
+ *
+ * @example formatUsd(5) // "$5"
+ * @example formatUsd(5.3) // "$5.30"
  */
 export function formatUsd(amount: number): string {
+	// The sign is lifted out so it lands before the symbol ("-$5"), where en-US puts it.
+	let sign = amount < 0 ? "-" : "";
 	// Whole amounts drop the cents entirely; anything else takes both digits, so a
 	// fractional amount reads as money ("$5.30") rather than a bare decimal ("$5.3").
-	let fractionDigits = Number.isInteger(amount) ? 0 : 2;
+	let absolute = Math.abs(amount);
+	let digits = Number.isInteger(absolute) ? String(absolute) : absolute.toFixed(2);
+	let point = digits.indexOf(".");
 
-	return amount.toLocaleString("en-US", {
-		style: "currency",
-		currency: "USD",
-		minimumFractionDigits: fractionDigits,
-		maximumFractionDigits: fractionDigits,
-	});
+	if (point === -1) return `${sign}$${groupDigits(digits)}`;
+
+	return `${sign}$${groupDigits(digits.slice(0, point))}${digits.slice(point)}`;
 }
 
-/** Formats a ping count for that same English-only marketing content (`"100,000"`). */
+/**
+ * Formats a ping count for that same English-only marketing content (`"100,000"`).
+ * Counts are whole pings, so a fractional projection rounds rather than showing a
+ * decimal — the same thing `maximumFractionDigits: 0` did.
+ */
 export function formatPings(count: number): string {
-	return count.toLocaleString("en-US", { maximumFractionDigits: 0 });
+	return groupDigits(String(Math.round(count)));
 }

@@ -36,7 +36,7 @@ export default createAction(routes.webhooks.polar, {
 		let polar = getServiceContainer().get(PolarClient);
 		let db = getServiceContainer().get(Database);
 
-		let result = polar.parseWebhook(
+		let result = await polar.parseWebhook(
 			ctx.request,
 			await ctx.request.text(),
 			env.POLAR_WEBHOOK_SECRET,

@@ -156,7 +156,6 @@ let {
 	PolarClient,
 	PolarError,
 	subscriptionFromEvent,
-	WebhookVerificationError,
 } = await import("./index.ts");
 
 afterEach(() => {
@@ -173,9 +172,19 @@ afterEach(() => {
 });
 
 describe("PolarClient", () => {
-	test("constructs the SDK with the given access token", () => {
-		new PolarClient({ accessToken: "polar_at_test" });
+	test("does not load or construct the SDK until a method is called", async () => {
+		let polar = new PolarClient({ accessToken: "polar_at_test" });
+		expect(calls["new"]).toBeUndefined();
+
+		await polar.getCustomer("cus_1");
 		expect(calls["new"]).toEqual([{ accessToken: "polar_at_test" }]);
+	});
+
+	test("constructs the SDK once and reuses it across calls", async () => {
+		let polar = new PolarClient({ accessToken: "polar_at_test" });
+		await Promise.all([polar.getCustomer("cus_1"), polar.getCustomer("cus_2")]);
+		await polar.getCustomer("cus_3");
+		expect(calls["new"]).toHaveLength(1);
 	});
 
 	describe("createCustomer", () => {
@@ -743,40 +752,40 @@ describe("PolarClient", () => {
 			return new Request("https://app/webhook", { method: "POST", headers });
 		}
 
-		test("returns false when the secret is empty (fails closed)", () => {
+		test("returns false when the secret is empty (fails closed)", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.verifyWebhook(req({}), "{}", "")).toBe(false);
+			expect(await polar.verifyWebhook(req({}), "{}", "")).toBe(false);
 			expect(validateEventCalls).toHaveLength(0);
 		});
 
-		test("forwards the raw body, flattened headers and secret to validateEvent", () => {
+		test("forwards the raw body, flattened headers and secret to validateEvent", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
-			polar.verifyWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
+			await polar.verifyWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
 			expect(validateEventCalls).toHaveLength(1);
 			expect(validateEventCalls[0]!.body).toBe("raw-body");
 			expect(validateEventCalls[0]!.secret).toBe("whsec_1");
 			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_1");
 		});
 
-		test("returns true for a valid signature", () => {
+		test("returns true for a valid signature", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
+			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
 		});
 
-		test("returns false for a WebhookVerificationError (bad signature)", () => {
+		test("returns false for a WebhookVerificationError (bad signature)", async () => {
 			validateEventImpl = () => {
 				throw new MockWebhookVerificationError("bad signature");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(false);
+			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(false);
 		});
 
-		test("returns true when the signature is valid but the event is unmodeled", () => {
+		test("returns true when the signature is valid but the event is unmodeled", async () => {
 			validateEventImpl = () => {
 				throw new MockSDKValidationError("Unknown event type");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
+			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
 		});
 	});
 
@@ -785,10 +794,10 @@ describe("PolarClient", () => {
 			return new Request("https://app/webhook", { method: "POST", headers });
 		}
 
-		test("returns the validated event on success", () => {
+		test("returns the validated event on success", async () => {
 			validateEventImpl = () => ({ type: "order.paid", data: { id: "ord_1" } });
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = polar.parseWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
+			let result = await polar.parseWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
 			expect(result.status).toBe("success");
 			if (result.status !== "success") throw new Error("expected success");
 			expect(result.data).toEqual({ type: "order.paid", data: { id: "ord_1" } });
@@ -798,41 +807,42 @@ describe("PolarClient", () => {
 			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_1");
 		});
 
-		test("fails closed without calling the verifier when the secret is missing", () => {
+		test("fails closed without calling the verifier when the secret is missing", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = polar.parseWebhook(req({}), "{}", undefined);
+			let result = await polar.parseWebhook(req({}), "{}", undefined);
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Missing Polar webhook secret");
 			expect(validateEventCalls).toHaveLength(0);
 		});
 
-		test("fails with a signature error for a WebhookVerificationError", () => {
+		test("fails with a signature error for a WebhookVerificationError", async () => {
 			validateEventImpl = () => {
 				throw new MockWebhookVerificationError("bad signature");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = polar.parseWebhook(req({}), "{}", "whsec_1");
+			let result = await polar.parseWebhook(req({}), "{}", "whsec_1");
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Invalid Polar webhook signature");
 		});
 
-		test("fails with a payload error for an SDK validation error", () => {
+		test("fails with a payload error for an SDK validation error", async () => {
 			validateEventImpl = () => {
 				throw new MockSDKValidationError("Unknown event type");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = polar.parseWebhook(req({}), "{}", "whsec_1");
+			let result = await polar.parseWebhook(req({}), "{}", "whsec_1");
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Invalid Polar webhook payload: Unknown event type");
 		});
 	});
 
-	test("re-exports PolarError and WebhookVerificationError", () => {
+	// WebhookVerificationError is deliberately type-only: its module is the schema-heavy
+	// webhook parser, so re-exporting the class would undo the lazy SDK load.
+	test("re-exports PolarError as a value", () => {
 		expect(typeof PolarError).toBe("function");
-		expect(typeof WebhookVerificationError).toBe("function");
 	});
 });
 
@@ -856,10 +866,10 @@ describe("subscriptionFromEvent", () => {
 	 * literals: that is where a real caller gets one, and the union is 35 payload types
 	 * wide, so a literal would need a cast to stand in for any of them.
 	 */
-	function parse(event: { type: string; data: unknown }) {
+	async function parse(event: { type: string; data: unknown }) {
 		validateEventImpl = () => event;
 		let polar = new PolarClient({ accessToken: "t" });
-		let result = polar.parseWebhook(
+		let result = await polar.parseWebhook(
 			new Request("https://app/webhook", { method: "POST" }),
 			"{}",
 			"whsec_1",
@@ -868,7 +878,7 @@ describe("subscriptionFromEvent", () => {
 		return result.data;
 	}
 
-	test("returns the subscription for every subscription lifecycle event", () => {
+	test("returns the subscription for every subscription lifecycle event", async () => {
 		let types = [
 			"subscription.created",
 			"subscription.updated",
@@ -880,16 +890,18 @@ describe("subscriptionFromEvent", () => {
 		];
 
 		for (let type of types) {
-			expect(subscriptionFromEvent(parse({ type, data: { id: "sub_1" } }))).toEqual({
+			expect(subscriptionFromEvent(await parse({ type, data: { id: "sub_1" } }))).toEqual({
 				id: "sub_1",
 			});
 		}
 	});
 
-	test("returns null for events carrying something else", () => {
-		expect(subscriptionFromEvent(parse({ type: "order.paid", data: { id: "ord_1" } }))).toBeNull();
+	test("returns null for events carrying something else", async () => {
 		expect(
-			subscriptionFromEvent(parse({ type: "checkout.updated", data: { id: "chk_1" } })),
+			subscriptionFromEvent(await parse({ type: "order.paid", data: { id: "ord_1" } })),
+		).toBeNull();
+		expect(
+			subscriptionFromEvent(await parse({ type: "checkout.updated", data: { id: "chk_1" } })),
 		).toBeNull();
 	});
 });

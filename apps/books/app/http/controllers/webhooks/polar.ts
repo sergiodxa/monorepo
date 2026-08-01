@@ -40,7 +40,7 @@ const TIERS: Record<string, string> = {
  */
 async function processWebhook(request: Request, log: Logger): Promise<Result<"OK", Error>> {
 	let polar = getServiceContainer().get(PolarClient);
-	let parsed = polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+	let parsed = await polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
 
 	if (isFailure(parsed)) return failure(parsed.error);
 

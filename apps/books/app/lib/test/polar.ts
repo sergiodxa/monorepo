@@ -222,7 +222,7 @@ export class FakePolarClient extends PolarClient {
 	}
 
 	/** @returns The scripted parse result, standing in for signature verification. */
-	override parseWebhook(): Result<PolarWebhookEvent, Error> {
+	override async parseWebhook(): Promise<Result<PolarWebhookEvent, Error>> {
 		let webhook = this.options.webhook;
 		if (!webhook) throw new Error("FakePolarClient was not given a webhook result");
 		return webhook;

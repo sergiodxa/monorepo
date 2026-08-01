@@ -93,7 +93,7 @@ export default createAction(
 			// on a bad/missing signature and accepts an authentic-but-unmodeled event
 			// (whose payload our own schema validation below still handles).
 			let polar = new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN });
-			if (!polar.verifyWebhook(request, body, webhookSecret)) {
+			if (!(await polar.verifyWebhook(request, body, webhookSecret))) {
 				log.info("Invalid webhook signature");
 				return json({ error: "Invalid signature" }, { status: 401 });
 			}

@@ -48,7 +48,7 @@ export default createAction(
 	inject([Database, PolarClient, BlogProvisioner] as const, async (db, polar, provisioner) => {
 		let ctx = getContext();
 		let body = await ctx.request.text();
-		if (!polar.verifyWebhook(ctx.request, body, env.POLAR_WEBHOOK_SECRET))
+		if (!(await polar.verifyWebhook(ctx.request, body, env.POLAR_WEBHOOK_SECRET)))
 			return new Response("invalid signature", { status: 401 });
 
 		let event = JSON.parse(body) as PolarEvent;

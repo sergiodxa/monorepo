@@ -23,6 +23,14 @@ rather than reading environment variables itself, so it composes with
 test. Webhook signature verification uses the Standard Webhooks scheme via
 `@polar-sh/sdk/webhooks.js`.
 
+The vendor SDK is **never imported at module scope**. It builds ~700 zod schemas when
+it loads, which costs over a megabyte of Worker bundle and tens of milliseconds of
+startup CPU in every isolate — including the many that never bill anything. Importing
+`PolarClient` (as a service-container token, say) therefore costs nothing; the SDK is
+loaded once, on the first method call. The visible consequence is that
+`verifyWebhook` and `parseWebhook` are `async`, since they have to load the verifier
+before they can use it.
+
 ## Usage
 
 ### Basic Example
@@ -49,7 +57,7 @@ let { url } = await polar.createCheckoutSession(
 
 ```ts
 let body = await request.text();
-if (!polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET)) {
+if (!(await polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET))) {
 	return new Response("invalid signature", { status: 401 });
 }
 ```
@@ -62,7 +70,9 @@ The Polar billing client. Wraps `@polar-sh/sdk`.
 
 #### `new PolarClient(options: PolarClientOptions)`
 
-Creates a new client. The underlying SDK client is created once and reused.
+Creates a new client. Does no work and loads no vendor code: the SDK is imported and
+the underlying client constructed on the first method call, then reused for the
+lifetime of this instance.
 
 **Parameters:**
 
@@ -301,7 +311,7 @@ on API failure so a reporting cron can retry on the next run.
 
 - `true` when the event was accepted, `false` when ingestion failed.
 
-#### `verifyWebhook(request: Request, rawBody: string, secret: string): boolean`
+#### `verifyWebhook(request: Request, rawBody: string, secret: string): Promise<boolean>`
 
 Verifies a Polar webhook signature using the Standard Webhooks scheme
 (`webhook-id` / `webhook-timestamp` / `webhook-signature` headers).
@@ -321,7 +331,7 @@ caller is expected to validate the payload shape itself.
 
 - `true` when the request is authentic, `false` otherwise.
 
-#### `parseWebhook(request: Request, rawBody: string, secret: string | undefined): Result<PolarWebhookEvent, Error>`
+#### `parseWebhook(request: Request, rawBody: string, secret: string | undefined): Promise<Result<PolarWebhookEvent, Error>>`
 
 Verifies the signature **and** returns the parsed event, so callers can branch on
 `event.type` with full types instead of re-parsing the raw body themselves.
@@ -344,7 +354,7 @@ webhook payload: …"`), so the two can be logged apart.
 **Example:**
 
 ```ts
-let result = polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
+let result = await polar.parseWebhook(request, await request.text(), env.POLAR_WEBHOOK_SECRET);
 if (isFailure(result)) return badRequest({ error: result.error.message });
 if (result.data.type === "order.paid") {
 	await tagCustomer(result.data.data.customer.email);
@@ -353,10 +363,15 @@ if (result.data.type === "order.paid") {
 
 ### Re-exports
 
-- `PolarError` — the SDK error thrown by API calls (re-exported from
-  `@polar-sh/sdk/models/errors/polarerror.js`).
-- `WebhookVerificationError` — thrown by `validateEvent` on a bad signature
-  (re-exported from `@polar-sh/sdk/webhooks.js`).
+- `PolarError` — the SDK error thrown by API calls (re-exported as a value from
+  `@polar-sh/sdk/models/errors/polarerror.js`, whose module is a bare `Error` subclass
+  and so costs nothing to load), so `catch (error) { if (error instanceof PolarError) … }`
+  works.
+- `WebhookVerificationError` — **type-only**. The module that defines it is the
+  schema-heavy webhook parser, so re-exporting the class would pull the whole vendor
+  model layer into every importer's startup path. `verifyWebhook` and `parseWebhook`
+  already turn it into `false` and a `"Invalid Polar webhook signature"` failure,
+  which is what a caller branches on.
 
 ### Types
 
@@ -485,7 +500,7 @@ not trust blindly:
 
 ```ts
 let body = await request.text();
-if (!polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET)) {
+if (!(await polar.verifyWebhook(request, body, env.POLAR_WEBHOOK_SECRET))) {
 	return json({ error: "Invalid signature" }, { status: 401 });
 }
 
@@ -502,7 +517,7 @@ if (isFailure(result)) return json({ error: "Invalid payload" }, { status: 400 }
 
 ## Tips
 
-1. **Construct once** - Create a single `PolarClient` per app (a container singleton) rather than per request; the underlying SDK client is reused.
+1. **Construct once** - Create a single `PolarClient` per app (a container singleton) rather than per request; the SDK is imported and the underlying client constructed on the instance's first method call, then reused.
 2. **Verify then validate** - `verifyWebhook` proves authenticity, not payload shape. Parse and validate the body afterwards before acting on it.
 3. **Fails closed** - `verifyWebhook` returns `false` for an empty secret or bad signature; it returns `true` for an authentic-but-unmodeled event so new Polar event types are not rejected.
 4. **`ingestPageViews` never throws** - It returns `false` on failure so a cron can retry; use `ingestEvents` directly when you want errors to propagate.
