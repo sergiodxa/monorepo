@@ -66,6 +66,10 @@ describe("parseExpression", () => {
 		expect(fields("@annually")).toEqual(fields("@yearly"));
 	});
 
+	test("reads @midnight as the other spelling of @daily", () => {
+		expect(fields("@midnight")).toEqual(fields("@daily"));
+	});
+
 	test("reads a macro whatever its case", () => {
 		expect(fields("@DAILY")).toEqual(fields("@daily"));
 		expect(fields("@Weekly")).toEqual(fields("@weekly"));
@@ -126,7 +130,6 @@ describe("parseExpression", () => {
 
 	test("rejects a macro it does not implement", () => {
 		expect(rejection("@reboot").reason).toBe("unknown-macro");
-		expect(rejection("@midnight").reason).toBe("unknown-macro");
 		expect(rejection("@every_minute").reason).toBe("unknown-macro");
 		expect(rejection("@daily extra").reason).toBe("unknown-macro");
 		expect(rejection("@reboot").field).toBe(null);

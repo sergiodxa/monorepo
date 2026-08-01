@@ -1,7 +1,15 @@
 /**
- * Parity vectors captured from `cron-parser` 5.6.2, the library this package
- * replaces, so the switch cannot quietly change which run a monitor waits for. This
- * file is temporary: delete it once no application depends on that library.
+ * Parity against `cron-parser` 5.6.2, the library this package replaces. The
+ * comparison is executed rather than recorded: the other library is a devDependency
+ * and is called here, so a change to either side shows up as a failure instead of
+ * agreeing with a stale transcript.
+ *
+ * The load-bearing case is the first block. Every cron expression a consumer has
+ * actually stored is evaluated in `UTC`, and the two libraries must agree exactly,
+ * because a difference there changes which monitor alerts the day the library is
+ * swapped.
+ *
+ * This file is temporary: delete it once no application depends on `cron-parser`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,742 +18,419 @@
 import { describe, expect, test } from "bun:test";
 
 import { unwrap } from "@pkg/result";
+import { CronExpressionParser } from "cron-parser";
 
 import { Schedule } from "./schedule";
 
-/** One recorded run of occurrences, as the replaced library computed it. */
-interface ParityVector {
-	expression: string;
-	timeZone: string;
-	from: string;
-	runs: readonly string[];
-}
+/**
+ * Every distinct cron expression stored by the product, read from the production
+ * database. All of them are stored against `UTC`.
+ */
+const STORED_IN_PRODUCTION = [
+	"0 0 * * *",
+	"* * * * *",
+	"*/10 * * * *",
+	"*/5 * * * *",
+	"0 * * * *",
+	"0 1 * * *",
+	"0 6 * * *",
+] as const;
 
 /**
- * Occurrences recorded from the replaced library across the shapes, the either-or
- * rule, both daylight saving transitions, and zones whose offset is not a whole
- * number of hours. The broader sweep this sample comes from compared roughly 83,000
- * occurrences over 22 zones and disagreed on eleven of them, all at a transition;
- * those are asserted separately below, with the other library's value named.
+ * Expressions the product's own tests, docs and locale files use. They are not stored
+ * anywhere yet, but they are the shapes a user is being shown and told to type, so
+ * they are the next thing that will be.
  */
-const VECTORS: readonly ParityVector[] = [
-	{
-		expression: "* * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-15T12:01:00.000Z",
-			"2026-06-15T12:02:00.000Z",
-			"2026-06-15T12:03:00.000Z",
-			"2026-06-15T12:04:00.000Z",
-			"2026-06-15T12:05:00.000Z",
-		],
-	},
-	{
-		expression: "*/15 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:07:00Z",
-		runs: [
-			"2026-06-15T12:15:00.000Z",
-			"2026-06-15T12:30:00.000Z",
-			"2026-06-15T12:45:00.000Z",
-			"2026-06-15T13:00:00.000Z",
-			"2026-06-15T13:15:00.000Z",
-		],
-	},
-	{
-		expression: "*/5 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T23:48:00Z",
-		runs: [
-			"2026-06-15T23:50:00.000Z",
-			"2026-06-15T23:55:00.000Z",
-			"2026-06-16T00:00:00.000Z",
-			"2026-06-16T00:05:00.000Z",
-			"2026-06-16T00:10:00.000Z",
-		],
-	},
-	{
-		expression: "5/10 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-15T12:05:00.000Z",
-			"2026-06-15T12:15:00.000Z",
-			"2026-06-15T12:25:00.000Z",
-			"2026-06-15T12:35:00.000Z",
-			"2026-06-15T12:45:00.000Z",
-		],
-	},
-	{
-		expression: "0 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:30:00Z",
-		runs: [
-			"2026-06-15T13:00:00.000Z",
-			"2026-06-15T14:00:00.000Z",
-			"2026-06-15T15:00:00.000Z",
-			"2026-06-15T16:00:00.000Z",
-			"2026-06-15T17:00:00.000Z",
-		],
-	},
-	{
-		expression: "0,30 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:15:00Z",
-		runs: [
-			"2026-06-15T12:30:00.000Z",
-			"2026-06-15T13:00:00.000Z",
-			"2026-06-15T13:30:00.000Z",
-			"2026-06-15T14:00:00.000Z",
-			"2026-06-15T14:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 */3 * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T13:00:00Z",
-		runs: [
-			"2026-06-15T15:00:00.000Z",
-			"2026-06-15T18:00:00.000Z",
-			"2026-06-15T21:00:00.000Z",
-			"2026-06-16T00:00:00.000Z",
-			"2026-06-16T03:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-16T09:00:00.000Z",
-			"2026-06-17T09:00:00.000Z",
-			"2026-06-18T09:00:00.000Z",
-			"2026-06-19T09:00:00.000Z",
-			"2026-06-20T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "30 9,17 * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-15T17:30:00.000Z",
-			"2026-06-16T09:30:00.000Z",
-			"2026-06-16T17:30:00.000Z",
-			"2026-06-17T09:30:00.000Z",
-			"2026-06-17T17:30:00.000Z",
-		],
-	},
-	{
-		expression: "15 8-17 * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:20:00Z",
-		runs: [
-			"2026-06-15T13:15:00.000Z",
-			"2026-06-15T14:15:00.000Z",
-			"2026-06-15T15:15:00.000Z",
-			"2026-06-15T16:15:00.000Z",
-			"2026-06-15T17:15:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * 1-5",
-		timeZone: "UTC",
-		from: "2026-06-19T12:00:00Z",
-		runs: [
-			"2026-06-22T09:00:00.000Z",
-			"2026-06-23T09:00:00.000Z",
-			"2026-06-24T09:00:00.000Z",
-			"2026-06-25T09:00:00.000Z",
-			"2026-06-26T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * SUN",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-21T09:00:00.000Z",
-			"2026-06-28T09:00:00.000Z",
-			"2026-07-05T09:00:00.000Z",
-			"2026-07-12T09:00:00.000Z",
-			"2026-07-19T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * mon,wed,fri",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-17T09:00:00.000Z",
-			"2026-06-19T09:00:00.000Z",
-			"2026-06-22T09:00:00.000Z",
-			"2026-06-24T09:00:00.000Z",
-			"2026-06-26T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * 1-5/2",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-17T09:00:00.000Z",
-			"2026-06-19T09:00:00.000Z",
-			"2026-06-22T09:00:00.000Z",
-			"2026-06-24T09:00:00.000Z",
-			"2026-06-26T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 1 * *",
-		timeZone: "UTC",
-		from: "2026-12-15T00:00:00Z",
-		runs: [
-			"2027-01-01T00:00:00.000Z",
-			"2027-02-01T00:00:00.000Z",
-			"2027-03-01T00:00:00.000Z",
-			"2027-04-01T00:00:00.000Z",
-			"2027-05-01T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 15 * *",
-		timeZone: "UTC",
-		from: "2026-03-01T00:00:00Z",
-		runs: [
-			"2026-03-15T00:00:00.000Z",
-			"2026-04-15T00:00:00.000Z",
-			"2026-05-15T00:00:00.000Z",
-			"2026-06-15T00:00:00.000Z",
-			"2026-07-15T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 31 * *",
-		timeZone: "UTC",
-		from: "2026-01-31T00:00:00Z",
-		runs: [
-			"2026-03-31T00:00:00.000Z",
-			"2026-05-31T00:00:00.000Z",
-			"2026-07-31T00:00:00.000Z",
-			"2026-08-31T00:00:00.000Z",
-			"2026-10-31T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 29 2 *",
-		timeZone: "UTC",
-		from: "2026-01-01T00:00:00Z",
-		runs: [
-			"2028-02-29T00:00:00.000Z",
-			"2032-02-29T00:00:00.000Z",
-			"2036-02-29T00:00:00.000Z",
-			"2040-02-29T00:00:00.000Z",
-			"2044-02-29T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 1 JAN *",
-		timeZone: "UTC",
-		from: "2026-06-01T00:00:00Z",
-		runs: [
-			"2027-01-01T00:00:00.000Z",
-			"2028-01-01T00:00:00.000Z",
-			"2029-01-01T00:00:00.000Z",
-			"2030-01-01T00:00:00.000Z",
-			"2031-01-01T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 1 jan-dec/3 *",
-		timeZone: "UTC",
-		from: "2026-06-01T00:00:00Z",
-		runs: [
-			"2026-07-01T00:00:00.000Z",
-			"2026-10-01T00:00:00.000Z",
-			"2027-01-01T00:00:00.000Z",
-			"2027-04-01T00:00:00.000Z",
-			"2027-07-01T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "59 23 31 12 *",
-		timeZone: "UTC",
-		from: "2026-12-31T23:58:00Z",
-		runs: [
-			"2026-12-31T23:59:00.000Z",
-			"2027-12-31T23:59:00.000Z",
-			"2028-12-31T23:59:00.000Z",
-			"2029-12-31T23:59:00.000Z",
-			"2030-12-31T23:59:00.000Z",
-		],
-	},
-	{
-		expression: "0-59/70 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:30:00Z",
-		runs: [
-			"2026-06-15T13:00:00.000Z",
-			"2026-06-15T14:00:00.000Z",
-			"2026-06-15T15:00:00.000Z",
-			"2026-06-15T16:00:00.000Z",
-			"2026-06-15T17:00:00.000Z",
-		],
-	},
-	{
-		expression: "1,2,3-5 * * * *",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-15T12:01:00.000Z",
-			"2026-06-15T12:02:00.000Z",
-			"2026-06-15T12:03:00.000Z",
-			"2026-06-15T12:04:00.000Z",
-			"2026-06-15T12:05:00.000Z",
-		],
-	},
-	{
-		expression: "@hourly",
-		timeZone: "UTC",
-		from: "2026-06-15T12:30:00Z",
-		runs: [
-			"2026-06-15T13:00:00.000Z",
-			"2026-06-15T14:00:00.000Z",
-			"2026-06-15T15:00:00.000Z",
-			"2026-06-15T16:00:00.000Z",
-			"2026-06-15T17:00:00.000Z",
-		],
-	},
-	{
-		expression: "@daily",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-16T00:00:00.000Z",
-			"2026-06-17T00:00:00.000Z",
-			"2026-06-18T00:00:00.000Z",
-			"2026-06-19T00:00:00.000Z",
-			"2026-06-20T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "@weekly",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-06-21T00:00:00.000Z",
-			"2026-06-28T00:00:00.000Z",
-			"2026-07-05T00:00:00.000Z",
-			"2026-07-12T00:00:00.000Z",
-			"2026-07-19T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "@monthly",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2026-07-01T00:00:00.000Z",
-			"2026-08-01T00:00:00.000Z",
-			"2026-09-01T00:00:00.000Z",
-			"2026-10-01T00:00:00.000Z",
-			"2026-11-01T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "@yearly",
-		timeZone: "UTC",
-		from: "2026-06-15T12:00:00Z",
-		runs: [
-			"2027-01-01T00:00:00.000Z",
-			"2028-01-01T00:00:00.000Z",
-			"2029-01-01T00:00:00.000Z",
-			"2030-01-01T00:00:00.000Z",
-			"2031-01-01T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 13 * 5",
-		timeZone: "UTC",
-		from: "2026-03-01T00:00:00Z",
-		runs: [
-			"2026-03-06T00:00:00.000Z",
-			"2026-03-13T00:00:00.000Z",
-			"2026-03-20T00:00:00.000Z",
-			"2026-03-27T00:00:00.000Z",
-			"2026-04-03T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 */2 * 1",
-		timeZone: "UTC",
-		from: "2026-03-01T00:00:00Z",
-		runs: [
-			"2026-03-02T00:00:00.000Z",
-			"2026-03-03T00:00:00.000Z",
-			"2026-03-05T00:00:00.000Z",
-			"2026-03-07T00:00:00.000Z",
-			"2026-03-09T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 1-7 * 1",
-		timeZone: "UTC",
-		from: "2026-03-01T00:00:00Z",
-		runs: [
-			"2026-03-02T00:00:00.000Z",
-			"2026-03-03T00:00:00.000Z",
-			"2026-03-04T00:00:00.000Z",
-			"2026-03-05T00:00:00.000Z",
-			"2026-03-06T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 30 2 1",
-		timeZone: "UTC",
-		from: "2027-01-01T00:00:00Z",
-		runs: [
-			"2027-02-01T00:00:00.000Z",
-			"2027-02-08T00:00:00.000Z",
-			"2027-02-15T00:00:00.000Z",
-			"2027-02-22T00:00:00.000Z",
-			"2028-02-07T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 0 15 * */7",
-		timeZone: "UTC",
-		from: "2026-03-01T00:00:00Z",
-		runs: [
-			"2026-03-08T00:00:00.000Z",
-			"2026-03-15T00:00:00.000Z",
-			"2026-03-22T00:00:00.000Z",
-			"2026-03-29T00:00:00.000Z",
-			"2026-04-05T00:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "America/New_York",
-		from: "2026-03-06T12:00:00Z",
-		runs: [
-			"2026-03-06T14:00:00.000Z",
-			"2026-03-07T14:00:00.000Z",
-			"2026-03-08T13:00:00.000Z",
-			"2026-03-09T13:00:00.000Z",
-			"2026-03-10T13:00:00.000Z",
-		],
-	},
-	{
-		expression: "30 2 * * *",
-		timeZone: "America/New_York",
-		from: "2026-03-07T12:00:00Z",
-		runs: [
-			"2026-03-08T07:30:00.000Z",
-			"2026-03-09T06:30:00.000Z",
-			"2026-03-10T06:30:00.000Z",
-			"2026-03-11T06:30:00.000Z",
-			"2026-03-12T06:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 2 * * *",
-		timeZone: "America/New_York",
-		from: "2026-03-07T12:00:00Z",
-		runs: [
-			"2026-03-08T07:00:00.000Z",
-			"2026-03-09T06:00:00.000Z",
-			"2026-03-10T06:00:00.000Z",
-			"2026-03-11T06:00:00.000Z",
-			"2026-03-12T06:00:00.000Z",
-		],
-	},
-	{
-		expression: "30 1 * * *",
-		timeZone: "America/New_York",
-		from: "2026-03-07T12:00:00Z",
-		runs: [
-			"2026-03-08T06:30:00.000Z",
-			"2026-03-09T05:30:00.000Z",
-			"2026-03-10T05:30:00.000Z",
-			"2026-03-11T05:30:00.000Z",
-			"2026-03-12T05:30:00.000Z",
-		],
-	},
-	{
-		expression: "*/15 * * * *",
-		timeZone: "America/New_York",
-		from: "2026-03-08T06:30:00Z",
-		runs: [
-			"2026-03-08T06:45:00.000Z",
-			"2026-03-08T07:00:00.000Z",
-			"2026-03-08T07:15:00.000Z",
-			"2026-03-08T07:30:00.000Z",
-			"2026-03-08T07:45:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "Europe/Madrid",
-		from: "2026-03-27T12:00:00Z",
-		runs: [
-			"2026-03-28T08:00:00.000Z",
-			"2026-03-29T07:00:00.000Z",
-			"2026-03-30T07:00:00.000Z",
-			"2026-03-31T07:00:00.000Z",
-			"2026-04-01T07:00:00.000Z",
-		],
-	},
-	{
-		expression: "30 2 * * *",
-		timeZone: "Europe/Madrid",
-		from: "2026-03-28T12:00:00Z",
-		runs: [
-			"2026-03-29T01:30:00.000Z",
-			"2026-03-30T00:30:00.000Z",
-			"2026-03-31T00:30:00.000Z",
-			"2026-04-01T00:30:00.000Z",
-			"2026-04-02T00:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "America/New_York",
-		from: "2026-10-30T12:00:00Z",
-		runs: [
-			"2026-10-30T13:00:00.000Z",
-			"2026-10-31T13:00:00.000Z",
-			"2026-11-01T14:00:00.000Z",
-			"2026-11-02T14:00:00.000Z",
-			"2026-11-03T14:00:00.000Z",
-		],
-	},
-	{
-		expression: "30 1 * * *",
-		timeZone: "America/New_York",
-		from: "2026-10-31T12:00:00Z",
-		runs: [
-			"2026-11-01T05:30:00.000Z",
-			"2026-11-02T06:30:00.000Z",
-			"2026-11-03T06:30:00.000Z",
-			"2026-11-04T06:30:00.000Z",
-			"2026-11-05T06:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 * * * *",
-		timeZone: "America/New_York",
-		from: "2026-11-01T04:30:00Z",
-		runs: [
-			"2026-11-01T05:00:00.000Z",
-			"2026-11-01T06:00:00.000Z",
-			"2026-11-01T07:00:00.000Z",
-			"2026-11-01T08:00:00.000Z",
-			"2026-11-01T09:00:00.000Z",
-		],
-	},
-	{
-		expression: "*/15 * * * *",
-		timeZone: "America/New_York",
-		from: "2026-11-01T05:00:00Z",
-		runs: [
-			"2026-11-01T05:15:00.000Z",
-			"2026-11-01T05:30:00.000Z",
-			"2026-11-01T05:45:00.000Z",
-			"2026-11-01T06:00:00.000Z",
-			"2026-11-01T06:15:00.000Z",
-		],
-	},
-	{
-		expression: "30 2 * * *",
-		timeZone: "Europe/Madrid",
-		from: "2026-10-24T12:00:00Z",
-		runs: [
-			"2026-10-25T00:30:00.000Z",
-			"2026-10-26T01:30:00.000Z",
-			"2026-10-27T01:30:00.000Z",
-			"2026-10-28T01:30:00.000Z",
-			"2026-10-29T01:30:00.000Z",
-		],
-	},
-	{
-		expression: "*/30 * * * *",
-		timeZone: "Europe/Madrid",
-		from: "2026-10-25T00:00:00Z",
-		runs: [
-			"2026-10-25T00:30:00.000Z",
-			"2026-10-25T01:00:00.000Z",
-			"2026-10-25T01:30:00.000Z",
-			"2026-10-25T02:00:00.000Z",
-			"2026-10-25T02:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "Asia/Kathmandu",
-		from: "2026-06-15T00:00:00Z",
-		runs: [
-			"2026-06-15T03:15:00.000Z",
-			"2026-06-16T03:15:00.000Z",
-			"2026-06-17T03:15:00.000Z",
-			"2026-06-18T03:15:00.000Z",
-			"2026-06-19T03:15:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "Asia/Kolkata",
-		from: "2026-06-15T00:00:00Z",
-		runs: [
-			"2026-06-15T03:30:00.000Z",
-			"2026-06-16T03:30:00.000Z",
-			"2026-06-17T03:30:00.000Z",
-			"2026-06-18T03:30:00.000Z",
-			"2026-06-19T03:30:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "Australia/Sydney",
-		from: "2026-04-04T12:00:00Z",
-		runs: [
-			"2026-04-04T23:00:00.000Z",
-			"2026-04-05T23:00:00.000Z",
-			"2026-04-06T23:00:00.000Z",
-			"2026-04-07T23:00:00.000Z",
-			"2026-04-08T23:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "Pacific/Auckland",
-		from: "2026-09-26T12:00:00Z",
-		runs: [
-			"2026-09-26T20:00:00.000Z",
-			"2026-09-27T20:00:00.000Z",
-			"2026-09-28T20:00:00.000Z",
-			"2026-09-29T20:00:00.000Z",
-			"2026-09-30T20:00:00.000Z",
-		],
-	},
-	{
-		expression: "0 9 * * *",
-		timeZone: "America/Sao_Paulo",
-		from: "2026-02-14T12:00:00Z",
-		runs: [
-			"2026-02-15T12:00:00.000Z",
-			"2026-02-16T12:00:00.000Z",
-			"2026-02-17T12:00:00.000Z",
-			"2026-02-18T12:00:00.000Z",
-			"2026-02-19T12:00:00.000Z",
-		],
-	},
-	{
-		expression: "*/20 * * * *",
-		timeZone: "Australia/Sydney",
-		from: "2026-10-03T15:30:00Z",
-		runs: [
-			"2026-10-03T15:40:00.000Z",
-			"2026-10-03T16:00:00.000Z",
-			"2026-10-03T16:20:00.000Z",
-			"2026-10-03T16:40:00.000Z",
-			"2026-10-03T17:00:00.000Z",
-		],
-	},
-];
+const EXERCISED_BY_THE_APP = [
+	"0 9 * * *",
+	"0 2 * * *",
+	"0 3 * * *",
+	"@daily",
+	"@hourly",
+	"@weekly",
+	"*/15 * * * *",
+	"5 * * * *",
+	"30 9 * * *",
+	"0 0 * * 1",
+	"0 9 * * 1",
+	"0 0 15 * *",
+	"0 0 1 * *",
+	"0 0 1 1 *",
+	"0 0 1 1 1",
+	"0 2 * * 0",
+] as const;
 
-describe("parity with the replaced library", () => {
-	test("computes the same occurrences for every recorded vector", () => {
-		for (let vector of VECTORS) {
-			let schedule = unwrap(Schedule.parse(vector.expression));
-			let runs = schedule
-				.next({
-					from: new Date(vector.from),
-					timeZone: vector.timeZone,
-					count: vector.runs.length,
-				})
-				.map((date) => date.toISOString());
+/** The only two zones the product uses today, in schema defaults, docs and tests. */
+const PRODUCT_ZONES = ["UTC", "America/New_York"] as const;
 
-			expect({ ...vector, runs }).toEqual({ ...vector, runs: [...vector.runs] });
+/** Instants chosen to land on month ends, a leap day, and a year boundary. */
+const ANCHORS = [
+	"2026-01-01T00:00:00Z",
+	"2026-02-28T23:59:00Z",
+	"2026-06-15T12:00:00Z",
+	"2026-12-31T23:30:00Z",
+	"2028-02-29T12:00:00Z",
+] as const;
+
+/** How many occurrences each comparison walks. */
+const DEPTH = 25;
+
+/** The occurrences `cron-parser` computes, so a divergence names the other side. */
+function theirOccurrences(
+	expression: string,
+	timeZone: string,
+	from: string,
+	count: number,
+): string[] {
+	let interval = CronExpressionParser.parse(expression, {
+		currentDate: new Date(from),
+		tz: timeZone,
+	});
+	let runs: string[] = [];
+	for (let index = 0; index < count; index++) runs.push(interval.next().toDate().toISOString());
+	return runs;
+}
+
+/** The occurrences this package computes, in the same shape. */
+function ourOccurrences(
+	expression: string,
+	timeZone: string,
+	from: string,
+	count: number,
+): string[] {
+	return unwrap(Schedule.parse(expression))
+		.next({ from: new Date(from), timeZone, count })
+		.map((date) => date.toISOString());
+}
+
+describe("parity for what the product has stored", () => {
+	test("agrees exactly with cron-parser on every stored expression, in UTC", () => {
+		for (let expression of STORED_IN_PRODUCTION) {
+			for (let from of ANCHORS) {
+				expect({ expression, from, runs: ourOccurrences(expression, "UTC", from, DEPTH) }).toEqual({
+					expression,
+					from,
+					runs: theirOccurrences(expression, "UTC", from, DEPTH),
+				});
+			}
 		}
 	});
 
-	test("covers both daylight saving transitions and more than one zone", () => {
-		let zones = new Set(VECTORS.map((vector) => vector.timeZone));
-		expect(zones.size).toBeGreaterThanOrEqual(5);
-		expect(VECTORS.length).toBeGreaterThanOrEqual(50);
+	test("agrees exactly on every expression the app's tests and docs use, in UTC", () => {
+		for (let expression of EXERCISED_BY_THE_APP) {
+			for (let from of ANCHORS) {
+				expect({ expression, from, runs: ourOccurrences(expression, "UTC", from, DEPTH) }).toEqual({
+					expression,
+					from,
+					runs: theirOccurrences(expression, "UTC", from, DEPTH),
+				});
+			}
+		}
+	});
+
+	test("agrees in America/New_York away from a transition", () => {
+		// The other zone the product names. June and December are both far enough from a
+		// transition that 25 occurrences of a daily schedule stay inside one offset.
+		for (let expression of [...STORED_IN_PRODUCTION, ...EXERCISED_BY_THE_APP]) {
+			for (let from of ["2026-06-15T12:00:00Z", "2026-12-01T12:00:00Z"]) {
+				let ours = ourOccurrences(expression, "America/New_York", from, 10);
+				expect({ expression, from, runs: ours }).toEqual({
+					expression,
+					from,
+					runs: theirOccurrences(expression, "America/New_York", from, 10),
+				});
+			}
+		}
+	});
+
+	test("computes a whole month of occurrences the same way, which is what billing counts", () => {
+		// The product estimates consumed pings by walking a month of occurrences, so the
+		// count and not only the instants has to match.
+		let start = "2026-06-01T00:00:00Z";
+		let end = new Date("2026-07-01T00:00:00Z");
+
+		for (let expression of ["*/5 * * * *", "*/10 * * * *", "0 * * * *", "0 0 * * *"]) {
+			let ours = ourOccurrences(expression, "UTC", start, 9_000).filter(
+				(run) => new Date(run) < end,
+			);
+			let theirs = theirOccurrences(expression, "UTC", start, 9_000).filter(
+				(run) => new Date(run) < end,
+			);
+			expect({ expression, count: ours.length, runs: ours }).toEqual({
+				expression,
+				count: theirs.length,
+				runs: theirs,
+			});
+		}
 	});
 });
 
-describe("deliberate differences from the replaced library", () => {
-	test("runs a schedule whose wall time is the exact instant a clock jumps", () => {
-		// Chatham moves 02:45 to 03:45 on 2026-09-27, and this schedule asks for 02:45.
-		// We carry the run past the jump, to 2026-09-26T14:00Z, on the same rule that
-		// carries any other missing wall time. The replaced library skips the week and
-		// reports 2026-10-03T13:00Z instead. A dead man's switch that silently expects
-		// nothing for a week is the worse of the two answers.
-		let schedule = unwrap(Schedule.parse("45 2 * * 0"));
-		let runs = schedule.next({
-			from: new Date("2026-09-06T16:00:00Z"),
-			timeZone: "Pacific/Chatham",
-			count: 4,
-		});
-		expect(runs.map((date) => date.toISOString())).toEqual([
-			"2026-09-12T14:00:00.000Z",
-			"2026-09-19T14:00:00.000Z",
-			"2026-09-26T14:00:00.000Z",
-			"2026-10-03T13:00:00.000Z",
-		]);
+describe("parity through a daylight saving transition", () => {
+	// Anchored two hours before each transition so the first occurrences straddle it.
+	const SPRING_FORWARD = [
+		{ timeZone: "America/New_York", from: "2026-03-08T05:00:00Z" },
+		{ timeZone: "Europe/Madrid", from: "2026-03-29T00:00:00Z" },
+		{ timeZone: "Europe/London", from: "2026-03-29T00:00:00Z" },
+		{ timeZone: "Australia/Sydney", from: "2026-10-03T14:00:00Z" },
+		{ timeZone: "Pacific/Auckland", from: "2026-09-26T12:00:00Z" },
+	] as const;
+
+	const FALL_BACK = [
+		{ timeZone: "America/New_York", from: "2026-11-01T04:00:00Z" },
+		{ timeZone: "Europe/Madrid", from: "2026-10-25T00:00:00Z" },
+		{ timeZone: "Europe/London", from: "2026-10-25T00:00:00Z" },
+		{ timeZone: "Australia/Sydney", from: "2026-04-04T14:00:00Z" },
+		{ timeZone: "Pacific/Auckland", from: "2026-04-04T12:00:00Z" },
+	] as const;
+
+	test("agrees on every stored expression across a spring-forward transition", () => {
+		for (let { timeZone, from } of SPRING_FORWARD) {
+			for (let expression of STORED_IN_PRODUCTION) {
+				expect({
+					expression,
+					timeZone,
+					runs: ourOccurrences(expression, timeZone, from, 10),
+				}).toEqual({
+					expression,
+					timeZone,
+					runs: theirOccurrences(expression, timeZone, from, 10),
+				});
+			}
+		}
 	});
 
-	test("runs a midnight schedule on a day whose midnight is skipped", () => {
-		// Cairo moves 00:00 to 01:00 on 2027-04-30, and this schedule asks for 00:00 on
-		// the 30th. We carry it to 2027-04-29T22:00Z, an hour into the day. The replaced
-		// library drops April and reports 2027-05-29T21:00Z next.
-		let schedule = unwrap(Schedule.parse("0 0 30 * *"));
-		let runs = schedule.next({
-			from: new Date("2027-03-14T07:00:00Z"),
-			timeZone: "Africa/Cairo",
-			count: 3,
+	test("agrees on every stored expression across a fall-back transition", () => {
+		for (let { timeZone, from } of FALL_BACK) {
+			for (let expression of STORED_IN_PRODUCTION) {
+				expect({
+					expression,
+					timeZone,
+					runs: ourOccurrences(expression, timeZone, from, 10),
+				}).toEqual({
+					expression,
+					timeZone,
+					runs: theirOccurrences(expression, timeZone, from, 10),
+				});
+			}
+		}
+	});
+
+	test("agrees on the app's other expressions across both transitions", () => {
+		// Every expression the app uses, including `0 2 * * *` and `0 2 * * 0` whose wall
+		// time is the hour New York skips: looking forward, both libraries carry the run
+		// past the jump. Only looking back do they disagree, which is pinned below.
+		for (let { timeZone, from } of [...SPRING_FORWARD, ...FALL_BACK]) {
+			for (let expression of EXERCISED_BY_THE_APP) {
+				expect({
+					expression,
+					timeZone,
+					runs: ourOccurrences(expression, timeZone, from, 10),
+				}).toEqual({
+					expression,
+					timeZone,
+					runs: theirOccurrences(expression, timeZone, from, 10),
+				});
+			}
+		}
+	});
+});
+
+describe("deliberate differences from cron-parser", () => {
+	// Each of these is a case where the two libraries disagree and this package is the
+	// one to keep. They are asserted with the other library's answer named, so the
+	// choice stays visible rather than becoming folklore.
+
+	test("looks back and still finds the run carried out of a skipped hour", () => {
+		// 02:00 does not exist in New York on 2026-03-08, and both libraries carry that
+		// day's run forward to 03:00 EDT. Asked what the previous run was, though, the
+		// other library no longer reports the instant it just produced and hands back the
+		// day before. A monitor whose last expected run cannot be found again is a monitor
+		// that computes lateness from the wrong baseline.
+		let schedule = unwrap(Schedule.parse("0 2 * * *"));
+		let timeZone = "America/New_York";
+		let carried = "2026-03-08T07:00:00.000Z"; // 03:00 EDT
+
+		expect(ourOccurrences("0 2 * * *", timeZone, "2026-03-07T12:00:00Z", 1)).toEqual([carried]);
+		expect(theirOccurrences("0 2 * * *", timeZone, "2026-03-07T12:00:00Z", 1)).toEqual([carried]);
+
+		expect(schedule.prev({ from: new Date("2026-03-08T09:00:00Z"), timeZone }).toISOString()).toBe(
+			carried,
+		);
+
+		let interval = CronExpressionParser.parse("0 2 * * *", {
+			currentDate: new Date("2026-03-08T09:00:00Z"),
+			tz: timeZone,
 		});
-		expect(runs.map((date) => date.toISOString())).toEqual([
-			"2027-03-29T22:00:00.000Z",
-			"2027-04-29T22:00:00.000Z",
-			"2027-05-29T21:00:00.000Z",
+		expect(interval.prev().toDate().toISOString()).toBe("2026-03-07T07:00:00.000Z");
+	});
+
+	test("looks back to a weekly run in a skipped hour instead of the week before", () => {
+		let schedule = unwrap(Schedule.parse("0 2 * * 0"));
+		let timeZone = "America/New_York";
+
+		expect(schedule.prev({ from: new Date("2026-03-08T09:00:00Z"), timeZone }).toISOString()).toBe(
+			"2026-03-08T07:00:00.000Z",
+		);
+
+		let interval = CronExpressionParser.parse("0 2 * * 0", {
+			currentDate: new Date("2026-03-08T09:00:00Z"),
+			tz: timeZone,
+		});
+		expect(interval.prev().toDate().toISOString()).toBe("2026-03-01T07:00:00.000Z");
+	});
+
+	test("carries a midnight run out of a skipped midnight, where cron-parser loses a day", () => {
+		// Cairo starts daylight saving at 00:00, so `@daily` has no wall time to fire at on
+		// 2026-04-24. This is the same rule as above and the case a UTC-only product would
+		// never notice, because it only appears in a zone that transitions at midnight.
+		let timeZone = "Africa/Cairo";
+		let from = "2026-04-22T20:00:00Z";
+
+		expect(ourOccurrences("@daily", timeZone, from, 3)).toEqual([
+			"2026-04-22T22:00:00.000Z", // 00:00 on the 23rd
+			"2026-04-23T22:00:00.000Z", // 01:00 on the 24th, carried out of the gap
+			"2026-04-24T21:00:00.000Z", // 00:00 on the 25th
+		]);
+		expect(theirOccurrences("@daily", timeZone, from, 3)).toEqual([
+			"2026-04-22T22:00:00.000Z",
+			"2026-04-24T21:00:00.000Z", // the 24th is missing
+			"2026-04-25T21:00:00.000Z",
 		]);
 	});
 
 	test("looks back to the same pass of a repeated hour that it looks forward to", () => {
-		// Sydney repeats 02:45 on 2026-04-05: 15:45Z as AEDT, 16:45Z as AEST. An
-		// appointment is kept once, on the first pass, so that is the instant reported
-		// in both directions. The replaced library reports the first pass going forward
-		// and the second, 16:45Z, going back, which contradicts itself.
-		let schedule = unwrap(Schedule.parse("45 2 * * 0"));
-		let previous = schedule.prev({
-			from: new Date("2026-04-05T15:00:00Z"),
-			timeZone: "Australia/Sydney",
-		});
-		expect(previous.toISOString()).toBe("2026-04-04T15:45:00.000Z");
+		// 01:00 happens twice in New York on 2026-11-01. An appointment is kept once, so
+		// the first pass is the occurrence in both directions. cron-parser reports the
+		// first pass going forward and the second going back, contradicting itself.
+		let schedule = unwrap(Schedule.parse("0 1 * * *"));
+		let timeZone = "America/New_York";
 
-		let next = schedule.next({
-			from: new Date("2026-04-04T12:00:00Z"),
-			timeZone: "Australia/Sydney",
+		let ours = schedule.prev({ from: new Date("2026-11-01T08:00:00Z"), timeZone });
+		expect(ours.toISOString()).toBe("2026-11-01T05:00:00.000Z");
+
+		let interval = CronExpressionParser.parse("0 1 * * *", {
+			currentDate: new Date("2026-11-01T08:00:00Z"),
+			tz: timeZone,
 		});
-		expect(next.toISOString()).toBe("2026-04-04T15:45:00.000Z");
+		expect(interval.prev().toDate().toISOString()).toBe("2026-11-01T06:00:00.000Z");
+
+		// Ours is the instant `next` also reports, which is the property that matters.
+		expect(schedule.next({ from: new Date("2026-11-01T04:00:00Z"), timeZone }).toISOString()).toBe(
+			"2026-11-01T05:00:00.000Z",
+		);
 	});
 
-	test("rejects what the replaced library accepts outside the standard five fields", () => {
-		// Seconds, `?`, `L`, `W` and `#` all parse in the replaced library. Accepting the
-		// syntax without honoring the semantics is the failure mode worth avoiding.
-		for (let expression of ["* * * * * *", "? ? * * *", "0 0 L * *", "0 0 1W * *", "0 0 * * 1#2"]) {
+	test("keeps advancing where cron-parser returns the same instant forever", () => {
+		// Lord Howe shifts by 30 minutes, and cron-parser stops advancing across it: every
+		// further next() hands back the same instant. This is not a semantic difference,
+		// it is the other library failing to make progress, and it is why parity is not a
+		// reason to keep it.
+		let timeZone = "Australia/Lord_Howe";
+		let interval = CronExpressionParser.parse("0 * * * *", {
+			currentDate: new Date("2026-04-04T13:00:00Z"),
+			tz: timeZone,
+		});
+		let theirs = [
+			interval.next().toDate().toISOString(),
+			interval.next().toDate().toISOString(),
+			interval.next().toDate().toISOString(),
+		];
+		expect(new Set(theirs).size).toBe(1);
+
+		// Ours advances, and every instant it reports reads as minute zero on the zone's
+		// wall clock: 01:00 at +11, then 02:00 and 03:00 at +10:30.
+		let schedule = unwrap(Schedule.parse("0 * * * *"));
+		let ours = schedule.next({ from: new Date("2026-04-04T13:00:00Z"), timeZone, count: 3 });
+		expect(ours.map((date) => date.toISOString())).toEqual([
+			"2026-04-04T14:00:00.000Z",
+			"2026-04-04T15:30:00.000Z",
+			"2026-04-04T16:30:00.000Z",
+		]);
+		for (let occurrence of ours) expect(schedule.matches(occurrence, { timeZone })).toBe(true);
+	});
+
+	test("never reports an occurrence off a minute boundary, as cron-parser can", () => {
+		// Chatham's offset is 45 minutes off the hour, and walking back across its
+		// transition the other library returns an instant at :59 seconds, then repeats a
+		// value it has already given. Cron resolves to minutes, so neither can be right.
+		let timeZone = "Pacific/Chatham";
+		let interval = CronExpressionParser.parse("0 * * * *", {
+			currentDate: new Date("2026-09-26T16:00:00Z"),
+			tz: timeZone,
+		});
+		let theirs = [
+			interval.prev().toDate(),
+			interval.prev().toDate(),
+			interval.prev().toDate(),
+			interval.prev().toDate(),
+		];
+		expect(theirs.map((date) => date.toISOString())).toEqual([
+			"2026-09-26T15:15:00.000Z",
+			"2026-09-26T14:15:00.000Z",
+			"2026-09-26T14:14:59.000Z", // not on a minute
+			"2026-09-26T14:15:00.000Z", // already reported
+		]);
+
+		// Ours walks back a minute-aligned hour at a time, and never repeats itself.
+		let schedule = unwrap(Schedule.parse("0 * * * *"));
+		let ours: Date[] = [];
+		let cursor = new Date("2026-09-26T16:00:00Z");
+		for (let index = 0; index < 4; index++) {
+			cursor = schedule.prev({ from: cursor, timeZone });
+			ours.push(cursor);
+		}
+		expect(ours.map((date) => date.toISOString())).toEqual([
+			"2026-09-26T15:15:00.000Z",
+			"2026-09-26T14:15:00.000Z",
+			"2026-09-26T13:15:00.000Z",
+			"2026-09-26T12:15:00.000Z",
+		]);
+		for (let occurrence of ours) expect(occurrence.getUTCSeconds()).toBe(0);
+	});
+});
+
+describe("differences in what is accepted rather than computed", () => {
+	test("rejects the syntax outside the standard five fields that cron-parser accepts", () => {
+		// Accepting the syntax without honoring the semantics is the failure mode worth
+		// avoiding, so these stay rejected on purpose. `W` is not in the list because the
+		// other library rejects it too.
+		for (let expression of [
+			"* * * * * *",
+			"*/5 * * * * *",
+			"? ? * * *",
+			"0 0 L * *",
+			"0 0 * * 1#2",
+			"0 0 * * 1L",
+		]) {
 			expect(Schedule.parse(expression).status).toBe("failure");
+			expect(() => CronExpressionParser.parse(expression, { tz: "UTC" })).not.toThrow();
 		}
 	});
 
-	test("accepts a duplicated value the replaced library rejects", () => {
-		// A list that repeats a value is normalized instead of refused, so validation
-		// does not fail on something harmless.
+	test("rejects the day-of-month W extension, which cron-parser also rejects", () => {
+		expect(Schedule.parse("0 0 1W * *").status).toBe("failure");
+		expect(() => CronExpressionParser.parse("0 0 1W * *", { tz: "UTC" })).toThrow();
+	});
+
+	test("accepts a repeated list value that cron-parser rejects", () => {
 		expect(unwrap(Schedule.parse("0 12 * * 1,1,1")).toString()).toBe("0 12 * * 1");
+		expect(() => CronExpressionParser.parse("0 12 * * 1,1,1", { tz: "UTC" })).toThrow();
+	});
+
+	test("accepts @midnight, which cron-parser rejects, as a spelling of @daily", () => {
+		// The crontab specification lists it, and the product's own schedule descriptions
+		// already name it. Accepting it only widens what parses, so nothing stored can
+		// stop being readable.
+		expect(unwrap(Schedule.parse("@midnight")).toString()).toBe("0 0 * * *");
+		expect(() => CronExpressionParser.parse("@midnight", { tz: "UTC" })).toThrow();
+	});
+
+	test("agrees with cron-parser on the occurrences of every macro both accept", () => {
+		for (let macro of ["@hourly", "@daily", "@weekly", "@monthly", "@yearly", "@annually"]) {
+			expect({ macro, runs: ourOccurrences(macro, "UTC", "2026-06-15T12:00:00Z", 8) }).toEqual({
+				macro,
+				runs: theirOccurrences(macro, "UTC", "2026-06-15T12:00:00Z", 8),
+			});
+		}
 	});
 });

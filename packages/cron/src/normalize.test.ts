@@ -25,6 +25,7 @@ describe("normalizeExpression", () => {
 	test("expands every macro to its fields", () => {
 		expect(normalized("@hourly")).toBe("0 * * * *");
 		expect(normalized("@daily")).toBe("0 0 * * *");
+		expect(normalized("@midnight")).toBe("0 0 * * *");
 		expect(normalized("@weekly")).toBe("0 0 * * 0");
 		expect(normalized("@monthly")).toBe("0 0 1 * *");
 		expect(normalized("@yearly")).toBe("0 0 1 1 *");

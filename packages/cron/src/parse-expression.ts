@@ -19,12 +19,14 @@ import { InvalidCronExpression } from "./invalid-cron-expression";
 
 /**
  * The `@` shorthands this package accepts, expanded to the five-field expression
- * they stand for. `@annually` is the long spelling of `@yearly`; shorthands with no
- * schedule of their own, such as `@reboot`, are absent and rejected.
+ * they stand for. `@annually` is the long spelling of `@yearly` and `@midnight` of
+ * `@daily`, both named by the crontab specification; shorthands with no schedule of
+ * their own, such as `@reboot`, are absent and rejected.
  */
 const MACROS: Record<string, string | undefined> = {
 	"@hourly": "0 * * * *",
 	"@daily": "0 0 * * *",
+	"@midnight": "0 0 * * *",
 	"@weekly": "0 0 * * 0",
 	"@monthly": "0 0 1 * *",
 	"@yearly": "0 0 1 1 *",

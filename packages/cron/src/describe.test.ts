@@ -153,6 +153,100 @@ describe("describeFields", () => {
 	});
 });
 
+describe("descriptor coverage", () => {
+	/**
+	 * Every distinction a hand-written schedule description draws, and the descriptor
+	 * that carries it. A consumer replacing such a function needs each row to come back
+	 * as structured data, because anything falling to `kind: "expression"` here would be
+	 * a sentence the user stops being shown.
+	 */
+	const CASES = [
+		{ sentence: "every year on January 1st at midnight", expression: "@yearly" },
+		{ sentence: "every year on January 1st at midnight", expression: "@annually" },
+		{ sentence: "every month on the 1st at midnight", expression: "@monthly" },
+		{ sentence: "every Sunday at midnight", expression: "@weekly" },
+		{ sentence: "every day at midnight", expression: "@daily" },
+		{ sentence: "every day at midnight", expression: "@midnight" },
+		{ sentence: "every hour", expression: "@hourly" },
+		{ sentence: "every minute", expression: "* * * * *" },
+		{ sentence: "every hour", expression: "0 * * * *" },
+		{ sentence: "every 15 minutes", expression: "*/15 * * * *" },
+		{ sentence: "every 5 minutes", expression: "*/5 * * * *" },
+		{ sentence: "every hour at minute 5", expression: "5 * * * *" },
+		{ sentence: "every day at midnight", expression: "0 0 * * *" },
+		{ sentence: "every day at 09:00", expression: "0 9 * * *" },
+		{ sentence: "every day at 09:30", expression: "30 9 * * *" },
+		{ sentence: "every Monday at midnight", expression: "0 0 * * 1" },
+		{ sentence: "every Monday at 09:00", expression: "0 9 * * 1" },
+		{ sentence: "monthly on day 15 at midnight", expression: "0 0 15 * *" },
+	] as const;
+
+	test("has a structured shape for every sentence such a function produces", () => {
+		for (let { expression, sentence } of CASES) {
+			expect({ expression, sentence, kind: descriptorOf(expression).kind }).not.toEqual({
+				expression,
+				sentence,
+				kind: "expression",
+			});
+		}
+	});
+
+	test("carries the numbers each sentence interpolates", () => {
+		// Spot-checking the rows whose wording needs a value: the spacing, the minute past
+		// the hour, the time of day, the weekday, and the day of the month.
+		expect(descriptorOf("*/15 * * * *")).toEqual({ kind: "interval", unit: "minute", every: 15 });
+		expect(descriptorOf("5 * * * *")).toEqual({ kind: "hourly", minutes: [5] });
+		expect(descriptorOf("30 9 * * *")).toEqual({ kind: "daily", at: [{ hour: 9, minute: 30 }] });
+		expect(descriptorOf("0 9 * * 1")).toEqual({
+			kind: "weekly",
+			weekdays: [1],
+			at: [{ hour: 9, minute: 0 }],
+		});
+		expect(descriptorOf("0 0 15 * *")).toEqual({
+			kind: "monthly",
+			days: [15],
+			at: [{ hour: 0, minute: 0 }],
+		});
+	});
+
+	test("tells an on-the-hour schedule apart from one at a minute past it", () => {
+		// Both are `hourly`, and the minutes are what a translation keys the wording on.
+		expect(descriptorOf("0 * * * *")).toEqual({ kind: "hourly", minutes: [0] });
+		expect(descriptorOf("5 * * * *")).toEqual({ kind: "hourly", minutes: [5] });
+	});
+
+	test("tells midnight apart from another time of day without wording it", () => {
+		// A description that says "at midnight" reads it off `at`, rather than needing a
+		// separate kind for it.
+		expect(descriptorOf("0 0 * * *")).toEqual({ kind: "daily", at: [{ hour: 0, minute: 0 }] });
+		expect(descriptorOf("0 9 * * *")).toEqual({ kind: "daily", at: [{ hour: 9, minute: 0 }] });
+	});
+
+	test("falls back to the expression exactly where such a function gives up too", () => {
+		// These are the cases a hand-written description cannot phrase either, and shows
+		// the raw expression for.
+		expect(descriptorOf("0 0 1 1 1")).toEqual({ kind: "expression" });
+		expect(descriptorOf("0 0 13 * 5")).toEqual({ kind: "expression" });
+	});
+
+	test("never returns a string anywhere inside a descriptor except the kind", () => {
+		// The rule that keeps user-facing copy out of this package: every other field is a
+		// number, so there is nothing here to translate.
+		for (let { expression } of CASES) {
+			let descriptor = descriptorOf(expression);
+			for (let [key, value] of Object.entries(descriptor)) {
+				if (key === "kind" || key === "unit") continue;
+				let values = Array.isArray(value) ? value : [value];
+				for (let entry of values) {
+					let numbers =
+						typeof entry === "object" && entry !== null ? Object.values(entry) : [entry];
+					for (let number of numbers) expect(typeof number).toBe("number");
+				}
+			}
+		}
+	});
+});
+
 describe("stepFromStart", () => {
 	test("finds the spacing of a series that starts at the field minimum", () => {
 		expect(stepFromStart([0, 15, 30, 45], 0, 59)).toBe(15);

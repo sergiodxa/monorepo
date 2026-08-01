@@ -265,18 +265,18 @@ concise shape. Show `toString()` in that case.
 
 ## Supported syntax
 
-| Shape           | Example                                           | Notes                                      |
-| --------------- | ------------------------------------------------- | ------------------------------------------ |
-| Value           | `30 9 * * *`                                      |                                            |
-| List            | `0,15,30,45 * * * *`                              | Sorted and deduplicated                    |
-| Range           | `0 9-17 * * *`                                    | Inclusive; a reversed range is rejected    |
-| Step on a star  | `*/15 * * * *`                                    |                                            |
-| Step on a range | `0 9-17/4 * * *`                                  |                                            |
-| Step on a value | `5/10 * * * *`                                    | Runs from the value to the field's maximum |
-| Month names     | `0 0 1 JAN *`, `0 0 * jan-mar *`                  | Three letters, any case                    |
-| Weekday names   | `0 9 * * MON-FRI`                                 | Three letters, any case                    |
-| Sunday as seven | `0 0 * * 7`                                       | Folded onto `0`                            |
-| Macros          | `@hourly` `@daily` `@weekly` `@monthly` `@yearly` | `@annually` is `@yearly`                   |
+| Shape           | Example                                           | Notes                                             |
+| --------------- | ------------------------------------------------- | ------------------------------------------------- |
+| Value           | `30 9 * * *`                                      |                                                   |
+| List            | `0,15,30,45 * * * *`                              | Sorted and deduplicated                           |
+| Range           | `0 9-17 * * *`                                    | Inclusive; a reversed range is rejected           |
+| Step on a star  | `*/15 * * * *`                                    |                                                   |
+| Step on a range | `0 9-17/4 * * *`                                  |                                                   |
+| Step on a value | `5/10 * * * *`                                    | Runs from the value to the field's maximum        |
+| Month names     | `0 0 1 JAN *`, `0 0 * jan-mar *`                  | Three letters, any case                           |
+| Weekday names   | `0 9 * * MON-FRI`                                 | Three letters, any case                           |
+| Sunday as seven | `0 0 * * 7`                                       | Folded onto `0`                                   |
+| Macros          | `@hourly` `@daily` `@weekly` `@monthly` `@yearly` | `@annually` is `@yearly`, `@midnight` is `@daily` |
 
 Field bounds are minute `0-59`, hour `0-23`, day of month `1-31`, month `1-12`, and day
 of week `0-7`.
@@ -350,38 +350,48 @@ Two consequences worth knowing:
 
 ### Differences from `cron-parser`
 
-This package replaces `cron-parser` 5.6.2. Sweeps totalling roughly 83,000 occurrence
-comparisons, over more than 80 expressions and 22 time zones, starting on both sides of
-every transition, found **11 disagreements**, all of them at a transition, in two
-classes:
+This package replaces `cron-parser` 5.6.2. A sweep of **172,428 occurrence comparisons**,
+over 80 expressions and 22 time zones, walking both directions from anchors on both sides
+of every offset change between 2026 and 2028, found **533 divergent runs**. Every one of
+them is at or cascades from a daylight saving transition; in `UTC` the two libraries agree
+on every expression tested, without exception.
 
-1. **A wall time the clock skips entirely** (6 cases: `45 2 * * 0` in `Pacific/Chatham`,
-   whose clock jumps at exactly 02:45, and `0 0 30 * *` in `Africa/Cairo`, whose clock
-   jumps at exactly 00:00, both looking forward; plus the same schedule in
-   `Australia/Adelaide` and `Australia/Sydney` looking backward, where the other library
-   keeps the run going forward but drops it going back). We carry the run past the jump,
-   in both directions. `cron-parser` drops it and reports the following week or month.
-   **We consider ours correct**: it is what a Unix cron daemon does, it is what
-   `cron-parser` itself does when the wall time is _inside_ the gap rather than exactly at
-   its start, and a monitor that expects nothing for a week is a monitor that cannot
-   alert.
-2. **`prev()` inside a repeated hour** (5 cases: `45 2 * * 0` in `Australia/Adelaide`,
-   `Australia/Sydney`, `Pacific/Auckland` and `Pacific/Chatham`; `30 23 * * 6` in
-   `America/Santiago`). We report the first pass, the same instant `next()` reports.
-   `cron-parser` reports the first pass going forward and the second going back.
-   **We consider ours correct**: `next()` and `prev()` should agree on which instants are
+The divergences fall into four classes, and this package is the one to keep in all four:
+
+1. **A wall time the clock skips entirely.** We carry the run past the jump; `cron-parser`
+   drops it and reports the next day, week, or month. **Ours is correct**: it is what a
+   Unix cron daemon does, and a dead man's switch that expects nothing for a day cannot
+   alert. Note the library agrees with us looking _forward_ and disagrees looking _back_,
+   so it cannot find again the occurrence it just produced. Worst case seen:
+   `@daily` in `Africa/Cairo`, whose clock jumps at exactly 00:00, loses a whole day.
+2. **`prev()` inside a repeated hour.** We report the first pass, the same instant `next()`
+   reports. `cron-parser` reports the first pass going forward and the second going back.
+   **Ours is correct**: `next()` and `prev()` should agree on which instants are
    occurrences.
+3. **The library stops advancing.** In zones whose offset shifts by 30 minutes
+   (`Australia/Lord_Howe`) or whose transition lands at midnight (`America/Santiago`),
+   `cron-parser` returns the _same instant_ from every subsequent `next()` or `prev()`
+   call. This is not a semantic disagreement, it is a failure to make progress, and it
+   accounts for most of the divergent runs in those zones.
+4. **The library returns an instant off a minute boundary.** Walking back through
+   `Pacific/Chatham`, whose offset is 45 minutes off the hour, it reports times ending
+   `:14:59`. Cron resolves to minutes, so no such instant can be an occurrence.
 
 Everything else matched exactly, including both DST directions in the common zones, the
 either-or rule with steps, name and step parsing, February 29th across a non-leap
-century, and month-length skipping.
+century, month-length skipping, and a full month of every-five-minutes occurrences.
 
-Two intentional differences in what is _accepted_ rather than computed: expressions using
-seconds or the non-standard extensions are rejected here and accepted there, and a list
-that repeats a value (`0 12 * * 1,1`) is accepted and normalized here but rejected there.
+Three differences in what is _accepted_ rather than computed, all of them wider here than
+there, so nothing that parses today stops parsing: expressions using seconds or the
+non-standard `L`, `#` and `?` are rejected here and accepted there; a list that repeats a
+value (`0 12 * * 1,1`) is accepted and normalized here but rejected there; and `@midnight`
+is accepted here, though `cron-parser` rejects it despite the crontab specification listing
+it. The `W` extension is rejected by both.
 
-`src/parity.test.ts` pins the recorded occurrences and the divergences above. It exists
-only until no application depends on `cron-parser`, and should be deleted with it.
+`src/parity.test.ts` executes this comparison rather than replaying a transcript:
+`cron-parser` is a devDependency and is called directly, so a regression on either side
+fails the suite. It exists only until no application depends on that library, and the
+devDependency and the file should be deleted together.
 
 ## Pattern: Validating a submitted expression
 
