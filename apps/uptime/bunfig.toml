@@ -1,0 +1,9 @@
+[test]
+# Mirrors the root bunfig so `bun test` works from inside this workspace, not only from
+# the repo root. Bun resolves bunfig from the working directory, so without this the root
+# preload is skipped and every test whose source graph imports `cloudflare:workers` at
+# module load fails before its first assertion — including files that mock nothing and
+# need nothing, because the failure is about the virtual module never being registered
+# rather than about bindings. A test that needs specific bindings still mocks
+# `cloudflare:workers` itself; this only guarantees the module resolves.
+preload = ["../../test/setup.ts"]

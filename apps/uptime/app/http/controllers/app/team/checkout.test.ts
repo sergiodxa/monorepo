@@ -1,10 +1,13 @@
 /**
- * Tests for the billing checkout entry point. No `cloudflare:workers` mock is
- * needed — this controller only touches `~/app/data/customer`, which wraps
- * `@pkg/polar` and has no queue-binding dependency. A fake `PolarClient` stands
- * in for the real one, stubbing every method `~/app/data/customer.ts` calls.
- * Whether the owner is subscribed is seeded into the `subscriptions` projection
- * instead of stubbed on the client (ADR-005), since that is where it is read from.
+ * Tests for the billing checkout entry point. A fake `PolarClient` stands in for the
+ * real one, stubbing every method `~/app/data/customer.ts` calls. Whether the owner is
+ * subscribed is seeded into the `subscriptions` projection instead of stubbed on the
+ * client (ADR-005), since that is where it is read from.
+ *
+ * No `cloudflare:workers` mock is registered here, but the controller's graph does reach
+ * it: `requireTeam` calls `apportionCostByTeam`, and `~/app/services/cost.ts` imports
+ * `env` at module load. The virtual module from the preload in `bunfig.toml` is what
+ * satisfies that — nothing here reads a binding, so no binding needs faking.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
