@@ -1142,7 +1142,6 @@ export default {
 			errors: {
 				generic: "¡Ups! Algo salió mal al crear el cron job.",
 				limitExceeded: "Ha alcanzado el límite de {{limit}} monitores de cron job en este equipo.",
-				invalidCron: "Expresión cron inválida.",
 			},
 			success: "El cron job {{name}} fue creado.",
 		},
@@ -1151,7 +1150,6 @@ export default {
 			errors: {
 				generic: "¡Ups! Algo salió mal al actualizar el cron job.",
 				notFound: "Este cron job no existe.",
-				invalidCron: "Expresión cron inválida.",
 			},
 			success: "El cron job {{name}} fue actualizado.",
 		},

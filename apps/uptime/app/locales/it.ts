@@ -1139,7 +1139,6 @@ export default {
 			errors: {
 				generic: "Ops! Qualcosa è andato storto.",
 				limitExceeded: "Ha raggiunto il limite di {{limit}} cron job in questo team.",
-				invalidCron: "Espressione cron non valida.",
 			},
 			success: "Il cron job '{{name}}' è stato creato.",
 		},
@@ -1148,7 +1147,6 @@ export default {
 			errors: {
 				generic: "Ops! Qualcosa è andato storto.",
 				notFound: "Questo cron job non esiste.",
-				invalidCron: "Espressione cron non valida.",
 			},
 			success: "Il cron job '{{name}}' è stato aggiornato.",
 		},

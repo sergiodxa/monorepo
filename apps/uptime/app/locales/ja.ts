@@ -1128,7 +1128,6 @@ export default {
 			errors: {
 				generic: "エラーが発生しました。",
 				limitExceeded: "このチームのCronジョブ上限（{{limit}}個）に達しました。",
-				invalidCron: "無効なCron式です。",
 			},
 			success: "Cronジョブ「{{name}}」が作成されました。",
 		},
@@ -1137,7 +1136,6 @@ export default {
 			errors: {
 				generic: "エラーが発生しました。",
 				notFound: "このCronジョブは存在しません。",
-				invalidCron: "無効なCron式です。",
 			},
 			success: "Cronジョブ「{{name}}」が更新されました。",
 		},

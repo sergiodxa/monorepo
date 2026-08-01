@@ -1147,7 +1147,6 @@ export default {
 			errors: {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				limitExceeded: "Sie haben das Limit von {{limit}} Cron Jobs in diesem Team erreicht.",
-				invalidCron: "Ungültiger Cron-Ausdruck.",
 			},
 			success: "Cron Job '{{name}}' wurde erstellt.",
 		},
@@ -1156,7 +1155,6 @@ export default {
 			errors: {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				notFound: "Dieser Cron Job existiert nicht.",
-				invalidCron: "Ungültiger Cron-Ausdruck.",
 			},
 			success: "Cron Job '{{name}}' wurde aktualisiert.",
 		},

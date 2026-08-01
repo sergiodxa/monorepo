@@ -1685,7 +1685,6 @@ export default {
 			errors: {
 				generic: "Oops! Something went wrong while creating the cron job.",
 				limitExceeded: "You have reached the limit of {{limit}} cron job monitors in this team.",
-				invalidCron: "Invalid cron expression.",
 			},
 			success: "{{name}} cron job was created.",
 		},
@@ -1694,7 +1693,6 @@ export default {
 			errors: {
 				generic: "Oops! Something went wrong while updating the cron job.",
 				notFound: "This cron job does not exist.",
-				invalidCron: "Invalid cron expression.",
 			},
 			success: "{{name}} cron job was updated.",
 		},

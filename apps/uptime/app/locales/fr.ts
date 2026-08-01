@@ -1144,7 +1144,6 @@ export default {
 			errors: {
 				generic: "Oups ! Une erreur s'est produite.",
 				limitExceeded: "Vous avez atteint la limite de {{limit}} cron jobs dans cette équipe.",
-				invalidCron: "Expression cron invalide.",
 			},
 			success: "Le cron job '{{name}}' a été créé.",
 		},
@@ -1153,7 +1152,6 @@ export default {
 			errors: {
 				generic: "Oups ! Une erreur s'est produite.",
 				notFound: "Ce cron job n'existe pas.",
-				invalidCron: "Expression cron invalide.",
 			},
 			success: "Le cron job '{{name}}' a été mis à jour.",
 		},
