@@ -33,6 +33,7 @@ import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
+import { p } from "@pkg/u/size";
 import { textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -195,6 +196,7 @@ export default createAction(routes.app.team.monitors.index, {
 															commandfor={menuId}
 															command="toggle-popover"
 															aria-label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
+															mix={[p(0)]}
 														>
 															<EllipsisVerticalIcon size={16} strokeWidth={1.5} />
 														</Button>
