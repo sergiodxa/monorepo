@@ -7,21 +7,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
+import { MemoryTransport } from "@pkg/mail/memory";
+import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
+import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
-import { Resend } from "resend";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { MAIL_FROM } from "~/app/emails/sender";
+import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { createTestDatabase } from "~/app/lib/test/db";
+import en from "~/app/locales/en";
 import { invites, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -57,18 +62,28 @@ async function createFixture() {
 	return { db, team, membership };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`/`requireRole`. */
+/** Stands in for the language middleware, which this router does not run. */
+let i18nextInstance = createInstance();
+await i18nextInstance.init({
+	lng: "en",
+	fallbackLng: "en",
+	supportedLngs: ["en"],
+	resources: { en: { translation: en } },
+	interpolation: { escapeValue: false },
+});
+
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership` in place of
+ * `requireTeam`/`requireRole`, plus the translator the invite email is built with.
+ */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.locale = "en";
+		ctx.i18next = i18nextInstance;
 		return next();
 	};
-}
-
-/** Builds a fake Resend client whose `emails.send` never hits the network. */
-function createFakeResend() {
-	return { emails: { send: mock(async () => ({ data: { id: "email_1" }, error: null })) } };
 }
 
 /** Sends a form request through a minimal router mapping a single action route. */
@@ -76,7 +91,7 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
-	resend: ReturnType<typeof createFakeResend>,
+	transport: MemoryTransport,
 	route: Route,
 	handler: RequestHandler<any>,
 	method: string,
@@ -84,9 +99,10 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(Resend, resend as unknown as Resend);
 
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [asyncContext(), formData() as Middleware, mail({ transport, from: MAIL_FROM })],
+	});
 	router.map(route, {
 		middleware: [seedTeam(team, membership)],
 		handler: handler as RequestHandler<any>,
@@ -104,13 +120,13 @@ async function send(
 describe("createInvite", () => {
 	test("creates a pending invite and redirects to team settings", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let response = await send(
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.create,
 			createInvite as RequestHandler<any>,
 			"POST",
@@ -128,12 +144,18 @@ describe("createInvite", () => {
 		expect(invite).not.toBeNull();
 		expect(invite?.sender_id).toBe(membership.subject_id);
 		expect(invite?.accepted_at).toBeNull();
-		expect(resend.emails.send).toHaveBeenCalledTimes(1);
+
+		// Identified by type rather than by subject: a string assertion passes when the
+		// wrong email goes out with similar copy, and fails when the copy is reworded.
+		expect(transport.messages).toHaveLength(1);
+		expect(transport.find((message) => message.email instanceof TeamInviteEmail)).toBeDefined();
+		expect(transport.last?.to).toEqual([{ email: "new-member@example.com" }]);
+		expect(transport.last?.text).toContain(routes.invite.href({ inviteId: invite?.id ?? "" }));
 	});
 
 	test("resends instead of duplicating a pending invite for the same email", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let existing = await db.create(
 			invites,
@@ -151,7 +173,7 @@ describe("createInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.create,
 			createInvite as RequestHandler<any>,
 			"POST",
@@ -165,12 +187,12 @@ describe("createInvite", () => {
 		});
 		expect(matching).toHaveLength(1);
 		expect(matching[0]?.id).toBe(existing.id);
-		expect(resend.emails.send).toHaveBeenCalledTimes(1);
+		expect(transport.messages).toHaveLength(1);
 	});
 
 	test("rejects an already-accepted email without creating another invite", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		await db.create(
 			invites,
@@ -188,7 +210,7 @@ describe("createInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.create,
 			createInvite as RequestHandler<any>,
 			"POST",
@@ -202,18 +224,18 @@ describe("createInvite", () => {
 			where: { team_id: team.id, email: "member@example.com" },
 		});
 		expect(matching).toHaveLength(1);
-		expect(resend.emails.send).not.toHaveBeenCalled();
+		expect(transport.messages).toHaveLength(0);
 	});
 
 	test("redirects back without creating an invite when the email is invalid", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let response = await send(
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.create,
 			createInvite as RequestHandler<any>,
 			"POST",
@@ -227,14 +249,14 @@ describe("createInvite", () => {
 
 		let matching = await db.findMany(invites, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
-		expect(resend.emails.send).not.toHaveBeenCalled();
+		expect(transport.messages).toHaveLength(0);
 	});
 });
 
 describe("revokeInvite", () => {
 	test("deletes a pending invite and redirects to team settings", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let invite = await db.create(
 			invites,
@@ -252,7 +274,7 @@ describe("revokeInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.revoke,
 			revokeInvite as RequestHandler<any>,
 			"DELETE",
@@ -270,7 +292,7 @@ describe("revokeInvite", () => {
 
 	test("responds 404 for an invite that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let otherTeam = await db.create(
 			teams,
@@ -293,7 +315,7 @@ describe("revokeInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.revoke,
 			revokeInvite as RequestHandler<any>,
 			"DELETE",
@@ -308,7 +330,7 @@ describe("revokeInvite", () => {
 
 	test("rejects revoking an already-accepted invite", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let invite = await db.create(
 			invites,
@@ -326,7 +348,7 @@ describe("revokeInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.revoke,
 			revokeInvite as RequestHandler<any>,
 			"DELETE",
@@ -342,7 +364,7 @@ describe("revokeInvite", () => {
 
 	test("redirects back without deleting anything when invite_id is missing", async () => {
 		let { db, team, membership } = await createFixture();
-		let resend = createFakeResend();
+		let transport = new MemoryTransport();
 
 		let invite = await db.create(
 			invites,
@@ -360,7 +382,7 @@ describe("revokeInvite", () => {
 			db,
 			team,
 			membership,
-			resend,
+			transport,
 			routes.teamAdminActions.invite.revoke,
 			revokeInvite as RequestHandler<any>,
 			"DELETE",

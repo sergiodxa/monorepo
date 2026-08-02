@@ -27,7 +27,6 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { Resend } from "resend";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { notifyCronJobResult } from "~/app/services/alerts";
@@ -160,8 +159,13 @@ export default createAction(routes.api.cronJobPing, {
 			userAgent: ctx.request.headers.get("User-Agent"),
 		});
 
-		let resend = getServiceContainer().get(Resend);
-		await notifyCronJobResult(db, resend, monitor, monitor.status, wasOnTime ? "healthy" : "late");
+		await notifyCronJobResult(
+			db,
+			ctx.email,
+			monitor,
+			monitor.status,
+			wasOnTime ? "healthy" : "late",
+		);
 
 		return created({ wasOnTime });
 	},

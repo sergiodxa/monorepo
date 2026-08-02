@@ -16,13 +16,15 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import { BatchedLogger } from "@pkg/logger";
+import { Mailer } from "@pkg/mail";
+import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { Resend } from "resend";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
+import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 interface NotifyCall {
@@ -38,7 +40,7 @@ let notifyCalls: NotifyCall[] = [];
 function recordCall(helper: NotifyCall["helper"]) {
 	return async (
 		_db: unknown,
-		_resend: unknown,
+		_mailer: unknown,
 		monitor: { id: string; name: string },
 		previousStatus: unknown,
 		payload: unknown,
@@ -96,7 +98,10 @@ type MessageBody = {
 async function runJob(db: Database, body: MessageBody) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(Resend, () => new Resend("re_test_key"));
+	container.singleton(
+		Mailer,
+		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
+	);
 	let job = new NotifyJob({ logger: new BatchedLogger("test") }, body);
 	await container.scope(() => job.perform());
 	return job;

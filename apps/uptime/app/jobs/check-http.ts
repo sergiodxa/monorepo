@@ -37,13 +37,13 @@
  */
 
 import { Job } from "@pkg/jobs";
+import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { Resend } from "resend";
 
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
@@ -371,8 +371,8 @@ export class CheckHttpJob extends Job {
 		status: MonitorStatus,
 	): Promise<void> {
 		try {
-			let resend = getServiceContainer().get(Resend);
-			await notifyHttpResult(db, resend, monitor, previousStatus, {
+			let mailer = getServiceContainer().get(Mailer);
+			await notifyHttpResult(db, mailer, monitor, previousStatus, {
 				status,
 				responseStatus: outcome.responseStatus ?? 0,
 				responseTimeMs: outcome.responseTimeMs ?? 0,

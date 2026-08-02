@@ -13,15 +13,17 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
+import { MemoryTransport } from "@pkg/mail/memory";
+import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
-import { Resend } from "resend";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -92,11 +94,14 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
-	container.instance(Resend, {
-		emails: { send: mock(async () => ({ data: { id: "email_1" }, error: null })) },
-	} as unknown as Resend);
 
-	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			formData() as Middleware,
+			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
+		],
+	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {

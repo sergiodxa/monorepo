@@ -737,6 +737,64 @@ export default {
 		},
 	},
 
+	emails: {
+		teamInvite: {
+			subject: "Uptimeの{{team}}に招待されました",
+			preview: "Uptimeで{{team}}に参加",
+			heading: "{{team}}に招待されました",
+			body: "{{team}}はUptimeを使ってサービスを監視しています。招待を承認してチームに参加してください。",
+			action: "招待を承認",
+			footer:
+				"このメールは、Uptimeでどなたかがあなたをチームに招待したため送信されました。心当たりがない場合は、このメッセージを無視してください。",
+		},
+
+		alert: {
+			subject: "[Uptimeアラート] {{monitor}}：{{status}}",
+			preview: "{{monitor}}：{{status}}",
+			heading: "{{monitor}}：{{status}}",
+			field: "{{label}}：{{value}}",
+			action: "ダッシュボードを開く",
+			incident:
+				"このインシデントの通知：{{sent}}件送信、{{suppressed}}件はクールダウンとインシデントあたり{{cap}}件の上限により抑制されました。",
+			footer:
+				"このメールは、チームのアラートのいずれかがこのイベントに一致したため送信されました。",
+
+			status: {
+				up: "復旧",
+				down: "ダウン",
+				degraded: "低下",
+			},
+
+			fields: {
+				monitor: "モニター",
+				status: "ステータス",
+				time: "時刻",
+				url: "URL",
+				responseStatus: "応答ステータス",
+				responseTime: "応答時間",
+				domain: "ドメイン",
+				resolvedValue: "解決された値",
+				endpoint: "エンドポイント",
+				schedule: "スケジュール",
+				lastPing: "最終Ping",
+				nextExpected: "次回予定",
+				hostname: "ホスト名",
+				expiresAt: "有効期限",
+			},
+
+			values: {
+				none: "—",
+				never: "なし",
+				monitor: "{{name}}（{{type}}）",
+				responseStatus: "{{actual}}（期待値：{{expected}}）",
+				milliseconds: "{{value}}ms",
+				domain: "{{domain}}（{{recordType}}）",
+				endpoint: "{{host}}:{{port}}",
+				schedule: "{{expression}}（{{timezone}}）",
+			},
+		},
+	},
+
 	components: {
 		heatmap: {
 			tooltip: "{{date}}\n成功率：{{successRate}}\nチェック数：{{checks}}",

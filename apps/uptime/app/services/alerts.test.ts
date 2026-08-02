@@ -18,7 +18,11 @@
 
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
-import type { Resend } from "resend";
+import type { Transport } from "@pkg/mail";
+
+import { Mailer, MailError } from "@pkg/mail";
+import { MemoryTransport } from "@pkg/mail/memory";
+import { failure } from "@pkg/result";
 
 import type {
 	AlertEventSnapshot,
@@ -28,6 +32,9 @@ import type {
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
+
+import { AlertEmail } from "~/app/emails/alert";
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
 let listForHttpMonitorMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
 let listTeamWideMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
@@ -108,13 +115,21 @@ function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
 	};
 }
 
-/** A working `Resend`-shaped stub whose `.emails.send` succeeds unless overridden. */
-function makeResend(
-	sendImpl: (...args: unknown[]) => Promise<{ data: unknown; error: unknown }> = mock(
-		async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }),
-	),
-): Resend {
-	return { emails: { send: sendImpl } } as unknown as Resend;
+/**
+ * A mailer carrying the app's own sender identity over a recording transport, so a
+ * test asserts on the message a provider would have received instead of on a mocked SDK.
+ */
+function makeMailer(transport: Transport = new MemoryTransport()): Mailer {
+	return new Mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO });
+}
+
+/** A transport that refuses every delivery, which is how a provider reports a bad address. */
+function failingTransport(message: string): Transport {
+	return {
+		async send() {
+			return failure(new MailError(message));
+		},
+	};
 }
 
 /** A minimal HTTP snapshot fixture. */
@@ -180,7 +195,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -211,7 +226,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -240,7 +255,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -269,7 +284,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -298,7 +313,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "dns",
@@ -333,7 +348,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "ssl",
@@ -359,7 +374,7 @@ describe("dispatchAlerts — candidate resolution", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -382,7 +397,7 @@ describe("dispatchAlerts — candidate resolution", () => {
 
 			await dispatchAlerts({
 				db,
-				resend: makeResend(),
+				mailer: makeMailer(),
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType,
@@ -407,7 +422,7 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -429,7 +444,7 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -449,11 +464,11 @@ describe("dispatchAlerts — cooldown", () => {
 		let alert = makeAlert({ cooldown_minutes: 30 });
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 		isInCooldownMock.mockImplementation(async () => true);
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -463,7 +478,7 @@ describe("dispatchAlerts — cooldown", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(send).not.toHaveBeenCalled();
+		expect(transport.messages).toHaveLength(0);
 		expect(recordMock).toHaveBeenCalledTimes(1);
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.status).toBe("skipped_cooldown");
@@ -478,7 +493,7 @@ describe("dispatchAlerts — cooldown", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -498,11 +513,11 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		let alert = makeAlert({ id: "alert-9" });
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 10);
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -513,7 +528,7 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		});
 
 		expect(countSentSinceRecoveryMock).toHaveBeenCalledWith(db, "alert-9", "monitor-1", "down", 10);
-		expect(send).not.toHaveBeenCalled();
+		expect(transport.messages).toHaveLength(0);
 		expect(recordMock).toHaveBeenCalledTimes(1);
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.status).toBe("skipped_cap");
@@ -525,11 +540,11 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		let { db } = createTestDatabase();
 		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 9);
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -539,7 +554,7 @@ describe("dispatchAlerts — per-incident send cap", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(send).toHaveBeenCalledTimes(1);
+		expect(transport.messages).toHaveLength(1);
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.status).toBe("sent");
 	});
@@ -548,11 +563,11 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		let { db } = createTestDatabase();
 		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 10);
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -563,18 +578,18 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		});
 
 		expect(countSentSinceRecoveryMock).not.toHaveBeenCalled();
-		expect(send).toHaveBeenCalledTimes(1);
+		expect(transport.messages).toHaveLength(1);
 	});
 
 	test("caps SSL reminders too, since they repeat without a recovery to end them", async () => {
 		let { db } = createTestDatabase();
 		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 10);
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "ssl",
@@ -590,7 +605,7 @@ describe("dispatchAlerts — per-incident send cap", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(send).not.toHaveBeenCalled();
+		expect(transport.messages).toHaveLength(0);
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.status).toBe("skipped_cap");
 	});
@@ -601,11 +616,11 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		let { db } = createTestDatabase();
 		listForHttpMonitorMock.mockImplementation(async () => [makeAlert({ id: "alert-11" })]);
 		summarizeIncidentMock.mockImplementation(async () => ({ sent: 10, suppressed: 300 }));
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -616,19 +631,18 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		});
 
 		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
-		let payload = send.mock.calls[0]?.[0] as { text: string };
-		expect(payload.text).toContain("10 sent, 300 suppressed");
+		expect(transport.last?.text).toContain("10 sent, 300 suppressed");
 	});
 
 	test("leaves a recovery message alone when nothing was suppressed", async () => {
 		let { db } = createTestDatabase();
 		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
 		summarizeIncidentMock.mockImplementation(async () => ({ sent: 1, suppressed: 0 }));
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -638,8 +652,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let payload = send.mock.calls[0]?.[0] as { text: string };
-		expect(payload.text).not.toContain("suppressed");
+		expect(transport.last?.text).not.toContain("suppressed");
 	});
 
 	test("doesn't summarize an incident for a non-recovery event", async () => {
@@ -648,7 +661,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -670,7 +683,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -688,18 +701,15 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 		expect(call.snapshot).toEqual(httpSnapshot);
 	});
 
-	test("records 'failed' with the thrown error's message when Resend returns an error", async () => {
+	test("records 'failed' with the error message when the transport refuses the message", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
-		let send = mock(async (..._args: unknown[]) => ({
-			data: null,
-			error: { name: "validation_error", message: "bad recipient" },
-		}));
+		let transport = failingTransport("bad recipient");
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -722,14 +732,11 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
 		});
 		listForHttpMonitorMock.mockImplementation(async () => [failing, succeeding]);
-		let send = mock(async (..._args: unknown[]) => ({
-			data: null,
-			error: { name: "x", message: "boom" },
-		}));
+		let transport = failingTransport("boom");
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -746,7 +753,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 
 	test("email subject is prefixed with the alert's configured subjectPrefix", async () => {
 		let { db } = createTestDatabase();
-		let send = mock(async (..._args: unknown[]) => ({ data: { id: "email_1" }, error: null }));
+		let transport = new MemoryTransport();
 		let alert = makeAlert({
 			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "[PROD]" } },
 		});
@@ -754,7 +761,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(send),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -764,16 +771,53 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let call = send.mock.calls[0]?.[0] as {
-			subject: string;
-			to: string;
-			from: string;
-			replyTo: string;
-		};
-		expect(call.subject).toBe("[PROD] [Uptime Alert] Homepage is DOWN");
-		expect(call.to).toBe("ops@example.com");
-		expect(call.from).toBe("Uptime <no-reply@uptime.sergiodxa.com>");
-		expect(call.replyTo).toBe("hello@sergiodxa.com");
+		expect(transport.last?.subject).toBe("[PROD] [Uptime Alert] Homepage is DOWN");
+		expect(transport.last?.to).toEqual([{ email: "ops@example.com" }]);
+		expect(transport.last?.from).toEqual(MAIL_FROM);
+		expect(transport.last?.replyTo).toEqual([MAIL_REPLY_TO]);
+	});
+
+	test("sends the alert email itself, identified by type rather than by its copy", async () => {
+		let { db } = createTestDatabase();
+		let transport = new MemoryTransport();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await dispatchAlerts({
+			db,
+			mailer: makeMailer(transport),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "down",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(transport.find((message) => message.email instanceof AlertEmail)).toBeDefined();
+	});
+
+	test("reports the monitor, the snapshot, and the dashboard link in both body parts", async () => {
+		let { db } = createTestDatabase();
+		let transport = new MemoryTransport();
+		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await dispatchAlerts({
+			db,
+			mailer: makeMailer(transport),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType: "down",
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(transport.last?.html).toContain("https://uptime.sergiodxa.com/x");
+		expect(transport.last?.text).toContain("Homepage");
+		expect(transport.last?.text).toContain("500 (expected 200)");
+		expect(transport.last?.text).toContain("https://uptime.sergiodxa.com/x");
 	});
 });
 
@@ -807,7 +851,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -849,7 +893,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -879,7 +923,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -910,7 +954,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -938,7 +982,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -965,7 +1009,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -996,7 +1040,7 @@ describe("dispatchAlerts — Discord delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -1027,7 +1071,7 @@ describe("dispatchAlerts — Discord delivery", () => {
 
 		await dispatchAlerts({
 			db,
-			resend: makeResend(),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -1080,7 +1124,7 @@ describe("notifyHttpResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifyHttpResult(db, makeResend(), makeHttpMonitor(), null, {
+		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), null, {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
@@ -1092,7 +1136,7 @@ describe("notifyHttpResult", () => {
 
 	test("does not dispatch when already up and staying up", async () => {
 		let { db } = createTestDatabase();
-		await notifyHttpResult(db, makeResend(), makeHttpMonitor(), "up", {
+		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
@@ -1106,7 +1150,7 @@ describe("notifyHttpResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifyHttpResult(db, makeResend(), makeHttpMonitor(), "down", {
+		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "down", {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
@@ -1129,7 +1173,7 @@ describe("notifyHttpResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifyHttpResult(db, makeResend(), makeHttpMonitor(), "up", {
+		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
 			status: "down",
 			responseStatus: 503,
 			responseTimeMs: 30,
@@ -1144,7 +1188,7 @@ describe("notifyHttpResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifyHttpResult(db, makeResend(), makeHttpMonitor(), "up", {
+		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
 			status: "degraded",
 			responseStatus: 200,
 			responseTimeMs: 6000,
@@ -1179,7 +1223,7 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 describe("notifyDnsResult", () => {
 	test("does not dispatch on the first-ever 'ok' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), null, {
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, {
 			status: "ok",
 			resolvedValue: "1.2.3.4",
 		});
@@ -1192,7 +1236,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "error", {
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", {
 			status: "ok",
 			resolvedValue: "1.2.3.4",
 		});
@@ -1207,7 +1251,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "ok", {
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", {
 			status: "error",
 			resolvedValue: null,
 		});
@@ -1221,7 +1265,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeResend(), makeDnsMonitor(), "ok", {
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", {
 			status: "changed",
 			resolvedValue: "9.9.9.9",
 		});
@@ -1255,7 +1299,7 @@ function makeTcpMonitor(overrides: Partial<SelectTcpMonitor> = {}): SelectTcpMon
 describe("notifyTcpResult", () => {
 	test("does not dispatch on the first-ever 'up' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyTcpResult(db, makeResend(), makeTcpMonitor(), null, {
+		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), null, {
 			status: "up",
 			responseTimeMs: 10,
 		});
@@ -1268,7 +1312,7 @@ describe("notifyTcpResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyTcpResult(db, makeResend(), makeTcpMonitor(), "down", {
+		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "down", {
 			status: "up",
 			responseTimeMs: 10,
 		});
@@ -1283,7 +1327,7 @@ describe("notifyTcpResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyTcpResult(db, makeResend(), makeTcpMonitor(), "up", {
+		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
 			status: "down",
 			responseTimeMs: null,
 		});
@@ -1297,7 +1341,7 @@ describe("notifyTcpResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyTcpResult(db, makeResend(), makeTcpMonitor(), "up", {
+		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
 			status: "timeout",
 			responseTimeMs: null,
 		});
@@ -1334,21 +1378,21 @@ describe("notifyCronJobResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), "missed", "new");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "missed", "new");
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
 	});
 
 	test("does not dispatch a first-ever 'healthy' status (previousStatus null)", async () => {
 		let { db } = createTestDatabase();
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), null, "healthy");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), null, "healthy");
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
 	});
 
 	test("a transition from 'new' to 'healthy' never counts as a recovery", async () => {
 		let { db } = createTestDatabase();
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), "new", "healthy");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "new", "healthy");
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
 	});
@@ -1358,7 +1402,7 @@ describe("notifyCronJobResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), "late", "healthy");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "late", "healthy");
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("up");
@@ -1370,7 +1414,7 @@ describe("notifyCronJobResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), "healthy", "missed");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("down");
@@ -1385,7 +1429,7 @@ describe("notifyCronJobResult", () => {
 
 		await notifyCronJobResult(
 			db,
-			makeResend(),
+			makeMailer(),
 			makeCronJobMonitor({
 				alert_on_late: true,
 				last_ping_at: lastPingAt,
@@ -1411,7 +1455,7 @@ describe("notifyCronJobResult", () => {
 
 		await notifyCronJobResult(
 			db,
-			makeResend(),
+			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"healthy",
 			"late",
@@ -1427,7 +1471,7 @@ describe("notifyCronJobResult", () => {
 
 		await notifyCronJobResult(
 			db,
-			makeResend(),
+			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"late",
 			"missed",
@@ -1443,7 +1487,7 @@ describe("notifyCronJobResult", () => {
 
 		await notifyCronJobResult(
 			db,
-			makeResend(),
+			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"late",
 			"healthy",
@@ -1458,7 +1502,7 @@ describe("notifyCronJobResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyCronJobResult(db, makeResend(), makeCronJobMonitor(), "healthy", "missed");
+		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		let snapshot = call.snapshot as { lastPingAt: string | null; nextExpectedAt: string | null };
@@ -1470,7 +1514,7 @@ describe("notifyCronJobResult", () => {
 describe("notifySslResult", () => {
 	test("does not dispatch when shouldAlertOnSslStatus says not to (e.g. a healthy, non-expiring cert)", async () => {
 		let { db } = createTestDatabase();
-		await notifySslResult(db, makeResend(), makeHttpMonitor(), "valid", 90);
+		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "valid", 90);
 
 		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
 	});
@@ -1480,7 +1524,7 @@ describe("notifySslResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifySslResult(db, makeResend(), makeHttpMonitor(), "expired", -3);
+		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expired", -3);
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("down");
@@ -1492,7 +1536,7 @@ describe("notifySslResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifySslResult(db, makeResend(), makeHttpMonitor(), "expiring", 7);
+		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expiring", 7);
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("degraded");
@@ -1505,7 +1549,7 @@ describe("notifySslResult", () => {
 
 		await notifySslResult(
 			db,
-			makeResend(),
+			makeMailer(),
 			makeHttpMonitor({ url: "https://sub.example.com/path" }),
 			"expired",
 			-1,
@@ -1520,7 +1564,7 @@ describe("notifySslResult", () => {
 		let alert = makeAlert();
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 
-		await notifySslResult(db, makeResend(), makeHttpMonitor({ url: "not-a-url" }), "expired", -1);
+		await notifySslResult(db, makeMailer(), makeHttpMonitor({ url: "not-a-url" }), "expired", -1);
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect((call.snapshot as { hostname: string }).hostname).toBe("not-a-url");

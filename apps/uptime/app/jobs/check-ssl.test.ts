@@ -17,14 +17,16 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import { BatchedLogger } from "@pkg/logger";
+import { Mailer } from "@pkg/mail";
+import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { Resend } from "resend";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { InsertMonitor } from "~/database/schema";
 
+import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 interface CalculateCall {
@@ -87,7 +89,10 @@ function makeJob() {
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(Resend, () => new Resend("re_test_key"));
+	container.singleton(
+		Mailer,
+		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
+	);
 	let job = makeJob();
 	await container.scope(() => job.perform());
 	return job;

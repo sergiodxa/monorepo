@@ -256,11 +256,12 @@ Make every email serializable so it can be enqueued and sent by a background job
 
 - [x] Phase 1: Contract
 - [x] Phase 2: Locale And Recording
-- [ ] Phase 3: Adoption
+- [x] Phase 3: Adoption
 
 ## Notes
 
 - Email classes must not be constructed with entities that carry live connections; pass the plain fields the email needs, which also keeps the constructor an honest description of its data requirements.
 - The i18n keys for every email belong under a single namespace prefix so a missing translation is easy to spot across locales.
+- Adoption in the uptime app resolves both emails to the app's fallback language, not the recipient's. An invite has no language column and an alert is addressed to a mailbox rather than an account, so there is nothing to look up. That is the documented order stopping at its last step, not a shortcut. Reading in the recipient's language needs a `language` column on invites and on the email alert config, which is a migration.
 - The mailer resolves the locale once per send and reuses it for both `subject()` and `body()`, so a subject and body can never disagree about language.
 - An `Email` whose `to` derives from optional data should fail loudly at construction rather than produce a message with no recipient; validating in the constructor keeps the failure next to the mistake.

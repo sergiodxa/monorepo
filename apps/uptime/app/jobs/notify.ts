@@ -17,12 +17,12 @@
  */
 
 import { Job } from "@pkg/jobs";
+import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { Resend } from "resend";
 
 import {
 	notifyCronJobResult,
@@ -92,10 +92,10 @@ export class NotifyJob extends Job {
 
 		let job = parsed.data;
 		let db = getServiceContainer().get(Database);
-		let resend = getServiceContainer().get(Resend);
+		let mailer = getServiceContainer().get(Mailer);
 
 		try {
-			let dispatched = await this.dispatch(db, resend, job);
+			let dispatched = await this.dispatch(db, mailer, job);
 
 			if (!dispatched) {
 				this.logger.info("job.notify.monitor_not_found", {
@@ -140,14 +140,14 @@ export class NotifyJob extends Job {
 	 * the monitor's current name and settings. Only the transition's statuses come from the
 	 * message, because the row's cached status has already been overwritten by the sweep.
 	 */
-	private async dispatch(db: Database, resend: Resend, job: NotifyJob.Input): Promise<boolean> {
+	private async dispatch(db: Database, mailer: Mailer, job: NotifyJob.Input): Promise<boolean> {
 		switch (job.monitorType) {
 			case "tcp": {
 				let monitor = await db.findOne(tcpMonitors, { where: { id: job.monitorId } });
 				if (!monitor) return false;
 
 				let { previous, current } = parseStatuses(job, TCP_STATUSES);
-				await notifyTcpResult(db, resend, monitor, previous, {
+				await notifyTcpResult(db, mailer, monitor, previous, {
 					status: current,
 					responseTimeMs: monitor.last_response_time_ms,
 				});
@@ -159,7 +159,7 @@ export class NotifyJob extends Job {
 				if (!monitor) return false;
 
 				let { previous, current } = parseStatuses(job, DNS_STATUSES);
-				await notifyDnsResult(db, resend, monitor, previous, {
+				await notifyDnsResult(db, mailer, monitor, previous, {
 					status: current,
 					resolvedValue: monitor.last_value,
 				});
@@ -171,7 +171,7 @@ export class NotifyJob extends Job {
 				if (!monitor) return false;
 
 				let { previous, current } = parseStatuses(job, cronJobStatuses);
-				await notifyCronJobResult(db, resend, monitor, previous, current);
+				await notifyCronJobResult(db, mailer, monitor, previous, current);
 				return true;
 			}
 
@@ -191,7 +191,7 @@ export class NotifyJob extends Job {
 					monitor.ssl_expiry_warning_days,
 				);
 
-				await notifySslResult(db, resend, monitor, current, daysUntilExpiry);
+				await notifySslResult(db, mailer, monitor, current, daysUntilExpiry);
 				return true;
 			}
 		}

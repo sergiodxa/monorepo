@@ -748,6 +748,64 @@ export default {
 		},
 	},
 
+	emails: {
+		teamInvite: {
+			subject: "Vous avez été invité à rejoindre {{team}} sur Uptime",
+			preview: "Rejoignez {{team}} sur Uptime",
+			heading: "Vous avez été invité à rejoindre {{team}}",
+			body: "{{team}} utilise Uptime pour garder un œil sur ses services. Acceptez l'invitation pour rejoindre l'équipe.",
+			action: "Accepter l'invitation",
+			footer:
+				"Vous avez reçu cet e-mail parce que quelqu'un vous a invité dans son équipe sur Uptime. Si vous ne vous y attendiez pas, vous pouvez ignorer ce message.",
+		},
+
+		alert: {
+			subject: "[Alerte Uptime] {{monitor}} est {{status}}",
+			preview: "{{monitor}} est {{status}}",
+			heading: "{{monitor}} est {{status}}",
+			field: "{{label}} : {{value}}",
+			action: "Ouvrir le tableau de bord",
+			incident:
+				"Notifications pour cet incident : {{sent}} envoyées, {{suppressed}} supprimées par le délai d'attente et la limite de {{cap}} par incident.",
+			footer:
+				"Vous avez reçu cet e-mail parce qu'une des alertes de votre équipe correspond à cet événement.",
+
+			status: {
+				up: "RÉTABLI",
+				down: "HORS LIGNE",
+				degraded: "DÉGRADÉ",
+			},
+
+			fields: {
+				monitor: "Moniteur",
+				status: "Statut",
+				time: "Heure",
+				url: "URL",
+				responseStatus: "Statut de la réponse",
+				responseTime: "Temps de réponse",
+				domain: "Domaine",
+				resolvedValue: "Valeur résolue",
+				endpoint: "Point de terminaison",
+				schedule: "Planification",
+				lastPing: "Dernier ping",
+				nextExpected: "Prochain attendu",
+				hostname: "Nom d'hôte",
+				expiresAt: "Expire le",
+			},
+
+			values: {
+				none: "—",
+				never: "jamais",
+				monitor: "{{name}} ({{type}})",
+				responseStatus: "{{actual}} (attendu {{expected}})",
+				milliseconds: "{{value}}ms",
+				domain: "{{domain}} ({{recordType}})",
+				endpoint: "{{host}}:{{port}}",
+				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+	},
+
 	components: {
 		heatmap: {
 			tooltip: "{{date}}\n{{successRate}} taux de réussite\n{{checks}} vérifications",

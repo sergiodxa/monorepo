@@ -3,10 +3,9 @@
  * ping endpoint for dead man's switch monitoring. Covers a healthy on-time ping,
  * 404 for an unknown cron job id, 409 for a disabled job, 429 for a ping within the
  * per-monitor window, and 429 once a caller has spent its own budget — two limits
- * with two different purposes, so both are exercised. `Resend` is registered as a
- * fake in the service container the same way `app/jobs/check-ssl.test.ts` does; no
- * seeded alerts means `notifyCronJobResult` never actually dispatches, so no real
- * network call happens.
+ * with two different purposes, so both are exercised. The mail middleware is
+ * registered over a recording transport, and no seeded alerts means
+ * `notifyCronJobResult` never dispatches one anyway, so nothing leaves the process.
  *
  * `cloudflare:workers` is mocked before the dynamic import of the controller because
  * the caller budget reads its backend off `env`. The double stands in for the
@@ -19,13 +18,15 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { MemoryTransport } from "@pkg/mail/memory";
+import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
-import { Resend } from "resend";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -82,12 +83,13 @@ async function createCronJobRow(db: Db, teamId: string, overrides: Record<string
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [asyncContext()] });
+	let router = createRouter({
+		middleware: [asyncContext(), mail({ transport: new MemoryTransport(), from: MAIL_FROM })],
+	});
 	router.map(routes.api.cronJobPing, cronJobPing);
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.singleton(Resend, () => new Resend("re_test_key"));
 
 	return container.scope(() => router.fetch(request));
 }

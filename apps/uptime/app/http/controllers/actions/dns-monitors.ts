@@ -15,7 +15,6 @@ import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { Resend } from "resend";
 
 import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
 
@@ -150,7 +149,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	await DnsMonitor.recordCheckResult(db, monitor.id, checkResult);
 	await notifyDnsResult(
 		db,
-		getServiceContainer().get(Resend),
+		ctx.email,
 		monitor,
 		monitor.last_status as DnsCheckStatus | null,
 		checkResult,

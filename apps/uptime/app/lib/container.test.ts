@@ -25,6 +25,7 @@ mock.module("cloudflare:workers", () => ({
 }));
 
 let { AuthSDK } = await import("@pkg/auth-sdk");
+let { Mailer } = await import("@pkg/mail");
 let { PolarClient } = await import("@pkg/polar");
 let { ServiceContainer } = await import("@pkg/service-container");
 let { Database } = await import("remix/data-table");
@@ -78,6 +79,13 @@ describe("container", () => {
 
 		/** Drains the eagerly-fired JWKS fetch promise so it can't reject unhandled later. */
 		await service.value.catch(() => {});
+	});
+
+	test("resolves a Mailer singleton for the send paths with no request behind them", () => {
+		let mailer = container.get(Mailer);
+
+		expect(mailer).toBeInstanceOf(Mailer);
+		expect(container.get(Mailer)).toBe(mailer);
 	});
 
 	test("resolves an AuthSDK singleton", () => {

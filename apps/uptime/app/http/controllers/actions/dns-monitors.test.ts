@@ -7,9 +7,8 @@
  * `checkDnsMonitor` resolves DNS over Cloudflare's DNS-over-HTTPS JSON API via the
  * global `fetch` (see `app/services/dns-check.ts`) — there's no binding to mock, so
  * `globalThis.fetch` is swapped out for the duration of those tests instead. It also
- * resolves a `Resend` client from the service container to dispatch alerts; a
- * `{ emails: { send } }`-shaped fake is registered in its place since no email should
- * actually be sent in a test.
+ * dispatches alerts through `ctx.email`, so the mail middleware is registered over a
+ * recording transport: nothing leaves the process, and no provider SDK is mocked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,15 +16,17 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { MemoryTransport } from "@pkg/mail/memory";
+import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter, type Middleware } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
-import { Resend } from "resend";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -55,11 +56,14 @@ async function postDnsMonitorAction(
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
-	container.instance(Resend, {
-		emails: { send: mock(async () => ({ data: null, error: null })) },
-	} as unknown as Resend);
 
-	let router = createRouter({ middleware: [asyncContext(), formData()] });
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			formData(),
+			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
+		],
+	});
 	/**
 	 * Casts `router.map` itself (rather than its arguments) so this helper can map
 	 * several differently-shaped routes without losing type-checking elsewhere.

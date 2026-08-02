@@ -373,7 +373,7 @@ Use `react-email` for authoring and rendering.
 - [x] Phase 2: Memory And Resend Transports
 - [x] Phase 3: Middleware
 - [x] Phase 4: Rendering And Layout Kit
-- [ ] Phase 5: Adoption On The Current Provider
+- [x] Phase 5: Adoption On The Current Provider
 - [ ] Phase 6: MIME And Cloudflare Transport
 - [ ] Phase 7: Provider Switch
 

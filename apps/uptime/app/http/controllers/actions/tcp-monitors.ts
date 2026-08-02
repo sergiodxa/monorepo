@@ -15,7 +15,6 @@ import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { Resend } from "resend";
 
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 
@@ -130,7 +129,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	await TcpMonitor.recordCheckResult(db, monitor.id, checkResult);
 	await notifyTcpResult(
 		db,
-		getServiceContainer().get(Resend),
+		ctx.email,
 		monitor,
 		monitor.last_status as TcpCheckStatus | null,
 		checkResult,

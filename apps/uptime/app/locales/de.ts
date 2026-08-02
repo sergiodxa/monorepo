@@ -751,6 +751,64 @@ export default {
 		},
 	},
 
+	emails: {
+		teamInvite: {
+			subject: "Sie wurden eingeladen, {{team}} auf Uptime beizutreten",
+			preview: "{{team}} auf Uptime beitreten",
+			heading: "Sie wurden eingeladen, {{team}} beizutreten",
+			body: "{{team}} nutzt Uptime, um seine Dienste im Blick zu behalten. Nehmen Sie die Einladung an, um dem Team beizutreten.",
+			action: "Einladung annehmen",
+			footer:
+				"Sie erhalten diese E-Mail, weil Sie jemand in sein Team auf Uptime eingeladen hat. Falls Sie damit nicht gerechnet haben, können Sie diese Nachricht ignorieren.",
+		},
+
+		alert: {
+			subject: "[Uptime-Alarm] {{monitor}} ist {{status}}",
+			preview: "{{monitor}} ist {{status}}",
+			heading: "{{monitor}} ist {{status}}",
+			field: "{{label}}: {{value}}",
+			action: "Dashboard öffnen",
+			incident:
+				"Benachrichtigungen für diesen Vorfall: {{sent}} gesendet, {{suppressed}} durch die Abkühlzeit und das Limit von {{cap}} pro Vorfall unterdrückt.",
+			footer:
+				"Sie erhalten diese E-Mail, weil eine der Benachrichtigungen Ihres Teams zu diesem Ereignis passt.",
+
+			status: {
+				up: "WIEDERHERGESTELLT",
+				down: "AUSGEFALLEN",
+				degraded: "BEEINTRÄCHTIGT",
+			},
+
+			fields: {
+				monitor: "Monitor",
+				status: "Status",
+				time: "Zeit",
+				url: "URL",
+				responseStatus: "Antwortstatus",
+				responseTime: "Antwortzeit",
+				domain: "Domain",
+				resolvedValue: "Aufgelöster Wert",
+				endpoint: "Endpunkt",
+				schedule: "Zeitplan",
+				lastPing: "Letzter Ping",
+				nextExpected: "Nächster erwarteter Ping",
+				hostname: "Hostname",
+				expiresAt: "Läuft ab am",
+			},
+
+			values: {
+				none: "—",
+				never: "nie",
+				monitor: "{{name}} ({{type}})",
+				responseStatus: "{{actual}} (erwartet {{expected}})",
+				milliseconds: "{{value}}ms",
+				domain: "{{domain}} ({{recordType}})",
+				endpoint: "{{host}}:{{port}}",
+				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+	},
+
 	components: {
 		heatmap: {
 			tooltip: "{{date}}\n{{successRate}} Erfolgsrate\n{{checks}} Prüfungen",

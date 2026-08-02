@@ -15,8 +15,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Mailer, SentMessage } from "@pkg/mail";
+import type { Result } from "@pkg/result";
 import type { Database } from "remix/data-table";
-import type { Resend } from "resend";
+
+import { isFailure, wrap } from "@pkg/result";
 
 import type { MaintenanceMonitorKind } from "~/app/data/maintenance-window";
 import type { DnsCheckResult, DnsCheckStatus } from "~/app/services/dns-check";
@@ -36,12 +39,11 @@ import type {
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow from "~/app/data/maintenance-window";
+import { AlertEmail } from "~/app/emails/alert";
+import { emailTranslator } from "~/app/emails/locale";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
-
-const EMAIL_FROM = "Uptime <no-reply@uptime.sergiodxa.com>";
-const EMAIL_REPLY_TO = "hello@sergiodxa.com";
 
 /**
  * Ceiling on the notifications one alert sends for the same monitor and event type in a
@@ -74,7 +76,11 @@ export type AlertMonitorKind = MaintenanceMonitorKind | "ssl";
 
 export interface DispatchAlertsParams {
 	db: Database;
-	resend: Resend;
+	/**
+	 * Mailer the email strategy delivers through. Request paths pass `ctx.email`;
+	 * background ones resolve the container's mailer, since they have no request.
+	 */
+	mailer: Mailer;
 	teamId: string;
 	monitorId: string;
 	monitorType: AlertMonitorKind;
@@ -184,23 +190,33 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 
 	/** Without this a capped incident is indistinguishable from alerts having been dropped. */
 	if (params.eventType === "up") {
-		let incident = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
-		if (incident.suppressed > 0) {
-			message.text += `\n\nNotifications for this incident: ${incident.sent} sent, ${incident.suppressed} suppressed by cooldown and the ${MAX_CONSECUTIVE_SENDS}-per-incident limit.`;
+		let summary = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
+		if (summary.suppressed > 0) {
+			message.incident = { ...summary, cap: MAX_CONSECUTIVE_SENDS };
+			message.text += `\n\nNotifications for this incident: ${summary.sent} sent, ${summary.suppressed} suppressed by cooldown and the ${MAX_CONSECUTIVE_SENDS}-per-incident limit.`;
 		}
 	}
 
-	try {
-		await deliver(alert, message, params);
-		await record("sent", null);
-	} catch (error) {
-		await record("failed", error instanceof Error ? error.message : String(error));
+	let outcome = await deliver(alert, message, params);
+	if (isFailure(outcome)) {
+		await record("failed", outcome.error.message);
+		return;
 	}
+
+	await record("sent", null);
 }
 
-interface Message {
+/**
+ * The notification as the channel-agnostic pipeline builds it. `subject` and `text`
+ * are what the chat and webhook strategies put on the wire verbatim; the email
+ * strategy renders its own translated body and reads only {@link AlertMessage.incident}
+ * from here.
+ */
+interface AlertMessage {
 	subject: string;
 	text: string;
+	/** Incident totals to report, set only on a recovery that suppressed something. */
+	incident?: AlertEmail.Incident;
 }
 
 function statusWord(eventType: AlertEventType): string {
@@ -245,7 +261,7 @@ function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 	}
 }
 
-function buildMessage(params: DispatchAlertsParams): Message {
+function buildMessage(params: DispatchAlertsParams): AlertMessage {
 	let word = statusWord(params.eventType);
 	let subject = `[Uptime Alert] ${params.monitorName} is ${word}`;
 	let lines = [
@@ -258,57 +274,78 @@ function buildMessage(params: DispatchAlertsParams): Message {
 	return { subject, text: lines.join("\n") };
 }
 
+/**
+ * Runs one alert's configured strategy and reports the outcome as a value, so the
+ * caller records `sent` or `failed` by branching instead of by catching. The three
+ * HTTP-based strategies still signal failure by throwing, so they are wrapped here
+ * rather than each rewritten; the mail path already answers with a `Result`.
+ */
 async function deliver(
 	alert: SelectAlert,
-	message: Message,
+	message: AlertMessage,
 	params: DispatchAlertsParams,
-): Promise<void> {
+): Promise<Result<unknown, Error>> {
+	// Each config is read into a local first: the discriminated union narrows the
+	// property, but a closure would widen it back to every strategy's shape.
 	switch (alert.config.strategy) {
 		case "email":
-			await deliverEmail(alert.config.config, message, params.resend);
-			return;
-		case "webhook":
-			await deliverWebhook(alert.config.config, message, params);
-			return;
-		case "slack":
-			await deliverSlack(alert.config.config, message);
-			return;
-		case "discord":
-			await deliverDiscord(alert.config.config, message);
-			return;
+			return await deliverEmail(alert.config.config, message, params);
+		case "webhook": {
+			let config = alert.config.config;
+			return await wrap(() => deliverWebhook(config, message, params));
+		}
+		case "slack": {
+			let config = alert.config.config;
+			return await wrap(() => deliverSlack(config, message));
+		}
+		case "discord": {
+			let config = alert.config.config;
+			return await wrap(() => deliverDiscord(config, message));
+		}
 	}
 }
 
 /**
- * Sends one alert email through Resend.
+ * Sends one alert email, awaiting the outcome because it is what the pipeline records
+ * against the alert.
  *
  * Counted before the send rather than after, because a rejected send is still a billed
  * one — and email is by far the most expensive thing this app does, at roughly 26× the
  * cost of the HTTP check that triggered it.
+ *
+ * The language is the app's fallback: an alert is addressed to a mailbox rather than to
+ * an account, so there is no stored preference to read and no locale on the row.
  */
 async function deliverEmail(
 	config: { to: string; subjectPrefix: string },
-	message: Message,
-	resend: Resend,
-): Promise<void> {
+	message: AlertMessage,
+	params: DispatchAlertsParams,
+): Promise<Result<SentMessage, Error>> {
 	recordCost("emailSent");
 
-	let subject = config.subjectPrefix
-		? `${config.subjectPrefix} ${message.subject}`
-		: message.subject;
-	let result = await resend.emails.send({
-		from: EMAIL_FROM,
-		replyTo: EMAIL_REPLY_TO,
-		to: config.to,
-		subject,
-		text: message.text,
-	});
-	if (result.error) throw new Error(result.error.message);
+	let translation = await wrap(() => emailTranslator());
+	if (isFailure(translation)) return translation;
+
+	return await params.mailer.send(
+		new AlertEmail({
+			to: config.to,
+			subjectPrefix: config.subjectPrefix,
+			monitorName: params.monitorName,
+			monitorType: params.monitorType,
+			eventType: params.eventType,
+			snapshot: params.snapshot,
+			dashboardUrl: params.dashboardUrl,
+			occurredAt: new Date(),
+			incident: message.incident ?? null,
+			locale: translation.data.locale,
+			t: translation.data.t,
+		}),
+	);
 }
 
 async function deliverWebhook(
 	config: { url: string; secret: string },
-	message: Message,
+	message: AlertMessage,
 	params: DispatchAlertsParams,
 ): Promise<void> {
 	let body = JSON.stringify({
@@ -331,7 +368,7 @@ async function deliverWebhook(
 
 async function deliverSlack(
 	config: { webhookUrl: string; channel?: string },
-	message: Message,
+	message: AlertMessage,
 ): Promise<void> {
 	let body: { text: string; channel?: string } = { text: `*${message.subject}*\n${message.text}` };
 	if (config.channel) body.channel = config.channel;
@@ -344,7 +381,10 @@ async function deliverSlack(
 	if (!response.ok) throw new Error(`Slack webhook failed with status ${response.status}`);
 }
 
-async function deliverDiscord(config: { webhookUrl: string }, message: Message): Promise<void> {
+async function deliverDiscord(
+	config: { webhookUrl: string },
+	message: AlertMessage,
+): Promise<void> {
 	let response = await fetch(config.webhookUrl, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -428,7 +468,7 @@ export function shouldNotifyCronJobResult(
  */
 export async function notifyHttpResult(
 	db: Database,
-	resend: Resend,
+	mailer: Mailer,
 	monitor: SelectMonitor,
 	previousStatus: "up" | "down" | "degraded" | "timeout" | null,
 	result: { status: "up" | "down" | "degraded"; responseStatus: number; responseTimeMs: number },
@@ -438,7 +478,7 @@ export async function notifyHttpResult(
 
 	await dispatchAlerts({
 		db,
-		resend,
+		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
 		monitorType: "http",
@@ -466,7 +506,7 @@ export async function notifyHttpResult(
  */
 export async function notifyDnsResult(
 	db: Database,
-	resend: Resend,
+	mailer: Mailer,
 	monitor: SelectDnsMonitor,
 	previousStatus: DnsCheckStatus | null,
 	result: Pick<DnsCheckResult, "status" | "resolvedValue">,
@@ -477,7 +517,7 @@ export async function notifyDnsResult(
 
 	await dispatchAlerts({
 		db,
-		resend,
+		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
 		monitorType: "dns",
@@ -499,7 +539,7 @@ export async function notifyDnsResult(
 /** See {@link notifyHttpResult}; `up` is the TCP-equivalent healthy state. */
 export async function notifyTcpResult(
 	db: Database,
-	resend: Resend,
+	mailer: Mailer,
 	monitor: SelectTcpMonitor,
 	previousStatus: TcpCheckStatus | null,
 	result: TcpCheckResult,
@@ -510,7 +550,7 @@ export async function notifyTcpResult(
 
 	await dispatchAlerts({
 		db,
-		resend,
+		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
 		monitorType: "tcp",
@@ -536,7 +576,7 @@ export async function notifyTcpResult(
  */
 export async function notifyCronJobResult(
 	db: Database,
-	resend: Resend,
+	mailer: Mailer,
 	monitor: SelectCronJobMonitor,
 	previousStatus: CronJobStatus | null,
 	newStatus: CronJobStatus,
@@ -547,7 +587,7 @@ export async function notifyCronJobResult(
 
 	await dispatchAlerts({
 		db,
-		resend,
+		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
 		monitorType: "cron",
@@ -579,7 +619,7 @@ export async function notifyCronJobResult(
  */
 export async function notifySslResult(
 	db: Database,
-	resend: Resend,
+	mailer: Mailer,
 	monitor: SelectMonitor,
 	status: SslStatus,
 	daysUntilExpiry: number | null,
@@ -595,7 +635,7 @@ export async function notifySslResult(
 
 	await dispatchAlerts({
 		db,
-		resend,
+		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
 		monitorType: "ssl",

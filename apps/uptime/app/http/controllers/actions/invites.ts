@@ -1,7 +1,9 @@
 /**
  * Form actions for creating and revoking team invites. Requires
  * `requireRole("admin")`. Creating an invite for an email that already has a pending
- * invite resends it instead of creating a duplicate row.
+ * invite resends it instead of creating a duplicate row, and queues the invite email
+ * for after the response, because a mail provider having a bad minute must not cost
+ * the admin the invite they just created.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,11 +17,12 @@ import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { Resend } from "resend";
 
 import Invite from "~/app/data/invite";
+import { DEFAULT_EMAIL_LOCALE } from "~/app/emails/locale";
+import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
-import { sendInviteEmail } from "~/app/services/invite-email";
+import { recordCost } from "~/app/services/cost";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-invite */
@@ -45,8 +48,22 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 	let invite = existing ?? (await Invite.create(db, ctx.team.id, ctx.membership.subject_id, email));
 
 	let url = new URL(routes.invite.href({ inviteId: invite.id }), ctx.request.url).toString();
-	let resend = getServiceContainer().get(Resend);
-	await sendInviteEmail(resend, ctx.team.name, email, url);
+
+	// Counted before the send: a rejected send is a billed one.
+	recordCost("emailSent");
+
+	// The invitee has no stored language and the invite records none, so the copy is
+	// written in the app's fallback rather than in the admin's own language — the
+	// requester's locale is the last resort, not the first (ADR-030 §4).
+	ctx.email.later(
+		new TeamInviteEmail({
+			team: ctx.team.name,
+			email,
+			url,
+			locale: DEFAULT_EMAIL_LOCALE,
+			t: ctx.i18next.getFixedT(DEFAULT_EMAIL_LOCALE),
+		}),
+	);
 
 	session?.flash("toast", { intent: "success", message: `Invite sent to ${email}.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

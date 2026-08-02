@@ -15,6 +15,9 @@ import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import mail from "@pkg/mail/middleware";
+import { ResendTransport } from "@pkg/mail/resend";
+import { getServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
 import { createController, createRouter } from "remix/fetch-router";
@@ -22,7 +25,9 @@ import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
+import { Resend } from "resend";
 
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { createTeam, leaveTeam, updateLanguage } from "~/app/http/controllers/actions/account";
 import { createAlert, deleteAlert, updateAlert } from "~/app/http/controllers/actions/alerts";
 import { createApiKey, deleteApiKey } from "~/app/http/controllers/actions/api-keys";
@@ -220,6 +225,15 @@ export default function application(options: application.Options) {
 	let globalMiddleware: Middleware[] = [
 		asyncContext(),
 		logger,
+		// Publishes `ctx.email` on every surface, machine ones included: the cron-job ping
+		// endpoint dispatches alerts too. It sits after the logger because the deferred
+		// queue it flushes once a handler has returned reports its failures through
+		// `ctx.logger`, which is still open at that point.
+		mail({
+			transport: () => new ResendTransport(getServiceContainer().get(Resend)),
+			from: MAIL_FROM,
+			replyTo: MAIL_REPLY_TO,
+		}),
 		formData() as Middleware,
 		methodOverride(),
 		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,

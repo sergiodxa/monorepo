@@ -14,12 +14,15 @@
 import { AuthSDK } from "@pkg/auth-sdk";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { setJobUsageTracker } from "@pkg/jobs";
+import { Mailer } from "@pkg/mail";
+import { ResendTransport } from "@pkg/mail/resend";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { createDatabase, Database } from "remix/data-table";
 import { Resend } from "resend";
 
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { recordD1Statement, trackJobCost } from "~/app/services/cost";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
@@ -59,6 +62,24 @@ container.singleton(Database, () =>
 );
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 container.singleton(Resend, () => new Resend(env.RESEND_API_TOKEN));
+/**
+ * Mailer for the send paths with no request behind them — the check jobs and the
+ * queue consumer — carrying the same sender identity the mail middleware applies to
+ * request paths. Handlers must not resolve this one: `ctx.email` is theirs, and only
+ * that instance has a `later()` queue anything flushes.
+ *
+ * Swapping providers is this one line plus the middleware's, because the transport is
+ * the only piece that knows which provider the app sends through.
+ */
+container.singleton(
+	Mailer,
+	() =>
+		new Mailer({
+			transport: new ResendTransport(container.get(Resend)),
+			from: MAIL_FROM,
+			replyTo: MAIL_REPLY_TO,
+		}),
+);
 container.singleton(IdTokenVerificationKeyService, () => new IdTokenVerificationKeyService());
 container.singleton(
 	AuthSDK,

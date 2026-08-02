@@ -745,6 +745,64 @@ export default {
 		},
 	},
 
+	emails: {
+		teamInvite: {
+			subject: "È stato invitato a unirsi a {{team}} su Uptime",
+			preview: "Si unisca a {{team}} su Uptime",
+			heading: "È stato invitato a unirsi a {{team}}",
+			body: "{{team}} usa Uptime per tenere d'occhio i propri servizi. Accetti l'invito per unirsi al team.",
+			action: "Accetta invito",
+			footer:
+				"Ha ricevuto questa email perché qualcuno L'ha invitata nel suo team su Uptime. Se non se lo aspettava, può ignorare questo messaggio.",
+		},
+
+		alert: {
+			subject: "[Avviso Uptime] {{monitor}} è {{status}}",
+			preview: "{{monitor}} è {{status}}",
+			heading: "{{monitor}} è {{status}}",
+			field: "{{label}}: {{value}}",
+			action: "Apri la dashboard",
+			incident:
+				"Notifiche per questo incidente: {{sent}} inviate, {{suppressed}} soppresse dal periodo di attesa e dal limite di {{cap}} per incidente.",
+			footer:
+				"Ha ricevuto questa email perché uno degli avvisi del suo team corrisponde a questo evento.",
+
+			status: {
+				up: "RIPRISTINATO",
+				down: "NON ATTIVO",
+				degraded: "DEGRADATO",
+			},
+
+			fields: {
+				monitor: "Monitor",
+				status: "Stato",
+				time: "Ora",
+				url: "URL",
+				responseStatus: "Stato della risposta",
+				responseTime: "Tempo di risposta",
+				domain: "Dominio",
+				resolvedValue: "Valore risolto",
+				endpoint: "Endpoint",
+				schedule: "Pianificazione",
+				lastPing: "Ultimo ping",
+				nextExpected: "Prossimo previsto",
+				hostname: "Hostname",
+				expiresAt: "Scade il",
+			},
+
+			values: {
+				none: "—",
+				never: "mai",
+				monitor: "{{name}} ({{type}})",
+				responseStatus: "{{actual}} (previsto {{expected}})",
+				milliseconds: "{{value}}ms",
+				domain: "{{domain}} ({{recordType}})",
+				endpoint: "{{host}}:{{port}}",
+				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+	},
+
 	components: {
 		heatmap: {
 			tooltip: "{{date}}\n{{successRate}} tasso di successo\n{{checks}} controlli",

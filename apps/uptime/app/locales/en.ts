@@ -1293,6 +1293,63 @@ export default {
 		},
 	},
 
+	emails: {
+		teamInvite: {
+			subject: "You've been invited to join {{team}} on Uptime",
+			preview: "Join {{team}} on Uptime",
+			heading: "You've been invited to join {{team}}",
+			body: "{{team}} uses Uptime to keep an eye on its services. Accept the invite to join the team.",
+			action: "Accept invite",
+			footer:
+				"You received this email because someone invited you to their team on Uptime. If you weren't expecting it, you can ignore this message.",
+		},
+
+		alert: {
+			subject: "[Uptime Alert] {{monitor}} is {{status}}",
+			preview: "{{monitor}} is {{status}}",
+			heading: "{{monitor}} is {{status}}",
+			field: "{{label}}: {{value}}",
+			action: "Open the dashboard",
+			incident:
+				"Notifications for this incident: {{sent}} sent, {{suppressed}} suppressed by cooldown and the {{cap}}-per-incident limit.",
+			footer: "You received this email because one of your team's alerts matched this event.",
+
+			status: {
+				up: "RECOVERED",
+				down: "DOWN",
+				degraded: "DEGRADED",
+			},
+
+			fields: {
+				monitor: "Monitor",
+				status: "Status",
+				time: "Time",
+				url: "URL",
+				responseStatus: "Response status",
+				responseTime: "Response time",
+				domain: "Domain",
+				resolvedValue: "Resolved value",
+				endpoint: "Endpoint",
+				schedule: "Schedule",
+				lastPing: "Last ping",
+				nextExpected: "Next expected",
+				hostname: "Hostname",
+				expiresAt: "Expires at",
+			},
+
+			values: {
+				none: "—",
+				never: "never",
+				monitor: "{{name}} ({{type}})",
+				responseStatus: "{{actual}} (expected {{expected}})",
+				milliseconds: "{{value}}ms",
+				domain: "{{domain}} ({{recordType}})",
+				endpoint: "{{host}}:{{port}}",
+				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+	},
+
 	components: {
 		heatmap: {
 			tooltip: "{{date}}\n{{successRate}} success rate\n{{checks}} checks",
