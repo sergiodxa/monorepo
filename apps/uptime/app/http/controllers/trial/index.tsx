@@ -761,8 +761,14 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													</Text>
 												</div>
 
-												<div mix={[flex(), flexWrap("wrap"), gap(3)]}>
-													<LinkButton href={monitorOffer.createHref}>
+												{/* Stacked and full-width rather than a wrapping row: side by side, the
+												    two read as equal choices, when subscribing is the one that makes the
+												    monitor keep running. */}
+												<div mix={[vstack({ gap: 3 })]}>
+													<LinkButton
+														href={monitorOffer.createHref}
+														mix={[is("full"), justify("center")]}
+													>
 														{t("page.trial.monitor.create")}
 														<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden />
 													</LinkButton>
@@ -771,6 +777,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 															href={monitorOffer.subscribeHref}
 															color="neutral"
 															variant="outline"
+															mix={[is("full"), justify("center")]}
 														>
 															{t("page.trial.monitor.subscribe")}
 														</LinkButton>
@@ -843,7 +850,11 @@ export function renderTrialPage(view: TrialPageView = {}) {
 					</div>
 				</section>
 
-				{probe === undefined ? null : (
+				{/* The free week is what an anonymous visitor is being offered, so it is sold
+				    only to one. A signed-in reader was offered a monitor instead, and pitching
+				    them a trial that ends on "no account, no card" describes neither what they
+				    were just offered nor what they already have. */}
+				{probe === undefined || monitorOffer !== undefined ? null : (
 					<section mix={[...sectionPadding()]}>
 						<div mix={[...marketingContainer()]}>
 							<div

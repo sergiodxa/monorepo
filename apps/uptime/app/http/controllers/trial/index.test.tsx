@@ -715,6 +715,17 @@ describe("POST /try for a signed-in viewer", () => {
 		expect(body).not.toContain("Get an email when this changes");
 	});
 
+	test("drops the free-week pitch, which describes an offer they were not made", async () => {
+		let actor = await signIn("active");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		// "No account, no card" is the closing argument of that section, and it is the line
+		// that reads worst to somebody who has both.
+		expect(body).not.toContain("What the week looks like");
+		expect(body).not.toContain("No account, no card");
+	});
+
 	test("offers billing alongside the monitor when the subscription is not active", async () => {
 		let actor = await signIn("revoked");
 
