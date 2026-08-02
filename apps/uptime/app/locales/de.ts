@@ -3488,31 +3488,51 @@ export default {
 					scopes: {
 						label: "Berechtigungen",
 						description: "Wählen Sie, worauf dieser API-Schlüssel zugreifen kann.",
-						options: {
-							"teams:read": "Teams lesen",
-							"teams:write": "Teams schreiben",
-							"invites:read": "Einladungen lesen",
-							"invites:write": "Einladungen schreiben",
-							"team-domains:read": "Domains lesen",
-							"team-domains:write": "Domains schreiben",
-							"monitors:read": "Monitore lesen",
-							"monitors:write": "Monitore schreiben",
-							"maintenance:read": "Wartung lesen",
-							"maintenance:write": "Wartung schreiben",
-							"dns-monitors:read": "DNS-Monitore lesen",
-							"dns-monitors:write": "DNS-Monitore schreiben",
-							"tcp-monitors:read": "TCP-Monitore lesen",
-							"tcp-monitors:write": "TCP-Monitore schreiben",
-							"alerts:read": "Benachrichtigungen lesen",
-							"alerts:write": "Benachrichtigungen schreiben",
-							"status-pages:read": "Statusseiten lesen",
-							"status-pages:write": "Statusseiten schreiben",
-							"cron-jobs:read": "Cron Jobs lesen",
-							"cron-jobs:write": "Cron Jobs schreiben",
-							"cron-jobs:ping": "Cron Jobs Ping",
-							"api-keys:read": "API-Schlüssel lesen",
-							"api-keys:write": "API-Schlüssel schreiben",
-							"ping:trigger": "Pings Auslösen",
+						descriptions: {
+							"teams:read":
+								"Name und Logo des Teams lesen sowie seine Mitglieder und deren Rollen auflisten.",
+							"teams:write":
+								"Name und Logo des Teams ändern. Mitglieder lassen sich damit weder hinzufügen noch entfernen, und das Team nicht löschen.",
+							"invites:read":
+								"Die Einladungen des Teams auflisten, offene wie angenommene, einschließlich der E-Mail-Adresse, an die jede ging.",
+							"invites:write":
+								"Eine E-Mail-Adresse ins Team einladen und eine bestehende Einladung zurückziehen. Wer eine Einladung annimmt, wird Mitglied.",
+							"team-domains:read":
+								"Die vom Team beanspruchten Domains auflisten und ob jede verifiziert ist.",
+							"team-domains:write":
+								"Eine Domain für das Team beanspruchen oder entfernen. Sobald eine Domain verifiziert ist, tritt jeder, der sich mit einer E-Mail-Adresse dieser Domain registriert, dem Team automatisch bei.",
+							"monitors:read":
+								"HTTP-Monitore, ihre Prüfergebnisse, ihre Verfügbarkeitsstatistiken und den Gesamtstatus des Teams lesen.",
+							"monitors:write":
+								"HTTP-Monitore und ihre Inhaltsprüfungen erstellen, ändern und löschen. Zusätzlich lässt sich damit ein Neuaufbau der Tagesstatistiken einreihen.",
+							"maintenance:read": "Die Wartungsfenster des Teams auflisten und lesen.",
+							"maintenance:write":
+								"Wartungsfenster erstellen, ändern, vorzeitig beenden und löschen. Ein laufendes Fenster kann Benachrichtigungen für die abgedeckten Monitore unterdrücken.",
+							"dns-monitors:read":
+								"DNS-Monitore und die von ihnen aufgezeichneten Auflösungsergebnisse auflisten und lesen.",
+							"dns-monitors:write": "DNS-Monitore erstellen, ändern und löschen.",
+							"tcp-monitors:read":
+								"TCP-Monitore und die von ihnen aufgezeichneten Verbindungsergebnisse auflisten und lesen.",
+							"tcp-monitors:write": "TCP-Monitore erstellen, ändern und löschen.",
+							"alerts:read":
+								"Benachrichtigungen und die von ihnen ausgelösten Ereignisse auflisten und lesen. Webhook-URLs und andere Kanal-Geheimnisse werden nie zurückgegeben.",
+							"alerts:write":
+								"Benachrichtigungen erstellen, ändern und löschen, samt ihrer Webhook- und Chat-Ziele. Das Löschen einer Benachrichtigung stoppt alles, was sie versendet hat.",
+							"status-pages:read":
+								"Die Statusseiten des Teams und die jeweils angehängten Monitore auflisten und lesen.",
+							"status-pages:write":
+								"Statusseiten erstellen, ändern und löschen sowie festlegen, welche Monitore und Cron Jobs eine Seite öffentlich zeigt.",
+							"cron-jobs:read": "Die Cron Jobs des Teams und ihre Zeitpläne auflisten und lesen.",
+							"cron-jobs:write":
+								"Cron Jobs erstellen, ändern und löschen. Wird einer gelöscht, wird seine Ping-URL nicht mehr angenommen.",
+							"cron-jobs:ping":
+								"Aufgeführt wegen der Ping-URL der Cron Jobs, die öffentlich ist und keinen Bereich prüft. Die Vergabe verschafft einem Schlüssel keinen Zugriff, den er nicht ohnehin hat.",
+							"api-keys:read":
+								"Die API-Schlüssel des Teams mit Name, Präfix, Bereichen und Ablauf auflisten. Der geheime Schlüssel selbst wird nie zurückgegeben.",
+							"api-keys:write":
+								"API-Schlüssel des Teams erstellen und löschen. Ein neuer Schlüssel kann jeden Bereich erhalten, dieser hier kann also jede andere Berechtigung vergeben.",
+							"ping:trigger":
+								"Einmalige HTTP-, DNS- und TCP-Prüfungen ausführen, ohne einen Monitor anzulegen. Jede Prüfung wird als ein Ping abgerechnet und erfordert ein aktives Abonnement.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
@@ -3815,7 +3835,7 @@ export default {
 			ping: {
 				title: "Diesen Monitor pingen",
 				description:
-					"Lassen Sie Ihren Job nach Abschluss eine POST-Anfrage hierher senden. Keine Authentifizierung erforderlich — behandeln Sie diese URL als Geheimnis.",
+					"Lassen Sie Ihren Job nach Abschluss eine POST-Anfrage hierher senden, mit einem API-Schlüssel mit dem Bereich `cron-jobs:ping`.",
 			},
 
 			uptimeHistory: "Verlauf der Betriebszeit",

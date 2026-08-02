@@ -11,10 +11,12 @@
  * scripted and unscripted paths produce identical markup instead of one of them
  * re-implementing the result in the browser.
  *
- * The field's caption is clipped rather than dropped: the row it sits in already names
- * the control for anyone who can see it, and the placeholder carries the hint, but the
- * `<input>` would have no accessible name at all without a `<label>` that wraps it and
- * still holds its text.
+ * Caption above the field, field above the button: the card this sits in is a narrow
+ * column, and the row this used to be wrapped into two ragged lines with the heading
+ * stranded beside them. The caption is drawn again rather than clipped now that there is
+ * a line to draw it on, but the `<label>` still wraps the `<input>` rather than pointing
+ * at it by `id` — that is what the control's accessible name rests on, and it survives
+ * whichever way the caption is styled.
  *
  * Its labels come in as props rather than through `@pkg/i18n/ui`'s `intl(handle)`,
  * since the fragment this renders inside wires up no `IntlProvider` of its own for the
@@ -27,9 +29,8 @@
 import type { Handle } from "remix/ui";
 
 import { Button, Input, Label } from "@pkg/r3-ui";
-import { visuallyHidden } from "@pkg/u/a11y";
-import { flex, flexWrap, gap, items } from "@pkg/u/layout";
-import { is, m, maxIs } from "@pkg/u/size";
+import { flex, flexCol, gap } from "@pkg/u/layout";
+import { m } from "@pkg/u/size";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
@@ -87,9 +88,9 @@ export const QuickPingForm = clientEntry(
 						}),
 					]}
 				>
-					<div mix={[flex(), flexWrap(), gap("8px"), items("center")]}>
-						<Label mix={[is("full"), maxIs("360px")]}>
-							<span mix={[visuallyHidden()]}>{label}</span>
+					<div mix={[flex(), flexCol(), gap("12px")]}>
+						<Label mix={[flex(), flexCol(), gap("4px")]}>
+							<span>{label}</span>
 							<Input
 								type="url"
 								name="url"

@@ -116,4 +116,29 @@ describe("api-key-new form controller", () => {
 		expect(body).toContain('name="expires_at"');
 		expect(body).toContain('value="monitors:read"');
 	});
+
+	test("labels each scope with its raw string and describes it", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await get(db, team, membership)).text();
+
+		expect(body).toContain('aria-describedby="api-key-scope-ping-trigger-description"');
+		expect(body).toContain('<p id="api-key-scope-ping-trigger-description"');
+		expect(body).toContain(">ping:trigger<");
+		expect(body).toContain(
+			"Run one-off HTTP, DNS and TCP checks without creating a monitor. Each check is billed as one ping and needs an active subscription.",
+		);
+	});
+
+	test("splits the scope list into two columns only once the page is wide enough", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await get(db, team, membership)).text();
+
+		let twoColumns = body.match(
+			/@media \(min-width: 1024px\)\s*\{[^{]*\{\s*grid-template-columns:\s*repeat\(2, 1fr\);/,
+		);
+		expect(twoColumns).not.toBeNull();
+		expect(body).toContain("max-inline-size: 880px");
+	});
 });

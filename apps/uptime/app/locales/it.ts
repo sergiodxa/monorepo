@@ -3456,31 +3456,50 @@ export default {
 					scopes: {
 						label: "Permessi",
 						description: "Selezioni a cosa può accedere questa chiave API.",
-						options: {
-							"teams:read": "Leggi Team",
-							"teams:write": "Scrivi Team",
-							"invites:read": "Leggi Inviti",
-							"invites:write": "Scrivi Inviti",
-							"team-domains:read": "Leggi Domini",
-							"team-domains:write": "Scrivi Domini",
-							"monitors:read": "Leggi Monitor",
-							"monitors:write": "Scrivi Monitor",
-							"maintenance:read": "Leggi Manutenzione",
-							"maintenance:write": "Scrivi Manutenzione",
-							"dns-monitors:read": "Leggi Monitor DNS",
-							"dns-monitors:write": "Scrivi Monitor DNS",
-							"tcp-monitors:read": "Leggi Monitor TCP",
-							"tcp-monitors:write": "Scrivi Monitor TCP",
-							"alerts:read": "Leggi Avvisi",
-							"alerts:write": "Scrivi Avvisi",
-							"status-pages:read": "Leggi Pagine di Stato",
-							"status-pages:write": "Scrivi Pagine di Stato",
-							"cron-jobs:read": "Leggi Cron Jobs",
-							"cron-jobs:write": "Scrivi Cron Jobs",
-							"cron-jobs:ping": "Ping Cron Jobs",
-							"api-keys:read": "Leggi Chiavi API",
-							"api-keys:write": "Scrivi Chiavi API",
-							"ping:trigger": "Attivare Ping",
+						descriptions: {
+							"teams:read": "Legge il nome e il logo del team ed elenca i membri con i loro ruoli.",
+							"teams:write":
+								"Modifica il nome e il logo del team. Non consente di aggiungere o rimuovere membri, né di eliminare il team.",
+							"invites:read":
+								"Elenca gli inviti del team, in sospeso e accettati, compreso l'indirizzo email a cui ciascuno è stato inviato.",
+							"invites:write":
+								"Invita un indirizzo email nel team e revoca un invito esistente. Chi accetta un invito diventa membro.",
+							"team-domains:read":
+								"Elenca i domini rivendicati dal team e indica se ciascuno è verificato.",
+							"team-domains:write":
+								"Rivendica un dominio per il team o lo rimuove. Una volta verificato un dominio, chiunque si registri con un'email di quel dominio entra automaticamente nel team.",
+							"monitors:read":
+								"Legge i monitor HTTP, i loro risultati di controllo, le statistiche di disponibilità e lo stato complessivo del team.",
+							"monitors:write":
+								"Crea, aggiorna ed elimina i monitor HTTP e i loro controlli sul contenuto. Consente anche di accodare una ricostruzione delle statistiche giornaliere.",
+							"maintenance:read": "Elenca e legge le finestre di manutenzione del team.",
+							"maintenance:write":
+								"Crea, aggiorna, termina in anticipo ed elimina le finestre di manutenzione. Una finestra in corso può sospendere gli avvisi dei monitor che copre.",
+							"dns-monitors:read":
+								"Elenca e legge i monitor DNS e i risultati di risoluzione registrati.",
+							"dns-monitors:write": "Crea, aggiorna ed elimina i monitor DNS.",
+							"tcp-monitors:read":
+								"Elenca e legge i monitor TCP e i risultati di connessione registrati.",
+							"tcp-monitors:write": "Crea, aggiorna ed elimina i monitor TCP.",
+							"alerts:read":
+								"Elenca e legge gli avvisi e gli eventi che hanno generato. Gli URL dei webhook e gli altri segreti dei canali non vengono mai restituiti.",
+							"alerts:write":
+								"Crea, aggiorna ed elimina gli avvisi, comprese le destinazioni webhook e chat. Eliminare un avviso interrompe tutte le notifiche che inviava.",
+							"status-pages:read":
+								"Elenca e legge le pagine di stato del team e i monitor collegati a ciascuna.",
+							"status-pages:write":
+								"Crea, aggiorna ed elimina le pagine di stato e sostituisce l'insieme di monitor e cron job che una pagina mostra pubblicamente.",
+							"cron-jobs:read": "Elenca e legge i cron job del team e le loro pianificazioni.",
+							"cron-jobs:write":
+								"Crea, aggiorna ed elimina i cron job. Eliminandone uno, il suo URL di ping non viene più accettato.",
+							"cron-jobs:ping":
+								"Presente per l'URL di ping dei cron job, che è pubblico e non verifica alcun ambito. Concederlo non dà alla chiave alcun accesso che non abbia già.",
+							"api-keys:read":
+								"Elenca le chiavi API del team con nome, prefisso, ambiti e scadenza. La chiave segreta non viene mai restituita.",
+							"api-keys:write":
+								"Crea ed elimina le chiavi API del team. Una nuova chiave può ricevere qualsiasi ambito, quindi questo permesso consente di concedere tutti gli altri.",
+							"ping:trigger":
+								"Esegue controlli HTTP, DNS e TCP estemporanei senza creare un monitor. Ogni controllo viene fatturato come un ping e richiede un abbonamento attivo.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
@@ -3776,7 +3795,7 @@ export default {
 			ping: {
 				title: "Pingare questo monitor",
 				description:
-					"Fai in modo che il tuo job invii una richiesta POST qui al termine. Non è richiesta alcuna autenticazione: tratta questo URL come un segreto.",
+					"Fai in modo che il tuo processo invii una richiesta POST qui al termine, con una chiave API che abbia l'ambito `cron-jobs:ping`.",
 			},
 
 			uptimeHistory: "Cronologia uptime",

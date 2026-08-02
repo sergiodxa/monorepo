@@ -3993,31 +3993,50 @@ export default {
 					scopes: {
 						label: "Permissions",
 						description: "Select what this API key can access.",
-						options: {
-							"teams:read": "Read Teams",
-							"teams:write": "Write Teams",
-							"invites:read": "Read Invites",
-							"invites:write": "Write Invites",
-							"team-domains:read": "Read Domains",
-							"team-domains:write": "Write Domains",
-							"monitors:read": "Read Monitors",
-							"monitors:write": "Write Monitors",
-							"maintenance:read": "Read Maintenance",
-							"maintenance:write": "Write Maintenance",
-							"dns-monitors:read": "Read DNS Monitors",
-							"dns-monitors:write": "Write DNS Monitors",
-							"tcp-monitors:read": "Read TCP Monitors",
-							"tcp-monitors:write": "Write TCP Monitors",
-							"alerts:read": "Read Alerts",
-							"alerts:write": "Write Alerts",
-							"status-pages:read": "Read Status Pages",
-							"status-pages:write": "Write Status Pages",
-							"cron-jobs:read": "Read Cron Jobs",
-							"cron-jobs:write": "Write Cron Jobs",
-							"cron-jobs:ping": "Ping Cron Jobs",
-							"api-keys:read": "Read API Keys",
-							"api-keys:write": "Write API Keys",
-							"ping:trigger": "Trigger Pings",
+						descriptions: {
+							"teams:read": "Read the team's name and logo, and list its members and their roles.",
+							"teams:write":
+								"Change the team's name and logo. It cannot add or remove members, or delete the team.",
+							"invites:read":
+								"List the team's invites, pending and accepted, including the email address each one was sent to.",
+							"invites:write":
+								"Invite an email address to the team and revoke an existing invite. Whoever accepts an invite becomes a member.",
+							"team-domains:read":
+								"List the domains claimed by the team and whether each one is verified.",
+							"team-domains:write":
+								"Claim a domain for the team, or remove one. Once a domain is verified, anyone signing up with an email at it joins the team automatically.",
+							"monitors:read":
+								"List and read HTTP monitors, their check results, their uptime stats and the team's overall status.",
+							"monitors:write":
+								"Create, update and delete HTTP monitors and their content checks. It can also queue a rebuild of the daily stats.",
+							"maintenance:read": "List and read the team's maintenance windows.",
+							"maintenance:write":
+								"Create, update, end early and delete maintenance windows. A running window can suppress alerts for the monitors it covers.",
+							"dns-monitors:read":
+								"List and read DNS monitors and the resolution results they recorded.",
+							"dns-monitors:write": "Create, update and delete DNS monitors.",
+							"tcp-monitors:read":
+								"List and read TCP monitors and the connection results they recorded.",
+							"tcp-monitors:write": "Create, update and delete TCP monitors.",
+							"alerts:read":
+								"List and read alerts and the events they fired. Webhook URLs and other channel secrets are never returned.",
+							"alerts:write":
+								"Create, update and delete alerts, including their webhook and chat destinations. Deleting an alert stops every notification it was sending.",
+							"status-pages:read":
+								"List and read the team's status pages and the monitors attached to each one.",
+							"status-pages:write":
+								"Create, update and delete status pages, and replace the set of monitors and cron jobs a page shows publicly.",
+							"cron-jobs:read": "List and read the team's cron jobs and their schedules.",
+							"cron-jobs:write":
+								"Create, update and delete cron jobs. Deleting one stops its ping URL from being accepted.",
+							"cron-jobs:ping":
+								"Listed for the cron job ping URL, which is public and checks no scope. Granting it gives a key no access it doesn't already have.",
+							"api-keys:read":
+								"List the team's API keys with their names, prefixes, scopes and expiry. The secret key itself is never returned.",
+							"api-keys:write":
+								"Create and delete the team's API keys. A new key can be given any scope, so this one can grant every other permission.",
+							"ping:trigger":
+								"Run one-off HTTP, DNS and TCP checks without creating a monitor. Each check is billed as one ping and needs an active subscription.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
@@ -4310,7 +4329,7 @@ export default {
 			ping: {
 				title: "Ping this monitor",
 				description:
-					"Have your job send a POST request here after it finishes. No authentication required — treat this URL as a secret.",
+					"Have your job send a POST request here after it finishes, with an API key carrying the `cron-jobs:ping` scope.",
 			},
 
 			uptimeHistory: "Uptime history",

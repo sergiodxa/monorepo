@@ -3429,31 +3429,49 @@ export default {
 					scopes: {
 						label: "権限",
 						description: "このAPIキーがアクセスできる内容を選択してください。",
-						options: {
-							"teams:read": "チームの読み取り",
-							"teams:write": "チームの書き込み",
-							"invites:read": "招待の読み取り",
-							"invites:write": "招待の書き込み",
-							"team-domains:read": "ドメインの読み取り",
-							"team-domains:write": "ドメインの書き込み",
-							"monitors:read": "モニターの読み取り",
-							"monitors:write": "モニターの書き込み",
-							"maintenance:read": "メンテナンスの読み取り",
-							"maintenance:write": "メンテナンスの書き込み",
-							"dns-monitors:read": "DNSモニターの読み取り",
-							"dns-monitors:write": "DNSモニターの書き込み",
-							"tcp-monitors:read": "TCPモニターの読み取り",
-							"tcp-monitors:write": "TCPモニターの書き込み",
-							"alerts:read": "アラートの読み取り",
-							"alerts:write": "アラートの書き込み",
-							"status-pages:read": "ステータスページの読み取り",
-							"status-pages:write": "ステータスページの書き込み",
-							"cron-jobs:read": "Cronジョブの読み取り",
-							"cron-jobs:write": "Cronジョブの書き込み",
-							"cron-jobs:ping": "Cronジョブ Ping",
-							"api-keys:read": "APIキーの読み取り",
-							"api-keys:write": "APIキーの書き込み",
-							"ping:trigger": "Pingの実行",
+						descriptions: {
+							"teams:read": "チームの名前とロゴを読み取り、メンバーとその役割を一覧表示します。",
+							"teams:write":
+								"チームの名前とロゴを変更します。メンバーの追加や削除、チームの削除はできません。",
+							"invites:read":
+								"保留中と承諾済みの両方を含め、チームの招待を一覧表示します。送信先のメールアドレスも含まれます。",
+							"invites:write":
+								"メールアドレスをチームに招待し、既存の招待を取り消します。招待を承諾した相手はチームのメンバーになります。",
+							"team-domains:read":
+								"チームが登録したドメインと、それぞれの検証状況を一覧表示します。",
+							"team-domains:write":
+								"チームのドメインを登録または削除します。ドメインが検証されると、そのドメインのメールアドレスで登録した人は自動的にチームに参加します。",
+							"monitors:read":
+								"HTTPモニター、そのチェック結果、稼働率の統計、およびチームの全体ステータスを読み取ります。",
+							"monitors:write":
+								"HTTPモニターとそのコンテンツチェックを作成・更新・削除します。日次統計の再集計をキューに入れることもできます。",
+							"maintenance:read": "チームのメンテナンスウィンドウを一覧表示して読み取ります。",
+							"maintenance:write":
+								"メンテナンスウィンドウを作成・更新・早期終了・削除します。実行中のウィンドウは、対象モニターのアラートを抑制できます。",
+							"dns-monitors:read":
+								"DNSモニターと記録された名前解決の結果を一覧表示して読み取ります。",
+							"dns-monitors:write": "DNSモニターを作成・更新・削除します。",
+							"tcp-monitors:read": "TCPモニターと記録された接続結果を一覧表示して読み取ります。",
+							"tcp-monitors:write": "TCPモニターを作成・更新・削除します。",
+							"alerts:read":
+								"アラートと発生したイベントを一覧表示して読み取ります。WebhookのURLなどチャネルの秘密情報が返されることはありません。",
+							"alerts:write":
+								"Webhookやチャットの送信先を含め、アラートを作成・更新・削除します。アラートを削除すると、そのアラートによる通知はすべて停止します。",
+							"status-pages:read":
+								"チームのステータスページと、各ページに紐づくモニターを一覧表示して読み取ります。",
+							"status-pages:write":
+								"ステータスページを作成・更新・削除し、ページが公開するモニターとCronジョブの組み合わせを差し替えます。",
+							"cron-jobs:read": "チームのCronジョブとそのスケジュールを一覧表示して読み取ります。",
+							"cron-jobs:write":
+								"Cronジョブを作成・更新・削除します。削除すると、そのping URLは受け付けられなくなります。",
+							"cron-jobs:ping":
+								"CronジョブのpingURLのために用意されていますが、このURLは公開でスコープを確認しません。付与しても、キーの権限は変わりません。",
+							"api-keys:read":
+								"チームのAPIキーを名前・プレフィックス・スコープ・有効期限とともに一覧表示します。キーの本体が返されることはありません。",
+							"api-keys:write":
+								"チームのAPIキーを作成・削除します。新しいキーには任意のスコープを与えられるため、この権限があれば他のすべての権限を付与できます。",
+							"ping:trigger":
+								"モニターを作成せずに、単発のHTTP・DNS・TCPチェックを実行します。1回のチェックにつき1pingとして課金され、有効なサブスクリプションが必要です。",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
@@ -3746,7 +3764,7 @@ export default {
 			ping: {
 				title: "このモニターにPingを送信",
 				description:
-					"ジョブが完了したら、ここにPOSTリクエストを送信してください。認証は不要です。このURLは秘密情報として扱ってください。",
+					"ジョブの完了後、`cron-jobs:ping` スコープを持つ API キーを添えて、ここに POST リクエストを送信してください。",
 			},
 
 			uptimeHistory: "稼働履歴",

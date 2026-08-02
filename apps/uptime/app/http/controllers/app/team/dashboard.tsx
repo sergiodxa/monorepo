@@ -9,19 +9,27 @@
  * it (notably Polar's API, the slowest of those fetches) before it can render the
  * page shell. Requires `requireUser` + `requireTeam`.
  *
- * The quick-check card is a `Frame` for a different reason than the rest: not to keep
- * the shell from blocking, but so that running a check swaps only that card. It is the
- * one thing on this page a visitor submits, and a full navigation would refetch every
- * frame around it to show one URL's result. It sits below the stat cards rather than
- * above them because the numbers are what this page is for; the quick check is a tool
- * someone reaches for, not the headline.
+ * The quick-check card is a `Frame` for two reasons rather than one: like the rest it
+ * streams behind a fallback, but it is also the one thing on this page a visitor
+ * submits, and running a check has to swap that card alone — a full navigation would
+ * refetch every frame around it to show one URL's result.
+ *
+ * The stat rows and the quick check share one grid. Wide enough, it splits into the
+ * numbers on the left and the quick check as a single column beside them, spanning both
+ * rows: the card holds a stacked form, and the full-width slim row it used to be gave it
+ * no vertical room at all. That column is a fixed track rather than a fraction, so the
+ * quick check stays the tool it is instead of growing into the headline the numbers are.
+ * Narrower than that, the grid stays the single column it is by default and the quick
+ * check falls below the stat cards — the order the markup is already in, so nothing has
+ * to be reordered for it and nothing overflows sideways.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { Empty, LinkButton } from "@pkg/r3-ui";
-import { flex, flexWrap, gap } from "@pkg/u/layout";
+import { flex, flexWrap, gap, grid, gridTemplate } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
 import { mbe } from "@pkg/u/size";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -88,71 +96,85 @@ export default createAction(routes.app.team.dashboard.index, {
 					toast={toast}
 				>
 					<div>
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
+						<div
+							mix={[
+								grid(),
+								gap("16px"),
+								mbe("24px"),
+								media("(min-width: 1280px)", gridTemplate({ columns: "minmax(0, 1fr) 280px" })),
+							]}
+						>
+							<div>
+								<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
+									<Frame
+										name="dashboard-card-usage"
+										src={routes.app.team.dashboard.cards.usage.href({ team: ctx.team.slug })}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-uptime"
+										src={routes.app.team.dashboard.cards.uptime.href({ team: ctx.team.slug })}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-slowest-endpoint"
+										src={routes.app.team.dashboard.cards.slowestEndpoint.href({
+											team: ctx.team.slug,
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+								</div>
+
+								<div mix={[flex(), flexWrap(), gap("16px")]}>
+									<Frame
+										name="dashboard-card-count-http"
+										src={routes.app.team.dashboard.cards.count.href({
+											team: ctx.team.slug,
+											resource: "http",
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-count-dns"
+										src={routes.app.team.dashboard.cards.count.href({
+											team: ctx.team.slug,
+											resource: "dns",
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-count-tcp"
+										src={routes.app.team.dashboard.cards.count.href({
+											team: ctx.team.slug,
+											resource: "tcp",
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-count-cron-jobs"
+										src={routes.app.team.dashboard.cards.count.href({
+											team: ctx.team.slug,
+											resource: "cron-jobs",
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+									<Frame
+										name="dashboard-card-count-ssl"
+										src={routes.app.team.dashboard.cards.count.href({
+											team: ctx.team.slug,
+											resource: "ssl",
+										})}
+										fallback={<StatCardSkeleton count={1} />}
+									/>
+								</div>
+							</div>
+
 							<Frame
-								name="dashboard-card-usage"
-								src={routes.app.team.dashboard.cards.usage.href({ team: ctx.team.slug })}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-uptime"
-								src={routes.app.team.dashboard.cards.uptime.href({ team: ctx.team.slug })}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-slowest-endpoint"
-								src={routes.app.team.dashboard.cards.slowestEndpoint.href({ team: ctx.team.slug })}
-								fallback={<StatCardSkeleton count={1} />}
+								name="dashboard-quick-ping"
+								src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
+								fallback={<StatCardSkeleton shape="field" />}
 							/>
 						</div>
-
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-							<Frame
-								name="dashboard-card-count-http"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "http",
-								})}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-count-dns"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "dns",
-								})}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-count-tcp"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "tcp",
-								})}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-count-cron-jobs"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "cron-jobs",
-								})}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-							<Frame
-								name="dashboard-card-count-ssl"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "ssl",
-								})}
-								fallback={<StatCardSkeleton count={1} />}
-							/>
-						</div>
-
-						<Frame
-							name="dashboard-quick-ping"
-							src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
-						/>
 
 						<Frame
 							name="dashboard-panel"

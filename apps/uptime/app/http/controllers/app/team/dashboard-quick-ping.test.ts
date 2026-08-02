@@ -189,22 +189,24 @@ describe("dashboard-quick-ping", () => {
 		let body = await response.text();
 		expect(body).toContain(en.page.dashboard.quickPing.title);
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
-		// The row is one line and shows no description of its own, so the sentence that used
-		// to be one has to still reach a visitor somewhere: it is the heading's tooltip.
-		expect(body).toContain(`title="${en.page.dashboard.quickPing.description}"`);
+		// The one place a visitor is told a check saves nothing and sends no alerts. It spent
+		// a while as the heading's `title`, where a touch screen never showed it at all; the
+		// tall card has the room to draw it, and the tooltip is gone rather than doubled up.
+		expect(body).toContain(en.page.dashboard.quickPing.description);
+		expect(body).not.toContain(`title="${en.page.dashboard.quickPing.description}"`);
 		// Nothing to report yet, so the card carries no status line at all.
 		expect(body).not.toContain(en.page.dashboard.quickPing.result.status.up);
 		expect(body).not.toContain("HTTP");
 	});
 
-	test("names the field for a screen reader even though its caption is not drawn", async () => {
+	test("names the field through a label that wraps it rather than through an id", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await render(db, team, membership)).text();
 
-		// The caption is clipped rather than dropped, so the accessible name now rests on two
-		// things a restyle could quietly take away: the text still being in the document, and
-		// the `<label>` still wrapping the control that would otherwise have nothing naming it.
+		// The caption is drawn again now that the card is a tall column with a line to draw it
+		// on, but the accessible name never depended on that and must not start to: it rests
+		// on the `<label>` still wrapping the control, which no restyle can quietly take away.
 		expect(body).toMatch(
 			new RegExp(
 				`<label[^>]*>\\s*<span[^>]*>${en.page.dashboard.quickPing.field.label}</span>\\s*<input[^>]*name="url"`,

@@ -1,8 +1,7 @@
 /**
  * The dashboard's quick-check card: a URL box that probes one target once and shows what
- * came back, without creating a monitor. It sits below the dashboard's stat cards,
- * because the numbers are what the page is for and a check nobody has run yet should not
- * out-weigh them.
+ * came back, without creating a monitor. It is the tall card in the column beside the
+ * dashboard's stat cards, dropping below them when there is no room for two columns.
  *
  * The card itself is server-rendered; only the form inside it is a client island, so
  * that a submit swaps this one frame instead of navigating the whole dashboard. The
@@ -20,10 +19,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { Badge, Card } from "@pkg/r3-ui";
+import { Badge, Card, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
-import { flex, flexWrap, gap, items } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
+import { flex, flexCol, gap, items } from "@pkg/u/layout";
 import { fontSize, weight } from "@pkg/u/typography";
 
 import type {
@@ -58,11 +56,15 @@ namespace QuickPing {
 }
 
 /**
- * Everything the card has fits on one line, deliberately: a full card with its own
- * heading and description block read as the most important thing on a page it is the
- * least important thing on. The sentence that used to be that description survives as the
- * heading's `title`, since it is the only place a visitor is told a check saves nothing
- * and sends no alerts.
+ * Everything stacks, top to bottom, because the card is a narrow column rather than the
+ * full-width strip it used to be. That vertical room is what buys back the description
+ * as real copy under the heading: it is the only place a visitor is told a check saves
+ * nothing and sends no alerts, and it spent a while surviving as the heading's `title`,
+ * where a touch screen never showed it at all.
+ *
+ * The heading is a `Text` rather than a `Card.Title`, whose 2xl step is the size the
+ * stat cards use for their figures — the loudest thing in this column should not be the
+ * one card that holds no number.
  */
 export default function QuickPing(handle: Handle<QuickPing.Props>) {
 	return () => {
@@ -70,38 +72,39 @@ export default function QuickPing(handle: Handle<QuickPing.Props>) {
 		let result = outcome?.kind === "result" ? outcome : undefined;
 
 		return (
-			<Card mix={[mbe("24px")]}>
-				<Card.Content>
-					<div mix={[flex(), flexWrap(), gap("12px"), items("center")]}>
-						<span mix={[fontSize("sm"), weight("medium")]} title={labels.description}>
-							{labels.title}
-						</span>
+			<Card>
+				<Card.Header>
+					<Text mix={[fontSize("sm"), weight("medium"), fg("neutral.emphasis")]}>
+						{labels.title}
+					</Text>
+					<Card.Description>{labels.description}</Card.Description>
+				</Card.Header>
 
-						<QuickPingForm
-							action={action}
-							src={src}
-							url={result?.url}
-							label={labels.field}
-							placeholder={labels.placeholder}
-							submit={labels.submit}
-						/>
+				<Card.Content mix={[flex(), flexCol(), gap("12px")]}>
+					<QuickPingForm
+						action={action}
+						src={src}
+						url={result?.url}
+						label={labels.field}
+						placeholder={labels.placeholder}
+						submit={labels.submit}
+					/>
 
-						{outcome?.kind === "error" && (
-							<span mix={[fontSize("sm"), fg("danger")]}>{labels.error[outcome.code]}</span>
-						)}
+					{outcome?.kind === "error" && (
+						<span mix={[fontSize("sm"), fg("danger")]}>{labels.error[outcome.code]}</span>
+					)}
 
-						{result && (
-							<>
-								<Badge {...badgeVariant(result.status)}>{labels.status[result.status]}</Badge>
-								<span mix={[fontSize("sm"), fg("neutral.muted")]}>
-									{result.responseStatus === null
-										? labels.noResponse
-										: `HTTP ${result.responseStatus}`}
-									{result.responseTimeMs !== null && ` · ${Math.round(result.responseTimeMs)} ms`}
-								</span>
-							</>
-						)}
-					</div>
+					{result && (
+						<div mix={[flex(), flexCol(), gap("8px"), items("start")]}>
+							<Badge {...badgeVariant(result.status)}>{labels.status[result.status]}</Badge>
+							<span mix={[fontSize("sm"), fg("neutral.muted")]}>
+								{result.responseStatus === null
+									? labels.noResponse
+									: `HTTP ${result.responseStatus}`}
+								{result.responseTimeMs !== null && ` · ${Math.round(result.responseTimeMs)} ms`}
+							</span>
+						</div>
+					)}
 				</Card.Content>
 			</Card>
 		);

@@ -78,6 +78,35 @@ function seedTeam(
 	};
 }
 
+/**
+ * Where each named `Frame` sits in the rendered document. A frame's name never reaches
+ * the markup — it is emitted with the hydration data at the end of the response, and the
+ * frame itself is a `<!-- rmx:f:id -->` comment around its content — so the name has to
+ * be resolved to an id through that data before any position in the DOM can be read off.
+ */
+function frameMarkers(body: string): Map<string, number> {
+	let data = body.match(/<script type="application\/json" id="rmx-data">(.*?)<\/script>/s);
+	let hydration = JSON.parse(data?.[1] ?? "{}") as { f?: Record<string, { name?: string }> };
+	let frames = hydration.f ?? {};
+
+	let markers = new Map<string, number>();
+	for (let [id, frame] of Object.entries(frames)) {
+		if (frame.name) markers.set(frame.name, body.indexOf(`<!-- rmx:f:${id} -->`));
+	}
+
+	return markers;
+}
+
+/**
+ * How many `<div>`s open minus close between two offsets: negative means the second
+ * offset sits that many levels shallower than the first, which is how a "these are
+ * siblings, that one is outside them both" relationship is read off flat HTML.
+ */
+function divDepthBetween(body: string, from: number, to: number): number {
+	let between = body.slice(from, to);
+	return (between.match(/<div[ >]/g)?.length ?? 0) - (between.match(/<\/div>/g)?.length ?? 0);
+}
+
 /** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
 	let { db } = createTestDatabase();
@@ -123,7 +152,7 @@ describe("app/team/dashboard", () => {
 		expect(body).toContain(en.page.dashboard.header.action.create);
 	});
 
-	test("places the quick-check frame below the stat cards and above the panel", async () => {
+	test("makes the quick check a column beside the stat rows, with the panel outside both", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
@@ -142,14 +171,49 @@ describe("app/team/dashboard", () => {
 		);
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
-		// The page is for the numbers; the quick check is a tool someone reaches for. Frames
-		// stream in whatever order the document lists them, so this is the order they render.
-		let lastStatCard = body.indexOf("dashboard-card-count-ssl");
-		let quickPing = body.indexOf("dashboard-quick-ping");
-		let panel = body.indexOf("dashboard-panel");
-		expect(lastStatCard).toBeGreaterThan(-1);
-		expect(quickPing).toBeGreaterThan(lastStatCard);
-		expect(panel).toBeGreaterThan(quickPing);
+		let markers = frameMarkers(body);
+		let ssl = markers.get("dashboard-card-count-ssl");
+		let quickPing = markers.get("dashboard-quick-ping");
+		let panel = markers.get("dashboard-panel");
+
+		// Source order survives the two-column layout: the quick check still trails every stat
+		// card and still precedes the tab table, which is the single-column order the grid
+		// falls back to when there is no room beside the numbers.
+		expect(ssl).toBeGreaterThan(-1);
+		expect(quickPing).toBeGreaterThan(ssl!);
+		expect(panel).toBeGreaterThan(quickPing!);
+
+		// Nesting is what changed, and it is what makes the card as tall as the numbers beside
+		// it. Two `<div>`s close between the last stat card and the quick check, putting the
+		// card next to the region that holds both stat rows rather than inside it; one more
+		// closes before the panel, leaving the panel outside the grid those two share.
+		expect(divDepthBetween(body, ssl!, quickPing!)).toBe(-2);
+		expect(divDepthBetween(body, quickPing!, panel!)).toBe(-1);
+	});
+
+	test("streams the quick check behind a fallback instead of blocking the document on it", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.dashboard.index, {
+			middleware: [seedTeam(team, membership)],
+			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
+		});
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let request = new Request(
+			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let body = await (await container.scope(() => router.fetch(request))).text();
+
+		// A frame with no `fallback` blocks the whole document on its fragment, and the quick
+		// check used to be that frame. The placeholder's control-height bars — which only the
+		// taller `field` skeleton draws — are the proof it renders a fallback now and streams.
+		expect(body).toContain("block-size: 2.5rem");
 	});
 
 	test("sets the dashboardTab cookie on the response", async () => {

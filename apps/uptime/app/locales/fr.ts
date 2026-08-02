@@ -3468,31 +3468,52 @@ export default {
 					scopes: {
 						label: "Permissions",
 						description: "Sélectionnez ce à quoi cette clé API peut accéder.",
-						options: {
-							"teams:read": "Lire les équipes",
-							"teams:write": "Écrire les équipes",
-							"invites:read": "Lire les invitations",
-							"invites:write": "Écrire les invitations",
-							"team-domains:read": "Lire les domaines",
-							"team-domains:write": "Écrire les domaines",
-							"monitors:read": "Lire les moniteurs",
-							"monitors:write": "Écrire les moniteurs",
-							"maintenance:read": "Lire la maintenance",
-							"maintenance:write": "Écrire la maintenance",
-							"dns-monitors:read": "Lire les moniteurs DNS",
-							"dns-monitors:write": "Écrire les moniteurs DNS",
-							"tcp-monitors:read": "Lire les moniteurs TCP",
-							"tcp-monitors:write": "Écrire les moniteurs TCP",
-							"alerts:read": "Lire les alertes",
-							"alerts:write": "Écrire les alertes",
-							"status-pages:read": "Lire les pages de statut",
-							"status-pages:write": "Écrire les pages de statut",
-							"cron-jobs:read": "Lire les tâches Cron",
-							"cron-jobs:write": "Écrire les tâches Cron",
-							"cron-jobs:ping": "Ping Cron Jobs",
-							"api-keys:read": "Lire les clés API",
-							"api-keys:write": "Écrire les clés API",
-							"ping:trigger": "Déclencher des Pings",
+						descriptions: {
+							"teams:read":
+								"Lire le nom et le logo de l'équipe, et lister ses membres avec leurs rôles.",
+							"teams:write":
+								"Modifier le nom et le logo de l'équipe. Ne permet ni d'ajouter ou retirer des membres, ni de supprimer l'équipe.",
+							"invites:read":
+								"Lister les invitations de l'équipe, en attente comme acceptées, y compris l'adresse e-mail destinataire de chacune.",
+							"invites:write":
+								"Inviter une adresse e-mail dans l'équipe et révoquer une invitation existante. Quiconque accepte une invitation devient membre.",
+							"team-domains:read":
+								"Lister les domaines revendiqués par l'équipe et l'état de vérification de chacun.",
+							"team-domains:write":
+								"Revendiquer un domaine pour l'équipe ou en retirer un. Une fois un domaine vérifié, toute personne qui s'inscrit avec une adresse e-mail de ce domaine rejoint automatiquement l'équipe.",
+							"monitors:read":
+								"Lire les moniteurs HTTP, leurs résultats de vérification, leurs statistiques de disponibilité et le statut global de l'équipe.",
+							"monitors:write":
+								"Créer, modifier et supprimer les moniteurs HTTP et leurs vérifications de contenu. Permet aussi de mettre en file une reconstruction des statistiques quotidiennes.",
+							"maintenance:read": "Lister et lire les fenêtres de maintenance de l'équipe.",
+							"maintenance:write":
+								"Créer, modifier, terminer par anticipation et supprimer des fenêtres de maintenance. Une fenêtre en cours peut suspendre les alertes des moniteurs qu'elle couvre.",
+							"dns-monitors:read":
+								"Lister et lire les moniteurs DNS et les résultats de résolution qu'ils ont enregistrés.",
+							"dns-monitors:write": "Créer, modifier et supprimer des moniteurs DNS.",
+							"tcp-monitors:read":
+								"Lister et lire les moniteurs TCP et les résultats de connexion qu'ils ont enregistrés.",
+							"tcp-monitors:write": "Créer, modifier et supprimer des moniteurs TCP.",
+							"alerts:read":
+								"Lister et lire les alertes et les événements qu'elles ont déclenchés. Les URL de webhook et autres secrets de canal ne sont jamais renvoyés.",
+							"alerts:write":
+								"Créer, modifier et supprimer des alertes, y compris leurs destinations webhook et chat. Supprimer une alerte arrête toutes les notifications qu'elle envoyait.",
+							"status-pages:read":
+								"Lister et lire les pages de statut de l'équipe et les moniteurs rattachés à chacune.",
+							"status-pages:write":
+								"Créer, modifier et supprimer des pages de statut, et remplacer l'ensemble des moniteurs et tâches Cron qu'une page affiche publiquement.",
+							"cron-jobs:read":
+								"Lister et lire les tâches Cron de l'équipe et leurs planifications.",
+							"cron-jobs:write":
+								"Créer, modifier et supprimer des tâches Cron. En supprimer une fait cesser l'acceptation de son URL de ping.",
+							"cron-jobs:ping":
+								"Présente pour l'URL de ping des tâches Cron, qui est publique et ne vérifie aucune portée. L'accorder ne donne à une clé aucun accès qu'elle n'a déjà.",
+							"api-keys:read":
+								"Lister les clés API de l'équipe avec leur nom, préfixe, portées et expiration. La clé secrète elle-même n'est jamais renvoyée.",
+							"api-keys:write":
+								"Créer et supprimer les clés API de l'équipe. Une nouvelle clé peut recevoir n'importe quelle portée, donc celle-ci permet d'accorder toutes les autres.",
+							"ping:trigger":
+								"Exécuter des vérifications HTTP, DNS et TCP ponctuelles sans créer de moniteur. Chaque vérification est facturée comme un ping et nécessite un abonnement actif.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
@@ -3789,7 +3810,7 @@ export default {
 			ping: {
 				title: "Pinguer ce moniteur",
 				description:
-					"Faites en sorte que votre tâche envoie une requête POST ici après son exécution. Aucune authentification requise — traitez cette URL comme un secret.",
+					"Faites en sorte que votre tâche envoie une requête POST ici une fois terminée, avec une clé d'API portant la portée `cron-jobs:ping`.",
 			},
 
 			uptimeHistory: "Historique de disponibilité",
