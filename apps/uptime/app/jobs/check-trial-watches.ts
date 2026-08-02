@@ -197,7 +197,11 @@ export class CheckTrialWatchesJob extends Job {
 		 * stamping a failed send would spend the day's one change email on nothing and leave
 		 * the reader unaware their site went down.
 		 */
-		if (sent) await TrialWatch.markChangeNotified(db, watch.id, now);
+		if (sent) {
+			await TrialWatch.markChangeNotified(db, watch.id, now);
+			/** Same condition, one row up: the funnel counts what landed, not what was tried. */
+			await Lead.recordEmailSent(db, watch.lead_id, now);
+		}
 
 		return { probed: true, changed: sent, wrappedUp: false };
 	}
@@ -238,6 +242,8 @@ export class CheckTrialWatchesJob extends Job {
 
 		/** One write that both records the send and ends the watch; the two are one event. */
 		await TrialWatch.markSummarySent(db, watch.id, now);
+		/** Same condition: the funnel counts what landed, not what was tried. */
+		await Lead.recordEmailSent(db, lead.id, now);
 		return { probed: false, changed: false, wrappedUp: true };
 	}
 

@@ -331,6 +331,69 @@ describe("Lead.markDigestSent", () => {
 	});
 });
 
+describe("Lead.recordEmailSent", () => {
+	test("a new lead has received nothing", async () => {
+		expect((await upsert()).emails_sent).toBe(0);
+	});
+
+	test("counts one email at a time", async () => {
+		let lead = await upsert();
+
+		await Lead.recordEmailSent(db, lead.id);
+		await Lead.recordEmailSent(db, lead.id);
+
+		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(2);
+	});
+
+	/**
+	 * The reason the increment is one SQL statement and not a read, an add and a write. Two of
+	 * the four sends run concurrently over a batch of leads, so a lost update is not a
+	 * hypothetical — and it would lose exactly the counts of the busiest lead.
+	 */
+	test("loses no count when several sends land at once", async () => {
+		let lead = await upsert();
+
+		await Promise.all(Array.from({ length: 10 }, () => Lead.recordEmailSent(db, lead.id)));
+
+		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(10);
+	});
+
+	test("counts against one lead and not another", async () => {
+		let one = await upsert({ email: "one@example.com" });
+		let two = await upsert({ email: "two@example.com" });
+
+		await Lead.recordEmailSent(db, one.id);
+
+		expect((await Lead.findById(db, one.id))?.emails_sent).toBe(1);
+		expect((await Lead.findById(db, two.id))?.emails_sent).toBe(0);
+	});
+});
+
+describe("Lead.countFunnelActivity", () => {
+	test("counts creations and digests inside the window and nothing outside it", async () => {
+		let day = 24 * 60 * 60 * 1000;
+		let start = Date.UTC(2026, 6, 1);
+
+		let inside = await upsert({ email: "inside@example.com" });
+		let outside = await upsert({ email: "outside@example.com" });
+		await db.update(leads, inside.id, { created_at: start + 1000 }, { touch: false });
+		await db.update(leads, outside.id, { created_at: start - 1000 }, { touch: false });
+		await Lead.markDigestSent(db, outside.id, start + 2000);
+
+		let counts = await Lead.countFunnelActivity(db, start, start + day);
+
+		expect(counts.created).toBe(1);
+		expect(counts.digestsSent).toBe(1);
+	});
+
+	test("answers with zeroes when there are no leads at all", async () => {
+		expect(await Lead.countFunnelActivity(db, 0, Date.now())).toEqual({
+			created: 0,
+			digestsSent: 0,
+		});
+	});
+});
+
 describe("Lead.hasMarketingConsent", () => {
 	test("separates an email given for the watch from consent to be marketed to", async () => {
 		let withoutConsent = await upsert({ email: "quiet@example.com", consented: false });

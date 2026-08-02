@@ -152,6 +152,8 @@ export class SendTrialDigestsJob extends Job {
 
 		/** Only now: the stamp is what moves this lead's next digest to tomorrow. */
 		await Lead.markDigestSent(db, lead.id, now);
+		/** And on the same condition, because the funnel counts what landed, not what was tried. */
+		await Lead.recordEmailSent(db, lead.id, now);
 		return true;
 	}
 }

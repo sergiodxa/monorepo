@@ -25,6 +25,7 @@ import type { SelectMonitor } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import Monitor from "~/app/data/monitor";
+import TrialConversion, { trialConversionUrls } from "~/app/data/trial-conversion";
 import TrialWatch, {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
@@ -221,6 +222,96 @@ describe("idempotency", () => {
 			"https://first.example",
 			"https://second.example",
 		]);
+	});
+});
+
+describe("the funnel record", () => {
+	test("writes the snapshot the report is drawn from", async () => {
+		let lead = await createLead();
+		await threeAttempts(lead.id, 30);
+		await Lead.recordEmailSent(db, lead.id);
+		await Lead.recordEmailSent(db, lead.id);
+
+		await convert();
+
+		let record = await TrialConversion.findByOwner(db, AUTHOR_ID);
+		expect(record?.lead_created_at).toBe(lead.created_at);
+		expect(record?.emails_sent).toBe(2);
+		expect(record?.watch_count).toBe(3);
+		expect(record?.paid_at).toBeNull();
+		expect(trialConversionUrls(record ?? { urls: "[]" })).toEqual([
+			"https://a.example",
+			"https://b.example",
+			"https://c.example",
+		]);
+	});
+
+	/**
+	 * Someone whose attempts all lapsed before they got around to signing up is still an
+	 * account the free page produced, and leaving them out understates the one thing the
+	 * report measures.
+	 */
+	test("records a signup even when there was nothing left to claim", async () => {
+		let lead = await createLead();
+		await threeAttempts(lead.id, 40);
+
+		await convert();
+
+		expect(await created()).toBeEmpty();
+		expect(await TrialConversion.findByOwner(db, AUTHOR_ID)).not.toBeNull();
+	});
+
+	test("records nothing for an address that never left a lead", async () => {
+		await convert();
+
+		expect(await TrialConversion.findByOwner(db, AUTHOR_ID)).toBeNull();
+	});
+
+	/**
+	 * Conversion runs on every sign-in, and a converted lead keeps receiving digests for the
+	 * rest of their seven days — so a second sign-in arrives carrying a higher email count and
+	 * must not be allowed to rewrite the measurement taken at the first.
+	 */
+	test("a later sign-in does not move the signup date or the counts taken at the first", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://example.com", 1);
+		await Lead.recordEmailSent(db, lead.id);
+
+		await convert();
+		let first = await TrialConversion.findByOwner(db, AUTHOR_ID);
+
+		await Lead.recordEmailSent(db, lead.id);
+		await attempt(lead.id, "https://second.example", 0);
+		await convert();
+
+		let second = await TrialConversion.findByOwner(db, AUTHOR_ID);
+		expect(second?.id).toBe(first?.id ?? "");
+		expect(second?.signed_up_at).toBe(first?.signed_up_at ?? 0);
+		expect(second?.emails_sent).toBe(1);
+		expect(second?.watch_count).toBe(1);
+	});
+
+	test("a payment already recorded survives every later sign-in", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://example.com", 1);
+		await convert();
+
+		let paidAt = Date.now() - MS_PER_DAY;
+		await TrialConversion.markPaid(db, AUTHOR_ID, paidAt);
+		await convert();
+
+		expect((await TrialConversion.findByOwner(db, AUTHOR_ID))?.paid_at).toBe(paidAt);
+	});
+
+	test("a failure recording it costs nobody their monitors", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://example.com", 1);
+		spyOn(TrialConversion, "recordSignup").mockRejectedValue(new Error("insert failed"));
+
+		await convert();
+
+		expect(await created()).toHaveLength(1);
+		spyOn(TrialConversion, "recordSignup").mockRestore();
 	});
 });
 

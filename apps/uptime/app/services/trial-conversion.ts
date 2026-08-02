@@ -10,6 +10,12 @@
  * module's — each watch carries its own clock, so a lead who tried three URLs a few days
  * apart can have two of them claimed and the third already lapsed.
  *
+ * It is also where the funnel's middle is recorded. Sign-in is the only moment at which a
+ * lead and an account are known to be the same person, so it is the only moment at which
+ * "this customer came from the free page" can ever be written down — and it has to be
+ * written by copying, because every row it is copied from is deleted within thirty days or
+ * the instant they unsubscribe. That snapshot is `~/app/data/trial-conversion.ts`.
+ *
  * **Nothing here may block sign-in.** Auto-creating monitors is a nicety on the one path a
  * user cannot route around, so every failure is logged and swallowed, in the shape
  * `Customer.cancelSubscriptions` and `CheckHttpJob`'s alert dispatch already use. A lead
@@ -24,10 +30,11 @@ import type { Database } from "remix/data-table";
 
 import { logger } from "@pkg/logger";
 
-import type { SelectTrialWatch } from "~/database/schema";
+import type { SelectLead, SelectTrialWatch } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import Monitor from "~/app/data/monitor";
+import TrialConversion from "~/app/data/trial-conversion";
 import TrialWatch from "~/app/data/trial-watch";
 
 /**
@@ -45,7 +52,7 @@ import TrialWatch from "~/app/data/trial-watch";
 const CONVERTED_INTERVAL_SECONDS = 600;
 
 /** Who signed in, and where their claimed targets go. */
-export interface TrialConversion {
+export interface TrialConversionSubject {
 	/** The authenticated subject's address, matched against `leads.email`. */
 	email: string;
 	/** The team they were just provisioned into, which must already exist. */
@@ -97,18 +104,25 @@ export interface TrialConversion {
  *
  * Never throws.
  */
-export async function convertTrialWatches(db: Database, subject: TrialConversion): Promise<void> {
+export async function convertTrialWatches(
+	db: Database,
+	subject: TrialConversionSubject,
+): Promise<void> {
 	try {
 		let lead = await Lead.findByEmail(db, subject.email);
 		if (!lead) return;
 
-		let watches = await TrialWatch.listConvertibleByLead(db, lead.id, Date.now());
-		if (watches.length === 0) return;
+		let now = Date.now();
+		let watches = await TrialWatch.listConvertibleByLead(db, lead.id, now);
 
 		let converted = 0;
 		for (let watch of watches) {
 			if (await convertWatch(db, subject, watch)) converted += 1;
 		}
+
+		await recordSignup(db, subject, lead, now);
+
+		if (watches.length === 0) return;
 
 		logger.info("trial_conversion.completed", {
 			leadId: lead.id,
@@ -120,6 +134,62 @@ export async function convertTrialWatches(db: Database, subject: TrialConversion
 		logger.error("trial_conversion.failed", {
 			teamId: subject.teamId,
 			authorId: subject.authorId,
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
+}
+
+/**
+ * Writes the durable record that this account came from the free page.
+ *
+ * **Runs after the monitors, and cannot affect them.** Instrumentation must never be the
+ * reason somebody's targets did not get claimed, so it goes last and catches its own
+ * failures rather than sharing the caller's — a snapshot that failed to write is a hole in a
+ * report, while a snapshot that threw before the loop would be a hole in someone's dashboard.
+ *
+ * **Runs even when nothing was claimable.** Someone whose attempts all lapsed before they got
+ * around to signing up is still a customer the free page produced, and the count that leaves
+ * them out is the count that understates the thing being measured. Repeat sign-ins are free:
+ * `TrialConversion.recordSignup` ignores a subject it already has.
+ *
+ * **It reads every attempt, not the claimable ones the caller already has.** A watch that
+ * lapsed before they signed up is still a URL they tried and an email they were sent, and the
+ * snapshot is meant to describe how they got here rather than what they were owed on arrival.
+ * That is one indexed read on a path that only reaches here for an address that left a lead.
+ *
+ * The URLs are de-duplicated because a person who tried the same address twice tried one URL,
+ * while `watch_count` keeps counting attempts — the two columns answer "what did they try"
+ * and "how many times did they use the form", which are different questions.
+ */
+async function recordSignup(
+	db: Database,
+	subject: TrialConversionSubject,
+	lead: SelectLead,
+	now: number,
+): Promise<void> {
+	try {
+		/** Reversed to oldest first, which is the order they tried them and the order to read. */
+		let watches = [...(await TrialWatch.listByLead(db, lead.id))].reverse();
+
+		let created = await TrialConversion.recordSignup(db, {
+			ownerId: subject.authorId,
+			leadCreatedAt: lead.created_at,
+			emailsSent: lead.emails_sent,
+			urls: [...new Set(watches.map((watch) => watch.url))],
+			watchCount: watches.length,
+			signedUpAt: now,
+		});
+
+		if (created) {
+			logger.info("trial_conversion.signup_recorded", {
+				ownerId: subject.authorId,
+				emailsSent: lead.emails_sent,
+				watchCount: watches.length,
+			});
+		}
+	} catch (error) {
+		logger.error("trial_conversion.signup_record_failed", {
+			ownerId: subject.authorId,
 			error: error instanceof Error ? error.message : String(error),
 		});
 	}
@@ -147,7 +217,7 @@ export async function convertTrialWatches(db: Database, subject: TrialConversion
  */
 async function convertWatch(
 	db: Database,
-	subject: TrialConversion,
+	subject: TrialConversionSubject,
 	watch: SelectTrialWatch,
 ): Promise<boolean> {
 	try {

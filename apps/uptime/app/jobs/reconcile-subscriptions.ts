@@ -21,6 +21,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
+import TrialConversion from "~/app/data/trial-conversion";
 
 export class ReconcileSubscriptionsJob extends Job {
 	/** The "Reconcile Polar Subscriptions" cron monitor this job reports itself to when it completes. */
@@ -73,6 +74,18 @@ export class ReconcileSubscriptionsJob extends Job {
 			let entitled = isActiveSubscriptionStatus(subscription.status);
 			let monitors = await Subscription.applyEntitlement(db, ownerId, entitled);
 			repaired += 1;
+
+			/**
+			 * The trial funnel's payment stamp, repaired here for the same reason the entitlement
+			 * is: a first-payment webhook that never arrived would otherwise leave a converted
+			 * customer recorded forever as a free signup, and the report would understate the one
+			 * number it exists to produce. Only rows that drifted reach this loop, so a working
+			 * webhook never gets here twice, and `markPaid` refuses to move a stamp that is
+			 * already set — the cost of a repair is that the payment is dated the day it was
+			 * noticed rather than the day it happened, which is at most a day out and is better
+			 * than never recording it at all.
+			 */
+			if (entitled) await TrialConversion.markPaid(db, ownerId);
 
 			this.logger.error("job.reconcile_subscriptions.repaired", {
 				subscriptionId: subscription.id,

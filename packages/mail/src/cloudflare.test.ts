@@ -1,8 +1,8 @@
 /**
  * Tests the binding transport against a double standing in for the platform, so the
- * envelope it builds is asserted directly: a bare sender, one message per recipient,
- * the same assembled body for all of them, and a rejection reported as a failure
- * rather than thrown.
+ * mapping from a normalized message onto the binding's send payload is asserted
+ * directly: formatted addresses, omitted empty fields, the identifier the platform
+ * assigns, and a refusal reported as a failure rather than thrown.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,35 +12,16 @@ import { describe, expect, test } from "bun:test";
 
 import { isFailure, isSuccess } from "@pkg/result";
 
+import type { SendEmailMessage, SendEmailResult } from "./cloudflare";
 import type { NormalizedMessage } from "./types";
 
 import { CloudflareTransport } from "./cloudflare";
 import { MailError } from "./errors";
 
-/** Sender identity, with a display name so the envelope's bare address is observable. */
+/** Sender identity, with a display name so formatting is observable in the payload. */
 const SENDER = { email: "no-reply@example.com", name: "Example" };
 
-/**
- * Stand-in for the platform's `EmailMessage`, recording what it was constructed
- * with. A real class is used rather than a plain object so the injected constructor
- * is exercised the way an app's import of it would be.
- */
-class FakeEmailMessage {
-	/**
-	 * Records the envelope and body handed to the platform.
-	 *
-	 * @param from - Envelope sender.
-	 * @param to - Envelope recipient.
-	 * @param raw - The complete RFC 5322 message.
-	 */
-	constructor(
-		readonly from: string,
-		readonly to: string,
-		readonly raw: string,
-	) {}
-}
-
-/** Builds a normalized message, which is the only shape a transport receives. */
+/** Builds a normalized message, which is the only shape a transport ever receives. */
 function createMessage(overrides?: Partial<NormalizedMessage>): NormalizedMessage {
 	return {
 		from: SENDER,
@@ -51,7 +32,7 @@ function createMessage(overrides?: Partial<NormalizedMessage>): NormalizedMessag
 		subject: "Hi",
 		html: "<p>Hi</p>",
 		text: "Hi",
-		headers: {},
+		headers: { "X-App": "example" },
 		date: new Date("2026-01-01T00:00:00.000Z"),
 		messageId: "<one@example.com>",
 		...overrides,
@@ -59,135 +40,119 @@ function createMessage(overrides?: Partial<NormalizedMessage>): NormalizedMessag
 }
 
 /**
- * Builds a binding double that records every message. `rejectFor` makes it refuse one
- * recipient, which is how the platform reports a destination it will not deliver to.
+ * Builds a binding double that records every payload. `respond` decides what the
+ * platform reports back, including the throw a refused message produces.
  */
-function createBinding(rejectFor?: string) {
-	let messages: FakeEmailMessage[] = [];
+function createBinding(respond: () => SendEmailResult) {
+	let payloads: SendEmailMessage[] = [];
 
 	let binding = {
-		/** Records the message, or rejects when the recipient is the refused one. */
-		async send(message: FakeEmailMessage): Promise<void> {
-			if (message.to === rejectFor) throw new Error(`Destination "${message.to}" not verified`);
-			messages.push(message);
+		/** Records the payload and reports whatever the test's responder decides. */
+		async send(message: SendEmailMessage): Promise<SendEmailResult> {
+			payloads.push(message);
+			return respond();
 		},
 	};
 
-	return { binding, messages };
+	return { binding, payloads };
 }
 
-/** Builds the transport around a double, with the fake constructor standing in for the platform's. */
-function createTransport(rejectFor?: string) {
-	let { binding, messages } = createBinding(rejectFor);
-	let transport = new CloudflareTransport({ binding, EmailMessage: FakeEmailMessage });
-	return { transport, messages };
+/** A binding that accepts every message and assigns it an identifier. */
+function createAcceptingBinding(messageId = "platform-id") {
+	return createBinding(() => ({ messageId }));
 }
 
 describe("CloudflareTransport", () => {
-	test("sends the assembled message with a bare sender and recipient envelope", async () => {
-		let { transport, messages } = createTransport();
+	test("maps every field of a normalized message onto the binding payload", async () => {
+		let { binding, payloads } = createAcceptingBinding();
 
-		let result = await transport.send(createMessage());
+		await new CloudflareTransport(binding).send(
+			createMessage({
+				cc: [{ email: "cc@example.com" }],
+				bcc: [{ email: "audit@example.com" }],
+				replyTo: [{ email: "hello@example.com" }],
+			}),
+		);
 
-		expect(isSuccess(result)).toBe(true);
-		expect(messages).toHaveLength(1);
-		expect(messages[0]?.from).toBe("no-reply@example.com");
-		expect(messages[0]?.to).toBe("ada@example.com");
+		expect(payloads).toHaveLength(1);
+		expect(payloads[0]).toEqual({
+			from: "Example <no-reply@example.com>",
+			to: ["Ada <ada@example.com>"],
+			cc: ["cc@example.com"],
+			bcc: ["audit@example.com"],
+			replyTo: "hello@example.com",
+			subject: "Hi",
+			html: "<p>Hi</p>",
+			text: "Hi",
+			headers: { "X-App": "example" },
+		});
 	});
 
-	test("hands over a raw MIME message carrying the headers and both body parts", async () => {
-		let { transport, messages } = createTransport();
+	test("sends one message for every recipient at once instead of one per address", async () => {
+		let { binding, payloads } = createAcceptingBinding();
 
-		await transport.send(createMessage({ subject: "Your invite", text: "Hi", html: "<p>Hi</p>" }));
-		let raw = messages[0]?.raw ?? "";
-
-		expect(raw).toContain("From: Example <no-reply@example.com>\r\n");
-		expect(raw).toContain("To: Ada <ada@example.com>\r\n");
-		expect(raw).toContain("Subject: Your invite\r\n");
-		expect(raw).toContain("Message-ID: <one@example.com>\r\n");
-		expect(raw).toContain("MIME-Version: 1.0\r\n");
-		expect(raw).toContain("Content-Type: multipart/alternative;");
-		expect(raw).toContain("Content-Type: text/plain; charset=utf-8\r\n");
-		expect(raw).toContain("Content-Type: text/html; charset=utf-8\r\n");
-	});
-
-	test("reports the message's own identifier, since the binding assigns none", async () => {
-		let { transport } = createTransport();
-
-		let result = await transport.send(createMessage({ messageId: "<generated@example.com>" }));
-
-		expect(isSuccess(result)).toBe(true);
-		if (isSuccess(result)) expect(result.data.messageId).toBe("<generated@example.com>");
-	});
-
-	test("sends once per envelope recipient, blind copies included, with one assembled body", async () => {
-		let { transport, messages } = createTransport();
-
-		await transport.send(
+		await new CloudflareTransport(binding).send(
 			createMessage({
 				to: [{ email: "ada@example.com" }, { email: "grace@example.com" }],
-				cc: [{ email: "cc@example.com" }],
 				bcc: [{ email: "audit@example.com" }],
 			}),
 		);
 
-		expect(messages.map((message) => message.to)).toEqual([
-			"ada@example.com",
-			"grace@example.com",
-			"cc@example.com",
-			"audit@example.com",
-		]);
-		expect(new Set(messages.map((message) => message.raw)).size).toBe(1);
-		expect(messages[0]?.raw).not.toContain("audit@example.com");
+		expect(payloads).toHaveLength(1);
+		expect(payloads[0]?.to).toEqual(["ada@example.com", "grace@example.com"]);
 	});
 
-	test("delivers once to an address listed in more than one field", async () => {
-		let { transport, messages } = createTransport();
+	test("omits the copy and reply-to fields when the message has none", async () => {
+		let { binding, payloads } = createAcceptingBinding();
 
-		await transport.send(
-			createMessage({ to: [{ email: "ada@example.com" }], cc: [{ email: "ada@example.com" }] }),
+		await new CloudflareTransport(binding).send(createMessage());
+
+		expect(payloads[0]?.cc).toBeUndefined();
+		expect(payloads[0]?.bcc).toBeUndefined();
+		expect(payloads[0]?.replyTo).toBeUndefined();
+	});
+
+	test("keeps only the first reply-to, since the platform's field holds one mailbox", async () => {
+		let { binding, payloads } = createAcceptingBinding();
+
+		await new CloudflareTransport(binding).send(
+			createMessage({
+				replyTo: [{ email: "hello@example.com", name: "Support" }, { email: "second@example.com" }],
+			}),
 		);
 
-		expect(messages).toHaveLength(1);
+		expect(payloads[0]?.replyTo).toBe("Support <hello@example.com>");
 	});
 
-	test("turns a rejected message into a failure naming the recipient", async () => {
-		let { transport } = createTransport("ada@example.com");
+	test("sends a text-only message without an HTML part", async () => {
+		let { binding, payloads } = createAcceptingBinding();
 
-		let result = await transport.send(createMessage());
+		await new CloudflareTransport(binding).send(createMessage({ html: undefined }));
+
+		expect(payloads[0]?.html).toBeUndefined();
+		expect(payloads[0]?.text).toBe("Hi");
+	});
+
+	test("reports the identifier the platform assigned, not the message's own", async () => {
+		let { binding } = createAcceptingBinding("cf-123");
+
+		let result = await new CloudflareTransport(binding).send(createMessage());
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.messageId).toBe("cf-123");
+	});
+
+	test("turns a refused message into a failure instead of an exception", async () => {
+		let { binding } = createBinding(() => {
+			throw new Error('Destination "ada@example.com" not verified');
+		});
+
+		let result = await new CloudflareTransport(binding).send(createMessage());
 
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) {
 			expect(result.error).toBeInstanceOf(MailError);
-			expect(result.error.message).toContain("ada@example.com");
 			expect(result.error.cause).toBeInstanceOf(Error);
 		}
-	});
-
-	test("stops at the first rejection instead of continuing down the recipient list", async () => {
-		let { transport, messages } = createTransport("grace@example.com");
-
-		let result = await transport.send(
-			createMessage({
-				to: [
-					{ email: "ada@example.com" },
-					{ email: "grace@example.com" },
-					{ email: "hopper@example.com" },
-				],
-			}),
-		);
-
-		expect(isFailure(result)).toBe(true);
-		expect(messages.map((message) => message.to)).toEqual(["ada@example.com"]);
-	});
-
-	test("fails a message with no recipient at all instead of calling the binding", async () => {
-		let { transport, messages } = createTransport();
-
-		let result = await transport.send(createMessage({ to: [] }));
-
-		expect(isFailure(result)).toBe(true);
-		if (isFailure(result)) expect(result.error).toBeInstanceOf(MailError);
-		expect(messages).toHaveLength(0);
 	});
 });

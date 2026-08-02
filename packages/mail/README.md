@@ -24,7 +24,7 @@ Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and
 
 Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's dependency into a bundle. `resend` is an **optional peer dependency**: apps that use `@pkg/mail/resend` already have it, and apps that do not never install it. Nothing outside that subpath imports it.
 
-The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import, so any raw-MIME transport can reuse it and its tests need no Workers environment.
+The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their provider, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
 ## Usage
 
@@ -85,23 +85,24 @@ let result = await mailer.send(new TeamInviteEmail(invite));
 
 ### Sending through the Workers binding
 
-The Cloudflare transport takes the binding and the platform's `EmailMessage` class. The class is passed in rather than imported by the package, because `cloudflare:email` only resolves inside a Workers project and the package must typecheck and test outside one:
+The Cloudflare transport takes the binding and nothing else. The binding composes the message from structured fields, so the transport assembles no MIME and the app imports no platform class:
 
 ```typescript
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
-import { EmailMessage } from "cloudflare:email";
 import { env } from "cloudflare:workers";
 
-let transport = new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage });
+let transport = new CloudflareTransport(env.EMAIL);
 ```
 
 The app declares the binding in `wrangler.jsonc`, where the name is the app's choice and must match the property read above:
 
 ```jsonc
 {
-	"send_email": [{ "name": "SEND_EMAIL" }],
+	"send_email": [{ "name": "EMAIL", "remote": true }],
 }
 ```
+
+`remote: true` makes a `wrangler dev` send a real send. Without it the local implementation only logs the message it would have sent, which exercises none of the things that decide whether a message arrives: sender verification, the destination limits, and the identifier the send returns.
 
 The binding form decides what the transport may send: an entry with only a `name` allows any verified address, while `destination_address`, `allowed_destination_addresses`, and `allowed_sender_addresses` restrict recipients or senders, and a message outside those limits is refused at send time rather than at deploy time. Before the first real delivery the sending domain has to be verified for the zone, with SPF, DKIM, and DMARC records in place; without that, mail is either refused or silently filtered.
 
@@ -426,50 +427,41 @@ The provider reports API errors in its response rather than by throwing, so both
 
 #### `CloudflareTransport`
 
-##### `new CloudflareTransport(options: CloudflareTransportOptions)`
+##### `new CloudflareTransport(binding: SendEmailBinding)`
 
-Delivers through the Workers email sending binding. That binding takes a raw RFC 5322 message rather than structured fields, so the transport assembles one with `buildMimeMessage()` and hands it over unchanged.
+Delivers through the Workers email sending binding. That binding composes the message from structured fields, so the transport maps a normalized message onto them and assembles no MIME of its own.
 
 **Parameters:**
 
-- `options.binding`: The `send_email` binding declared in the app's Wrangler configuration
-- `options.EmailMessage`: The platform's `EmailMessage` class, which the app imports from `cloudflare:email`
+- `binding`: The `send_email` binding declared in the app's Wrangler configuration
 
 **Returns:**
 
-- Success carrying the message's own `Message-ID`, since the binding assigns none, or a `MailError` failure carrying the platform's rejection as `cause`
+- Success carrying the identifier the platform assigned, or a `MailError` failure carrying the platform's rejection as `cause`
 
 **Example:**
 
 ```typescript
-let transport = new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage });
+let transport = new CloudflareTransport(env.EMAIL);
 ```
 
-**Why the constructor is a parameter.** `cloudflare:email` has no type declarations outside a Workers project, so a bare import of it fails this package's typecheck and would make the transport's tests need a Workers environment. Passing the class in costs the app one import and buys a transport that is exercised with an ordinary class in tests.
-
-**Multiple recipients.** The binding accepts one envelope recipient per message, so a message addressed to several people is sent once per recipient — `to`, then `cc`, then `bcc`, with duplicates dropped — carrying the same assembled body every time. The `To` and `Cc` headers still list everyone, and blind copies still appear in no header. Sends run in order and stop at the first rejection, so a multi-recipient failure can be partial; the error names the recipient it stopped on.
+**What the binding cannot express.** `Date` and `Message-ID` are written by the platform, so the values a normalized message carries do not reach the wire; the identifier reported back is the platform's, which is the one its delivery logs are keyed by. `replyTo` is one mailbox rather than a list, so only the first survives — the rest are dropped rather than folded into a header, since a message should never ship a `Reply-To` the platform did not write.
 
 #### What this package assumes about the platform
 
 ```typescript
-type RawEmailMessage = object;
-
-interface RawEmailMessageConstructor {
-	new (from: string, to: string, raw: string): RawEmailMessage;
-}
-
 interface SendEmailBinding {
-	send(message: RawEmailMessage): Promise<void>;
+	send(message: SendEmailMessage): Promise<SendEmailResult>;
 }
 ```
 
-The binding surface is written from provider documentation, not from a verified deployment of this package. Three things are assumed:
+The binding surface is written from the platform's own generated types, not from a verified deployment of this package. Three things are assumed:
 
 - **The binding name and shape** — an app-chosen name under `send_email` in `wrangler.jsonc`, exposed on `env` as an object with a single `send` method.
-- **The `send` signature** — `send(message): Promise<void>`, resolving on acceptance and rejecting on refusal, returning no provider identifier of its own.
-- **Recipient rules** — one envelope recipient per message, the sending domain verified for the zone, and destination or sender allowlists enforced at send time by the binding's declaration form.
+- **The `send` signature** — structured fields in, `{ messageId }` out, rejecting on refusal rather than reporting the refusal in the result.
+- **Recipient rules** — the sending domain verified for the zone, and destination or sender allowlists enforced at send time by the binding's declaration form.
 
-`SendEmailBinding`, `RawEmailMessageConstructor`, and `RawEmailMessage` in `src/cloudflare.ts` are the single seam those assumptions live behind, and they are declared locally rather than taken from an ambient global for exactly that reason: if the platform's surface turns out to differ, the correction is those three declarations and the one `send()` call that uses them. `RawEmailMessage` is deliberately opaque — the transport constructs one and hands it straight back to the binding without reading a member — so a change in the platform's own object shape cannot reach this package at all.
+`SendEmailBinding`, `SendEmailMessage`, and `SendEmailResult` in `src/cloudflare.ts` are the single seam those assumptions live behind, and they are declared locally rather than taken from an ambient global for exactly that reason: the platform's types only resolve inside a Workers project, so a bare import would fail this package's typecheck and make the transport's tests need a Workers environment. If the platform's surface turns out to differ, the correction is those three declarations and the one `send()` call that uses them.
 
 ### `@pkg/mail/middleware`
 
@@ -532,7 +524,7 @@ Moving to the binding is the same construction with the other transport, once th
 
 ```typescript
 let mailer = new Mailer({
-	transport: new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage }),
+	transport: new CloudflareTransport(env.EMAIL),
 	from: { email: "no-reply@example.com", name: "Example" },
 	replyTo: { email: "hello@example.com" },
 });

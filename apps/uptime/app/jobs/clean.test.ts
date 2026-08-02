@@ -20,6 +20,7 @@ import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import TrialConversion from "~/app/data/trial-conversion";
 import { CleanJob } from "~/app/jobs/clean";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
@@ -346,5 +347,37 @@ describe("CleanJob.perform trial cleanup", () => {
 		// Consent is not an exemption while every email this feature sends is driven by a
 		// watch: with the last watch gone there is nothing left for the consent to authorise.
 		expect(await db.findMany(leads, {})).toHaveLength(0);
+	});
+
+	/**
+	 * The entire reason `trial_conversions` is a table and not a join. The lead, the watches
+	 * and their results are all gone by design; the record of what they cost and what they
+	 * became has to still be here, or nothing can answer "how long did that customer take" a
+	 * month after they converted.
+	 */
+	test("leaves a conversion record standing after every row it was copied from is swept", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("watch-1", "lead-1", now - 31 * MS_PER_DAY);
+		await seedTrialResult("result-1", "watch-1", now - 31 * MS_PER_DAY);
+		await TrialConversion.recordSignup(db, {
+			ownerId: "subject-1",
+			leadCreatedAt: now - 31 * MS_PER_DAY,
+			emailsSent: 6,
+			urls: ["https://example.com"],
+			watchCount: 1,
+			signedUpAt: now - 25 * MS_PER_DAY,
+		});
+
+		await run();
+
+		expect(await db.findMany(leads, {})).toBeEmpty();
+		expect(await db.findMany(trialWatches, {})).toBeEmpty();
+		expect(await db.findMany(trialWatchResults, {})).toBeEmpty();
+
+		let record = await TrialConversion.findByOwner(db, "subject-1");
+		expect(record?.emails_sent).toBe(6);
+		expect(record?.watch_count).toBe(1);
+		expect(record?.urls).toBe('["https://example.com"]');
 	});
 });

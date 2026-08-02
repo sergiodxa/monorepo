@@ -1,9 +1,9 @@
 /**
- * Transport for the Workers email sending binding, whose provider takes a raw RFC
- * 5322 message instead of structured fields, so it delegates to the package's MIME
- * builder and hands the result over unchanged. Both the binding and the raw-message
- * constructor arrive as options, which keeps the platform surface a single seam
- * this package can be tested and corrected at.
+ * Transport for the Workers email sending binding, whose structured send call takes
+ * the same fields a normalized message already holds, so it maps them across and
+ * assembles no MIME of its own. The binding is injected rather than read from an
+ * ambient global, which keeps the platform surface a single seam this package can be
+ * tested and corrected at.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,31 +16,39 @@ import { failure, isFailure, success, wrap } from "@pkg/result";
 import type { NormalizedMessage, SentMessage, Transport } from "./types";
 
 import { MailError } from "./errors";
-import { buildMimeMessage } from "./mime";
+import { formatAddress } from "./lib/address";
 
 /**
- * The platform's raw message object, treated as opaque: this package constructs one
- * and hands it straight back to the binding without reading a member, so a change
- * in the platform's own shape cannot break the transport. It is an alias rather
- * than an interface because only an alias can name a shape this permissive.
+ * The send payload the binding accepts, narrowed to the fields this package fills.
+ * Addresses are mailbox strings throughout: the platform also takes name/email
+ * objects, but a formatted string carries the display name just as well and keeps
+ * the mapping identical to the one every other transport performs.
  */
-export type RawEmailMessage = object;
+export interface SendEmailMessage {
+	/** Sender mailbox; the domain has to be verified for the account. */
+	from: string;
+	/** Primary recipients; the platform needs at least one of these three lists. */
+	to: string[];
+	/** Carbon-copy recipients. */
+	cc?: string[];
+	/** Blind carbon-copy recipients, which reach the envelope but no header. */
+	bcc?: string[];
+	/** Where replies go; the platform takes one mailbox, not a list. */
+	replyTo?: string;
+	/** Subject line. */
+	subject: string;
+	/** Plain-text body. */
+	text?: string;
+	/** HTML body. */
+	html?: string;
+	/** Extra headers to set on the assembled message. */
+	headers?: Record<string, string>;
+}
 
-/**
- * Constructor the platform exports as `EmailMessage`. It is injected instead of
- * imported because `cloudflare:email` has no type declarations outside a Workers
- * project, and a bare import of it would fail this package's typecheck while
- * adding nothing a test could substitute.
- */
-export interface RawEmailMessageConstructor {
-	/**
-	 * Builds the platform's raw message.
-	 *
-	 * @param from - Envelope sender, a bare address with no display name.
-	 * @param to - Envelope recipient; one per message, so a multi-recipient send is several messages.
-	 * @param raw - The complete RFC 5322 message, headers included.
-	 */
-	new (from: string, to: string, raw: string): RawEmailMessage;
+/** What the binding reports back for an accepted message. */
+export interface SendEmailResult {
+	/** Identifier the platform assigned, which is what its delivery logs are keyed by. */
+	messageId: string;
 }
 
 /**
@@ -50,93 +58,78 @@ export interface RawEmailMessageConstructor {
  */
 export interface SendEmailBinding {
 	/**
-	 * Hands one raw message to the platform for delivery.
+	 * Composes and delivers one message.
 	 *
-	 * @param message - A raw message built with {@link RawEmailMessageConstructor}.
-	 * @returns Nothing; the platform reports refusal by rejecting.
+	 * @param message - The fields to build the message from; see {@link SendEmailMessage}.
+	 * @returns The platform's identifier for the accepted message.
 	 */
-	send(message: RawEmailMessage): Promise<void>;
+	send(message: SendEmailMessage): Promise<SendEmailResult>;
 }
 
-/** What the transport needs from the app: the binding, and the constructor to build for it. */
-export interface CloudflareTransportOptions {
-	/** The `send_email` binding declared in the app's Wrangler configuration. */
-	binding: SendEmailBinding;
-	/** The platform's `EmailMessage` class, imported by the app from `cloudflare:email`. */
-	EmailMessage: RawEmailMessageConstructor;
+/** Returns the formatted list, or `undefined` when empty so an absent field is omitted. */
+function optionalAddresses(addresses: NormalizedMessage["to"]): string[] | undefined {
+	if (addresses.length === 0) return undefined;
+	return addresses.map(formatAddress);
 }
 
 /**
- * Envelope recipients for a message: everyone who receives it, blind copies
- * included, since the envelope is what actually routes mail. Duplicates are dropped
- * so an address listed twice is not delivered twice, and the order stays `to`,
- * `cc`, `bcc` so a failure reports the most important recipient first.
+ * Maps a normalized message onto the binding's send payload. Only the first reply-to
+ * mailbox survives, because the platform's field holds one address; the rest are
+ * dropped rather than folded into a header, so a message never ships a `Reply-To`
+ * the platform did not write.
  */
-function envelopeRecipients(message: NormalizedMessage): string[] {
-	let addresses = [...message.to, ...message.cc, ...message.bcc];
-	return [...new Set(addresses.map((address) => address.email))];
+function toPayload(message: NormalizedMessage): SendEmailMessage {
+	let replyTo = message.replyTo.at(0);
+
+	return {
+		from: formatAddress(message.from),
+		to: message.to.map(formatAddress),
+		cc: optionalAddresses(message.cc),
+		bcc: optionalAddresses(message.bcc),
+		replyTo: replyTo && formatAddress(replyTo),
+		subject: message.subject,
+		text: message.text,
+		html: message.html,
+		headers: message.headers,
+	};
 }
 
 /**
  * Transport that delivers through the Workers email sending binding.
  *
- * The binding accepts one envelope recipient per message, so a message addressed to
- * several people is sent once per recipient with the same assembled body; the
- * `To` and `Cc` headers still list everyone, and blind copies still appear in no
- * header. Sends run in order and stop at the first rejection, which means a
- * multi-recipient failure can be partial: the returned error names the recipient it
- * stopped on.
+ * The platform assembles the message, so the `Date` and `Message-ID` a normalized
+ * message carries are not what goes on the wire: the binding writes its own and
+ * returns the identifier it assigned, which is the one its delivery logs are keyed
+ * by. Everything else maps across a field at a time, and the binding refuses at send
+ * time — not at deploy time — anything outside the sender and destination limits its
+ * configuration declares.
  *
  * @example
- * import { EmailMessage } from "cloudflare:email";
- * let transport = new CloudflareTransport({ binding: env.SEND_EMAIL, EmailMessage });
+ * let transport = new CloudflareTransport(env.EMAIL);
  * let mailer = new Mailer({ transport, from: SENDER });
  */
 export class CloudflareTransport implements Transport {
-	/** The binding deliveries are handed to. */
-	#binding: SendEmailBinding;
-
-	/** The platform class a raw message must be wrapped in before the binding takes it. */
-	#EmailMessage: RawEmailMessageConstructor;
-
 	/**
 	 * Creates the transport around an app's binding.
 	 *
-	 * @param options - The binding and the `EmailMessage` constructor; see {@link CloudflareTransportOptions}.
+	 * @param binding - The `send_email` binding declared in the app's Wrangler configuration.
 	 */
-	constructor(options: CloudflareTransportOptions) {
-		this.#binding = options.binding;
-		this.#EmailMessage = options.EmailMessage;
-	}
+	constructor(private binding: SendEmailBinding) {}
 
 	/**
-	 * Assembles the message as raw MIME and delivers it to every envelope recipient.
+	 * Hands the message's fields to the binding, which composes and delivers it.
 	 *
 	 * @param message - The normalized message to deliver.
-	 * @returns Success carrying the message's own `Message-ID`, since the binding assigns none.
+	 * @returns The identifier the platform assigned on success, a `MailError` on rejection.
 	 */
 	async send(message: NormalizedMessage): Promise<Result<SentMessage, MailError>> {
-		let recipients = envelopeRecipients(message);
-		if (recipients.length === 0) {
-			return failure(new MailError("A message needs at least one recipient."));
-		}
-
-		let raw = buildMimeMessage(message);
-
-		for (let recipient of recipients) {
-			let outcome = await wrap(() =>
-				this.#binding.send(new this.#EmailMessage(message.from.email, recipient, raw)),
+		let outcome = await wrap(() => this.binding.send(toPayload(message)));
+		if (isFailure(outcome)) {
+			return failure(
+				new MailError("The mail binding rejected the message.", { cause: outcome.error }),
 			);
-
-			if (isFailure(outcome)) {
-				return failure(
-					new MailError(`The mail binding rejected the message for "${recipient}".`, {
-						cause: outcome.error,
-					}),
-				);
-			}
 		}
 
-		return success({ messageId: message.messageId });
+		return success({ messageId: outcome.data.messageId });
 	}
 }

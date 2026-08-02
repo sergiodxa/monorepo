@@ -119,6 +119,16 @@ export interface TrialWatchDigestEntry {
 	results: SelectTrialWatchResult[];
 }
 
+/** What one window of the funnel report needs to know about the `trial_watches` table. */
+export interface TrialWatchFunnelActivity {
+	/** URLs submitted in the window — one watch per submission, and one confirmation email. */
+	created: number;
+	/** On-change emails sent in the window. */
+	changeEmails: number;
+	/** Seven-day wrap-ups sent in the window. */
+	summaryEmails: number;
+}
+
 /**
  * Whether a status counts toward `checks_ok`.
  *
@@ -407,6 +417,53 @@ export default class TrialWatch {
 			{ summary_sent_at: sentAt, next_due_at: null },
 			{ touch: true },
 		);
+	}
+
+	/**
+	 * The three numbers the funnel report draws from this table for one UTC day.
+	 *
+	 * One statement with three conditional sums, over a table bounded to the last thirty days
+	 * of attempts, for the same reason `Lead.countFunnelActivity` scans rather than seeks: two
+	 * of the three columns carry no index, and adding one for a once-a-day read would cost a
+	 * written row on every send to save a scan of a few thousand.
+	 *
+	 * Each stamp is written at most once per watch per day — a wrap-up once ever, a change
+	 * email once a day by `shouldNotifyChange` — so counting stamps inside a window counts
+	 * emails and not watches. `created` doubles as the confirmation count, since one submission
+	 * creates exactly one watch and sends exactly one confirmation.
+	 *
+	 * @param db - Database handle.
+	 * @param from - Start of the window, inclusive.
+	 * @param to - End of the window, exclusive.
+	 * @returns Watches created, change emails sent, and wrap-ups sent inside the window.
+	 */
+	static async countFunnelActivity(
+		db: Database,
+		from: number,
+		to: number,
+	): Promise<TrialWatchFunnelActivity> {
+		let result = await db.exec(
+			`SELECT SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) AS created,
+			        SUM(CASE WHEN change_notified_at >= ? AND change_notified_at < ? THEN 1 ELSE 0 END)
+			          AS changeEmails,
+			        SUM(CASE WHEN summary_sent_at >= ? AND summary_sent_at < ? THEN 1 ELSE 0 END)
+			          AS summaryEmails
+			   FROM ${getTableName(trialWatches)}`,
+			[from, to, from, to, from, to],
+		);
+
+		// `SUM` over no rows is `NULL`, which is an empty table rather than an error.
+		let [row] = (result.rows ?? []) as unknown as {
+			created: number | null;
+			changeEmails: number | null;
+			summaryEmails: number | null;
+		}[];
+
+		return {
+			created: Number(row?.created ?? 0),
+			changeEmails: Number(row?.changeEmails ?? 0),
+			summaryEmails: Number(row?.summaryEmails ?? 0),
+		};
 	}
 
 	/**

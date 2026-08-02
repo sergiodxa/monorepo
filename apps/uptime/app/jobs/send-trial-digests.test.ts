@@ -14,9 +14,12 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 
+import type { Transport } from "@pkg/mail";
+
 import { BatchedLogger } from "@pkg/logger";
-import { Mailer } from "@pkg/mail";
+import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
+import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
@@ -34,6 +37,13 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 let transport = new MemoryTransport();
+
+/** A transport that accepts nothing, for the cases about what a failed send must not do. */
+class RefusingTransport implements Transport {
+	async send() {
+		return failure(new MailError("provider unavailable"));
+	}
+}
 
 async function runJob(db: Database) {
 	let container = new ServiceContainer();
@@ -234,5 +244,41 @@ describe("SendTrialDigestsJob", () => {
 		expect(transport.last?.text).toContain("Checks run 2");
 		expect(transport.last?.text).toContain("Uptime 50.0%");
 		expect(transport.last?.text).toContain("Slowest response 100ms");
+	});
+
+	/**
+	 * The funnel's email counter is read as "emails this person received", so it is gated on
+	 * exactly what the digest stamp is gated on. A counter incremented next to `send()` rather
+	 * than after it would measure what was attempted, which is a different number and the one
+	 * nobody asked for.
+	 */
+	test("counts the digest against the lead once it has been accepted", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db);
+		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
+
+		await runJob(db);
+
+		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(1);
+	});
+
+	test("counts nothing when the transport refuses the digest", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db);
+		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
+
+		let container = new ServiceContainer();
+		container.singleton(Database, () => db);
+		container.singleton(
+			Mailer,
+			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
+		);
+		let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
+		await container.scope(() => job.perform());
+
+		let row = await Lead.findById(db, lead.id);
+		expect(row?.emails_sent).toBe(0);
+		// And the digest stays owed, which is the existing rule this one is tied to.
+		expect(row?.last_digest_at).toBeNull();
 	});
 });

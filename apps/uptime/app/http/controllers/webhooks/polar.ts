@@ -28,6 +28,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
+import TrialConversion from "~/app/data/trial-conversion";
 import routes from "~/routes/web";
 
 /** POST /webhooks/polar */
@@ -80,12 +81,22 @@ export default createAction(routes.webhooks.polar, {
 		let entitled = isActiveSubscriptionStatus(subscription.status);
 		let monitors = await Subscription.applyEntitlement(db, ownerId, entitled);
 
+		/**
+		 * The end of the trial funnel, and the only place in the app that knows an account has
+		 * started paying. `markPaid` stamps only a row whose `paid_at` is still null, so the
+		 * renewals and plan changes that re-assert entitlement every month cannot move the
+		 * instant a customer converted, and an owner who never came through the free page has no
+		 * row to stamp — which is the ordinary case and a no-op rather than an error.
+		 */
+		let firstPayment = entitled && (await TrialConversion.markPaid(db, ownerId));
+
 		logger.info("webhook.polar.subscription", {
 			type: result.data.type,
 			ownerId,
 			status: subscription.status,
 			entitled,
 			monitors,
+			firstPayment,
 		});
 
 		return ok({ received: true });

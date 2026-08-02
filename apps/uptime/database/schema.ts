@@ -800,6 +800,17 @@ export const leads = table({
 		 * enforces and `Lead.listDueForDigest` for the query it drives.
 		 */
 		last_digest_at: c.integer().nullable(),
+		/**
+		 * How many trial emails this address has actually been sent, counted one at a time by
+		 * `Lead.recordEmailSent` and only after a transport accepted the message.
+		 *
+		 * A lifetime total and not a per-day one: the question it answers is "how many emails
+		 * had they received by the time they signed up", which is one number taken once, at
+		 * conversion, and copied onto {@link trialConversions} so it survives this row. Counting
+		 * attempts instead of accepted sends would make it a measure of what was intended rather
+		 * than of what landed, which is the opposite of what a funnel wants.
+		 */
+		emails_sent: c.integer().default(0),
 	},
 });
 
@@ -932,3 +943,105 @@ export const trialWatchResults = table({
 
 export type SelectTrialWatchResult = TableRow<typeof trialWatchResults>;
 export type InsertTrialWatchResult = InsertRow<typeof trialWatchResults>;
+
+// Trial funnel
+
+/**
+ * One account that came through the public trial: what it cost to get them there, when
+ * they signed up, and when — if ever — they started paying.
+ *
+ * **The one trial table nothing sweeps.** The other three are deleted on a thirty-day clock
+ * and an unsubscribe deletes a lead's entire history the moment it is clicked, so a row
+ * here is written by copying the facts out rather than by pointing at them: `lead_created_at`,
+ * `emails_sent`, `watch_count` and `urls` are snapshots taken at sign-up of rows that will
+ * not exist in a month. Joining back to a lead would produce a table that answers questions
+ * for thirty days and then silently stops.
+ *
+ * **Keyed on the subject, not on the address.** Three reasons, and they agree. Unsubscribing
+ * must delete every trace of a lead, and an address kept here would be a trace. Somebody who
+ * signed up is a customer rather than a lead, so the address they typed into a public form is
+ * no longer the identity that matters. And the subject is `teams.owner_id`, which is
+ * {@link subscriptions}' `external_customer_id` — so this table reaches billing without a hop
+ * through anything that expires.
+ *
+ * Both dates are written once. `signed_up_at` is set by the first sign-in that converts and
+ * never moved, because conversion runs on every sign-in and the interesting instant is the
+ * first one; `paid_at` is set by the first entitlement that lands and never moved, because a
+ * renewal is not a conversion.
+ */
+export const trialConversions = table({
+	name: "trial_conversions",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		/**
+		 * The OIDC subject, which is also `teams.owner_id`. Unique, so the sign-in path's write
+		 * is an upsert: it runs on every sign-in and a second row would double every count.
+		 */
+		owner_id: c.text().unique(),
+		/** When the lead was first created, copied off it — the start of "days to convert". */
+		lead_created_at: c.integer(),
+		/** How many trial emails they had received by sign-up, copied off `leads.emails_sent`. */
+		emails_sent: c.integer().default(0),
+		/** How many URLs they had tried, copied off their watches. */
+		watch_count: c.integer().default(0),
+		/**
+		 * The URLs themselves, as a JSON array of strings. Denormalized deliberately: the
+		 * watches are gone in a month, the list is only ever read back whole to be printed in a
+		 * report, and a child table would need its own sweep exemption to survive as long as
+		 * this row does.
+		 */
+		urls: c.text(),
+		/** The first sign-in that claimed a trial target; never moved by a later one. */
+		signed_up_at: c.integer(),
+		/**
+		 * When they first became entitled to a paid subscription, or `null` while they are on
+		 * the free tier. First payment wins — a renewal, a plan change or a repaired webhook
+		 * must not move it, or "days from lead to paid" would drift upward forever.
+		 */
+		paid_at: c.integer().nullable(),
+	},
+});
+
+export type SelectTrialConversion = TableRow<typeof trialConversions>;
+export type InsertTrialConversion = InsertRow<typeof trialConversions>;
+
+/**
+ * One reported day of the trial funnel, written by the report job and never recomputed.
+ *
+ * It exists because the tables these counters are drawn from do not keep their own past.
+ * Leads and watches are swept at thirty days and an unsubscribe removes a lead's history
+ * retroactively, so counting August in September returns a smaller number than counting
+ * August in August. A stored row is the only version of the day that stays true, and it is
+ * what the report's thirty-day context sums over.
+ *
+ * Written on every run, including a run that sends no email, so a quiet day is a row of
+ * zeroes rather than a hole. `date` is unique, which is what makes a re-run overwrite the
+ * day it recomputed instead of double-counting it.
+ */
+export const trialDailyStats = table({
+	name: "trial_daily_stats",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		/** The reported UTC day as `YYYY-MM-DD`, and the row's real key. */
+		date: c.text().unique(),
+		/** Addresses handed over for the first time that day. */
+		new_leads: c.integer().default(0),
+		/** URLs submitted to the free form that day, one per watch created. */
+		urls_checked: c.integer().default(0),
+		/** Trial emails accepted by the transport that day, across every lead. */
+		emails_sent: c.integer().default(0),
+		/** Leads who signed in and became a free account that day. */
+		free_signups: c.integer().default(0),
+		/** Converted accounts whose first payment landed that day. */
+		paid_conversions: c.integer().default(0),
+	},
+});
+
+export type SelectTrialDailyStats = TableRow<typeof trialDailyStats>;
+export type InsertTrialDailyStats = InsertRow<typeof trialDailyStats>;

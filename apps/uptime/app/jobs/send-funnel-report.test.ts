@@ -1,0 +1,261 @@
+/**
+ * Unit tests for `SendFunnelReportJob.perform()`: what it counts, when it stays quiet, and
+ * the one thing it must do on every single run whether it sends or not.
+ *
+ * The two silences are the cases most likely to regress into noise. An unconfigured
+ * deployment — local dev, preview, this test suite — has no recipient and must send nothing
+ * at all, and a day on which nobody touched the trial page must not produce an email saying
+ * so every morning. Both still write the day's row, because that row is the only version of
+ * the day that survives the thirty-day sweep, and a gap in it can never be filled in later.
+ *
+ * The recipient is read structurally off `env`, so `cloudflare:workers` is mocked and the
+ * subject imported dynamically — the default preload answers every binding with a
+ * `test-<KEY>` string, which would otherwise look like a configured address.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+
+import { BatchedLogger } from "@pkg/logger";
+import { Mailer } from "@pkg/mail";
+import { MemoryTransport } from "@pkg/mail/memory";
+import { ServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
+import Lead from "~/app/data/lead";
+import TrialConversion from "~/app/data/trial-conversion";
+import TrialDailyStats from "~/app/data/trial-daily-stats";
+import TrialWatch from "~/app/data/trial-watch";
+import { FunnelReportEmail } from "~/app/emails/funnel-report";
+import { MAIL_FROM } from "~/app/emails/sender";
+import { createTestDatabase } from "~/app/lib/test/db";
+import { leads, trialWatches } from "~/database/schema";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** The recipient this deployment is pretending to have; cleared for the unconfigured case. */
+let envStub: Record<string, unknown> = { FUNNEL_REPORT_TO: "ops@example.com" };
+
+mock.module("cloudflare:workers", () => ({
+	env: new Proxy(
+		{},
+		{
+			get: (_target, key: string) => envStub[key],
+		},
+	),
+	waitUntil: (promise: Promise<unknown>) => void promise,
+}));
+
+let { SendFunnelReportJob } = await import("~/app/jobs/send-funnel-report");
+
+let db: Database;
+let transport = new MemoryTransport();
+
+beforeEach(() => {
+	db = createTestDatabase().db;
+	transport = new MemoryTransport();
+	envStub = { FUNNEL_REPORT_TO: "ops@example.com" };
+});
+
+/** Yesterday in UTC, which is the only day the job ever reports. */
+function yesterday(): string {
+	return new Date(Date.now() - MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+/** An instant inside yesterday's UTC day, far enough from both edges to be unambiguous. */
+function duringYesterday(): number {
+	return new Date(`${yesterday()}T12:00:00.000Z`).getTime();
+}
+
+async function runJob() {
+	let container = new ServiceContainer();
+	container.singleton(Database, () => db);
+	container.singleton(Mailer, () => new Mailer({ transport, from: MAIL_FROM }));
+
+	let job = new SendFunnelReportJob({ logger: new BatchedLogger("test") }, {});
+	await container.scope(() => job.perform());
+}
+
+/** A lead created yesterday, with a watch under it — one submission of the free form. */
+async function seedSubmission(email: string, at: number = duringYesterday()) {
+	let lead = await Lead.upsertByEmail(db, { email, locale: "en", consented: false });
+	await db.update(leads, lead.id, { created_at: at }, { touch: false });
+
+	let watch = await TrialWatch.create(db, lead.id, {
+		url: `https://${email.split("@")[0]}.example`,
+	});
+	await db.update(trialWatches, watch.id, { created_at: at }, { touch: false });
+
+	return lead;
+}
+
+/** The one report this run produced, or `undefined` when it stayed quiet. */
+function reports() {
+	return transport.messages.filter((message) => message.email instanceof FunnelReportEmail);
+}
+
+describe("staying quiet", () => {
+	test("sends nothing when the deployment names no recipient", async () => {
+		envStub = {};
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		expect(reports()).toBeEmpty();
+	});
+
+	test("still writes the day's row when there is nobody to send it to", async () => {
+		envStub = {};
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		expect((await TrialDailyStats.findByDate(db, yesterday()))?.new_leads).toBe(1);
+	});
+
+	test("sends nothing on a day when nothing at all happened", async () => {
+		await runJob();
+
+		expect(reports()).toBeEmpty();
+	});
+
+	test("still writes a row of zeroes for a day when nothing happened", async () => {
+		await runJob();
+
+		let row = await TrialDailyStats.findByDate(db, yesterday());
+		expect(row).not.toBeNull();
+		expect(row?.new_leads).toBe(0);
+		expect(row?.emails_sent).toBe(0);
+		expect(row?.paid_conversions).toBe(0);
+	});
+
+	test("ignores a recipient variable that is declared and left blank", async () => {
+		envStub = { FUNNEL_REPORT_TO: "" };
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		expect(reports()).toBeEmpty();
+	});
+});
+
+describe("what the day counts", () => {
+	test("counts a submission as one lead and one URL, and its confirmation as one email", async () => {
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		let row = await TrialDailyStats.findByDate(db, yesterday());
+		expect(row?.new_leads).toBe(1);
+		expect(row?.urls_checked).toBe(1);
+		expect(row?.emails_sent).toBe(1);
+	});
+
+	test("counts the digests, change emails and wrap-ups the day's stamps record", async () => {
+		let lead = await seedSubmission("ada@example.com");
+		await db.update(leads, lead.id, { last_digest_at: duringYesterday() }, { touch: false });
+		let [watch] = await TrialWatch.listByLead(db, lead.id);
+		await db.update(
+			trialWatches,
+			watch?.id ?? "",
+			{ change_notified_at: duringYesterday(), summary_sent_at: duringYesterday() },
+			{ touch: false },
+		);
+
+		await runJob();
+
+		// The confirmation, the digest, the change email and the wrap-up.
+		expect((await TrialDailyStats.findByDate(db, yesterday()))?.emails_sent).toBe(4);
+	});
+
+	test("leaves out anything that happened on a different day", async () => {
+		await seedSubmission("ada@example.com", Date.now() - 5 * MS_PER_DAY);
+
+		await runJob();
+
+		expect((await TrialDailyStats.findByDate(db, yesterday()))?.new_leads).toBe(0);
+	});
+
+	test("counts signups and payments separately", async () => {
+		await seedSubmission("ada@example.com");
+		await TrialConversion.recordSignup(db, {
+			ownerId: "subject-1",
+			leadCreatedAt: duringYesterday() - 4 * MS_PER_DAY,
+			emailsSent: 5,
+			urls: ["https://ada.example"],
+			watchCount: 1,
+			signedUpAt: duringYesterday(),
+		});
+		await TrialConversion.markPaid(db, "subject-1", duringYesterday() + 60_000);
+
+		await runJob();
+
+		let row = await TrialDailyStats.findByDate(db, yesterday());
+		expect(row?.free_signups).toBe(1);
+		expect(row?.paid_conversions).toBe(1);
+	});
+});
+
+describe("the report itself", () => {
+	test("goes to the configured address with the headline in the subject", async () => {
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		let [message] = reports();
+		expect(message?.to.at(0)?.email).toBe("ops@example.com");
+		expect(message?.subject).toContain("1 lead, 0 signups, 0 paid");
+	});
+
+	/** Internal mail: the unsubscribe machinery every other trial email carries has no place here. */
+	test("carries no unsubscribe headers and no unsubscribe link", async () => {
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		let [message] = reports();
+		expect(message?.headers["List-Unsubscribe"]).toBeUndefined();
+		expect(message?.html).not.toContain("/unsubscribe/");
+	});
+
+	test("itemises a paid conversion with the days and emails it took", async () => {
+		await seedSubmission("ada@example.com");
+		await TrialConversion.recordSignup(db, {
+			ownerId: "subject-1",
+			leadCreatedAt: duringYesterday() - 6 * MS_PER_DAY,
+			emailsSent: 8,
+			urls: ["https://ada.example"],
+			watchCount: 2,
+			signedUpAt: duringYesterday() - MS_PER_DAY,
+		});
+		await TrialConversion.markPaid(db, "subject-1", duringYesterday());
+
+		await runJob();
+
+		let [message] = reports();
+		expect(message?.subject).toContain("1 paid");
+		expect(message?.text).toContain("Days to paying");
+		expect(message?.text).toContain("https://ada.example");
+	});
+
+	test("includes the trailing totals, drawn from the days already reported", async () => {
+		await TrialDailyStats.upsertDay(db, {
+			date: new Date(Date.now() - 3 * MS_PER_DAY).toISOString().slice(0, 10),
+			newLeads: 9,
+			urlsChecked: 0,
+			emailsSent: 0,
+			freeSignups: 0,
+			paidConversions: 0,
+		});
+		await seedSubmission("ada@example.com");
+
+		await runJob();
+
+		let [message] = reports();
+		expect(message?.text).toContain("Last 30 days");
+		// Nine from the earlier day plus the one counted just now.
+		expect(message?.text).toContain("10");
+	});
+});

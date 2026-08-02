@@ -38,6 +38,7 @@ import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
 import { ReportCostsJob } from "~/app/jobs/report-costs";
+import { SendFunnelReportJob } from "~/app/jobs/send-funnel-report";
 import { SendTrialDigestsJob } from "~/app/jobs/send-trial-digests";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
@@ -79,6 +80,7 @@ const QueueMessageSchema = s.variant("type", {
 	reportCosts: s.object({ type: s.literal("reportCosts") }),
 	checkTrialWatches: s.object({ type: s.literal("checkTrialWatches") }),
 	sendTrialDigests: s.object({ type: s.literal("sendTrialDigests") }),
+	sendFunnelReport: s.object({ type: s.literal("sendFunnelReport") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -228,6 +230,18 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 		waitUntil(sendQueueMessage({ type: "checkSsl" }));
 		waitUntil(sendQueueMessage({ type: "sendTrialDigests" }));
 	}
+
+	/**
+	 * Daily at 7 AM UTC: count yesterday's trial funnel, store the day, and mail the report.
+	 *
+	 * Last of the daily triggers, and on its own hour rather than sharing 06:00, so a failure in
+	 * the SSL sweep or the digests neither delays nor is delayed by a report about them. It
+	 * reads only the previous UTC day, so the midnight cleanup finished seven hours before it
+	 * starts and cannot be deleting rows it is counting.
+	 */
+	if (controller.cron === "0 7 * * *") {
+		waitUntil(sendQueueMessage({ type: "sendFunnelReport" }));
+	}
 }
 
 export default {
@@ -351,6 +365,9 @@ export default {
 						break;
 					case "sendTrialDigests":
 						waitUntil(SendTrialDigestsJob.run({ message, uptime }));
+						break;
+					case "sendFunnelReport":
+						waitUntil(SendFunnelReportJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

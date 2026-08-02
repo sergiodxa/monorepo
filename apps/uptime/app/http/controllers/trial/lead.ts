@@ -117,7 +117,15 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	recordCost("emailSent");
 
 	let checkedAt = new Date(probe.checkedAt);
-	ctx.email.later(
+	/**
+	 * Sent rather than queued with `later()`, because the funnel counts emails a lead actually
+	 * received and only an awaited send says whether one was. It costs the response nothing:
+	 * the mail middleware flushes its queue in a `finally` around the handler, so a deferred
+	 * send is awaited before the response leaves anyway — `later()` moves a send after the
+	 * handler, not out of the request. A rejection is logged and changes nothing else, exactly
+	 * as it did when the middleware was the one logging it.
+	 */
+	let sent = await ctx.email.send(
 		new TrialConfirmationEmail({
 			to: lead.email,
 			url: probe.url,
@@ -131,6 +139,15 @@ export default createAction(routes.trial.lead, async (ctx) => {
 			t: ctx.i18next.getFixedT(locale),
 		}),
 	);
+
+	if (isFailure(sent)) {
+		ctx.logger.error("trial.lead.confirmation_email_failed", {
+			leadId: lead.id,
+			error: sent.error.message,
+		});
+	} else {
+		await Lead.recordEmailSent(db, lead.id);
+	}
 
 	session?.set(TRIAL_WATCH_STARTED, probe.url);
 	return back;

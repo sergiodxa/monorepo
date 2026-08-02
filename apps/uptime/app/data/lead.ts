@@ -70,7 +70,16 @@ const COLUMNS = [
 	"locale",
 	"consented_at",
 	"last_digest_at",
+	"emails_sent",
 ] as const;
+
+/** What one window of the funnel report needs to know about the `leads` table. */
+export interface LeadFunnelActivity {
+	/** Addresses handed over for the first time in the window. */
+	created: number;
+	/** Daily digests sent in the window, one per lead by construction. */
+	digestsSent: number;
+}
 
 /**
  * Whether the daily digest is owed to this lead: exactly one per UTC day, no matter how
@@ -210,6 +219,68 @@ export default class Lead {
 	/** Stamps the digest, which is what moves the next one to the following day. */
 	static async markDigestSent(db: Database, leadId: string, sentAt: number = Date.now()) {
 		return await db.update(leads, leadId, { last_digest_at: sentAt }, { touch: true });
+	}
+
+	/**
+	 * Counts one more email this address has received.
+	 *
+	 * **Call it only after a transport accepted the message**, alongside the stamp that send
+	 * already writes — {@link Lead.markDigestSent}, `TrialWatch.markChangeNotified`,
+	 * `TrialWatch.markSummarySent`. The number is copied onto a `trial_conversions` row at
+	 * sign-up and read as "emails this person received before converting", so counting an
+	 * attempt the provider rejected would answer a different question than the one asked.
+	 *
+	 * `emails_sent = emails_sent + 1` in SQL rather than a read, an add and a write, for the
+	 * same reason {@link Lead.upsertByEmail} is one statement: the four sends are dispatched
+	 * from three different places and two of them run concurrently over a batch of leads, so
+	 * a read-modify-write would lose increments exactly when a lead is busiest.
+	 *
+	 * @param db - Database handle.
+	 * @param leadId - The lead who received the email.
+	 * @param sentAt - When it went out; also the row's new `updated_at`.
+	 */
+	static async recordEmailSent(db: Database, leadId: string, sentAt: number = Date.now()) {
+		return await db.exec(
+			`UPDATE ${getTableName(leads)}
+			    SET emails_sent = emails_sent + 1, updated_at = ?
+			  WHERE id = ?`,
+			[sentAt, leadId],
+		);
+	}
+
+	/**
+	 * The two numbers the funnel report draws from this table for one UTC day.
+	 *
+	 * One statement with two conditional sums rather than two counts, and a scan rather than
+	 * two index seeks. The table only ever holds the leads of the last thirty days — everything
+	 * older has been swept — so it is small by construction, and `last_digest_at` has no index
+	 * of its own to seek on. Adding one for a query that runs once a day would cost a written
+	 * row on every digest to save a scan of a few thousand.
+	 *
+	 * @param db - Database handle.
+	 * @param from - Start of the window, inclusive.
+	 * @param to - End of the window, exclusive.
+	 * @returns Leads created and digests sent inside the window.
+	 */
+	static async countFunnelActivity(
+		db: Database,
+		from: number,
+		to: number,
+	): Promise<LeadFunnelActivity> {
+		let result = await db.exec(
+			`SELECT SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) AS created,
+			        SUM(CASE WHEN last_digest_at >= ? AND last_digest_at < ? THEN 1 ELSE 0 END)
+			          AS digestsSent
+			   FROM ${getTableName(leads)}`,
+			[from, to, from, to],
+		);
+
+		// `SUM` over no rows is `NULL`, which is an empty table rather than an error.
+		let [row] = (result.rows ?? []) as unknown as {
+			created: number | null;
+			digestsSent: number | null;
+		}[];
+		return { created: Number(row?.created ?? 0), digestsSent: Number(row?.digestsSent ?? 0) };
 	}
 
 	/**
