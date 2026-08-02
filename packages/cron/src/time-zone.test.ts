@@ -9,7 +9,45 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { instantFromWallClock, zonedPartsOf } from "./time-zone";
+import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone";
+
+/** One hour in milliseconds, the unit most offsets are a multiple of. */
+const HOUR_MS = 3_600_000;
+
+describe("offsetAt", () => {
+	test("reads a whole-hour offset on either side of Greenwich", () => {
+		expect(offsetAt(Date.UTC(2026, 5, 15), "UTC")).toBe(0);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "America/New_York")).toBe(-4 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 0, 15), "America/New_York")).toBe(-5 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Asia/Tokyo")).toBe(9 * HOUR_MS);
+	});
+
+	test("reads offsets that are not a whole number of hours", () => {
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Asia/Kolkata")).toBe(5.5 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Asia/Kathmandu")).toBe(5.75 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "America/St_Johns")).toBe(-2.5 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Australia/Lord_Howe")).toBe(10.5 * HOUR_MS);
+	});
+
+	test("reads the furthest offsets in use", () => {
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Pacific/Kiritimati")).toBe(14 * HOUR_MS);
+		expect(offsetAt(Date.UTC(2026, 5, 15), "Pacific/Niue")).toBe(-11 * HOUR_MS);
+	});
+
+	test("changes exactly at the instant a clock moves", () => {
+		// New York moves at 07:00Z on 2026-03-08, and Troll moves two hours at 01:00Z on
+		// 2026-03-29, which is the largest single change any zone makes.
+		expect(offsetAt(Date.parse("2026-03-08T06:59:59Z"), "America/New_York")).toBe(-5 * HOUR_MS);
+		expect(offsetAt(Date.parse("2026-03-08T07:00:00Z"), "America/New_York")).toBe(-4 * HOUR_MS);
+		expect(offsetAt(Date.parse("2026-03-29T00:59:59Z"), "Antarctica/Troll")).toBe(0);
+		expect(offsetAt(Date.parse("2026-03-29T01:00:00Z"), "Antarctica/Troll")).toBe(2 * HOUR_MS);
+	});
+
+	test("returns null instead of throwing for a zone the runtime rejects", () => {
+		expect(offsetAt(Date.UTC(2026, 0, 1), "Nowhere/Land")).toBe(null);
+		expect(offsetAt(Number.NaN, "UTC")).toBe(null);
+	});
+});
 
 describe("zonedPartsOf", () => {
 	test("reads an instant's fields in the zone asked for", () => {

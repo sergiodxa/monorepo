@@ -60,9 +60,6 @@ const EXERCISED_BY_THE_APP = [
 	"0 2 * * 0",
 ] as const;
 
-/** The only two zones the product uses today, in schema defaults, docs and tests. */
-const PRODUCT_ZONES = ["UTC", "America/New_York"] as const;
-
 /** Instants chosen to land on month ends, a leap day, and a year boundary. */
 const ANCHORS = [
 	"2026-01-01T00:00:00Z",

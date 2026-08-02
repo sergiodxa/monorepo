@@ -119,7 +119,9 @@ let upcoming = schedule.next({ from: new Date(), timeZone: "Europe/Madrid", coun
 ### `schedule.prev(options): Date`
 
 The last occurrence strictly before `options.from`, so `next` and `prev` never report
-the same instant for the same input.
+the same instant for the same input. Strictly means to the millisecond: asked from
+`12:00:30`, a schedule that fires at `12:00` reports that run, because it is behind the
+instant asked about even though it is inside the same minute.
 
 **Parameters:**
 
@@ -347,16 +349,22 @@ Two consequences worth knowing:
 2. A schedule inside a skipped hour still runs, an hour late, rather than being dropped
    for the day. For a dead man's switch, a run that silently never happens is the worse
    failure.
+3. That carried run is reachable from either side and from inside the gap itself, so a
+   monitor that pings the moment the clock jumps still has its own run ahead of it rather
+   than nothing for a day. `next` and `prev` agree on it, which is the property the whole
+   search is checked against: walking a window forward and backward finds the same
+   instants, in every zone in the table.
 
 ### Differences from `cron-parser`
 
 This package replaces `cron-parser` 5.6.2. A sweep of **172,428 occurrence comparisons**,
 over 80 expressions and 22 time zones, walking both directions from anchors on both sides
-of every offset change between 2026 and 2028, found **533 divergent runs**. Every one of
-them is at or cascades from a daylight saving transition; in `UTC` the two libraries agree
-on every expression tested, without exception.
+of every offset change between 2026 and 2028, found **533 divergent runs**, and a seeded
+differential run of 2,000 generated expressions in `UTC` found one more class. Every
+divergence is either at a daylight saving transition or in how a step reaching the
+day-of-week `7` alias is expanded.
 
-The divergences fall into four classes, and this package is the one to keep in all four:
+The divergences fall into five classes, and this package is the one to keep in all five:
 
 1. **A wall time the clock skips entirely.** We carry the run past the jump; `cron-parser`
    drops it and reports the next day, week, or month. **Ours is correct**: it is what a
@@ -376,6 +384,13 @@ The divergences fall into four classes, and this package is the one to keep in a
 4. **The library returns an instant off a minute boundary.** Walking back through
    `Pacific/Chatham`, whose offset is 45 minutes off the hour, it reports times ending
    `:14:59`. Cron resolves to minutes, so no such instant can be an occurrence.
+5. **A day-of-week step whose stride never lands on `7`.** `6-7/2` is Saturday only: the
+   stride goes 6, then 8, which is past the field, so Sunday is never reached.
+   `cron-parser` adds Sunday whenever a range ends at `7`, whatever the stride, turning a
+   Saturday schedule into a weekend one. Same for `3/3`, which is Wednesday and Saturday.
+   **Ours is correct**: Vixie cron expands the range into a bitmap of `0`–`7` and folds
+   bit 7 onto bit 0 afterwards, so a stride that skips bit 7 never sets bit 0. This is the
+   only divergence that shows up in `UTC`.
 
 Everything else matched exactly, including both DST directions in the common zones, the
 either-or rule with steps, name and step parsing, February 29th across a non-leap
@@ -388,10 +403,35 @@ value (`0 12 * * 1,1`) is accepted and normalized here but rejected there; and `
 is accepted here, though `cron-parser` rejects it despite the crontab specification listing
 it. The `W` extension is rejected by both.
 
-`src/parity.test.ts` executes this comparison rather than replaying a transcript:
-`cron-parser` is a devDependency and is called directly, so a regression on either side
-fails the suite. It exists only until no application depends on that library, and the
-devDependency and the file should be deleted together.
+`src/parity.test.ts` and `src/differential.test.ts` execute this comparison rather than
+replaying a transcript: `cron-parser` is a devDependency and is called directly, so a
+regression on either side fails the suite. The first names the cases a person chose; the
+second draws 2,000 expressions from a fixed seed and compares both directions in `UTC`.
+Both exist only until no application depends on that library, and the devDependency and
+the two files should be deleted together.
+
+### How the suite is built
+
+Test expressions come from one place, `src/test/corpus.ts`, and the properties they are
+held to from `src/test/properties.ts`:
+
+- `field-forms.test.ts` walks **every** shape each field accepts — every value, every
+  contiguous range, every step on a star, every abbreviation in every case, every
+  two-value list — and compares the expansion with the grammar worked out independently.
+- `field-rejections.test.ts` does the same for what is rejected, checking the reason, the
+  field, and the character index each failure reports.
+- `invariants.test.ts` asserts the occurrence properties over the generated corpus and
+  across a table of zones spanning positive, negative, half-hour, three-quarter-hour and
+  fixed offsets, a transition at midnight, one of thirty minutes and one of two hours.
+- `differential.test.ts` compares the same corpus against `cron-parser` in `UTC`.
+
+`CRON_FUZZ_ITERATIONS` raises the generated corpus from its default 2,000 for a deeper
+local sweep; the seed is fixed, so an expression a failure names is the one the next run
+produces. Past roughly ten thousand, raise `--timeout` too:
+
+```bash
+CRON_FUZZ_ITERATIONS=60000 bun test --isolate --timeout 60000 packages/cron/src/
+```
 
 ## Pattern: Validating a submitted expression
 

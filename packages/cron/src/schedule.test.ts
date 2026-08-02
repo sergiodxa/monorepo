@@ -395,6 +395,22 @@ describe("lateness across a daylight saving transition", () => {
 		expect(deadline.getTime() - lastRun.getTime()).toBe(3_600_000);
 	});
 
+	test("still expects the run carried out of a skipped hour after the clock has jumped", () => {
+		// The case a monitor meets in practice: it pings at 03:00 EDT, the instant the clock
+		// reaches after skipping 02:00, and its 02:30 run has not happened yet. Reading the
+		// deadline as the next day would leave the switch expecting nothing for 23 hours.
+		let schedule = scheduleFor("30 2 * * *");
+		let options = { timeZone: "America/New_York" } as const;
+		let lastRun = new Date("2026-03-08T07:00:00Z"); // 03:00 EDT, just past the jump
+
+		let deadline = schedule.expectedBy(lastRun, options);
+		expect(deadline.toISOString()).toBe("2026-03-08T07:30:00.000Z"); // 03:30 EDT
+		expect(schedule.isDue(lastRun, { ...options, now: new Date("2026-03-08T07:29:00Z") })).toBe(
+			false,
+		);
+		expect(schedule.isDue(lastRun, { ...options, now: deadline })).toBe(true);
+	});
+
 	test("holds a daily deadline at its local time in a second zone", () => {
 		// Madrid springs forward on 2026-03-29 and falls back on 2026-10-25, so the same
 		// schedule is checked in a zone whose transitions land on different dates.

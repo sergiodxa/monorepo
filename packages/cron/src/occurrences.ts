@@ -11,7 +11,7 @@ import type { CronFieldSet } from "./fields";
 import type { WallClock, ZonedParts } from "./time-zone";
 
 import { daysInMonth, weekdayOf } from "./calendar";
-import { instantFromWallClock, zonedPartsOf } from "./time-zone";
+import { instantFromWallClock, offsetAt, zonedPartsOf } from "./time-zone";
 
 /**
  * How far the calendar walk may reach before giving up. Eight years is the widest
@@ -251,10 +251,28 @@ function endOfPreviousMatchingDay(
 		else endOfPreviousMonth(cursor);
 
 		if (cursor.year < horizon) return null;
-		if (matchesDate(fields, cursor)) return instantFromWallClock(cursor, timeZone);
+		if (matchesDate(fields, cursor)) return lastInstantOfDay(cursor, timeZone);
 	}
 
 	return null;
+}
+
+/**
+ * The last instant a date covers in a zone, read as one minute before the next date
+ * starts rather than as that date's 23:59. When a clock is set back at midnight the
+ * final hour of the day happens twice, and 23:59 on its own names the first pass;
+ * resuming a backward walk there would skip every occurrence in the second.
+ *
+ * @param day - Wall-clock fields of the date; its time of day is ignored.
+ * @param timeZone - IANA time zone name.
+ * @returns That date's final minute as an instant, or `null` for an unknown zone.
+ */
+function lastInstantOfDay(day: WallClock, timeZone: string): number | null {
+	let nextDay: WallClock = { ...day };
+	startOfNextDay(nextDay);
+	let start = instantFromWallClock(nextDay, timeZone);
+	if (start === null) return null;
+	return start - MINUTE_MS;
 }
 
 /**
@@ -271,8 +289,19 @@ function nextByWallClock(fields: CronFieldSet, from: number, timeZone: string): 
 	let parts = zonedPartsOf(from, timeZone);
 	if (parts === null) return null;
 
+	// The minute `from` falls in is a candidate: an occurrence inside it is still before
+	// or after `from` once the seconds are taken into account, and the instant
+	// comparisons below are what decide. Stepping off it here would drop it instead.
 	let cursor = cursorFrom(parts);
-	addMinute(cursor);
+	if (offsetMovedEarlierInDay(parts, from, timeZone)) {
+		// A wall time the clock skipped is carried past the jump, so it names an instant
+		// later than the wall times that follow it. Walking on from `from` alone would
+		// step over that carried run for anyone asking between the jump and the run
+		// itself, while `prev` still reports it, so the day is re-read from the top. The
+		// candidates that precede `from` cost a turn each and are rejected below.
+		cursor.hour = 0;
+		cursor.minute = 0;
+	}
 	let horizon = parts.year + MAX_SEARCH_YEARS;
 
 	for (let turn = 0; turn < MAX_ITERATIONS; turn++) {
@@ -329,8 +358,9 @@ function previousByWallClock(fields: CronFieldSet, from: number, timeZone: strin
 	let parts = zonedPartsOf(from, timeZone);
 	if (parts === null) return null;
 
+	// As going forward, the minute `from` falls in is a candidate and the instant
+	// comparison below is what rules it out.
 	let cursor = cursorFrom(parts);
-	subtractMinute(cursor);
 	let horizon = parts.year - MAX_SEARCH_YEARS;
 
 	for (let turn = 0; turn < MAX_ITERATIONS; turn++) {
@@ -371,6 +401,26 @@ function previousByWallClock(fields: CronFieldSet, from: number, timeZone: strin
 	}
 
 	return null;
+}
+
+/**
+ * Whether the zone's offset changed between the start of an instant's local day and
+ * the instant itself. That is the only way an earlier wall time can name a later
+ * instant, so it is the only case in which a forward walk has to reconsider the part
+ * of the day already behind it.
+ *
+ * The day's start is taken as the elapsed wall-clock minutes back from `from`, which
+ * lands a transition's worth early on a day that had one. Being early only answers
+ * `true` more readily, and the thorough walk that answer selects is always correct.
+ *
+ * @param parts - Zoned fields of `from`, for the minutes elapsed since midnight.
+ * @param from - Milliseconds since the epoch.
+ * @param timeZone - IANA time zone name.
+ * @returns `true` when the day is one whose clock moved before this instant.
+ */
+function offsetMovedEarlierInDay(parts: ZonedParts, from: number, timeZone: string): boolean {
+	let elapsed = (parts.hour * 60 + parts.minute) * MINUTE_MS;
+	return offsetAt(from, timeZone) !== offsetAt(from - elapsed, timeZone);
 }
 
 /**

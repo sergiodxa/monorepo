@@ -386,6 +386,101 @@ describe("daylight saving: fall back", () => {
 	});
 });
 
+describe("a run carried out of a skipped hour stays findable in both directions", () => {
+	// The forward search used to read the wall clock only from where it was asked, and a
+	// wall time the clock skipped names an instant later than the wall times that follow
+	// it. Asked between the jump and the carried run, the search walked past it and
+	// reported the next day, while `prev` still reported it: a dead man's switch left
+	// expecting nothing for a whole day, and two answers that contradicted each other.
+
+	test("finds the carried run when asked from inside the hour that was skipped", () => {
+		// 02:30 does not exist in New York on 2026-03-08; the run lands at 07:30Z, which
+		// reads as 03:30 EDT. Asked from 07:00Z, that run is still ahead.
+		let timeZone = "America/New_York";
+		let carried = "2026-03-08T07:30:00.000Z";
+
+		expect(nextRuns("30 2 * * *", timeZone, "2026-03-07T12:00:00Z")).toEqual([carried]);
+		for (let from of ["2026-03-08T07:00:00Z", "2026-03-08T07:10:00Z", "2026-03-08T07:29:59Z"]) {
+			expect(nextRuns("30 2 * * *", timeZone, from)).toEqual([carried]);
+		}
+		expect(previousRun("30 2 * * *", timeZone, "2026-03-08T12:00:00Z")).toBe(carried);
+	});
+
+	test("finds it in a zone whose clock moves at 01:00, and in one that moves two hours", () => {
+		expect(nextRuns("30 1 * * *", "Europe/London", "2026-03-29T01:10:00Z")).toEqual([
+			"2026-03-29T01:30:00.000Z",
+		]);
+		// Troll goes from +00 to +02 in one step, so a whole two hours of wall time is gone.
+		expect(nextRuns("30 2 * * *", "Antarctica/Troll", "2026-03-29T00:30:00Z")).toEqual([
+			"2026-03-29T02:30:00.000Z",
+		]);
+	});
+
+	test("finds it when the hour the clock skips is midnight", () => {
+		// Cairo starts daylight saving at 00:00, so the whole first hour of 2026-04-24 is
+		// missing and only a zone that transitions at midnight shows this at all.
+		expect(nextRuns("30 0 * * *", "Africa/Cairo", "2026-04-23T22:10:00Z")).toEqual([
+			"2026-04-23T22:30:00.000Z",
+		]);
+	});
+
+	test("keeps asking from just before a run cheap for a schedule with many times a day", () => {
+		// Re-reading the day from the top is what makes the carried run findable, and it is
+		// only done on a day whose offset moved. A schedule naming 1,380 times a day would
+		// otherwise pay for that re-read on every call.
+		let fields = fieldsOf("* 0-22 * * *");
+		let started = performance.now();
+		for (let turn = 0; turn < 200; turn++) {
+			nextOccurrence(fields, Date.UTC(2026, 5, 15, 22, 59), "America/New_York");
+		}
+		expect((performance.now() - started) / 200).toBeLessThan(1);
+	});
+});
+
+describe("the last minute of a day the clock repeats", () => {
+	test("walks back into the second pass of a repeated final hour", () => {
+		// Santiago ends daylight saving at 24:00, so 23:00 on 2026-04-04 happens twice. An
+		// hourly schedule restricted to that date fires 25 times, and the search used to
+		// resume a backward walk at the first pass of 23:59 and lose the last of them.
+		let timeZone = "America/Santiago";
+		let forward = nextRuns("0 * 4 4 *", timeZone, "2026-04-04T00:00:00Z", 26).filter(
+			(run) => run < "2026-04-06",
+		);
+		expect(forward.length).toBe(25);
+		expect(forward.slice(-2)).toEqual(["2026-04-05T02:00:00.000Z", "2026-04-05T03:00:00.000Z"]);
+		expect(previousRun("0 * 4 4 *", timeZone, "2026-04-06T00:00:00Z")).toBe(
+			"2026-04-05T03:00:00.000Z",
+		);
+	});
+});
+
+describe("the minute the search is asked from", () => {
+	test("counts an occurrence inside it as past for next and as before for prev", () => {
+		// Cron resolves to minutes, so the seconds of the instant asked about only decide
+		// which side of it an occurrence in the same minute falls on. An hour-pinned
+		// schedule used to step off that minute first and lose a whole day.
+		for (let expression of ["0 12 * * *", "0 * * * *"]) {
+			expect(previousRun(expression, "UTC", "2026-06-15T12:00:00.000Z")).not.toBe(
+				"2026-06-15T12:00:00.000Z",
+			);
+			for (let from of [
+				"2026-06-15T12:00:00.001Z",
+				"2026-06-15T12:00:30Z",
+				"2026-06-15T12:00:59.999Z",
+			]) {
+				expect({ expression, from, previous: previousRun(expression, "UTC", from) }).toEqual({
+					expression,
+					from,
+					previous: "2026-06-15T12:00:00.000Z",
+				});
+			}
+			expect(nextRuns(expression, "UTC", "2026-06-15T12:00:30Z")[0]).not.toBe(
+				"2026-06-15T12:00:00.000Z",
+			);
+		}
+	});
+});
+
 describe("unknown zones", () => {
 	test("report no occurrence rather than throwing", () => {
 		let fields = fieldsOf("0 9 * * *");

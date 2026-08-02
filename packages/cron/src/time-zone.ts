@@ -109,8 +109,11 @@ export function zonedPartsOf(instant: number, timeZone: string): ZonedParts | nu
  * @param instant - Milliseconds since the epoch.
  * @param timeZone - IANA time zone name.
  * @returns The offset in milliseconds, or `null` for an unknown zone.
+ *
+ * @example
+ * offsetAt(Date.UTC(2026, 5, 15), "America/New_York"); // -14_400_000
  */
-function offsetAt(instant: number, timeZone: string): number | null {
+export function offsetAt(instant: number, timeZone: string): number | null {
 	let parts = zonedPartsOf(instant, timeZone);
 	if (parts === null) return null;
 	let asUtc = Date.UTC(
