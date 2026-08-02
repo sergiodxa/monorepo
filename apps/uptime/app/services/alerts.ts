@@ -444,10 +444,16 @@ export function shouldNotifyDnsResult(
  * neither a monitor moving to `new` nor one recovering from `new` is alert-worthy.
  *
  * `late` is the single opt-in transition: it's an early warning, so it only notifies when
- * the monitor has `alert_on_late` set. `missed` — the actual failure — always notifies, and
- * so does a recovery, including a recovery from a `late` the monitor was never told about:
- * the status transition still happens and is still what a later `missed` is reached from,
- * so what the flag withholds is the notification, never the state.
+ * the monitor has `alert_on_late` set. `missed` — the actual failure — always notifies.
+ *
+ * A recovery only notifies when the failure it ends was itself notified. This used to be
+ * the other way around, on the reasoning that the flag withholds the notification and
+ * never the state — true of the state machine, but it produced an incoherent inbox: a
+ * monitor with `alert_on_late` off would flap `healthy` → `late` → `healthy` and send a
+ * "recovered" for a failure the owner was never told about. In production every single
+ * cron alert was an `up`, several an hour, with no `down` anywhere among them. An alert
+ * announcing the end of an event nobody heard start is worse than no alert, because it
+ * teaches its reader to ignore the channel.
  */
 export function shouldNotifyCronJobResult(
 	previousStatus: CronJobStatus | null,
@@ -457,7 +463,8 @@ export function shouldNotifyCronJobResult(
 	if (newStatus === "new") return false;
 	if (newStatus === "late") return monitor.alert_on_late;
 	if (newStatus !== "healthy") return true;
-	return recovered(previousStatus, "healthy") && previousStatus !== "new";
+	if (!recovered(previousStatus, "healthy") || previousStatus === "new") return false;
+	return previousStatus !== "late" || monitor.alert_on_late;
 }
 
 /**

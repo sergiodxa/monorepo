@@ -1402,7 +1402,13 @@ describe("notifyCronJobResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "late", "healthy");
+		await notifyCronJobResult(
+			db,
+			makeMailer(),
+			makeCronJobMonitor({ alert_on_late: true }),
+			"late",
+			"healthy",
+		);
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("up");
@@ -1481,7 +1487,7 @@ describe("notifyCronJobResult", () => {
 		expect(call.event_type).toBe("down");
 	});
 
-	test("still dispatches a recovery from a suppressed 'late' when alert_on_late is off", async () => {
+	test("dispatches nothing recovering from a suppressed 'late'", async () => {
 		let { db } = createTestDatabase();
 		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
 
@@ -1493,8 +1499,7 @@ describe("notifyCronJobResult", () => {
 			"healthy",
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.event_type).toBe("up");
+		expect(recordMock).not.toHaveBeenCalled();
 	});
 
 	test("formats a null last-ping/next-expected as null in the snapshot", async () => {
@@ -1631,7 +1636,19 @@ describe("shouldNotifyCronJobResult", () => {
 		expect(shouldNotifyCronJobResult(null, "healthy", silent)).toBe(false);
 	});
 
-	test("alerts on a recovery from a late the monitor was never notified about", () => {
-		expect(shouldNotifyCronJobResult("late", "healthy", silent)).toBe(true);
+	test("stays silent recovering from a late the monitor was never notified about", () => {
+		// Production sent several "recovered" an hour with no "down" anywhere among them:
+		// an every-minute monitor flaps healthy -> late -> healthy, and with the warning
+		// declined only the recovery half was ever delivered.
+		expect(shouldNotifyCronJobResult("late", "healthy", silent)).toBe(false);
+	});
+
+	test("alerts recovering from a late the monitor was notified about", () => {
+		expect(shouldNotifyCronJobResult("late", "healthy", alerting)).toBe(true);
+	});
+
+	test("alerts recovering from missed whether or not late warnings were declined", () => {
+		expect(shouldNotifyCronJobResult("missed", "healthy", silent)).toBe(true);
+		expect(shouldNotifyCronJobResult("missed", "healthy", alerting)).toBe(true);
 	});
 });

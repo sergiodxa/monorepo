@@ -92,13 +92,38 @@ export class CheckCronJobsJob extends Job {
 		 */
 		if (monitor.next_expected_at === null) return null;
 
-		let missedThreshold = monitor.next_expected_at + monitor.grace_period_seconds * 1000;
+		/**
+		 * The grace period is the tolerance, so nothing is late until it has elapsed. It used
+		 * to gate only `missed`, with `late` triggering the instant the expected time passed
+		 * — which made an every-minute monitor flap `healthy` -> `late` -> `healthy` on most
+		 * cycles, because the sweep runs on the same cadence as the ping and regularly got
+		 * there first. It also disagreed with the ping endpoint, which has always judged its
+		 * own `wasOnTime` against this same deadline: a ping could be recorded on time by one
+		 * half of the feature and late by the other.
+		 */
+		let lateThreshold = monitor.next_expected_at + monitor.grace_period_seconds * 1000;
+		/**
+		 * Missed is a whole skipped run, not merely a later shade of late: the deadline for
+		 * the *following* occurrence has also passed. Deriving it from the schedule rather
+		 * than from a multiple of the grace period keeps the meaning the same whether a job
+		 * runs every minute or once a week. A schedule that no longer parses leaves it
+		 * `null`, and the monitor stays late rather than being called missed on arithmetic
+		 * nobody could do.
+		 */
+		let followingExpected = CronJobMonitor.calculateNextExpected(
+			monitor.cron_expression,
+			monitor.timezone,
+			new Date(monitor.next_expected_at),
+		);
+		let missedThreshold =
+			followingExpected === null ? null : followingExpected + monitor.grace_period_seconds * 1000;
+
 		let newStatus: CronJobStatus | null = null;
 
-		if (monitor.status === "healthy" && now > monitor.next_expected_at && now <= missedThreshold) {
-			newStatus = "late";
-		} else if (now > missedThreshold) {
+		if (missedThreshold !== null && now > missedThreshold) {
 			newStatus = "missed";
+		} else if (monitor.status === "healthy" && now > lateThreshold) {
+			newStatus = "late";
 		}
 
 		if (newStatus === null) return null;

@@ -80,13 +80,30 @@ beforeEach(() => {
 });
 
 describe("CheckCronJobsJob", () => {
-	test("transitions a healthy monitor past its expected time, within grace, to late", async () => {
+	test("leaves a healthy monitor alone while it is still inside its grace period", async () => {
 		let { db } = createTestDatabase();
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
 			alert_on_late: true,
 			next_expected_at: now - 1000,
+			grace_period_seconds: 300,
+		});
+
+		await runJob(db);
+
+		let stillHealthy = await CronJobMonitor.findById(db, monitor.id);
+		expect(stillHealthy?.status).toBe("healthy");
+		expect(enqueued).toEqual([]);
+	});
+
+	test("transitions a healthy monitor whose grace period has elapsed to late", async () => {
+		let { db } = createTestDatabase();
+		let now = Date.now();
+		let monitor = await seedMonitor(db, {
+			status: "healthy",
+			alert_on_late: true,
+			next_expected_at: now - 400 * 1000,
 			grace_period_seconds: 300,
 		});
 
@@ -119,7 +136,7 @@ describe("CheckCronJobsJob", () => {
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
 			alert_on_late: false,
-			next_expected_at: now - 1000,
+			next_expected_at: now - 400 * 1000,
 			grace_period_seconds: 300,
 		});
 
@@ -149,7 +166,7 @@ describe("CheckCronJobsJob", () => {
 		let monitor = await seedMonitor(db, {
 			status: "late",
 			alert_on_late: false,
-			next_expected_at: now - 10 * 60 * 1000,
+			next_expected_at: now - (24 * 60 * 60 * 1000 + 600 * 1000),
 			grace_period_seconds: 300,
 		});
 
@@ -171,7 +188,7 @@ describe("CheckCronJobsJob", () => {
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
-			next_expected_at: now - 10 * 60 * 1000,
+			next_expected_at: now - (24 * 60 * 60 * 1000 + 600 * 1000),
 			grace_period_seconds: 300,
 		});
 
@@ -195,7 +212,7 @@ describe("CheckCronJobsJob", () => {
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "late",
-			next_expected_at: now - 10 * 60 * 1000,
+			next_expected_at: now - (24 * 60 * 60 * 1000 + 600 * 1000),
 			grace_period_seconds: 300,
 		});
 
@@ -273,7 +290,9 @@ describe("CheckCronJobsJob", () => {
 				await seedMonitor(db, {
 					name: `Backup ${index}`,
 					status: "healthy",
-					next_expected_at: now - 10 * 60 * 1000,
+					// Past the following daily occurrence, so each transitions to `missed` —
+					// the transition that notifies regardless of `alert_on_late`.
+					next_expected_at: now - (24 * 60 * 60 * 1000 + 600 * 1000),
 					grace_period_seconds: 300,
 				}),
 			);
