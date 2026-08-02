@@ -33,7 +33,7 @@ import { createRouter } from "remix/fetch-router";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
-import { BASE_URL } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
@@ -264,7 +264,7 @@ describe("GET /status/:slug", () => {
 		let body = await response.text();
 		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
-			`<link rel="canonical" href="${BASE_URL}${routes.statusPage.href({ slug: page.slug })}" />`,
+			`<link rel="canonical" href="${SEO.baseUrl}${routes.statusPage.href({ slug: page.slug })}" />`,
 		);
 		expect(body).toContain(
 			'<meta name="description" content="Live availability for every Acme service." />',

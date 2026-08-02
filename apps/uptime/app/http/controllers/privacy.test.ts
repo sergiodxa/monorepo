@@ -25,7 +25,7 @@ import { renderToString } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
-import { BASE_URL } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -93,7 +93,7 @@ describe("GET /privacy", () => {
 		let body = await response.text();
 		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
-			`<link rel="canonical" href="${BASE_URL}${routes.legal.privacy.href()}" />`,
+			`<link rel="canonical" href="${SEO.baseUrl}${routes.legal.privacy.href()}" />`,
 		);
 		expect(body).toContain(
 			'<meta name="description" content="Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service." />',

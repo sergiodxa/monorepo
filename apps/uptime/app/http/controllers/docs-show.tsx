@@ -24,7 +24,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { canonicalUrl } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -112,11 +112,11 @@ export default createAction(routes.docs.show, async (ctx) => {
 				// about; the shared docs description only stands in for a doc that
 				// shipped without one, so no page is left with an empty description.
 				description: frontmatter.description || ctx.i18next.t("docs.meta.description"),
-				url: canonicalUrl(ctx.url),
-				// No JSON-LD: `TechArticle` would be the closest fit, but it wants an
-				// author and dates only some docs carry in frontmatter, and a schema
-				// with invented fields is worse than none.
-				type: "article",
+				canonical: SEO.canonical(ctx.url),
+				// No structured data: `TechArticle` would be the closest fit, but it
+				// wants an author and dates only some docs carry in frontmatter, and a
+				// schema with invented fields is worse than none.
+				og: { type: "article" },
 			}}
 		>
 			<DocsLayout

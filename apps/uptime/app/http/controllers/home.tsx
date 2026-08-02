@@ -72,7 +72,7 @@ import {
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
 } from "~/app/lib/pricing";
-import { canonicalUrl, getWebSiteSchema } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -332,8 +332,9 @@ export default createAction(routes.home, async (ctx) => {
 			locale={ctx.locale}
 			seo={{
 				description: t("landing.meta.description"),
-				url: canonicalUrl(ctx.url),
-				jsonLd: getWebSiteSchema(),
+				canonical: SEO.canonical(ctx.url),
+				// The one page whose subject is the site itself.
+				schema: SEO.schema.website(),
 			}}
 			preload={[
 				{ href: SCREENSHOT_LIGHT, as: "image", media: "(prefers-color-scheme: light)" },

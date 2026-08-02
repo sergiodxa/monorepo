@@ -18,7 +18,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { canonicalUrl, getFAQSchema } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { audiences } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -56,8 +56,8 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 			locale={ctx.locale}
 			seo={{
 				description: content.metaDescription,
-				url: canonicalUrl(ctx.url),
-				jsonLd: content.faqs.length > 0 ? getFAQSchema(content.faqs) : undefined,
+				canonical: SEO.canonical(ctx.url),
+				schema: content.faqs.length > 0 ? SEO.schema.faq(content.faqs) : undefined,
 			}}
 			preload={[
 				{ href: SCREENSHOT_LIGHT, as: "image", media: "(prefers-color-scheme: light)" },

@@ -28,7 +28,7 @@ import { renderWith } from "remix/render-middleware";
 import { renderToString } from "remix/ui/server";
 
 import i18n from "~/app/http/middleware/i18n";
-import { BASE_URL } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -121,7 +121,7 @@ describe("GET /docs/*slug", () => {
 		let body = await response.text();
 		// Canonical is normalized onto the product's own origin, not the request host.
 		expect(body).toContain(
-			`<link rel="canonical" href="${BASE_URL}${routes.docs.show.href({ slug: "overview" })}" />`,
+			`<link rel="canonical" href="${SEO.baseUrl}${routes.docs.show.href({ slug: "overview" })}" />`,
 		);
 		expect(body).toContain(
 			'<meta name="description" content="Monitor your websites, APIs, servers, and scheduled tasks. Get alerted when something goes wrong and share status with your users." />',

@@ -19,7 +19,7 @@ import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { canonicalUrl } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -35,10 +35,10 @@ export default createAction(routes.legal.terms, async (ctx) => {
 			locale={ctx.locale}
 			seo={{
 				description: ctx.i18next.t("legal.terms.meta.description"),
-				url: canonicalUrl(ctx.url),
+				canonical: SEO.canonical(ctx.url),
 				// A dated, versioned legal document, not a product page — `article` is
 				// what its `lastUpdated` line and revision history actually describe.
-				type: "article",
+				og: { type: "article" },
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

@@ -51,7 +51,7 @@ import type { MarketingContent } from "~/resources/content/marketing";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { monthlyCostForUsage } from "~/app/lib/pricing";
-import { canonicalUrl, getFAQSchema, getSoftwareApplicationSchema } from "~/app/lib/seo";
+import { getSoftwareApplicationSchema, SEO } from "~/app/lib/seo";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -228,17 +228,17 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 			locale={ctx.locale}
 			seo={{
 				description: content.metaDescription,
-				url: canonicalUrl(ctx.url),
+				canonical: SEO.canonical(ctx.url),
 				// Two schemas, both describing what this page actually renders: the
 				// product (its `featureList` is the "why teams switch" grid, verbatim)
 				// and the FAQ accordion further down.
-				jsonLd: [
+				schema: [
 					getSoftwareApplicationSchema({
 						name: t("landing.comparison.tableProductHeader"),
 						description: content.metaDescription,
 						featureList: features.map((feature) => feature.title),
 					}),
-					getFAQSchema(faqs),
+					SEO.schema.faq(faqs),
 				],
 			}}
 		>

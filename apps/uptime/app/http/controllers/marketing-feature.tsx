@@ -17,7 +17,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { canonicalUrl, getFAQSchema, getSoftwareApplicationSchema } from "~/app/lib/seo";
+import { getSoftwareApplicationSchema, SEO } from "~/app/lib/seo";
 import { features } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -60,15 +60,15 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 			locale={ctx.locale}
 			seo={{
 				description: content.metaDescription,
-				url: canonicalUrl(ctx.url),
-				jsonLd: [
+				canonical: SEO.canonical(ctx.url),
+				schema: [
 					getSoftwareApplicationSchema({
 						name: schemaName,
 						description: content.metaDescription,
 						// The very bullets the feature grid renders below the hero.
 						featureList: content.features.map((feature) => feature.title),
 					}),
-					...(content.faqs.length > 0 ? [getFAQSchema(content.faqs)] : []),
+					...(content.faqs.length > 0 ? [SEO.schema.faq(content.faqs)] : []),
 				],
 			}}
 			preload={[

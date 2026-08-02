@@ -49,7 +49,7 @@ import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
-import { canonicalUrl } from "~/app/lib/seo";
+import { SEO } from "~/app/lib/seo";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
 import {
@@ -435,7 +435,7 @@ export default createAction(
 					// its title. Both are team-authored content, never app copy, so there's
 					// nothing here to translate — and no locale key to reach for either.
 					description: page.description ?? page.title,
-					url: canonicalUrl(ctx.url),
+					canonical: SEO.canonical(ctx.url),
 				}}
 			>
 				<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>

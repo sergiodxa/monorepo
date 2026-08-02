@@ -1,9 +1,10 @@
 /**
  * Tests the `/` controller: it renders the public marketing homepage inside the
  * shared document/marketing chrome for both anonymous and signed-in viewers, with the
- * hero CTA switching between a sign-in form and a dashboard link, and every section
- * of the page — hero screenshot, trust indicators, feature/use-case grids, the
- * pricing calculator's server-rendered baseline, and the FAQ — present in the markup.
+ * hero CTA switching between a sign-in form and a dashboard link, its full head
+ * metadata set and `WebSite` structured data, and every section of the page — hero
+ * screenshot, trust indicators, feature/use-case grids, the pricing calculator's
+ * server-rendered baseline, and the FAQ — present in the markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,6 +27,7 @@ import { renderToString } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -85,6 +87,31 @@ describe("GET /", () => {
 		expect(body).toContain("Monitor your services");
 		expect(body).toContain("with confidence");
 		expect(body).toContain("Start Monitoring");
+	});
+
+	test("emits the whole head metadata set and the WebSite structured data", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		// The tag set is pinned in full because a regression here — a canonical on the
+		// serving host, a dropped `og:url` — is invisible to every other assertion.
+		expect(body).toContain(
+			[
+				"<title>Uptime by Sergio Xalambrí</title>",
+				'<meta name="description" content="Simple &amp; reliable uptime monitoring for developers" />',
+				`<link rel="canonical" href="${SEO.baseUrl}/" />`,
+				'<meta property="og:type" content="website" />',
+				`<meta property="og:url" content="${SEO.baseUrl}/" />`,
+				'<meta property="og:site_name" content="Uptime" />',
+				'<meta property="og:title" content="Uptime by Sergio Xalambrí" />',
+				'<meta property="og:description" content="Simple &amp; reliable uptime monitoring for developers" />',
+				'<meta name="twitter:card" content="summary_large_image" />',
+				'<meta name="twitter:title" content="Uptime by Sergio Xalambrí" />',
+				'<meta name="twitter:description" content="Simple &amp; reliable uptime monitoring for developers" />',
+			].join(""),
+		);
+		// The root is the one URL that keeps its trailing slash.
+		expect(body).toContain(`"@type":"WebSite","name":"Uptime","url":"${SEO.baseUrl}"`);
 	});
 
 	test("renders the hero screenshot with a preloaded variant per color scheme", async () => {

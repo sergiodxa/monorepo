@@ -1,98 +1,69 @@
 /**
- * Structured-data builders for the public pages: schema.org JSON-LD objects a
- * controller hands to `DocumentLayout`'s `seo.jsonLd`, plus the canonical base URL
- * every absolute link in `<head>` is resolved against.
- *
- * These are plain object builders — no serialization, no escaping, no `<script>` of
- * their own. `DocumentLayout` owns emitting them, so a controller only decides *which*
- * schema describes its page.
+ * The product's own SEO instance: one `@pkg/seo` configuration holding the canonical
+ * origin, site name, and default description every `<head>` URL and schema.org node is
+ * built from, plus the one builder whose defaults are product facts rather than page
+ * input. Controllers and the document layout read their metadata through it, so the
+ * product's identity is stated here and nowhere else.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Canonical origin every `<head>` URL (canonical link, `og:url`, schema `url`) is built against. */
-export const BASE_URL = "https://uptime.sergiodxa.com";
+import type { SchemaOrg } from "@pkg/seo";
 
-/** The product's own description, reused by the schemas that describe the site as a whole. */
-const SITE_DESCRIPTION =
-	"Usage-based uptime monitoring service. Monitor websites, APIs, DNS, SSL certificates, and cron jobs from multiple global regions.";
+import { createSeo } from "@pkg/seo";
 
 /**
- * Resolves a request URL to its canonical absolute form: same origin as
- * {@link BASE_URL} regardless of which host served the request (custom domain, the
- * `workers.dev` subdomain, a preview deployment), with the trailing slash dropped
- * everywhere but the root so one page never advertises two canonical URLs.
+ * The site's one configured SEO instance, shared by every controller and layout: it
+ * resolves canonical URLs onto the product's origin regardless of which host served the
+ * request (custom domain, `workers.dev` subdomain, preview deployment) and binds the
+ * schema.org builders to the same identity.
  *
- * @example canonicalUrl("https://ping.workers.dev/features/monitors/") // "https://uptime.sergiodxa.com/features/monitors"
+ * No `twitter.site`/`creator` handle: the product has no account there, and an empty
+ * handle is worse metadata than none — the card layout is all these pages advertise.
+ *
+ * @example SEO.canonical(ctx.url) // "https://uptime.sergiodxa.com/features/monitors"
  */
-export function canonicalUrl(url: string | URL): string {
-	let { pathname, search } = new URL(url);
-	let canonical = new URL(`${pathname}${search}`, BASE_URL).toString();
-	if (canonical !== `${BASE_URL}/` && canonical.endsWith("/")) return canonical.slice(0, -1);
-	return canonical;
-}
+export const SEO = createSeo({
+	baseUrl: "https://uptime.sergiodxa.com",
+	siteName: "Uptime",
+	defaultDescription:
+		"Usage-based uptime monitoring service. Monitor websites, APIs, DNS, SSL certificates, and cron jobs from multiple global regions.",
+	twitter: { card: "summary_large_image" },
+});
 
-/** `Organization` schema — the publisher behind the product. */
-export function getOrganizationSchema() {
-	return {
-		"@context": "https://schema.org",
-		"@type": "Organization",
-		name: "Uptime",
-		url: BASE_URL,
-		logo: `${BASE_URL}/android-chrome-512x512.png`,
-		sameAs: ["https://github.com/sergiodxa"],
-	};
-}
-
-/** `WebSite` schema — for the homepage only, where the subject is the site itself. */
-export function getWebSiteSchema() {
-	return {
-		"@context": "https://schema.org",
-		"@type": "WebSite",
-		name: "Uptime",
-		url: BASE_URL,
-		description: SITE_DESCRIPTION,
-	};
-}
-
-/** `SoftwareApplication` schema — for a page whose subject is the product or one of its capabilities. */
-export function getSoftwareApplicationSchema(options: {
+/** What a page contributes to its `SoftwareApplication` node — everything else is a product fact. */
+export interface ProductSchemaInput {
+	/** The product or capability the page is about, as the schema's `name`. */
 	name: string;
+	/** The page's own meta description, reused as the node's description. */
 	description: string;
+	/** The capabilities the page itself lists, so the node never claims features it doesn't show. */
 	featureList?: string[];
-}) {
-	return {
-		"@context": "https://schema.org",
-		"@type": "SoftwareApplication",
-		name: options.name,
-		description: options.description,
+}
+
+/**
+ * Builds the `SoftwareApplication` node for a page whose subject is the product or one
+ * of its capabilities, filling in the facts that are the same on every such page: it's a
+ * web application, it runs anywhere, and it is sold on the one usage-based plan.
+ *
+ * @param input - The page's own name, description, and rendered feature list.
+ * @returns The node, with page URLs and prices already in schema.org's shapes.
+ * @example getSoftwareApplicationSchema({ name: "Monitors", description: content.metaDescription })
+ */
+export function getSoftwareApplicationSchema(
+	input: ProductSchemaInput,
+): SchemaOrg.SoftwareApplication {
+	return SEO.schema.softwareApplication({
+		name: input.name,
+		description: input.description,
 		applicationCategory: "WebApplication",
 		operatingSystem: "Any",
 		offers: {
-			"@type": "Offer",
 			price: "0",
 			priceCurrency: "USD",
 			description: "Usage-based pricing starting at $0/month",
 		},
-		...(options.featureList && { featureList: options.featureList }),
-	};
-}
-
-/**
- * `FAQPage` schema — for a page carrying a real FAQ section, so the questions can
- * surface as rich results. Pass the same question/answer pairs the page renders;
- * a schema describing answers a visitor can't find on the page is a violation of
- * Google's structured-data policy, not just a mismatch.
- */
-export function getFAQSchema(faqs: Array<{ question: string; answer: string }>) {
-	return {
-		"@context": "https://schema.org",
-		"@type": "FAQPage",
-		mainEntity: faqs.map((faq) => ({
-			"@type": "Question",
-			name: faq.question,
-			acceptedAnswer: { "@type": "Answer", text: faq.answer },
-		})),
-	};
+		...(input.featureList && { featureList: input.featureList }),
+	});
 }
