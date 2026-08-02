@@ -36,6 +36,7 @@ import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 
 import Subscription from "~/app/data/subscription";
+import { RATE_CARD_VERSION } from "~/app/lib/cost-rates";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { polarSubscription } from "~/app/lib/test/polar";
 import { monitorResults, monitors, teams } from "~/database/schema";
@@ -114,7 +115,7 @@ function serve(rows: Record<string, unknown>[], options: { ingestStatus?: number
 function costRow(teamId: string, overrides: Record<string, unknown> = {}) {
 	return {
 		teamId,
-		rateCard: "2026-07-31",
+		rateCard: RATE_CARD_VERSION,
 		d1RowRead: 20_180,
 		d1RowWritten: 10,
 		emailSent: 0,
@@ -189,7 +190,7 @@ describe("ReportCostsJob", () => {
 		let metadata = ingested[0]?.[0]?.metadata;
 		expect(metadata?.team_id).toBe(team.id);
 		expect(metadata?.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-		expect(metadata?.rate_card).toBe("2026-07-31");
+		expect(metadata?.rate_card).toBe(RATE_CARD_VERSION);
 		// snake_case resource names, derived from the rate card rather than listed here.
 		expect(metadata?.d1_row_read).toBe(20_180);
 		expect(metadata?.email_sent).toBe(2);

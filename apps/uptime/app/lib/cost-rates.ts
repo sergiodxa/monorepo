@@ -20,7 +20,7 @@
  */
 
 /** The rate card this module currently states. Carried on every measurement it prices. */
-export const RATE_CARD_VERSION = "2026-07-31";
+export const RATE_CARD_VERSION = "2026-08-02";
 
 /**
  * Cents per unit, at Workers Paid overage rates.
@@ -29,12 +29,16 @@ export const RATE_CARD_VERSION = "2026-07-31";
  * recorded data points position quantities by it, so a resource may be appended but never
  * reordered or removed without orphaning every point already written.
  *
- * `emailSent` still carries the $0.90/1,000 of the HTTP API this app used to send through,
- * and `app/services/alerts.ts` now sends through the platform's email binding instead. The
- * rate is deliberately left alone until the binding's own price is confirmed rather than
- * assumed: re-pricing it is a new {@link RATE_CARD_VERSION}, and a version bump is a
- * billing event that has to be decided, not a side effect of swapping a transport. Until
- * then this line over-states what a sent email costs.
+ * `emailSent` moved from the $0.90/1,000 of the HTTP API this app used to send through to
+ * the $0.35/1,000 of the platform's email binding it sends through now, which is what
+ * carried this card from `2026-07-31` to `2026-08-02`. The bump is the point: every figure
+ * priced before that date was computed against a transport that no longer exists, and
+ * dating the change is what keeps those figures readable rather than silently wrong.
+ *
+ * The binding also includes 3,000 messages a month on Workers Paid. Netting them off here
+ * would break the rule above — this card answers what a customer would cost with no free
+ * tier, and an allowance is an account-wide fact that cannot be divided among the teams
+ * that consumed it.
  */
 export const RATES = {
 	workerRequest: 3.0e-5, // $0.30 / M
@@ -50,7 +54,7 @@ export const RATES = {
 	doDurationMs: 1.5625e-7, // $12.50 / M GB-s at the fixed 128 MB allocation
 	aeDataPoint: 2.5e-5, // $0.25 / M
 	aeQuery: 1.0e-4, // $1.00 / M
-	emailSent: 9.0e-2, // $0.90 / 1,000 — pending a re-price for the email binding
+	emailSent: 3.5e-2, // $0.35 / 1,000, beyond the 3,000/month included on Workers Paid
 } as const;
 
 /** A resource the ledger can be asked to count. */

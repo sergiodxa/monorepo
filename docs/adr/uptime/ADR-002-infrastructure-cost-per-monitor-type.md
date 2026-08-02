@@ -2,8 +2,17 @@
 
 ## Status
 
-**Analysis** — 2026-07-30. No code or pricing change made yet. The recommendation at the end
-is the proposed decision; nothing in it has been implemented.
+**Analysis** — 2026-07-30, **partially implemented** 2026-08-02.
+
+The email-transport recommendation has been carried out: the app sends through Cloudflare
+Email Sending, and the rate card prices a sent email at $0.35 per 1,000 under
+`RATE_CARD_VERSION` `2026-08-02`. Nothing else in the recommendation has been implemented.
+
+Every email figure in the tables below is left at the $0.90 Resend rate on purpose. They
+are the measurement that argued for the change, and restating them at the new price would
+destroy the comparison that made the case — the point of §8 and §9 is the gap between the
+two numbers. Read them as dated: costs recorded before `2026-08-02` really were priced this
+way, which is what the rate-card version on each of them is for.
 
 ## Background
 
@@ -90,6 +99,10 @@ seven canonical pricing pages were themselves the most specific available.
 | Resend — outbound (**actual transport**) | 50,000 on Pro $20 |   $0.90 / 1,000 |                   $9.0 × 10⁻⁴ | [Resend pricing](https://resend.com/pricing)                                        |
 
 ### Email is Resend, not Cloudflare Email Sending
+
+> **Superseded 2026-08-02.** This was true when measured and is no longer: the migration
+> this subsection quantifies has since been made, and Resend is gone from the codebase. The
+> paragraph is kept as written because the figures below depend on it.
 
 `app/services/alerts.ts` sends through **Resend** (`resend.emails.send`; `Resend` is
 registered as a container singleton in `app/lib/container.ts`). Cloudflare Email Service is
