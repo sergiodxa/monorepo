@@ -50,8 +50,26 @@ import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
 
-/** Minimum time between accepted pings for a single monitor. */
-const RATE_LIMIT_MS = 60_000;
+/**
+ * Minimum time between accepted pings for a single monitor.
+ *
+ * Half the finest cadence a monitor can be scheduled with, not the whole minute it used
+ * to be. A job on a `* * * * *` schedule cannot ping at exactly 60.000s intervals — queue
+ * latency and dispatch jitter put consecutive pings a second or two either side of the
+ * minute — and against a hard 60s floor every gap that landed at 59s was refused. In
+ * production that rejected roughly 40% of one monitor's pings, so it recorded about
+ * three runs in five and looked intermittently unreliable while running perfectly.
+ *
+ * Halving it keeps what the rule is for: no schedule is finer than a minute, so two pings
+ * inside 30s still cannot be two separate runs, and a runaway loop is still bounded (and
+ * bounded again by the per-caller budget below, which is the abuse limit proper).
+ *
+ * The rule this approximates is one accepted ping per *scheduled run*, which would derive
+ * the window from the monitor's own schedule rather than from the finest one any monitor
+ * could have. That is the better rule and a larger change; this is the floor that stops
+ * the every-minute case from silently dropping two runs in five.
+ */
+const RATE_LIMIT_MS = 30_000;
 
 /**
  * Requests one caller may spend on one monitor per {@link CALLER_WINDOW}, mirroring

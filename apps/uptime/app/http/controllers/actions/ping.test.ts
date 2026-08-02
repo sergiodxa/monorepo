@@ -44,7 +44,6 @@ import { auth, login } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { createRevokedSubscription } from "~/app/lib/test/polar";
-import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
