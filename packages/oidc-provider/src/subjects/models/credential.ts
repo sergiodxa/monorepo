@@ -1,9 +1,9 @@
 /**
  * Model for password credentials associated with a subject.
  *
- * Stores a bcrypt password hash per subject and provides creation, verification,
- * and password-update helpers. Raw passwords are never stored; only the hash is
- * persisted.
+ * Stores one password hash per subject and provides creation, verification, and
+ * password-update helpers. Raw passwords are never stored; only the hash is
+ * persisted, and a hash in the superseded format is replaced on a correct login.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,11 +11,13 @@
 
 import type { Database } from "remix/data-table";
 
-import bcrypt from "bcryptjs";
+import { isFailure, unwrap } from "@pkg/result";
 import { column as c, table } from "remix/data-table";
 
+import { hashSecret, verifySecret } from "../../shared/lib/password-hash";
+
 /**
- * Persistence model for a subject's password credential (bcrypt hash).
+ * Persistence model for a subject's password credential.
  */
 export default class Credential {
 	/** Error thrown when no credential exists for the given subject. */
@@ -49,14 +51,14 @@ export default class Credential {
 	}
 
 	/**
-	 * Creates a password credential for a subject, storing only the bcrypt hash.
+	 * Creates a password credential for a subject, storing only the hash.
 	 * @param db - Database instance.
 	 * @param subjectId - Subject the credential belongs to.
 	 * @param password - Plaintext password to hash and store.
 	 * @returns The created credential write result.
 	 */
 	static async create(db: Database, subjectId: string, password: string) {
-		let passwordHash = await bcrypt.hash(password, 10);
+		let passwordHash = unwrap(await hashSecret(password));
 
 		return await db.create(Credential.table, {
 			id: crypto.randomUUID(),
@@ -70,6 +72,13 @@ export default class Credential {
 
 	/**
 	 * Verifies a plaintext password against the subject's stored hash.
+	 *
+	 * A correct password stored in the superseded hash format is re-hashed and
+	 * written back here, which is the only moment the plaintext is available to
+	 * derive a replacement from. That rewrite leaves `updated_at` alone: it marks
+	 * when the password itself last changed, which a rehash does not.
+	 * A hash that cannot be checked at all counts as a mismatch, so an unreadable
+	 * stored value denies the login instead of granting it.
 	 * @param db - Database instance.
 	 * @param subjectId - Subject whose credential to check.
 	 * @param password - Plaintext password to compare.
@@ -81,11 +90,24 @@ export default class Credential {
 	static async verify(db: Database, subjectId: string, password: string): Promise<boolean> {
 		let credential = await this.findBySubject(db, subjectId);
 		if (!credential) throw new this.InvalidCredentialError();
-		return await bcrypt.compare(password, credential.password_hash);
+
+		let checked = await verifySecret(credential.password_hash, password);
+		if (isFailure(checked) || !checked.data.matches) return false;
+
+		if (checked.data.rehashed) {
+			await db.update(
+				Credential.table,
+				{ id: credential.id },
+				{ password_hash: checked.data.rehashed },
+				{ touch: false },
+			);
+		}
+
+		return true;
 	}
 
 	/**
-	 * Replaces the subject's stored password with a new bcrypt hash.
+	 * Replaces the subject's stored password with a new hash.
 	 * @param db - Database instance.
 	 * @param subjectId - Subject whose password to update.
 	 * @param password - New plaintext password to hash and store.
@@ -96,7 +118,7 @@ export default class Credential {
 		let credential = await this.findBySubject(db, subjectId);
 		if (!credential) throw new this.InvalidCredentialError();
 
-		let passwordHash = await bcrypt.hash(password, 10);
+		let passwordHash = unwrap(await hashSecret(password));
 
 		return await db.update(
 			Credential.table,

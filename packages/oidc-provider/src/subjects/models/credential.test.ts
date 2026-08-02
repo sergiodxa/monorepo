@@ -1,12 +1,30 @@
+/**
+ * Tests for the subject password-credential model.
+ *
+ * Alongside the lifecycle cases these cover the stored-hash migration: a password
+ * written in the superseded bcrypt format must still authenticate its subject, and
+ * doing so must leave the row holding a hash in the current format.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
+import bcrypt from "bcryptjs";
 import { createDatabase } from "remix/data-table";
 
 import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
 
 import Credential from "./credential";
+
+/** Cost factor every stored bcrypt hash was written with. */
+const LEGACY_BCRYPT_COST = 10;
+
+/** Prefix identifying the format written for new hashes. */
+const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
 describe("Credential", () => {
 	let sqliteDb: Database;
@@ -24,6 +42,24 @@ describe("Credential", () => {
 		sqliteDb.close();
 	});
 
+	/**
+	 * Inserts a credential hashed the way every row written before the migration
+	 * was, bypassing the model so the stored value is genuinely in the old format.
+	 * @param subjectId - Subject the credential belongs to.
+	 * @param password - Password to hash with the superseded scheme.
+	 */
+	async function createLegacyCredential(subjectId: string, password: string) {
+		let now = new Date().toISOString();
+		await db.create(Credential.table, {
+			id: crypto.randomUUID(),
+			subject_id: subjectId,
+			password_hash: await bcrypt.hash(password, LEGACY_BCRYPT_COST),
+			verified_at: null,
+			created_at: now,
+			updated_at: now,
+		});
+	}
+
 	describe("create", () => {
 		test("creates a credential with hashed password for a subject", async () => {
 			let subject = await createSubject(db);
@@ -37,7 +73,7 @@ describe("Credential", () => {
 			expect(credential).not.toBeNull();
 			expect(credential?.subject_id).toBe(subject.id);
 			expect(credential?.password_hash).not.toBe(password);
-			expect(credential?.password_hash).toStartWith("$2");
+			expect(credential?.password_hash).toStartWith(CURRENT_PREFIX);
 			expect(credential?.verified_at).toBeNull();
 		});
 	});
@@ -84,6 +120,46 @@ describe("Credential", () => {
 			await expect(Credential.verify(db, "non-existent-id", "anyPassword")).rejects.toThrow(
 				Credential.InvalidCredentialError,
 			);
+		});
+
+		test("returns true for a password stored in the superseded hash format", async () => {
+			let subject = await createSubject(db);
+			await createLegacyCredential(subject.id, "correctPassword123");
+
+			let isValid = await Credential.verify(db, subject.id, "correctPassword123");
+
+			expect(isValid).toBe(true);
+		});
+
+		test("rewrites a superseded hash in the current format after a match", async () => {
+			let subject = await createSubject(db);
+			await createLegacyCredential(subject.id, "correctPassword123");
+			let before = await Credential.findBySubject(db, subject.id);
+
+			await Credential.verify(db, subject.id, "correctPassword123");
+
+			let upgraded = (await Credential.findBySubject(db, subject.id))?.password_hash;
+			expect(upgraded).toStartWith(CURRENT_PREFIX);
+
+			// The password itself did not change, so its timestamp must not move.
+			expect((await Credential.findBySubject(db, subject.id))?.updated_at).toBe(
+				before?.updated_at ?? "",
+			);
+
+			// The rewritten hash is the one the next login will be checked against.
+			expect(await Credential.verify(db, subject.id, "correctPassword123")).toBe(true);
+			expect((await Credential.findBySubject(db, subject.id))?.password_hash).toBe(upgraded);
+		});
+
+		test("returns false for a wrong password against a superseded hash, leaving it alone", async () => {
+			let subject = await createSubject(db);
+			await createLegacyCredential(subject.id, "correctPassword123");
+			let before = (await Credential.findBySubject(db, subject.id))?.password_hash;
+
+			let isValid = await Credential.verify(db, subject.id, "wrongPassword");
+
+			expect(isValid).toBe(false);
+			expect((await Credential.findBySubject(db, subject.id))?.password_hash).toBe(before);
 		});
 	});
 

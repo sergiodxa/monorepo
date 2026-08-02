@@ -1,9 +1,10 @@
 /**
  * Model for OAuth 2.0 client secrets.
  *
- * Generates prefixed secrets, stores only their bcrypt hashes, and verifies
- * presented secrets in a timing-safe way (parallel comparison plus a dummy
- * comparison when a client has no secrets) to avoid leaking which secret matched.
+ * Generates prefixed secrets, stores only their hashes, and verifies presented
+ * secrets in a timing-safe way (parallel comparison, plus an equivalent amount of
+ * work when a client has no secrets) to avoid leaking which secret matched, or
+ * whether any exists at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,18 +12,19 @@
 
 import type { Database } from "remix/data-table";
 
-import bcrypt from "bcryptjs";
+import { randomToken } from "@pkg/crypto";
+import { isFailure, unwrap } from "@pkg/result";
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
+import { hashSecret, spendVerificationCost, verifySecret } from "../../shared/lib/password-hash";
 import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
 
-/**
- * Pre-computed valid bcrypt hash used for timing attack prevention.
- * When no secrets exist for a client, we still perform a bcrypt comparison
- * against this dummy hash to ensure consistent response times.
- */
-const TIMING_SAFE_DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMye.OmWJc0.vv.rMIFZQMWLQihlT4YLu8W";
+/** Entropy behind a generated secret, in bytes. */
+const SECRET_BYTES = 32;
+
+/** Prefix every generated secret carries, so a leaked one is recognizable. */
+const SECRET_PREFIX = "sdx_auth";
 
 /**
  * Model for client secrets.
@@ -54,12 +56,7 @@ export default class Secret {
 	 * @returns Secret string prefixed with `sdx_auth_`
 	 */
 	static generateSecretValue(): string {
-		let randomBytes = crypto.getRandomValues(new Uint8Array(32));
-		let base64 = btoa(String.fromCharCode(...randomBytes))
-			.replace(/\+/g, "")
-			.replace(/\//g, "")
-			.replace(/=/g, "");
-		return `sdx_auth_${base64}`;
+		return randomToken({ bytes: SECRET_BYTES, prefix: SECRET_PREFIX });
 	}
 
 	/**
@@ -91,7 +88,7 @@ export default class Secret {
 	 */
 	static async create(db: Database, clientId: string, name?: string, expiresAt?: string) {
 		let plainSecret = this.generateSecretValue();
-		let secretHash = await bcrypt.hash(plainSecret, 10);
+		let secretHash = unwrap(await hashSecret(plainSecret));
 		let id = crypto.randomUUID();
 
 		await db.create(Secret.table, {
@@ -111,8 +108,13 @@ export default class Secret {
 	 * Verifies a client secret.
 	 * All valid secrets are compared in parallel to prevent timing attacks
 	 * that could reveal which position the valid secret is in.
-	 * A dummy comparison is performed when no secrets exist to prevent
-	 * timing attacks that could detect the absence of secrets.
+	 * An equivalent hashing operation is performed when no secrets exist, to
+	 * prevent timing attacks that could detect the absence of secrets.
+	 * A secret still stored in the superseded hash format is rewritten in the
+	 * current one as part of the same write that records its use, since a match
+	 * is the only moment the plaintext is available to hash again.
+	 * A hash that cannot be checked at all counts as a mismatch, so an unreadable
+	 * stored value denies the client instead of authenticating it.
 	 * @param db - Database instance
 	 * @param clientId - Client ID
 	 * @param plainSecret - Plain secret to verify
@@ -132,31 +134,31 @@ export default class Secret {
 		});
 
 		if (validSecrets.length === 0) {
-			await bcrypt.compare(plainSecret, TIMING_SAFE_DUMMY_HASH);
+			await spendVerificationCost(plainSecret);
 			return false;
 		}
 
 		let comparisons = await Promise.all(
-			validSecrets.map(async (secret) => ({
-				id: secret.id,
-				isMatch: await bcrypt.compare(plainSecret, secret.secret_hash),
-			})),
+			validSecrets.map(async (secret) => {
+				let checked = await verifySecret(secret.secret_hash, plainSecret);
+				if (isFailure(checked)) return { id: secret.id, matches: false, rehashed: null };
+				return { id: secret.id, ...checked.data };
+			}),
 		);
 
-		let match = comparisons.find((c) => c.isMatch);
+		let match = comparisons.find((comparison) => comparison.matches);
+		if (!match) return false;
 
-		if (match) {
-			await db.update(
-				Secret.table,
-				{ id: match.id },
-				{
-					last_used_at: now.toISOString(),
-				},
-			);
-			return true;
-		}
+		await db.update(
+			Secret.table,
+			{ id: match.id },
+			{
+				last_used_at: now.toISOString(),
+				...(match.rehashed ? { secret_hash: match.rehashed } : {}),
+			},
+		);
 
-		return false;
+		return true;
 	}
 
 	/**

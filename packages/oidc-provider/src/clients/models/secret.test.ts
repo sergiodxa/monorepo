@@ -1,6 +1,18 @@
+/**
+ * Tests for the client-secret model.
+ *
+ * Alongside the lifecycle cases these cover the stored-hash migration: a secret
+ * written in the superseded bcrypt format must still authenticate its client, and
+ * doing so must leave the row holding a hash in the current format.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
+import bcrypt from "bcryptjs";
 import { createDatabase } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
@@ -8,6 +20,12 @@ import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createClient } from "../../shared/test/fixtures";
 
 import Secret from "./secret";
+
+/** Cost factor every stored bcrypt hash was written with. */
+const LEGACY_BCRYPT_COST = 10;
+
+/** Prefix identifying the format written for new hashes. */
+const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
 describe("Secret", () => {
 	let sqliteDb: Database;
@@ -24,6 +42,34 @@ describe("Secret", () => {
 	afterEach(() => {
 		sqliteDb.close();
 	});
+
+	/**
+	 * Inserts a secret hashed the way every row written before the migration was,
+	 * bypassing the model so the stored value is genuinely in the old format.
+	 * @param clientId - Client the secret belongs to.
+	 * @param plainSecret - Secret to hash with the superseded scheme.
+	 */
+	async function createLegacySecret(clientId: string, plainSecret: string) {
+		await db.create(Secret.table, {
+			id: crypto.randomUUID(),
+			client_id: clientId,
+			secret_hash: await bcrypt.hash(plainSecret, LEGACY_BCRYPT_COST),
+			name: "Legacy Secret",
+			last_used_at: null,
+			expires_at: null,
+			created_at: new Date().toISOString(),
+		});
+	}
+
+	/**
+	 * Reads the stored hash of a client's only secret.
+	 * @param clientId - Client whose secret to read.
+	 * @returns The stored hash, or null when the client has no secret.
+	 */
+	async function readStoredHash(clientId: string) {
+		let stored = await db.findOne(Secret.table, { where: { client_id: clientId } });
+		return stored?.secret_hash ?? null;
+	}
 
 	describe("generateSecretValue", () => {
 		test("returns string starting with sdx_auth_", () => {
@@ -88,6 +134,13 @@ describe("Secret", () => {
 			let isValid = await Secret.verify(db, client.id, plainSecret);
 			expect(isValid).toBe(true);
 		});
+
+		test("stores the hash in the current format", async () => {
+			let client = await createClient(db);
+			await Secret.create(db, client.id);
+
+			expect(await readStoredHash(client.id)).toStartWith(CURRENT_PREFIX);
+		});
 	});
 
 	describe("verify", () => {
@@ -136,6 +189,41 @@ describe("Secret", () => {
 
 			let isValid = await Secret.verify(db, client.id, "sdx_auth_any_secret");
 			expect(isValid).toBe(false);
+		});
+
+		test("returns true for a secret stored in the superseded hash format", async () => {
+			let client = await createClient(db);
+			let plainSecret = Secret.generateSecretValue();
+			await createLegacySecret(client.id, plainSecret);
+
+			let isValid = await Secret.verify(db, client.id, plainSecret);
+			expect(isValid).toBe(true);
+		});
+
+		test("rewrites a superseded hash in the current format after a match", async () => {
+			let client = await createClient(db);
+			let plainSecret = Secret.generateSecretValue();
+			await createLegacySecret(client.id, plainSecret);
+
+			await Secret.verify(db, client.id, plainSecret);
+
+			let upgraded = await readStoredHash(client.id);
+			expect(upgraded).toStartWith(CURRENT_PREFIX);
+
+			// The rewritten hash is the one the next request will be checked against.
+			expect(await Secret.verify(db, client.id, plainSecret)).toBe(true);
+			expect(await readStoredHash(client.id)).toBe(upgraded);
+		});
+
+		test("returns false for a wrong secret against a superseded hash, leaving it alone", async () => {
+			let client = await createClient(db);
+			await createLegacySecret(client.id, Secret.generateSecretValue());
+			let before = await readStoredHash(client.id);
+
+			let isValid = await Secret.verify(db, client.id, "sdx_auth_wrong_secret");
+
+			expect(isValid).toBe(false);
+			expect(await readStoredHash(client.id)).toBe(before);
 		});
 	});
 

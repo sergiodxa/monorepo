@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",
+		"@pkg/crypto": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",

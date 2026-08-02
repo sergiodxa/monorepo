@@ -213,8 +213,26 @@ host builds them into its own `assets/tenant/` directory — see
 `apps/auth-saas/vite.config.client.ts` for the Vite config that globs the package's
 `src/client/**` into that output.
 
+## Pattern: Upgrading stored credential hashes
+
+Subject passwords and client secrets are stored as PBKDF2-HMAC-SHA256 hashes in the
+self-describing `$pbkdf2-sha256$i=...$<salt>$<key>` format, so the cost parameters
+travel with each value and can be raised without a schema change.
+
+Hashes written by the provider's earlier bcrypt scheme still verify. There is no way
+to convert one without the plaintext, so a correct password or secret is re-hashed at
+the moment it is presented and written back in the same request that accepted it —
+`Credential.verify` and `Secret.verify` do this themselves, so no caller can forget.
+Nothing else changes: the rehash replaces only the stored hash, leaving `updated_at`
+to mean "when the password last changed".
+
+That makes the migration driven by logins, not by deploys. Old hashes disappear as
+their owners authenticate, and the compatibility path has to stay until none remain —
+a query for hashes that do not begin with `$pbkdf2-sha256$` says when that is.
+
 ## Related Packages
 
+- [`@pkg/crypto`](/packages/crypto) - Password hashing, digests, and random tokens used throughout the provider
 - [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - Adapter to run the provider in a Durable Object
 - [`@pkg/data-table-d1`](/packages/data-table-d1) - Adapter to run the provider on a self-hosted Worker with D1
 
@@ -225,3 +243,4 @@ host builds them into its own `assets/tenant/` directory — see
 3. **Schedule `cleanup()`** - Wire it to a cron trigger or a DO alarm; it is not run automatically by `fetch`.
 4. **Keep `internalSecret` consistent** - The control plane's `createInternalToken` and the provider's `internalSecret` must use the same secret, or management-API calls will be rejected.
 5. **Set the issuer before serving** - A fresh database has no issuer; provision it via `POST /api/setup` (or a seed) before expecting tokens to sign.
+6. **Do not drop the legacy hash path on a schedule** - It can only be removed once no stored hash is still in the old format, and that depends on users signing in, not on a release.
