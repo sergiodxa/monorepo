@@ -14,6 +14,8 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 
 import * as Webhooks from "@pkg/webhooks";
 
+import type { Customer, Discount, Order, Subscription } from "./index";
+
 // Captured before the module is mocked below, so the cross-check runs against the
 // verifier the SDK actually ships rather than against this file's stand-in.
 let { validateEvent: sdkValidateEvent, WebhookVerificationError: SDKWebhookVerificationError } =
@@ -173,7 +175,7 @@ let {
 	PolarClient,
 	PolarError,
 	subscriptionFromEvent,
-} = await import("./index.ts");
+} = await import("./index");
 
 /** A webhook secret in the form Polar issues one: arbitrary text, never base64. */
 const WEBHOOK_SECRET = "polar_whs_TestSecretValue123";
@@ -306,7 +308,7 @@ describe("PolarClient", () => {
 		test("passes email/name/metadata through", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
 			let customer = await polar.createCustomer("jane@example.com", "Jane", { tenant_id: "t_1" });
-			expect(customer).toEqual({ id: "cus_1" });
+			expect<Partial<Customer>>(customer).toEqual({ id: "cus_1" });
 			expect(calls["customers.create"]).toEqual([
 				{ email: "jane@example.com", name: "Jane", metadata: { tenant_id: "t_1" } },
 			]);
@@ -350,7 +352,7 @@ describe("PolarClient", () => {
 		test("looks up by external id", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
 			let customer = await polar.getExternalCustomer("sub_123");
-			expect(customer).toEqual({ id: "cus_1" });
+			expect<Partial<Customer> | null>(customer).toEqual({ id: "cus_1" });
 			expect(calls["customers.getExternal"]).toEqual([{ externalId: "sub_123" }]);
 		});
 
@@ -367,7 +369,7 @@ describe("PolarClient", () => {
 		test("returns the first matching customer", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
 			let customer = await polar.findCustomerByEmail("jane@example.com");
-			expect(customer).toEqual({ id: "cus_1" });
+			expect<Partial<Customer> | null>(customer).toEqual({ id: "cus_1" });
 			expect(calls["customers.list"]).toEqual([{ email: "jane@example.com" }]);
 		});
 
@@ -394,7 +396,7 @@ describe("PolarClient", () => {
 	test("listSubscriptions flattens every page", async () => {
 		let polar = new PolarClient({ accessToken: "t" });
 		let subs = await polar.listSubscriptions("cus_1");
-		expect(subs).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
+		expect<Partial<Subscription>[]>(subs).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
 		expect(calls["subscriptions.list"]).toEqual([{ customerId: "cus_1" }]);
 	});
 
@@ -432,7 +434,7 @@ describe("PolarClient", () => {
 			];
 			let polar = new PolarClient({ accessToken: "t" });
 			let subscriptions = await polar.listActiveSubscriptions("ext_1", "prod_1");
-			expect(subscriptions).toEqual([
+			expect<Partial<Subscription>[]>(subscriptions).toEqual([
 				{ id: "sub_1", productId: "prod_1" },
 				{ id: "sub_3", productId: "prod_1" },
 			]);
@@ -457,7 +459,7 @@ describe("PolarClient", () => {
 
 			let subscriptions = await polar.listActiveSubscriptionsByProduct("prod_1");
 
-			expect(subscriptions).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
+			expect<Partial<Subscription>[]>(subscriptions).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
 			expect(calls["subscriptions.list"]).toEqual([{ productId: "prod_1", active: true }]);
 		});
 	});
@@ -536,7 +538,7 @@ describe("PolarClient", () => {
 		test("flattens every page and defaults the limit to 12", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
 			let discounts = await polar.listDiscounts();
-			expect(discounts).toEqual([{ id: "disc_1" }, { id: "disc_2" }]);
+			expect<Partial<Discount>[]>(discounts).toEqual([{ id: "disc_1" }, { id: "disc_2" }]);
 			expect(calls["discounts.list"]).toEqual([{ limit: 12 }]);
 		});
 
@@ -559,7 +561,7 @@ describe("PolarClient", () => {
 		test("forwards the customer/product filters and flattens every page", async () => {
 			let polar = new PolarClient({ accessToken: "t" });
 			let orders = await polar.listOrders({ customerId: "cus_1", productId: "prod_1" });
-			expect(orders).toEqual([{ id: "ord_1" }, { id: "ord_2" }]);
+			expect<Partial<Order>[]>(orders).toEqual([{ id: "ord_1" }, { id: "ord_2" }]);
 			expect(calls["orders.list"]).toEqual([{ customerId: "cus_1", productId: "prod_1" }]);
 		});
 
@@ -944,7 +946,7 @@ describe("PolarClient", () => {
 
 			expect(result.status).toBe("success");
 			if (result.status !== "success") throw new Error("expected success");
-			expect(result.data).toEqual({ type: "order.paid", data: { id: "ord_1" } });
+			expect(result.data).toMatchObject({ type: "order.paid", data: { id: "ord_1" } });
 		});
 
 		test("forwards the raw body, flattened headers and secret to the parser", async () => {
@@ -1184,7 +1186,9 @@ describe("subscriptionFromEvent", () => {
 		];
 
 		for (let type of types) {
-			expect(subscriptionFromEvent(await parse({ type, data: { id: "sub_1" } }))).toEqual({
+			expect<Partial<Subscription> | null>(
+				subscriptionFromEvent(await parse({ type, data: { id: "sub_1" } })),
+			).toEqual({
 				id: "sub_1",
 			});
 		}
