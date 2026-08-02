@@ -8,6 +8,14 @@
  * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain,
  * matching the template in `app/http/controllers/app/team/http-monitors.test.ts`.
  *
+ * Several assertions here guard decisions an ordinary edit could silently undo: the
+ * status badge living in the shell's header rather than in a stat card, the bare
+ * `POST <url>` snippet staying deleted (it told a reader nothing the `curl` line
+ * doesn't, and reads as a complete instruction while omitting the now-mandatory
+ * `cron-jobs:ping` credential), and the route to creating a scoped key staying on the
+ * page. `<main` is the boundary between the shell's header and the page body, so a
+ * marker's index relative to it is what "in the header" means in the rendered HTML.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -125,7 +133,7 @@ describe("cronJobShow", () => {
 				name: "Nightly Backup",
 				cron_expression: "0 0 * * *",
 				timezone: "UTC",
-				grace_period_seconds: 300,
+				grace_period_seconds: 900,
 				status: "new",
 				enabled_at: Date.now(),
 			},
@@ -139,6 +147,91 @@ describe("cronJobShow", () => {
 		expect(body).toContain("Nightly Backup");
 		expect(body).toContain(routes.api.cronJobPing.href({ cronJobId: monitor.id }));
 		expect(body).toContain("No pings received yet");
+		// Uptime history is the 90-day bar, not the calendar-year heatmap — whose legend
+		// is the "Success"/"Mixed"/"Failure" scale, and which is what forced the page to
+		// scroll sideways.
+		expect(body).toContain("90 days ago");
+		expect(body).not.toContain("Failure");
+	});
+
+	test("shows the status badge in the shell header rather than as a stat card", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 900,
+				status: "missed",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, monitor.id);
+		let body = await response.text();
+
+		expect(body).toContain("Missed");
+		expect(body.indexOf("Missed")).toBeLessThan(body.indexOf("<main"));
+		expect(body.lastIndexOf("Missed")).toBeLessThan(body.indexOf("<main"));
+	});
+
+	test("folds timezone and grace period into the schedule card as a worded duration", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 3 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 900,
+				status: "healthy",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, monitor.id);
+		let body = await response.text();
+
+		expect(body).toContain("UTC · 15 minutes grace");
+		expect(body).not.toContain("900s");
+	});
+
+	test("offers authenticated snippets and a route to a scoped API key, and no bare POST line", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 900,
+				status: "new",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, monitor.id);
+		let body = await response.text();
+
+		// Every rendered snippet carries the Authorization header; the old bare
+		// `POST <url>` block was the only `<code>` starting with the bare verb.
+		expect(body).not.toContain("<code>POST");
+		expect(body).toContain("curl -X POST");
+		expect(body).toContain("Authorization: Bearer $UPTIME_API_KEY");
+		expect(body).toContain("Copy command");
+		expect(body).toContain("Copy crontab line");
+		expect(body).toContain(routes.app.team.apiKeys.new.href({ team: team.slug }));
+		expect(body).toContain("Create an API key");
 	});
 
 	test("lists the monitor's recent pings", async () => {
@@ -175,5 +268,33 @@ describe("cronJobShow", () => {
 		let body = await response.text();
 		expect(body).toContain("203.0.113.5");
 		expect(body).toContain("On Time");
+	});
+
+	test("words every instant as a distance from now, with the absolute time on hover", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 900,
+				status: "healthy",
+				last_ping_at: Date.now() - 2 * 60 * 1000,
+				next_expected_at: Date.now() + 4 * 60 * 60 * 1000,
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, monitor.id);
+		let body = await response.text();
+
+		expect(body).toContain("2 minutes ago");
+		expect(body).toContain("in 4 hours");
+		expect(body).toMatch(/<span title="[^"]+">2 minutes ago<\/span>/);
+		expect(body).not.toMatch(/\d{1,2}\/\d{1,2}\/\d{4}, \d/);
 	});
 });

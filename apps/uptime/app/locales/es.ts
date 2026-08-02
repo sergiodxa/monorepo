@@ -556,7 +556,7 @@ export default {
 			down: "Caído",
 			unknown: "Desconocido",
 		},
-		heatmap: {
+		uptimeBar: {
 			daysAgo: "Hace 90 días",
 			today: "Hoy",
 			legend: {
@@ -3780,6 +3780,7 @@ export default {
 				timezone: "Zona Horaria",
 				status: "Estado",
 				gracePeriod: "Período de Gracia",
+				gracePeriodValue: "{{duration}} de gracia",
 				description: "Descripción",
 			},
 
@@ -3807,6 +3808,16 @@ export default {
 				title: "Haga ping a este monitor",
 				description:
 					"Haz que tu tarea envíe una petición POST aquí al terminar, con una clave de API que tenga el alcance `cron-jobs:ping`.",
+				snippet: {
+					curl: "Desde un script",
+					copyCurl: "Copiar comando",
+					crontab: "Desde crontab",
+					copyCrontab: "Copiar línea de crontab",
+				},
+				apiKey: {
+					text: "Sin una clave con ese alcance, el ping se rechaza con un 401 y la ejecución igual cuenta como perdida.",
+					cta: "Crea una clave de API",
+				},
 			},
 
 			uptimeHistory: "Historial de actividad",

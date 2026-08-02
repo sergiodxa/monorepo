@@ -8,12 +8,17 @@
  * `-heatmap.tsx`), so this controller no longer blocks on any of it (notably Polar's
  * API, the slowest of those fetches) before it can render the page shell.
  *
+ * The certificate's last-checked instant reads as a distance from now, with the
+ * absolute timestamp on `title`, matching how every other monitor detail page words
+ * a "when did this last happen" reading.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle } from "remix/ui";
 
+import { formatDateTime, formatRelative } from "@pkg/dates";
 import { notFound } from "@pkg/http/response/html";
 import { IntlProvider } from "@pkg/i18n/ui";
 import {
@@ -154,7 +159,7 @@ export default createAction(routes.app.team.monitors.show, {
 							/>
 						</div>
 
-						<SslCard team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
+						<SslCard team={ctx.team} monitor={monitor} i18next={ctx.i18next} locale={ctx.locale} />
 
 						<div mix={[mbs("24px")]}>
 							<Frame
@@ -192,13 +197,14 @@ namespace SslCard {
 		team: { slug: string };
 		monitor: SelectMonitor;
 		i18next: ReturnType<typeof getContext>["i18next"];
+		locale: string;
 	}
 }
 
 /** Renders the SSL certificate card: a "not configured" prompt, or the certificate's expiry/issuer details, matching {@link calculateSslStatus}'s classification. */
 function SslCard(handle: Handle<SslCard.Props>) {
 	return () => {
-		let { team, monitor, i18next } = handle.props;
+		let { team, monitor, i18next, locale } = handle.props;
 		let editHref = routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id });
 
 		if (!monitor.ssl_monitoring_enabled) {
@@ -279,9 +285,18 @@ function SslCard(handle: Handle<SslCard.Props>) {
 							{i18next.t("page.monitor.ssl.lastChecked")}
 						</p>
 						<p mix={[fontSize("1.125rem"), weight(600)]}>
-							{monitor.ssl_last_checked_at === null
-								? "—"
-								: new Date(monitor.ssl_last_checked_at).toLocaleString()}
+							{monitor.ssl_last_checked_at === null ? (
+								"—"
+							) : (
+								<span
+									title={formatDateTime(new Date(monitor.ssl_last_checked_at), {
+										locale,
+										timeZone: "UTC",
+									})}
+								>
+									{formatRelative(new Date(monitor.ssl_last_checked_at), { locale })}
+								</span>
+							)}
 						</p>
 					</div>
 					<div mix={[flex(), justify("end")]}>

@@ -558,7 +558,7 @@ export default {
 			down: "Ausgefallen",
 			unknown: "Unbekannt",
 		},
-		heatmap: {
+		uptimeBar: {
 			daysAgo: "Vor 90 Tagen",
 			today: "Heute",
 			legend: {
@@ -3809,6 +3809,7 @@ export default {
 				timezone: "Zeitzone",
 				status: "Status",
 				gracePeriod: "Karenzzeit",
+				gracePeriodValue: "{{duration}} Karenz",
 				description: "Beschreibung",
 			},
 
@@ -3836,6 +3837,16 @@ export default {
 				title: "Diesen Monitor pingen",
 				description:
 					"Lassen Sie Ihren Job nach Abschluss eine POST-Anfrage hierher senden, mit einem API-Schlüssel mit dem Bereich `cron-jobs:ping`.",
+				snippet: {
+					curl: "Aus einem Skript",
+					copyCurl: "Befehl kopieren",
+					crontab: "Aus der Crontab",
+					copyCrontab: "Crontab-Zeile kopieren",
+				},
+				apiKey: {
+					text: "Ohne Schlüssel mit diesem Bereich wird der Ping mit einem 401 abgelehnt, und der Lauf gilt trotzdem als verpasst.",
+					cta: "API-Schlüssel erstellen",
+				},
 			},
 
 			uptimeHistory: "Verlauf der Betriebszeit",

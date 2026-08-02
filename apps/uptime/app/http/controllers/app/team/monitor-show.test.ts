@@ -138,6 +138,31 @@ describe("monitorShow", () => {
 		expect(body).toContain("Edit Monitor");
 	});
 
+	test("words the certificate's last check as a distance from now, with the absolute time on hover", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+				ssl_monitoring_enabled: true,
+				ssl_last_checked_at: Date.now() - 3 * 60 * 60 * 1000,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, monitor.id);
+		expect(response.status).toBe(200);
+
+		let body = await response.text();
+		expect(body).toMatch(/<span title="[^"]+">3 hours ago<\/span>/);
+		expect(body).not.toMatch(/\d{1,2}\/\d{1,2}\/\d{4}, \d/);
+	});
+
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 

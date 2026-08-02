@@ -557,7 +557,7 @@ export default {
 			down: "Hors ligne",
 			unknown: "Inconnu",
 		},
-		heatmap: {
+		uptimeBar: {
 			daysAgo: "Il y a 90 jours",
 			today: "Aujourd'hui",
 			legend: {
@@ -3784,6 +3784,7 @@ export default {
 				timezone: "Fuseau Horaire",
 				status: "Statut",
 				gracePeriod: "Période de Grâce",
+				gracePeriodValue: "{{duration}} de grâce",
 				description: "Description",
 			},
 
@@ -3811,6 +3812,16 @@ export default {
 				title: "Pinguer ce moniteur",
 				description:
 					"Faites en sorte que votre tâche envoie une requête POST ici une fois terminée, avec une clé d'API portant la portée `cron-jobs:ping`.",
+				snippet: {
+					curl: "Depuis un script",
+					copyCurl: "Copier la commande",
+					crontab: "Depuis la crontab",
+					copyCrontab: "Copier la ligne de crontab",
+				},
+				apiKey: {
+					text: "Sans clé portant cette portée, le ping est rejeté avec un 401 et l'exécution est tout de même comptée comme manquée.",
+					cta: "Créer une clé d'API",
+				},
 			},
 
 			uptimeHistory: "Historique de disponibilité",

@@ -546,7 +546,7 @@ export default {
 			down: "ダウン",
 			unknown: "不明",
 		},
-		heatmap: {
+		uptimeBar: {
 			daysAgo: "90日前",
 			today: "今日",
 			legend: {
@@ -3737,6 +3737,7 @@ export default {
 				timezone: "タイムゾーン",
 				status: "ステータス",
 				gracePeriod: "猶予期間",
+				gracePeriodValue: "猶予 {{duration}}",
 				description: "説明",
 			},
 
@@ -3764,6 +3765,16 @@ export default {
 				title: "このモニターにPingを送信",
 				description:
 					"ジョブの完了後、`cron-jobs:ping` スコープを持つ API キーを添えて、ここに POST リクエストを送信してください。",
+				snippet: {
+					curl: "スクリプトから",
+					copyCurl: "コマンドをコピー",
+					crontab: "crontab から",
+					copyCrontab: "crontab の行をコピー",
+				},
+				apiKey: {
+					text: "そのスコープを持つキーがない場合、Ping は 401 で拒否され、その実行は未受信として扱われます。",
+					cta: "API キーを作成",
+				},
 			},
 
 			uptimeHistory: "稼働履歴",

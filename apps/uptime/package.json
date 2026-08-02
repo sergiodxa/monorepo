@@ -18,6 +18,7 @@
 		"@pkg/cron": "workspace:*",
 		"@pkg/crypto": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
+		"@pkg/dates": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/i18n": "workspace:*",
 		"@pkg/jobs": "workspace:*",

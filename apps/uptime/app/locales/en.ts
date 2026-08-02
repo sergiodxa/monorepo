@@ -1102,7 +1102,7 @@ export default {
 			down: "Down",
 			unknown: "Unknown",
 		},
-		heatmap: {
+		uptimeBar: {
 			daysAgo: "90 days ago",
 			today: "Today",
 			legend: {
@@ -4302,6 +4302,7 @@ export default {
 				timezone: "Timezone",
 				status: "Status",
 				gracePeriod: "Grace Period",
+				gracePeriodValue: "{{duration}} grace",
 				description: "Description",
 			},
 
@@ -4329,6 +4330,16 @@ export default {
 				title: "Ping this monitor",
 				description:
 					"Have your job send a POST request here after it finishes, with an API key carrying the `cron-jobs:ping` scope.",
+				snippet: {
+					curl: "From a script",
+					copyCurl: "Copy command",
+					crontab: "From crontab",
+					copyCrontab: "Copy crontab line",
+				},
+				apiKey: {
+					text: "Without a key carrying that scope the ping is rejected with a 401, and the run still counts as missed.",
+					cta: "Create an API key",
+				},
 			},
 
 			uptimeHistory: "Uptime history",
