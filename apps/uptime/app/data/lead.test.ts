@@ -109,6 +109,53 @@ describe("Lead.upsertByEmail", () => {
 	});
 });
 
+/**
+ * The identity half of the free-watch cap. Tagging is a legitimate privacy practice and must
+ * keep working as an address, so the row is keyed on the person while the mail still goes to
+ * the spelling they used.
+ */
+describe("Lead.upsertByEmail identity", () => {
+	test("resolves every tagged and cased spelling to one lead", async () => {
+		let first = await upsert({ email: "hello+a@sergiodxa.com" });
+		let second = await upsert({ email: "hello+b@sergiodxa.com" });
+		let third = await upsert({ email: "HELLO@sergiodxa.com" });
+
+		expect(second.id).toBe(first.id);
+		expect(third.id).toBe(first.id);
+		expect(await db.count(leads)).toBe(1);
+	});
+
+	test("keeps a dotted Gmail variant as its own lead", async () => {
+		await upsert({ email: "he.llo@gmail.com" });
+		await upsert({ email: "hello@gmail.com" });
+
+		expect(await db.count(leads)).toBe(2);
+	});
+
+	test("delivers to the address as typed, not to the key", async () => {
+		let lead = await upsert({ email: "Hello+Sale@Sergiodxa.com" });
+
+		expect(lead.email).toBe("Hello+Sale@Sergiodxa.com");
+		expect(lead.normalized_email).toBe("hello@sergiodxa.com");
+	});
+
+	/** The same rule `locale` follows: the newest spelling is the inbox they are watching. */
+	test("takes the newest spelling as the address to write to", async () => {
+		await upsert({ email: "hello+old@sergiodxa.com" });
+		let lead = await upsert({ email: "hello+new@sergiodxa.com" });
+
+		expect(lead.email).toBe("hello+new@sergiodxa.com");
+		expect(await db.count(leads)).toBe(1);
+	});
+
+	test("does not revoke a consent given under a different spelling", async () => {
+		await upsert({ email: "hello+a@sergiodxa.com", consented: true });
+		let lead = await upsert({ email: "hello+b@sergiodxa.com", consented: false });
+
+		expect(lead.consented_at).not.toBeNull();
+	});
+});
+
 describe("Lead.findByEmail", () => {
 	test("finds the lead behind an address", async () => {
 		let created = await upsert();
@@ -118,6 +165,14 @@ describe("Lead.findByEmail", () => {
 
 	test("returns null for an address that never tried the tool", async () => {
 		expect(await Lead.findByEmail(db, "stranger@example.com")).toBeNull();
+	});
+
+	/** What makes signing up as `hello@` claim the targets tried as `hello+test@`. */
+	test("finds a lead created under a tagged spelling from the untagged one", async () => {
+		let created = await upsert({ email: "hello+test@sergiodxa.com" });
+
+		expect((await Lead.findByEmail(db, "hello@sergiodxa.com"))?.id).toBe(created.id);
+		expect((await Lead.findByEmail(db, "HELLO@SERGIODXA.COM"))?.id).toBe(created.id);
 	});
 });
 

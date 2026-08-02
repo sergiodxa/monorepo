@@ -759,14 +759,29 @@ export const leads = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		/**
-		 * Unique, and deliberately the natural key rather than a surrogate one: the address is
-		 * the only identifier an anonymous visitor gives us, and it is also what the sign-in
-		 * path has in hand when it looks for trial targets to convert. A second row for the
-		 * same address would split one person's watches across two leads and send them two
-		 * digests a day, so the constraint is in the database and not only in
-		 * `Lead.upsertByEmail`.
+		 * The address as it was last typed, and the one every email is actually delivered to.
+		 *
+		 * Not unique, and not the identity of the row — {@link leads.normalized_email} is. The
+		 * two are different things: `hello+news@x.com` is a legitimate way to write an address
+		 * that must keep receiving mail exactly as spelled, while the person behind it is the
+		 * same person as `hello@x.com` and must not get a second free week by tagging. A repeat
+		 * submission overwrites this with whatever was typed that time, the way `locale` does,
+		 * because the newest spelling is the one they are watching an inbox for.
 		 */
-		email: c.text().unique(),
+		email: c.text(),
+		/**
+		 * The address reduced to the person behind it — lowercased, `+tag` removed, dots kept —
+		 * and the row's real identity. See `normalizeLeadEmail` in `~/app/lib/trial-identity`
+		 * for why each of those three is the way it is.
+		 *
+		 * Unique, and the conflict target of the create-or-update the trial form runs, for the
+		 * reason the raw address used to carry it: a second row for one person would split
+		 * their watches across two leads, send them two digests a day, and hand each of their
+		 * tagged spellings its own free week on the same URL. It is also what the sign-in path
+		 * matches a subject's address against, so somebody who tried with `hello+test@` and
+		 * signed up as `hello@` still has their targets converted.
+		 */
+		normalized_email: c.text().unique(),
 		/**
 		 * The random, unguessable token every trial email's unsubscribe link carries.
 		 *
@@ -846,8 +861,29 @@ export const trialWatches = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		lead_id: c.text(),
-		/** The URL being watched, and the one a conversion turns into a real HTTP monitor. */
+		/**
+		 * The URL being watched, exactly as the probe resolved it — the one that is fetched
+		 * hourly, reported in every email, and turned into a real HTTP monitor by a conversion.
+		 */
 		url: c.text(),
+		/**
+		 * The same URL reduced to the endpoint behind it, used for one thing only: deciding
+		 * whether this lead already has a free week running on this target. See
+		 * `normalizeTrialUrl` in `~/app/lib/trial-identity` for the four reductions it makes and
+		 * the one it deliberately does not — `http://` and `https://` stay two different
+		 * endpoints and each gets its own week.
+		 *
+		 * Stored rather than derived at read time so the cap's lookup is an indexed equality on
+		 * `(lead_id, normalized_url)` rather than a scan over every URL that lead ever tried,
+		 * and so `url` can stay verbatim for probing and display without the two ever
+		 * disagreeing about which one is which.
+		 *
+		 * It carries no unique constraint. Nothing needs it to: a watch is deleted thirty days
+		 * after it is created, so "a row exists for this pair" already *is* the thirty-day
+		 * window, and the request that finds one answers with a report email rather than an
+		 * error.
+		 */
+		normalized_url: c.text(),
 		/**
 		 * Fixed at one hour by the product and not editable anywhere, but stored rather than
 		 * hard-coded in the sweep because it is what makes this table claimable by the same
@@ -924,11 +960,16 @@ export type InsertTrialWatch = InsertRow<typeof trialWatches>;
  * the same way. A digest draws an uptime bar over these rows, which totals on the watch
  * cannot produce.
  *
- * This is the disposable one of the three trial tables and the only one a retention sweep
- * may delete from. Rows are bounded by construction — 168 per watch, and then the watch
- * stops writing — but bounded is not self-deleting, and they are dead the moment the
- * digests that render them have been sent. Deleting a `trial_watches` row instead would
- * lose the target a sign-up would have converted.
+ * This is the disposable one of the three trial tables. Rows are bounded by construction —
+ * 168 per watch, and then the watch stops writing — but bounded is not self-deleting.
+ *
+ * They live exactly as long as the watch they belong to, and the sweep deletes them by
+ * following {@link trialWatchResults.trial_watch_id} to a watch past its `converts_until`
+ * rather than by an age of their own. An age would be wrong now that a repeat submission is
+ * answered with a report drawn from these rows: a cutoff shorter than the watch's own life
+ * would leave a live watch with nothing to report, and one as long as it would delete the
+ * results *after* the watch, orphaning them. Following the watch is the only shape with
+ * neither failure.
  */
 export const trialWatchResults = table({
 	name: "trial_watch_results",

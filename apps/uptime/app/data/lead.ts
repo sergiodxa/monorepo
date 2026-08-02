@@ -11,6 +11,12 @@
  * {@link Lead.listDueForDigest} and {@link shouldSendDigest} are here and the weekly
  * wrap-up is not.
  *
+ * Because it is the person, it is keyed on the person and not on the string they typed.
+ * `normalized_email` — lowercased, `+tag` removed — is the unique column and the conflict
+ * target of the upsert; `email` is the address as last typed and is only ever a delivery
+ * detail. Every lookup that starts from an address goes through `normalizeLeadEmail`, so a
+ * caller cannot accidentally compare the two.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -25,6 +31,7 @@ import type { BatchedSweepResult } from "~/app/lib/retention";
 import type { SelectLead, SupportedLanguage } from "~/database/schema";
 
 import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/lib/retention";
+import { normalizeLeadEmail } from "~/app/lib/trial-identity";
 import { leads, trialWatchResults, trialWatches } from "~/database/schema";
 
 /**
@@ -66,6 +73,7 @@ const COLUMNS = [
 	"created_at",
 	"updated_at",
 	"email",
+	"normalized_email",
 	"unsubscribe_token",
 	"locale",
 	"consented_at",
@@ -110,16 +118,23 @@ function startOfUtcDay(now: number) {
 
 export default class Lead {
 	/**
-	 * Records a lead, or updates the one that address already has.
+	 * Records a lead, or updates the one that person already has.
 	 *
-	 * One statement keyed on the unique `email`, not a read followed by a write: two trial
-	 * submissions racing from the same person would otherwise both find nothing and both
-	 * insert, and the second insert would fail on the constraint after the first had already
-	 * created a watch pointing at a lead the caller no longer has.
+	 * One statement keyed on the unique `normalized_email`, not a read followed by a write:
+	 * two trial submissions racing from the same person would otherwise both find nothing and
+	 * both insert, and the second insert would fail on the constraint after the first had
+	 * already created a watch pointing at a lead the caller no longer has.
+	 *
+	 * **Keyed on the normalized address and not on the typed one**, which is the whole reason
+	 * the two are separate columns. `hello+a@x.com`, `hello+b@x.com` and `HELLO@x.com` are one
+	 * person and must be one lead — otherwise each spelling buys its own free week on the same
+	 * URL — while the mail still has to reach whichever of them they actually typed.
 	 *
 	 * What a repeat submission does to each field is a separate decision, and none of them
 	 * is "take the newest value":
 	 *
+	 * - `email` always takes the new value, for the same reason `locale` does: it is the
+	 *   spelling they used this time and the one they are watching an inbox for.
 	 * - `locale` always takes the new value: it is the language of the page they are on right
 	 *   now, which is the best guess available for the language to write to them in.
 	 * - `consented_at` only ever goes from null to a timestamp. An unticked box on a later
@@ -138,11 +153,12 @@ export default class Lead {
 
 		let result = await db.exec(
 			`INSERT INTO ${table}
-			        (id, created_at, updated_at, email, unsubscribe_token, locale,
-			         consented_at, last_digest_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
-			 ON CONFLICT (email) DO UPDATE
+			        (id, created_at, updated_at, email, normalized_email, unsubscribe_token,
+			         locale, consented_at, last_digest_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+			 ON CONFLICT (normalized_email) DO UPDATE
 			    SET updated_at = excluded.updated_at,
+			        email = excluded.email,
 			        locale = excluded.locale,
 			        consented_at = COALESCE(${table}.consented_at, excluded.consented_at)
 			RETURNING ${COLUMNS.join(", ")}`,
@@ -151,6 +167,7 @@ export default class Lead {
 				now,
 				now,
 				input.email,
+				normalizeLeadEmail(input.email),
 				generateUUID(),
 				input.locale,
 				input.consented ? now : null,
@@ -166,9 +183,14 @@ export default class Lead {
 	/**
 	 * The lead for an email address, or `null`. This is the sign-in path's entry point: an
 	 * address is the only thing a lead and a newly signed-in subject are known to share.
+	 *
+	 * The lookup is on the normalized form, so it takes an address in any spelling and finds
+	 * the one lead behind it. That is what makes signing up as `hello@x.com` convert the
+	 * targets someone tried as `hello+test@x.com` — the alternative, an exact match on the
+	 * stored address, fails for exactly the people careful enough to tag.
 	 */
 	static async findByEmail(db: Database, email: string) {
-		return await db.findOne(leads, { where: { email } });
+		return await db.findOne(leads, { where: { normalized_email: normalizeLeadEmail(email) } });
 	}
 
 	/** The lead a watch belongs to, for the emails a sweep sends. */

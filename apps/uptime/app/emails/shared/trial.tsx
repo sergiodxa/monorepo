@@ -1,5 +1,5 @@
 /**
- * Pieces the four free-watch emails share: the status vocabulary they report, the
+ * Pieces the five free-watch emails share: the status vocabulary they report, the
  * unsubscribe header every one of them carries, the way they abbreviate a URL and
  * render an instant, and the bar-plus-totals report the two digests are built around.
  *
@@ -8,7 +8,7 @@
  * comes from one `emails.trial.*` prefix, and the way to make the mail stop belongs to
  * the family rather than being a per-email decision.
  *
- * This module is deliberately not an email class and not a base class for the four that
+ * This module is deliberately not an email class and not a base class for the five that
  * are. What the trial emails have in common is copy and a couple of small components,
  * not behaviour: each one derives its own recipient, its own subject and its own body,
  * which is the whole of the `Email` contract. ADR-030 rejects a shared base class for
@@ -191,10 +191,12 @@ export namespace TrialReport {
 
 /**
  * One URL's record over one window: the bar, then checks run, uptime, and the slowest
- * response. Shared by both digests so a reader who gets six dailies and one weekly is
- * reading the same report at two scales — it is the only thing the two still have in
- * common, since one covers a whole set of URLs for a day and the other one URL for a
- * week.
+ * response. Shared by the two digests and by the report a repeat submission earns, so a
+ * reader who gets six dailies and one weekly is reading the same report at two scales — it
+ * is the only thing those two still have in common, since one covers a whole set of URLs
+ * for a day and the other one URL for a week. The repeat report reuses it for the same
+ * reason it is not a subclass of the wrap-up: what those emails share is this block, not
+ * their framing.
  *
  * @example <TrialReport segments={hours} stats={stats} rangeStart={start} rangeEnd={end} t={t} />
  */

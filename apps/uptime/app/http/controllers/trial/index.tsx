@@ -141,6 +141,7 @@ import Subscription from "~/app/data/subscription";
 import Team from "~/app/data/team";
 import {
 	TRIAL_PROBE,
+	TRIAL_WATCH_REPEATED,
 	TRIAL_WATCH_STARTED,
 	isRedirectProbe,
 	takeTrialState,
@@ -257,6 +258,12 @@ export interface TrialPageView {
 	refusal?: TrialRefusalState;
 	/** The URL a watch was just opened for, rendered once as a receipt. */
 	watching?: string;
+	/**
+	 * The URL a submission was capped on, rendered once as its own receipt. Set instead of
+	 * {@link TrialPageView.watching} when the address already had a free week on that URL
+	 * inside the last thirty days, so nothing was started and the report went out instead.
+	 */
+	repeated?: string;
 	/** Whether the address just submitted to the email form failed validation. */
 	leadError?: boolean;
 	/** Starting value for the URL box, when no probe supplies one. */
@@ -465,7 +472,7 @@ function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
 export function renderTrialPage(view: TrialPageView = {}) {
 	let ctx = getContext();
 	let t = ctx.i18next.t;
-	let { probe, refusal, watching, leadError, monitorOffer } = view;
+	let { probe, refusal, watching, repeated, leadError, monitorOffer } = view;
 	let incomplete = isIncompleteForm(refusal);
 
 	let chrome = buildMarketingChrome(t);
@@ -651,6 +658,23 @@ export function renderTrialPage(view: TrialPageView = {}) {
 									<Alert.Title>{t("page.trial.watching.title")}</Alert.Title>
 									<Alert.Description>
 										{t("page.trial.watching.description", { url: watching })}
+									</Alert.Description>
+								</Alert.Content>
+							</Alert>
+						)}
+
+						{/*
+						 * Not `success`, because nothing was started, and not `warning`, because
+						 * nothing went wrong either: the URL is already being reported on and the
+						 * report is on its way. `brand` is the tone the page uses for the thing it
+						 * is telling you rather than the thing you did.
+						 */}
+						{repeated === undefined ? null : (
+							<Alert color="brand" live="polite" mix={[mbs(6)]}>
+								<Alert.Content>
+									<Alert.Title>{t("page.trial.repeated.title")}</Alert.Title>
+									<Alert.Description>
+										{t("page.trial.repeated.description", { url: repeated })}
 									</Alert.Description>
 								</Alert.Content>
 							</Alert>
@@ -996,15 +1020,22 @@ function buildMonitorOffer(
 export default createController(routes.trial.check, {
 	actions: {
 		/**
-		 * GET /try — the empty box, plus the receipt for a watch that was just opened. Reaches
-		 * nothing that could cost a probe, which is what makes it safe for a crawler, a link
-		 * preview, or a reload to land on.
+		 * GET /try — the empty box, plus the receipt for whichever of the two things the last
+		 * submission did: opened a watch, or found the URL already had one. Reaches nothing
+		 * that could cost a probe, which is what makes it safe for a crawler, a link preview,
+		 * or a reload to land on.
+		 *
+		 * Both receipts are taken even though at most one is ever set, so a value left behind
+		 * by an abandoned submission cannot surface on top of the next one's answer.
 		 */
 		index(ctx) {
-			let watching = takeTrialState<string>(ctx.get(Session), TRIAL_WATCH_STARTED);
+			let session = ctx.get(Session);
+			let watching = takeTrialState<string>(session, TRIAL_WATCH_STARTED);
+			let repeated = takeTrialState<string>(session, TRIAL_WATCH_REPEATED);
 
 			return renderTrialPage({
 				watching,
+				repeated,
 				prefill: ctx.url.searchParams.get(TRIAL_URL_FIELD) ?? "",
 			});
 		},

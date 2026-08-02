@@ -151,6 +151,46 @@ describe("the conversion window, per attempt", () => {
 	});
 });
 
+/**
+ * A lead is the person, not the string they typed, and sign-in has to find them by the same
+ * rule. Matching the stored address exactly used to fail for exactly the people careful
+ * enough to tag: they tried as `hello+test@`, signed up as `hello@`, and their targets
+ * lapsed unclaimed with nothing able to say why.
+ */
+describe("matching a subject to a lead", () => {
+	async function convertAs(email: string) {
+		await convertTrialWatches(db, { email, teamId: TEAM_ID, authorId: AUTHOR_ID });
+	}
+
+	test("claims the targets of an address that was tried with a tag", async () => {
+		let lead = await createLead("hello+test@sergiodxa.com");
+		await attempt(lead.id, "https://tagged.example", 1);
+
+		await convertAs("hello@sergiodxa.com");
+
+		expect((await created()).map((monitor) => monitor.url)).toEqual(["https://tagged.example"]);
+	});
+
+	test("claims them whatever case the subject's address arrives in", async () => {
+		let lead = await createLead("hello@sergiodxa.com");
+		await attempt(lead.id, "https://cased.example", 1);
+
+		await convertAs("HELLO@SERGIODXA.COM");
+
+		expect((await created()).map((monitor) => monitor.url)).toEqual(["https://cased.example"]);
+	});
+
+	/** The reduction not made: a dotted local part is somebody else, and gets nothing. */
+	test("does not hand one person's targets to a dotted variant of their address", async () => {
+		let lead = await createLead("hello@gmail.com");
+		await attempt(lead.id, "https://dotted.example", 1);
+
+		await convertAs("he.llo@gmail.com");
+
+		expect(await created()).toBeEmpty();
+	});
+});
+
 describe("what a claimed target becomes", () => {
 	test("records which monitor the target became, which is what stops a second claim", async () => {
 		let lead = await createLead();

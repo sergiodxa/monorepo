@@ -62,9 +62,8 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import type { ClaimedTrialWatch } from "~/app/data/trial-watch";
-import type { TrialStats } from "~/app/emails/shared/trial";
 import type { HttpCheckResult } from "~/app/services/http-check";
-import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
+import type { MonitorStatus, SelectLead } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import TrialWatch, {
@@ -77,7 +76,7 @@ import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
-import { formatUptime, segmentsOver } from "~/app/lib/trial-report";
+import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
 import { HttpCheck } from "~/app/services/http-check";
 import routes from "~/routes/web";
@@ -340,7 +339,7 @@ export class CheckTrialWatchesJob extends Job {
 				to: lead.email,
 				url: row.url,
 				segments: segmentsOver(results, row.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
-				stats: weekStats(row),
+				stats: watchStats(row),
 				subscribeUrl,
 				unsubscribeToken: lead.unsubscribe_token,
 				locale,
@@ -358,19 +357,4 @@ export class CheckTrialWatchesJob extends Job {
 
 		return true;
 	}
-}
-
-/**
- * The three numbers under a wrap-up's bar, read off the watch's own running totals.
- *
- * `max_response_time_ms` is zero exactly when nothing ever answered — the column starts at
- * zero and only ever takes a `MAX` against a real measurement — so zero is reported as "no
- * slowest response" rather than as an implausibly fast one.
- */
-function weekStats(watch: SelectTrialWatch): TrialStats {
-	return {
-		checks: watch.checks_run,
-		uptime: watch.checks_run === 0 ? null : formatUptime(watch.checks_ok / watch.checks_run),
-		slowestResponseMs: watch.max_response_time_ms === 0 ? null : watch.max_response_time_ms,
-	};
 }

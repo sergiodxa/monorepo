@@ -1460,6 +1460,20 @@ export default {
 				footer:
 					"You received this email because you asked us to watch this URL for a week. This is the last one.",
 			},
+
+			repeat: {
+				subject: "What we have found on {{url}} so far",
+				preview: "The checks we already have on {{url}}",
+				heading: "{{url}} has already been checked",
+				intro: "You asked us to watch {{url}} on {{since}}. Here is everything those checks found.",
+				rangeStart: "Day 1",
+				rangeEnd: "Day 7",
+				closing:
+					"Each URL gets one free week every 30 days, so this request did not start a second one. To keep checking {{url}} — as often as you like, with an alert the moment it changes — use Uptime.",
+				action: "Keep checking this URL",
+				footer:
+					"You received this email because you submitted this URL on our website and we already had a report for it.",
+			},
 		},
 	},
 
@@ -3554,6 +3568,12 @@ export default {
 				title: "We are on it",
 				description:
 					"The first hourly check on {{url}} runs in an hour. A copy of the check you just ran is already in your inbox.",
+			},
+
+			repeated: {
+				title: "We have already checked this one",
+				description:
+					"{{url}} already had its free week from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
 			},
 
 			benefits: {

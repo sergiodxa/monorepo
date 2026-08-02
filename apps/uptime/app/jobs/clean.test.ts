@@ -241,6 +241,7 @@ describe("CleanJob.perform trial cleanup", () => {
 			created_at: createdAt,
 			updated_at: createdAt,
 			email: `${id}@example.com`,
+			normalized_email: `${id}@example.com`,
 			unsubscribe_token: `token-${id}`,
 			locale: "en",
 			consented_at: null,
@@ -249,13 +250,19 @@ describe("CleanJob.perform trial cleanup", () => {
 	}
 
 	/** A watch dated from `createdAt`, with both of its deadlines derived the way it is created. */
-	async function seedWatch(id: string, leadId: string, createdAt: number) {
+	async function seedWatch(
+		id: string,
+		leadId: string,
+		createdAt: number,
+		url = "https://example.com",
+	) {
 		return await db.create(trialWatches, {
 			id,
 			created_at: createdAt,
 			updated_at: createdAt,
 			lead_id: leadId,
-			url: "https://example.com",
+			url,
+			normalized_url: url,
 			next_due_at: null,
 			expires_at: createdAt + 7 * MS_PER_DAY,
 			converts_until: createdAt + 30 * MS_PER_DAY,
@@ -272,15 +279,62 @@ describe("CleanJob.perform trial cleanup", () => {
 		});
 	}
 
-	test("deletes trial results older than the seven days a watch writes them over", async () => {
+	/**
+	 * The two sweeps that used to run on unrelated clocks now run on one, and the ordering
+	 * inside `sweepTrial` is what makes that safe: the results are identified by joining to
+	 * the watch, so they have to go while it still exists.
+	 */
+	test("takes a watch and every one of its results in the same run", async () => {
 		let now = Date.now();
-		await seedTrialResult("old", "watch-1", now - 8 * MS_PER_DAY);
-		await seedTrialResult("recent", "watch-1", now - 6 * MS_PER_DAY);
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("watch-1", "lead-1", now - 31 * MS_PER_DAY);
+		await seedTrialResult("day-one", "watch-1", now - 31 * MS_PER_DAY);
+		await seedTrialResult("day-six", "watch-1", now - 25 * MS_PER_DAY);
+
+		await run();
+
+		expect(await db.findMany(trialWatches, {})).toBeEmpty();
+		expect(await db.findMany(trialWatchResults, {})).toBeEmpty();
+	});
+
+	/**
+	 * The failure the old seven-day age produced, asserted directly: a result written on day
+	 * six of a watch aged out at day thirteen while the watch it belonged to lived to thirty,
+	 * and a report drawn for a repeat submission after that found nothing.
+	 */
+	test("keeps a living watch's results however old they are", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 20 * MS_PER_DAY);
+		await seedWatch("watch-1", "lead-1", now - 20 * MS_PER_DAY);
+		await seedTrialResult("day-one", "watch-1", now - 20 * MS_PER_DAY);
+		await seedTrialResult("day-six", "watch-1", now - 14 * MS_PER_DAY);
 
 		await run();
 
 		let remaining = await db.findMany(trialWatchResults, {});
-		expect(remaining.map((row) => row.id)).toEqual(["recent"]);
+		expect(remaining.map((row) => row.id).sort()).toEqual(["day-one", "day-six"]);
+	});
+
+	/**
+	 * The other failure the age produced, and the one nothing could have recovered from: a
+	 * result written on day six of a thirty-day watch would have outlived it by six days, with
+	 * no watch left to identify it and nothing that would ever match it again.
+	 */
+	test("leaves no result behind once its watch is gone", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("expired", "lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("still-open", "lead-1", now - 20 * MS_PER_DAY, "https://other.example");
+		await seedTrialResult("of-expired", "expired", now - 25 * MS_PER_DAY);
+		await seedTrialResult("of-open", "still-open", now - 14 * MS_PER_DAY);
+
+		await run();
+
+		let watchIds = new Set((await db.findMany(trialWatches, {})).map((row) => row.id));
+		let results = await db.findMany(trialWatchResults, {});
+
+		expect(results.map((row) => row.id)).toEqual(["of-open"]);
+		expect(results.every((row) => watchIds.has(row.trial_watch_id))).toBe(true);
 	});
 
 	test("keeps a watch whose week of checking is over but whose offer is still open", async () => {
@@ -321,7 +375,7 @@ describe("CleanJob.perform trial cleanup", () => {
 		let now = Date.now();
 		await seedLead("lead-1", now - 31 * MS_PER_DAY);
 		await seedWatch("expired", "lead-1", now - 31 * MS_PER_DAY);
-		await seedWatch("still-open", "lead-1", now - 20 * MS_PER_DAY);
+		await seedWatch("still-open", "lead-1", now - 20 * MS_PER_DAY, "https://other.example");
 
 		await run();
 

@@ -7,6 +7,26 @@
  * reporting the check that was already on screen. Nothing here is billed and no Polar
  * customer is provisioned — a lead is not a user, and only signing up makes one.
  *
+ * ## One free week per URL per thirty days
+ *
+ * The middle write is the one with a condition on it. A free watch is a week of hourly
+ * outbound fetches given away for an email address, and without a cap the same person could
+ * restart it on the same URL forever by submitting again whenever the last one lapsed. So
+ * the pair `(lead, normalized URL)` is looked up first, and finding a row means this URL
+ * already had its week — a watch is deleted thirty days after it is created, so the row's
+ * existence *is* the window and no date arithmetic happens here.
+ *
+ * Both halves of that pair are normalized, because both had trivial bypasses: a trailing
+ * slash, a fragment or a reordered query string made one URL into three, and a `+tag` made
+ * one person into as many leads as they cared to type. `~/app/lib/trial-identity` holds both
+ * reductions and the one it deliberately does not make — `http://` and `https://` are two
+ * endpoints and get a week each.
+ *
+ * **A capped submission is answered, not swallowed.** It sends the report of what the
+ * existing watch has already found on that URL, which is the one thing we can say that the
+ * reader could not have got anywhere else, and the page says plainly that no second week was
+ * started. Silence would read as a bug, and a bare refusal would spend the moment on nothing.
+ *
  * ## What is trusted
  *
  * The URL, the status and the timings come out of the session, written there by `POST /try`
@@ -51,18 +71,24 @@ import type { SupportedLanguage } from "~/database/schema";
 import Lead from "~/app/data/lead";
 import TrialWatch, { TRIAL_WATCH_DURATION_DAYS } from "~/app/data/trial-watch";
 import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
+import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
 import { renderTrialPage } from "~/app/http/controllers/trial/index";
 import {
 	TRIAL_PROBE,
+	TRIAL_WATCH_REPEATED,
 	TRIAL_WATCH_STARTED,
 	takeTrialState,
 } from "~/app/http/controllers/trial/session";
 import { TrialLeadSchema } from "~/app/http/validators/trial";
+import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
 import { supportedLanguages } from "~/database/schema";
 import routes from "~/routes/web";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Origin the report's call to action points at; the host this app is served from. */
+const APP_ORIGIN = "https://uptime.sergiodxa.com";
 
 /** POST /try/lead — records the lead, opens the watch, sends the receipt. */
 export default createAction(routes.trial.lead, async (ctx) => {
@@ -102,6 +128,63 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		locale,
 		consented: result.data.consent,
 	});
+
+	/**
+	 * The cap, and the whole of it. A row here means this pair already had its free week, and
+	 * because a watch is deleted thirty days after it was created, a row can only be found
+	 * while that thirty days is still open. The URL is normalized inside the lookup, so a
+	 * trailing slash, a fragment or a reordered query string cannot walk past it.
+	 */
+	let existing = await TrialWatch.findByNormalizedUrl(db, lead.id, probe.url);
+
+	if (existing) {
+		let results = await TrialWatch.listResultsBetween(
+			db,
+			existing.id,
+			existing.created_at,
+			existing.expires_at,
+		);
+
+		// Counted before the send, because a rejected send is a billed one.
+		recordCost("emailSent");
+		let report = await ctx.email.send(
+			new TrialRepeatReportEmail({
+				to: lead.email,
+				url: existing.url,
+				watchingSince: new Date(existing.created_at),
+				/**
+				 * The watch's own seven days, anchored to when it started rather than to now, so
+				 * the bar reads as the week that was promised. Days it has not reached yet come
+				 * back as `null` and draw as "no data", which is the honest answer for a week
+				 * still in progress.
+				 */
+				segments: segmentsOver(results, existing.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
+				stats: watchStats(existing),
+				subscribeUrl: `${APP_ORIGIN}${routes.app.index.href()}`,
+				unsubscribeToken: lead.unsubscribe_token,
+				locale,
+				t: ctx.i18next.getFixedT(locale),
+			}),
+		);
+
+		if (isFailure(report)) {
+			ctx.logger.error("trial.lead.repeat_report_email_failed", {
+				leadId: lead.id,
+				watchId: existing.id,
+				error: report.error.message,
+			});
+		} else {
+			await Lead.recordEmailSent(db, lead.id);
+		}
+
+		/**
+		 * A different receipt, because a different thing happened. Telling somebody we are now
+		 * watching a URL we declined to start watching again would be the one lie this page can
+		 * tell that they have no way to check.
+		 */
+		session?.set(TRIAL_WATCH_REPEATED, existing.url);
+		return back;
+	}
 
 	await TrialWatch.create(db, lead.id, {
 		url: probe.url,

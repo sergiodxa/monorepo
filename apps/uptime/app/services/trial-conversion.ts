@@ -6,9 +6,13 @@
  * thirty days from each attempt that URL is claimable. This is the claim: an address is the
  * only thing a lead and a signed-in subject are known to share, so sign-in looks for a lead
  * with the subject's address and creates a monitor for every attempt whose own window is
- * still open. What is convertible is `~/app/data/trial-watch.ts`'s decision, not this
- * module's — each watch carries its own clock, so a lead who tried three URLs a few days
- * apart can have two of them claimed and the third already lapsed.
+ * still open. The match is on the *person* behind the address — `Lead.findByEmail` reduces
+ * both sides the same way — because an exact match on the stored string fails for precisely
+ * the people careful enough to tag: tried as `hello+test@`, signed up as `hello@`, and their
+ * targets would lapse unclaimed with nothing able to say why. What is convertible is
+ * `~/app/data/trial-watch.ts`'s decision, not this module's — each watch carries its own
+ * clock, so a lead who tried three URLs a few days apart can have two of them claimed and
+ * the third already lapsed.
  *
  * It is also where the funnel's middle is recorded. Sign-in is the only moment at which a
  * lead and an account are known to be the same person, so it is the only moment at which
@@ -53,7 +57,12 @@ const CONVERTED_INTERVAL_SECONDS = 600;
 
 /** Who signed in, and where their claimed targets go. */
 export interface TrialConversionSubject {
-	/** The authenticated subject's address, matched against `leads.email`. */
+	/**
+	 * The authenticated subject's address, matched against `leads.normalized_email` — the
+	 * person behind the address rather than the string, so someone who tried the free page as
+	 * `hello+test@` and signed up as `hello@` still has their targets claimed. `Lead.findByEmail`
+	 * does the reduction, so this is passed in whatever spelling the identity provider gave.
+	 */
 	email: string;
 	/** The team they were just provisioned into, which must already exist. */
 	teamId: string;

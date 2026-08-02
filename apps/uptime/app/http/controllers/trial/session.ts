@@ -94,6 +94,18 @@ export const TRIAL_PROBE = "trialProbe";
 export const TRIAL_WATCH_STARTED = "trialWatchStarted";
 
 /**
+ * Session key for the URL a submission was capped on, rendered once as its own receipt.
+ *
+ * Separate from {@link TRIAL_WATCH_STARTED} rather than a flag beside it, because the two
+ * are different outcomes and the page must not describe one as the other: a URL that already
+ * had its free week inside the last thirty days starts nothing, and saying "we are on it"
+ * over a watch that was not created is the one claim a visitor has no way to check. Written
+ * by `POST /try/lead` when it finds an existing watch, removed by `GET /try` as it renders
+ * it.
+ */
+export const TRIAL_WATCH_REPEATED = "trialWatchRepeated";
+
+/**
  * Reads a trial value and removes it, for the handler that consumes it.
  *
  * @param session - The request's session, absent when no session middleware ran.

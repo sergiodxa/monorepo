@@ -1201,6 +1201,21 @@ export default {
 				footer:
 					"Vous avez reçu cet e-mail parce que vous nous avez demandé de surveiller cette URL pendant une semaine. C'est le dernier.",
 			},
+
+			repeat: {
+				subject: "Ce que nous avons trouvé sur {{url}} jusqu'ici",
+				preview: "Les vérifications déjà effectuées sur {{url}}",
+				heading: "{{url}} est déjà vérifiée",
+				intro:
+					"Vous nous avez demandé de surveiller {{url}} le {{since}}. Voici tout ce que ces vérifications ont trouvé.",
+				rangeStart: "Jour 1",
+				rangeEnd: "Jour 7",
+				closing:
+					"Chaque URL bénéficie d'une semaine gratuite tous les 30 jours ; cette demande n'en a donc pas lancé une seconde. Pour continuer à vérifier {{url}} — aussi souvent que vous le souhaitez, avec une alerte dès que cela change — utilisez Uptime.",
+				action: "Continuer à vérifier cette URL",
+				footer:
+					"Vous avez reçu cet e-mail parce que vous avez soumis cette URL sur notre site et que nous avions déjà un rapport la concernant.",
+			},
 		},
 	},
 
@@ -3310,6 +3325,12 @@ export default {
 				title: "C'est parti",
 				description:
 					"Le premier test horaire de {{url}} sera lancé dans une heure. Une copie du test que vous venez de faire est déjà dans votre boîte.",
+			},
+
+			repeated: {
+				title: "Nous avons déjà vérifié celle-ci",
+				description:
+					"{{url}} a déjà eu sa semaine gratuite lors d'une demande précédente : chaque URL en a une tous les 30 jours. Nous vous avons envoyé par e-mail tout ce que ces vérifications ont trouvé, donc rien de nouveau n'a été lancé.",
 			},
 
 			benefits: {

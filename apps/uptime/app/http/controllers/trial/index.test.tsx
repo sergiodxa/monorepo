@@ -130,7 +130,8 @@ mock.module("@pkg/logger", () => ({
 	logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} },
 }));
 
-let { TRIAL_PROBE, TRIAL_WATCH_STARTED } = await import("~/app/http/controllers/trial/session");
+let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
+	await import("~/app/http/controllers/trial/session");
 let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
 let { default: trialCheck } = await import("./index");
 
@@ -359,6 +360,22 @@ describe("GET /try", () => {
 		expect(body).toContain("We are on it");
 		expect(body).toContain("https://example.com/");
 		expect(session.get(TRIAL_WATCH_STARTED)).toBeUndefined();
+	});
+
+	/**
+	 * The capped submission's own receipt, and it must not read as the other one: nothing was
+	 * started, and saying otherwise is the one claim on this page a visitor cannot check.
+	 */
+	test("renders the capped receipt once and then forgets it", async () => {
+		let session = new Session();
+		session.set(TRIAL_WATCH_REPEATED, "https://example.com/");
+
+		let { body } = await getTry(session);
+
+		expect(body).toContain("We have already checked this one");
+		expect(body).toContain("https://example.com/");
+		expect(body).not.toContain("We are on it");
+		expect(session.get(TRIAL_WATCH_REPEATED)).toBeUndefined();
 	});
 });
 

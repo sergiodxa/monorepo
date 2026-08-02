@@ -27,6 +27,12 @@
  * convertible one, which is why {@link TrialWatch.deleteExpired} sweeps on the second column
  * and never on the first.
  *
+ * **A third deadline falls out of the second and needs no column of its own.** One person
+ * gets one free week per URL per thirty days, and because a row is deleted thirty days after
+ * it is created, "a row exists for this lead and this URL" already says exactly that. That is
+ * the whole of {@link TrialWatch.findByNormalizedUrl}, and it is why `normalized_url` is a
+ * key rather than a date.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -45,8 +51,9 @@ import type {
 	SelectTrialWatchResult,
 } from "~/database/schema";
 
-import { deleteOlderThan } from "~/app/lib/retention";
+import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES, deleteOlderThan } from "~/app/lib/retention";
 import { claimDue } from "~/app/lib/scheduling";
+import { normalizeTrialUrl } from "~/app/lib/trial-identity";
 import { trialWatchResults, trialWatches } from "~/database/schema";
 
 /** How long a target is re-checked for before the wrap-up goes out and checking stops. */
@@ -104,6 +111,17 @@ const CLAIM_COLUMNS = [
 
 /** A trial watch claimed for a check, projected to the columns the sweep reads. */
 export type ClaimedTrialWatch = Pick<SelectTrialWatch, (typeof CLAIM_COLUMNS)[number]>;
+
+/**
+ * What {@link TrialWatch.create} accepts: everything on the row a caller may set, with the
+ * URL required and `normalized_url` absent.
+ *
+ * The key is derived from the URL rather than supplied, so removing it from the input is
+ * what makes "a watch whose key does not match its own URL" unrepresentable rather than
+ * merely discouraged. The URL is required for the same reason: it is the one field the key
+ * is computed from, and every other column is optional or stamped by `create` itself.
+ */
+export type NewTrialWatch = Omit<InsertTrialWatch, "normalized_url" | "url"> & { url: string };
 
 /** One completed trial check, as the thing to record. */
 export interface TrialCheckResult {
@@ -216,8 +234,13 @@ export default class TrialWatch {
 	 * next cron tick would spend a check confirming what is on screen. Callers pass that first
 	 * result as `last_status` in `input`, which gives change detection a baseline from the
 	 * very first hour instead of burning one on establishing it.
+	 *
+	 * `normalized_url` is derived here rather than accepted, and derived *after* the spread so
+	 * no caller can supply one. It is the key {@link TrialWatch.findByNormalizedUrl} caps on,
+	 * and a row whose key does not match its own URL would be a free week nothing could ever
+	 * find again.
 	 */
-	static async create(db: Database, leadId: string, input: InsertTrialWatch) {
+	static async create(db: Database, leadId: string, input: NewTrialWatch) {
 		let now = Date.now();
 
 		return await db.create(
@@ -226,12 +249,38 @@ export default class TrialWatch {
 				id: generateUUID(),
 				lead_id: leadId,
 				...input,
+				normalized_url: normalizeTrialUrl(input.url),
 				expires_at: now + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY,
 				converts_until: now + TRIAL_WATCH_CONVERSION_WINDOW_DAYS * MS_PER_DAY,
 				next_due_at: now + TRIAL_WATCH_INTERVAL_SECONDS * 1000,
 			},
 			{ touch: true, returnRow: true },
 		);
+	}
+
+	/**
+	 * The watch this lead already has on this URL, or `null` — the whole of the free-watch
+	 * cap.
+	 *
+	 * **A row's existence is the thirty-day window**, so no date arithmetic happens here and
+	 * none should be added. A watch is deleted by {@link TrialWatch.deleteExpired} thirty days
+	 * after it was created, so a row can only be found while that window is open and finding
+	 * one is exactly "this pair already had its free week". Adding a date condition would
+	 * either duplicate the sweep's rule or quietly disagree with it.
+	 *
+	 * The lookup is on the normalized URL, which is what makes a trailing slash, a fragment or
+	 * a reordered query string land on the watch that already exists instead of buying another
+	 * one. `http://` and `https://` still do not collide — see `normalizeTrialUrl`.
+	 *
+	 * @param db - Database handle.
+	 * @param leadId - The lead submitting the URL.
+	 * @param url - The URL as typed; normalized here so callers cannot compare the wrong form.
+	 * @returns The existing watch, or `null` when this pair is free to start one.
+	 */
+	static async findByNormalizedUrl(db: Database, leadId: string, url: string) {
+		return await db.findOne(trialWatches, {
+			where: { lead_id: leadId, normalized_url: normalizeTrialUrl(url) },
+		});
 	}
 
 	/**
@@ -429,8 +478,10 @@ export default class TrialWatch {
 	 *
 	 * Each stamp is written at most once per watch per day — a wrap-up once ever, a change
 	 * email once a day by `shouldNotifyChange` — so counting stamps inside a window counts
-	 * emails and not watches. `created` doubles as the confirmation count, since one submission
-	 * creates exactly one watch and sends exactly one confirmation.
+	 * emails and not watches. `created` doubles as the confirmation count, since a watch is
+	 * created exactly when a confirmation goes out. It is not the submission count: a
+	 * submission for a URL this lead already has a watch on creates nothing here and sends the
+	 * repeat report instead, which is counted on the lead's `emails_sent` and nowhere else.
 	 *
 	 * @param db - Database handle.
 	 * @param from - Start of the window, inclusive.
@@ -522,23 +573,51 @@ export default class TrialWatch {
 	}
 
 	/**
-	 * Deletes the per-check history that no digest will render again, in bounded batches.
+	 * Deletes the per-check history of every watch whose own thirty days are up, in bounded
+	 * batches — so a watch and its results go in the same sweep, and neither outlives the
+	 * other.
 	 *
-	 * The cutoff is a plain age on `checked_at` and it is sound without joining to the watch,
-	 * which is the only reason this can use the shared sweep at all. A result written at `t`
-	 * belongs to a watch that expires no later than `t + 7 days`, since a watch only writes
-	 * results during its own seven days — so a result older than seven days provably belongs
-	 * to a watch that has finished. The sweep therefore never deletes a running watch's
-	 * history, at the cost of keeping a finished watch's oldest rows a few days longer than
-	 * strictly necessary, which is a rounding error against 168 rows per watch.
+	 * **The condition follows the watch and is not an age on `checked_at`.** The age was
+	 * sound while nothing read a result after its watch's week ended, and both ways of
+	 * writing it are wrong now that a repeat submission is answered with a report drawn from
+	 * these rows. Seven days would leave a live watch with nothing to report the moment its
+	 * first week's rows aged out; thirty would delete a result written on day six at *day
+	 * thirty-six*, six days after {@link TrialWatch.deleteExpired} took the watch it belonged
+	 * to, leaving rows nothing can ever reach or delete. Joining to the watch has neither
+	 * failure: the results exist exactly as long as the row that explains them.
 	 *
-	 * Safe to run before {@link TrialWatch.deleteExpired}, and in practice always does: by the
-	 * time a watch is 30 days old every one of its results is more than 7 days old and has
-	 * already gone, so the watch delete never orphans anything.
+	 * **It must run before {@link TrialWatch.deleteExpired}**, and that is now load-bearing
+	 * rather than incidental: the watch row is what identifies these results, so deleting the
+	 * watches first would strand every one of them permanently.
+	 *
+	 * Batched in the shape `~/app/lib/retention` uses, hand-written for the same reason
+	 * `Lead.deleteOrphaned` is: the predicate is a join rather than a date range, which
+	 * `deleteOlderThan` cannot express.
 	 */
 	static async deleteExpiredResults(db: Database, now: number): Promise<BatchedSweepResult> {
-		let cutoff = now - TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY;
-		return await deleteOlderThan(db, "trial_watch_results", "checked_at", cutoff);
+		let results = getTableName(trialWatchResults);
+		let watches = getTableName(trialWatches);
+
+		let sql =
+			`DELETE FROM ${results} WHERE \`id\` IN (` +
+			`SELECT r.\`id\` FROM ${results} r ` +
+			`JOIN ${watches} w ON w.\`id\` = r.\`trial_watch_id\` ` +
+			`WHERE w.\`converts_until\` < ? LIMIT ?)`;
+
+		let rowsAffected = 0;
+		let batches = 0;
+
+		while (batches < RETENTION_MAX_BATCHES) {
+			let result = await db.exec(sql, [now, RETENTION_BATCH_SIZE]);
+			batches += 1;
+
+			let affected = result.affectedRows ?? 0;
+			rowsAffected += affected;
+
+			if (affected < RETENTION_BATCH_SIZE) return { rowsAffected, batches, reachedCeiling: false };
+		}
+
+		return { rowsAffected, batches, reachedCeiling: true };
 	}
 
 	/**
@@ -549,10 +628,12 @@ export default class TrialWatch {
 	 * without anyone noticing. A converted watch goes too — its monitor exists and owns the
 	 * target now.
 	 *
-	 * **Must run before `Lead.deleteOrphaned`.** That sweep deletes leads with no watches
-	 * left, which is only the right condition if the watches have already been reduced to the
-	 * ones still worth keeping; run the other way round and a lead would be deleted while two
-	 * of their three attempts were still claimable.
+	 * **Must run after {@link TrialWatch.deleteExpiredResults} and before
+	 * `Lead.deleteOrphaned`.** The results sweep identifies its rows by joining to these
+	 * watches, so running it second would strand every one of them; and `Lead.deleteOrphaned`
+	 * deletes leads with no watches left, which is only the right condition once the watches
+	 * have already been reduced to the ones still worth keeping. Run that one first and a lead
+	 * would be deleted while two of their three attempts were still claimable.
 	 */
 	static async deleteExpired(db: Database, now: number): Promise<BatchedSweepResult> {
 		return await deleteOlderThan(db, "trial_watches", "converts_until", now);

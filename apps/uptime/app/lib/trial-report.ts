@@ -1,22 +1,25 @@
 /**
- * The two pieces of arithmetic the free-watch digests share: turning a target's checks into
- * the segments of an uptime bar, and turning a success ratio into the percentage those emails
- * print.
+ * The arithmetic the free-watch reports share: turning a target's checks into the segments of
+ * an uptime bar, turning a success ratio into the percentage those emails print, and reading
+ * a watch's running totals off as the three numbers under the bar.
  *
- * Shared because the same bar is drawn at two scales by two different jobs — one segment per
- * hour over a day for the daily digest, one per day over a week for the wrap-up — and the
- * only thing that differs between them is the period. Keeping the bucketing in one place is
- * what stops a bar in one email disagreeing with the same data in the other.
+ * Shared because the same bar is drawn at three scales by three different senders — one
+ * segment per hour over a day for the daily digest, one per day over a week for the wrap-up,
+ * and the same week again when a repeat submission is answered with a report instead of a
+ * second free week — and the only thing that differs between them is the period. Keeping the
+ * bucketing in one place is what stops a bar in one email disagreeing with the same data in
+ * another.
  *
- * Deliberately not in `~/app/emails/`: nothing here renders, and both callers are background
- * jobs assembling data before an email class ever exists.
+ * Deliberately not in `~/app/emails/`: nothing here renders, and its callers are assembling
+ * data before an email class ever exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TrialStats } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
-import type { MonitorStatus } from "~/database/schema";
+import type { MonitorStatus, SelectTrialWatch } from "~/database/schema";
 
 /**
  * Severity of each status, for collapsing a period's checks into the one segment a bar draws.
@@ -75,4 +78,27 @@ export function segmentsOver(
  */
 export function formatUptime(ratio: number): string {
 	return (ratio * 100).toFixed(1);
+}
+
+/**
+ * The three numbers under a report's bar, read off the watch's own running totals rather
+ * than re-derived from its history.
+ *
+ * Those columns already cover exactly the window a whole-watch report describes, so counting
+ * 168 rows to reach the same answer would be work with no different result. The bar still
+ * needs the rows, because daily segments cannot be recovered from a total.
+ *
+ * `max_response_time_ms` is zero exactly when nothing ever answered — the column starts at
+ * zero and only ever takes a `MAX` against a real measurement — so zero is reported as "no
+ * slowest response" rather than as an implausibly fast one.
+ *
+ * @param watch - The watch to report on.
+ * @returns Checks run, uptime as a percentage string, and the slowest response.
+ */
+export function watchStats(watch: SelectTrialWatch): TrialStats {
+	return {
+		checks: watch.checks_run,
+		uptime: watch.checks_run === 0 ? null : formatUptime(watch.checks_ok / watch.checks_run),
+		slowestResponseMs: watch.max_response_time_ms === 0 ? null : watch.max_response_time_ms,
+	};
 }

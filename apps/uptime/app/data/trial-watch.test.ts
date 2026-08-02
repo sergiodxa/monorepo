@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import type { Database } from "remix/data-table";
 
-import type { InsertTrialWatch } from "~/database/schema";
+import type { NewTrialWatch } from "~/app/data/trial-watch";
 
 import TrialWatch, {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 /** A valid `TrialWatch.create` input for `lead-1`, with any field overridable per test. */
-async function createWatch(overrides: Partial<InsertTrialWatch> = {}) {
+async function createWatch(overrides: Partial<NewTrialWatch> = {}) {
 	return await TrialWatch.create(db, "lead-1", {
 		url: "https://example.com",
 		...overrides,
@@ -587,6 +587,95 @@ describe("TrialWatch.listByLead", () => {
 	});
 });
 
+/**
+ * The free-watch cap, which is the whole of "one free week per person per URL per thirty
+ * days": a row exists for the pair, or it does not. The spellings that used to walk past it
+ * are the point of every case here.
+ */
+describe("TrialWatch.findByNormalizedUrl", () => {
+	test("stores the key beside the URL, derived and not supplied", async () => {
+		let watch = await createWatch({ url: "https://Example.com/a/?b=2&a=1#top" });
+
+		expect(watch.url).toBe("https://Example.com/a/?b=2&a=1#top");
+		expect(watch.normalized_url).toBe("https://example.com/a?a=1&b=2");
+	});
+
+	test("finds nothing for a lead who has never submitted this URL", async () => {
+		await createWatch({ url: "https://example.com" });
+
+		expect(await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://other.example")).toBeNull();
+	});
+
+	test("finds the existing watch for the same URL", async () => {
+		let watch = await createWatch({ url: "https://example.com" });
+
+		let found = await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com");
+		expect(found?.id).toBe(watch.id);
+	});
+
+	test.each([
+		["a trailing slash", "https://example.com/"],
+		["a fragment", "https://example.com/#pricing"],
+		["a fragment and a slash", "https://example.com/#"],
+		["an uppercase host", "https://EXAMPLE.com"],
+	])("caps %s against the same target", async (_label, spelling) => {
+		let watch = await createWatch({ url: "https://example.com" });
+
+		let found = await TrialWatch.findByNormalizedUrl(db, "lead-1", spelling);
+		expect(found?.id).toBe(watch.id);
+	});
+
+	test("caps reordered query parameters against the same target", async () => {
+		let watch = await createWatch({ url: "https://example.com/api?b=2&a=1" });
+
+		let found = await TrialWatch.findByNormalizedUrl(
+			db,
+			"lead-1",
+			"https://example.com/api?a=1&b=2",
+		);
+		expect(found?.id).toBe(watch.id);
+	});
+
+	test("caps a trailing slash in front of a query string too", async () => {
+		let watch = await createWatch({ url: "https://example.com/health/?deep=1" });
+
+		let found = await TrialWatch.findByNormalizedUrl(
+			db,
+			"lead-1",
+			"https://example.com/health?deep=1",
+		);
+		expect(found?.id).toBe(watch.id);
+	});
+
+	/**
+	 * The one exception, and it is deliberate. A plaintext origin and a TLS one are two
+	 * different endpoints that can behave differently, so each is worth its own free week.
+	 */
+	test("does not collide http with https on the same host", async () => {
+		await createWatch({ url: "https://example.com" });
+
+		expect(await TrialWatch.findByNormalizedUrl(db, "lead-1", "http://example.com")).toBeNull();
+	});
+
+	test("does not collide two paths that differ only in case", async () => {
+		await createWatch({ url: "https://example.com/Status" });
+
+		expect(
+			await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com/status"),
+		).toBeNull();
+	});
+
+	test("is scoped to the lead, so two people may each watch the same URL", async () => {
+		await createWatch({ url: "https://example.com" });
+		await TrialWatch.create(db, "lead-2", { url: "https://example.com" });
+
+		let first = await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com");
+		let second = await TrialWatch.findByNormalizedUrl(db, "lead-2", "https://example.com");
+
+		expect(first?.id).not.toBe(second?.id);
+	});
+});
+
 describe("TrialWatch.deleteExpiredResults", () => {
 	/** Writes a result at an arbitrary instant, which `recordCheck` always stamps as now. */
 	async function resultAt(watchId: string, id: string, checkedAt: number) {
@@ -599,9 +688,10 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		});
 	}
 
-	test("deletes history no digest will render again", async () => {
+	test("deletes the history of a watch whose conversion window has closed", async () => {
 		let watch = await createWatch();
 		let now = Date.now();
+		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 		await resultAt(watch.id, "old", now - 8 * MS_PER_DAY);
 
 		let swept = await TrialWatch.deleteExpiredResults(db, now);
@@ -610,10 +700,16 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		expect(await db.count(trialWatchResults)).toBe(0);
 	});
 
-	test("never deletes a running watch's history, since none of it can be that old", async () => {
+	/**
+	 * The whole reason the condition follows the watch instead of aging `checked_at`. A watch
+	 * three weeks past its week of checking is still convertible and is still what a repeat
+	 * submission is answered with, so its results are exactly what a report would draw on —
+	 * and an age of seven days would have taken every one of them.
+	 */
+	test("keeps history older than the week, while the watch it belongs to lives", async () => {
 		let watch = await createWatch();
 		let now = Date.now();
-		await resultAt(watch.id, "yesterday", now - MS_PER_DAY);
+		await resultAt(watch.id, "day-one", now - 20 * MS_PER_DAY);
 		await resultAt(watch.id, "an-hour-ago", now - MS_PER_HOUR);
 
 		await TrialWatch.deleteExpiredResults(db, now);
@@ -624,11 +720,28 @@ describe("TrialWatch.deleteExpiredResults", () => {
 	test("leaves the watch itself alone, which is the row a conversion needs", async () => {
 		let watch = await createWatch();
 		let now = Date.now();
+		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 		await resultAt(watch.id, "old", now - 8 * MS_PER_DAY);
 
 		await TrialWatch.deleteExpiredResults(db, now);
 
 		expect(await TrialWatch.findById(db, watch.id)).not.toBeNull();
+	});
+
+	/** One lapsed watch's history goes; another lead's live watch keeps all of its own. */
+	test("sweeps by watch and not across the table", async () => {
+		let lapsed = await createWatch();
+		let live = await createWatch({ url: "https://other.example" });
+		let now = Date.now();
+
+		await db.update(trialWatches, lapsed.id, { converts_until: now - 1 });
+		await resultAt(lapsed.id, "lapsed-result", now - 20 * MS_PER_DAY);
+		await resultAt(live.id, "live-result", now - 20 * MS_PER_DAY);
+
+		await TrialWatch.deleteExpiredResults(db, now);
+
+		let remaining = await db.findMany(trialWatchResults, {});
+		expect(remaining.map((row) => row.id)).toEqual(["live-result"]);
 	});
 });
 

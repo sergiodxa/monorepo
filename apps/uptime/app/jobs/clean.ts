@@ -140,13 +140,15 @@ export class CleanJob extends Job {
 	 * Each sweep's own condition is only sound once the one before it has run, so this is a
 	 * sequence and not a list of independent windows:
 	 *
-	 * 1. **Results** go on a plain seven-day age, which is safe on its own because a result is
-	 *    only ever written during its watch's own seven days — so one older than that provably
-	 *    belongs to a watch that has finished.
+	 * 1. **Results** go with the watch they belong to, found by joining to it, so they must be
+	 *    swept while it still exists — the watch row is the only thing that identifies them,
+	 *    and taking it first would strand every one of them permanently. They carry no age of
+	 *    their own: a shorter one would leave a watch that is still being reported on with
+	 *    nothing to report, and one as long as the watch's would delete them days after it.
 	 * 2. **Watches** go on `converts_until`, thirty days, and never on `expires_at`: a watch
 	 *    whose week of checking ended is still claimable as a real monitor for another three,
-	 *    and sweeping the wrong column would withdraw the offer without anyone noticing. By
-	 *    then every result it owns is long past step 1's cutoff, so nothing is orphaned.
+	 *    and sweeping the wrong column would withdraw the offer without anyone noticing. Step
+	 *    1 has already taken everything that pointed at it, so nothing is orphaned.
 	 * 3. **Leads** go only when no watch is left to protect, which is the right condition
 	 *    *because* step 2 has already reduced their watches to the ones still worth keeping.
 	 *    Run before it, and someone who tried three URLs on three days would be deleted while

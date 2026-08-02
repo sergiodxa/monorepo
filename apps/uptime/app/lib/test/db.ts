@@ -982,18 +982,36 @@ function isInsertOperation(
 /**
  * Applies every `.sql` migration in `database/migrations/` (filename-sorted, the same
  * order `wrangler d1 migrations apply` uses) to the given in-memory database.
+ *
+ * `before` stops short of one migration, which is the only way to test a migration that has
+ * data to convert: seed the rows it will find against the schema as it stood, then apply the
+ * one file with {@link applyMigration}. Without it every test starts from a database the
+ * migration has already run against and has nothing left to do.
+ *
  * @param sqliteDb - An open Bun `bun:sqlite` database instance.
+ * @param before - Filename to stop before, exclusive. Applies everything when omitted.
  */
-export function applyMigrations(sqliteDb: SqliteDatabase): void {
-	let migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "../../../database/migrations");
-	let files = readdirSync(migrationsDir)
+export function applyMigrations(sqliteDb: SqliteDatabase, before?: string): void {
+	let files = readdirSync(migrationsDirectory())
 		.filter((file) => file.endsWith(".sql"))
-		.sort();
+		.sort()
+		.filter((file) => before === undefined || file < before);
 
-	for (let file of files) {
-		let sql = readFileSync(join(migrationsDir, file), "utf8");
-		sqliteDb.run(sql);
-	}
+	for (let file of files) applyMigration(sqliteDb, file);
+}
+
+/**
+ * Applies one named migration, for the test that seeded the rows it is meant to convert.
+ * @param sqliteDb - An open Bun `bun:sqlite` database instance.
+ * @param file - Filename inside `database/migrations/`, extension included.
+ */
+export function applyMigration(sqliteDb: SqliteDatabase, file: string): void {
+	sqliteDb.run(readFileSync(join(migrationsDirectory(), file), "utf8"));
+}
+
+/** Absolute path of `database/migrations/`, resolved from this module rather than the cwd. */
+function migrationsDirectory(): string {
+	return join(dirname(fileURLToPath(import.meta.url)), "../../../database/migrations");
 }
 
 /**

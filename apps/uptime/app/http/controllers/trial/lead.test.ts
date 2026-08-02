@@ -17,6 +17,13 @@
  * has written rows and queued mail and must not be repeatable by a reload, while a rejected
  * address changed nothing and comes back as the page itself with the result still on it.
  *
+ * The third suite is the free-watch cap, which is the only condition on the middle write.
+ * One person gets one free week per URL per thirty days, and the cases worth testing are the
+ * spellings that used to walk past that: a trailing slash, a fragment, a reordered query
+ * string, and a `+tag` on the address. Each one has to land on the watch that already exists
+ * — while `http://` and `https://` deliberately do not, and mail still goes to whichever
+ * spelling of the address was actually typed.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -44,7 +51,13 @@ import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import { MAIL_FROM } from "~/app/emails/sender";
-import { TRIAL_PROBE, TRIAL_WATCH_STARTED } from "~/app/http/controllers/trial/session";
+import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
+import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
+import {
+	TRIAL_PROBE,
+	TRIAL_WATCH_REPEATED,
+	TRIAL_WATCH_STARTED,
+} from "~/app/http/controllers/trial/session";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
@@ -95,9 +108,19 @@ function probeState(overrides: Partial<TrialProbeState> = {}): TrialProbeState {
 
 let transport = new MemoryTransport();
 
-/** Submits the capture form against a fresh database and returns everything it touched. */
-async function submit(body: Record<string, string>, session: Session) {
-	let { db } = createTestDatabase();
+/**
+ * Submits the capture form and returns everything it touched.
+ *
+ * `existing` reuses a database from an earlier submission, which is the only way to reach
+ * the cap: it needs a watch this address already opened, and that has to have been opened by
+ * a real submission rather than seeded past the code under test.
+ */
+async function submit(
+	body: Record<string, string>,
+	session: Session,
+	existing?: ReturnType<typeof createTestDatabase>["db"],
+) {
+	let db = existing ?? createTestDatabase().db;
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
@@ -237,6 +260,162 @@ describe("POST /try/lead consent", () => {
 		let lead = await Lead.findByEmail(db, "reader@example.com");
 		expect(lead?.consented_at).not.toBeNull();
 		expect(Lead.hasMarketingConsent(lead!)).toBe(true);
+	});
+});
+
+describe("POST /try/lead free-watch cap", () => {
+	/**
+	 * Opens the first watch on `url` for `email`, then submits `again` and returns the state
+	 * both submissions left behind. Two real requests against one database, because the cap
+	 * reads a row the first request wrote.
+	 */
+	async function submitTwice(first: { email: string; url: string }, again: Partial<typeof first>) {
+		let one = new Session();
+		one.set(TRIAL_PROBE, probeState({ url: first.url }));
+		let { db } = await submit({ email: first.email }, one);
+
+		transport.clear();
+
+		let two = new Session();
+		two.set(TRIAL_PROBE, probeState({ url: again.url ?? first.url }));
+		let result = await submit({ email: again.email ?? first.email }, two, db);
+
+		return { db, session: two, response: result.response };
+	}
+
+	/** Every watch in the database, whichever lead opened it. */
+	async function allWatches(db: ReturnType<typeof createTestDatabase>["db"]) {
+		let lead = await Lead.findByEmail(db, "reader@example.com");
+		return lead === null ? [] : await TrialWatch.listByLead(db, lead.id);
+	}
+
+	test("opens no second watch on a URL that already has one", async () => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{},
+		);
+
+		expect(await allWatches(db)).toHaveLength(1);
+	});
+
+	test("sends the report of what the existing watch found, not the confirmation", async () => {
+		await submitTwice({ email: "reader@example.com", url: "https://probed.example/" }, {});
+
+		expect(transport.messages).toHaveLength(1);
+		expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+	});
+
+	test("leaves the capped receipt rather than the one that claims a watch started", async () => {
+		let { session, response } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{},
+		);
+
+		expect(response.status).toBe(303);
+		expect(session.get(TRIAL_WATCH_STARTED)).toBeUndefined();
+		expect(session.get(TRIAL_WATCH_REPEATED)).toBe("https://probed.example/");
+	});
+
+	test("claims the probe, so the capped submission is not repeatable either", async () => {
+		let { session } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{},
+		);
+
+		expect(session.get(TRIAL_PROBE)).toBeUndefined();
+	});
+
+	test.each([
+		["a trailing slash", "https://probed.example"],
+		["a fragment", "https://probed.example/#pricing"],
+		["an uppercase host", "https://PROBED.example/"],
+	])("caps a resubmission spelled with %s", async (_label, spelling) => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{ url: spelling },
+		);
+
+		expect(await allWatches(db)).toHaveLength(1);
+		expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+	});
+
+	test("caps a resubmission whose query parameters were reordered", async () => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/api?b=2&a=1" },
+			{ url: "https://probed.example/api?a=1&b=2" },
+		);
+
+		expect(await allWatches(db)).toHaveLength(1);
+	});
+
+	test.each([["hello+b@sergiodxa.com"], ["HELLO@sergiodxa.com"]])(
+		"caps a resubmission from %s, which is the same person",
+		async (spelling) => {
+			let one = new Session();
+			one.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
+			let { db } = await submit({ email: "hello+a@sergiodxa.com" }, one);
+
+			transport.clear();
+
+			let two = new Session();
+			two.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
+			await submit({ email: spelling }, two, db);
+
+			let lead = await Lead.findByEmail(db, "hello@sergiodxa.com");
+			expect(await TrialWatch.listByLead(db, lead!.id)).toHaveLength(1);
+			expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+		},
+	);
+
+	/** Tagging is a privacy practice, not a bypass: the report goes to the spelling they used. */
+	test("mails the report to the address as typed, not to the key it was capped under", async () => {
+		let one = new Session();
+		one.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
+		let { db } = await submit({ email: "hello+a@sergiodxa.com" }, one);
+
+		transport.clear();
+
+		let two = new Session();
+		two.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
+		await submit({ email: "hello+b@sergiodxa.com" }, two, db);
+
+		expect(transport.last?.to).toEqual([{ email: "hello+b@sergiodxa.com" }]);
+	});
+
+	/** The deliberate exception: two schemes are two endpoints and each is worth its own week. */
+	test("starts a second watch for http when https already has one", async () => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{ url: "http://probed.example/" },
+		);
+
+		expect(await allWatches(db)).toHaveLength(2);
+		expect(transport.last?.email).toBeInstanceOf(TrialConfirmationEmail);
+	});
+
+	test("starts a normal watch for a different URL from the same address", async () => {
+		let { db, session } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{ url: "https://other.example/" },
+		);
+
+		let watches = await allWatches(db);
+		expect(watches.map((watch) => watch.url).sort()).toEqual([
+			"https://other.example/",
+			"https://probed.example/",
+		]);
+		expect(session.get(TRIAL_WATCH_STARTED)).toBe("https://other.example/");
+		expect(transport.last?.email).toBeInstanceOf(TrialConfirmationEmail);
+	});
+
+	test("counts the report against the emails the lead has received", async () => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{},
+		);
+
+		// One confirmation for the watch that opened, one report for the one that was capped.
+		expect((await Lead.findByEmail(db, "reader@example.com"))?.emails_sent).toBe(2);
 	});
 });
 

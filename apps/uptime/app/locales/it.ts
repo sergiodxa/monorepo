@@ -1194,6 +1194,21 @@ export default {
 				footer:
 					"Ha ricevuto questa email perché ci ha chiesto di sorvegliare questo URL per una settimana. È l'ultima.",
 			},
+
+			repeat: {
+				subject: "Quello che abbiamo trovato finora su {{url}}",
+				preview: "I controlli che abbiamo già su {{url}}",
+				heading: "{{url}} è già sotto controllo",
+				intro:
+					"Ci ha chiesto di sorvegliare {{url}} il {{since}}. Ecco tutto quello che quei controlli hanno rilevato.",
+				rangeStart: "Giorno 1",
+				rangeEnd: "Giorno 7",
+				closing:
+					"Ogni URL ha una settimana gratuita ogni 30 giorni, quindi questa richiesta non ne ha avviata una seconda. Per continuare a controllare {{url}} — con la frequenza che preferisce e con un avviso appena qualcosa cambia — usi Uptime.",
+				action: "Continuare a controllare questo URL",
+				footer:
+					"Ha ricevuto questa email perché ha inviato questo URL sul nostro sito e avevamo già un rapporto su di esso.",
+			},
 		},
 	},
 
@@ -3296,6 +3311,12 @@ export default {
 				title: "Ci stiamo pensando noi",
 				description:
 					"Il primo controllo orario di {{url}} parte fra un'ora. Una copia del controllo appena eseguito è già nella tua casella.",
+			},
+
+			repeated: {
+				title: "Questo l'abbiamo già controllato",
+				description:
+					"{{url}} ha già avuto la sua settimana gratuita con una richiesta precedente: ogni URL ne ha una ogni 30 giorni. Ti abbiamo inviato per email tutto quello che quei controlli hanno rilevato, quindi non è stato avviato niente di nuovo.",
 			},
 
 			benefits: {

@@ -1190,6 +1190,21 @@ export default {
 				footer:
 					"Ha recibido este correo porque nos pidió vigilar esta URL durante una semana. Este es el último.",
 			},
+
+			repeat: {
+				subject: "Lo que hemos encontrado en {{url}} hasta ahora",
+				preview: "Las comprobaciones que ya tenemos de {{url}}",
+				heading: "{{url}} ya se está comprobando",
+				intro:
+					"Nos pidió vigilar {{url}} el {{since}}. Esto es todo lo que encontraron esas comprobaciones.",
+				rangeStart: "Día 1",
+				rangeEnd: "Día 7",
+				closing:
+					"Cada URL tiene una semana gratuita cada 30 días, así que esta petición no ha iniciado una segunda. Para seguir comprobando {{url}} —con la frecuencia que quiera y con un aviso en cuanto cambie— use Uptime.",
+				action: "Seguir comprobando esta URL",
+				footer:
+					"Ha recibido este correo porque envió esta URL en nuestra web y ya teníamos un informe de ella.",
+			},
 		},
 	},
 
@@ -3298,6 +3313,12 @@ export default {
 				title: "Estamos en ello",
 				description:
 					"La primera comprobación horaria de {{url}} se ejecuta dentro de una hora. Ya tienes en tu bandeja una copia de la que acabas de hacer.",
+			},
+
+			repeated: {
+				title: "Esta ya la hemos comprobado",
+				description:
+					"{{url}} ya tuvo su semana gratuita en una petición anterior: cada URL tiene una cada 30 días. Te hemos enviado por correo todo lo que encontraron esas comprobaciones, así que no hemos iniciado nada nuevo.",
 			},
 
 			benefits: {
