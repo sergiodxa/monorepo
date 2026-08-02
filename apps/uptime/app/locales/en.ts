@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ApiKeyScope } from "~/database/schema";
+
 export default {
 	landing: {
 		meta: {
@@ -3992,15 +3994,31 @@ export default {
 						label: "Permissions",
 						description: "Select what this API key can access.",
 						options: {
+							"teams:read": "Read Teams",
+							"teams:write": "Write Teams",
+							"invites:read": "Read Invites",
+							"invites:write": "Write Invites",
+							"team-domains:read": "Read Domains",
+							"team-domains:write": "Write Domains",
 							"monitors:read": "Read Monitors",
 							"monitors:write": "Write Monitors",
+							"maintenance:read": "Read Maintenance",
+							"maintenance:write": "Write Maintenance",
+							"dns-monitors:read": "Read DNS Monitors",
+							"dns-monitors:write": "Write DNS Monitors",
+							"tcp-monitors:read": "Read TCP Monitors",
+							"tcp-monitors:write": "Write TCP Monitors",
 							"alerts:read": "Read Alerts",
 							"alerts:write": "Write Alerts",
+							"status-pages:read": "Read Status Pages",
+							"status-pages:write": "Write Status Pages",
 							"cron-jobs:read": "Read Cron Jobs",
 							"cron-jobs:write": "Write Cron Jobs",
 							"cron-jobs:ping": "Ping Cron Jobs",
+							"api-keys:read": "Read API Keys",
+							"api-keys:write": "Write API Keys",
 							"ping:trigger": "Trigger Pings",
-						},
+						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "Expiration Date (Optional)",

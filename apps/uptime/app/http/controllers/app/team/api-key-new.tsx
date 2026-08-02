@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Checkbox, CheckboxGroup, Description, Label } from "@pkg/r3-ui";
+import { Button, Checkbox, CheckboxGroup, DateField, Description, Label } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap } from "@pkg/u/layout";
@@ -89,21 +89,12 @@ export default createAction(routes.app.team.apiKeys.new, {
 								</Description>
 							</div>
 
-							<Field label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}>
-								<input
-									type="date"
-									name="expires_at"
-									mix={[
-										p(2, 3),
-										rounded("md"),
-										border("neutral"),
-										fontSize("sm"),
-										font("inherit"),
-										bg("neutral.tint"),
-										fg("inherit"),
-									]}
-								/>
-							</Field>
+							<DateField
+								label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}
+								name="expires_at"
+								description={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.description")}
+								mix={mbe("28px")}
+							/>
 
 							<Button type="submit">{ctx.i18next.t("page.apiKeys.form.actions.create")}</Button>
 						</form>

@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ApiKeyScope } from "~/database/schema";
+
 export default {
 	landing: {
 		meta: {
@@ -3487,15 +3489,31 @@ export default {
 						label: "Berechtigungen",
 						description: "Wählen Sie, worauf dieser API-Schlüssel zugreifen kann.",
 						options: {
+							"teams:read": "Teams lesen",
+							"teams:write": "Teams schreiben",
+							"invites:read": "Einladungen lesen",
+							"invites:write": "Einladungen schreiben",
+							"team-domains:read": "Domains lesen",
+							"team-domains:write": "Domains schreiben",
 							"monitors:read": "Monitore lesen",
 							"monitors:write": "Monitore schreiben",
+							"maintenance:read": "Wartung lesen",
+							"maintenance:write": "Wartung schreiben",
+							"dns-monitors:read": "DNS-Monitore lesen",
+							"dns-monitors:write": "DNS-Monitore schreiben",
+							"tcp-monitors:read": "TCP-Monitore lesen",
+							"tcp-monitors:write": "TCP-Monitore schreiben",
 							"alerts:read": "Benachrichtigungen lesen",
 							"alerts:write": "Benachrichtigungen schreiben",
+							"status-pages:read": "Statusseiten lesen",
+							"status-pages:write": "Statusseiten schreiben",
 							"cron-jobs:read": "Cron Jobs lesen",
 							"cron-jobs:write": "Cron Jobs schreiben",
 							"cron-jobs:ping": "Cron Jobs Ping",
+							"api-keys:read": "API-Schlüssel lesen",
+							"api-keys:write": "API-Schlüssel schreiben",
 							"ping:trigger": "Pings Auslösen",
-						},
+						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "Ablaufdatum (optional)",

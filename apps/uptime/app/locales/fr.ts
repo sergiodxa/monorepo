@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ApiKeyScope } from "~/database/schema";
+
 export default {
 	landing: {
 		meta: {
@@ -3467,15 +3469,31 @@ export default {
 						label: "Permissions",
 						description: "Sélectionnez ce à quoi cette clé API peut accéder.",
 						options: {
+							"teams:read": "Lire les équipes",
+							"teams:write": "Écrire les équipes",
+							"invites:read": "Lire les invitations",
+							"invites:write": "Écrire les invitations",
+							"team-domains:read": "Lire les domaines",
+							"team-domains:write": "Écrire les domaines",
 							"monitors:read": "Lire les moniteurs",
 							"monitors:write": "Écrire les moniteurs",
+							"maintenance:read": "Lire la maintenance",
+							"maintenance:write": "Écrire la maintenance",
+							"dns-monitors:read": "Lire les moniteurs DNS",
+							"dns-monitors:write": "Écrire les moniteurs DNS",
+							"tcp-monitors:read": "Lire les moniteurs TCP",
+							"tcp-monitors:write": "Écrire les moniteurs TCP",
 							"alerts:read": "Lire les alertes",
 							"alerts:write": "Écrire les alertes",
+							"status-pages:read": "Lire les pages de statut",
+							"status-pages:write": "Écrire les pages de statut",
 							"cron-jobs:read": "Lire les tâches Cron",
 							"cron-jobs:write": "Écrire les tâches Cron",
 							"cron-jobs:ping": "Ping Cron Jobs",
+							"api-keys:read": "Lire les clés API",
+							"api-keys:write": "Écrire les clés API",
 							"ping:trigger": "Déclencher des Pings",
-						},
+						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "Date d'expiration (optionnel)",

@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ApiKeyScope } from "~/database/schema";
+
 export default {
 	landing: {
 		meta: {
@@ -3466,15 +3468,31 @@ export default {
 						label: "Permisos",
 						description: "Seleccione a qué puede acceder esta clave API.",
 						options: {
+							"teams:read": "Leer Equipos",
+							"teams:write": "Escribir Equipos",
+							"invites:read": "Leer Invitaciones",
+							"invites:write": "Escribir Invitaciones",
+							"team-domains:read": "Leer Dominios",
+							"team-domains:write": "Escribir Dominios",
 							"monitors:read": "Leer Monitores",
 							"monitors:write": "Escribir Monitores",
+							"maintenance:read": "Leer Mantenimiento",
+							"maintenance:write": "Escribir Mantenimiento",
+							"dns-monitors:read": "Leer Monitores DNS",
+							"dns-monitors:write": "Escribir Monitores DNS",
+							"tcp-monitors:read": "Leer Monitores TCP",
+							"tcp-monitors:write": "Escribir Monitores TCP",
 							"alerts:read": "Leer Alertas",
 							"alerts:write": "Escribir Alertas",
+							"status-pages:read": "Leer Páginas de Estado",
+							"status-pages:write": "Escribir Páginas de Estado",
 							"cron-jobs:read": "Leer Trabajos Cron",
 							"cron-jobs:write": "Escribir Trabajos Cron",
 							"cron-jobs:ping": "Hacer Ping a Trabajos Cron",
+							"api-keys:read": "Leer Claves API",
+							"api-keys:write": "Escribir Claves API",
 							"ping:trigger": "Ejecutar Pings",
-						},
+						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "Fecha de expiración (Opcional)",

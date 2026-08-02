@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ApiKeyScope } from "~/database/schema";
+
 export default {
 	landing: {
 		meta: {
@@ -3428,15 +3430,31 @@ export default {
 						label: "権限",
 						description: "このAPIキーがアクセスできる内容を選択してください。",
 						options: {
+							"teams:read": "チームの読み取り",
+							"teams:write": "チームの書き込み",
+							"invites:read": "招待の読み取り",
+							"invites:write": "招待の書き込み",
+							"team-domains:read": "ドメインの読み取り",
+							"team-domains:write": "ドメインの書き込み",
 							"monitors:read": "モニターの読み取り",
 							"monitors:write": "モニターの書き込み",
+							"maintenance:read": "メンテナンスの読み取り",
+							"maintenance:write": "メンテナンスの書き込み",
+							"dns-monitors:read": "DNSモニターの読み取り",
+							"dns-monitors:write": "DNSモニターの書き込み",
+							"tcp-monitors:read": "TCPモニターの読み取り",
+							"tcp-monitors:write": "TCPモニターの書き込み",
 							"alerts:read": "アラートの読み取り",
 							"alerts:write": "アラートの書き込み",
+							"status-pages:read": "ステータスページの読み取り",
+							"status-pages:write": "ステータスページの書き込み",
 							"cron-jobs:read": "Cronジョブの読み取り",
 							"cron-jobs:write": "Cronジョブの書き込み",
 							"cron-jobs:ping": "Cronジョブ Ping",
+							"api-keys:read": "APIキーの読み取り",
+							"api-keys:write": "APIキーの書き込み",
 							"ping:trigger": "Pingの実行",
-						},
+						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
 						label: "有効期限（任意）",
