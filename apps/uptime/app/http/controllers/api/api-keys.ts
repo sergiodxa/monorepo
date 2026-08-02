@@ -3,11 +3,15 @@
  * only, `api-keys:read`) and create (`api-keys:write`), up to the per-team limit.
  * The plaintext key is only ever returned once, in the create response.
  *
+ * A key can only create a key no more powerful than itself — see the scope check in
+ * `apiKeysCreate`. Without that, `api-keys:write` would be an escalation to every other
+ * scope rather than a permission alongside them.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BadRequest, Created } from "@pkg/http/status-code";
+import { BadRequest, Created, Forbidden } from "@pkg/http/status-code";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -85,6 +89,27 @@ export default createController(apiKeysRoutes, {
 						"VALIDATION_ERROR",
 						result.error.issues.map((issue) => issue.message).join(", "),
 						BadRequest,
+					);
+				}
+
+				/**
+				 * A key may only hand out authority it already holds. Without this, the
+				 * `api-keys:write` scope is not one permission among the others but a way to
+				 * obtain all of them: mint a second key carrying every scope, then use it. That
+				 * makes narrow-scoping a key pointless the moment it can also write keys, and
+				 * since `ping:trigger` spends money it is an escalation with a bill attached.
+				 *
+				 * The team's own members are not bound by this — the create-key form is
+				 * admin-only and an admin already holds every authority a key could be given, so
+				 * there is nothing to escalate to. This is about one key minting another.
+				 */
+				let held = new Set<string>(ctx.apiKey.scopes);
+				let ungranted = result.data.scopes.filter((scope) => !held.has(scope));
+				if (ungranted.length > 0) {
+					return apiError(
+						"FORBIDDEN",
+						`API key cannot grant scopes it does not hold: ${ungranted.join(", ")}`,
+						Forbidden,
 					);
 				}
 

@@ -115,7 +115,8 @@ describe("POST /api/v1/api-keys", () => {
 	test("creates an API key and returns the plaintext key once", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["api-keys:write"]);
+		// The caller must hold every scope it grants, so it holds the one it hands over here.
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
 
 		let response = await dispatch(db, post(key, { name: "CI key", scopes: ["monitors:read"] }));
 		expect(response.status).toBe(201);
@@ -128,6 +129,48 @@ describe("POST /api/v1/api-keys", () => {
 
 		let created = await db.findOne(apiKeys, { where: { id: body.data.apiKey.id } });
 		expect(created?.scopes).toEqual(["monitors:read"]);
+	});
+
+	test("refuses to grant a scope the calling key does not hold", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write"]);
+
+		let response = await dispatch(db, post(key, { name: "escalated", scopes: ["monitors:write"] }));
+		expect(response.status).toBe(403);
+
+		let body = (await response.json()) as { error: { code: string; message: string } };
+		expect(body.error.code).toBe("FORBIDDEN");
+		expect(body.error.message).toContain("monitors:write");
+
+		// Nothing was minted: the refusal has to happen before the key exists, not after.
+		expect(await ApiKey.countByTeam(db, team.id)).toBe(1);
+	});
+
+	test("names every ungranted scope, not just the first", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
+
+		let response = await dispatch(
+			db,
+			post(key, { name: "escalated", scopes: ["monitors:read", "ping:trigger", "teams:write"] }),
+		);
+		expect(response.status).toBe(403);
+
+		let body = (await response.json()) as { error: { message: string } };
+		expect(body.error.message).toContain("ping:trigger");
+		expect(body.error.message).toContain("teams:write");
+		expect(body.error.message).not.toContain("monitors:read");
+	});
+
+	test("allows a key to mint a narrower copy of itself", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read", "alerts:read"]);
+
+		let response = await dispatch(db, post(key, { name: "narrower", scopes: ["monitors:read"] }));
+		expect(response.status).toBe(201);
 	});
 
 	test("returns 400 when the payload fails validation (no scopes)", async () => {
