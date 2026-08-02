@@ -1,12 +1,29 @@
+/**
+ * Tests for the Polar billing client.
+ *
+ * The vendor SDK is faked so the API surface can be asserted without network calls,
+ * but webhook signatures are real: verification is the security boundary, so every
+ * delivery here is signed the way Polar signs and the new verification path is
+ * cross-checked against the SDK's own verifier on the same bytes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
-// The webhooks module ships its own WebhookVerificationError; re-declare a matching
-// shape here so the mocked module can throw instances the client recognises.
-class MockWebhookVerificationError extends Error {}
+import * as Webhooks from "@pkg/webhooks";
+
+// Captured before the module is mocked below, so the cross-check runs against the
+// verifier the SDK actually ships rather than against this file's stand-in.
+let { validateEvent: sdkValidateEvent, WebhookVerificationError: SDKWebhookVerificationError } =
+	await import("@polar-sh/sdk/webhooks.js");
+
+/** Stands in for the error the SDK raises when it cannot model an event's payload. */
 class MockSDKValidationError extends Error {}
 
 // Captures the last arguments passed to validateEvent so tests can assert on them,
-// plus a controllable behaviour for the mocked verifier.
+// plus a controllable behaviour for the mocked parser.
 let validateEventCalls: Array<{ body: string; headers: Record<string, string>; secret: string }> =
 	[];
 let validateEventImpl: (
@@ -16,7 +33,7 @@ let validateEventImpl: (
 ) => unknown = () => ({ type: "checkout.updated" });
 
 mock.module("@polar-sh/sdk/webhooks.js", () => ({
-	WebhookVerificationError: MockWebhookVerificationError,
+	WebhookVerificationError: SDKWebhookVerificationError,
 	validateEvent: (body: string, headers: Record<string, string>, secret: string) => {
 		validateEventCalls.push({ body, headers, secret });
 		return validateEventImpl(body, headers, secret);
@@ -157,6 +174,104 @@ let {
 	PolarError,
 	subscriptionFromEvent,
 } = await import("./index.ts");
+
+/** A webhook secret in the form Polar issues one: arbitrary text, never base64. */
+const WEBHOOK_SECRET = "polar_whs_TestSecretValue123";
+
+/** A body Polar could plausibly deliver; the SDK's parser is mocked, so shape is free. */
+const WEBHOOK_BODY = '{"type":"checkout.updated","data":{"id":"chk_1"}}';
+
+/** How a delivery is described to the fixture helpers before it is signed. */
+interface DeliveryOptions {
+	/** Body text to sign and send; defaults to {@link WEBHOOK_BODY}. */
+	body?: string;
+	/** Delivery id for the `webhook-id` header. */
+	id?: string;
+	/** Send time in whole seconds since the epoch; defaults to now. */
+	timestamp?: number;
+	/** Secret to sign with; defaults to {@link WEBHOOK_SECRET}. */
+	secret?: string;
+}
+
+/**
+ * Signs a delivery the way Polar's senders do, computed here with WebCrypto directly
+ * rather than through either implementation under test, so the fixtures are an
+ * independent oracle rather than a restatement of the code they exercise.
+ *
+ * The two rules that matter: the HMAC key is the secret's **UTF-8 bytes** (Polar's
+ * secret is text, not base64 key material), and the signed content is
+ * `id.timestamp.body`.
+ *
+ * @param options - The delivery to sign.
+ * @returns The three Standard Webhooks headers, as a plain record.
+ */
+async function signLikePolar(options: DeliveryOptions = {}): Promise<Record<string, string>> {
+	let body = options.body ?? WEBHOOK_BODY;
+	let id = options.id ?? "wh_1";
+	let timestamp = options.timestamp ?? Math.floor(Date.now() / 1000);
+	let secret = options.secret ?? WEBHOOK_SECRET;
+
+	let key = await crypto.subtle.importKey(
+		"raw",
+		new TextEncoder().encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	let mac = await crypto.subtle.sign(
+		"HMAC",
+		key,
+		new TextEncoder().encode(`${id}.${timestamp}.${body}`),
+	);
+
+	let binary = "";
+	for (let byte of new Uint8Array(mac)) binary += String.fromCharCode(byte);
+
+	return {
+		"webhook-id": id,
+		"webhook-timestamp": String(timestamp),
+		"webhook-signature": `v1,${btoa(binary)}`,
+	};
+}
+
+/**
+ * Builds a signed delivery as a handler receives one: the request whose headers carry
+ * the signature, plus the raw body text already read off it.
+ *
+ * @param options - The delivery to sign.
+ * @returns The request and the exact body the signature covers.
+ */
+async function delivery(
+	options: DeliveryOptions = {},
+): Promise<{ request: Request; body: string }> {
+	let body = options.body ?? WEBHOOK_BODY;
+	let headers = await signLikePolar(options);
+	return { request: new Request("https://app/webhook", { method: "POST", headers }), body };
+}
+
+/**
+ * The verdict the SDK's own verifier reaches, reduced to the authentic/not-authentic
+ * answer the old `verifyWebhook` derived from it: only a `WebhookVerificationError`
+ * counted as a rejected signature, and any other throw meant the signature had already
+ * passed and only the typing failed.
+ *
+ * @param body - The raw delivery body.
+ * @param headers - The delivery headers, flattened as the SDK expects them.
+ * @param secret - The Polar webhook signing secret.
+ * @returns `true` when the SDK considers the delivery authentic.
+ */
+function sdkSaysAuthentic(
+	body: string,
+	headers: Record<string, string>,
+	secret: string = WEBHOOK_SECRET,
+): boolean {
+	try {
+		sdkValidateEvent(body, headers, secret);
+		return true;
+	} catch (error) {
+		return !(error instanceof SDKWebhookVerificationError);
+	}
+}
 
 afterEach(() => {
 	calls = Object.create(null);
@@ -748,94 +863,149 @@ describe("PolarClient", () => {
 	});
 
 	describe("verifyWebhook", () => {
-		function req(headers: Record<string, string>): Request {
-			return new Request("https://app/webhook", { method: "POST", headers });
-		}
-
 		test("returns false when the secret is empty (fails closed)", async () => {
+			let { request, body } = await delivery();
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(await polar.verifyWebhook(req({}), "{}", "")).toBe(false);
-			expect(validateEventCalls).toHaveLength(0);
-		});
-
-		test("forwards the raw body, flattened headers and secret to validateEvent", async () => {
-			let polar = new PolarClient({ accessToken: "t" });
-			await polar.verifyWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
-			expect(validateEventCalls).toHaveLength(1);
-			expect(validateEventCalls[0]!.body).toBe("raw-body");
-			expect(validateEventCalls[0]!.secret).toBe("whsec_1");
-			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_1");
+			expect(await polar.verifyWebhook(request, body, "")).toBe(false);
 		});
 
 		test("returns true for a valid signature", async () => {
+			let { request, body } = await delivery();
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
+			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(true);
 		});
 
-		test("returns false for a WebhookVerificationError (bad signature)", async () => {
-			validateEventImpl = () => {
-				throw new MockWebhookVerificationError("bad signature");
-			};
+		test("returns false when the body was changed after signing", async () => {
+			let { request } = await delivery();
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(false);
+			expect(await polar.verifyWebhook(request, `${WEBHOOK_BODY} `, WEBHOOK_SECRET)).toBe(false);
 		});
 
-		test("returns true when the signature is valid but the event is unmodeled", async () => {
-			validateEventImpl = () => {
-				throw new MockSDKValidationError("Unknown event type");
-			};
+		test("returns false when the signature was tampered with", async () => {
+			let headers = await signLikePolar();
+			headers["webhook-signature"] = `v1,${btoa("not the mac at all")}`;
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(await polar.verifyWebhook(req({}), "{}", "whsec_1")).toBe(true);
+			let request = new Request("https://app/webhook", { method: "POST", headers });
+			expect(await polar.verifyWebhook(request, WEBHOOK_BODY, WEBHOOK_SECRET)).toBe(false);
+		});
+
+		test("returns false for a timestamp outside the tolerance (replay)", async () => {
+			let stale = Math.floor(Date.now() / 1000) - 10 * 60;
+			let { request, body } = await delivery({ timestamp: stale });
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(false);
+		});
+
+		test("returns false when the delivery was signed with another secret", async () => {
+			let { request, body } = await delivery({ secret: "some_other_secret" });
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(false);
+		});
+
+		test("returns false when a signature header is missing", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			for (let missing of ["webhook-id", "webhook-timestamp", "webhook-signature"]) {
+				let headers = await signLikePolar();
+				delete headers[missing];
+				let request = new Request("https://app/webhook", { method: "POST", headers });
+				expect(await polar.verifyWebhook(request, WEBHOOK_BODY, WEBHOOK_SECRET)).toBe(false);
+			}
+		});
+
+		test("returns true when the signature is valid but the body is unmodelled", async () => {
+			let { request, body } = await delivery({ body: '{"type":"nothing.models.this"}' });
+			let polar = new PolarClient({ accessToken: "t" });
+			// The security boundary passed; typing the payload is the caller's problem.
+			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(true);
+		});
+
+		test("returns true when the signature is valid but the body is not JSON at all", async () => {
+			let { request, body } = await delivery({ body: "not json" });
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.verifyWebhook(request, body, WEBHOOK_SECRET)).toBe(true);
+		});
+
+		test("never loads the vendor SDK, because verification no longer needs it", async () => {
+			let { request, body } = await delivery();
+			let polar = new PolarClient({ accessToken: "t" });
+			await polar.verifyWebhook(request, body, WEBHOOK_SECRET);
+			expect(calls["new"]).toBeUndefined();
+			expect(validateEventCalls).toHaveLength(0);
 		});
 	});
 
 	describe("parseWebhook", () => {
-		function req(headers: Record<string, string>): Request {
-			return new Request("https://app/webhook", { method: "POST", headers });
-		}
-
 		test("returns the validated event on success", async () => {
 			validateEventImpl = () => ({ type: "order.paid", data: { id: "ord_1" } });
+			let { request, body } = await delivery({ id: "wh_7" });
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = await polar.parseWebhook(req({ "webhook-id": "wh_1" }), "raw-body", "whsec_1");
+
+			let result = await polar.parseWebhook(request, body, WEBHOOK_SECRET);
+
 			expect(result.status).toBe("success");
 			if (result.status !== "success") throw new Error("expected success");
 			expect(result.data).toEqual({ type: "order.paid", data: { id: "ord_1" } });
-			expect(validateEventCalls).toHaveLength(1);
-			expect(validateEventCalls[0]!.body).toBe("raw-body");
-			expect(validateEventCalls[0]!.secret).toBe("whsec_1");
-			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_1");
 		});
 
-		test("fails closed without calling the verifier when the secret is missing", async () => {
+		test("forwards the raw body, flattened headers and secret to the parser", async () => {
+			let { request, body } = await delivery({ id: "wh_7" });
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = await polar.parseWebhook(req({}), "{}", undefined);
+
+			await polar.parseWebhook(request, body, WEBHOOK_SECRET);
+
+			expect(validateEventCalls).toHaveLength(1);
+			expect(validateEventCalls[0]!.body).toBe(body);
+			expect(validateEventCalls[0]!.secret).toBe(WEBHOOK_SECRET);
+			expect(validateEventCalls[0]!.headers["webhook-id"]).toBe("wh_7");
+		});
+
+		test("fails closed without any signature work when the secret is missing", async () => {
+			let { request, body } = await delivery();
+			let polar = new PolarClient({ accessToken: "t" });
+
+			let result = await polar.parseWebhook(request, body, undefined);
+
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Missing Polar webhook secret");
 			expect(validateEventCalls).toHaveLength(0);
 		});
 
-		test("fails with a signature error for a WebhookVerificationError", async () => {
-			validateEventImpl = () => {
-				throw new MockWebhookVerificationError("bad signature");
-			};
+		test("fails with a signature error, and never reaches the parser, for a bad signature", async () => {
+			let { request } = await delivery();
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = await polar.parseWebhook(req({}), "{}", "whsec_1");
+
+			let result = await polar.parseWebhook(request, `${WEBHOOK_BODY} `, WEBHOOK_SECRET);
+
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Invalid Polar webhook signature");
+			expect(validateEventCalls).toHaveLength(0);
 		});
 
-		test("fails with a payload error for an SDK validation error", async () => {
+		test("fails with a payload error when the parser cannot type the event", async () => {
 			validateEventImpl = () => {
 				throw new MockSDKValidationError("Unknown event type");
 			};
+			let { request, body } = await delivery();
 			let polar = new PolarClient({ accessToken: "t" });
-			let result = await polar.parseWebhook(req({}), "{}", "whsec_1");
+
+			let result = await polar.parseWebhook(request, body, WEBHOOK_SECRET);
+
 			expect(result.status).toBe("failure");
 			if (result.status !== "failure") throw new Error("expected failure");
 			expect(result.error.message).toBe("Invalid Polar webhook payload: Unknown event type");
+		});
+
+		test("never puts the signature or the secret on a failure", async () => {
+			let { request } = await delivery();
+			let polar = new PolarClient({ accessToken: "t" });
+
+			let result = await polar.parseWebhook(request, `${WEBHOOK_BODY} `, WEBHOOK_SECRET);
+
+			if (result.status !== "failure") throw new Error("expected failure");
+			expect(result.error.message).not.toContain(WEBHOOK_SECRET);
+			expect(result.error.message).not.toContain(request.headers.get("webhook-signature"));
 		});
 	});
 
@@ -843,6 +1013,133 @@ describe("PolarClient", () => {
 	// webhook parser, so re-exporting the class would undo the lazy SDK load.
 	test("re-exports PolarError as a value", () => {
 		expect(typeof PolarError).toBe("function");
+	});
+});
+
+/**
+ * The check ADR-026 makes mandatory before the SDK stops being the security boundary:
+ * on the same bytes, the SDK's verifier and `verifyWebhook` must reach the same
+ * accept/reject verdict, because a silent mismatch would reject legitimate billing
+ * events. It stays here for as long as the SDK is installed.
+ *
+ * Every fixture is signed by {@link signLikePolar}, which computes the MAC with
+ * WebCrypto directly, so neither implementation is being compared against itself.
+ */
+describe("webhook verification cross-check against the vendor SDK", () => {
+	/**
+	 * Runs one delivery through both implementations and returns the two verdicts,
+	 * so a test only has to say what it expects them to agree on.
+	 */
+	async function verdicts(
+		headers: Record<string, string>,
+		body: string,
+		secret: string = WEBHOOK_SECRET,
+	): Promise<{ sdk: boolean; pkg: boolean }> {
+		let request = new Request("https://app/webhook", { method: "POST", headers });
+		let polar = new PolarClient({ accessToken: "t" });
+		return {
+			sdk: sdkSaysAuthentic(body, headers, secret),
+			pkg: await polar.verifyWebhook(request, body, secret),
+		};
+	}
+
+	test("both accept a delivery signed the way Polar signs", async () => {
+		let headers = await signLikePolar();
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: true, pkg: true });
+	});
+
+	test("both accept an authentic body neither can model", async () => {
+		// The distinction ADR-026 preserves: the signature is what authenticates, so an
+		// event type nothing here knows is not an attack.
+		let body = '{"type":"nothing.models.this","data":{}}';
+		let headers = await signLikePolar({ body });
+		expect(await verdicts(headers, body)).toEqual({ sdk: true, pkg: true });
+	});
+
+	test("both accept an authentic body that is not JSON", async () => {
+		let body = "not json at all";
+		let headers = await signLikePolar({ body });
+		expect(await verdicts(headers, body)).toEqual({ sdk: true, pkg: true });
+	});
+
+	test("both accept a good signature presented beside an unreadable one", async () => {
+		// A sender mid-rotation sends several space-separated values, and a scheme
+		// neither side reads must not invalidate the one it does.
+		let headers = await signLikePolar();
+		headers["webhook-signature"] = `v1a,AAAA ${headers["webhook-signature"]}`;
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: true, pkg: true });
+	});
+
+	test("both reject a body changed after signing", async () => {
+		let headers = await signLikePolar();
+		expect(await verdicts(headers, `${WEBHOOK_BODY} `)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a tampered signature", async () => {
+		let headers = await signLikePolar();
+		headers["webhook-signature"] = `v1,${btoa("this is not the mac")}`;
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a delivery id the signature did not cover", async () => {
+		let headers = await signLikePolar();
+		headers["webhook-id"] = "wh_someone_elses";
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a stale timestamp", async () => {
+		let headers = await signLikePolar({ timestamp: Math.floor(Date.now() / 1000) - 10 * 60 });
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a timestamp too far in the future", async () => {
+		let headers = await signLikePolar({ timestamp: Math.floor(Date.now() / 1000) + 10 * 60 });
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a delivery signed with a different secret", async () => {
+		let headers = await signLikePolar({ secret: "some_other_secret" });
+		expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+	});
+
+	test("both reject a delivery missing any one of the three headers", async () => {
+		for (let missing of ["webhook-id", "webhook-timestamp", "webhook-signature"]) {
+			let headers = await signLikePolar();
+			delete headers[missing];
+			expect(await verdicts(headers, WEBHOOK_BODY)).toEqual({ sdk: false, pkg: false });
+		}
+	});
+
+	test("`Webhooks.sign()` reproduces the header a Polar sender produces", async () => {
+		// Pins the secret handling in the signing direction too: `@pkg/webhooks` keys on
+		// the base64-decoded secret, and Polar's secret is text, so the value handed to
+		// the package has to be the secret's UTF-8 bytes re-encoded as base64.
+		let id = "wh_pinned";
+		let timestamp = 1614265330;
+		let expected = await signLikePolar({ id, timestamp });
+
+		let signed = await Webhooks.sign(WEBHOOK_BODY, {
+			secret: btoa(WEBHOOK_SECRET),
+			id,
+			timestamp,
+		});
+
+		if (signed.status !== "success") throw new Error("expected the delivery to sign");
+		expect(Object.fromEntries(signed.data.headers.entries())).toEqual(expected);
+	});
+
+	test("verifying against the raw, undecoded secret would reject a genuine delivery", async () => {
+		// The mismatch this migration had to find: Polar's secret is arbitrary text, so
+		// handing it to a Standard Webhooks verifier unchanged keys on the wrong bytes and
+		// silently rejects every legitimate billing event.
+		let headers = await signLikePolar();
+		let request = new Request("https://app/webhook", { method: "POST", headers });
+
+		let result = await Webhooks.verify(request, { secret: WEBHOOK_SECRET });
+
+		expect(result.status).toBe("failure");
+		if (result.status !== "failure") throw new Error("expected failure");
+		expect(result.error).toBeInstanceOf(Webhooks.SignatureMismatchError);
 	});
 });
 
@@ -868,12 +1165,9 @@ describe("subscriptionFromEvent", () => {
 	 */
 	async function parse(event: { type: string; data: unknown }) {
 		validateEventImpl = () => event;
+		let { request, body } = await delivery();
 		let polar = new PolarClient({ accessToken: "t" });
-		let result = await polar.parseWebhook(
-			new Request("https://app/webhook", { method: "POST" }),
-			"{}",
-			"whsec_1",
-		);
+		let result = await polar.parseWebhook(request, body, WEBHOOK_SECRET);
 		if (result.status !== "success") throw new Error("expected success");
 		return result.data;
 	}

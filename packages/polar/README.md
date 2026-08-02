@@ -20,16 +20,33 @@ the monorepo:
 The client takes its configuration through the constructor (`{ accessToken }`)
 rather than reading environment variables itself, so it composes with
 [`@pkg/service-container`](/packages/service-container) (ADR-008) and is trivial to
-test. Webhook signature verification uses the Standard Webhooks scheme via
-`@polar-sh/sdk/webhooks.js`.
+test.
+
+Webhook signatures are verified by [`@pkg/webhooks`](/packages/webhooks), not by the
+vendor SDK. The signature over the raw body is the only thing proving a request came
+from Polar, so request authentication belongs to reviewed code here rather than to a
+billing library's release cycle (ADR-026). The SDK stays on afterwards as the parser
+that turns an already-verified body into a typed event — the parse is what maps
+Polar's snake-case wire fields onto the camel-case models callers read, so it cannot
+simply be dropped.
 
 The vendor SDK is **never imported at module scope**. It builds ~700 zod schemas when
 it loads, which costs over a megabyte of Worker bundle and tens of milliseconds of
 startup CPU in every isolate — including the many that never bill anything. Importing
 `PolarClient` (as a service-container token, say) therefore costs nothing; the SDK is
-loaded once, on the first method call. The visible consequence is that
-`verifyWebhook` and `parseWebhook` are `async`, since they have to load the verifier
-before they can use it.
+loaded once, on the first method call. `verifyWebhook` never reaches it at all now,
+so an endpoint that only authenticates a delivery loads no vendor code; `parseWebhook`
+loads it only once the signature has already verified. Both stay `async`.
+
+### Polar's secret is text, not key material
+
+Worth knowing before touching this code: Polar's webhook secret is an arbitrary
+string, and both its senders and its SDK base64-encode that string before handing it
+to a Standard Webhooks implementation — so the HMAC key is the secret's **UTF-8
+bytes**. A specification verifier decodes whatever secret it is given, so the client
+re-encodes the secret the same way before verifying. Passing `POLAR_WEBHOOK_SECRET`
+straight to a Standard Webhooks library instead would key on the wrong bytes and
+silently reject every authentic delivery.
 
 ## Usage
 
@@ -314,10 +331,12 @@ on API failure so a reporting cron can retry on the next run.
 #### `verifyWebhook(request: Request, rawBody: string, secret: string): Promise<boolean>`
 
 Verifies a Polar webhook signature using the Standard Webhooks scheme
-(`webhook-id` / `webhook-timestamp` / `webhook-signature` headers).
+(`webhook-id` / `webhook-timestamp` / `webhook-signature` headers), through
+[`@pkg/webhooks`](/packages/webhooks). No vendor code is loaded.
 
-Fails **closed**: a missing/empty secret or an invalid signature returns `false`.
-When the signature is valid but the SDK cannot model the event type, the security
+Fails **closed**: a missing/empty secret, a missing or unmatched signature, or a
+timestamp more than five minutes out (in either direction) returns `false`. When the
+signature is valid but the body is not something this endpoint can model, the security
 boundary has still passed, so the webhook is accepted and `true` is returned — the
 caller is expected to validate the payload shape itself.
 
@@ -336,10 +355,15 @@ caller is expected to validate the payload shape itself.
 Verifies the signature **and** returns the parsed event, so callers can branch on
 `event.type` with full types instead of re-parsing the raw body themselves.
 
-Fails **closed**: a missing/empty secret is a failure and the verifier is never
-called. The failure message distinguishes a rejected signature (`"Invalid Polar
-webhook signature"`) from an authentic body the SDK could not model (`"Invalid Polar
-webhook payload: …"`), so the two can be logged apart.
+Authentication is `@pkg/webhooks`; the SDK is reached only afterwards, and only to
+type the verified body. Anything it objects to at that point is reported as a payload
+failure, never as an authentication one — the boundary already passed.
+
+Fails **closed**: a missing/empty secret is a failure and no signature work happens.
+The failure message distinguishes a rejected signature (`"Invalid Polar webhook
+signature"`) from an authentic body the SDK could not model (`"Invalid Polar webhook
+payload: …"`), so the two can be logged apart. Neither message ever contains the
+signature or the secret.
 
 **Parameters:**
 
@@ -367,11 +391,13 @@ if (result.data.type === "order.paid") {
   `@polar-sh/sdk/models/errors/polarerror.js`, whose module is a bare `Error` subclass
   and so costs nothing to load), so `catch (error) { if (error instanceof PolarError) … }`
   works.
-- `WebhookVerificationError` — **type-only**. The module that defines it is the
-  schema-heavy webhook parser, so re-exporting the class would pull the whole vendor
-  model layer into every importer's startup path. `verifyWebhook` and `parseWebhook`
-  already turn it into `false` and a `"Invalid Polar webhook signature"` failure,
-  which is what a caller branches on.
+- `WebhookVerificationError` — **type-only**, and now vestigial: nothing here produces
+  one, because signatures are checked by `@pkg/webhooks`. It stays exported so an
+  existing type-level importer keeps compiling. It stays type-only because the module
+  that defines it is the schema-heavy webhook parser, so re-exporting the class would
+  pull the whole vendor model layer into every importer's startup path. `verifyWebhook`
+  and `parseWebhook` report a rejection as `false` and as a `"Invalid Polar webhook
+signature"` failure, which is what a caller branches on.
 
 ### Types
 
@@ -511,6 +537,7 @@ if (isFailure(result)) return json({ error: "Invalid payload" }, { status: 400 }
 
 ## Related Packages
 
+- [`@pkg/webhooks`](/packages/webhooks) - Standard Webhooks verification; the security boundary for every inbound delivery.
 - [`@pkg/service-container`](/packages/service-container) - Dependency injection container the client is registered in.
 - [`@pkg/validate`](/packages/validate) - Validate webhook payloads after signature verification.
 - [`@pkg/result`](/packages/result) - Result type used alongside payload validation.
@@ -519,7 +546,9 @@ if (isFailure(result)) return json({ error: "Invalid payload" }, { status: 400 }
 
 1. **Construct once** - Create a single `PolarClient` per app (a container singleton) rather than per request; the SDK is imported and the underlying client constructed on the instance's first method call, then reused.
 2. **Verify then validate** - `verifyWebhook` proves authenticity, not payload shape. Parse and validate the body afterwards before acting on it.
-3. **Fails closed** - `verifyWebhook` returns `false` for an empty secret or bad signature; it returns `true` for an authentic-but-unmodeled event so new Polar event types are not rejected.
+3. **Fails closed** - `verifyWebhook` returns `false` for an empty secret, a bad signature, or a timestamp outside the five-minute tolerance; it returns `true` for an authentic-but-unmodeled event so new Polar event types are not rejected.
 4. **`ingestPageViews` never throws** - It returns `false` on failure so a cron can retry; use `ingestEvents` directly when you want errors to propagate.
 5. **`parseWebhook` when you need the event** - Use `verifyWebhook` when a boolean is enough; use `parseWebhook` when you want to act on the typed event (`event.type === "order.paid"`) without re-parsing the body. Both fail closed on a missing secret.
 6. **Pass IDs explicitly** - The client is app-agnostic: pass `productId` (e.g. from `env.POLAR_PRODUCT_ID`) and metadata keys at the call site rather than baking them in.
+7. **Verify Polar deliveries through this client** - Handing `POLAR_WEBHOOK_SECRET` straight to a Standard Webhooks library rejects every authentic delivery, because Polar's secret is text and that library expects base64 key material; the client does the conversion for you.
+8. **Read the body once** - Both methods take the raw body as a parameter and verify those exact bytes, so read it with `await request.text()` and pass the same string; a re-serialized object signs differently.

@@ -7,6 +7,12 @@
  * subscriptions, products, discounts, orders, hosted checkout/portal sessions,
  * usage-event ingestion, and Standard-Webhooks signature verification/parsing.
  *
+ * Webhook authentication is `@pkg/webhooks`, not the vendor SDK: the signature over
+ * the raw body is the only thing proving a request came from Polar, so that check
+ * belongs to reviewed code here rather than to a billing library's release cycle.
+ * The SDK stays on as the parser that turns an already-verified body into a typed
+ * event, which is the one thing it does that this package cannot.
+ *
  * The client is constructed from configuration (`{ accessToken }`) rather than
  * reading environment variables itself, so it stays compatible with
  * `@pkg/service-container` (ADR-008) and is trivial to test.
@@ -33,7 +39,8 @@ import type { Order } from "@polar-sh/sdk/models/components/order.js";
 import type { Product } from "@polar-sh/sdk/models/components/product.js";
 import type { Subscription } from "@polar-sh/sdk/models/components/subscription.js";
 
-import { failure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@pkg/result";
+import * as Webhooks from "@pkg/webhooks";
 import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
 
 // PolarError is the one SDK value worth importing eagerly: its module is a bare
@@ -42,11 +49,14 @@ export { PolarError };
 export type { Checkout, Customer, CustomerSession, Discount, Order, Product, Subscription };
 
 /**
- * The error the SDK's verifier throws for a bad or missing signature. Type-only: the
- * module that defines it is the schema-heavy webhook parser, so a value re-export
- * would pull the whole vendor model layer back into every importer's startup path.
- * {@link PolarClient.verifyWebhook} and {@link PolarClient.parseWebhook} already turn
- * it into `false`/`failure`, which is what callers branch on.
+ * The error the SDK's verifier throws for a bad or missing signature. Kept exported,
+ * and still type-only, so an existing type-level importer keeps compiling — but
+ * nothing here produces one any more: signatures are now checked by `@pkg/webhooks`,
+ * and {@link PolarClient.verifyWebhook} and {@link PolarClient.parseWebhook} report a
+ * rejection as `false` and as a `"Invalid Polar webhook signature"` failure, which is
+ * what callers branch on. It stays type-only because the module that defines it is the
+ * schema-heavy webhook parser, so a value re-export would pull the whole vendor model
+ * layer back into every importer's startup path.
  */
 export type { WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 
@@ -61,16 +71,18 @@ export type PolarWebhookEvent = ReturnType<
 
 /**
  * The vendor SDK as {@link PolarClient} uses it: one configured API client plus the
- * webhook verifier and the error it throws, resolved together by
- * {@link PolarClient.sdk} on first use.
+ * event parser, resolved together by {@link PolarClient.sdk} on first use.
  */
 interface PolarSdk {
 	/** The configured SDK client every API method delegates to. */
 	client: Polar;
-	/** Verifies a Standard Webhooks signature and parses the payload, or throws. */
+	/**
+	 * Turns a webhook body into a typed event, or throws when it cannot model it. It
+	 * verifies the signature too, but {@link PolarClient.parseWebhook} only ever calls
+	 * it on a body `@pkg/webhooks` has already authenticated, so its verdict is read as
+	 * a typing result and never as an authentication one.
+	 */
 	validateEvent: typeof import("@polar-sh/sdk/webhooks.js").validateEvent;
-	/** The class `validateEvent` throws for a rejected signature specifically. */
-	WebhookVerificationError: typeof import("@polar-sh/sdk/webhooks.js").WebhookVerificationError;
 }
 
 /**
@@ -151,6 +163,80 @@ export interface PolarClientOptions {
  * deduplicates on.
  */
 const INGEST_CHUNK_SIZE = 100;
+
+/**
+ * Accepted clock skew on an inbound delivery, applied in both directions.
+ *
+ * Pinned here rather than left to the verifier's default because five minutes is the
+ * window Polar's own deliveries are built for, and this value is the replay window: a
+ * captured request stays replayable for exactly this long.
+ */
+const WEBHOOK_TOLERANCE = "5 minutes";
+
+/**
+ * Re-encodes a Polar webhook secret as the base64 key material a Standard Webhooks
+ * verifier expects.
+ *
+ * Polar's secret is arbitrary text, not base64 key material: both its senders and its
+ * SDK base64-encode the secret before handing it to a specification implementation, so
+ * the HMAC key is the secret's UTF-8 bytes. A verifier decodes whatever it is given, so
+ * the same encoding has to happen here — passing the secret through unchanged would
+ * key on the wrong bytes and reject every authentic delivery.
+ *
+ * @param secret - The webhook secret exactly as Polar issued it.
+ * @returns The secret's UTF-8 bytes, base64 encoded.
+ */
+function toSigningSecret(secret: string): string {
+	// Built a byte at a time rather than through `btoa(secret)` so a secret containing
+	// non-Latin-1 text encodes instead of throwing.
+	let binary = "";
+	for (let byte of new TextEncoder().encode(secret)) binary += String.fromCharCode(byte);
+	return btoa(binary);
+}
+
+/**
+ * Rebuilds a delivery as a request whose body is still unread.
+ *
+ * Verification covers the exact bytes received and a stream can be read only once, so
+ * callers hand over the raw text they already consumed; putting that text back behind
+ * the same headers is what lets it be verified as received rather than re-serialized.
+ *
+ * @param request - The incoming webhook request, used for its URL and headers.
+ * @param rawBody - The exact raw request body the signature was computed over.
+ * @returns A request carrying the same signature headers over the same bytes.
+ */
+function toVerifiableRequest(request: Request, rawBody: string): Request {
+	return new Request(request.url, {
+		method: "POST",
+		headers: new Headers(request.headers),
+		body: rawBody,
+	});
+}
+
+/**
+ * Whether a delivery is authentic, which is the whole of the security boundary.
+ *
+ * A `PayloadValidationError` counts as authentic: the signature matched and only the
+ * body's shape was unexpected, so an event this endpoint cannot model is not treated
+ * as an attack. Every other failure — missing headers, a malformed or unmatched
+ * signature, a stale timestamp, an unusable secret — means the request is not
+ * authentic and the caller must reject it.
+ *
+ * @param request - The incoming webhook request, used for its headers.
+ * @param rawBody - The exact raw request body the signature was computed over.
+ * @param secret - The Polar webhook signing secret, as Polar issued it.
+ * @returns `true` when the signature verified against the secret.
+ */
+async function isAuthentic(request: Request, rawBody: string, secret: string): Promise<boolean> {
+	let result = await Webhooks.verify(toVerifiableRequest(request, rawBody), {
+		secret: toSigningSecret(secret),
+		tolerance: WEBHOOK_TOLERANCE,
+	});
+
+	if (isFailure(result)) return result.error instanceof Webhooks.PayloadValidationError;
+
+	return true;
+}
 
 /**
  * A cost to attach to an ingested event, read by Polar's Cost Insights and Metrics API
@@ -339,16 +425,15 @@ export class PolarClient {
 	 * import out of module scope: the bundler splits it into a chunk that an isolate
 	 * only ever evaluates if it actually reaches a billing code path.
 	 *
-	 * @returns The configured client, verifier, and verification error class.
+	 * @returns The configured client and the webhook event parser.
 	 */
 	private sdk(): Promise<PolarSdk> {
 		return (this.loading ??= Promise.all([
 			import("@polar-sh/sdk"),
 			import("@polar-sh/sdk/webhooks.js"),
-		]).then(([{ Polar }, { validateEvent, WebhookVerificationError }]) => ({
+		]).then(([{ Polar }, { validateEvent }]) => ({
 			client: new Polar({ accessToken: this.accessToken }),
 			validateEvent,
-			WebhookVerificationError,
 		})));
 	}
 
@@ -895,11 +980,14 @@ export class PolarClient {
 
 	/**
 	 * Verify a Polar webhook signature using the Standard Webhooks scheme
-	 * (`webhook-id` / `webhook-timestamp` / `webhook-signature` headers).
+	 * (`webhook-id` / `webhook-timestamp` / `webhook-signature` headers), through
+	 * `@pkg/webhooks` rather than the vendor SDK — so the request authentication path
+	 * is reviewed code here, and this method loads no vendor code at all.
 	 *
-	 * Fails **closed**: a missing/empty secret or an invalid signature returns
-	 * `false`. When the signature is valid but the SDK cannot model the event type
-	 * (a {@link https://docs.polar.sh Polar} event not yet in the SDK), the security
+	 * Fails **closed**: a missing/empty secret, a missing or unmatched signature, or a
+	 * timestamp outside {@link WEBHOOK_TOLERANCE} returns `false`. When the signature
+	 * is valid but the body is not something this endpoint can model (a
+	 * {@link https://docs.polar.sh Polar} event type nothing here knows), the security
 	 * boundary has still passed, so the webhook is accepted and `true` is returned —
 	 * the caller is expected to validate the payload shape itself.
 	 *
@@ -921,27 +1009,11 @@ export class PolarClient {
 		rawBody: string,
 		secret: string | undefined,
 	): Promise<boolean> {
-		// Checked before loading the verifier, so a misconfigured deployment rejects
-		// webhooks without ever evaluating the vendor's schema module.
+		// A misconfigured deployment rejects every delivery rather than accepting
+		// whatever arrives, and says so before any signature work is attempted.
 		if (!secret) return false;
 
-		let headers: Record<string, string> = {};
-		request.headers.forEach((value, key) => {
-			headers[key] = value;
-		});
-
-		let sdk = await this.sdk();
-
-		try {
-			sdk.validateEvent(rawBody, headers, secret);
-			return true;
-		} catch (error) {
-			// A bad/missing signature is a WebhookVerificationError -> fail closed.
-			if (error instanceof sdk.WebhookVerificationError) return false;
-			// The signature verified but the SDK could not type the event (an event
-			// type it does not model); the security boundary passed, so accept it.
-			return true;
-		}
+		return await isAuthentic(request, rawBody, secret);
 	}
 
 	/**
@@ -949,9 +1021,15 @@ export class PolarClient {
 	 * branch on `event.type` with full types instead of re-parsing the raw body
 	 * themselves. Complements {@link verifyWebhook}, which only proves authenticity.
 	 *
-	 * Fails **closed**: a missing/empty secret is a failure without calling the
-	 * verifier. The failure error distinguishes a rejected signature from an
-	 * authentic body the SDK could not model, so the caller can log them apart.
+	 * Authentication is `@pkg/webhooks`; the SDK is reached only afterwards, and only
+	 * to turn the verified body into a typed event (the parse is what maps Polar's
+	 * snake-case wire fields onto the camel-case models callers read). Anything the
+	 * SDK objects to at that point is therefore reported as a payload failure, never
+	 * as an authentication one — the boundary already passed.
+	 *
+	 * Fails **closed**: a missing/empty secret is a failure without any signature work.
+	 * The failure message distinguishes a rejected signature from an authentic body the
+	 * SDK could not model, so the caller can log and answer them apart.
 	 *
 	 * @param request - The incoming webhook request, used for its headers.
 	 * @param rawBody - The exact raw request body used to compute the signature.
@@ -970,25 +1048,27 @@ export class PolarClient {
 		rawBody: string,
 		secret: string | undefined,
 	): Promise<Result<PolarWebhookEvent, Error>> {
-		// Checked before loading the verifier, so a misconfigured deployment rejects
-		// webhooks without ever evaluating the vendor's schema module.
+		// A misconfigured deployment rejects every delivery rather than accepting
+		// whatever arrives, and says so before any signature work is attempted.
 		if (!secret) return failure(new Error("Missing Polar webhook secret"));
+
+		if (!(await isAuthentic(request, rawBody, secret))) {
+			return failure(new Error("Invalid Polar webhook signature"));
+		}
 
 		let headers: Record<string, string> = {};
 		request.headers.forEach((value, key) => {
 			headers[key] = value;
 		});
 
-		let sdk = await this.sdk();
+		let { validateEvent } = await this.sdk();
 
 		try {
-			return success(sdk.validateEvent(rawBody, headers, secret));
+			return success(validateEvent(rawBody, headers, secret));
 		} catch (error) {
-			// A bad/missing signature is a WebhookVerificationError -> fail closed.
-			if (error instanceof sdk.WebhookVerificationError) {
-				return failure(new Error("Invalid Polar webhook signature"));
-			}
-			// The signature verified but the SDK could not validate/type the payload.
+			// The delivery is already authenticated, so every objection from here is
+			// about the payload's shape — including the SDK's own verification, which
+			// keys on the same secret over the same bytes and so agrees by construction.
 			let message = error instanceof Error ? error.message : String(error);
 			return failure(new Error(`Invalid Polar webhook payload: ${message}`));
 		}
