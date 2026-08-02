@@ -5,8 +5,9 @@
  * Container and loader are one component rather than two things a page has to remember to
  * pair up, because half of the pair is worse than neither half: a `.cf-turnstile` div with
  * no `api.js` behind it is an inert box that renders nothing, writes no token into the
- * form, and turns every submission from that page into a `failed-challenge` refusal —
- * silently, and only in the deployments that have a site key at all. That is exactly the
+ * form, and turns every submission from that page into a refusal asking the visitor to
+ * finish a challenge they were never shown — silently, and only in the deployments that
+ * have a site key at all. That is exactly the
  * shape the landing page shipped in, so the two parts are no longer separable.
  *
  * The loader sits after the container and inside the same form, rather than at the end of
@@ -39,8 +40,9 @@ export namespace Turnstile {
 	export interface Props {
 		/**
 		 * This deployment's site key, or `null` when none is configured — in which case
-		 * nothing renders at all, matching `guardTrialProbe` skipping the challenge under
-		 * that same condition.
+		 * nothing renders at all. Verification does not skip to match: a form with no widget
+		 * submits no token, and a probe with no token is refused. A deployment missing the
+		 * key is therefore a deployment that runs no checks, which is the intended failure.
 		 */
 		siteKey: string | null;
 	}

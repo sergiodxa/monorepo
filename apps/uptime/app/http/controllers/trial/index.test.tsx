@@ -12,9 +12,16 @@
  * the reason it is allowed to exist at all: a refused submission never reaches the network,
  * the probe does not follow redirects — the header that switches following off is asserted
  * on the outgoing request, so removing it fails a test rather than quietly reopening the
- * hole `trial-guard.ts` describes — and nothing is billed. Each of the five refusal codes
- * must still produce its own sentence, because the page's job is to let a visitor tell "we
- * stopped for today" apart from "your site is down".
+ * hole `trial-guard.ts` describes — and an anonymous check is billed nothing. Each refusal
+ * code must still produce its own sentence, because the page's job is to let a visitor tell
+ * "we stopped for today" apart from "your site is down"; the one that means "you have not
+ * finished the form" is also asserted to render on the field rather than in the Alert.
+ *
+ * The signed-in half is a different page from the same handler, so it gets its own block at
+ * the bottom: a real team row, a real entitlement projection, and assertions on all three
+ * of who is charged, which budgets are asked for, and what the card offers. The anonymous
+ * expectations are re-asserted there rather than assumed, since the one thing this change
+ * could not be allowed to do is alter what a stranger sees.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,11 +29,13 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 import type { Result } from "@pkg/result";
 import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
+import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
@@ -38,17 +47,20 @@ import { renderWith } from "remix/render-middleware";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 
-import type { TrialRefusalCode } from "~/app/http/controllers/trial/index";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
+import type { Viewer } from "~/app/http/middleware/auth";
 import type {
 	TrialProbeGrant,
 	TrialProbeRequest,
 	TrialRefusal,
 	TrialRefusalReason,
 } from "~/app/services/trial-guard";
+import type { SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Every probe the action issued, as the Durable Object stub saw it. */
@@ -71,12 +83,17 @@ function makeGeoFetchNamespace() {
 	};
 }
 
+/** Work the action deferred, drained by {@link dispatch} so the meter event can be read. */
+let deferred: Promise<unknown>[] = [];
+
 mock.module("cloudflare:workers", () => ({
 	env: {
 		GEO_FETCH: makeGeoFetchNamespace(),
 		PING_RESULTS: { writeDataPoint: (point: unknown) => writtenPoints.push(point) },
 	},
-	waitUntil: () => {},
+	waitUntil: (promise: Promise<unknown>) => {
+		deferred.push(promise);
+	},
 	DurableObject: class {},
 }));
 
@@ -140,17 +157,75 @@ function probeState(overrides: Partial<TrialProbeState> = {}): TrialProbeState {
 	};
 }
 
-/** Both methods run through the same router; only the request differs. */
-async function dispatch(request: Request, session: Session) {
+/** Event batches the action handed the billing client, one entry per call. */
+let ingested: IngestEvent[][] = [];
+
+let polar = {
+	async ingestEventsSafe(events: IngestEvent[]) {
+		ingested.push(events);
+		return true;
+	},
+} as unknown as PolarClientType;
+
+let viewer: Viewer = {
+	id: "viewer-1",
+	name: "Test Viewer",
+	email: "viewer@example.com",
+	avatar: "",
+};
+
+/** A signed-in viewer with a team, as the request runs as them. */
+interface Actor {
+	db: ReturnType<typeof createTestDatabase>["db"];
+	team: SelectTeam;
+}
+
+/**
+ * Seeds a viewer's team and its owner's entitlement.
+ *
+ * `subscription` is the state the projection is left in, and the three values are three
+ * different answers from the gate: a recorded active row, a recorded revoked one, and no
+ * row at all — which reads as `unknown` and must still be billed.
+ */
+async function signIn(subscription: "active" | "revoked" | "unknown"): Promise<Actor> {
 	let { db } = createTestDatabase();
+
+	let team = await db.create(
+		teams,
+		{
+			id: crypto.randomUUID(),
+			owner_id: crypto.randomUUID(),
+			name: "Acme",
+			slug: `acme-${crypto.randomUUID()}`,
+			logo: null,
+		},
+		{ touch: true, returnRow: true },
+	);
+	await db.create(
+		memberships,
+		{ id: crypto.randomUUID(), subject_id: viewer.id, team_id: team.id, role: "admin" },
+		{ touch: true, returnRow: true },
+	);
+
+	if (subscription === "active") await createActiveSubscription(db, team.owner_id);
+	if (subscription === "revoked") await createRevokedSubscription(db, team.owner_id);
+
+	return { db, team };
+}
+
+/** Both methods run through the same router; only the request and the actor differ. */
+async function dispatch(request: Request, session: Session, actor?: Actor) {
+	let db = actor?.db ?? createTestDatabase().db;
 	let container = new ServiceContainer();
 	container.instance(Database, db);
+	container.instance(PolarClient, polar);
 
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
 			((ctx, next) => {
-				ctx.set(Auth, { ok: false });
+				if (actor === undefined) ctx.set(Auth, { ok: false });
+				else ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 				return next();
 			}) as Middleware,
 			((ctx, next) => {
@@ -165,6 +240,9 @@ async function dispatch(request: Request, session: Session) {
 	router.map(routes.trial.check, trialCheck);
 
 	let response = await container.scope(() => router.fetch(request));
+	// The platform settles deferred work after the response; this stands in for that, so
+	// asserting on the meter event doesn't race it.
+	await Promise.all(deferred.splice(0));
 
 	return { response, session, body: await response.text() };
 }
@@ -176,14 +254,14 @@ async function getTry(session = new Session(), search = "") {
 }
 
 /** Submits the form and reads back both the rendered page and the session it touched. */
-async function runTry(body: Record<string, string>, session = new Session()) {
+async function runTry(body: Record<string, string>, session = new Session(), actor?: Actor) {
 	let request = new Request(`https://uptime.test${routes.trial.check.action.href()}`, {
 		method: "POST",
 		headers: { "content-type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams(body),
 	});
 
-	let result = await dispatch(request, session);
+	let result = await dispatch(request, session, actor);
 
 	return { ...result, probe: session.get(TRIAL_PROBE) as TrialProbeState | undefined };
 }
@@ -191,6 +269,8 @@ async function runTry(body: Record<string, string>, session = new Session()) {
 beforeEach(() => {
 	probes.length = 0;
 	writtenPoints.length = 0;
+	ingested.length = 0;
+	deferred.length = 0;
 	guardTrialProbe.mockClear();
 	trialTurnstileSiteKey.mockReset();
 	trialTurnstileSiteKey.mockImplementation(() => null);
@@ -410,7 +490,7 @@ describe("POST /try", () => {
 		let { body, probe } = await runTry({ url: "example.com" });
 
 		expect(probe).toBeUndefined();
-		expect(body).toContain("prober did not answer");
+		expect(body).toContain("Something on our side stopped the check");
 		expect(body).not.toContain("Check another URL");
 	});
 
@@ -448,14 +528,20 @@ describe("POST /try refusals", () => {
 	 * `unavailable` is the one the guard never issues — it comes from the prober throwing,
 	 * which has its own test above — so it is listed here only for the distinctness check.
 	 */
-	let cases: Array<{ code: TrialRefusalCode; contains: string }> = [
+	let cases: Array<{ code: TrialRefusalReason; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
+		{ code: "challenge-incomplete", contains: "Complete the verification" },
 		{ code: "failed-challenge", contains: "could not confirm the request came from a browser" },
 		{ code: "rate-limited", contains: "run another check" },
 		{ code: "budget-exhausted", contains: "every free check we run in a day" },
-		{ code: "unavailable", contains: "prober did not answer" },
+		{ code: "unavailable", contains: "Something on our side stopped the check" },
 	];
 
+	/**
+	 * The reasons that render in the Alert. `challenge-incomplete` is left out because it
+	 * renders on the field instead, and `unavailable` because the guard's own version of it
+	 * has no test target here — the prober throwing does, above.
+	 */
 	let guardReasons: Array<{ code: TrialRefusalReason; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
 		{ code: "failed-challenge", contains: "could not confirm the request came from a browser" },
@@ -528,5 +614,126 @@ describe("POST /try refusals", () => {
 
 		expect(guardTrialProbe).toHaveBeenCalledTimes(1);
 		expect(body).toContain("not an address we will check on your behalf");
+	});
+
+	test("renders the alert inside the form card rather than adrift below it", async () => {
+		guardResult = failure(new TestRefusal("budget-exhausted"));
+
+		let { body } = await runTry({ url: "example.com" });
+
+		let formStart = body.indexOf(`action="${routes.trial.check.action.href()}"`);
+		let alertAt = body.indexOf("every free check we run in a day");
+		let submitAt = body.indexOf("Run the check");
+
+		expect(formStart).toBeGreaterThan(-1);
+		expect(alertAt).toBeGreaterThan(formStart);
+		expect(alertAt).toBeLessThan(submitAt);
+	});
+
+	test("renders an unfinished challenge as field validation, never as the alert", async () => {
+		guardResult = failure(new TestRefusal("challenge-incomplete"));
+
+		let { body } = await runTry({ url: "example.com" });
+
+		expect(body).toContain("Complete the verification");
+		expect(body).toContain("data-field-error");
+		// The Alert's title is the tell: an incomplete form is not a check that failed.
+		expect(body).not.toContain("The check did not run");
+	});
+
+	test("does not tell somebody who never ticked the box to reload the page", async () => {
+		guardResult = failure(new TestRefusal("challenge-incomplete"));
+
+		let { body } = await runTry({ url: "example.com" });
+
+		expect(body).not.toContain("could not confirm the request came from a browser");
+	});
+});
+
+describe("POST /try for a signed-in viewer", () => {
+	test("bills the check to their team and spends neither free budget", async () => {
+		let actor = await signIn("active");
+
+		await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
+		expect(writtenPoints).toHaveLength(1);
+		expect(ingested).toHaveLength(1);
+		expect(ingested[0]?.[0]?.externalCustomerId).toBe(actor.team.owner_id);
+		expect(ingested[0]?.[0]?.metadata).toMatchObject({ teamId: actor.team.id, type: "adhoc" });
+		// No monitor id: the ping counts toward the team's total and against no monitor.
+		expect(ingested[0]?.[0]?.metadata).not.toHaveProperty("monitorId");
+	});
+
+	test("bills an owner whose subscription state cannot be determined", async () => {
+		let actor = await signIn("unknown");
+
+		await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
+		expect(writtenPoints).toHaveLength(1);
+	});
+
+	test("gives a revoked subscription the free path rather than refusing it", async () => {
+		let actor = await signIn("revoked");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
+		expect(writtenPoints).toHaveLength(0);
+		expect(ingested).toHaveLength(0);
+		expect(body).toContain("HTTP 200");
+	});
+
+	test("offers a monitor on the checked URL instead of asking for an email", async () => {
+		let actor = await signIn("active");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(body).toContain("Create a monitor for this URL");
+		expect(body).toContain(
+			`${routes.app.team.monitors.new.href({ team: actor.team.slug })}?url=https%3A%2F%2Fexample.com%2F`,
+		);
+		expect(body).not.toContain(`action="${routes.trial.lead.href()}"`);
+		expect(body).not.toContain("Get an email when this changes");
+	});
+
+	test("offers billing alongside the monitor when the subscription is not active", async () => {
+		let actor = await signIn("revoked");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(body).toContain("Create a monitor for this URL");
+		expect(body).toContain("Start your subscription");
+		expect(body).toContain(routes.app.team.checkout.href({ team: actor.team.slug }));
+		expect(body).not.toContain(`action="${routes.trial.lead.href()}"`);
+	});
+
+	test("does not offer billing to a team that is already paying", async () => {
+		let actor = await signIn("active");
+
+		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(body).not.toContain("Start your subscription");
+		expect(body).not.toContain(routes.app.team.checkout.href({ team: actor.team.slug }));
+	});
+
+	test("stores no probe, since the form that would claim it never renders", async () => {
+		let actor = await signIn("active");
+
+		let { probe } = await runTry({ url: "example.com" }, new Session(), actor);
+
+		expect(probe).toBeUndefined();
+	});
+
+	test("leaves the anonymous visitor exactly as they were", async () => {
+		let { body } = await runTry({ url: "example.com" });
+
+		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
+		expect(writtenPoints).toHaveLength(0);
+		expect(ingested).toHaveLength(0);
+		expect(body).toContain(`action="${routes.trial.lead.href()}"`);
+		expect(body).toContain("Get an email when this changes");
+		expect(body).not.toContain("Create a monitor for this URL");
 	});
 });

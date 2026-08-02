@@ -11,14 +11,24 @@
  * across the whole site).
  *
  * One entry point, {@link guardTrialProbe}, runs all three and answers with a single
- * `Result` so the page's action branches once. The four refusal reasons stay
- * distinguishable on purpose: "we stopped for the day" and "your site is unreachable" are
- * different sentences to show a visitor, and collapsing them would make the page lie.
+ * `Result` so the page's action branches once. The refusal reasons stay distinguishable on
+ * purpose: "we stopped for the day" and "your site is unreachable" are different sentences
+ * to show a visitor, and collapsing them would make the page lie.
  *
  * Ordering is by cost, cheapest first, so the expensive checks are only reached by
  * requests that survived the free ones: the caller budget is a binding call that bills
  * nothing, the target rules are pure string work, the challenge is one round trip, DNS is
  * one or two more, and the daily budget is the only step that spends KV.
+ *
+ * ## Billed probes
+ *
+ * A caller that is charging the probe to an account passes `billed` and skips the three
+ * controls that exist purely because an anonymous probe is free — the per-address budget,
+ * the challenge, and the daily budget. None of them are protecting anything for a request
+ * that pays its own way, and the daily cost fence in particular must not be spent by
+ * traffic that is not costing us anything. The target rules and the resolve-and-verify
+ * step are *not* skipped: those are about this Worker not being used as an attack proxy,
+ * which is as true of a signed-in caller as of a stranger.
  *
  * What this deliberately does not do: perform the probe, decide what to tell the visitor,
  * or record anything to Analytics Engine. A caller granted a probe does those itself.
@@ -177,12 +187,25 @@ const ALLOWED_PORTS: readonly string[] = ["", "80", "443"];
 export type TrialRefusalReason =
 	/** The URL points somewhere an anonymous visitor may not send us. */
 	| "blocked-target"
-	/** The Turnstile challenge was absent, invalid, or could not be verified. */
+	/**
+	 * The form arrived with no Turnstile token, which is what an unticked widget looks
+	 * like. Not a failure — an unfinished form, and the only reason here the visitor can
+	 * clear by doing one more thing on the page they are already looking at.
+	 */
+	| "challenge-incomplete"
+	/** A Turnstile token was supplied and Cloudflare did not accept it. */
 	| "failed-challenge"
 	/** This address has spent its budget; it can try again shortly. */
 	| "rate-limited"
 	/** The site has performed all the free probes it will perform today. */
-	| "budget-exhausted";
+	| "budget-exhausted"
+	/**
+	 * Something on our side stopped the check before it could run, so nothing at all was
+	 * learned about the target. A statement about this deployment rather than about the
+	 * visitor's URL, and the only reason here they cannot act on — see {@link TrialRefusal}
+	 * on `detail`, which is where the specific fault is named for whoever reads the logs.
+	 */
+	| "unavailable";
 
 /**
  * A refused trial probe.
@@ -193,7 +216,7 @@ export type TrialRefusalReason =
  * out but all of which someone reading production logs does.
  */
 export class TrialRefusal extends Error {
-	/** Which of the four controls refused, and therefore what the page should say. */
+	/** Which control refused, and therefore what the page should say. */
 	readonly reason: TrialRefusalReason;
 
 	/** The specific rule that fired, for logs rather than for display. */
@@ -232,6 +255,12 @@ export interface TrialProbeRequest {
 	 * enforced in one place instead of at every call site.
 	 */
 	request: Request;
+	/**
+	 * Whether the caller is charging this probe to an account, which turns off the three
+	 * free-tier controls — see this module's own doc comment. Stated rather than optional
+	 * so that every call site has to have an opinion about who is paying.
+	 */
+	billed: boolean;
 }
 
 /** Permission to perform one free probe, and what was learned getting there. */
@@ -244,16 +273,19 @@ export interface TrialProbeGrant {
 	 * the probe cannot be pinned to them.
 	 */
 	addresses: string[];
-	/** Free probes left in today's global budget once this one is counted. */
-	budgetRemaining: number;
+	/**
+	 * Free probes left in today's global budget once this one is counted, or `null` for a
+	 * billed probe, which spends none of it and therefore has nothing to report.
+	 */
+	budgetRemaining: number | null;
 }
 
 /**
  * The Turnstile secret, when the running deployment has one.
  *
- * Read structurally rather than off the generated `Cloudflare.Env`, which is what makes an
- * absent secret a supported state instead of a crash: the keys are being provisioned
- * separately from this code, and a deploy that lands first must still serve the page.
+ * Read structurally rather than off the generated `Cloudflare.Env` so that an absent
+ * secret is a state this module can *describe* rather than a crash. It is not a state it
+ * tolerates: {@link verifyChallenge} refuses every probe without one.
  *
  * @returns The secret, or `undefined` when this deployment has none.
  */
@@ -266,11 +298,12 @@ function turnstileSecret(): string | undefined {
 /**
  * The Turnstile site key, for the page to render the widget with.
  *
- * Not a secret — it ships to the browser — but read the same structural way, because the
- * page has the same problem the verification does: it must render without the key rather
- * than fail. A page given `null` should render no widget at all, which pairs with
- * {@link verifyChallenge} skipping verification, so the two halves are unconfigured
- * together instead of the form collecting a token nothing checks.
+ * Not a secret — it ships to the browser — but read the same structural way, so the page
+ * renders without the key rather than failing. A page given `null` renders no widget at
+ * all, and a deployment in that state is broken rather than merely unconfigured: with no
+ * widget the form sends no token, and {@link verifyChallenge} refuses a probe with no
+ * token. That is the intended shape of the failure — an unprotected prober is the one
+ * outcome worse than a page that cannot run a check.
  *
  * @returns The site key, or `null` when this deployment has none.
  */
@@ -698,30 +731,40 @@ async function checkResolvedAddresses(hostname: string): Promise<Result<string[]
 /**
  * Verifies a Turnstile token server-side.
  *
- * With no secret configured this **skips** and reports a pass, so the page works before
- * the keys exist. That is the intended state for exactly as long as it takes to provision
- * them, and it is logged at error level on every request rather than once, because a trial
- * page that is quietly unprotected looks identical to a protected one until the bill
- * arrives — the log is the only difference visible from outside.
+ * Fails **closed** in every direction, including when Cloudflare's endpoint cannot be
+ * reached and when this deployment has no secret at all: a challenge that was not verified
+ * was not passed, and the page degrading is a smaller problem than the prober being open.
+ * There is deliberately no escape hatch for an unconfigured environment — a secret rotated
+ * away or dropped from a deploy would otherwise open the free prober to the whole internet
+ * with nothing but a log line to show for it. The log stays, at error level on every
+ * request, because it is the operator's only signal; what changes is that the request
+ * stops there.
  *
- * With a secret configured it fails **closed**, including when Cloudflare's endpoint
- * cannot be reached: a challenge that was not verified was not passed, and the page
- * degrading is a smaller problem than the prober being open.
+ * The two ways a challenge can fail are kept apart, because they are different sentences
+ * to show a visitor. No token at all is what an unticked widget looks like, and the person
+ * who submitted the form early needs to finish it, not reload the page. A token Cloudflare
+ * actively rejected — or one it could not be asked about — is the case the "try again"
+ * wording was written for.
  *
  * @param token - The token the widget produced.
  * @param address - The calling address, which Turnstile cross-checks against the token.
- * @returns Whether the caller may proceed.
+ * @returns The refusal to answer with, or `null` when the caller may proceed.
  */
-async function verifyChallenge(token: string | null, address: string | null): Promise<boolean> {
+async function verifyChallenge(
+	token: string | null,
+	address: string | null,
+): Promise<TrialRefusal | null> {
 	let secret = turnstileSecret();
 	if (secret === undefined) {
-		logger.error("trial_guard.turnstile_skipped", {
-			reason: "TURNSTILE_SECRET_KEY is not configured; trial probes are unchallenged",
+		logger.error("trial_guard.turnstile_unconfigured", {
+			reason: "TURNSTILE_SECRET_KEY is not configured; trial probes cannot be challenged",
 		});
-		return true;
+		return new TrialRefusal("unavailable", "turnstile-unconfigured");
 	}
 
-	if (token === null || token === "") return false;
+	if (token === null || token === "") {
+		return new TrialRefusal("challenge-incomplete", "no-token");
+	}
 
 	let body = new URLSearchParams({ secret, response: token });
 	if (address !== null) body.set("remoteip", address);
@@ -730,21 +773,22 @@ async function verifyChallenge(token: string | null, address: string | null): Pr
 		let response = await fetch(SITEVERIFY_URL, { method: "POST", body });
 		if (!response.ok) {
 			logger.error("trial_guard.turnstile_unavailable", { status: response.status });
-			return false;
+			return new TrialRefusal("failed-challenge", "siteverify-unavailable");
 		}
 
 		let parsed = s.parseSafe(s.object({ success: s.boolean() }), await response.json());
 		if (!parsed.success) {
 			logger.error("trial_guard.turnstile_unreadable");
-			return false;
+			return new TrialRefusal("failed-challenge", "siteverify-unreadable");
 		}
 
-		return parsed.value.success;
+		if (parsed.value.success) return null;
+		return new TrialRefusal("failed-challenge", "token-rejected");
 	} catch (error) {
 		logger.error("trial_guard.turnstile_unavailable", {
 			message: error instanceof Error ? error.message : String(error),
 		});
-		return false;
+		return new TrialRefusal("failed-challenge", "siteverify-unreachable");
 	}
 }
 
@@ -800,10 +844,15 @@ async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
 /**
  * Runs every control and answers whether this visitor gets their free probe.
  *
- * Call once per submission and branch on the result; a granted probe has already been
+ * Call once per submission and branch on the result; a granted free probe has already been
  * counted against both budgets, so a caller that then decides not to probe has spent one
  * anyway. That is deliberate — the alternative is a second call to commit, and a control
  * that is only enforced when the caller remembers to finish the handshake is not a control.
+ *
+ * A `billed` probe is held to the target rules and the address resolution and to nothing
+ * else, so it spends neither budget and is never challenged. Both halves of that matter:
+ * the free-tier controls would be charging an account for protections it is not using, and
+ * the SSRF controls are the ones that have nothing to do with who is paying.
  *
  * ## What this cannot promise
  *
@@ -835,15 +884,18 @@ async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
 export async function guardTrialProbe(
 	probe: TrialProbeRequest,
 ): Promise<Result<TrialProbeGrant, TrialRefusal>> {
-	let limited = await consumeCallerBudget(probe.request);
-	if (limited !== null) return failure(limited);
+	if (!probe.billed) {
+		let limited = await consumeCallerBudget(probe.request);
+		if (limited !== null) return failure(limited);
+	}
 
 	let target = checkTarget(probe.target);
 	if (isFailure(target)) return target;
 
-	let address = probe.request.headers.get("CF-Connecting-IP");
-	if (!(await verifyChallenge(probe.token, address))) {
-		return failure(new TrialRefusal("failed-challenge", "turnstile"));
+	if (!probe.billed) {
+		let address = probe.request.headers.get("CF-Connecting-IP");
+		let challenge = await verifyChallenge(probe.token, address);
+		if (challenge !== null) return failure(challenge);
 	}
 
 	// A literal was already judged on its own value; there is no name to resolve.
@@ -854,6 +906,8 @@ export async function guardTrialProbe(
 		if (isFailure(resolved)) return resolved;
 		addresses = resolved.data;
 	}
+
+	if (probe.billed) return success({ url: target.data, addresses, budgetRemaining: null });
 
 	let budget = await spendDailyBudget();
 	if (isFailure(budget)) return budget;

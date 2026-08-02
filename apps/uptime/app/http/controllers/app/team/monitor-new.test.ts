@@ -83,6 +83,7 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
+	search = "",
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
@@ -94,7 +95,10 @@ async function send(
 	});
 
 	let request = new Request(
-		new URL(routes.app.team.monitors.new.href({ team: team.slug }), "https://uptime.test"),
+		new URL(
+			`${routes.app.team.monitors.new.href({ team: team.slug })}${search}`,
+			"https://uptime.test",
+		),
 	);
 
 	return container.scope(() => router.fetch(request));
@@ -112,5 +116,24 @@ describe("monitorNew", () => {
 		expect(body).toContain('name="url"');
 		expect(body).toContain('name="name"');
 		expect(body).toContain("URL");
+	});
+
+	test("pre-fills the URL field from ?url=", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(db, team, membership, "?url=https%3A%2F%2Fexample.com%2F");
+
+		expect(await response.text()).toContain('value="https://example.com/"');
+	});
+
+	test("leaves the field empty when no pre-fill was asked for", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(db, team, membership);
+		let body = await response.text();
+		let field = /<input[^>]*name="url"[^>]*>/.exec(body)?.[0];
+
+		expect(field).toBeDefined();
+		expect(field).not.toContain("value=");
 	});
 });

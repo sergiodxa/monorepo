@@ -2,6 +2,10 @@
  * New HTTP monitor form page controller. Posts to the `create-monitor` action.
  * Requires `requireUser` + `requireTeam`.
  *
+ * Accepts a `?url=` pre-fill, so anywhere in the app that already knows which URL a viewer
+ * wants watched can hand them this form with it filled in. It only seeds the field: the
+ * monitor is still created by the `POST`, so a link, a crawler or a reload creates nothing.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -13,11 +17,19 @@ import { createAction } from "remix/fetch-router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { MONITOR_URL_PREFILL } from "~/app/http/validators/monitor";
 import FormPage from "~/resources/components/form-page";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
+
+/**
+ * Longest pre-fill accepted from `?url=`. The value is only ever echoed into an input and
+ * JSX escapes it, so this is not an injection guard — it is a cap on how much of somebody
+ * else's query string this page will render for them.
+ */
+const MAX_PREFILL_LENGTH = 2048;
 
 /** GET /app/:team/monitors/new — the new monitor form. */
 export default createAction(routes.app.team.monitors.new, {
@@ -26,6 +38,8 @@ export default createAction(routes.app.team.monitors.new, {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		let prefill = ctx.url.searchParams.get(MONITOR_URL_PREFILL)?.slice(0, MAX_PREFILL_LENGTH);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · New monitor`}>
@@ -42,7 +56,7 @@ export default createAction(routes.app.team.monitors.new, {
 							method="post"
 							action={routes.actions.monitor.http.create.href({ team: ctx.team.slug })}
 						>
-							<MonitorFormFields i18next={ctx.i18next} page="createMonitor" />
+							<MonitorFormFields i18next={ctx.i18next} page="createMonitor" defaultUrl={prefill} />
 							<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
 						</form>
 					</FormPage>

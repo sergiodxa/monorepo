@@ -3244,6 +3244,8 @@ export default {
 				title: "Die Prüfung wurde nicht ausgeführt",
 				blockedTarget:
 					"Diese Adresse prüfen wir nicht für dich. Es muss eine öffentliche http:// oder https:// URL auf Port 80 oder 443 sein, ohne Benutzername und Passwort, und sie muss auf eine Adresse im offenen Internet auflösen.",
+				challengeIncomplete:
+					"Schließen Sie die Verifizierung ab, dann können wir die Prüfung ausführen.",
 				failedChallenge:
 					"Wir konnten nicht bestätigen, dass die Anfrage aus einem Browser kam. Lade die Seite neu und versuche es erneut.",
 				rateLimited: "Sie können in einer Minute eine weitere Prüfung starten.",
@@ -3251,7 +3253,7 @@ export default {
 				budgetExhausted:
 					"Wir haben heute schon alle kostenlosen Prüfungen ausgeführt, die wir an einem Tag ausführen. Das liegt an uns und nicht an deiner URL — komm morgen wieder, oder starte die Überwachung und wir prüfen sie jede Minute.",
 				unavailable:
-					"Unsere Sonde hat nicht geantwortet, also haben wir nichts über deine URL erfahren. Das liegt an uns und nicht an dir. Versuche es gleich noch einmal.",
+					"Etwas auf unserer Seite hat die Prüfung verhindert, bevor sie laufen konnte, deshalb haben wir nichts über Ihre URL erfahren. Das liegt an uns und nicht an Ihnen. Versuchen Sie es gleich noch einmal.",
 			},
 
 			result: {
@@ -3294,6 +3296,16 @@ export default {
 					placeholder: "du@beispiel.de",
 					error: "Das sieht nicht nach einer E-Mail-Adresse aus.",
 				},
+			},
+
+			monitor: {
+				title: "Diese URL weiter überwachen",
+				description:
+					"Machen Sie aus dieser einen Prüfung einen Monitor: dieselbe Prüfung in Ihrem Intervall, mit einer Benachrichtigung, sobald sich etwas ändert.",
+				subscribeDescription:
+					"Machen Sie aus dieser einen Prüfung einen Monitor: dieselbe Prüfung in Ihrem Intervall, mit einer Benachrichtigung, sobald sich etwas ändert. Er läuft, sobald Ihr Abonnement aktiv ist.",
+				create: "Monitor für diese URL anlegen",
+				subscribe: "Abonnement starten",
 			},
 
 			watching: {

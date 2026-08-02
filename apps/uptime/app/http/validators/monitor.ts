@@ -18,6 +18,16 @@ import * as f from "remix/data-schema/form-data";
 
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
+/**
+ * Query parameter the new-monitor page pre-fills its `url` field from, so a URL the viewer
+ * has already handed us somewhere else does not have to be typed a second time.
+ *
+ * Named for the field it fills, and declared here rather than beside either page because
+ * two of them spell it — one writing the link and one reading it — and a name spelled two
+ * ways is a pre-fill that silently does nothing.
+ */
+export const MONITOR_URL_PREFILL = "url";
+
 /** Field shape shared by the create and update monitor web forms. */
 const monitorFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),

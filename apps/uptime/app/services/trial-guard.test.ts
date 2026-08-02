@@ -9,13 +9,18 @@
  * inside them, and the fully qualified `localhost.` that matches no suffix rule until its
  * root label is stripped.
  *
- * The second is that an absent Turnstile secret skips verification instead of throwing,
- * and says so in the log. The keys are being provisioned separately from this code, so
- * "unconfigured" is a state the page will really be deployed in, and the log line is the
- * only thing that distinguishes it from a protected one.
+ * The second is that the challenge fails closed in every direction, an absent secret
+ * included. An unconfigured deployment refuses rather than passing, and it says so in the
+ * log, because the alternative — a quietly unchallenged prober — looks identical to a
+ * protected one from outside until the bill arrives.
  *
- * The third is that the four refusals stay apart. A test asserting only `isFailure` would
- * pass while the page told a visitor their site was down because we had run out of budget.
+ * The third is that the refusals stay apart. A test asserting only `isFailure` would pass
+ * while the page told a visitor their site was down because we had run out of budget, or
+ * told somebody who had not ticked the box to reload the page.
+ *
+ * The fourth is what a billed probe does and does not skip: the three free-tier controls
+ * go, and the two that keep this Worker from being an attack proxy stay. Both halves are
+ * asserted, because the failure modes are a spent budget nobody owed and an open prober.
  *
  * The Cloudflare bindings (`KV`, `TRIAL_RATE_LIMITER`) are stubbed via
  * `mock.module("cloudflare:workers", ...)`, and both outbound calls — DNS-over-HTTPS and
@@ -30,6 +35,8 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
+
+import type { TrialProbeRequest } from "~/app/services/trial-guard";
 
 /** Stands in for KV, so a test can seed today's counter and read back what was written. */
 let kvStore = new Map<string, string>();
@@ -86,14 +93,21 @@ function respondDns(url: URL): Response {
 	});
 }
 
-/** A submission from a visitor, with the address the platform reported for them. */
-function submission(target: string, options: { token?: string | null; address?: string } = {}) {
+/**
+ * A submission from a visitor, with the address the platform reported for them. Free
+ * unless a test says otherwise, since that is the path every control here exists for.
+ */
+function submission(
+	target: string,
+	options: { token?: string | null; address?: string; billed?: boolean } = {},
+): TrialProbeRequest {
 	let headers = new Headers();
 	headers.set("CF-Connecting-IP", options.address ?? "203.0.113.9");
 	return {
 		target,
 		token: options.token === undefined ? "token-1" : options.token,
 		request: new Request("https://uptime.test/try", { method: "POST", headers }),
+		billed: options.billed ?? false,
 	};
 }
 
@@ -438,15 +452,23 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("failed-challenge");
 	});
 
-	test("refuses when the form sent no token at all", async () => {
+	test("tells an unfinished form apart from a rejected token, and asks nobody about it", async () => {
 		let result = await guardTrialProbe(submission("example.com", { token: null }));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.reason).toBe("failed-challenge");
+		expect(result.error.reason).toBe("challenge-incomplete");
 		// The token is never sent for verification, so nothing is spent asking.
 		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
 		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
+	});
+
+	test("treats an empty token the same as no token at all", async () => {
+		let result = await guardTrialProbe(submission("example.com", { token: "" }));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("challenge-incomplete");
 	});
 
 	test("fails closed when siteverify cannot be reached", async () => {
@@ -459,24 +481,33 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("failed-challenge");
 	});
 
-	test("skips verification, loudly, when no secret is configured", async () => {
+	test("refuses, loudly, when no secret is configured rather than passing unchallenged", async () => {
 		delete envStub.TURNSTILE_SECRET_KEY;
 		let log = spyOn(logger, "error").mockImplementation(() => {});
 
-		let result = await guardTrialProbe(submission("example.com", { token: null }));
+		let result = await guardTrialProbe(submission("example.com"));
 
-		expect(isFailure(result)).toBe(false);
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		/**
+		 * `unavailable` and not `failed-challenge`: the visitor completed everything asked of
+		 * them, and this deployment is the thing that is wrong.
+		 */
+		expect(result.error.reason).toBe("unavailable");
+		expect(result.error.detail).toBe("turnstile-unconfigured");
 		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
 		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
-		expect(log).toHaveBeenCalledWith("trial_guard.turnstile_skipped", expect.anything());
+		expect(log).toHaveBeenCalledWith("trial_guard.turnstile_unconfigured", expect.anything());
 	});
 
-	test("skips verification when the secret is present but empty", async () => {
+	test("refuses when the secret is present but empty", async () => {
 		envStub.TURNSTILE_SECRET_KEY = "";
 
-		let result = await guardTrialProbe(submission("example.com", { token: null }));
+		let result = await guardTrialProbe(submission("example.com"));
 
-		expect(isFailure(result)).toBe(false);
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("unavailable");
 	});
 
 	test("keys the caller budget on CF-Connecting-IP, never on a client-supplied header", async () => {
@@ -488,6 +519,7 @@ describe("guardTrialProbe", () => {
 			target: "example.com",
 			token: "token-1",
 			request: new Request("https://uptime.test/try", { method: "POST", headers }),
+			billed: false,
 		});
 
 		expect(rateLimitMock).toHaveBeenCalledWith({ key: "trial-probe:198.51.100.2" });
@@ -578,6 +610,42 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("blocked-target");
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(kvPutMock).not.toHaveBeenCalled();
+	});
+
+	test("spends none of the free-tier controls on a billed probe", async () => {
+		let result = await guardTrialProbe(submission("example.com", { token: null, billed: true }));
+
+		expect(isFailure(result)).toBe(false);
+		if (isFailure(result)) return;
+		// Nothing to report: a billed probe takes nothing out of the day's allowance.
+		expect(result.data.budgetRemaining).toBeNull();
+		expect(rateLimitMock).not.toHaveBeenCalled();
+		expect(kvGetMock).not.toHaveBeenCalled();
+		expect(kvPutMock).not.toHaveBeenCalled();
+
+		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
+		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
+	});
+
+	test("holds a billed probe to the same target rules as a free one", async () => {
+		let result = await guardTrialProbe(
+			submission("http://169.254.169.254/latest/meta-data/", { billed: true }),
+		);
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("blocked-target");
+	});
+
+	test("still resolves and verifies a billed probe's hostname", async () => {
+		dnsRecords.set("example.com:A", ["127.0.0.1"]);
+
+		let result = await guardTrialProbe(submission("example.com", { billed: true }));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("blocked-target");
+		expect(result.error.detail).toBe("private-address");
 	});
 });
 

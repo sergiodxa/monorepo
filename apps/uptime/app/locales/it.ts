@@ -3229,6 +3229,7 @@ export default {
 				title: "Il controllo non è stato eseguito",
 				blockedTarget:
 					"Quello non è un indirizzo che controlliamo per conto tuo. Deve essere una URL http:// o https:// pubblica, sulla porta 80 o 443, senza nome utente né password, e deve risolvere a un indirizzo sulla rete aperta.",
+				challengeIncomplete: "Completa la verifica e potremo eseguire il controllo.",
 				failedChallenge:
 					"Non siamo riusciti a confermare che la richiesta arrivasse da un browser. Ricarica la pagina e riprova.",
 				rateLimited: "Puoi eseguire un altro controllo tra un minuto.",
@@ -3236,7 +3237,7 @@ export default {
 				budgetExhausted:
 					"Abbiamo già eseguito tutti i controlli gratuiti che facciamo in un giorno. Dipende da noi, non dalla tua URL: torna domani, oppure inizia a monitorare e la controlleremo ogni minuto.",
 				unavailable:
-					"La nostra sonda non ha risposto, quindi non abbiamo scoperto nulla sulla tua URL. È un problema nostro, non tuo. Riprova fra poco.",
+					"Qualcosa dalla nostra parte ha impedito al controllo di partire, quindi non abbiamo scoperto nulla sulla tua URL. È un problema nostro, non tuo. Riprova fra poco.",
 			},
 
 			result: {
@@ -3279,6 +3280,16 @@ export default {
 					placeholder: "tu@esempio.com",
 					error: "Non sembra un indirizzo email.",
 				},
+			},
+
+			monitor: {
+				title: "Continua a tenere d'occhio questa URL",
+				description:
+					"Trasforma questo singolo controllo in un monitor: lo stesso controllo alla frequenza che scegli, con un avviso appena qualcosa cambia.",
+				subscribeDescription:
+					"Trasforma questo singolo controllo in un monitor: lo stesso controllo alla frequenza che scegli, con un avviso appena qualcosa cambia. Partirà non appena il tuo abbonamento sarà attivo.",
+				create: "Crea un monitor per questa URL",
+				subscribe: "Attiva il tuo abbonamento",
 			},
 
 			watching: {

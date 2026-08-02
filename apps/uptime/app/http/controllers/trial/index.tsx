@@ -43,6 +43,15 @@
  * one URL has been checked. Neither the timings nor the timestamp is why anybody is here, so
  * they support the badge rather than share its weight.
  *
+ * ## Who is looking at it
+ *
+ * The page is written for a stranger, and for a stranger nothing about it changes. A
+ * signed-in viewer gets two things differently: their check is billed to their team when
+ * that team is paying for one (see the `POST` handler), and the email capture under the
+ * result is replaced by an offer to monitor the URL properly. Asking somebody with an
+ * account for an email address we already hold, in exchange for a weaker version of what
+ * they can already have, is the one thing this card must not do.
+ *
  * A `3xx` gets its own branch. Trial probes do not follow redirects — that refusal is what
  * stops a `302` walking past the address checks `trial-guard.ts` just made — so a site that
  * sends `http://` to `https://` comes back as a `301` and grades `down` against the expected
@@ -81,6 +90,7 @@ import {
 	Card,
 	Checkbox,
 	Description,
+	FieldError,
 	Heading,
 	HeadingScope,
 	LinkButton,
@@ -88,6 +98,7 @@ import {
 	TextField,
 } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
+import { getServiceContainer } from "@pkg/service-container";
 import { bg, fg, linearGradient } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import {
@@ -114,7 +125,9 @@ import {
 	weight,
 	wordBreak,
 } from "@pkg/u/typography";
+import { generateUUID } from "@pkg/uuid";
 import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 import { Session } from "remix/session";
 import { css } from "remix/ui";
@@ -122,8 +135,10 @@ import { css } from "remix/ui";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
 import type { TrialRefusalReason } from "~/app/services/trial-guard";
-import type { MonitorStatus } from "~/database/schema";
+import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
+import Subscription from "~/app/data/subscription";
+import Team from "~/app/data/team";
 import {
 	TRIAL_PROBE,
 	TRIAL_WATCH_STARTED,
@@ -131,10 +146,13 @@ import {
 	takeTrialState,
 } from "~/app/http/controllers/trial/session";
 import { getViewer } from "~/app/http/middleware/auth";
+import { MONITOR_URL_PREFILL } from "~/app/http/validators/monitor";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { BASE_PRICE_USD } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
+import { recordAdhocPing } from "~/app/services/adhoc-ping";
+import { apportionCostByTeam } from "~/app/services/cost";
 import { HttpCheck } from "~/app/services/http-check";
 import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import { guardTrialProbe } from "~/app/services/trial-guard";
@@ -197,19 +215,16 @@ const FIRST_SCREEN_PEEK = "72px";
 const FIRST_SCREEN_MIN_BLOCK_SIZE = `calc(100dvh - ${HEADER_BLOCK_SIZE} - ${FIRST_SCREEN_PEEK})`;
 
 /**
- * Why the last submission never became a check.
+ * A refused submission, as the page needs to explain it.
  *
- * `unavailable` is not one of the guard's reasons — it is the fifth thing that can go
- * wrong, and it is on our side: the guard said yes and the Durable Object that performs the
- * probe could not be reached, so nothing at all was learned about the target. It is kept
- * apart from `blocked-target` and from a `down` result because both of those are statements
- * about the visitor's URL, and this one is a statement about us.
+ * The guard produces every code but one. `unavailable` also arrives from this controller,
+ * for the case the guard cannot see: it said yes and the Durable Object that performs the
+ * probe could not be reached, so nothing at all was learned about the target. Both faults
+ * are the same sentence to a visitor — ours, not yours — which is why they share a code and
+ * are told apart only in the logs.
  */
-export type TrialRefusalCode = TrialRefusalReason | "unavailable";
-
-/** A refused submission, as the page needs to explain it. */
 export interface TrialRefusalState {
-	code: TrialRefusalCode;
+	code: TrialRefusalReason;
 	/**
 	 * Seconds until a retry could work, when the refusal knows. Only a rate limit does;
 	 * everything else carries `null` and the copy says nothing about waiting.
@@ -217,7 +232,24 @@ export interface TrialRefusalState {
 	retryAfterSeconds: number | null;
 }
 
-/** Everything that varies between the four ways this page can be reached. */
+/**
+ * What a signed-in visitor is offered under their result, in place of the email capture.
+ *
+ * They already have an account, so a week of free watching in exchange for an address we
+ * hold is a worse version of what they can have now. The offer is the real product instead:
+ * a monitor on the URL they just checked.
+ */
+export interface TrialMonitorOffer {
+	/** The new-monitor form, with the checked URL already in its field. */
+	createHref: string;
+	/**
+	 * Billing, when this viewer's team holds no active subscription and the monitor they
+	 * are about to create would sit unscheduled until it does. `null` when it would run.
+	 */
+	subscribeHref: string | null;
+}
+
+/** Everything that varies between the ways this page can be reached. */
 export interface TrialPageView {
 	/** The check that ran, when one did. */
 	probe?: TrialProbeState;
@@ -229,6 +261,8 @@ export interface TrialPageView {
 	leadError?: boolean;
 	/** Starting value for the URL box, when no probe supplies one. */
 	prefill?: string;
+	/** The signed-in viewer's offer, which replaces the email capture when present. */
+	monitorOffer?: TrialMonitorOffer;
 }
 
 /**
@@ -382,6 +416,10 @@ function resultDetail(probe: TrialProbeState, t: TFunction): string {
  * the only one whose copy mentions waiting, and it falls back to a wordless version when
  * the limiter reported no window.
  *
+ * One function for every reason including {@link isIncompleteForm}'s, even though that one
+ * renders somewhere else entirely, so that no reason can acquire a second sentence by
+ * being handled in a second place.
+ *
  * @param refusal - What the guard, or the prober, refused with.
  * @param t - The request's translator.
  * @returns The sentence to show.
@@ -392,9 +430,26 @@ function refusalMessage(refusal: TrialRefusalState, t: TFunction): string {
 		return t("page.trial.refusal.rateLimitedFor", { seconds: refusal.retryAfterSeconds });
 	}
 	if (refusal.code === "blocked-target") return t("page.trial.refusal.blockedTarget");
+	if (refusal.code === "challenge-incomplete") return t("page.trial.refusal.challengeIncomplete");
 	if (refusal.code === "failed-challenge") return t("page.trial.refusal.failedChallenge");
 	if (refusal.code === "budget-exhausted") return t("page.trial.refusal.budgetExhausted");
 	return t("page.trial.refusal.unavailable");
+}
+
+/**
+ * Whether a refusal is the form not being finished rather than the request being turned
+ * down.
+ *
+ * The one refusal the visitor clears by doing something on the page they are already
+ * looking at, so it renders where its control is — a field error under the challenge —
+ * instead of in the Alert. An Alert titled "The check did not run" over "tick the box" is a
+ * misdiagnosis dressed as a failure, and it is also the wrong shape: nothing went wrong.
+ *
+ * @param refusal - The refusal to place, when there is one.
+ * @returns Whether it belongs on the field rather than in the Alert.
+ */
+function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
+	return refusal?.code === "challenge-incomplete";
 }
 
 /**
@@ -410,7 +465,8 @@ function refusalMessage(refusal: TrialRefusalState, t: TFunction): string {
 export function renderTrialPage(view: TrialPageView = {}) {
 	let ctx = getContext();
 	let t = ctx.i18next.t;
-	let { probe, refusal, watching, leadError } = view;
+	let { probe, refusal, watching, leadError, monitorOffer } = view;
+	let incomplete = isIncompleteForm(refusal);
 
 	let chrome = buildMarketingChrome(t);
 
@@ -555,7 +611,31 @@ export function renderTrialPage(view: TrialPageView = {}) {
 											required
 										/>
 
-										<Turnstile siteKey={trialTurnstileSiteKey()} />
+										<div mix={[vstack({ gap: 2 })]}>
+											<Turnstile siteKey={trialTurnstileSiteKey()} />
+											{/*
+											 * The unfinished-form refusal renders here rather than in the
+											 * Alert below, against the control it is about, in the same
+											 * `FieldError` the URL box's own validation message uses.
+											 */}
+											{refusal !== undefined && incomplete ? (
+												<FieldError>{refusalMessage(refusal, t)}</FieldError>
+											) : null}
+										</div>
+
+										{/*
+										 * Inside the card and against the button that produced it. Below the
+										 * card, which is where this used to sit, it read as a notice about the
+										 * page rather than as the answer to the submit that just failed.
+										 */}
+										{refusal === undefined || incomplete ? null : (
+											<Alert color="warning" live="polite">
+												<Alert.Content>
+													<Alert.Title>{t("page.trial.refusal.title")}</Alert.Title>
+													<Alert.Description>{refusalMessage(refusal, t)}</Alert.Description>
+												</Alert.Content>
+											</Alert>
+										)}
 
 										<Button type="submit" size="lg">
 											{t("page.trial.form.submit")}
@@ -563,15 +643,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 									</form>
 								</Card.Content>
 							</Card>
-						)}
-
-						{refusal === undefined ? null : (
-							<Alert color="warning" live="polite" mix={[mbs(6)]}>
-								<Alert.Content>
-									<Alert.Title>{t("page.trial.refusal.title")}</Alert.Title>
-									<Alert.Description>{refusalMessage(refusal, t)}</Alert.Description>
-								</Alert.Content>
-							</Alert>
 						)}
 
 						{watching === undefined ? null : (
@@ -653,44 +724,77 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													</form>
 												)}
 											</div>
-										) : (
-											<div mix={[vstack({ gap: 2 })]}>
-												<Heading level={3} mix={[m(0), fontSize("base")]}>
-													{t("page.trial.lead.title")}
-												</Heading>
-												<Text>{t("page.trial.lead.description")}</Text>
-											</div>
-										)}
-
-										{redirected ? null : (
-											<form
-												method="post"
-												action={routes.trial.lead.href()}
-												mix={[vstack({ gap: 4 })]}
-											>
-												<TextField
-													name="email"
-													type="email"
-													label={t("page.trial.lead.email.label")}
-													placeholder={t("page.trial.lead.email.placeholder")}
-													errorMessage={leadError ? t("page.trial.lead.email.error") : undefined}
-													autoComplete="email"
-													required
-												/>
-
-												<div mix={[vstack({ gap: 1 })]}>
-													<Checkbox name="consent" value="true" aria-describedby={CONSENT_NOTE_ID}>
-														<span mix={[fontSize("sm")]}>{t("page.trial.lead.consent")}</span>
-													</Checkbox>
-													<Description id={CONSENT_NOTE_ID} mix={[pis(CHECKBOX_LABEL_OFFSET)]}>
-														{t("page.trial.lead.consentNote")}
-													</Description>
+										) : monitorOffer !== undefined ? (
+											<div mix={[vstack({ gap: 4 })]}>
+												<div mix={[vstack({ gap: 2 })]}>
+													<Heading level={3} mix={[m(0), fontSize("base")]}>
+														{t("page.trial.monitor.title")}
+													</Heading>
+													<Text>
+														{monitorOffer.subscribeHref === null
+															? t("page.trial.monitor.description")
+															: t("page.trial.monitor.subscribeDescription")}
+													</Text>
 												</div>
 
-												<Description>{t("page.trial.lead.promise")}</Description>
+												<div mix={[flex(), flexWrap("wrap"), gap(3)]}>
+													<LinkButton href={monitorOffer.createHref}>
+														{t("page.trial.monitor.create")}
+														<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden />
+													</LinkButton>
+													{monitorOffer.subscribeHref === null ? null : (
+														<LinkButton
+															href={monitorOffer.subscribeHref}
+															color="neutral"
+															variant="outline"
+														>
+															{t("page.trial.monitor.subscribe")}
+														</LinkButton>
+													)}
+												</div>
+											</div>
+										) : (
+											<div mix={[vstack({ gap: 6 })]}>
+												<div mix={[vstack({ gap: 2 })]}>
+													<Heading level={3} mix={[m(0), fontSize("base")]}>
+														{t("page.trial.lead.title")}
+													</Heading>
+													<Text>{t("page.trial.lead.description")}</Text>
+												</div>
 
-												<Button type="submit">{t("page.trial.lead.submit")}</Button>
-											</form>
+												<form
+													method="post"
+													action={routes.trial.lead.href()}
+													mix={[vstack({ gap: 4 })]}
+												>
+													<TextField
+														name="email"
+														type="email"
+														label={t("page.trial.lead.email.label")}
+														placeholder={t("page.trial.lead.email.placeholder")}
+														errorMessage={leadError ? t("page.trial.lead.email.error") : undefined}
+														autoComplete="email"
+														required
+													/>
+
+													<div mix={[vstack({ gap: 1 })]}>
+														<Checkbox
+															name="consent"
+															value="true"
+															aria-describedby={CONSENT_NOTE_ID}
+														>
+															<span mix={[fontSize("sm")]}>{t("page.trial.lead.consent")}</span>
+														</Checkbox>
+														<Description id={CONSENT_NOTE_ID} mix={[pis(CHECKBOX_LABEL_OFFSET)]}>
+															{t("page.trial.lead.consentNote")}
+														</Description>
+													</div>
+
+													<Description>{t("page.trial.lead.promise")}</Description>
+
+													<Button type="submit">{t("page.trial.lead.submit")}</Button>
+												</form>
+											</div>
 										)}
 									</Card.Content>
 								</Card>
@@ -813,6 +917,82 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	);
 }
 
+/** The signed-in viewer's standing, as this page needs it. */
+interface TrialAccount {
+	/**
+	 * The team the viewer's work is attributed to: their first, the same one `/app` sends
+	 * them to. `null` for a viewer with no membership at all, which signing in makes
+	 * impossible but which this page will not crash over.
+	 */
+	team: SelectTeam | null;
+	/**
+	 * The team to charge this check to, or `null` when there is nobody to charge — a
+	 * subscription known to be inactive, or no team. Non-null implies {@link team}.
+	 */
+	billedTeam: SelectTeam | null;
+}
+
+/**
+ * Resolves who is asking, and whether their check can be billed.
+ *
+ * Answers `null` for an anonymous visitor without touching the database, which is what
+ * keeps the free path exactly as cheap as it was before this page knew about accounts.
+ *
+ * @returns The viewer's standing, or `null` when nobody is signed in.
+ */
+async function resolveTrialAccount(): Promise<TrialAccount | null> {
+	let viewer = getViewer();
+	if (viewer === null) return null;
+
+	let db = getServiceContainer().get(Database);
+	let [team] = await Team.listBySubjectId(db, viewer.id);
+	if (team === undefined) return { team: null, billedTeam: null };
+
+	/**
+	 * `stateFor`, not `isActive`: only a subscription *known* to be inactive drops the
+	 * viewer onto the free path. An owner whose state cannot be determined keeps being
+	 * billed, the same reading every other gate in this app takes, because the alternative
+	 * is a lookup blip quietly spending the public daily budget on a paying customer.
+	 */
+	let state = await Subscription.stateFor(db, team.owner_id);
+	return { team, billedTeam: state === "inactive" ? null : team };
+}
+
+/**
+ * The offer that replaces the email capture for a signed-in viewer.
+ *
+ * A link to the existing new-monitor form with the URL already in it, rather than a
+ * one-click create: a viewer can belong to several teams, and that form is where the
+ * interval, the region and the expected status get decided. Building a second way to
+ * create a monitor to save one page load would be the expensive kind of shortcut.
+ *
+ * @param account - The viewer's standing, or `null` when nobody is signed in.
+ * @param url - The URL that was just checked, as the guard normalized it.
+ * @returns The offer, or `undefined` when the email capture should render instead.
+ */
+function buildMonitorOffer(
+	account: TrialAccount | null,
+	url: string,
+): TrialMonitorOffer | undefined {
+	if (account === null) return undefined;
+	// No team means no team-scoped URL to link to; `/app` resolves one, or explains why not.
+	if (account.team === null) return { createHref: routes.app.index.href(), subscribeHref: null };
+
+	let team = account.team.slug;
+	let query = new URLSearchParams({ [MONITOR_URL_PREFILL]: url });
+
+	return {
+		createHref: `${routes.app.team.monitors.new.href({ team })}?${query}`,
+		/**
+		 * Billing is offered alongside, not instead: the monitor can be created either way,
+		 * and it simply will not be scheduled until the subscription is. `checkout` is the
+		 * app's one entry point to that — it decides between a Polar checkout and the
+		 * customer portal itself, so this page does not have to know which one applies.
+		 */
+		subscribeHref: account.billedTeam === null ? routes.app.team.checkout.href({ team }) : null,
+	};
+}
+
 export default createController(routes.trial.check, {
 	actions: {
 		/**
@@ -830,18 +1010,32 @@ export default createController(routes.trial.check, {
 		},
 
 		/**
-		 * POST /try — the one free probe an anonymous visitor gets, and the page that reports
-		 * it.
+		 * POST /try — the check, and the page that reports it.
 		 *
 		 * Two halves, in this order and never the other way round. `guardTrialProbe` decides
 		 * whether this request may cause an outbound fetch at all — target rules, Turnstile,
 		 * the caller's per-minute budget and the site's daily one — and only a grant reaches
 		 * `HttpCheck`, which is the same class a paid monitor's scheduled check runs through.
 		 *
-		 * Nothing here is billed. A trial probe creates no Polar customer, ingests no ping and
-		 * records no data point: the visitor has no account to attribute it to and the whole
-		 * point of the page is that trying it costs them nothing. The daily budget in the
-		 * guard is what bounds what it costs *us*.
+		 * ## Who pays
+		 *
+		 * An anonymous check is free and stays free: no Polar customer, no meter event, no
+		 * data point, and the guard's two budgets are what bound what it costs *us*.
+		 *
+		 * A check asked for by a signed-in viewer whose team holds a subscription is the same
+		 * work the ad-hoc ping endpoint sells, so it is recorded and billed the same way,
+		 * through {@link recordAdhocPing} and `apportionCostByTeam`. Because it is paid for,
+		 * it also spends neither free budget and skips the challenge — see `trial-guard.ts` on
+		 * why those three and not the SSRF controls.
+		 *
+		 * A signed-in viewer whose team's subscription is *known* to be inactive gets the free
+		 * anonymous treatment for the check itself, budgets and challenge included: there is
+		 * nobody to bill, and this page's whole purpose is to be usable by somebody who has
+		 * not paid yet. `stateFor` rather than `isActive` is what makes that hinge on a known
+		 * "inactive" instead of on a lookup that merely came back empty — a transient failure
+		 * must not quietly move a paying customer onto the free budget.
+		 *
+		 * What no signed-in viewer gets is the email capture; see {@link TrialMonitorOffer}.
 		 *
 		 * ## Redirects
 		 *
@@ -872,10 +1066,19 @@ export default createController(routes.trial.check, {
 			 */
 			session?.unset(TRIAL_PROBE);
 
+			let account = await resolveTrialAccount();
+			let billedTeam = account?.billedTeam ?? null;
+
+			if (billedTeam !== null) {
+				/** Everything this request costs belongs to the team being billed (ADR-007 §5). */
+				apportionCostByTeam([billedTeam.id]);
+			}
+
 			let grant = await guardTrialProbe({
 				target: submitted,
 				token: typeof token === "string" && token !== "" ? token : null,
 				request: ctx.request,
+				billed: billedTeam !== null,
 			});
 
 			if (isFailure(grant)) {
@@ -931,14 +1134,27 @@ export default createController(routes.trial.check, {
 				checkedAt: Date.now(),
 			};
 
+			if (billedTeam !== null) {
+				recordAdhocPing({
+					id: generateUUID(),
+					team: billedTeam,
+					status: probe.status,
+					responseTimeMs: outcome.responseTimeMs ?? 0,
+				});
+			}
+
 			/**
 			 * Stored even though this response already renders it: the email form under the
 			 * result is a second request, and the watch it opens has to be for a URL we resolved
 			 * and checked ourselves rather than one posted back up from the browser.
+			 *
+			 * A signed-in viewer never sees that form, so there is nothing for them to claim
+			 * and nothing to store — the probe would sit in the session until it was overwritten
+			 * or the session expired, claimable only by a request that cannot reach it.
 			 */
-			session?.set(TRIAL_PROBE, probe);
+			if (account === null) session?.set(TRIAL_PROBE, probe);
 
-			return renderTrialPage({ probe });
+			return renderTrialPage({ probe, monitorOffer: buildMonitorOffer(account, url) });
 		},
 	},
 });

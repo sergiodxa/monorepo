@@ -3232,6 +3232,7 @@ export default {
 				title: "La comprobación no se ejecutó",
 				blockedTarget:
 					"Esa no es una dirección que vayamos a comprobar en tu nombre. Tiene que ser una URL http:// o https:// pública, en el puerto 80 o 443, sin usuario ni contraseña, y resolver a algún sitio de la internet abierta.",
+				challengeIncomplete: "Completa la verificación y podremos ejecutar la comprobación.",
 				failedChallenge:
 					"No pudimos confirmar que la petición viniera de un navegador. Recarga la página e inténtalo de nuevo.",
 				rateLimited: "Puedes ejecutar otra comprobación en un minuto.",
@@ -3239,7 +3240,7 @@ export default {
 				budgetExhausted:
 					"Ya hemos hecho todas las comprobaciones gratuitas que hacemos en un día. Esto es cosa nuestra, no de tu URL: vuelve mañana, o empieza a monitorizar y la comprobaremos cada minuto.",
 				unavailable:
-					"Nuestro sondeo no respondió, así que no aprendimos nada sobre tu URL. El problema es nuestro, no tuyo. Inténtalo de nuevo en un momento.",
+					"Algo de nuestro lado impidió que la comprobación llegara a ejecutarse, así que no aprendimos nada sobre tu URL. El problema es nuestro, no tuyo. Inténtalo de nuevo en un momento.",
 			},
 
 			result: {
@@ -3281,6 +3282,16 @@ export default {
 					placeholder: "tu@ejemplo.com",
 					error: "Eso no parece una dirección de email.",
 				},
+			},
+
+			monitor: {
+				title: "Sigue vigilando esta URL",
+				description:
+					"Convierte esta comprobación en un monitor: la misma comprobación con la frecuencia que elijas y un aviso en cuanto algo cambie.",
+				subscribeDescription:
+					"Convierte esta comprobación en un monitor: la misma comprobación con la frecuencia que elijas y un aviso en cuanto algo cambie. Empezará a ejecutarse en cuanto tu suscripción esté activa.",
+				create: "Crear un monitor para esta URL",
+				subscribe: "Activar tu suscripción",
 			},
 
 			watching: {

@@ -3488,6 +3488,7 @@ export default {
 				title: "The check did not run",
 				blockedTarget:
 					"That is not an address we will check on your behalf. It has to be a public http:// or https:// URL on port 80 or 443, carry no username or password, and resolve to somewhere on the open internet.",
+				challengeIncomplete: "Complete the verification and we can run the check.",
 				failedChallenge:
 					"We could not confirm the request came from a browser. Reload the page and try again.",
 				rateLimited: "You can run another check in a minute.",
@@ -3495,7 +3496,7 @@ export default {
 				budgetExhausted:
 					"We have already run every free check we run in a day. That is about us, not about your URL — come back tomorrow, or start monitoring and we will check it every minute.",
 				unavailable:
-					"Our prober did not answer, so we learned nothing about your URL. That is our side and not yours. Try again in a moment.",
+					"Something on our side stopped the check before it ran, so we learned nothing about your URL. That is us and not you. Try again in a moment.",
 			},
 
 			result: {
@@ -3537,6 +3538,16 @@ export default {
 					placeholder: "you@example.com",
 					error: "That does not look like an email address.",
 				},
+			},
+
+			monitor: {
+				title: "Keep watching this URL",
+				description:
+					"Turn this one check into a monitor: the same check on your schedule, with an alert the moment it changes.",
+				subscribeDescription:
+					"Turn this one check into a monitor: the same check on your schedule, with an alert the moment it changes. It starts running once your subscription is active.",
+				create: "Create a monitor for this URL",
+				subscribe: "Start your subscription",
 			},
 
 			watching: {

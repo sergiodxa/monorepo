@@ -3243,6 +3243,7 @@ export default {
 				title: "Le test n'a pas été lancé",
 				blockedTarget:
 					"Ce n'est pas une adresse que nous testerons pour vous. Il faut une URL http:// ou https:// publique, sur le port 80 ou 443, sans identifiant ni mot de passe, et qui résout vers l'internet ouvert.",
+				challengeIncomplete: "Complétez la vérification et nous pourrons lancer le test.",
 				failedChallenge:
 					"Nous n'avons pas pu confirmer que la requête venait d'un navigateur. Rechargez la page et réessayez.",
 				rateLimited: "Vous pouvez lancer une autre vérification dans une minute.",
@@ -3250,7 +3251,7 @@ export default {
 				budgetExhausted:
 					"Nous avons déjà effectué tous les tests gratuits que nous faisons en une journée. Cela vient de nous, pas de votre URL — revenez demain, ou lancez la surveillance et nous la testerons chaque minute.",
 				unavailable:
-					"Notre sonde n'a pas répondu, nous n'avons donc rien appris sur votre URL. Cela vient de chez nous, pas de chez vous. Réessayez dans un instant.",
+					"Quelque chose de notre côté a empêché le test de se lancer, nous n'avons donc rien appris sur votre URL. Cela vient de chez nous, pas de chez vous. Réessayez dans un instant.",
 			},
 
 			result: {
@@ -3293,6 +3294,16 @@ export default {
 					placeholder: "vous@exemple.com",
 					error: "Cela ne ressemble pas à une adresse email.",
 				},
+			},
+
+			monitor: {
+				title: "Continuer à surveiller cette URL",
+				description:
+					"Transformez ce test unique en moniteur : le même test à la fréquence de votre choix, avec une alerte dès que quelque chose change.",
+				subscribeDescription:
+					"Transformez ce test unique en moniteur : le même test à la fréquence de votre choix, avec une alerte dès que quelque chose change. Il démarrera dès que votre abonnement sera actif.",
+				create: "Créer un moniteur pour cette URL",
+				subscribe: "Démarrer votre abonnement",
 			},
 
 			watching: {
