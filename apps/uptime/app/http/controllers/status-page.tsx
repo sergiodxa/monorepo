@@ -2,7 +2,7 @@
  * Public status page controller. Loads a page by slug — private pages 404, since
  * this route is the page's only access path and private pages have no public route
  * at all. Resolves every attached HTTP/DNS/TCP/cron-job monitor's current status and
- * 365-day heatmap, and combines them into one page-level status.
+ * 90-day uptime bar, and combines them into one page-level status.
  *
  * The response carries a cache policy (see {@link withCachePolicy}), because this is
  * the one page whose traffic spikes exactly when the origin is least able to absorb
@@ -31,16 +31,15 @@ import { rounded } from "@pkg/u/effects";
 import { combine, raw } from "@pkg/u/general";
 import { hstack, vstack } from "@pkg/u/layout";
 import { dark } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, minIs, p } from "@pkg/u/size";
+import { m, maxIs, mbe, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
-import { fontSize, nowrap, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import type { ServiceStatus } from "~/app/services/status-page";
-import type { SelectMonitorDailyStats } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -61,6 +60,7 @@ import {
 } from "~/app/services/status-page";
 import { badgeVariant } from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
+import UptimeBar from "~/resources/views/shared/uptime-bar";
 import routes from "~/routes/web";
 
 /**
@@ -137,162 +137,6 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 	return () => {
 		let Icon = STATUS_ICON[handle.props.status];
 		return <Icon size={16} mix={[ICON_COLOR_MIX[BADGE_TONE[handle.props.status]]]} />;
-	};
-}
-
-/** How many trailing days {@link MiniHeatmap}'s row of bars covers. */
-const MINI_HEATMAP_DAYS = 90;
-
-/** The last {@link MINI_HEATMAP_DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
-function buildLastNDays(): string[] {
-	let today = new Date();
-	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-
-	let dates: string[] = [];
-	for (let i = MINI_HEATMAP_DAYS - 1; i >= 0; i--) {
-		dates.push(new Date(end.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-	}
-	return dates;
-}
-
-/**
- * Aggregate uptime across `days` as a formatted percentage value (no unit or
- * copy attached — pass it through {@link MiniHeatmap.Props.formatUptime} for the
- * translated caption), or `null` when there's no data at all. `days` may cover
- * more than {@link MINI_HEATMAP_DAYS} (the caller passes a full year's worth) —
- * this only sums entries whose `date` falls in `dates`, so the percentage
- * matches the same window the bars render.
- */
-function calculateUptimePercentage(
-	days: SelectMonitorDailyStats[],
-	dates: string[],
-): string | null {
-	let windowDates = new Set(dates);
-	let totalChecks = 0;
-	let successfulChecks = 0;
-
-	for (let day of days) {
-		if (!windowDates.has(day.date)) continue;
-		totalChecks += day.total_checks;
-		successfulChecks += day.successful_checks;
-	}
-
-	if (totalChecks === 0) return null;
-
-	let percentage = (successfulChecks / totalChecks) * 100;
-	return percentage.toFixed(percentage === 100 ? 0 : 2);
-}
-
-namespace MiniHeatmap {
-	export interface Props {
-		days: SelectMonitorDailyStats[];
-		/** Pre-translated captions and legend labels, shared across every card's heatmap. */
-		labels: {
-			daysAgo: string;
-			today: string;
-			legend: {
-				full: string;
-				partial: string;
-				down: string;
-				noData: string;
-			};
-		};
-		/** Formats a {@link calculateUptimePercentage} result into the translated "X% uptime" caption. */
-		formatUptime: (percentage: string) => string;
-	}
-}
-
-/**
- * Renders a single-row, last-90-days heatmap for `days`, as thin vertical bars with
- * a range/uptime caption above and a status-color legend below. A single row of
- * thin vertical bars for the last 90 days (today inclusive), one per day, colored
- * by that day's `monitor_daily_stats.status`. Days with no data (not yet reached, or
- * the monitor didn't exist yet) render as empty bars. The bars stretch to fill the
- * full row width (no per-bar max width), so the row never trails off into empty
- * space regardless of how many days actually have data. The caption/legend copy
- * comes from `handle.props.labels`/`handle.props.formatUptime`, both built once by
- * the handler from `ctx.i18next.t("statusPage.heatmap.*")` and shared across every
- * card's heatmap. Bar/legend colors read the shared `--ui-success/warning/danger/
- * neutral-*` design tokens instead of ad-hoc `oklch(...)` literals, so they follow
- * the app's light/dark theming automatically.
- */
-function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
-	return () => {
-		let { labels, formatUptime } = handle.props;
-		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));
-		let dates = buildLastNDays();
-		let uptime = calculateUptimePercentage(handle.props.days, dates);
-
-		return (
-			<div>
-				<div mix={[hstack({ align: "center", gap: "8px" }), mbe("6px")]}>
-					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.daysAgo}</span>
-					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
-					{uptime !== null && (
-						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
-							{formatUptime(uptime)}
-						</span>
-					)}
-					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
-					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.today}</span>
-				</div>
-
-				<div mix={[hstack({ align: "stretch", gap: "2px" }), bs("32px")]}>
-					{dates.map((date) => {
-						let day = byDate.get(date);
-						return (
-							<div
-								key={date}
-								title={
-									day
-										? `${date}: ${day.status} (${day.successful_checks}/${day.total_checks})`
-										: date
-								}
-								mix={[
-									raw({ flex: 1 }),
-									minIs("2px"),
-									rounded("1px"),
-									day?.status === "up"
-										? bg("success.solid")
-										: day?.status === "degraded"
-											? bg("warning.solid")
-											: day?.status === "down"
-												? bg("danger.solid")
-												: bg("neutral.border"),
-								]}
-							/>
-						);
-					})}
-				</div>
-
-				<div mix={[hstack({ align: "center", justify: "end", gap: "12px" }), mbs("6px")]}>
-					<div mix={[hstack({ align: "center", gap: "4px" })]}>
-						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("success.solid")]} />
-						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
-							{labels.legend.full}
-						</span>
-					</div>
-					<div mix={[hstack({ align: "center", gap: "4px" })]}>
-						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("warning.solid")]} />
-						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
-							{labels.legend.partial}
-						</span>
-					</div>
-					<div mix={[hstack({ align: "center", gap: "4px" })]}>
-						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("danger.solid")]} />
-						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
-							{labels.legend.down}
-						</span>
-					</div>
-					<div mix={[hstack({ align: "center", gap: "4px" })]}>
-						<div mix={[is("10px"), bs("10px"), rounded("2px"), bg("neutral.border")]} />
-						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
-							{labels.legend.noData}
-						</span>
-					</div>
-				</div>
-			</div>
-		);
 	};
 }
 
@@ -404,18 +248,18 @@ export default createAction(
 			down: ctx.i18next.t("statusPage.status.down"),
 			unknown: ctx.i18next.t("statusPage.status.unknown"),
 		};
-		let heatmapLabels: MiniHeatmap.Props["labels"] = {
-			daysAgo: ctx.i18next.t("statusPage.heatmap.daysAgo"),
-			today: ctx.i18next.t("statusPage.heatmap.today"),
+		let uptimeBarLabels = {
+			daysAgo: ctx.i18next.t("statusPage.uptimeBar.daysAgo"),
+			today: ctx.i18next.t("statusPage.uptimeBar.today"),
 			legend: {
-				full: ctx.i18next.t("statusPage.heatmap.legend.full"),
-				partial: ctx.i18next.t("statusPage.heatmap.legend.partial"),
-				down: ctx.i18next.t("statusPage.heatmap.legend.down"),
-				noData: ctx.i18next.t("statusPage.heatmap.legend.noData"),
+				full: ctx.i18next.t("statusPage.uptimeBar.legend.full"),
+				partial: ctx.i18next.t("statusPage.uptimeBar.legend.partial"),
+				down: ctx.i18next.t("statusPage.uptimeBar.legend.down"),
+				noData: ctx.i18next.t("statusPage.uptimeBar.legend.noData"),
 			},
 		};
 		let formatUptime = (percentage: string) =>
-			ctx.i18next.t("statusPage.heatmap.tooltip.uptime", { percentage });
+			ctx.i18next.t("statusPage.uptimeBar.tooltip.uptime", { percentage });
 
 		/**
 		 * The moment the page reports as its own, rounded down to the start of the
@@ -492,9 +336,9 @@ export default createAction(
 											{statusLabel[service.status]}
 										</Badge>
 									</div>
-									<MiniHeatmap
+									<UptimeBar
 										days={service.days}
-										labels={heatmapLabels}
+										labels={uptimeBarLabels}
 										formatUptime={formatUptime}
 									/>
 								</div>
