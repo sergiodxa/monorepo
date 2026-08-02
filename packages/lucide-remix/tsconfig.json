@@ -1,7 +1,6 @@
 {
 	"extends": "../../tsconfig.json",
 	"include": ["src/**/*", "scripts/**/*"],
-	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"],
 	"compilerOptions": {
 		"types": ["bun", "node"]
 	}
