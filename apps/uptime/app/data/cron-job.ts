@@ -89,19 +89,37 @@ export default class CronJobMonitor {
 	}
 
 	/**
-	 * Lists monitors the scheduled `CheckCronJobsJob` sweep should evaluate: enabled,
-	 * with an expected-arrival time, and not already `missed` (a `missed` monitor stays
-	 * that way until its next on-time ping) or `new` (which only leaves `new` once it
-	 * receives a first ping).
+	 * Lists monitors the scheduled `CheckCronJobsJob` sweep should evaluate: enabled, and
+	 * not already `missed` (a `missed` monitor stays that way until its next on-time ping)
+	 * or `new` (which only leaves `new` once it receives a first ping).
+	 *
+	 * Deliberately does **not** require an expected-arrival time. It used to, and that was
+	 * a hole big enough to hide a ten-day outage: a row with a null `next_expected_at` was
+	 * never selected, so the sweep never evaluated it, so it never left `healthy` — and
+	 * five monitors sat green for ten days while nothing was pinging them at all. A
+	 * monitor with nothing to be on time against is not healthy, it is unmeasurable, and
+	 * the sweep is the only thing positioned to notice. It repairs the row instead; see
+	 * `CheckCronJobsJob.evaluate`.
 	 */
 	static async listActionable(db: Database) {
 		return await db.findMany(cronJobMonitors, {
-			where: and(
-				notNull("enabled_at"),
-				notNull("next_expected_at"),
-				inList("status", ["healthy", "late"]),
-			),
+			where: and(notNull("enabled_at"), inList("status", ["healthy", "late"])),
 		});
+	}
+
+	/**
+	 * Sets a monitor's expected-arrival time without touching its status, used by the
+	 * sweep to repair a row that has none. Separate from {@link updateStatus} because
+	 * repairing what a monitor is measured against is not a statement about its health:
+	 * the monitor keeps whatever status it had, and the next pass judges it normally.
+	 */
+	static async setNextExpected(db: Database, monitorId: string, nextExpectedAt: number) {
+		return await db.update(
+			cronJobMonitors,
+			monitorId,
+			{ next_expected_at: nextExpectedAt },
+			{ touch: true },
+		);
 	}
 
 	/** Sets a monitor's status directly, used by the scheduled late/missed sweep. */

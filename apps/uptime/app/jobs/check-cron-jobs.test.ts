@@ -80,6 +80,63 @@ beforeEach(() => {
 });
 
 describe("CheckCronJobsJob", () => {
+	test("repairs an enabled monitor that has no expected-arrival time", async () => {
+		// The hole this closes: such a row used to be filtered out of the sweep entirely, so
+		// it never left `healthy` however long it went unpinged. Five production monitors
+		// reported green for ten days while nothing pinged them.
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, { status: "healthy", next_expected_at: null });
+
+		await runJob(db);
+
+		let repaired = await CronJobMonitor.findById(db, monitor.id);
+		expect(repaired?.next_expected_at).not.toBeNull();
+		expect(repaired?.next_expected_at ?? 0).toBeGreaterThan(Date.now());
+		// Repair is not a health verdict, and there is nothing to be late for yet.
+		expect(repaired?.status).toBe("healthy");
+		expect(enqueued).toEqual([]);
+	});
+
+	test("goes late on the pass after a repair once the repaired deadline passes", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, {
+			status: "healthy",
+			alert_on_late: true,
+			next_expected_at: null,
+		});
+
+		await runJob(db);
+		let repaired = await CronJobMonitor.findById(db, monitor.id);
+
+		// Wind the repaired deadline into the past; the next sweep must now judge it.
+		await CronJobMonitor.setNextExpected(
+			db,
+			monitor.id,
+			Date.now() - (repaired?.grace_period_seconds ?? 300) * 1000 - 1000,
+		);
+		await runJob(db);
+
+		expect((await CronJobMonitor.findById(db, monitor.id))?.status).toBe("late");
+	});
+
+	test("leaves an enabled monitor alone when its schedule cannot be parsed", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await seedMonitor(db, {
+			status: "healthy",
+			next_expected_at: null,
+			cron_expression: "not a cron expression",
+		});
+
+		let job = await runJob(db);
+
+		let untouched = await CronJobMonitor.findById(db, monitor.id);
+		expect(untouched?.next_expected_at).toBeNull();
+		expect(untouched?.status).toBe("healthy");
+		expect(
+			job.logger.events.some((event) => event.event === "job.check_cron_jobs.unschedulable"),
+		).toBe(true);
+	});
+
 	test("leaves a healthy monitor alone while it is still inside its grace period", async () => {
 		let { db } = createTestDatabase();
 		let now = Date.now();

@@ -87,10 +87,40 @@ export class CheckCronJobsJob extends Job {
 		now: number,
 	): Promise<{ notification: NotifyMessage | null } | null> {
 		/**
-		 * `listActionable` only returns rows with a `next_expected_at`, but narrow again
-		 * here so this arithmetic doesn't need a non-null assertion.
+		 * A row with no expected-arrival time cannot be judged, and until recently it was
+		 * also never selected — which is how five monitors reported healthy for ten days
+		 * while nothing pinged them. The sweep repairs it from the schedule rather than
+		 * skipping it, so the next pass has something to measure against and the monitor
+		 * rejoins the population that can go late.
+		 *
+		 * No transition this pass: the recomputed time is in the future by construction, so
+		 * there is nothing yet to be late for.
 		 */
-		if (monitor.next_expected_at === null) return null;
+		if (monitor.next_expected_at === null) {
+			let repaired = CronJobMonitor.calculateNextExpected(
+				monitor.cron_expression,
+				monitor.timezone,
+			);
+
+			if (repaired === null) {
+				/**
+				 * An enabled monitor whose expression no longer parses can never be measured,
+				 * and nothing else in the system will say so. Left alone rather than guessed at.
+				 */
+				this.logger.error("job.check_cron_jobs.unschedulable", {
+					monitorId: monitor.id,
+					cronExpression: monitor.cron_expression,
+				});
+				return null;
+			}
+
+			await CronJobMonitor.setNextExpected(db, monitor.id, repaired);
+			this.logger.info("job.check_cron_jobs.repaired_next_expected", {
+				monitorId: monitor.id,
+				nextExpectedAt: repaired,
+			});
+			return null;
+		}
 
 		/**
 		 * The grace period is the tolerance, so nothing is late until it has elapsed. It used
