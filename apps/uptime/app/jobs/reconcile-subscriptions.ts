@@ -23,6 +23,9 @@ import { Database } from "remix/data-table";
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 
 export class ReconcileSubscriptionsJob extends Job {
+	/** The "Reconcile Polar Subscriptions" cron monitor this job reports itself to when it completes. */
+	static override monitorId = "2df6d6d9-54e9-4a84-954a-e1d357421459";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);

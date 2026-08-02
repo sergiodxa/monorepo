@@ -79,6 +79,9 @@ interface TeamDay {
 }
 
 export class ReportCostsJob extends Job {
+	/** The "Report Infrastructure Costs" cron monitor this job reports itself to when it completes. */
+	static override monitorId = "ddf291cc-5fd5-4ab7-b016-dea824399990";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);
