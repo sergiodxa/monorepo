@@ -10,7 +10,7 @@ Translation itself is delegated to i18next. The middleware in `@pkg/i18n/middlew
 
 Because the language is resolved before the instance is built, that instance is only ever given the bundles the request can resolve through: the detected language's and the fallback language's. An app that supports six languages therefore attaches two bundles per request instead of six, without giving up the per-request instance that keeps the languages isolated.
 
-The root entry (`@pkg/i18n`) has no router dependency, so the detector and locale helpers can also be used outside middleware (e.g. in background jobs or non-router handlers).
+The root entry (`@pkg/i18n`) has no router dependency, so the detector and locale helpers can also be used outside middleware (e.g. in background jobs or non-router handlers). Code that runs with no request at all — a scheduled job, a queue consumer, a test, a client bootstrap — has no `context.i18next` to translate through either, so the root entry also ships `createTranslator`: the same idea as the middleware (resolve a language, then build an instance for it) without a `Request` to resolve it from, and caching one instance per language because the bundles are static.
 
 Rendering translations through `remix/ui` is a separate concern from detecting and loading them, so it lives at its own entry point, `@pkg/i18n/ui`: an `IntlProvider` that publishes a live i18next instance through context, and a `Trans` component for translations containing markup.
 
@@ -59,6 +59,24 @@ let detector = new LanguageDetector({
 let locale = await detector.detect(request); // always a supported language
 ```
 
+### Translating without a request
+
+```typescript
+import { createTranslator } from "@pkg/i18n";
+
+let translate = createTranslator({
+	resources: { en: { translation: en }, es: { translation: es } },
+	supportedLanguages: ["en", "es"],
+	fallbackLanguage: "en",
+});
+
+// In a job, a consumer, or anywhere `context.i18next` does not exist:
+let { locale, t } = await translate(recipient.language);
+// locale is the language the copy was actually produced in — "en" when
+// recipient.language is one this app does not ship.
+await send({ subject: t("digest.subject"), locale });
+```
+
 ### `remix/ui`
 
 Wrap a server-rendered page in `IntlProvider` with the per-request instance the middleware already initialized, and read it back anywhere below through `intl`:
@@ -104,17 +122,15 @@ Wrapping every island in its own `IntlProvider` would work, but it's repetitive.
 
 ```tsx
 // bootstrap/browser.ts, before run() mounts anything
+import { createTranslator } from "@pkg/i18n";
 import { setIntl } from "@pkg/i18n/ui";
-import { createInstance } from "i18next";
 import { run } from "remix/ui";
 
-let i18n = createInstance();
-await i18n.init({
-	supportedLngs: ["en", "es"],
-	fallbackLng: "en",
-	lng: document.documentElement.lang,
+let { i18n } = await createTranslator({
 	resources: { en: { translation: en }, es: { translation: es } },
-});
+	supportedLanguages: ["en", "es"],
+	fallbackLanguage: "en",
+})(document.documentElement.lang);
 
 setIntl(i18n);
 
@@ -211,6 +227,36 @@ Gets the client's best-quality locale from the `Accept-Language` header, filtere
 import { getClientLocales } from "@pkg/i18n";
 
 let date = new Date().toLocaleDateString(getClientLocales(request));
+```
+
+### `createTranslator(options: TranslatorOptions): Translator`
+
+Creates a translator over a fixed set of bundles, for code with no request behind it. The returned `Translator` takes a language and resolves a `Translation`: the language it actually bound to, a `t` already fixed to it, and the instance behind that `t`.
+
+A language outside `supportedLanguages` resolves to `fallbackLanguage` before anything is built, so `translation.locale` is the language the copy was really produced in and can be recorded or reported as such — never the one that was asked for.
+
+Instances are cached by resolved language, so repeated work in the same language (one event fanning out into many messages) initializes i18next once, not once per message. The cache belongs to the translator the factory returned, so two translators configured with different bundles never hand each other's instances out. Unlike the middleware's per-request instance, every supported language's bundle is attached, so `translation.i18n.getFixedT(other)` still resolves another language.
+
+**Parameters:**
+
+- `options.resources`: i18next [resources](https://www.i18next.com/overview/configuration-options), every language's bundle
+- `options.supportedLanguages`: Languages the caller ships; anything else resolves to the fallback
+- `options.fallbackLanguage`: Language used when none is asked for, when the asked-for one is unsupported, and for a key missing from another language's bundle
+- `options.i18next`: Further i18next init options for every instance built. `lng`, `supportedLngs`, `fallbackLng`, and `resources` are always taken from the options above, so the two layers cannot disagree
+
+**Returns:**
+
+- A `Translator`: `(language?: string) => Promise<Translation>`
+
+**Example:**
+
+```typescript
+let translate = createTranslator({
+	resources,
+	supportedLanguages: ["en", "es"],
+	fallbackLanguage: "en",
+});
+let { locale, t } = await translate("es");
 ```
 
 ### `IntlProvider`
@@ -317,6 +363,43 @@ interface I18nextMiddlewareOptions {
 	detection: LanguageDetectorOptions;
 	i18next?: Omit<InitOptions, "detection">;
 	plugins?: NewableModule<Module>[] | Module[];
+}
+```
+
+#### `TranslatorOptions`
+
+```typescript
+interface TranslatorOptions {
+	resources: Resource;
+	supportedLanguages: readonly string[];
+	fallbackLanguage: string;
+	i18next?: Omit<InitOptions, "fallbackLng" | "lng" | "resources" | "supportedLngs">;
+}
+```
+
+#### `Translation` and `Translator`
+
+```typescript
+interface Translation {
+	locale: string; // the language the copy is actually produced in
+	t: TFunction; // already fixed to locale
+	i18n: i18n; // the instance t is fixed from
+}
+
+interface Translator {
+	(language?: string): Promise<Translation>;
+}
+```
+
+#### `TFunction` and `i18n`
+
+i18next's own types, re-exported from the root entry. Type a translator or an instance (`ctx.i18next`, an `IntlProvider` prop, a function taking a `t`) through these, so translation stays this package's contract and consuming apps never depend on i18next directly.
+
+```typescript
+import type { TFunction } from "@pkg/i18n";
+
+export function greet(t: TFunction): string {
+	return t("greeting");
 }
 ```
 
@@ -427,8 +510,9 @@ let detector = new LanguageDetector({
 3. **Detection never throws** - Methods missing their configuration are skipped and unsupported values are ignored, so `context.locale` is always safe to use as a supported language.
 4. **Use `getClientLocales` for formatting, the detector for content** - Formatting should honor the client's exact regional preference (`en-GB` dates) even when the app only ships `en` translations.
 5. **Only the detected language and the fallback are attached** - `context.i18next.t(key, { lng })` for any other supported language finds no bundle, because the request's instance is built over those two only. Translate through an instance of your own when a request genuinely needs a third language.
-6. **The instance is per-request** - Do not cache `context.i18next` in module scope; sharing one instance across requests leaks one user's language into another's response.
-7. **`Trans` takes `i18nKey`, not `key`** - `key` is `remix/ui`'s own reconciliation prop and is stripped before a component ever sees its props.
-8. **Pick a `components` key that isn't a real HTML void element** - `link`, `br`, `img`, `hr`, and the rest of that list are parsed as self-closing regardless of how the translation wrote them, since the underlying parser checks tag names against the real HTML void-element list, not against `components`. A tag meant to wrap children needs a different name (`articleLink`, not `link`).
-9. **Register one instance with `setIntl`, not one `IntlProvider` per island** - every independently hydrated island has no ancestor context to read, but client-side there's exactly one user per page, so a single module-scoped default is safe. Reach for `IntlProvider` client-side only to override that default for one specific subtree.
-10. **`IntlProvider` re-renders on `changeLanguage()`/a namespace loading, client-side only** - it subscribes through `handle.queueTask`, which the server renderer never runs, so nothing subscribes to anything server-side. Don't call `i18n.changeLanguage()` mid-request on the server either way — a request's language is resolved once, before rendering starts, and rendering streams, so anything already sent would keep the old language while anything rendered after the call wouldn't.
+6. **The instance is per-request** - Do not cache `context.i18next` in module scope; sharing one instance across requests leaks one user's language into another's response. `createTranslator`'s cache is the deliberate exception: its instances are bound to a language chosen by the caller, never to a request, so nothing about one user is in them.
+7. **Record `translation.locale`, not the language you asked for** - They differ exactly when the request was for a language the app does not ship, which is the case worth knowing about after the fact.
+8. **`Trans` takes `i18nKey`, not `key`** - `key` is `remix/ui`'s own reconciliation prop and is stripped before a component ever sees its props.
+9. **Pick a `components` key that isn't a real HTML void element** - `link`, `br`, `img`, `hr`, and the rest of that list are parsed as self-closing regardless of how the translation wrote them, since the underlying parser checks tag names against the real HTML void-element list, not against `components`. A tag meant to wrap children needs a different name (`articleLink`, not `link`).
+10. **Register one instance with `setIntl`, not one `IntlProvider` per island** - every independently hydrated island has no ancestor context to read, but client-side there's exactly one user per page, so a single module-scoped default is safe. Reach for `IntlProvider` client-side only to override that default for one specific subtree.
+11. **`IntlProvider` re-renders on `changeLanguage()`/a namespace loading, client-side only** - it subscribes through `handle.queueTask`, which the server renderer never runs, so nothing subscribes to anything server-side. Don't call `i18n.changeLanguage()` mid-request on the server either way — a request's language is resolved once, before rendering starts, and rendering streams, so anything already sent would keep the old language while anything rendered after the call wouldn't.

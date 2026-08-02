@@ -11,11 +11,11 @@
 import { describe, expect, test } from "bun:test";
 
 import type { InvalidCronReason } from "@pkg/cron";
-import type { TFunction } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 
 import { Schedule } from "@pkg/cron";
+import { createTranslator } from "@pkg/i18n";
 import { isFailure, unwrap } from "@pkg/result";
-import { createInstance } from "i18next";
 
 import de from "~/app/locales/de";
 import en from "~/app/locales/en";
@@ -28,20 +28,18 @@ import { describeSchedule, invalidCronMessage } from "./cron-text";
 
 const LOCALES = { en, es, de, fr, it, ja };
 
-let i18next = createInstance();
-await i18next.init({
-	lng: "en",
-	fallbackLng: "en",
-	supportedLngs: Object.keys(LOCALES),
+let { i18n } = await createTranslator({
 	resources: Object.fromEntries(
 		Object.entries(LOCALES).map(([language, translation]) => [language, { translation }]),
 	),
-	interpolation: { escapeValue: false },
-});
+	supportedLanguages: Object.keys(LOCALES),
+	fallbackLanguage: "en",
+	i18next: { interpolation: { escapeValue: false } },
+})();
 
 /** The translator for one language, as a controller would hand it to the helpers. */
 function translator(language: string): TFunction {
-	return i18next.getFixedT(language);
+	return i18n.getFixedT(language);
 }
 
 /** Describes an expression in one language, the way a controller calls the helper. */

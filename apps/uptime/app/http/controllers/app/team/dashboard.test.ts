@@ -19,8 +19,8 @@ import { describe, expect, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
+import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
-import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
@@ -48,13 +48,11 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let i18nextInstance = createInstance();
-await i18nextInstance.init({
-	lng: "en",
-	fallbackLng: "en",
-	supportedLngs: ["en"],
+let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
-});
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
 
 /** Seeds ctx.team/ctx.membership/ctx.teams/ctx.locale/ctx.i18next + Auth, standing in for requireUser+requireTeam+i18n. */
 function seedTeam(

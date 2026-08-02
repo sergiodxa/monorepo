@@ -14,8 +14,8 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
+import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
-import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
@@ -40,13 +40,11 @@ let monitorCardUptime = (await import("./monitor-card-uptime")).default as {
 	handler: RequestHandler<any>;
 };
 
-let i18nextInstance = createInstance();
-await i18nextInstance.init({
-	lng: "en",
-	fallbackLng: "en",
-	supportedLngs: ["en"],
+let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
-});
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
 
 /** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
 function createHtmlRenderer(ctx: RequestContext) {

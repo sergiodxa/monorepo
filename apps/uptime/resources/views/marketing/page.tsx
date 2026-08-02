@@ -18,7 +18,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
 import { ArrowRightIcon, CheckIcon, Icon } from "@pkg/lucide-remix";

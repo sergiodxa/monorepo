@@ -24,7 +24,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TFunction } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { NavLink } from "@pkg/r3-ui";

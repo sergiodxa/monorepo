@@ -1,9 +1,11 @@
 /**
  * Browser entry point that hydrates the uptime client. It registers one
- * module-scoped i18next instance via `@pkg/i18n/ui`'s `setIntl` — over the same
- * locale dictionaries `app/http/middleware/i18n.ts` initializes server-side, and
- * initially set to whatever language `DocumentLayout` rendered `<html lang>` as
- * — so every independently hydrated island (`Avatar`, `Logo`, `CopyButton`,
+ * module-scoped i18next instance via `@pkg/i18n/ui`'s `setIntl` — built with
+ * `@pkg/i18n`'s `createTranslator` over the same locale dictionaries
+ * `app/http/middleware/i18n.ts` initializes server-side, and bound to whatever
+ * language `DocumentLayout` rendered `<html lang>` as (anything else the
+ * document could carry resolves to English rather than leaving the client
+ * untranslated) — so every independently hydrated island (`Avatar`, `Logo`, `CopyButton`,
  * `RunMonitorButton`, `DocsNav`) can call `intl(handle)`/`Trans` with no
  * `IntlProvider` of its own (see that package's docs for why one instance per
  * page load is safe client-side). It then globs the resources and routes
@@ -16,6 +18,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createTranslator } from "@pkg/i18n";
 import { setIntl } from "@pkg/i18n/ui";
 import { run } from "remix/ui";
 
@@ -29,13 +32,7 @@ import ja from "~/app/locales/ja";
 const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"];
 const DEFAULT_LANGUAGE = "en";
 
-let { createInstance } = await import("i18next");
-
-let i18n = createInstance();
-await i18n.init({
-	supportedLngs: SUPPORTED_LANGUAGES,
-	fallbackLng: DEFAULT_LANGUAGE,
-	lng: document.documentElement.lang,
+let { i18n } = await createTranslator({
 	resources: {
 		en: { translation: en },
 		es: { translation: es },
@@ -44,11 +41,13 @@ await i18n.init({
 		fr: { translation: fr },
 		it: { translation: it },
 	},
+	supportedLanguages: SUPPORTED_LANGUAGES,
+	fallbackLanguage: DEFAULT_LANGUAGE,
 	// Matches `app/http/middleware/i18n.ts`: JSX already HTML-escapes text nodes
 	// when it renders, so i18next's own interpolation escaping is redundant and
 	// double-encodes values.
-	interpolation: { escapeValue: false },
-});
+	i18next: { interpolation: { escapeValue: false } },
+})(document.documentElement.lang);
 
 setIntl(i18n);
 

@@ -12,10 +12,10 @@ import { describe, expect, test } from "bun:test";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
+import { createTranslator } from "@pkg/i18n";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
-import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
@@ -63,14 +63,12 @@ async function createFixture() {
 }
 
 /** Stands in for the language middleware, which this router does not run. */
-let i18nextInstance = createInstance();
-await i18nextInstance.init({
-	lng: "en",
-	fallbackLng: "en",
-	supportedLngs: ["en"],
+let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
-	interpolation: { escapeValue: false },
-});
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+	i18next: { interpolation: { escapeValue: false } },
+})();
 
 /**
  * Middleware that seeds `ctx.team`/`ctx.membership` in place of

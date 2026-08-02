@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { TFunction } from "@pkg/i18n";
 import type { Address } from "@pkg/mail";
-import type { TFunction } from "i18next";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@pkg/mail";

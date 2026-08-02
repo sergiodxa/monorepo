@@ -9,7 +9,7 @@
  */
 
 import type { InvalidCronExpression, TimeOfDay } from "@pkg/cron";
-import type { TFunction } from "i18next";
+import type { TFunction } from "@pkg/i18n";
 
 import { Schedule } from "@pkg/cron";
 import { isFailure } from "@pkg/result";

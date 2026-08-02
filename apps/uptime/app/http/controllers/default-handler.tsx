@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { i18n } from "i18next";
+import type { i18n } from "@pkg/i18n";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 

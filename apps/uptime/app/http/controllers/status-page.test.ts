@@ -25,8 +25,8 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
+import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
-import { createInstance } from "i18next";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
@@ -62,13 +62,11 @@ function createHtmlRenderer(ctx: RequestContext) {
 	};
 }
 
-let i18nextInstance = createInstance();
-await i18nextInstance.init({
-	lng: "en",
-	fallbackLng: "en",
-	supportedLngs: ["en"],
+let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
-});
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
 
 /** For the PUBLIC status-page.tsx only — no team/auth, just i18next. */
 function seedLocale(): Middleware {
