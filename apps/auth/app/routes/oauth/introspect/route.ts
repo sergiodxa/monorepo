@@ -17,7 +17,7 @@ import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
 import { OIDCProvider } from "~/modules/oauth2";
-import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
+import { rateLimit } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/route";
@@ -49,9 +49,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	// Rate limit by client_id
-	if (!(await checkRateLimit("INTROSPECT_RATE_LIMITER", clientCredentials.clientId))) {
-		return rateLimitResponse();
-	}
+	let limited = await rateLimit("INTROSPECT_RATE_LIMITER", clientCredentials.clientId);
+	if (limited) return limited;
 
 	let result = await validate(request, Schema);
 

@@ -1,8 +1,8 @@
 /**
  * Test suite for the OIDC provider module. Exercises the token endpoint's three
- * grant types, plus revoke, introspect, userinfo, logout, and ID-token claim
- * behavior against a mocked repository, verifying the OAuth/OIDC provider's
- * success paths and error handling.
+ * grant types, plus revoke, introspect, userinfo, logout, ID-token claim
+ * behavior, and the password login flow — including the bcrypt-to-PBKDF2
+ * upgrade — against a mocked repository.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,9 @@
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { JWK } from "@edgefirst-dev/jwt";
+import { Hex, password, sha256 } from "@pkg/crypto";
+import { unwrap } from "@pkg/result";
+import bcrypt from "bcryptjs";
 
 import { ISSUER } from "../config";
 
@@ -661,5 +664,236 @@ describe("OIDCProvider", () => {
 			expect(decoded.username).toBe(testSubject.username);
 			expect(decoded.picture).toBe(testSubject.avatar);
 		});
+	});
+});
+
+// =============================================================================
+// Password login and hash migration
+// =============================================================================
+
+/** Password every credential login case signs in with. */
+const LOGIN_PASSWORD = "correct horse battery staple";
+
+/** Cost factor the bcrypt hashes stored before the PBKDF2 migration were written with. */
+const LEGACY_BCRYPT_ROUNDS = 10;
+
+/** Prefix the self-describing PBKDF2 format writes, used to tell the two schemes apart. */
+const PBKDF2_PREFIX = "$pbkdf2-sha256$";
+
+/** Mutable record of what a login repository double holds and was asked to persist. */
+interface LoginRepositoryState {
+	/** Hash currently stored for the subject, or `null` when they have no credential. */
+	storedHash: string | null;
+	/** Verification timestamp on the stored credential; `null` blocks sign-in. */
+	verifiedAt: Date | null;
+	/** Hashes handed to `createCredential`, in call order. */
+	created: string[];
+	/** Hashes handed to `updateCredentialPasswordHash`, in call order. */
+	upgraded: string[];
+	/** Avatar URLs handed to `createSubject`, in call order. */
+	avatars: string[];
+	/** When set, `updateCredentialPasswordHash` rejects with it. */
+	upgradeError: Error | null;
+	/** When true, the email looks unregistered and the sign-up branch runs. */
+	subjectMissing: boolean;
+}
+
+/** Builds login repository state, defaulting to a verified subject with no credential yet. */
+function loginState(overrides: Partial<LoginRepositoryState> = {}): LoginRepositoryState {
+	return {
+		storedHash: null,
+		verifiedAt: new Date(),
+		created: [],
+		upgraded: [],
+		avatars: [],
+		upgradeError: null,
+		subjectMissing: false,
+		...overrides,
+	};
+}
+
+/**
+ * Repository double for the password login flow, reading and recording through the
+ * given state so a test can assert what was persisted rather than how it was called.
+ */
+function createLoginRepository(state: LoginRepositoryState): OIDCProvider.Repository {
+	return {
+		...createMockRepository(),
+
+		findSubjectByEmail: mock(async () => (state.subjectMissing ? null : testSubject)),
+
+		createSubject: mock(async (data: { avatar: string }) => {
+			state.avatars.push(data.avatar);
+			return testSubject;
+		}),
+
+		findCredential: mock(async () => {
+			if (state.storedHash === null) return null;
+			return {
+				subjectId: testSubject.id,
+				passwordHash: state.storedHash,
+				verifiedAt: state.verifiedAt,
+			};
+		}),
+
+		createCredential: mock(async (_subjectId: string, passwordHash: string) => {
+			state.created.push(passwordHash);
+		}),
+
+		updateCredentialPasswordHash: mock(async (_subjectId: string, passwordHash: string) => {
+			if (state.upgradeError) throw state.upgradeError;
+			state.upgraded.push(passwordHash);
+		}),
+
+		createSession: mock(async () => ({ id: testSession.id })),
+
+		findOrCreateGrant: mock(async () => ({
+			id: "grant-123",
+			subjectId: testSubject.id,
+			clientId: testClient.id,
+		})),
+
+		storeAuthorizationCode: mock(async () => {}),
+	} as unknown as OIDCProvider.Repository;
+}
+
+/** Builds a credential login input, with the authorization request the flow resumes. */
+function loginInput(
+	overrides: Partial<OIDCProvider.LoginWithCredentialInput> = {},
+): OIDCProvider.LoginWithCredentialInput {
+	return {
+		email: testSubject.emailAddress,
+		password: LOGIN_PASSWORD,
+		name: testSubject.displayName,
+		username: testSubject.username,
+		clientId: testClient.id,
+		ip: null,
+		ua: null,
+		redirectUri: testClient.redirectUri,
+		state: "state-123",
+		...overrides,
+	};
+}
+
+describe("loginWithCredential()", () => {
+	test("authenticates a subject whose stored hash is bcrypt", async () => {
+		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("success");
+	});
+
+	test("upgrades a bcrypt hash to PBKDF2 after a successful sign-in", async () => {
+		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		await provider.loginWithCredential(loginInput());
+
+		expect(state.upgraded).toHaveLength(1);
+
+		let upgraded = state.upgraded[0] ?? "";
+		expect(upgraded.startsWith(PBKDF2_PREFIX)).toBe(true);
+		expect(password.needsRehash(upgraded)).toBe(false);
+		expect(unwrap(await password.verify(upgraded, LOGIN_PASSWORD))).toBe(true);
+	});
+
+	test("verifies against the upgraded hash on the next sign-in, without upgrading again", async () => {
+		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		await provider.loginWithCredential(loginInput());
+		state.storedHash = state.upgraded[0] ?? null;
+		state.upgraded = [];
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("success");
+		expect(state.upgraded).toHaveLength(0);
+	});
+
+	test("rejects a wrong password against a bcrypt hash and leaves it alone", async () => {
+		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure")
+			expect(result.error).toBeInstanceOf(OIDCProvider.AccessDeniedError);
+		expect(state.upgraded).toHaveLength(0);
+	});
+
+	test("rejects a wrong password against a PBKDF2 hash", async () => {
+		let state = loginState({ storedHash: unwrap(await password.hash(LOGIN_PASSWORD)) });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure")
+			expect(result.error).toBeInstanceOf(OIDCProvider.AccessDeniedError);
+	});
+
+	test("refuses a hash in neither format instead of letting the sign-in through", async () => {
+		let state = loginState({ storedHash: "not-a-hash-at-all" });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure")
+			expect(result.error).toBeInstanceOf(OIDCProvider.AccessDeniedError);
+	});
+
+	test("still signs the subject in when persisting the upgrade fails", async () => {
+		let state = loginState({
+			storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS),
+			upgradeError: new Error("database unavailable"),
+		});
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("success");
+		expect(state.upgraded).toHaveLength(0);
+	});
+
+	test("refuses an unverified credential without checking the password", async () => {
+		let state = loginState({
+			storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS),
+			verifiedAt: null,
+		});
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure")
+			expect(result.error).toBeInstanceOf(OIDCProvider.MissingValidationError);
+		expect(state.upgraded).toHaveLength(0);
+	});
+
+	test("writes a PBKDF2 hash when the subject has no credential yet", async () => {
+		let state = loginState();
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("failure");
+		expect(state.created).toHaveLength(1);
+		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
+	});
+
+	test("gives a brand-new subject a hex-digest gravatar and a PBKDF2 credential", async () => {
+		let state = loginState({ subjectMissing: true });
+		let provider = new OIDCProvider(ISSUER, createLoginRepository(state));
+
+		await provider.loginWithCredential(loginInput());
+
+		let expectedDigest = Hex.encode(unwrap(await sha256(testSubject.emailAddress)));
+		expect(state.avatars).toEqual([`https://gravatar.com/avatar/${expectedDigest}`]);
+		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
 	});
 });

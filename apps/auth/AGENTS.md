@@ -52,7 +52,9 @@ The Auth app (`apps/auth`) is a comprehensive OAuth 2.0 and OpenID Connect (OIDC
 
 ### User Authentication
 
-- MUST hash passwords using bcrypt with appropriate salt rounds
+- MUST hash new passwords with PBKDF2-HMAC-SHA256 through `password.hash()`, never write a bcrypt hash again
+- MUST keep verifying stored bcrypt hashes, and re-hash the plaintext on a successful sign-in — the hash cannot be converted without the password, so a login is the only chance to retire it
+- MUST NOT remove the bcrypt dependency until no stored hash starts with `$2`, which depends on user logins rather than on a deploy
 - MUST validate user credentials securely
 - SHOULD implement account lockout after failed login attempts
 - MUST verify email addresses before allowing authentication

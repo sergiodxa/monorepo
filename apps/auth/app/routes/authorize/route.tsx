@@ -26,7 +26,7 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Client from "~/models/client";
-import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
+import { rateLimit } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/route";
@@ -76,9 +76,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Rate limit by IP address to prevent enumeration attacks
 	let ip = getClientIP(request) ?? "unknown";
-	if (!(await checkRateLimit("AUTHORIZE_RATE_LIMITER", ip))) {
-		return rateLimitResponse();
-	}
+	let limited = await rateLimit("AUTHORIZE_RATE_LIMITER", ip);
+	if (limited) return limited;
 
 	// Check if user is already logged in (has valid access token)
 	let accessToken = session().get("accessToken");

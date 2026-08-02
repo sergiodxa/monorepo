@@ -101,6 +101,8 @@ Rate limiting is implemented using [Cloudflare Workers Rate Limiting bindings](h
 
 Rate limits are per Cloudflare location (edge-local) for optimal performance.
 
+A refused request answers `429` with `{ "error": "too_many_requests" }` plus the standard `RateLimit`, `RateLimit-Policy` and `Retry-After` fields, computed from the limit and period declared for the binding. The binding reports no quota state of its own, so `remaining` is deliberately omitted rather than guessed, and the declared values in `app/modules/rate-limit.ts` must be kept in step with `wrangler.jsonc` or every emitted header goes stale. A binding that cannot answer is logged and the request is allowed through, so a limiter outage cannot stop token issuance.
+
 ## Environment Variables
 
 See `.env.example` for required environment variables.

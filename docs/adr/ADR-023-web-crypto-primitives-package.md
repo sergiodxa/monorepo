@@ -23,6 +23,8 @@ These are the pieces most worth getting right once. Spreading them across call s
 | `packages/oidc-provider/.../credential.ts` | bcrypt hashing of user credentials                                                     |
 | `apps/auth/package.json`                   | `@oslojs/crypto` and `@oslojs/encoding` declared, never imported                       |
 
+The table above is the problem statement as it stood when this decision was made. Two of those paths have since moved: `apps/r3-uptime` is now `apps/uptime`, the React app of that name having been replaced by its Remix v3 port. See "Adoption Status" below for what has since shipped.
+
 ### Issues Identified
 
 | Issue                                         | Impact                                                                              |
@@ -197,6 +199,19 @@ Use a WebAssembly Argon2 build for password hashing.
 - [x] Phase 2: Password Hashing
 - [x] Phase 3: TOTP And Sealing
 - [ ] Phase 4: Cleanup
+
+### Adoption Status
+
+| Site                                          | State                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `apps/auth/app/modules/oauth2.ts`             | Migrated: no `node:crypto`, no hand-rolled PKCE hashing or hex/base64url      |
+| `apps/auth` password hashing                  | Migrated: new hashes are PBKDF2, with bcrypt verification and rehash-on-login |
+| `apps/auth/package.json` Oslo packages        | Removed; they were declared but never imported                                |
+| `packages/oidc-provider` secrets, credentials | Migrated: new hashes are PBKDF2, bcrypt retained for verifying stored hashes  |
+| `apps/uptime/app/services/api-key.ts`         | Outstanding: still calls `getRandomValues` and `subtle.digest` directly       |
+| `apps/uptime/app/services/alerts.ts`          | Outstanding: still carries a local `hmacSha256Hex` with its own hex encoder   |
+
+Phase 4 stays open, and cannot close on a schedule. `bcryptjs` is required by `apps/auth` and `packages/oidc-provider` until no stored hash begins with `$2`, and every such hash is rewritten only when its owner next signs in successfully. The check that ends this phase is a query returning zero rows, not a deploy.
 
 ## Notes
 

@@ -8,17 +8,45 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { timingSafeEqual } from "node:crypto";
+import type { Result } from "@pkg/result";
 
 import { JWK, JWT } from "@edgefirst-dev/jwt";
-import { failure, success } from "@pkg/result";
+import {
+	Base64Url,
+	CryptoError,
+	Hex,
+	password,
+	randomBytes,
+	sha256,
+	timingSafeEqual,
+} from "@pkg/crypto";
+import { elapsed } from "@pkg/dates";
+import { failure, isFailure, success } from "@pkg/result";
 import bcrypt from "bcryptjs";
-import { isBefore } from "date-fns";
-import { base64url } from "jose";
 
 import AccessToken from "../entities/access-token";
 import IdToken from "../entities/id-token";
 import LogoutToken from "../entities/logout-token";
+
+/**
+ * Bytes of entropy behind the session-state salt, matching the length this
+ * server has always emitted so a `session_state` stays the same shape.
+ */
+const SESSION_STATE_SALT_BYTES = 16;
+
+/**
+ * Bytes of entropy behind the OP browser state. The value lives in a 30-day
+ * cookie and is fed back into the session-state hash by the check-session
+ * iframe, so its encoding cannot change while old cookies are still in flight.
+ */
+const OP_BROWSER_STATE_BYTES = 32;
+
+/**
+ * Shape of a bcrypt hash (`$2a$`, `$2b$`, `$2y$`), used to route a stored
+ * credential to the legacy verifier. Hashes written today are PBKDF2 and carry
+ * their own `$pbkdf2-sha256$` tag instead.
+ */
+const BCRYPT_HASH_PATTERN = /^\$2[aby]?\$/;
 
 // =============================================================================
 // Errors
@@ -204,6 +232,14 @@ export namespace OIDC {
 
 		findCredential(subjectId: string): Promise<Nullable<Credential>>;
 		createCredential(subjectId: string, passwordHash: string): Promise<void>;
+		/**
+		 * Replaces the stored hash for a subject that already has a credential.
+		 *
+		 * Called only after a password verified, to retire a hash written under an
+		 * older scheme; it must never create a row, since a missing credential means
+		 * the subject has no password rather than an outdated one.
+		 */
+		updateCredentialPasswordHash(subjectId: string, passwordHash: string): Promise<void>;
 
 		createSession(
 			subjectId: string,
@@ -355,7 +391,7 @@ export class OIDC {
 		tokenTypeHint?: "access_token" | "refresh_token";
 	}) {
 		let client = await this.repository.findClientById(args.clientId);
-		if (!client || !secureCompare(client.secret, args.clientSecret)) {
+		if (!client || !timingSafeEqual(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Invalid client credentials");
 		}
 
@@ -394,7 +430,7 @@ export class OIDC {
 		  }
 	> {
 		let client = await this.repository.findClientById(args.clientId);
-		if (!client || !secureCompare(client.secret, args.clientSecret)) {
+		if (!client || !timingSafeEqual(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Invalid client credentials");
 		}
 
@@ -567,6 +603,18 @@ export class OIDC {
 		}
 	}
 
+	/**
+	 * Signs a subject in with an email and password, issuing an authorization code
+	 * on success.
+	 *
+	 * An unknown email creates the subject and a credential and still fails with
+	 * `MissingValidationError`, so the response cannot be used to tell registered
+	 * addresses from unregistered ones. A correct password against a hash written
+	 * under an older scheme is upgraded in place before the code is issued.
+	 *
+	 * @param input - Credentials plus the authorization request to resume.
+	 * @returns The authorization code result, or why the sign-in was refused.
+	 */
 	async loginWithCredential(input: OIDC.LoginWithCredentialInput) {
 		let subject = await this.repository.findSubjectByEmail(input.email);
 
@@ -574,8 +622,10 @@ export class OIDC {
 			let credential = await this.repository.findCredential(subject.id);
 
 			if (!credential) {
-				let passwordHash = await bcrypt.hash(input.password, 10);
-				await this.repository.createCredential(subject.id, passwordHash);
+				let passwordHash = await password.hash(input.password);
+				if (isFailure(passwordHash)) return failure(new InternalServerError());
+
+				await this.repository.createCredential(subject.id, passwordHash.data);
 				return failure(new MissingValidationError("Verify your email address."));
 			}
 
@@ -583,12 +633,14 @@ export class OIDC {
 				return failure(new MissingValidationError("Verify your email address."));
 			}
 
-			let passwordValid = await bcrypt.compare(input.password, credential.passwordHash);
-			if (!passwordValid) {
+			let passwordValid = await verifyPassword(credential.passwordHash, input.password);
+			if (isFailure(passwordValid) || !passwordValid.data) {
 				return failure(new AccessDeniedError("Invalid email or password."));
 			}
+
+			await this.upgradePasswordHash(subject.id, credential.passwordHash, input.password);
 		} else {
-			let emailHash = await this.sha256(input.email);
+			let emailHash = await sha256Hex(input.email);
 
 			subject = await this.repository.createSubject({
 				emailAddress: input.email,
@@ -597,8 +649,10 @@ export class OIDC {
 				username: input.username,
 			});
 
-			let passwordHash = await bcrypt.hash(input.password, 10);
-			await this.repository.createCredential(subject.id, passwordHash);
+			let passwordHash = await password.hash(input.password);
+			if (isFailure(passwordHash)) return failure(new InternalServerError());
+
+			await this.repository.createCredential(subject.id, passwordHash.data);
 
 			return failure(new MissingValidationError("Verify your email address."));
 		}
@@ -700,24 +754,38 @@ export class OIDC {
 	// Session State Methods
 	// =========================================================================
 
+	/**
+	 * Builds the OIDC Session Management `session_state` value: the hex SHA-256 of
+	 * client id, RP origin, browser state and a fresh salt, joined to that salt so
+	 * the check-session iframe can recompute the same digest.
+	 *
+	 * @param clientId - The relying party the state is issued to.
+	 * @param redirectUri - Only its origin is hashed, as the specification requires.
+	 * @param opBrowserState - Opaque per-browser value read back from its cookie.
+	 * @returns `<hash>.<salt>`, both lowercase hex.
+	 */
 	async generateSessionState(
 		clientId: string,
 		redirectUri: string,
 		opBrowserState: string,
 	): Promise<string> {
 		let origin = new URL(redirectUri).origin;
-		let salt = this.generateSalt();
+		let salt = Hex.encode(randomBytes(SESSION_STATE_SALT_BYTES));
 		let input = `${clientId} ${origin} ${opBrowserState} ${salt}`;
-		let hash = await this.sha256(input);
+		let hash = await sha256Hex(input);
 		return `${hash}.${salt}`;
 	}
 
+	/**
+	 * Mints the opaque per-browser value stored in the `op_browser_state` cookie.
+	 *
+	 * Lowercase hex, because the check-session iframe concatenates it into the
+	 * digest input verbatim and cookies already in flight carry that encoding.
+	 *
+	 * @returns 32 random bytes as hex.
+	 */
 	generateOpBrowserState(): string {
-		let array = new Uint8Array(32);
-		crypto.getRandomValues(array);
-		return Array.from(array)
-			.map((b) => b.toString(16).padStart(2, "0"))
-			.join("");
+		return Hex.encode(randomBytes(OP_BROWSER_STATE_BYTES));
 	}
 
 	// =========================================================================
@@ -763,7 +831,7 @@ export class OIDC {
 
 		if (!client) throw new InvalidClientError("Client not found");
 		if (!session) throw new InvalidGrantError("Session not found");
-		if (isBefore(session.expiresAt, new Date())) {
+		if (elapsed(session.expiresAt) > 0) {
 			throw new InvalidGrantError("Session has expired");
 		}
 
@@ -774,7 +842,7 @@ export class OIDC {
 			if (args.clientId !== clientId) {
 				throw new InvalidClientError("Client ID mismatch");
 			}
-			if (!secureCompare(client.secret, args.clientSecret)) {
+			if (!timingSafeEqual(client.secret, args.clientSecret)) {
 				throw new InvalidClientError("Invalid client credentials");
 			}
 		}
@@ -837,7 +905,7 @@ export class OIDC {
 		let client = await this.repository.findClientById(args.clientId);
 		if (!client) throw new InvalidClientError("Client is not registered");
 
-		if (!secureCompare(client.secret, args.clientSecret)) {
+		if (!timingSafeEqual(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Client is not registered");
 		}
 
@@ -858,7 +926,7 @@ export class OIDC {
 			throw new InvalidGrantError("Invalid or expired refresh token");
 		}
 
-		if (isBefore(session.expiresAt, new Date())) {
+		if (elapsed(session.expiresAt) > 0) {
 			throw new InvalidGrantError("Session has expired");
 		}
 
@@ -906,20 +974,34 @@ export class OIDC {
 		return await jwt.sign(JWK.Algoritm.ES256, await this.repository.getSigningKey());
 	}
 
-	private generateSalt(): string {
-		let array = new Uint8Array(16);
-		crypto.getRandomValues(array);
-		return Array.from(array)
-			.map((b) => b.toString(16).padStart(2, "0"))
-			.join("");
-	}
+	/**
+	 * Replaces a stored hash that is behind current policy, right after the only
+	 * moment the plaintext exists: a successful sign-in.
+	 *
+	 * A bcrypt hash can never be converted without the password, so this is the
+	 * one chance to retire it. The upgrade is best effort — a failed re-hash or a
+	 * failed write leaves the old hash in place and the next sign-in tries again,
+	 * because refusing a correct password would be far worse than a late upgrade.
+	 *
+	 * @param subjectId - Owner of the credential being upgraded.
+	 * @param stored - The hash that was just verified.
+	 * @param plaintext - The password that verified against it.
+	 */
+	private async upgradePasswordHash(
+		subjectId: string,
+		stored: string,
+		plaintext: string,
+	): Promise<void> {
+		if (!password.needsRehash(stored)) return;
 
-	private async sha256(message: string): Promise<string> {
-		let encoder = new TextEncoder();
-		let data = encoder.encode(message);
-		let hashBuffer = await crypto.subtle.digest("SHA-256", data);
-		let hashArray = Array.from(new Uint8Array(hashBuffer));
-		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+		let rehashed = await password.hash(plaintext);
+		if (isFailure(rehashed)) return;
+
+		try {
+			await this.repository.updateCredentialPasswordHash(subjectId, rehashed.data);
+		} catch {
+			// Keep the verified hash; the next successful sign-in retries the upgrade.
+		}
 	}
 }
 
@@ -930,30 +1012,91 @@ export { OIDC as OIDCProvider };
 // Helper Classes
 // =============================================================================
 
+/**
+ * PKCE code challenge derivation and checking (RFC 7636).
+ */
 class CodeChallenge {
-	private static async generate(verifier: string, method: "S256" | "plain") {
+	/**
+	 * Derives the challenge a verifier produces under a method: the unpadded
+	 * base64url SHA-256 for `S256`, and the verifier itself for `plain`.
+	 *
+	 * @param verifier - The `code_verifier` presented at the token endpoint.
+	 * @param method - The method recorded with the authorization code.
+	 * @returns The derived challenge, or `null` when the digest could not be taken.
+	 */
+	private static async generate(
+		verifier: string,
+		method: "S256" | "plain",
+	): Promise<string | null> {
 		if (method === "plain") return verifier;
-		let encoder = new TextEncoder();
-		let data = encoder.encode(verifier);
-		let hash = await crypto.subtle.digest("SHA-256", data);
-		return base64url.encode(new Uint8Array(hash));
+
+		let digest = await sha256(verifier);
+		if (isFailure(digest)) return null;
+
+		return Base64Url.encode(digest.data);
 	}
 
-	static async validate(verifier: string, challenge: string, method: "S256" | "plain" = "S256") {
+	/**
+	 * Checks a verifier against the stored challenge.
+	 *
+	 * Fails closed: a digest the runtime refuses is reported as a mismatch rather
+	 * than letting the grant through unchecked.
+	 *
+	 * @param verifier - The `code_verifier` presented at the token endpoint.
+	 * @param challenge - The `code_challenge` stored with the authorization code.
+	 * @param method - The challenge method; defaults to `S256`.
+	 * @returns Whether the verifier derives exactly the stored challenge.
+	 */
+	static async validate(
+		verifier: string,
+		challenge: string,
+		method: "S256" | "plain" = "S256",
+	): Promise<boolean> {
 		let generatedChallenge = await CodeChallenge.generate(verifier, method);
-		return generatedChallenge === challenge;
+		if (generatedChallenge === null) return false;
+
+		return timingSafeEqual(generatedChallenge, challenge);
 	}
 }
 
-function secureCompare(a: string, b: string): boolean {
-	let encoder = new TextEncoder();
-	let aBuffer = encoder.encode(a);
-	let bBuffer = encoder.encode(b);
+/**
+ * Lowercase hex SHA-256 of a string, the encoding both the gravatar URL and the
+ * OIDC session state are already published with.
+ *
+ * @param message - Text to digest, read as UTF-8.
+ * @returns The digest as 64 lowercase hex characters.
+ * @throws {InternalServerError} If the runtime refuses the digest.
+ */
+async function sha256Hex(message: string): Promise<string> {
+	let digest = await sha256(message);
+	if (isFailure(digest)) throw new InternalServerError(digest.error.message);
 
-	if (aBuffer.length !== bBuffer.length) {
-		timingSafeEqual(aBuffer, aBuffer);
-		return false;
+	return Hex.encode(digest.data);
+}
+
+/**
+ * Checks a password against a stored credential hash, in whichever format it was
+ * written.
+ *
+ * Both formats are self-identifying, so the stored value picks its own verifier:
+ * a `$2…$` prefix means bcrypt, from before this server moved to PBKDF2, and
+ * anything else is handed to the PBKDF2 verifier. A wrong password is
+ * `success(false)`; only a hash no verifier can read is a failure, which keeps
+ * "wrong password" apart from "cannot check".
+ *
+ * @param stored - The hash held for the subject.
+ * @param plaintext - The password presented at sign-in.
+ * @returns Whether the password matches, or why the check could not run.
+ */
+async function verifyPassword(
+	stored: string,
+	plaintext: string,
+): Promise<Result<boolean, CryptoError>> {
+	if (!BCRYPT_HASH_PATTERN.test(stored)) return await password.verify(stored, plaintext);
+
+	try {
+		return success(await bcrypt.compare(plaintext, stored));
+	} catch {
+		return failure(new CryptoError("bcrypt verification failed"));
 	}
-
-	return timingSafeEqual(aBuffer, bBuffer);
 }

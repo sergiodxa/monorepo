@@ -18,7 +18,7 @@ import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
 import { OIDCProvider } from "~/modules/oauth2";
-import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
+import { rateLimit } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/route";
@@ -84,9 +84,8 @@ export async function action({ request }: Route.ActionArgs) {
 		rateLimitKey = request.headers.get("cf-connecting-ip") ?? "unknown";
 	}
 
-	if (!(await checkRateLimit("TOKEN_RATE_LIMITER", rateLimitKey))) {
-		return rateLimitResponse();
-	}
+	let limited = await rateLimit("TOKEN_RATE_LIMITER", rateLimitKey);
+	if (limited) return limited;
 
 	try {
 		if (body.grant_type === "authorization_code") {

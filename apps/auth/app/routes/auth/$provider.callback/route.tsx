@@ -19,7 +19,7 @@ import { formPostResponse } from "~/helpers/form-post";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
-import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
+import { rateLimit } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 import { github } from "~/strategies/github";
 
@@ -32,9 +32,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	// Rate limit login callbacks by IP
 	let ip = getClientIP(request) ?? "unknown";
-	if (!(await checkRateLimit("LOGIN_RATE_LIMITER", ip))) {
-		return rateLimitResponse();
-	}
+	let limited = await rateLimit("LOGIN_RATE_LIMITER", ip);
+	if (limited) return limited;
 
 	let sub: string;
 

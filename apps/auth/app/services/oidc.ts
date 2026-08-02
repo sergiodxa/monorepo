@@ -125,6 +125,19 @@ export default new OIDC("auth.sergiodxa.com", {
 		await db().insert(schema.credentials).values({ subjectId, passwordHash });
 	},
 
+	/**
+	 * Writes an upgraded password hash over the subject's existing credential.
+	 *
+	 * Scoped by `subjectId` and never an insert, so a subject without a credential
+	 * stays without one instead of gaining a password they never set.
+	 */
+	async updateCredentialPasswordHash(subjectId, passwordHash) {
+		await db()
+			.update(schema.credentials)
+			.set({ passwordHash })
+			.where(eq(schema.credentials.subjectId, subjectId));
+	},
+
 	async createSession(subjectId, clientId, ip, ua) {
 		let [session] = await db()
 			.insert(schema.sessions)

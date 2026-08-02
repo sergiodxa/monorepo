@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { cacheHeader } from "pretty-cache-header";
+import { policy } from "@pkg/http/cache";
 import { data } from "react-router";
 import { z } from "zod";
 
@@ -21,6 +21,27 @@ const resources = {
 	en: { translation: enTranslation },
 };
 
+/**
+ * Cache policy for a locale catalog: five minutes in the browser, a day in the
+ * CDN, and a week of stale reuse both while revalidating and after an origin
+ * error, so a translation file never fails to load because the origin is down.
+ *
+ * No visibility directive is emitted, because the value is already live in CDN
+ * caches and adding one would change the bytes clients have stored.
+ */
+const LOCALE_CACHE_CONTROL = policy({
+	maxAge: "5 minutes",
+	sMaxAge: "1 day",
+	staleWhileRevalidate: "7 days",
+	staleIfError: "7 days",
+}).toString();
+
+/**
+ * Serves one namespace of one language, validating both against the bundled
+ * resources so an unknown language or namespace is a `400` rather than a `404`
+ * the i18next client would retry. Cache headers are attached in production only,
+ * keeping development reloads immediate.
+ */
 export async function loader({ params }: Route.LoaderArgs) {
 	const lng = z
 		.string()
@@ -44,17 +65,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	// On production, we want to add cache headers to the response
 	if (process.env.NODE_ENV === "production") {
-		headers.set(
-			"Cache-Control",
-			cacheHeader({
-				maxAge: "5m", // Cache in the browser for 5 minutes
-				sMaxage: "1d", // Cache in the CDN for 1 day
-				// Serve stale content while revalidating for 7 days
-				staleWhileRevalidate: "7d",
-				// Serve stale content if there's an error for 7 days
-				staleIfError: "7d",
-			}),
-		);
+		headers.set("Cache-Control", LOCALE_CACHE_CONTROL);
 	}
 
 	return data(namespaces[ns.data], { headers });
