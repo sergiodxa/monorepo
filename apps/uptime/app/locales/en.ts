@@ -866,7 +866,7 @@ export default {
 					"Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service.",
 			},
 
-			lastUpdated: "Last updated: February 11, 2026",
+			lastUpdated: "Last updated: August 2, 2026",
 			title: "Privacy Policy",
 
 			sections: {
@@ -990,26 +990,38 @@ export default {
 					outro:
 						"We do not use tracking cookies, third-party advertising cookies, or any cookies for marketing purposes.",
 				},
+				turnstile: {
+					title: "9. Bot Protection",
+					first:
+						"The public page where anyone can check a URL without an account is protected by Cloudflare Turnstile. It is there to tell a person from a bot, so the free checker is not drained by automated traffic.",
+					second:
+						"To do that, Cloudflare receives your IP address and information about your browser, and may set a token in your browser to remember that the check passed.",
+					third:
+						"Turnstile runs only on that public page. It is not used anywhere in the signed-in app.",
+					referencePrefix: "For what Cloudflare does with that data, see their ",
+					referenceLinkText: "Turnstile Privacy Addendum",
+					referenceSuffix: ".",
+				},
 				childrensPrivacy: {
-					title: "9. Children's Privacy",
+					title: "10. Children's Privacy",
 					body: "Uptime is not intended for use by individuals under 18 years of age. We do not knowingly collect personal information from children under 18.",
 				},
 				internationalTransfers: {
-					title: "10. International Data Transfers",
+					title: "11. International Data Transfers",
 					first:
 						"Your data may be processed via Cloudflare's global network. If you are located in the European Union, your data may be transferred to and processed in the United States.",
 					second:
 						"We rely on Cloudflare's Standard Contractual Clauses and other appropriate safeguards to ensure your data is protected in accordance with GDPR requirements.",
 				},
 				changesToPolicy: {
-					title: "11. Changes to This Policy",
+					title: "12. Changes to This Policy",
 					first:
 						'We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date.',
 					second:
 						"For significant changes, we will also send you an email notification if you have an account with us.",
 				},
 				contact: {
-					title: "12. Contact Us",
+					title: "13. Contact Us",
 					body: "If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:",
 					email: "privacy@sergiodxa.com",
 				},
@@ -1324,7 +1336,6 @@ export default {
 			subject: "[Uptime Alert] {{monitor}} is {{status}}",
 			preview: "{{monitor}} is {{status}}",
 			heading: "{{monitor}} is {{status}}",
-			field: "{{label}}: {{value}}",
 			action: "Open the dashboard",
 			incident:
 				"Notifications for this incident: {{sent}} sent, {{suppressed}} suppressed by cooldown and the {{cap}}-per-incident limit.",
@@ -1366,7 +1377,6 @@ export default {
 		},
 
 		trial: {
-			field: "{{label}}: {{value}}",
 			stopAction: "Stop these emails",
 			stop: "One click ends every URL you asked us to watch and deletes your address and its data. You can start again any time from our website.",
 
@@ -3478,8 +3488,8 @@ export default {
 					"That is not an address we will check on your behalf. It has to be a public http:// or https:// URL on port 80 or 443, carry no username or password, and resolve to somewhere on the open internet.",
 				failedChallenge:
 					"We could not confirm the request came from a browser. Reload the page and try again.",
-				rateLimited: "You have just run a check. Give it a minute and run another.",
-				rateLimitedFor: "You have just run a check. You can run another in {{seconds}} seconds.",
+				rateLimited: "You can run another check in a minute.",
+				rateLimitedFor: "You can run another check in {{seconds}} seconds.",
 				budgetExhausted:
 					"We have already run every free check we run in a day. That is about us, not about your URL — come back tomorrow, or start monitoring and we will check it every minute.",
 				unavailable:

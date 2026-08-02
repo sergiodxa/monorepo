@@ -1,8 +1,9 @@
 /**
  * Tests the `/privacy` controller: it renders the static Privacy Policy page inside
  * the shared document/marketing chrome for both anonymous and signed-in viewers, with
- * the `MarketingLayout` header CTA switching between the two, and emits its canonical
- * URL and meta description in `<head>`.
+ * the `MarketingLayout` header CTA switching between the two, carries the Cloudflare
+ * Turnstile disclosure and its link to Cloudflare's privacy addendum, and emits its
+ * canonical URL and meta description in `<head>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -97,6 +98,19 @@ describe("GET /privacy", () => {
 		);
 		expect(body).toContain(
 			'<meta name="description" content="Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service." />',
+		);
+	});
+
+	test("discloses Cloudflare Turnstile and links to its privacy addendum", async () => {
+		let response = await getPrivacy(null);
+
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain("<h2>9. Bot Protection</h2>");
+		expect(body).toContain("protected by Cloudflare Turnstile");
+		// The disclosure Cloudflare requires before the widget can run in invisible mode.
+		expect(body).toContain(
+			'<a href="https://www.cloudflare.com/en-gb/turnstile-privacy-policy/" target="_blank" rel="noreferrer">Turnstile Privacy Addendum</a>',
 		);
 	});
 

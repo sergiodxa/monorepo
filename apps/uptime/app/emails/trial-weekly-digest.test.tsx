@@ -53,7 +53,7 @@ describe("TrialWeeklyDigestEmail", () => {
 	test("reads as a report in the subject, not as an offer", async () => {
 		let email = await makeEmail();
 
-		expect(email.subject).toBe("Seven-day report: https://example.com");
+		expect(email.subject).toBe("Seven-day report: example.com");
 	});
 
 	test("reports the whole week's numbers", async () => {
@@ -61,10 +61,10 @@ describe("TrialWeeklyDigestEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("https://example.com over the last seven days");
-		expect(text).toContain("Checks run: 168");
-		expect(text).toContain("Uptime: 99.4%");
-		expect(text).toContain("Slowest response: 2100ms");
+		expect(text).toContain("example.com over the last seven days");
+		expect(text).toContain("Checks run 168");
+		expect(text).toContain("Uptime 99.4%");
+		expect(text).toContain("Slowest response 2100ms");
 		expect(text).toContain("7 days ago");
 		expect(text).toContain("Today");
 	});
@@ -94,8 +94,8 @@ describe("TrialWeeklyDigestEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Uptime: —");
-		expect(text).toContain("Slowest response: —");
+		expect(text).toContain("Uptime —");
+		expect(text).toContain("Slowest response —");
 	});
 
 	test("states that the free checks stop here", async () => {
@@ -103,7 +103,7 @@ describe("TrialWeeklyDigestEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("the free checks on https://example.com stop here");
+		expect(text).toContain("the free checks on example.com stop here");
 	});
 
 	test("offers the subscribe link with no persuasion copy around it", async () => {
@@ -142,6 +142,6 @@ describe("TrialWeeklyDigestEmail", () => {
 		let { locale, t } = await emailTranslator("it");
 		let email = await makeEmail({ locale, t });
 
-		expect(email.subject).toBe("Rapporto di sette giorni: https://example.com");
+		expect(email.subject).toBe("Rapporto di sette giorni: example.com");
 	});
 });

@@ -42,13 +42,13 @@ describe("TrialChangeEmail", () => {
 	test("puts the URL and its new state in the subject, and no timestamp", async () => {
 		let email = await makeEmail();
 
-		expect(email.subject).toBe("https://example.com is DOWN");
+		expect(email.subject).toBe("example.com is DOWN");
 	});
 
 	test("announces a recovery rather than an outage the other way round", async () => {
 		let email = await makeEmail({ status: "up", previousStatus: "down" });
 
-		expect(email.subject).toBe("https://example.com is UP");
+		expect(email.subject).toBe("example.com is UP");
 	});
 
 	test("reports what changed, what it was, and when", async () => {
@@ -56,12 +56,12 @@ describe("TrialChangeEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("URL: https://example.com");
-		expect(text).toContain("Status: DOWN");
-		expect(text).toContain("Previous status: UP");
-		expect(text).toContain("Response status: 503");
-		expect(text).toContain("Response time: 4200ms");
-		expect(text).toContain("Changed at: 2026-08-03T14:32:00.000Z");
+		expect(text).toContain("URL example.com (https://example.com)");
+		expect(text).toContain("Status DOWN");
+		expect(text).toContain("Previous status UP");
+		expect(text).toContain("Response status 503");
+		expect(text).toContain("Response time 4200ms");
+		expect(text).toContain("Changed at Aug 3, 2026 at 2:32 PM UTC");
 	});
 
 	test("reports an em dash for a URL that stopped answering entirely", async () => {
@@ -69,8 +69,8 @@ describe("TrialChangeEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Response status: —");
-		expect(text).toContain("Response time: —");
+		expect(text).toContain("Response status —");
+		expect(text).toContain("Response time —");
 	});
 
 	test("stays short: no uptime bar and no call to action", async () => {
@@ -80,7 +80,8 @@ describe("TrialChangeEmail", () => {
 
 		expect(html).not.toContain("table-layout:fixed");
 		expect(html).not.toContain("#107f04");
-		expect(html.split("<a ").length - 1).toBe(1);
+		// The URL row and the unsubscribe link, and nothing else — no call to action.
+		expect(html.split("<a ").length - 1).toBe(2);
 	});
 
 	test("carries the unsubscribe as a link and as one-click headers", async () => {
@@ -101,6 +102,6 @@ describe("TrialChangeEmail", () => {
 		let { locale, t } = await emailTranslator("fr");
 		let email = await makeEmail({ locale, t });
 
-		expect(email.subject).toBe("https://example.com est HORS LIGNE");
+		expect(email.subject).toBe("example.com est HORS LIGNE");
 	});
 });

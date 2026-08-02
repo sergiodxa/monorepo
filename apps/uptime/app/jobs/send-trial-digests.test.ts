@@ -231,8 +231,8 @@ describe("SendTrialDigestsJob", () => {
 
 		// Two checks inside the 24-hour window, one of them healthy; the third is older than
 		// the window and is neither counted nor drawn.
-		expect(transport.last?.text).toContain("Checks run: 2");
-		expect(transport.last?.text).toContain("Uptime: 50.0%");
-		expect(transport.last?.text).toContain("Slowest response: 100ms");
+		expect(transport.last?.text).toContain("Checks run 2");
+		expect(transport.last?.text).toContain("Uptime 50.0%");
+		expect(transport.last?.text).toContain("Slowest response 100ms");
 	});
 });

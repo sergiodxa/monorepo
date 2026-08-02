@@ -136,17 +136,19 @@
 		// A far tighter ceiling than RATE_LIMITER's, because the surface is different: the
 		// cron ping and the ad-hoc API are authenticated and billed, so a caller running
 		// them hard is a caller paying for it, while the public try-it page probes on
-		// behalf of a stranger for free. Five a minute is generous for a person trying the
-		// tool and hostile to a script. A separate binding rather than a second key prefix
+		// behalf of a stranger for free. A separate binding rather than a second key prefix
 		// because `limit`/`period` are properties of the binding, not of the key.
 		//
-		// One a minute: a person trying the tool runs a check, reads the result, and thinks
-		// — they do not need a second probe inside the same minute, and anything that does
-		// is not a person. The daily budget bounds the spend; this bounds the rate.
+		// Three a minute: a person trying the tool runs a check, reads the result, and
+		// thinks, so one probe a minute would be enough for the happy path — but the budget
+		// is spent before the challenge is verified, so a submission the challenge refuses
+		// burns an allowance with no check behind it. Three leaves room for those retries
+		// and is still hostile to a script. The daily budget bounds the spend; this bounds
+		// the rate.
 		{
 			"name": "TRIAL_RATE_LIMITER",
 			"namespace_id": "1002",
-			"simple": { "limit": 1, "period": 60 },
+			"simple": { "limit": 3, "period": 60 },
 		},
 	],
 }

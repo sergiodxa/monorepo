@@ -134,15 +134,14 @@ import { getViewer } from "~/app/http/middleware/auth";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { BASE_PRICE_USD } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
+import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { HttpCheck } from "~/app/services/http-check";
-import { guardTrialProbe, trialTurnstileSiteKey } from "~/app/services/trial-guard";
+import { guardTrialProbe } from "~/app/services/trial-guard";
+import Turnstile from "~/resources/components/turnstile";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
-
-/** Cloudflare's Turnstile loader. Fetched only when this deployment has a site key. */
-const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js";
 
 /**
  * Longest pre-fill accepted from `?url=`. The value is only ever echoed into an input, and
@@ -413,7 +412,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	let t = ctx.i18next.t;
 	let { probe, refusal, watching, leadError } = view;
 
-	let siteKey = trialTurnstileSiteKey();
 	let chrome = buildMarketingChrome(t);
 
 	let prefill = (view.prefill ?? "").slice(0, MAX_PREFILL_LENGTH);
@@ -557,14 +555,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 											required
 										/>
 
-										{siteKey === null ? null : (
-											<div
-												class="cf-turnstile"
-												data-sitekey={siteKey}
-												data-response-field-name={TURNSTILE_FIELD}
-												data-theme="auto"
-											/>
-										)}
+										<Turnstile siteKey={trialTurnstileSiteKey()} />
 
 										<Button type="submit" size="lg">
 											{t("page.trial.form.submit")}
@@ -817,8 +808,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 						</div>
 					</section>
 				)}
-
-				{siteKey === null ? null : <script src={TURNSTILE_SCRIPT} async defer />}
 			</MarketingLayout>
 		</DocumentLayout>,
 	);

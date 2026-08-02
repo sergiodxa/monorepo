@@ -12,15 +12,17 @@
  */
 
 import type { TFunction } from "@pkg/i18n";
-import type { Address } from "@pkg/mail";
+import type { Address, EmailTableRow } from "@pkg/mail";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@pkg/mail";
 
-import type { TrialField, TrialStatus } from "~/app/emails/shared/trial";
+import type { TrialStatus } from "~/app/emails/shared/trial";
 
 import {
 	TrialUnsubscribe,
+	trialDateTime,
+	trialDisplayUrl,
 	trialStatusKey,
 	trialUnsubscribeHeaders,
 } from "~/app/emails/shared/trial";
@@ -76,7 +78,9 @@ export class TrialConfirmationEmail implements Email {
 
 	/** Subject naming the URL, so the receipt is findable by what it is about. */
 	get subject(): string {
-		return this.#trial.t("emails.trial.confirmation.subject", { url: this.#trial.url });
+		return this.#trial.t("emails.trial.confirmation.subject", {
+			url: trialDisplayUrl(this.#trial.url),
+		});
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
@@ -85,28 +89,25 @@ export class TrialConfirmationEmail implements Email {
 	}
 
 	/**
-	 * Body tree: the headline, what happens next, the check that just ran as labelled
-	 * lines, and the two footer sentences that say why this arrived and how to end it.
+	 * Body tree: the headline, what happens next, the check that just ran as a table,
+	 * and the two footer sentences that say why this arrived and how to end it.
 	 */
 	body(): RemixElement {
 		let { t, locale, url, watchUntil, unsubscribeToken } = this.#trial;
-		let heading = t("emails.trial.confirmation.heading", { url });
+		let displayUrl = trialDisplayUrl(url);
+		let heading = t("emails.trial.confirmation.heading", { url: displayUrl });
 
 		return (
 			<Email.Layout
 				lang={locale}
 				title={heading}
-				preview={t("emails.trial.confirmation.preview", { url })}
+				preview={t("emails.trial.confirmation.preview", { url: displayUrl })}
 			>
 				<Email.Heading>{heading}</Email.Heading>
 				<Email.Text>
-					{t("emails.trial.confirmation.body", { until: watchUntil.toISOString() })}
+					{t("emails.trial.confirmation.body", { until: trialDateTime(watchUntil, locale) })}
 				</Email.Text>
-				{this.#fields().map((field) => (
-					<Email.Text key={field.label}>
-						{t("emails.trial.field", { label: field.label, value: field.value })}
-					</Email.Text>
-				))}
+				<Email.Table rows={this.#rows()} />
 				<Email.Footer>
 					{t("emails.trial.confirmation.footer")}{" "}
 					<TrialUnsubscribe token={unsubscribeToken} t={t} />
@@ -116,12 +117,19 @@ export class TrialConfirmationEmail implements Email {
 	}
 
 	/** The probe as the reader sees it: what was checked, what came back, and when. */
-	#fields(): TrialField[] {
-		let { t, url, status, responseStatus, responseTimeMs, checkedAt } = this.#trial;
+	#rows(): EmailTableRow[] {
+		let { t, locale, url, status, responseStatus, responseTimeMs, checkedAt } = this.#trial;
 		let none = t("emails.trial.values.none");
 
 		return [
-			{ label: t("emails.trial.fields.url"), value: url },
+			{
+				label: t("emails.trial.fields.url"),
+				value: (
+					<a href={url} style="color:inherit;text-decoration:none;">
+						{trialDisplayUrl(url)}
+					</a>
+				),
+			},
 			{ label: t("emails.trial.fields.status"), value: t(trialStatusKey(status)) },
 			{
 				label: t("emails.trial.fields.responseStatus"),
@@ -134,7 +142,7 @@ export class TrialConfirmationEmail implements Email {
 						? none
 						: t("emails.trial.values.milliseconds", { value: responseTimeMs }),
 			},
-			{ label: t("emails.trial.fields.checkedAt"), value: checkedAt.toISOString() },
+			{ label: t("emails.trial.fields.checkedAt"), value: trialDateTime(checkedAt, locale) },
 		];
 	}
 }

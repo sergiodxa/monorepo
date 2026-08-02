@@ -75,12 +75,12 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Monitor: Homepage (http)");
-		expect(text).toContain("Status: DOWN");
-		expect(text).toContain("URL: https://example.com");
-		expect(text).toContain("Response status: 500 (expected 200)");
-		expect(text).toContain("Response time: 1200ms");
-		expect(text).toContain("Time: 2026-08-01T10:00:00.000Z");
+		expect(text).toContain("Monitor Homepage (http)");
+		expect(text).toContain("Status DOWN");
+		expect(text).toContain("URL https://example.com");
+		expect(text).toContain("Response status 500 (expected 200)");
+		expect(text).toContain("Response time 1200ms");
+		expect(text).toContain("Time Aug 1, 2026 at 10:00 AM UTC");
 		expect(text).toContain("https://uptime.test/app/team-1/monitors/monitor-1");
 	});
 
@@ -117,8 +117,8 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Domain: example.com (A)");
-		expect(text).toContain("Resolved value: 203.0.113.4");
+		expect(text).toContain("Domain example.com (A)");
+		expect(text).toContain("Resolved value 203.0.113.4");
 	});
 
 	test("reports a TCP check's own detail, with an em dash for a missing response time", async () => {
@@ -135,8 +135,8 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Endpoint: db.example.com:5432");
-		expect(text).toContain("Response time: —");
+		expect(text).toContain("Endpoint db.example.com:5432");
+		expect(text).toContain("Response time —");
 	});
 
 	test("reports a cron job's own detail, saying 'never' for a monitor that never pinged", async () => {
@@ -154,8 +154,27 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Schedule: */5 * * * * (UTC)");
-		expect(text).toContain("Last ping: never");
+		expect(text).toContain("Schedule */5 * * * * (UTC)");
+		expect(text).toContain("Last ping never");
+	});
+
+	test("reports a cron job's own timestamps in the reader's language, labelled UTC", async () => {
+		let email = await makeEmail({
+			monitorType: "cron",
+			snapshot: {
+				type: "cron",
+				status: "missed",
+				lastPingAt: "2026-08-01T09:45:00.000Z",
+				nextExpectedAt: "2026-08-01T09:50:00.000Z",
+				cronExpression: "*/5 * * * *",
+				timezone: "UTC",
+			},
+		});
+
+		let { text } = await render(email.body());
+
+		expect(text).toContain("Last ping Aug 1, 2026 at 9:45 AM UTC");
+		expect(text).toContain("Next expected Aug 1, 2026 at 9:50 AM UTC");
 	});
 
 	test("reports a certificate's own detail", async () => {
@@ -173,8 +192,8 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Hostname: example.com");
-		expect(text).toContain("Expires at: 2026-08-20T00:00:00.000Z");
+		expect(text).toContain("Hostname example.com");
+		expect(text).toContain("Expires at Aug 20, 2026 at 12:00 AM UTC");
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {

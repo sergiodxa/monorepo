@@ -1,7 +1,7 @@
 /**
  * Pieces the four free-watch emails share: the status vocabulary they report, the
- * unsubscribe header every one of them carries, the labelled field line they all use,
- * and the bar-plus-totals report the two digests are built around.
+ * unsubscribe header every one of them carries, the way they abbreviate a URL and
+ * render an instant, and the bar-plus-totals report the two digests are built around.
  *
  * These readers never created an account, so there is no stored preference to look up
  * and no settings page to send them to. Everything here is written for that: the copy
@@ -23,8 +23,10 @@
  */
 
 import type { TFunction } from "@pkg/i18n";
+import type { EmailTableRow } from "@pkg/mail";
 import type { Handle } from "remix/ui";
 
+import { formatDateTime } from "@pkg/dates";
 import { Email } from "@pkg/mail";
 
 import { UptimeBar } from "~/app/emails/shared/uptime-bar";
@@ -127,12 +129,38 @@ export function trialStatusKey(status: TrialStatus): string {
 	return "emails.trial.status.down";
 }
 
-/** One `label: value` line, both sides already translated. */
-export interface TrialField {
-	/** Translated name of what the line reports. */
-	label: string;
-	/** The value as the reader sees it. */
-	value: string;
+/**
+ * The URL as a heading should say it: without the scheme, and without the trailing
+ * slash a bare origin picks up on its way through `URL`.
+ *
+ * A heading is the one place the full URL hurts. Mail clients auto-link anything that
+ * looks like an address, so `https://api.remix.run/` inside a sentence comes out as a
+ * wall of underlined blue at heading size, and the half of it carrying no information
+ * is the half that draws the eye. The unabbreviated URL still appears in the message,
+ * once, in the table, where it is the value of a row that says it is a URL.
+ *
+ * @param url - The watched URL, absolute.
+ * @returns The same URL with the scheme and any trailing slash removed.
+ */
+export function trialDisplayUrl(url: string): string {
+	return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+/**
+ * An instant as one of these emails reports it: in the reader's language, and in UTC.
+ *
+ * UTC because a lead is an email address and nothing else — they never created an
+ * account, so there is no stored timezone to render this in and no settings page that
+ * would let them pick one. Naming the zone is what keeps the timestamp honest, since a
+ * reader four hours off would otherwise read it as local and think the check ran at a
+ * time it did not.
+ *
+ * @param date - Instant to render.
+ * @param locale - Language the surrounding copy is in.
+ * @returns The formatted date and time, with the zone spelled out.
+ */
+export function trialDateTime(date: Date, locale: string): string {
+	return `${formatDateTime(date, { locale, timeZone: "UTC" })} UTC`;
 }
 
 /** The numbers a digest reports under a bar. */
@@ -187,7 +215,7 @@ export function TrialReport(handle: Handle<TrialReport.Props>) {
 			},
 		};
 
-		let fields: TrialField[] = [
+		let rows: EmailTableRow[] = [
 			{ label: t("emails.trial.fields.checks"), value: String(stats.checks) },
 			{
 				label: t("emails.trial.fields.uptime"),
@@ -208,11 +236,7 @@ export function TrialReport(handle: Handle<TrialReport.Props>) {
 		return (
 			<>
 				<UptimeBar segments={segments} labels={labels} />
-				{fields.map((field) => (
-					<Email.Text key={field.label}>
-						{t("emails.trial.field", { label: field.label, value: field.value })}
-					</Email.Text>
-				))}
+				<Email.Table rows={rows} />
 			</>
 		);
 	};

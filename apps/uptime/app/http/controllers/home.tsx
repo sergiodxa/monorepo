@@ -11,10 +11,11 @@
  * expressed server-side. Everything else here is static server-rendered HTML,
  * including the FAQ (native `<details>`).
  *
- * The hero's try-it box is the one form on the page, and it submits with `GET`. Arriving
- * at `/try?url=…` only pre-fills the field over there, so a link preview, a crawler, or a
- * URL somebody shared can never spend one of the free probes — running a check is always
- * a `POST`, made from `/try` itself. The box carries no call to action, no benefits copy
+ * The hero's try-it box is the one form on the page, and it `POST`s straight to the run
+ * action on `/try`, so the check runs on the first click and its answer comes back in
+ * that same response. Running a check is only ever a `POST`, which is what keeps a link
+ * preview, a crawler, or a URL somebody shared from spending one of the free probes:
+ * none of them issue one. The box carries no call to action, no benefits copy
  * and no email capture either: `/try` is the page that sells, and every control added
  * beside this field is one more thing between a visitor and their answer.
  *
@@ -83,7 +84,7 @@ import {
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
+import { TRIAL_URL_FIELD } from "~/app/http/validators/trial";
 import {
 	BASE_PRICE_USD,
 	INCLUDED_PINGS,
@@ -99,6 +100,7 @@ import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
+import Turnstile from "~/resources/components/turnstile";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -187,12 +189,6 @@ interface TrustIndicator {
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
-	/**
-	 * The landing form posts straight to the run action, so it has to carry the same
-	 * challenge `/try`'s own form does — otherwise the one-click path would be the one way
-	 * into the prober that skips it.
-	 */
-	let siteKey = trialTurnstileSiteKey();
 	let chrome = buildMarketingChrome(ctx.i18next.t);
 	let t = ctx.i18next.t;
 
@@ -589,14 +585,10 @@ export default createAction(routes.home, async (ctx) => {
 								required
 								mix={[grow(1), is("full"), textAlign("start")]}
 							/>
-							{siteKey === null ? null : (
-								<div
-									class="cf-turnstile"
-									data-sitekey={siteKey}
-									data-response-field-name={TURNSTILE_FIELD}
-									data-theme="auto"
-								/>
-							)}
+							{/* This form posts straight to the run action, so it has to carry the same
+							    challenge `/try`'s own form does — otherwise the one-click path would be
+							    the one way into the prober that skips it. */}
+							<Turnstile siteKey={trialTurnstileSiteKey()} />
 							{/* Pinned to `Input`'s own fixed 40px rather than left to padding, which is
 							    what sizes a Button and what left the two a few pixels apart. */}
 							<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>

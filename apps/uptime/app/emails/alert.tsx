@@ -9,9 +9,10 @@
  */
 
 import type { TFunction } from "@pkg/i18n";
-import type { Address } from "@pkg/mail";
+import type { Address, EmailTableRow } from "@pkg/mail";
 import type { RemixElement } from "remix/ui";
 
+import { formatDateTime } from "@pkg/dates";
 import { Email } from "@pkg/mail";
 
 import type { AlertEventSnapshot, SelectAlertEvent } from "~/database/schema";
@@ -28,12 +29,35 @@ function statusKey(eventType: SelectAlertEvent["event_type"]): string {
 	return "emails.alert.status.down";
 }
 
-/** One `label: value` line of the transition report, both sides already translated. */
-interface AlertField {
-	/** Translated name of what the line reports. */
-	label: string;
-	/** The value as the reader sees it, formatted for their language where it matters. */
-	value: string;
+/** One row of the transition report, both sides already translated. */
+type AlertField = EmailTableRow;
+
+/**
+ * One of the email's instants, in the reader's language and in UTC.
+ *
+ * The zone is spelled out rather than guessed at: this address is a notification
+ * target on a team, not necessarily a member with a profile, so there is no timezone
+ * to render it in — and an unlabelled timestamp is one a reader will assume is local.
+ *
+ * @param date - Instant to report.
+ * @param locale - Language the surrounding copy is in.
+ * @returns The formatted date and time, with the zone spelled out.
+ */
+function alertDateTime(date: Date, locale: string): string {
+	return `${formatDateTime(date, { locale, timeZone: "UTC" })} UTC`;
+}
+
+/**
+ * The same, for the instants a snapshot carries as ISO strings rather than as dates,
+ * falling back to the caller's word for an instant that was never recorded.
+ *
+ * @param iso - Instant as the snapshot stored it, or `null` when there isn't one.
+ * @param locale - Language the surrounding copy is in.
+ * @param fallback - Already-translated text to report in place of a missing instant.
+ * @returns The formatted date and time, or the fallback.
+ */
+function snapshotDateTime(iso: string | null, locale: string, fallback: string): string {
+	return iso === null ? fallback : alertDateTime(new Date(iso), locale);
 }
 
 export namespace AlertEmail {
@@ -113,8 +137,8 @@ export class AlertEmail implements Email {
 	}
 
 	/**
-	 * Body tree the mailer renders into both parts: the headline, one line per
-	 * reported field, a link to the monitor, and the incident totals when there are any.
+	 * Body tree the mailer renders into both parts: the headline, the reported fields
+	 * as a table, a link to the monitor, and the incident totals when there are any.
 	 */
 	body(): RemixElement {
 		let { t, locale, monitorName, dashboardUrl, incident } = this.#alert;
@@ -127,11 +151,7 @@ export class AlertEmail implements Email {
 				preview={t("emails.alert.preview", { monitor: monitorName, status: this.#status() })}
 			>
 				<Email.Heading>{headline}</Email.Heading>
-				{this.#fields().map((field) => (
-					<Email.Text key={field.label}>
-						{t("emails.alert.field", { label: field.label, value: field.value })}
-					</Email.Text>
-				))}
+				<Email.Table rows={this.#fields()} />
 				<Email.Button href={dashboardUrl}>{t("emails.alert.action")}</Email.Button>
 				{incident ? (
 					<Email.Text muted>
@@ -154,7 +174,7 @@ export class AlertEmail implements Email {
 
 	/** Every reported line: what changed, then the check's own detail, then when. */
 	#fields(): AlertField[] {
-		let { t, monitorName, monitorType, occurredAt } = this.#alert;
+		let { t, locale, monitorName, monitorType, occurredAt } = this.#alert;
 
 		return [
 			{
@@ -163,7 +183,7 @@ export class AlertEmail implements Email {
 			},
 			{ label: t("emails.alert.fields.status"), value: this.#status() },
 			...this.#snapshotFields(),
-			{ label: t("emails.alert.fields.time"), value: occurredAt.toISOString() },
+			{ label: t("emails.alert.fields.time"), value: alertDateTime(occurredAt, locale) },
 		];
 	}
 
@@ -173,7 +193,7 @@ export class AlertEmail implements Email {
 	 * email that quietly reports nothing about it.
 	 */
 	#snapshotFields(): AlertField[] {
-		let { t, snapshot } = this.#alert;
+		let { t, locale, snapshot } = this.#alert;
 		let none = t("emails.alert.values.none");
 
 		switch (snapshot.type) {
@@ -237,16 +257,22 @@ export class AlertEmail implements Email {
 					{ label: t("emails.alert.fields.status"), value: snapshot.status },
 					{
 						label: t("emails.alert.fields.lastPing"),
-						value: snapshot.lastPingAt ?? t("emails.alert.values.never"),
+						value: snapshotDateTime(snapshot.lastPingAt, locale, t("emails.alert.values.never")),
 					},
-					{ label: t("emails.alert.fields.nextExpected"), value: snapshot.nextExpectedAt ?? none },
+					{
+						label: t("emails.alert.fields.nextExpected"),
+						value: snapshotDateTime(snapshot.nextExpectedAt, locale, none),
+					},
 				];
 
 			case "ssl":
 				return [
 					{ label: t("emails.alert.fields.hostname"), value: snapshot.hostname },
 					{ label: t("emails.alert.fields.status"), value: snapshot.status },
-					{ label: t("emails.alert.fields.expiresAt"), value: snapshot.expiresAt ?? none },
+					{
+						label: t("emails.alert.fields.expiresAt"),
+						value: snapshotDateTime(snapshot.expiresAt, locale, none),
+					},
 				];
 		}
 	}

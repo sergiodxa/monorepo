@@ -497,10 +497,10 @@ describe("guardTrialProbe", () => {
 		await guardTrialProbe(submission("example.com"));
 
 		/**
-		 * The binding counts one request per call and its ceiling is one per minute, so a
-		 * second call here would not halve the effective limit — it would take it to zero and
-		 * refuse every visitor. Cheap to assert, and the failure it catches looks like the
-		 * feature being broken rather than like a limit being wrong.
+		 * The binding counts one request per call and its ceiling is three per minute, so a
+		 * second call here would silently cut a visitor's allowance from three probes to one.
+		 * Cheap to assert, and the failure it catches looks like the feature being broken
+		 * rather than like a limit being wrong.
 		 */
 		expect(rateLimitMock).toHaveBeenCalledTimes(1);
 	});

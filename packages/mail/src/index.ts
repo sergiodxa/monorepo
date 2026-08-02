@@ -16,6 +16,13 @@ export type { Address, Message, NormalizedMessage, SentMessage, Transport } from
 export type { MailerOptions, SendOptions } from "./mailer";
 export type { RenderedEmail } from "./render";
 
+/**
+ * One row of an `Email.Table`. Exported under its own name because `Email` is a type
+ * alias in type space and a namespace object in value space, so `Email.Table.Row` only
+ * resolves in the second of those and an author writing the rows out needs the first.
+ */
+export type EmailTableRow = EmailComponents.Table.Row;
+
 export { MailError } from "./errors";
 export { formatAddress, toAddressList } from "./lib/address";
 export { htmlToText } from "./lib/html-to-text";

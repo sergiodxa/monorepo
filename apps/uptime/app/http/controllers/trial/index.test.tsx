@@ -451,7 +451,7 @@ describe("POST /try refusals", () => {
 	let cases: Array<{ code: TrialRefusalCode; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
 		{ code: "failed-challenge", contains: "could not confirm the request came from a browser" },
-		{ code: "rate-limited", contains: "just run a check" },
+		{ code: "rate-limited", contains: "run another check" },
 		{ code: "budget-exhausted", contains: "every free check we run in a day" },
 		{ code: "unavailable", contains: "prober did not answer" },
 	];
@@ -459,7 +459,7 @@ describe("POST /try refusals", () => {
 	let guardReasons: Array<{ code: TrialRefusalReason; contains: string }> = [
 		{ code: "blocked-target", contains: "not an address we will check on your behalf" },
 		{ code: "failed-challenge", contains: "could not confirm the request came from a browser" },
-		{ code: "rate-limited", contains: "just run a check" },
+		{ code: "rate-limited", contains: "run another check" },
 		{ code: "budget-exhausted", contains: "every free check we run in a day" },
 	];
 
@@ -499,7 +499,7 @@ describe("POST /try refusals", () => {
 
 		let { body } = await runTry({ url: "example.com" });
 
-		expect(body).toContain("Give it a minute");
+		expect(body).toContain("in a minute");
 		expect(body).not.toContain("seconds.");
 	});
 

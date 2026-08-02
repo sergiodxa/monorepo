@@ -42,6 +42,15 @@ const fontFaceCss = `
 
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
+/**
+ * The Cloudflare Web Analytics site token. Public by construction — the beacon reads it
+ * out of the rendered attribute, so it ships to every browser that loads a page — which
+ * is why it is a constant here rather than a binding. Kept verbatim: it is what
+ * identifies this property in the Cloudflare dashboard, so a changed token silently
+ * starts a fresh, empty analytics history instead of failing.
+ */
+const CF_BEACON_TOKEN = "2e915da0d572432eb502c32794ac1da6";
+
 namespace DocumentLayout {
 	/**
 	 * One `<link rel="preload">` a page asks for on top of the document's own
@@ -125,6 +134,16 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					non-blocking Frame's later-arriving <template> would never get picked up
 					until the slowest Frame on the page had already resolved. */}
 					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+					{/* Cloudflare's own analytics beacon — no cookies, and nothing added to the
+					first-party bundle. Last thing in the body, where Cloudflare's snippet goes, so
+					it never competes with the page's own content for the connection. The
+					`data-cf-beacon` name and its JSON shape are the beacon's, read verbatim off
+					this attribute, so neither is ours to tidy up. */}
+					<script
+						type="module"
+						src="https://static.cloudflareinsights.com/beacon.min.js"
+						data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}
+					></script>
 				</body>
 			</html>
 		);

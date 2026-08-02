@@ -33,7 +33,12 @@ import { Email } from "@pkg/mail";
 import type { TrialStats } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
-import { TrialReport, TrialUnsubscribe, trialUnsubscribeHeaders } from "~/app/emails/shared/trial";
+import {
+	TrialReport,
+	TrialUnsubscribe,
+	trialDisplayUrl,
+	trialUnsubscribeHeaders,
+} from "~/app/emails/shared/trial";
 
 export namespace TrialWeeklyDigestEmail {
 	/** One URL's completed week, and the link that keeps it being watched. */
@@ -82,7 +87,9 @@ export class TrialWeeklyDigestEmail implements Email {
 
 	/** Subject naming the URL and the window, so it reads as a report rather than an offer. */
 	get subject(): string {
-		return this.#digest.t("emails.trial.weekly.subject", { url: this.#digest.url });
+		return this.#digest.t("emails.trial.weekly.subject", {
+			url: trialDisplayUrl(this.#digest.url),
+		});
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
@@ -96,13 +103,13 @@ export class TrialWeeklyDigestEmail implements Email {
 	 */
 	body(): RemixElement {
 		let { t, locale, url, segments, stats, subscribeUrl, unsubscribeToken } = this.#digest;
-		let heading = t("emails.trial.weekly.heading", { url });
+		let heading = t("emails.trial.weekly.heading", { url: trialDisplayUrl(url) });
 
 		return (
 			<Email.Layout
 				lang={locale}
 				title={heading}
-				preview={t("emails.trial.weekly.preview", { url })}
+				preview={t("emails.trial.weekly.preview", { url: trialDisplayUrl(url) })}
 			>
 				<Email.Heading>{heading}</Email.Heading>
 				<TrialReport
@@ -112,7 +119,7 @@ export class TrialWeeklyDigestEmail implements Email {
 					rangeEnd={t("emails.trial.weekly.rangeEnd")}
 					t={t}
 				/>
-				<Email.Text>{t("emails.trial.weekly.closing", { url })}</Email.Text>
+				<Email.Text>{t("emails.trial.weekly.closing", { url: trialDisplayUrl(url) })}</Email.Text>
 				<Email.Button href={subscribeUrl}>{t("emails.trial.weekly.action")}</Email.Button>
 				<Email.Footer>
 					{t("emails.trial.weekly.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />

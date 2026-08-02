@@ -280,6 +280,80 @@ export function Button(handle: Handle<Button.Props>) {
 	};
 }
 
+export namespace Table {
+	/** One row: what is being reported, and what it says. */
+	export interface Row {
+		/** Name of the thing reported, rendered in the de-emphasized color. */
+		label: string;
+		/** The value as the reader sees it, already formatted and translated. */
+		value: RemixNode;
+	}
+
+	/** Props accepted by {@link Table}. */
+	export interface Props {
+		/** Rows in reading order. Rendering nothing for an empty list is deliberate. */
+		rows: Row[];
+		/** Color of the hairlines between rows. */
+		borderColor?: string;
+	}
+}
+
+/**
+ * A set of facts as a two-column table: label on the left, value hard against the
+ * right, hairlines between the rows.
+ *
+ * It exists because the alternative every email reaches for first — one paragraph per
+ * fact reading `Label: value` — gives a reader no column to run their eye down, and
+ * turns five short facts into five full-width lines of prose. A table is also the one
+ * layout primitive mail clients agree on, so the alignment survives where a flex row
+ * or a definition list would not.
+ *
+ * Values are nodes rather than strings so a row can hold a link without this component
+ * knowing which rows are links.
+ *
+ * @example <Email.Table rows={[{ label: "Status", value: "Up" }]} />
+ */
+export function Table(handle: Handle<Table.Props>) {
+	return () => {
+		let { rows, borderColor = BORDER_COLOR } = handle.props;
+		if (rows.length === 0) return null;
+
+		return (
+			<table
+				role="presentation"
+				width="100%"
+				cellPadding="0"
+				cellSpacing="0"
+				style="width:100%;margin:0 0 16px;border-collapse:collapse;"
+			>
+				<tbody>
+					{rows.map((row, index) => {
+						// Hairlines go between rows, so the first one does without a top border and
+						// the block sits flush against whatever precedes it.
+						let border = index === 0 ? "none" : `1px solid ${borderColor}`;
+
+						return (
+							<tr key={row.label}>
+								<td
+									style={`padding:10px 12px 10px 0;border-top:${border};font-family:inherit;font-size:14px;line-height:1.4;color:${MUTED_COLOR};white-space:nowrap;vertical-align:top;`}
+								>
+									{row.label}
+								</td>
+								<td
+									align="right"
+									style={`padding:10px 0;border-top:${border};font-family:inherit;font-size:14px;line-height:1.4;font-weight:600;color:${TEXT_COLOR};text-align:right;word-break:break-word;vertical-align:top;`}
+								>
+									{row.value}
+								</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		);
+	};
+}
+
 export namespace Footer {
 	/** Props accepted by {@link Footer}. */
 	export interface Props {

@@ -67,7 +67,7 @@ describe("TrialDailyDigestEmail", () => {
 		test("names the URL in the subject rather than counting it", async () => {
 			let email = await makeEmail();
 
-			expect(email.subject).toBe("Daily report: https://example.com");
+			expect(email.subject).toBe("Daily report: example.com");
 		});
 
 		test("reads as one report: no roll-up line and no per-URL heading", async () => {
@@ -75,7 +75,7 @@ describe("TrialDailyDigestEmail", () => {
 
 			let { text } = await render(email.body());
 
-			expect(text).toContain("https://example.com over the last 24 hours");
+			expect(text).toContain("example.com over the last 24 hours");
 			expect(text).not.toContain("were up at the last check");
 			expect(text).not.toContain("—  UP");
 		});
@@ -85,9 +85,9 @@ describe("TrialDailyDigestEmail", () => {
 
 			let { text } = await render(email.body());
 
-			expect(text).toContain("Checks run: 24");
-			expect(text).toContain("Uptime: 100%");
-			expect(text).toContain("Slowest response: 310ms");
+			expect(text).toContain("Checks run 24");
+			expect(text).toContain("Uptime 100%");
+			expect(text).toContain("Slowest response 310ms");
 			expect(text).toContain("24 hours ago");
 		});
 
@@ -111,9 +111,9 @@ describe("TrialDailyDigestEmail", () => {
 
 			let { text } = await render(email.body());
 
-			expect(text).toContain("Checks run: 0");
-			expect(text).toContain("Uptime: —");
-			expect(text).toContain("Slowest response: —");
+			expect(text).toContain("Checks run 0");
+			expect(text).toContain("Uptime —");
+			expect(text).toContain("Slowest response —");
 		});
 	});
 
@@ -162,8 +162,8 @@ describe("TrialDailyDigestEmail", () => {
 
 			let { text } = await render(email.body());
 
-			expect(text).toContain("https://a.example — UP");
-			expect(text).toContain("https://b.example — DEGRADED");
+			expect(text).toContain("a.example — UP");
+			expect(text).toContain("b.example — DEGRADED");
 		});
 
 		test("gives every URL its own bar", async () => {
@@ -210,6 +210,6 @@ describe("TrialDailyDigestEmail", () => {
 		let { locale, t } = await emailTranslator("de");
 		let email = await makeEmail({ locale, t });
 
-		expect(email.subject).toBe("Täglicher Bericht: https://example.com");
+		expect(email.subject).toBe("Täglicher Bericht: example.com");
 	});
 });

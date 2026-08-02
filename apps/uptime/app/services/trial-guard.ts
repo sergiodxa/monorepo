@@ -68,17 +68,19 @@ const BUDGET_TTL_SECONDS = 172_800;
  * neither number back, so the two are kept in step by hand and drift shows up only in what
  * a caller is told about its own budget).
  *
- * One, against the sixty the authenticated endpoints get, because the surface is
+ * Three, against the sixty the authenticated endpoints get, because the surface is
  * different: a caller running a billed API hard is a caller paying for it, while this
- * probes on behalf of a stranger for free. One is not a compromise between the two — it is
- * the shape of the interaction. Somebody trying the tool runs a check, reads the result and
- * thinks about it; they have no use for a second probe inside the same minute, and whatever
- * does want one is not a person.
+ * probes on behalf of a stranger for free. Somebody trying the tool runs a check, reads the
+ * result and thinks about it, so one probe a minute would cover the happy path — but this
+ * budget is spent before {@link verifyChallenge} runs, so a submission the challenge
+ * refuses, which is what an impatient visitor submitting ahead of the widget gets, spends
+ * an allowance with no check behind it. Three is room for those retries, and still nothing
+ * a script can work with.
  *
  * It is still only a shaping limit. Addresses are free, so the honest cost fence is
  * {@link TRIAL_DAILY_BUDGET}, which this cannot substitute for.
  */
-const CALLER_LIMIT = 1;
+const CALLER_LIMIT = 3;
 
 /** Length of the caller budget's window; matches the binding's `simple.period` of 60. */
 const CALLER_WINDOW = "1 minute";

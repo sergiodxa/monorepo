@@ -1,7 +1,8 @@
 /**
  * Privacy Policy controller. Renders the static GDPR-oriented prose — covering data
- * collected, usage, sharing, retention, rights, security, and cookies — inside the
- * shared `MarketingLayout` chrome. Every section's copy comes from
+ * collected, usage, sharing, retention, rights, security, cookies, and the Turnstile
+ * bot protection on the public URL checker — inside the shared `MarketingLayout`
+ * chrome. Every section's copy comes from
  * `legal.privacy.sections.*` in the locale files; the sibling `apps/uptime` app only
  * ever translated this page's SEO `meta.title`/`meta.description` (never its body
  * prose), so these `sections.*` keys are new and — like every other freshly added
@@ -23,6 +24,13 @@ import { SEO } from "~/app/lib/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
+
+/**
+ * Cloudflare's own addendum covering what Turnstile collects. Cloudflare requires the
+ * bot-protection section below to reference it, and the same document serves every
+ * locale, so the URL is a constant rather than a translatable string.
+ */
+const TURNSTILE_PRIVACY_ADDENDUM = "https://www.cloudflare.com/en-gb/turnstile-privacy-policy/";
 
 /** GET /privacy — the Privacy Policy page. */
 export default createAction(routes.legal.privacy, async (ctx) => {
@@ -229,6 +237,18 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 						</li>
 					</ul>
 					<p>{ctx.i18next.t("legal.privacy.sections.cookies.outro")}</p>
+
+					<h2>{ctx.i18next.t("legal.privacy.sections.turnstile.title")}</h2>
+					<p>{ctx.i18next.t("legal.privacy.sections.turnstile.first")}</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.turnstile.second")}</p>
+					<p>{ctx.i18next.t("legal.privacy.sections.turnstile.third")}</p>
+					<p>
+						{ctx.i18next.t("legal.privacy.sections.turnstile.referencePrefix")}
+						<a href={TURNSTILE_PRIVACY_ADDENDUM} target="_blank" rel="noreferrer">
+							{ctx.i18next.t("legal.privacy.sections.turnstile.referenceLinkText")}
+						</a>
+						{ctx.i18next.t("legal.privacy.sections.turnstile.referenceSuffix")}
+					</p>
 
 					<h2>{ctx.i18next.t("legal.privacy.sections.childrensPrivacy.title")}</h2>
 					<p>{ctx.i18next.t("legal.privacy.sections.childrensPrivacy.body")}</p>

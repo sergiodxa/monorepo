@@ -483,6 +483,295 @@ export default {
 		},
 	},
 
+	legal: {
+		terms: {
+			meta: {
+				title: "Nutzungsbedingungen | Uptime",
+				description:
+					"Nutzungsbedingungen für Uptime, den Uptime-Monitoring-Dienst von Sergio Xalambrí.",
+			},
+
+			lastUpdated: "Zuletzt aktualisiert: 11. Februar 2026",
+			title: "Nutzungsbedingungen",
+
+			sections: {
+				introduction: {
+					title: "1. Einleitung",
+					body: "Willkommen bei Uptime. Diese Nutzungsbedingungen regeln Ihre Nutzung unseres Uptime-Monitoring-Dienstes, betrieben von Sergio Xalambrí. Mit dem Zugriff auf Uptime oder der Nutzung von Uptime erklären Sie sich mit diesen Bedingungen einverstanden.",
+				},
+				serviceDescription: {
+					title: "2. Leistungsbeschreibung",
+					body: "Uptime überwacht die Verfügbarkeit Ihrer Dienste und Ihrer geplanten Aufgaben: HTTP-Endpunkte, DNS, TCP-Ports, SSL-Zertifikate und Cronjobs. So behalten Sie den Zustand Ihrer Dienste und geplanten Aufgaben im Blick. Wir prüfen Ihre Endpunkte aus mehreren Regionen weltweit und benachrichtigen Sie, sobald Probleme erkannt werden.",
+				},
+				accountTerms: {
+					title: "3. Kontobedingungen",
+					first:
+						"Sie müssen bei der Erstellung eines Kontos zutreffende und vollständige Angaben machen.",
+					second:
+						"Sie sind für die Sicherheit Ihrer Zugangsdaten und für alle Aktivitäten verantwortlich, die über Ihr Konto stattfinden.",
+					third:
+						"Sie müssen mindestens 18 Jahre alt oder befugt sein, diese Vereinbarung im Namen einer Organisation rechtsverbindlich abzuschließen.",
+					fourth: "Sie müssen uns unverzüglich informieren, wenn Ihr Konto unbefugt genutzt wird.",
+				},
+				acceptableUse: {
+					title: "4. Zulässige Nutzung",
+					intro: "Bei der Nutzung von Uptime verpflichten Sie sich, Folgendes zu unterlassen:",
+					first:
+						"Unseren Dienst missbrauchen, überlasten oder stören oder versuchen, Nutzungsgrenzen zu umgehen.",
+					second:
+						"URLs oder Endpunkte überwachen, die Ihnen nicht gehören oder für die Sie keine Berechtigung haben.",
+					third:
+						"Cronjobs oder geplante Aufgaben überwachen, die Ihnen nicht gehören oder für die Sie keine Berechtigung haben.",
+					fourth:
+						"Cronjob-Ping-Endpunkte für andere Zwecke als die legitime Überwachung geplanter Aufgaben verwenden.",
+					fifth: "Den Dienst für rechtswidrige oder unbefugte Zwecke nutzen.",
+					sixth:
+						"Versuchen, unbefugt auf unsere Systeme oder die Konten anderer Nutzer zuzugreifen.",
+					seventh:
+						"Den Dienst ohne unsere schriftliche Zustimmung weiterverkaufen oder weitergeben.",
+				},
+				paymentTerms: {
+					title: "5. Zahlungsbedingungen",
+					first:
+						"Uptime rechnet nutzungsabhängig ab. Sie zahlen entsprechend der Anzahl Ihrer Monitore und der von Ihnen eingestellten Prüfhäufigkeit.",
+					second: "Abonnements werden über Polar verwaltet und abgewickelt.",
+					third:
+						"Wenn Sie kündigen, erstatten wir den nicht genutzten Teil Ihres Abonnements anteilig.",
+					fourth:
+						"Wir behalten uns vor, die Preise mit einer Frist von 30 Tagen zu ändern. Die weitere Nutzung nach einer Preisänderung gilt als Zustimmung.",
+				},
+				dataAndPrivacy: {
+					title: "6. Daten und Datenschutz",
+					firstPrefix: "Für Ihre Nutzung von Uptime gilt außerdem unsere ",
+					firstLinkText: "Datenschutzerklärung",
+					firstSuffix: ", die beschreibt, wie wir Ihre Daten erheben, verwenden und schützen.",
+					second:
+						"Monitoring-Daten werden 365 Tage lang aufbewahrt. Danach werden historische Daten automatisch gelöscht.",
+					third:
+						"Sie können jederzeit die Löschung Ihrer Daten verlangen, indem Sie uns kontaktieren. Nach der Schließung Ihres Kontos werden Ihre Daten innerhalb von 30 Tagen gelöscht.",
+				},
+				serviceAvailability: {
+					title: "7. Verfügbarkeit des Dienstes",
+					first:
+						"Wir streben eine Verfügbarkeit von 99,9 % an, aber das ist ein Ziel und keine Garantie. Wir bieten keine Service-Level-Agreements (SLAs) mit finanziellen Entschädigungen.",
+					second:
+						"Wartungsarbeiten kündigen wir nach Möglichkeit rechtzeitig im Voraus an. Notfallwartungen können ohne Ankündigung erfolgen.",
+					third:
+						"Wir haften nicht für Ausfallzeiten, Datenverluste oder Schäden, die durch geplante oder ungeplante Unterbrechungen des Dienstes entstehen.",
+				},
+				limitationOfLiability: {
+					title: "8. Haftungsbeschränkung",
+					first:
+						"Uptime wird „wie besehen“ und „wie verfügbar“ bereitgestellt, ohne ausdrückliche oder stillschweigende Gewährleistungen jeglicher Art.",
+					second:
+						"Wir garantieren nicht, dass unser Dienst jeden Ausfall Ihrer überwachten Endpunkte erkennt. Die Überwachung hängt von Netzwerkbedingungen und anderen Faktoren ab, die außerhalb unserer Kontrolle liegen.",
+					third:
+						"Unsere Gesamthaftung Ihnen gegenüber für Ansprüche aus der Nutzung des Dienstes ist auf den Betrag begrenzt, den Sie uns in den 12 Monaten vor dem Anspruch gezahlt haben.",
+					fourth: "Wir haften nicht für indirekte, zufällige, besondere, Folge- oder Strafschäden.",
+				},
+				termination: {
+					title: "9. Beendigung",
+					first:
+						"Sie können Ihr Konto jederzeit über Ihre Kontoeinstellungen oder durch eine Nachricht an uns schließen.",
+					second:
+						"Wir können Ihr Konto sperren oder schließen, wenn Sie gegen diese Bedingungen verstoßen, oder aus anderen Gründen mit angemessener Vorankündigung.",
+					third:
+						"Mit der Beendigung endet Ihr Zugang zum Dienst und Ihre Daten werden innerhalb von 30 Tagen gelöscht.",
+				},
+				changesToTerms: {
+					title: "10. Änderungen dieser Bedingungen",
+					body: "Wir können diese Nutzungsbedingungen von Zeit zu Zeit aktualisieren. Über wesentliche Änderungen informieren wir Sie per E-Mail oder über den Dienst. Wenn Sie Uptime nach Inkrafttreten der Änderungen weiter nutzen, gilt das als Zustimmung zu den überarbeiteten Bedingungen.",
+				},
+				contact: {
+					title: "11. Kontakt",
+					prefix:
+						"Wenn Sie Fragen zu diesen Nutzungsbedingungen haben, schreiben Sie uns bitte an ",
+					email: "hello@sergiodxa.com",
+				},
+			},
+		},
+		privacy: {
+			meta: {
+				title: "Datenschutzerklärung | Uptime",
+				description:
+					"Datenschutzerklärung für Uptime. Erfahren Sie, wie wir Ihre Daten erheben, verwenden und schützen, wenn Sie unseren Uptime-Monitoring-Dienst nutzen.",
+			},
+
+			lastUpdated: "Zuletzt aktualisiert: 2. August 2026",
+			title: "Datenschutzerklärung",
+
+			sections: {
+				introduction: {
+					title: "1. Einleitung",
+					first:
+						"Diese Datenschutzerklärung beschreibt, wie Uptime, betrieben von Sergio Xalambrí („wir“, „uns“ oder „unser“), Ihre personenbezogenen Daten erhebt, verwendet und schützt, wenn Sie unseren Uptime-Monitoring-Dienst nutzen.",
+					second:
+						"Diese Erklärung gilt für alle Nutzer unseres Dienstes und umfasst die Daten, die über unsere Website und unsere Monitoring-Plattform erhoben werden.",
+				},
+				dataCollected: {
+					title: "2. Daten, die wir erheben",
+					accountData: {
+						title: "Kontodaten",
+						body: "Wenn Sie sich über die GitHub-Anmeldung registrieren, erheben wir Ihre E-Mail-Adresse und Ihren Anzeigenamen aus Ihrem GitHub-Profil.",
+					},
+					monitoringData: {
+						title: "Monitoring-Daten",
+						body: "Wir erheben Daten zu den Monitoren, die Sie anlegen, darunter die URLs, die Sie überwachen möchten, Antwortzeiten, HTTP-Statuscodes sowie Verfügbarkeits- und Ausfallereignisse.",
+					},
+					cronJobData: {
+						title: "Daten zur Cronjob-Überwachung",
+						intro: "Für die Überwachung von Cronjobs (geplanten Aufgaben) erheben wir:",
+						first: "Ping-Zeitstempel (wann Ihre geplanten Aufgaben ihren Abschluss melden)",
+						second: "Quell-IP-Adressen der Ping-Anfragen",
+						third: "User-Agent-Angaben aus den Ping-Anfragen",
+						fourth: "Zeitplan-Konfiguration (Cron-Ausdrücke, Zeitzonen, Karenzzeiten)",
+						outro:
+							"Diese Daten helfen Ihnen zu verfolgen, ob Ihre geplanten Aufgaben pünktlich laufen, und ermöglichen es uns, Sie zu benachrichtigen, wenn erwartete Pings ausbleiben.",
+					},
+					usageData: {
+						title: "Nutzungsdaten",
+						body: "Wir erheben Analyse- und Protokolldaten darüber, wie Sie unseren Dienst nutzen, darunter Seitenaufrufe, die Nutzung von Funktionen und Fehlerprotokolle.",
+					},
+					paymentData: {
+						title: "Zahlungsdaten",
+						body: "Die Zahlungsabwicklung übernimmt Polar. Wir speichern Ihre Kreditkartendaten nicht. Von Polar erhalten wir lediglich eine Bestätigung Ihres Abonnementstatus und Ihrer Rechnungshistorie.",
+					},
+				},
+				dataUsage: {
+					title: "3. Wie wir Ihre Daten verwenden",
+					first: {
+						label: "Um den Monitoring-Dienst bereitzustellen:",
+						body: "Wir nutzen Ihre Daten, um die von Ihnen angegebenen URLs zu überwachen und deren Verfügbarkeit zu verfolgen.",
+					},
+					second: {
+						label: "Um Warnungen und Benachrichtigungen zu senden:",
+						body: "Wir nutzen Ihre E-Mail-Adresse, um Ihnen Ausfallwarnungen und Statusmeldungen zu schicken.",
+					},
+					third: {
+						label: "Um den Dienst zu verbessern:",
+						body: "Wir analysieren Nutzungsmuster, um Funktionen zu verbessern und Fehler zu beheben.",
+					},
+					fourth: {
+						label: "Um mit Ihnen zu kommunizieren:",
+						body: "Wir senden Ihnen unter Umständen Produktneuigkeiten, Sicherheitshinweise und Support-Nachrichten.",
+					},
+				},
+				dataSharing: {
+					title: "4. Weitergabe von Daten",
+					noSell: "Wir verkaufen Ihre personenbezogenen Daten nicht.",
+					intro:
+						"Wir geben Daten an die folgenden Drittanbieter weiter, die uns beim Betrieb von Uptime unterstützen:",
+					first: {
+						label: "Cloudflare:",
+						body: "Infrastruktur, Hosting und Auslieferung von Inhalten",
+					},
+					second: { label: "Polar:", body: "Zahlungsabwicklung und Abonnementverwaltung" },
+					third: { label: "Resend:", body: "E-Mail-Zustellung für Warnungen und Hinweise" },
+					fourth: { label: "GitHub:", body: "Authentifizierung" },
+					outro:
+						"Wir können Ihre Daten außerdem offenlegen, wenn wir gesetzlich dazu verpflichtet sind oder um unsere Rechte und die Sicherheit unserer Nutzer zu schützen.",
+				},
+				dataRetention: {
+					title: "5. Speicherdauer",
+					first: { label: "Monitoring-Daten:", body: "365 Tage ab der Erhebung" },
+					second: { label: "Kontodaten:", body: "Bis Sie Ihr Konto löschen" },
+					third: { label: "Protokolle:", body: "30 Tage" },
+				},
+				rights: {
+					title: "6. Ihre Rechte (DSGVO)",
+					intro: "Nach der Datenschutz-Grundverordnung (DSGVO) haben Sie das Recht:",
+					first: {
+						label: "Auf Auskunft:",
+						body: "Eine Kopie der personenbezogenen Daten anzufordern, die wir über Sie gespeichert haben",
+					},
+					second: {
+						label: "Auf Berichtigung:",
+						body: "Die Korrektur unrichtiger personenbezogener Daten zu verlangen",
+					},
+					third: {
+						label: "Auf Löschung:",
+						body: "Die Löschung Ihrer personenbezogenen Daten zu verlangen",
+					},
+					fourth: {
+						label: "Auf Datenübertragbarkeit:",
+						body: "Ihre Daten in einem übertragbaren Format zu erhalten",
+					},
+					fifth: {
+						label: "Auf Widerspruch:",
+						body: "Bestimmten Arten der Datenverarbeitung zu widersprechen",
+					},
+					outro:
+						"Um eines dieser Rechte auszuüben, kontaktieren Sie uns bitte unter der unten angegebenen E-Mail-Adresse.",
+				},
+				security: {
+					title: "7. Sicherheit",
+					intro: "Wir setzen angemessene Sicherheitsmaßnahmen ein, um Ihre Daten zu schützen:",
+					first: {
+						label: "Verschlüsselung bei der Übertragung:",
+						body: "Alle Daten werden über HTTPS/TLS übertragen",
+					},
+					second: {
+						label: "Verschlüsselung im Ruhezustand:",
+						body: "Gespeicherte Daten sind verschlüsselt",
+					},
+					third: {
+						label: "Zugriffskontrollen:",
+						body: "Strenge Zugriffskontrollen begrenzen, wer auf Ihre Daten zugreifen kann",
+					},
+					fourth: {
+						label: "Regelmäßige Sicherheitsprüfungen:",
+						body: "Wir überprüfen unsere Sicherheitspraktiken regelmäßig",
+					},
+				},
+				cookies: {
+					title: "8. Cookies",
+					intro: "Wir verwenden nur die Cookies, die für den Betrieb des Dienstes nötig sind:",
+					first: {
+						label: "Sitzungs-Cookies:",
+						body: "Für die Anmeldung und damit Sie angemeldet bleiben",
+					},
+					outro:
+						"Wir verwenden keine Tracking-Cookies, keine Werbe-Cookies von Dritten und keine Cookies zu Marketingzwecken.",
+				},
+				turnstile: {
+					title: "9. Bot-Schutz",
+					first:
+						"Die öffentliche Seite, auf der jeder ohne Konto eine URL prüfen kann, ist durch Cloudflare Turnstile geschützt. Es dient dazu, einen Menschen von einem Bot zu unterscheiden, damit die kostenlose Prüfung nicht durch automatisierten Traffic aufgebraucht wird.",
+					second:
+						"Dazu erhält Cloudflare Ihre IP-Adresse und Informationen über Ihren Browser und speichert möglicherweise ein Token in Ihrem Browser, um sich zu merken, dass die Prüfung bestanden wurde.",
+					third:
+						"Turnstile läuft ausschließlich auf dieser öffentlichen Seite. In der angemeldeten Anwendung wird es nirgendwo eingesetzt.",
+					referencePrefix: "Was Cloudflare mit diesen Daten macht, steht im ",
+					referenceLinkText: "Turnstile-Datenschutzzusatz",
+					referenceSuffix: " von Cloudflare.",
+				},
+				childrensPrivacy: {
+					title: "10. Datenschutz für Kinder",
+					body: "Uptime ist nicht für Personen unter 18 Jahren bestimmt. Wir erheben wissentlich keine personenbezogenen Daten von Kindern unter 18 Jahren.",
+				},
+				internationalTransfers: {
+					title: "11. Internationale Datenübermittlung",
+					first:
+						"Ihre Daten werden möglicherweise über das globale Netzwerk von Cloudflare verarbeitet. Wenn Sie sich in der Europäischen Union befinden, können Ihre Daten in die Vereinigten Staaten übermittelt und dort verarbeitet werden.",
+					second:
+						"Wir stützen uns auf die Standardvertragsklauseln von Cloudflare und weitere geeignete Garantien, damit Ihre Daten im Einklang mit den Anforderungen der DSGVO geschützt sind.",
+				},
+				changesToPolicy: {
+					title: "12. Änderungen dieser Erklärung",
+					first:
+						"Wir können diese Datenschutzerklärung von Zeit zu Zeit aktualisieren. Über wesentliche Änderungen informieren wir Sie, indem wir die neue Fassung auf dieser Seite veröffentlichen und das Datum unter „Zuletzt aktualisiert“ anpassen.",
+					second:
+						"Bei erheblichen Änderungen schicken wir Ihnen zusätzlich eine E-Mail-Benachrichtigung, wenn Sie ein Konto bei uns haben.",
+				},
+				contact: {
+					title: "13. Kontakt",
+					body: "Wenn Sie Fragen zu dieser Datenschutzerklärung haben oder Ihre Datenrechte ausüben möchten, erreichen Sie uns unter:",
+					email: "privacy@sergiodxa.com",
+				},
+			},
+		},
+	},
+
 	app: {
 		meta: {
 			title: "Uptime von Sergio Xalambrí",
@@ -782,7 +1071,6 @@ export default {
 			subject: "[Uptime-Alarm] {{monitor}} ist {{status}}",
 			preview: "{{monitor}} ist {{status}}",
 			heading: "{{monitor}} ist {{status}}",
-			field: "{{label}}: {{value}}",
 			action: "Dashboard öffnen",
 			incident:
 				"Benachrichtigungen für diesen Vorfall: {{sent}} gesendet, {{suppressed}} durch die Abkühlzeit und das Limit von {{cap}} pro Vorfall unterdrückt.",
@@ -825,7 +1113,6 @@ export default {
 		},
 
 		trial: {
-			field: "{{label}}: {{value}}",
 			stopAction: "Diese E-Mails beenden",
 			stop: "Ein Klick beendet alle URLs, um deren Beobachtung Sie uns gebeten haben, und löscht Ihre Adresse samt Daten. Sie können jederzeit über unsere Website neu beginnen.",
 
@@ -2960,10 +3247,8 @@ export default {
 					"Diese Adresse prüfen wir nicht für dich. Es muss eine öffentliche http:// oder https:// URL auf Port 80 oder 443 sein, ohne Benutzername und Passwort, und sie muss auf eine Adresse im offenen Internet auflösen.",
 				failedChallenge:
 					"Wir konnten nicht bestätigen, dass die Anfrage aus einem Browser kam. Lade die Seite neu und versuche es erneut.",
-				rateLimited:
-					"Du hast gerade eine Prüfung ausgeführt. Warte eine Minute und starte die nächste.",
-				rateLimitedFor:
-					"Du hast gerade eine Prüfung ausgeführt. In {{seconds}} Sekunden geht die nächste.",
+				rateLimited: "Sie können in einer Minute eine weitere Prüfung starten.",
+				rateLimitedFor: "Sie können in {{seconds}} Sekunden eine weitere Prüfung starten.",
 				budgetExhausted:
 					"Wir haben heute schon alle kostenlosen Prüfungen ausgeführt, die wir an einem Tag ausführen. Das liegt an uns und nicht an deiner URL — komm morgen wieder, oder starte die Überwachung und wir prüfen sie jede Minute.",
 				unavailable:

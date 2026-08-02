@@ -11,15 +11,17 @@
  */
 
 import type { TFunction } from "@pkg/i18n";
-import type { Address } from "@pkg/mail";
+import type { Address, EmailTableRow } from "@pkg/mail";
 import type { RemixElement } from "remix/ui";
 
 import { Email } from "@pkg/mail";
 
-import type { TrialField, TrialStatus } from "~/app/emails/shared/trial";
+import type { TrialStatus } from "~/app/emails/shared/trial";
 
 import {
 	TrialUnsubscribe,
+	trialDateTime,
+	trialDisplayUrl,
 	trialStatusKey,
 	trialUnsubscribeHeaders,
 } from "~/app/emails/shared/trial";
@@ -79,7 +81,10 @@ export class TrialChangeEmail implements Email {
 	 */
 	get subject(): string {
 		let { t, url } = this.#change;
-		return t("emails.trial.change.subject", { url, status: this.#status() });
+		return t("emails.trial.change.subject", {
+			url: trialDisplayUrl(url),
+			status: this.#status(),
+		});
 	}
 
 	/** One-click unsubscribe, for the clients that render their own button for it. */
@@ -90,21 +95,20 @@ export class TrialChangeEmail implements Email {
 	/** Body tree: the headline, one sentence of context, the report, and the footer. */
 	body(): RemixElement {
 		let { t, locale, url, changedAt, unsubscribeToken } = this.#change;
-		let heading = t("emails.trial.change.heading", { url, status: this.#status() });
+		let displayUrl = trialDisplayUrl(url);
+		let heading = t("emails.trial.change.heading", { url: displayUrl, status: this.#status() });
 
 		return (
 			<Email.Layout
 				lang={locale}
 				title={heading}
-				preview={t("emails.trial.change.preview", { url, status: this.#status() })}
+				preview={t("emails.trial.change.preview", { url: displayUrl, status: this.#status() })}
 			>
 				<Email.Heading>{heading}</Email.Heading>
-				<Email.Text>{t("emails.trial.change.body", { time: changedAt.toISOString() })}</Email.Text>
-				{this.#fields().map((field) => (
-					<Email.Text key={field.label}>
-						{t("emails.trial.field", { label: field.label, value: field.value })}
-					</Email.Text>
-				))}
+				<Email.Text>
+					{t("emails.trial.change.body", { time: trialDateTime(changedAt, locale) })}
+				</Email.Text>
+				<Email.Table rows={this.#rows()} />
 				<Email.Footer>
 					{t("emails.trial.change.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
 				</Email.Footer>
@@ -118,12 +122,20 @@ export class TrialChangeEmail implements Email {
 	}
 
 	/** What changed, what it changed from, what came back, and when. */
-	#fields(): TrialField[] {
-		let { t, url, previousStatus, responseStatus, responseTimeMs, changedAt } = this.#change;
+	#rows(): EmailTableRow[] {
+		let { t, locale, url, previousStatus, responseStatus, responseTimeMs, changedAt } =
+			this.#change;
 		let none = t("emails.trial.values.none");
 
 		return [
-			{ label: t("emails.trial.fields.url"), value: url },
+			{
+				label: t("emails.trial.fields.url"),
+				value: (
+					<a href={url} style="color:inherit;text-decoration:none;">
+						{trialDisplayUrl(url)}
+					</a>
+				),
+			},
 			{ label: t("emails.trial.fields.status"), value: this.#status() },
 			{
 				label: t("emails.trial.fields.previousStatus"),
@@ -140,7 +152,7 @@ export class TrialChangeEmail implements Email {
 						? none
 						: t("emails.trial.values.milliseconds", { value: responseTimeMs }),
 			},
-			{ label: t("emails.trial.fields.changedAt"), value: changedAt.toISOString() },
+			{ label: t("emails.trial.fields.changedAt"), value: trialDateTime(changedAt, locale) },
 		];
 	}
 }

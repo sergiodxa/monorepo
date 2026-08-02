@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
@@ -31,7 +31,17 @@ import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
-import home from "./home";
+/**
+ * Whether this deployment has a Turnstile site key, which is what decides whether the
+ * try-it box carries a challenge at all. Mocked because the default `cloudflare:workers`
+ * stub answers every binding read with a non-empty placeholder, so the unconfigured case —
+ * the one where the widget and its loader must both be absent — is unreachable otherwise.
+ */
+let trialTurnstileSiteKey = mock((): string | null => null);
+
+mock.module("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
+
+let { default: home } = await import("./home");
 
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
@@ -76,6 +86,11 @@ async function getHome(viewer: Viewer | null) {
 	let request = new Request(`https://uptime.test${routes.home.href()}`);
 	return container.scope(() => router.fetch(request));
 }
+
+beforeEach(() => {
+	trialTurnstileSiteKey.mockReset();
+	trialTurnstileSiteKey.mockImplementation(() => null);
+});
 
 describe("GET /", () => {
 	test("renders the marketing homepage for an anonymous visitor", async () => {
@@ -187,6 +202,29 @@ describe("GET /", () => {
 		expect(body).toContain(`<form method="post" action="${routes.trial.check.action.href()}"`);
 		expect(body).toContain('name="url"');
 		expect(body).toContain("Run a check");
+	});
+
+	test("renders no Turnstile widget when the deployment has no site key", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).not.toContain("cf-turnstile");
+		expect(body).not.toContain("challenges.cloudflare.com");
+	});
+
+	test("renders the Turnstile widget and its loader when a site key is configured", async () => {
+		// Both halves, because the widget alone is inert: without the loader the container
+		// never becomes a challenge, no token is written into the form, and every submission
+		// from this page is refused as one that could not be confirmed to come from a browser.
+		trialTurnstileSiteKey.mockImplementation(() => "0x-site-key");
+
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).toContain('class="cf-turnstile"');
+		expect(body).toContain('data-sitekey="0x-site-key"');
+		expect(body).toContain('data-response-field-name="cf-turnstile-response"');
+		expect(body).toContain("https://challenges.cloudflare.com/turnstile/v0/api.js");
 	});
 
 	test("keeps the trial's selling copy off the landing page", async () => {

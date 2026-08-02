@@ -33,6 +33,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import {
 	TrialReport,
 	TrialUnsubscribe,
+	trialDisplayUrl,
 	trialStatusKey,
 	trialUnsubscribeHeaders,
 } from "~/app/emails/shared/trial";
@@ -87,7 +88,7 @@ function TargetSection(handle: Handle<TargetSection.Props>) {
 				{headed ? (
 					<Email.Heading level={2}>
 						{t("emails.trial.daily.target", {
-							url: target.url,
+							url: trialDisplayUrl(target.url),
 							status: t(trialStatusKey(target.status)),
 						})}
 					</Email.Heading>
@@ -136,7 +137,7 @@ export class TrialDailyDigestEmail implements Email {
 	get subject(): string {
 		let { t } = this.#digest;
 		let only = this.#only();
-		if (only) return t("emails.trial.daily.subject", { url: only.url });
+		if (only) return t("emails.trial.daily.subject", { url: trialDisplayUrl(only.url) });
 		return t("emails.trial.daily.subjectMany", { total: this.#digest.targets.length });
 	}
 
@@ -150,10 +151,10 @@ export class TrialDailyDigestEmail implements Email {
 		let { t, locale, targets, unsubscribeToken } = this.#digest;
 		let only = this.#only();
 		let heading = only
-			? t("emails.trial.daily.heading", { url: only.url })
+			? t("emails.trial.daily.heading", { url: trialDisplayUrl(only.url) })
 			: t("emails.trial.daily.headingMany", { total: targets.length });
 		let preview = only
-			? t("emails.trial.daily.preview", { url: only.url })
+			? t("emails.trial.daily.preview", { url: trialDisplayUrl(only.url) })
 			: t("emails.trial.daily.previewMany", { total: targets.length });
 
 		return (

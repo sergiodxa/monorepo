@@ -42,7 +42,7 @@ describe("TrialConfirmationEmail", () => {
 	test("takes its subject from the locale files, naming the URL", async () => {
 		let email = await makeEmail();
 
-		expect(email.subject).toBe("We are now checking https://example.com every hour");
+		expect(email.subject).toBe("We are now checking example.com every hour");
 	});
 
 	test("states what happens next and until when", async () => {
@@ -50,7 +50,7 @@ describe("TrialConfirmationEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("every hour until 2026-08-08T10:00:00.000Z");
+		expect(text).toContain("every hour until Aug 8, 2026 at 10:00 AM UTC");
 		expect(text).toContain("summary once a day");
 	});
 
@@ -59,11 +59,11 @@ describe("TrialConfirmationEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("URL: https://example.com");
-		expect(text).toContain("Status: UP");
-		expect(text).toContain("Response status: 200");
-		expect(text).toContain("Response time: 143ms");
-		expect(text).toContain("Checked at: 2026-08-01T10:00:00.000Z");
+		expect(text).toContain("URL example.com (https://example.com)");
+		expect(text).toContain("Status UP");
+		expect(text).toContain("Response status 200");
+		expect(text).toContain("Response time 143ms");
+		expect(text).toContain("Checked at Aug 1, 2026 at 10:00 AM UTC");
 	});
 
 	test("reports an em dash for a URL that never answered", async () => {
@@ -71,9 +71,9 @@ describe("TrialConfirmationEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Status: DOWN");
-		expect(text).toContain("Response status: —");
-		expect(text).toContain("Response time: —");
+		expect(text).toContain("Status DOWN");
+		expect(text).toContain("Response status —");
+		expect(text).toContain("Response time —");
 	});
 
 	test("does not read as marketing: the unsubscribe is the only link in it", async () => {
@@ -81,7 +81,8 @@ describe("TrialConfirmationEmail", () => {
 
 		let { html } = await render(email.body());
 
-		expect(html.split("<a ").length - 1).toBe(1);
+		// The URL row and the unsubscribe link, and nothing else — no call to action.
+		expect(html.split("<a ").length - 1).toBe(2);
 		expect(html).toContain("https://uptime.sergiodxa.com/unsubscribe/tok-abc123");
 	});
 
@@ -104,7 +105,7 @@ describe("TrialConfirmationEmail", () => {
 		let { locale, t } = await emailTranslator("ja");
 		let email = await makeEmail({ locale, t });
 
-		expect(email.subject).not.toBe("We are now checking https://example.com every hour");
-		expect(email.subject).toContain("https://example.com");
+		expect(email.subject).not.toBe("We are now checking example.com every hour");
+		expect(email.subject).toContain("example.com");
 	});
 });
