@@ -1236,8 +1236,7 @@ export default {
 
 			quickPing: {
 				title: "Verificación rápida",
-				description:
-					"Verifique cualquier URL una vez, ahora mismo. No se guarda nada ni se envían alertas — cuenta como un ping.",
+				description: "Verifique una URL una vez. Nada se guarda, sin alertas; cuesta un ping.",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",

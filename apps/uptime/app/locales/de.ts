@@ -1242,7 +1242,7 @@ export default {
 			quickPing: {
 				title: "Schnellprüfung",
 				description:
-					"Prüfen Sie eine beliebige URL einmalig, sofort. Nichts wird gespeichert und es werden keine Benachrichtigungen gesendet — es zählt als ein Ping.",
+					"Prüfen Sie eine URL einmalig. Nichts gespeichert, keine Benachrichtigungen, ein Ping.",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",

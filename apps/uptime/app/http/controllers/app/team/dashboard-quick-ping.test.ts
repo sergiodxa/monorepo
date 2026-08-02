@@ -197,6 +197,27 @@ describe("dashboard-quick-ping", () => {
 		// Nothing to report yet, so the card carries no status line at all.
 		expect(body).not.toContain(en.page.dashboard.quickPing.result.status.up);
 		expect(body).not.toContain("HTTP");
+		// The space that line will take is drawn anyway. Without it the card grows the moment
+		// a check comes back, and everything laid out beside it moves every time one does.
+		expect(body).toContain("min-block-size: calc(0.75rem + 0.25rem + 2px + 0.5rem + 1.25rem)");
+	});
+
+	test("puts the result between the field and the button that runs the next check", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await render(db, team, membership, await storeResult(upResult()))).text();
+
+		// Source order is the ordering: an answer belongs under the field it is about and
+		// ahead of the button. Floating it up there visually instead would have left tab and
+		// screen-reader order reading the two the other way round, which is why the button
+		// moved in beside the field rather than the answer being reordered past it.
+		let field = body.indexOf('name="url"');
+		let status = body.indexOf(`>${en.page.dashboard.quickPing.result.status.up}<`);
+		let submit = body.indexOf(`>${en.page.dashboard.quickPing.action.submit}<`);
+
+		expect(field).toBeGreaterThan(-1);
+		expect(status).toBeGreaterThan(field);
+		expect(submit).toBeGreaterThan(status);
 	});
 
 	test("names the field through a label that wraps it rather than through an id", async () => {

@@ -214,6 +214,9 @@ describe("app/team/dashboard", () => {
 		// check used to be that frame. The placeholder's control-height bars — which only the
 		// taller `field` skeleton draws — are the proof it renders a fallback now and streams.
 		expect(body).toContain("block-size: 2.5rem");
+		// And it holds open the same height the real card holds open for a check's answer, so
+		// swapping the real one in over it doesn't move the page a second time.
+		expect(body).toContain("min-block-size: calc(0.75rem + 0.25rem + 2px + 0.5rem + 1.25rem)");
 	});
 
 	test("sets the dashboardTab cookie on the response", async () => {

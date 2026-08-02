@@ -1778,8 +1778,7 @@ export default {
 
 			quickPing: {
 				title: "Quick check",
-				description:
-					"Check any URL once, right now. Nothing is saved and no alerts are sent — it counts as one ping.",
+				description: "Check a URL once. Nothing saved, no alerts — costs one ping.",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",

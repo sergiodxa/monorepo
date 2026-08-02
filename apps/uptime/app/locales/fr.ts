@@ -1239,7 +1239,7 @@ export default {
 			quickPing: {
 				title: "Vérification rapide",
 				description:
-					"Vérifiez n'importe quelle URL une fois, immédiatement. Rien n'est enregistré et aucune alerte n'est envoyée — cela compte pour un ping.",
+					"Vérifiez une URL une fois. Rien n'est enregistré, aucune alerte — coûte un ping.",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",

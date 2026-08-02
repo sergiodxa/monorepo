@@ -1234,7 +1234,7 @@ export default {
 			quickPing: {
 				title: "Controllo rapido",
 				description:
-					"Controlli qualsiasi URL una volta, subito. Nulla viene salvato e nessun avviso viene inviato — conta come un ping.",
+					"Controlli un URL una volta. Nulla viene salvato, nessun avviso — costa un ping.",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",

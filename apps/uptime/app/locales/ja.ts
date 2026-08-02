@@ -1222,8 +1222,7 @@ export default {
 
 			quickPing: {
 				title: "クイックチェック",
-				description:
-					"任意のURLを今すぐ1回だけチェックします。何も保存されずアラートも送信されませんが、pingを1回消費します。",
+				description: "URLを1回チェック。保存もアラートもなし、pingを1回消費します。",
 				field: {
 					label: "URL",
 					placeholder: "https://example.com/healthcheck",
