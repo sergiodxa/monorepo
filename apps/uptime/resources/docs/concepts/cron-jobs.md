@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 5
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-02
 ---
 
 Unlike HTTP monitors that actively check endpoints, cron monitors work by receiving pings from your jobs—if a ping doesn't arrive on time, you get alerted. This "dead man's switch" approach works for any scheduled task, regardless of where it runs or what technology it uses.
@@ -15,10 +15,18 @@ Unlike HTTP monitors that actively check endpoints, cron monitors work by receiv
 Cron job monitoring uses a "dead man's switch" approach:
 
 1. **Define the expected schedule** - You tell Uptime when your job should run using a cron expression
-2. **Your job pings Uptime** - At the end of each run, your job sends a simple HTTP request to a unique endpoint
+2. **Your job pings Uptime** - At the end of each run, your job sends an authenticated HTTP request to the monitor's endpoint
 3. **Uptime tracks the pings** - If a ping doesn't arrive within the expected window, Uptime marks the job as late or missed and sends you an alert
 
 This approach works for any scheduled task, regardless of where it runs or what technology it uses.
+
+## Authenticating Pings
+
+Pings require an API key with the `cron-jobs:ping` scope, sent as an `Authorization: Bearer` header. Create one under **Settings** > **API Keys** and give it only that scope—a ping key can record pings and nothing else, so leaking it can't expose or change your monitors.
+
+A key can only ping monitors belonging to the team that owns it. Pinging another team's monitor returns `404`, the same answer as an id that doesn't exist.
+
+Store the key the way you store any other secret your job uses—an environment variable or your scheduler's secret store—rather than inlining it in a crontab. If it does leak, delete the key and create a new one; the monitor and its history are unaffected.
 
 ## Configuration Options
 
@@ -85,14 +93,15 @@ Cron monitors have four possible statuses:
 
 ## Integration Examples
 
-When you create a cron monitor, Uptime provides ready-to-use code snippets for integrating with your jobs.
+When you create a cron monitor, Uptime provides ready-to-use code snippets for integrating with your jobs. Every one of them reads the API key from the environment, so the key never appears in a crontab, a script, or a log line.
 
 ### cURL Command
 
 The simplest way to ping Uptime from any environment:
 
 ```bash
-curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping \
+  -H "Authorization: Bearer $UPTIME_API_KEY"
 ```
 
 ### Bash / Crontab Integration
@@ -101,7 +110,8 @@ Add the ping to the end of your cron job:
 
 ```bash
 # In your crontab
-0 2 * * * /path/to/backup.sh && curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
+UPTIME_API_KEY=uptime_your_api_key
+0 2 * * * /path/to/backup.sh && curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping -H "Authorization: Bearer $UPTIME_API_KEY"
 ```
 
 Or within a shell script:
@@ -116,7 +126,8 @@ gzip backup.sql
 aws s3 cp backup.sql.gz s3://my-bucket/
 
 # Ping Uptime only if everything succeeded
-curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping \
+  -H "Authorization: Bearer $UPTIME_API_KEY"
 ```
 
 ### Application Code
@@ -133,12 +144,14 @@ async function runScheduledJob() {
 	// Ping Uptime when complete
 	await fetch("https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping", {
 		method: "POST",
+		headers: { Authorization: `Bearer ${process.env.UPTIME_API_KEY}` },
 	});
 }
 ```
 
 ```python
 # Python example
+import os
 import requests
 
 def run_scheduled_job():
@@ -146,7 +159,10 @@ def run_scheduled_job():
     sync_inventory_data()
 
     # Ping Uptime when complete
-    requests.post('https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping')
+    requests.post(
+        'https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping',
+        headers={'Authorization': f"Bearer {os.environ['UPTIME_API_KEY']}"},
+    )
 ```
 
 ## Best Practices
@@ -156,12 +172,15 @@ def run_scheduled_job():
 Always send the ping after your job completes successfully, not when it starts. Pinging at the start only confirms the job began - it tells you nothing about whether it finished or succeeded.
 
 ```bash
+PING="https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping"
+AUTH="Authorization: Bearer $UPTIME_API_KEY"
+
 # Wrong - pings before the job runs
-curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
+curl -X POST "$PING" -H "$AUTH"
 ./backup.sh
 
 # Correct - pings only after success
-./backup.sh && curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
+./backup.sh && curl -X POST "$PING" -H "$AUTH"
 ```
 
 ### Set Appropriate Grace Periods

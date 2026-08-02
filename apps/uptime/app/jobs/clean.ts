@@ -76,6 +76,9 @@ const RETAINED_TABLES: readonly RetainedTable[] = [
 ];
 
 export class CleanJob extends Job {
+	/** The "Clean Old Monitor Results" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let now = Date.now();

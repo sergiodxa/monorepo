@@ -58,6 +58,9 @@ interface CheckedMonitor {
 }
 
 export class CheckTcpJob extends Job {
+	/** The "Check TCP Connections" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);

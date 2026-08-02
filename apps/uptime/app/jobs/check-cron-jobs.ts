@@ -28,6 +28,9 @@ import { shouldNotifyCronJobResult } from "~/app/services/alerts";
 import { apportionCostByTeam } from "~/app/services/cost";
 
 export class CheckCronJobsJob extends Job {
+	/** The "Check Cron Job Monitors" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let monitors = await CronJobMonitor.listActionable(db);

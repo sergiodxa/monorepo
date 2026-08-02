@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 5
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-02
 ---
 
 Cron job monitors track scheduled tasks by receiving pings when jobs complete. If a ping is not received within the expected window, the job is marked as late and alerts are triggered.
@@ -624,7 +624,9 @@ curl "https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping?limit=10&of
 
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
 
-**Rate Limit:** This endpoint is rate limited to 1 request per minute per cron job. Additional requests within the same minute will be rejected with a `429` error.
+Like every other endpoint on this page, it requires an API key: send it as `Authorization: Bearer <key>`. A key reaches only the monitors of the team that owns it—pinging another team's monitor returns `404`, exactly as an id that doesn't exist does, so the endpoint can't be used to discover which ids are real.
+
+**Rate Limit:** This endpoint is rate limited to 1 request per minute per cron job. Additional requests within the same minute will be rejected with a `429` error. A separate abuse limit caps how many requests one caller may send for one monitor per minute, whether or not they are accepted; exceeding it also returns `429`, and it applies before the key is checked.
 
 ### Required Scope
 
@@ -654,14 +656,14 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping \
 
 ### Possible Errors
 
-| Status | Code           | Description                                 |
-| ------ | -------------- | ------------------------------------------- |
-| 401    | UNAUTHORIZED   | Missing or invalid API key                  |
-| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:ping` scope |
-| 404    | NOT_FOUND      | Cron job not found                          |
-| 409    | CONFLICT       | Cron job is disabled                        |
-| 429    | RATE_LIMITED   | More than 1 ping per minute for this job    |
-| 500    | INTERNAL_ERROR | Server error                                |
+| Status | Code           | Description                                                      |
+| ------ | -------------- | ---------------------------------------------------------------- |
+| 401    | UNAUTHORIZED   | Missing, invalid, or expired API key                             |
+| 403    | FORBIDDEN      | API key doesn't have `cron-jobs:ping` scope                      |
+| 404    | NOT_FOUND      | Cron job not found, or owned by another team                     |
+| 409    | CONFLICT       | Cron job is disabled                                             |
+| 429    | RATE_LIMITED   | More than 1 ping per minute for this job, or caller budget spent |
+| 500    | INTERNAL_ERROR | Server error                                                     |
 
 ### Response Schema
 

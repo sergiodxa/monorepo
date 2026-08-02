@@ -28,6 +28,9 @@ import { apportionCostByTeam } from "~/app/services/cost";
 import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 
 export class CheckSslJob extends Job {
+	/** The "Check SSL Certificates" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "2140cbc2-e18e-441c-9ef9-3d516a9e3a19";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let monitors = await Monitor.listSslEnabled(db);

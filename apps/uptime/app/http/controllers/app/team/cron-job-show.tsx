@@ -176,10 +176,13 @@ export default createAction(routes.app.team.cronJobs.show, {
 							<code>POST {pingUrl}</code>
 						</pre>
 						<pre mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-							<code>curl -X POST {pingUrl}</code>
+							<code>curl -X POST {pingUrl} -H "Authorization: Bearer $UPTIME_API_KEY"</code>
 						</pre>
 						<pre mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-							<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>
+							<code>
+								0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl} -H "Authorization:
+								Bearer $UPTIME_API_KEY"
+							</code>
 						</pre>
 
 						<h2>{ctx.i18next.t("page.cronJobDetail.uptimeHistory")}</h2>

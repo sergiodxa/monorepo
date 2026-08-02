@@ -40,6 +40,9 @@ const PING_DETAIL_RETENTION_DAYS = 30;
 const PING_DETAIL_COLUMNS = ["source_ip", "user_agent"];
 
 export class CleanCronJobPingsJob extends Job {
+	/** The "Clean Old Cron Job Pings" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "31db20cb-8736-44fa-9ac7-448d2200befd";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let now = Date.now();

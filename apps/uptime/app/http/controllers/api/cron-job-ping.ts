@@ -1,16 +1,25 @@
 /**
- * Public cron-job ping endpoint: `POST /api/v1/cron-jobs/:cronJobId/ping`. Unlike the
- * rest of the app, this route is intentionally unauthenticated — a scheduled job's
- * `curl` call is the entire integration, per `docs/cron-job-monitoring.md` ("the
- * system provides a unique ping endpoint"). The monitor's own id is the ping-URL
- * identifier; treat it as a bearer secret.
+ * Cron-job ping endpoint: `POST /api/v1/cron-jobs/:cronJobId/ping`. A scheduled job
+ * reports that it ran by calling this; the monitor goes late or missed when it doesn't.
+ *
+ * It requires an API key carrying `cron-jobs:ping`, and it did not always. The endpoint
+ * used to be deliberately open, with the monitor id in the URL serving as the secret —
+ * the model most cron-monitoring services use, because it keeps the integration to a
+ * bare `curl` with no header. The reason it changed is that a URL is a poor secret: it
+ * leaks into CI logs, shell history, shared crontabs and screenshots, and once leaked
+ * there was nothing to revoke short of deleting the monitor. A key can be scoped to this
+ * one capability and rotated on its own.
+ *
+ * The cost of that is real and was accepted knowingly: every crontab pinging this
+ * endpoint has to carry an `Authorization` header, and one that doesn't gets a 401 and
+ * eventually a missed-check alert.
  *
  * Two independent limits apply, for two different reasons. The product rule is one
  * accepted ping per minute per monitor, enforced from `last_ping_at` in the handler
- * below. The abuse rule is a budget per caller, enforced by middleware before the
- * handler runs so a refused request never reaches the database — an unauthenticated
- * route is reachable in volume by anyone holding a ping URL, and the product rule
- * alone bounds what is *recorded*, not what is *charged*.
+ * below. The abuse rule is a budget per caller, enforced by middleware *before*
+ * authentication so that a flood is refused without spending a database read on looking
+ * up whatever key it presented, and the product rule alone bounds what is *recorded*,
+ * not what is *charged*.
  *
  * A ping this endpoint accepts is billed as one ping against the team's allowance, and
  * only an accepted one is: a request refused as unknown, disabled, or too frequent
@@ -35,6 +44,7 @@ import { createAction } from "remix/fetch-router";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Team from "~/app/data/team";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { notifyCronJobResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
@@ -141,12 +151,21 @@ const limitByCaller: Middleware = (context, next) => {
 
 /** POST /api/v1/cron-jobs/:cronJobId/ping */
 export default createAction(routes.api.cronJobPing, {
-	middleware: [limitByCaller],
+	middleware: [limitByCaller, requireApiKey("cron-jobs:ping")],
 	handler: async (ctx) => {
 		let db = getServiceContainer().get(Database);
 
 		let { cronJobId } = s.parse(s.object({ cronJobId: s.string() }), ctx.params);
-		let monitor = await CronJobMonitor.findById(db, cronJobId);
+		/**
+		 * Scoped to the key's own team, not looked up by id alone. Authenticating the caller
+		 * only says who they are; without this a key from any team could ping any monitor
+		 * whose id it had, which is the same hole the id-as-secret model had, reopened one
+		 * step later.
+		 *
+		 * A monitor belonging to someone else answers 404 rather than 403, so the endpoint
+		 * cannot be used to discover which ids exist.
+		 */
+		let monitor = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
 		if (!monitor) return notFound({ error: "Not Found" });
 
 		if (monitor.enabled_at === null) return conflict({ error: "Cron job is disabled" });

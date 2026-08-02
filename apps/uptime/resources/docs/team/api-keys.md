@@ -5,7 +5,7 @@ section:
   title: Team & Settings
   order: 3
 order: 4
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-02
 ---
 
 API keys allow you to access the Uptime API programmatically. Use them to integrate monitoring data into your own tools, automate monitor management, or build custom dashboards.
@@ -46,7 +46,7 @@ Scopes control what actions an API key can perform. Choose only the scopes your 
 | ----------------- | --------------------------------------------------- |
 | `cron-jobs:read`  | List and view cron jobs and their execution history |
 | `cron-jobs:write` | Create, update, and delete cron jobs                |
-| `cron-jobs:ping`  | Send pings to cron job endpoints                    |
+| `cron-jobs:ping`  | Record pings for the team's cron job monitors       |
 
 ### Alerts & Status
 

@@ -17,6 +17,9 @@ import { sendQueueBatch } from "~/app/lib/queue";
 import { apportionCostByTeam } from "~/app/services/cost";
 
 export class EnqueuePendingDomainsJob extends Job {
+	/** The "Enqueue Pending Domains" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let pending = await TeamDomain.listUnverified(db);

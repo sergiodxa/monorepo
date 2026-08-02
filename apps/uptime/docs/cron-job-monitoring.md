@@ -18,9 +18,10 @@ Cron job monitoring verifies that scheduled jobs run on time by requiring the jo
 
 1. The user creates a cron job monitor.
 2. The system provides a unique ping endpoint for that monitor.
-3. The user's scheduled job calls the ping endpoint after it finishes.
-4. The system compares actual pings against the expected schedule.
-5. Based on timing, the job is marked healthy, late, missed, or new.
+3. The user creates an API key carrying the cron ping permission, and gives it to the job.
+4. The user's scheduled job calls the ping endpoint after it finishes, presenting that key.
+5. The system compares actual pings against the expected schedule.
+6. Based on timing, the job is marked healthy, late, missed, or new.
 
 ## Status Model
 
@@ -42,8 +43,21 @@ Ping history also tracks whether each individual ping was on time.
 ## Ping Rules
 
 - Jobs are expected to ping after successful completion.
+- A ping must present an API key carrying the cron ping permission. That permission is separate from cron read and write so a key handed to a scheduled job can record pings and nothing else.
+- A key reaches only the monitors of the team that owns it.
+- A monitor the caller's team does not own is answered exactly as an unknown one is, so the endpoint cannot be used to learn which monitor identifiers exist. Telling the two apart would hand an authenticated caller a way to enumerate other teams' monitors.
 - Disabled jobs should not accept pings as if they were active.
-- The ping endpoint should be protected against accidental overuse with rate limiting.
+- The ping endpoint should be protected against accidental overuse with rate limiting: one accepted ping per minute per monitor as a product rule, and a per-caller budget as an abuse rule.
+- The abuse budget is spent before the key is checked, so a flood is refused without the system looking up whatever key it presented. A caller past its budget is told it is rate limited, not that it is unauthenticated.
+- Only an accepted ping is billable. A ping refused before it is recorded — unauthenticated, unpermitted, unknown, disabled, too frequent, or over budget — performed no work and must not be metered.
+
+### Why Pings Are Authenticated
+
+The endpoint was originally open, with the monitor identifier in the URL acting as the only secret. That is the conventional model for cron monitoring, and it buys a real thing: the integration is a bare shell command with no header and no key to distribute.
+
+It was given up because a URL is a poor secret. It leaks into continuous integration logs, shell history, shared crontabs and screenshots, and once leaked there is nothing to revoke short of deleting the monitor and losing its history. A permission-scoped key can be rotated on its own, and can be granted to a job without granting anything else.
+
+The cost is accepted knowingly and is not softened: every job pinging the endpoint has to carry a key, and one that does not is rejected and will eventually alert as missed. There is no grace period and no unauthenticated fallback.
 
 ## Visible Outputs
 
@@ -55,7 +69,7 @@ Ping history also tracks whether each individual ping was on time.
 - Grace period
 - Timezone
 - Ping history
-- Copyable integration examples for common runtimes or shells
+- Copyable integration examples for common runtimes or shells, each carrying the authorization header a ping needs and reading the key from the environment rather than inlining it
 
 ## Defaults and Limits
 
@@ -74,6 +88,8 @@ Ping history also tracks whether each individual ping was on time.
 
 Preserve these product rules:
 
-- Cron jobs need a generated ping URL.
+- Cron jobs need a generated ping URL, and that URL is an address, not a credential.
+- Pings must require a permission distinct from cron read and write, scoped to the owning team, and revocable without touching the monitor.
+- An unowned monitor and an unknown monitor must be answered identically.
 - Expected timing must be derived from cron expression, timezone, and grace period.
 - The feature should support both operational dashboards and public-facing status communication.

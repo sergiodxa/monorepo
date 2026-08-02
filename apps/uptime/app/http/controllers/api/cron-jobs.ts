@@ -2,8 +2,8 @@
  * API v1 collection endpoints for cron-job monitors: `GET /api/v1/cron-jobs` lists a
  * team's cron jobs and `POST /api/v1/cron-jobs` creates one. Requires
  * `cron-jobs:read`/`cron-jobs:write` via `requireApiKey`. Does not cover
- * `POST /api/v1/cron-jobs/:cronJobId/ping` — that endpoint is deliberately public and
- * lives in `app/http/controllers/api/cron-job-ping.ts`.
+ * `POST /api/v1/cron-jobs/:cronJobId/ping`, which lives in
+ * `app/http/controllers/api/cron-job-ping.ts` and requires `cron-jobs:ping`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

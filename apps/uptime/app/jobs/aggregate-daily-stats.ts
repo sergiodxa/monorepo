@@ -39,6 +39,9 @@ interface RawAggregateRow {
 }
 
 export class AggregateDailyStatsJob extends Job {
+	/** The "Daily Stats Aggregation" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let date = getYesterdayDateUtc();

@@ -57,6 +57,9 @@ interface CheckedMonitor {
 }
 
 export class CheckDnsJob extends Job {
+	/** The "Check DNS Records" cron monitor this sweep reports itself to when it completes. */
+	static override monitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
+
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let polar = getServiceContainer().get(PolarClient);
