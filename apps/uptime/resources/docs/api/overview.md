@@ -15,7 +15,7 @@ The Uptime API is a RESTful API that allows you to manage all aspects of your mo
 All API requests should be made to:
 
 ```
-https://uptime.example.com/api/v1
+https://uptime.sergiodxa.com/api/v1
 ```
 
 ## Authentication
@@ -29,6 +29,7 @@ All responses are returned as JSON. Successful responses include a `data` field,
 ## Available Resources
 
 - [Status](/docs/api/resources/status) - Check API health and your account status
+- [Ping](/docs/api/resources/ping) - Run a one-off HTTP, DNS or TCP check without creating a monitor
 - [HTTP Monitors](/docs/api/resources/http-monitors) - Monitor websites and HTTP endpoints
 - [DNS Monitors](/docs/api/resources/dns-monitors) - Monitor DNS records and propagation
 - [TCP Monitors](/docs/api/resources/tcp-monitors) - Monitor TCP ports and services

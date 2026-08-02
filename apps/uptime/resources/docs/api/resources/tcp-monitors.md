@@ -15,7 +15,7 @@ TCP monitors verify that services are accepting connections on specific ports. U
 Retrieve all TCP monitors for your team.
 
 ```
-GET /v1/tcp-monitors
+GET /api/v1/tcp-monitors
 ```
 
 **Required scope:** `tcp-monitors:read`
@@ -23,7 +23,7 @@ GET /v1/tcp-monitors
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/tcp-monitors \
+curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -159,7 +159,7 @@ curl https://api.uptime.example.com/v1/tcp-monitors \
 Create a new TCP monitor to check port connectivity.
 
 ```
-POST /v1/tcp-monitors
+POST /api/v1/tcp-monitors
 ```
 
 **Required scope:** `tcp-monitors:write`
@@ -178,7 +178,7 @@ POST /v1/tcp-monitors
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/tcp-monitors \
+curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -369,7 +369,7 @@ curl https://api.uptime.example.com/v1/tcp-monitors \
 Retrieve a single TCP monitor by ID.
 
 ```
-GET /v1/tcp-monitors/:id
+GET /api/v1/tcp-monitors/:id
 ```
 
 **Required scope:** `tcp-monitors:read`
@@ -377,7 +377,7 @@ GET /v1/tcp-monitors/:id
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -509,7 +509,7 @@ curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
 Update an existing TCP monitor. Only include fields you want to change.
 
 ```
-PUT /v1/tcp-monitors/:id
+PUT /api/v1/tcp-monitors/:id
 ```
 
 **Required scope:** `tcp-monitors:write`
@@ -528,7 +528,7 @@ PUT /v1/tcp-monitors/:id
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
   -X PUT \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
@@ -713,7 +713,7 @@ curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
 Permanently delete a TCP monitor and all its check history.
 
 ```
-DELETE /v1/tcp-monitors/:id
+DELETE /api/v1/tcp-monitors/:id
 ```
 
 **Required scope:** `tcp-monitors:write`
@@ -721,7 +721,7 @@ DELETE /v1/tcp-monitors/:id
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123 \
   -X DELETE \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
@@ -747,7 +747,7 @@ Returns `204 No Content` with no response body on success.
 Retrieve the connection check history for a TCP monitor.
 
 ```
-GET /v1/tcp-monitors/:id/results
+GET /api/v1/tcp-monitors/:id/results
 ```
 
 **Required scope:** `tcp-monitors:read`
@@ -762,7 +762,7 @@ GET /v1/tcp-monitors/:id/results
 ### cURL
 
 ```bash
-curl "https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123/results?limit=10&offset=0" \
+curl "https://uptime.sergiodxa.com/api/v1/tcp-monitors/tcpm_abc123/results?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

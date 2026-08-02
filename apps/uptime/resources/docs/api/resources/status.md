@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 The Status endpoint provides a consolidated view of your team's monitoring health, including the overall status and individual monitor states.
 
-## GET /v1/status
+## GET /api/v1/status
 
 Returns the overall status of all monitors in your team, along with a summary and details for each monitor.
 
@@ -23,7 +23,7 @@ Returns the overall status of all monitors in your team, along with a summary an
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/status \
+curl https://uptime.sergiodxa.com/api/v1/status \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

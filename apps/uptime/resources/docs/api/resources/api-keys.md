@@ -12,7 +12,7 @@ Manage API keys for your team programmatically. Each team can have a maximum of 
 
 > **Important:** The full API key value is only returned once when the key is created. Store it securely immediately, as it cannot be retrieved again.
 
-## GET /v1/api-keys
+## GET /api/v1/api-keys
 
 Returns all API keys for your team. The actual key values are never returned after creation, only the prefix for identification.
 
@@ -25,7 +25,7 @@ Returns all API keys for your team. The actual key values are never returned aft
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/api-keys \
+curl https://uptime.sergiodxa.com/api/v1/api-keys \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -147,7 +147,7 @@ curl https://api.uptime.example.com/v1/api-keys \
 
 ---
 
-## POST /v1/api-keys
+## POST /api/v1/api-keys
 
 Creates a new API key for your team.
 
@@ -170,7 +170,7 @@ Creates a new API key for your team.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/api-keys \
+curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -346,7 +346,7 @@ curl -X POST https://api.uptime.example.com/v1/api-keys \
 
 ---
 
-## DELETE /v1/api-keys/:id
+## DELETE /api/v1/api-keys/:id
 
 Permanently deletes an API key. This action cannot be undone. Any integrations using this key will immediately lose access.
 
@@ -365,7 +365,7 @@ Permanently deletes an API key. This action cannot be undone. Any integrations u
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/api-keys/key_abc123 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/api-keys/key_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

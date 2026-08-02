@@ -27,14 +27,14 @@ Create API keys from your team settings. See [Managing API Keys](/docs/team/api-
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors \
+curl https://uptime.sergiodxa.com/api/v1/monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
 ### JavaScript (fetch)
 
 ```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors", {
+const response = await fetch("https://uptime.sergiodxa.com/api/v1/monitors", {
 	headers: {
 		Authorization: "Bearer uptime_your_api_key",
 	},

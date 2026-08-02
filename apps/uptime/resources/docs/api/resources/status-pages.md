@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 Status pages provide a public-facing view of your service health. Associate monitors and cron jobs to display their status to your users.
 
-## GET /v1/status-pages
+## GET /api/v1/status-pages
 
 Returns all status pages for your team.
 
@@ -23,7 +23,7 @@ Returns all status pages for your team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/status-pages \
+curl https://uptime.sergiodxa.com/api/v1/status-pages \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -113,7 +113,7 @@ curl https://api.uptime.example.com/v1/status-pages \
 }
 ```
 
-## POST /v1/status-pages
+## POST /api/v1/status-pages
 
 Creates a new status page.
 
@@ -139,7 +139,7 @@ Creates a new status page.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/status-pages \
+curl -X POST https://uptime.sergiodxa.com/api/v1/status-pages \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -243,7 +243,7 @@ curl -X POST https://api.uptime.example.com/v1/status-pages \
 }
 ```
 
-## GET /v1/status-pages/:id
+## GET /api/v1/status-pages/:id
 
 Returns a single status page with its associated monitors and cron jobs.
 
@@ -262,7 +262,7 @@ Returns a single status page with its associated monitors and cron jobs.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/status-pages/sp_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -374,7 +374,7 @@ curl https://api.uptime.example.com/v1/status-pages/sp_abc123 \
 }
 ```
 
-## PUT /v1/status-pages/:id
+## PUT /api/v1/status-pages/:id
 
 Updates an existing status page.
 
@@ -408,7 +408,7 @@ All fields are optional. Only provided fields will be updated.
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/status-pages/sp_abc123 \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -508,7 +508,7 @@ curl -X PUT https://api.uptime.example.com/v1/status-pages/sp_abc123 \
 }
 ```
 
-## DELETE /v1/status-pages/:id
+## DELETE /api/v1/status-pages/:id
 
 Deletes a status page.
 
@@ -527,7 +527,7 @@ Deletes a status page.
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/status-pages/sp_abc123 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -549,7 +549,7 @@ Returns `204 No Content` on success.
 
 Returns `204 No Content` with an empty response body on success.
 
-## PUT /v1/status-pages/:id/monitors
+## PUT /api/v1/status-pages/:id/monitors
 
 Updates the monitors and cron jobs associated with a status page.
 
@@ -575,7 +575,7 @@ Updates the monitors and cron jobs associated with a status page.
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/status-pages/sp_abc123/monitors \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123/monitors \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{

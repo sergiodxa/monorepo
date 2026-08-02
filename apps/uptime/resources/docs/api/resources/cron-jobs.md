@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 Cron job monitors track scheduled tasks by receiving pings when jobs complete. If a ping is not received within the expected window, the job is marked as late and alerts are triggered.
 
-## GET /v1/cron-jobs
+## GET /api/v1/cron-jobs
 
 Returns all cron job monitors for your team.
 
@@ -23,7 +23,7 @@ Returns all cron job monitors for your team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/cron-jobs \
+curl https://uptime.sergiodxa.com/api/v1/cron-jobs \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -111,7 +111,7 @@ curl https://api.uptime.example.com/v1/cron-jobs \
 }
 ```
 
-## POST /v1/cron-jobs
+## POST /api/v1/cron-jobs
 
 Creates a new cron job monitor.
 
@@ -136,7 +136,7 @@ Creates a new cron job monitor.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/cron-jobs \
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -249,7 +249,7 @@ curl -X POST https://api.uptime.example.com/v1/cron-jobs \
 }
 ```
 
-## GET /v1/cron-jobs/:id
+## GET /api/v1/cron-jobs/:id
 
 Returns a single cron job monitor by ID.
 
@@ -262,7 +262,7 @@ Returns a single cron job monitor by ID.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -346,7 +346,7 @@ curl https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-## PUT /v1/cron-jobs/:id
+## PUT /api/v1/cron-jobs/:id
 
 Updates an existing cron job monitor.
 
@@ -373,7 +373,7 @@ All fields are optional. Only provided fields will be updated.
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -481,7 +481,7 @@ curl -X PUT https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
 }
 ```
 
-## DELETE /v1/cron-jobs/:id
+## DELETE /api/v1/cron-jobs/:id
 
 Deletes a cron job monitor. This action cannot be undone.
 
@@ -494,7 +494,7 @@ Deletes a cron job monitor. This action cannot be undone.
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -516,7 +516,7 @@ Returns `204 No Content` on success with an empty response body.
 
 Returns `204 No Content` with an empty response body on success.
 
-## GET /v1/cron-jobs/:id/ping
+## GET /api/v1/cron-jobs/:id/ping
 
 Returns the ping history for a cron job monitor.
 
@@ -536,7 +536,7 @@ Returns the ping history for a cron job monitor.
 #### cURL
 
 ```bash
-curl "https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping?limit=10&offset=0" \
+curl "https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -620,7 +620,7 @@ curl "https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping?limit=10&offs
 }
 ```
 
-## POST /v1/cron-jobs/:id/ping
+## POST /api/v1/cron-jobs/:id/ping
 
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
 
@@ -635,7 +635,7 @@ Records a ping for a cron job monitor. Call this endpoint when your scheduled ta
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping \
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/cron_abc123/ping \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

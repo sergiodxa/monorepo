@@ -15,7 +15,7 @@ DNS monitors check that your DNS records resolve correctly and match expected va
 Retrieves all DNS monitors for your team.
 
 ```
-GET /v1/dns-monitors
+GET /api/v1/dns-monitors
 ```
 
 **Required Scope:** `dns-monitors:read`
@@ -23,7 +23,7 @@ GET /v1/dns-monitors
 ### cURL
 
 ```bash
-curl https://uptime.example.com/api/v1/dns-monitors \
+curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -154,7 +154,7 @@ curl https://uptime.example.com/api/v1/dns-monitors \
 Creates a new DNS monitor.
 
 ```
-POST /v1/dns-monitors
+POST /api/v1/dns-monitors
 ```
 
 **Required Scope:** `dns-monitors:write`
@@ -173,7 +173,7 @@ POST /v1/dns-monitors
 ### cURL
 
 ```bash
-curl https://uptime.example.com/api/v1/dns-monitors \
+curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -355,7 +355,7 @@ curl https://uptime.example.com/api/v1/dns-monitors \
 Retrieves a single DNS monitor by ID.
 
 ```
-GET /v1/dns-monitors/:id
+GET /api/v1/dns-monitors/:id
 ```
 
 **Required Scope:** `dns-monitors:read`
@@ -363,7 +363,7 @@ GET /v1/dns-monitors/:id
 ### cURL
 
 ```bash
-curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -490,7 +490,7 @@ curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
 Updates an existing DNS monitor. All fields are optional; only provided fields are updated.
 
 ```
-PUT /v1/dns-monitors/:id
+PUT /api/v1/dns-monitors/:id
 ```
 
 **Required Scope:** `dns-monitors:write`
@@ -509,7 +509,7 @@ PUT /v1/dns-monitors/:id
 ### cURL
 
 ```bash
-curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
   -X PUT \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
@@ -686,7 +686,7 @@ curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
 Permanently deletes a DNS monitor and all its historical results.
 
 ```
-DELETE /v1/dns-monitors/:id
+DELETE /api/v1/dns-monitors/:id
 ```
 
 **Required Scope:** `dns-monitors:write`
@@ -694,7 +694,7 @@ DELETE /v1/dns-monitors/:id
 ### cURL
 
 ```bash
-curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
   -X DELETE \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
@@ -720,7 +720,7 @@ Returns `204 No Content` with an empty response body on success.
 Retrieves the check history for a DNS monitor.
 
 ```
-GET /v1/dns-monitors/:id/results
+GET /api/v1/dns-monitors/:id/results
 ```
 
 **Required Scope:** `dns-monitors:read`
@@ -734,7 +734,7 @@ GET /v1/dns-monitors/:id/results
 ### cURL
 
 ```bash
-curl "https://uptime.example.com/api/v1/dns-monitors/dns_abc123/results?limit=10" \
+curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/results?limit=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

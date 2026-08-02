@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 Manage your team settings, memberships, and custom domains for status pages.
 
-## GET /v1/team
+## GET /api/v1/team
 
 Returns the current team's details.
 
@@ -23,7 +23,7 @@ Returns the current team's details.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/team \
+curl https://uptime.sergiodxa.com/api/v1/team \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -100,7 +100,7 @@ curl https://api.uptime.example.com/v1/team \
 }
 ```
 
-## PUT /v1/team
+## PUT /api/v1/team
 
 Updates the current team's settings. At least one field must be provided.
 
@@ -120,7 +120,7 @@ Updates the current team's settings. At least one field must be provided.
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/team \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -212,7 +212,7 @@ curl -X PUT https://api.uptime.example.com/v1/team \
 }
 ```
 
-## GET /v1/memberships
+## GET /api/v1/memberships
 
 Returns all memberships for the current team.
 
@@ -225,7 +225,7 @@ Returns all memberships for the current team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/memberships \
+curl https://uptime.sergiodxa.com/api/v1/memberships \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -325,7 +325,7 @@ curl https://api.uptime.example.com/v1/memberships \
 }
 ```
 
-## GET /v1/team-domains
+## GET /api/v1/team-domains
 
 Returns all custom domains configured for the team's status pages.
 
@@ -338,7 +338,7 @@ Returns all custom domains configured for the team's status pages.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/team-domains \
+curl https://uptime.sergiodxa.com/api/v1/team-domains \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -425,7 +425,7 @@ curl https://api.uptime.example.com/v1/team-domains \
 }
 ```
 
-## POST /v1/team-domains
+## POST /api/v1/team-domains
 
 Adds a custom domain for the team's status pages.
 
@@ -444,7 +444,7 @@ Adds a custom domain for the team's status pages.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/team-domains \
+curl -X POST https://uptime.sergiodxa.com/api/v1/team-domains \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -523,7 +523,7 @@ curl -X POST https://api.uptime.example.com/v1/team-domains \
 }
 ```
 
-## DELETE /v1/team-domains
+## DELETE /api/v1/team-domains
 
 Removes a custom domain from the team.
 
@@ -542,7 +542,7 @@ Removes a custom domain from the team.
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/team-domains \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/team-domains \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{

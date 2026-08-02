@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 Manage team invitations to onboard new members. Invites are sent via email and expire after 7 days if not accepted.
 
-## GET /v1/invites
+## GET /api/v1/invites
 
 Returns all pending and accepted invitations for your team.
 
@@ -23,7 +23,7 @@ Returns all pending and accepted invitations for your team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/invites \
+curl https://uptime.sergiodxa.com/api/v1/invites \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -118,7 +118,7 @@ curl https://api.uptime.example.com/v1/invites \
 }
 ```
 
-## POST /v1/invites
+## POST /api/v1/invites
 
 Create a new invitation and send it to the specified email address. The invite expires after 7 days.
 
@@ -137,7 +137,7 @@ Create a new invitation and send it to the specified email address. The invite e
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/invites \
+curl -X POST https://uptime.sergiodxa.com/api/v1/invites \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{"email": "newuser@example.com"}'
@@ -221,7 +221,7 @@ curl -X POST https://api.uptime.example.com/v1/invites \
 }
 ```
 
-## DELETE /v1/invites/:id
+## DELETE /api/v1/invites/:id
 
 Revoke a pending invitation. This prevents the invited user from joining the team using this invite.
 
@@ -240,7 +240,7 @@ Revoke a pending invitation. This prevents the invited user from joining the tea
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/invites/inv_ghi789 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/invites/inv_ghi789 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

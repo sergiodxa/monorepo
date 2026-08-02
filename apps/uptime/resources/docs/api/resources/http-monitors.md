@@ -15,7 +15,7 @@ HTTP monitors check your websites and APIs for availability, performance, and co
 Retrieve all HTTP monitors for your team.
 
 ```
-GET /v1/monitors
+GET /api/v1/monitors
 ```
 
 **Required scope:** `monitors:read`
@@ -23,7 +23,7 @@ GET /v1/monitors
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors \
+curl https://uptime.sergiodxa.com/api/v1/monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -122,7 +122,7 @@ curl https://api.uptime.example.com/v1/monitors \
 Create a new HTTP monitor.
 
 ```
-POST /v1/monitors
+POST /api/v1/monitors
 ```
 
 **Required scope:** `monitors:write`
@@ -149,7 +149,7 @@ POST /v1/monitors
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors \
+curl https://uptime.sergiodxa.com/api/v1/monitors \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -320,7 +320,7 @@ curl https://api.uptime.example.com/v1/monitors \
 Retrieve a single HTTP monitor by ID.
 
 ```
-GET /v1/monitors/:id
+GET /api/v1/monitors/:id
 ```
 
 **Required scope:** `monitors:read`
@@ -328,7 +328,7 @@ GET /v1/monitors/:id
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -418,7 +418,7 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
 Update an existing HTTP monitor.
 
 ```
-PUT /v1/monitors/:id
+PUT /api/v1/monitors/:id
 ```
 
 **Required scope:** `monitors:write`
@@ -430,7 +430,7 @@ All fields from [Create Monitor](#create-monitor) are accepted. Only include fie
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
   -X PUT \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
@@ -589,7 +589,7 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
 Permanently delete an HTTP monitor and all its check history.
 
 ```
-DELETE /v1/monitors/:id
+DELETE /api/v1/monitors/:id
 ```
 
 **Required scope:** `monitors:write`
@@ -597,7 +597,7 @@ DELETE /v1/monitors/:id
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
   -X DELETE \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
@@ -623,7 +623,7 @@ Returns `204 No Content` with an empty body on success.
 Retrieve the check history for a monitor.
 
 ```
-GET /v1/monitors/:id/results
+GET /api/v1/monitors/:id/results
 ```
 
 **Required scope:** `monitors:read`
@@ -638,7 +638,7 @@ GET /v1/monitors/:id/results
 ### cURL
 
 ```bash
-curl "https://api.uptime.example.com/v1/monitors/mon_abc123/results?limit=10&offset=0" \
+curl "https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/results?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -733,7 +733,7 @@ curl "https://api.uptime.example.com/v1/monitors/mon_abc123/results?limit=10&off
 Retrieve performance statistics for a single monitor.
 
 ```
-GET /v1/monitors/:id/stats
+GET /api/v1/monitors/:id/stats
 ```
 
 **Required scope:** `monitors:read`
@@ -741,7 +741,7 @@ GET /v1/monitors/:id/stats
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors/mon_abc123/stats \
+curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123/stats \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -837,7 +837,7 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123/stats \
 Retrieve aggregated statistics across all monitors.
 
 ```
-GET /v1/monitors/stats
+GET /api/v1/monitors/stats
 ```
 
 **Required scope:** `monitors:read`
@@ -845,7 +845,7 @@ GET /v1/monitors/stats
 ### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/monitors/stats \
+curl https://uptime.sergiodxa.com/api/v1/monitors/stats \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -934,7 +934,7 @@ Manage content validation rules for a monitor. Content checks verify that respon
 ### Create Content Check
 
 ```
-POST /v1/monitors/:id/content-checks
+POST /api/v1/monitors/:id/content-checks
 ```
 
 **Required scope:** `monitors:write`
@@ -950,7 +950,7 @@ POST /v1/monitors/:id/content-checks
 ### Delete Content Check
 
 ```
-DELETE /v1/monitors/:id/content-checks/:checkId
+DELETE /api/v1/monitors/:id/content-checks/:checkId
 ```
 
 **Required scope:** `monitors:write`

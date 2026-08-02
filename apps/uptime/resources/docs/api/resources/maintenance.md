@@ -10,7 +10,7 @@ lastUpdated: 2026-02-14
 
 Maintenance windows allow you to schedule planned downtime for your monitors. During a maintenance window, alerts can be suppressed and the status page can display a maintenance notice.
 
-## GET /v1/maintenance
+## GET /api/v1/maintenance
 
 Returns a list of all maintenance windows for your team.
 
@@ -23,7 +23,7 @@ Returns a list of all maintenance windows for your team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/maintenance \
+curl https://uptime.sergiodxa.com/api/v1/maintenance \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -139,7 +139,7 @@ curl https://api.uptime.example.com/v1/maintenance \
 }
 ```
 
-## POST /v1/maintenance
+## POST /api/v1/maintenance
 
 Creates a new maintenance window.
 
@@ -163,7 +163,7 @@ Creates a new maintenance window.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/maintenance \
+curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -318,7 +318,7 @@ curl -X POST https://api.uptime.example.com/v1/maintenance \
 }
 ```
 
-## GET /v1/maintenance/:id
+## GET /api/v1/maintenance/:id
 
 Returns a single maintenance window by ID.
 
@@ -331,7 +331,7 @@ Returns a single maintenance window by ID.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -438,7 +438,7 @@ curl https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
 }
 ```
 
-## PUT /v1/maintenance/:id
+## PUT /api/v1/maintenance/:id
 
 Updates an existing maintenance window.
 
@@ -462,7 +462,7 @@ Updates an existing maintenance window.
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -610,7 +610,7 @@ curl -X PUT https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
 }
 ```
 
-## DELETE /v1/maintenance/:id
+## DELETE /api/v1/maintenance/:id
 
 Deletes a maintenance window.
 
@@ -623,7 +623,7 @@ Deletes a maintenance window.
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -645,7 +645,7 @@ Returns `204 No Content` on success.
 
 Returns `204 No Content` with an empty response body on success.
 
-## POST /v1/maintenance/:id/end
+## POST /api/v1/maintenance/:id/end
 
 Ends a maintenance window early. Sets the `endedEarlyAt` timestamp to the current time.
 
@@ -658,7 +658,7 @@ Ends a maintenance window early. Sets the `endedEarlyAt` timestamp to the curren
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/maintenance/mnt_abc123/end \
+curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 

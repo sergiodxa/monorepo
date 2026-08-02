@@ -92,7 +92,7 @@ When you create a cron monitor, Uptime provides ready-to-use code snippets for i
 The simplest way to ping Uptime from any environment:
 
 ```bash
-curl -X POST https://uptime.example.com/ping/{monitor-id}
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
 ```
 
 ### Bash / Crontab Integration
@@ -101,7 +101,7 @@ Add the ping to the end of your cron job:
 
 ```bash
 # In your crontab
-0 2 * * * /path/to/backup.sh && curl -X POST https://uptime.example.com/ping/{monitor-id}
+0 2 * * * /path/to/backup.sh && curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
 ```
 
 Or within a shell script:
@@ -116,7 +116,7 @@ gzip backup.sql
 aws s3 cp backup.sql.gz s3://my-bucket/
 
 # Ping Uptime only if everything succeeded
-curl -X POST https://uptime.example.com/ping/{monitor-id}
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
 ```
 
 ### Application Code
@@ -131,7 +131,7 @@ async function runScheduledJob() {
 	await sendReportEmails();
 
 	// Ping Uptime when complete
-	await fetch("https://uptime.example.com/ping/{monitor-id}", {
+	await fetch("https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping", {
 		method: "POST",
 	});
 }
@@ -146,7 +146,7 @@ def run_scheduled_job():
     sync_inventory_data()
 
     # Ping Uptime when complete
-    requests.post('https://uptime.example.com/ping/{monitor-id}')
+    requests.post('https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping')
 ```
 
 ## Best Practices
@@ -157,11 +157,11 @@ Always send the ping after your job completes successfully, not when it starts. 
 
 ```bash
 # Wrong - pings before the job runs
-curl -X POST https://uptime.example.com/ping/{monitor-id}
+curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
 ./backup.sh
 
 # Correct - pings only after success
-./backup.sh && curl -X POST https://uptime.example.com/ping/{monitor-id}
+./backup.sh && curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs/{monitor-id}/ping
 ```
 
 ### Set Appropriate Grace Periods

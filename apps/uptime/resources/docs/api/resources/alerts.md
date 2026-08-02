@@ -12,7 +12,7 @@ Alerts notify you when monitors detect issues. Each team can have up to 10 alert
 
 Sensitive data such as webhook URLs and secrets are never returned in API responses for security.
 
-## GET /v1/alerts
+## GET /api/v1/alerts
 
 Returns all alerts for your team.
 
@@ -25,7 +25,7 @@ Returns all alerts for your team.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/alerts \
+curl https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -130,7 +130,7 @@ curl https://api.uptime.example.com/v1/alerts \
 }
 ```
 
-## POST /v1/alerts
+## POST /api/v1/alerts
 
 Creates a new alert. The request body varies based on the notification strategy.
 
@@ -180,7 +180,7 @@ Creates a new alert. The request body varies based on the notification strategy.
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/alerts \
+curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -198,7 +198,7 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/alerts \
+curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -214,7 +214,7 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/alerts \
+curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -230,7 +230,7 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
 #### cURL
 
 ```bash
-curl -X POST https://api.uptime.example.com/v1/alerts \
+curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -482,7 +482,7 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
 }
 ```
 
-## GET /v1/alerts/:id
+## GET /api/v1/alerts/:id
 
 Returns a single alert by ID.
 
@@ -495,7 +495,7 @@ Returns a single alert by ID.
 #### cURL
 
 ```bash
-curl https://api.uptime.example.com/v1/alerts/alt_abc123 \
+curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -578,7 +578,7 @@ curl https://api.uptime.example.com/v1/alerts/alt_abc123 \
 }
 ```
 
-## PUT /v1/alerts/:id
+## PUT /api/v1/alerts/:id
 
 Updates an existing alert. You cannot change the `strategy` field.
 
@@ -595,7 +595,7 @@ Include only the fields you want to update. The `strategy` field cannot be chang
 #### cURL
 
 ```bash
-curl -X PUT https://api.uptime.example.com/v1/alerts/alt_abc123 \
+curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -735,7 +735,7 @@ curl -X PUT https://api.uptime.example.com/v1/alerts/alt_abc123 \
 }
 ```
 
-## DELETE /v1/alerts/:id
+## DELETE /api/v1/alerts/:id
 
 Deletes an alert.
 
@@ -748,7 +748,7 @@ Deletes an alert.
 #### cURL
 
 ```bash
-curl -X DELETE https://api.uptime.example.com/v1/alerts/alt_abc123 \
+curl -X DELETE https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
@@ -770,7 +770,7 @@ Returns `204 No Content` on success.
 
 Returns `204 No Content` with no response body on success.
 
-## GET /v1/alerts/:id/events
+## GET /api/v1/alerts/:id/events
 
 Returns the event history for an alert.
 
@@ -789,7 +789,7 @@ Returns the event history for an alert.
 #### cURL
 
 ```bash
-curl "https://api.uptime.example.com/v1/alerts/alt_abc123/events?limit=10" \
+curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?limit=10" \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
