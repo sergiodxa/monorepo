@@ -33,6 +33,15 @@ export default {
 			},
 		},
 
+		try: {
+			title: "Comprueba cualquier URL, gratis",
+			description:
+				"Sin cuenta. Ejecutamos una comprobación y te mostramos exactamente lo que informaría un monitor.",
+			label: "Comprueba una URL",
+			placeholder: "https://ejemplo.com",
+			submit: "Ejecutar comprobación",
+		},
+
 		hero: {
 			pill: "Monitoreo de Uptime",
 			title: "Monitoree sus servicios <strong>con confianza</strong>",
@@ -45,6 +54,11 @@ export default {
 				pricing: "Ver precios",
 			},
 
+			try: {
+				label: "Comprueba una URL",
+				placeholder: "https://ejemplo.com",
+				submit: "Ejecutar comprobación",
+			},
 			screenshot: {
 				alt: "Captura de pantalla del panel de Uptime: una barra lateral con monitores HTTP, DNS y TCP, cron jobs, alertas, mantenimiento y páginas de estado; tarjetas de resumen con el uso mensual de pings, el porcentaje de uptime general y el endpoint más lento; conteos por tipo de monitores activos y caídos; y una tabla de monitores HTTP con gráficos de tendencia de latencia y etiquetas de estado",
 			},
@@ -804,6 +818,93 @@ export default {
 				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+
+		trial: {
+			field: "{{label}}: {{value}}",
+			stopAction: "Dejar de recibir estos correos",
+			stop: "Un clic termina con todas las URL que nos pidió vigilar y borra su dirección y sus datos. Puede volver a empezar cuando quiera desde nuestro sitio web.",
+
+			status: {
+				up: "ACTIVO",
+				degraded: "DEGRADADO",
+				down: "CAÍDO",
+			},
+
+			fields: {
+				url: "URL",
+				status: "Estado",
+				previousStatus: "Estado anterior",
+				responseStatus: "Estado de respuesta",
+				responseTime: "Tiempo de respuesta",
+				checkedAt: "Comprobado el",
+				changedAt: "Cambió el",
+				checks: "Comprobaciones realizadas",
+				uptime: "Disponibilidad",
+				slowest: "Respuesta más lenta",
+			},
+
+			values: {
+				none: "—",
+				milliseconds: "{{value}}ms",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% de disponibilidad",
+				legend: {
+					up: "Activo",
+					degraded: "Degradado",
+					down: "Caído",
+					noData: "Sin datos",
+				},
+			},
+
+			confirmation: {
+				subject: "Ahora comprobamos {{url}} cada hora",
+				preview: "Las comprobaciones cada hora de {{url}} ya han empezado",
+				heading: "Ahora comprobamos {{url}} cada hora",
+				body: "Esta es la comprobación que acaba de ejecutar. Repetiremos la misma cada hora hasta el {{until}} y le escribiremos cada vez que el resultado cambie. También recibirá un resumen una vez al día.",
+				footer:
+					"Ha recibido este correo porque nos pidió comprobar esta URL desde nuestro sitio web.",
+			},
+
+			change: {
+				subject: "{{url}} está {{status}}",
+				preview: "{{url}} está {{status}}",
+				heading: "{{url}} está {{status}}",
+				body: "La comprobación de las {{time}} devolvió un resultado distinto al de la anterior.",
+				footer: "Ha recibido este correo porque nos pidió vigilar esta URL durante una semana.",
+			},
+
+			daily: {
+				subject: "Informe diario: {{url}}",
+				subjectMany: "Informe diario: {{total}} URL",
+				preview: "Las últimas 24 horas de comprobaciones de {{url}}",
+				previewMany: "Las últimas 24 horas de comprobaciones de {{total}} URL",
+				heading: "{{url}} en las últimas 24 horas",
+				headingMany: "Sus {{total}} URL en las últimas 24 horas",
+				summaryAll: "Las {{total}} estaban activas en la última comprobación.",
+				summary: "{{up}} de {{total}} estaban activas en la última comprobación.",
+				target: "{{url}} — {{status}}",
+				rangeStart: "Hace 24 horas",
+				rangeEnd: "Ahora",
+				footer:
+					"Ha recibido este correo porque nos pidió realizar estas comprobaciones desde nuestro sitio web.",
+			},
+
+			weekly: {
+				subject: "Informe de siete días: {{url}}",
+				preview: "La semana completa de comprobaciones de {{url}}",
+				heading: "{{url}} en los últimos siete días",
+				rangeStart: "Hace 7 días",
+				rangeEnd: "Hoy",
+				closing:
+					"Este era el séptimo día, así que las comprobaciones gratuitas de {{url}} terminan aquí.",
+				action: "Seguir comprobando esta URL",
+				footer:
+					"Ha recibido este correo porque nos pidió vigilar esta URL durante una semana. Este es el último.",
 			},
 		},
 	},
@@ -2823,6 +2924,162 @@ export default {
 			cta: "Cerrar sesión",
 		},
 
+		trial: {
+			meta: {
+				title: "Comprueba una URL — Uptime",
+				description:
+					"Ejecuta una comprobación real sobre cualquier URL desde nuestra red, sin cuenta. Después la vigilamos durante una semana.",
+			},
+
+			heading: "Comprueba una URL ahora mismo",
+			intro:
+				"Escribe una URL y ejecutamos una comprobación real desde nuestra red: la misma que hace un monitor de pago. No se guarda nada y no se cobra nada salvo que nos pidas continuar.",
+
+			form: {
+				url: {
+					label: "URL a comprobar",
+					description: "Una dirección http:// o https:// en la internet pública.",
+					placeholder: "https://ejemplo.com",
+				},
+				submit: "Ejecutar la comprobación",
+			},
+
+			refusal: {
+				title: "La comprobación no se ejecutó",
+				blockedTarget:
+					"Esa no es una dirección que vayamos a comprobar en tu nombre. Tiene que ser una URL http:// o https:// pública, en el puerto 80 o 443, sin usuario ni contraseña, y resolver a algún sitio de la internet abierta.",
+				failedChallenge:
+					"No pudimos confirmar que la petición viniera de un navegador. Recarga la página e inténtalo de nuevo.",
+				rateLimited: "Acabas de ejecutar una comprobación. Espera un minuto y haz otra.",
+				rateLimitedFor:
+					"Acabas de ejecutar una comprobación. Podrás hacer otra en {{seconds}} segundos.",
+				budgetExhausted:
+					"Ya hemos hecho todas las comprobaciones gratuitas que hacemos en un día. Esto es cosa nuestra, no de tu URL: vuelve mañana, o empieza a monitorizar y la comprobaremos cada minuto.",
+				unavailable:
+					"Nuestro sondeo no respondió, así que no aprendimos nada sobre tu URL. El problema es nuestro, no tuyo. Inténtalo de nuevo en un momento.",
+			},
+
+			result: {
+				checkAnother: "Comprobar otra URL",
+				noResponse: "Sin respuesta",
+				httpStatus: "HTTP {{status}}",
+				milliseconds: "{{value}} ms",
+				checkedAt: "Comprobado el {{time}}",
+
+				redirect: {
+					badge: "Redirige",
+					title: "Esta URL redirige a otro sitio",
+					description:
+						"Respondió, y respondió señalándonos otra dirección. No fuimos allí: solo comprobamos la URL que nos diste, y eso es lo que impide que esta caja sirva para llegar a donde no debe. Comprueba el destino y tendrás un resultado real de él.",
+					destination: "Apunta a {{url}}",
+					action: "Comprobar esa en su lugar",
+					unknownDestination:
+						"No leímos a dónde apunta. Abre la URL en un navegador, mira dónde acabas y comprueba aquí esa dirección.",
+				},
+
+				status: {
+					up: "Activo",
+					degraded: "Lento",
+					down: "Caído",
+				},
+			},
+
+			lead: {
+				title: "Recibe un email cuando esto cambie",
+				description:
+					"Déjanos un email y repetimos esta misma comprobación cada hora durante siete días, con un resumen al día. Sin cuenta y sin tarjeta.",
+				consent: "Escríbeme también de vez en cuando sobre Uptime.",
+				consentNote: "En cualquier caso tendrás las comprobaciones.",
+				promise: "Cada email lleva un enlace de un clic que las detiene y borra tu dirección.",
+				submit: "Vigilar esta URL una semana",
+
+				email: {
+					label: "Email",
+					placeholder: "tu@ejemplo.com",
+					error: "Eso no parece una dirección de email.",
+				},
+			},
+
+			watching: {
+				title: "Estamos en ello",
+				description:
+					"La primera comprobación horaria de {{url}} se ejecuta dentro de una hora. Ya tienes en tu bandeja una copia de la que acabas de hacer.",
+			},
+
+			benefits: {
+				title: "Cómo será la semana",
+				description:
+					"Todo lo que un monitor de pago te diría sobre esta URL, gratis y durante siete días.",
+
+				list: {
+					hourly: {
+						title: "Una comprobación cada hora",
+						description:
+							"Durante siete días, desde la misma red en la que corre un monitor de pago.",
+					},
+					changes: {
+						title: "Un email cuando cambia",
+						description:
+							"Se cae o vuelve, y te enteras. Como mucho uno al día, para que un sitio inestable no te desborde.",
+					},
+					digest: {
+						title: "Un resumen al día",
+						description: "Cómo aguantó tu URL, de un vistazo.",
+					},
+					noAccount: {
+						title: "Sin cuenta y sin tarjeta",
+						description: "Nada que registrar, y un clic lo detiene para siempre.",
+					},
+				},
+			},
+
+			more: {
+				title: "No solo sitios web",
+				description:
+					"La semana gratis cubre HTTP. Con una cuenta de pago te vigilamos tres cosas más.",
+
+				list: {
+					tcp: {
+						title: "TCP",
+						description:
+							"Saber que un puerto sigue respondiendo, para lo que no son webs: bases de datos, servidores de correo, servidores de juego.",
+					},
+					dns: {
+						title: "DNS",
+						description:
+							"Saber que un registro sigue apuntando a donde debe, para que un secuestro o un cambio mal hecho no pase desapercibido.",
+					},
+					cron: {
+						title: "Tareas programadas",
+						description:
+							"Saber que tu copia de seguridad nocturna terminó, y enterarte la noche en que no.",
+					},
+				},
+			},
+
+			cta: {
+				badge: "Después de la semana",
+				title: "Quédate las comprobaciones y añade el resto",
+				description:
+					"Cada minuto en lugar de cada hora, todas las URL que quieras, alertas donde ya trabajas, páginas de estado y un año de histórico. {{price}} al mes.",
+				action: "Empezar a monitorizar",
+				pricing: "Ver precios",
+			},
+		},
+
+		unsubscribe: {
+			confirm: {
+				title: "¿Detener estos emails?",
+				body: "Esto termina todas las comprobaciones que pidió esa dirección y borra la dirección junto con todo lo registrado a su nombre. No se guarda nada, así que no hay nada que deshacer, pero puedes volver a empezar desde nuestra web cuando quieras.",
+				cta: "Sí, detener y borrar",
+			},
+
+			done: {
+				title: "Te has dado de baja",
+				body: "Esa dirección ya no está en nuestra lista y las comprobaciones que pidió se han detenido. No se le enviará nada más. Puedes volver a empezar desde nuestra web cuando quieras.",
+				cta: "Volver al sitio",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "No encontrado",

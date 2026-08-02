@@ -177,6 +177,27 @@ describe("GET /", () => {
 		expect(body).toContain("From which regions can I monitor my services?");
 	});
 
+	test("renders the try-it box as a POST that runs the check on the first click", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		// The method is the security property, not a style choice: only a `POST` runs a
+		// probe, and neither a link preview, a crawler, nor a pasted `/try?url=…` issues one,
+		// so none of them can spend one of the free checks.
+		expect(body).toContain(`<form method="post" action="${routes.trial.check.action.href()}"`);
+		expect(body).toContain('name="url"');
+		expect(body).toContain("Run a check");
+	});
+
+	test("keeps the trial's selling copy off the landing page", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).not.toContain("What the week looks like");
+		expect(body).not.toContain("Watch this URL for a week");
+		expect(body).not.toContain(routes.trial.lead.href());
+	});
+
 	test("renders the marketing homepage for a signed-in viewer with a dashboard CTA", async () => {
 		let viewer: Viewer = {
 			id: "user-1",

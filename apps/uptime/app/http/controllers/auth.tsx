@@ -3,7 +3,8 @@
  * authorization-code flow against auth.sergiodxa.com; the `index` (GET) completes the
  * callback, verifies the returned ID token, provisions the Polar customer, resolves
  * the subject's team (existing membership, then domain join, then a new personal
- * team), writes the session, and redirects to the saved `returnTo` path or `/app`.
+ * team), turns any trial targets that address is still owed into real monitors in that
+ * team, writes the session, and redirects to the saved `returnTo` path or `/app`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +29,8 @@ import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
+import type IdToken from "~/app/auth/value-objects/id-token";
+
 import { createAuthProvider } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
@@ -35,6 +38,7 @@ import Team from "~/app/data/team";
 import { returnTo, safeReturnTo } from "~/app/http/cookies";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
+import { convertTrialWatches } from "~/app/services/trial-conversion";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -57,6 +61,27 @@ function provider(ctx: { request: Request }) {
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
 	i18next: i18n;
+}
+
+/**
+ * The team this sign-in lands in: an existing membership, then a domain join, then a fresh
+ * personal team.
+ *
+ * Returns the team rather than only ensuring one exists, because the trial conversion that
+ * runs next has to be told where to create monitors. A subject who belongs to several is
+ * given the one they own, and that preference is the point: a domain-joined team is their
+ * employer's, and the URLs someone probed anonymously on a public page are not something to
+ * publish to their colleagues on their behalf. Falling back to the first membership when
+ * they own none keeps the offer working for a subject whose only team is a shared one, which
+ * is the team they would have been reading the dashboard of anyway.
+ */
+async function resolveTeam(db: Database, idToken: IdToken) {
+	let teams = await Team.listBySubjectId(db, idToken.subject);
+
+	let [first] = teams;
+	if (first) return teams.find((team) => team.owner_id === idToken.subject) ?? first;
+
+	return (await Team.joinByDomain(db, idToken)) ?? (await Team.createTeam(db, idToken));
 }
 
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
@@ -129,11 +154,19 @@ export default createController(routes.auth, {
 
 				await Customer.findOrCreate(polar, idToken);
 
-				let teams = await Team.listBySubjectId(db, idToken.subject);
-				if (teams.length === 0) {
-					let joined = await Team.joinByDomain(db, idToken);
-					if (!joined) await Team.createTeam(db, idToken);
-				}
+				let team = await resolveTeam(db, idToken);
+
+				/**
+				 * After the team exists and before the session is written, because it needs
+				 * somewhere to put the monitors it creates and the person must find them already
+				 * there when the redirect lands them on the dashboard. It never throws — see the
+				 * service — so sign-in cannot fail on it.
+				 */
+				await convertTrialWatches(db, {
+					email: idToken.email,
+					teamId: team.id,
+					authorId: idToken.subject,
+				});
 
 				login({
 					id: idToken.subject,

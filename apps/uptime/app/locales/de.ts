@@ -33,6 +33,15 @@ export default {
 			},
 		},
 
+		try: {
+			title: "Prüfen Sie jede URL, kostenlos",
+			description:
+				"Kein Konto nötig. Wir führen eine Prüfung durch und zeigen genau, was ein Monitor melden würde.",
+			label: "URL prüfen",
+			placeholder: "https://beispiel.de",
+			submit: "Prüfung starten",
+		},
+
 		hero: {
 			pill: "Uptime-Überwachung",
 			title: "Überwachen Sie Ihre Dienste <strong>mit Zuversicht</strong>",
@@ -45,6 +54,11 @@ export default {
 				pricing: "Preise ansehen",
 			},
 
+			try: {
+				label: "URL prüfen",
+				placeholder: "https://beispiel.de",
+				submit: "Prüfung starten",
+			},
 			screenshot: {
 				alt: "Screenshot des Uptime-Dashboards: eine Seitenleiste mit HTTP-, DNS- und TCP-Monitoren, Cron-Jobs, Benachrichtigungen, Wartung und Statusseiten; Übersichtskarten für monatliche Ping-Nutzung, Gesamt-Uptime-Prozentsatz und den langsamsten Endpunkt; Zählungen aktiver und ausgefallener Monitore pro Typ; und eine Tabelle der HTTP-Monitore mit Latenz-Trendlinien und Status-Badges",
 			},
@@ -807,6 +821,93 @@ export default {
 				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+
+		trial: {
+			field: "{{label}}: {{value}}",
+			stopAction: "Diese E-Mails beenden",
+			stop: "Ein Klick beendet alle URLs, um deren Beobachtung Sie uns gebeten haben, und löscht Ihre Adresse samt Daten. Sie können jederzeit über unsere Website neu beginnen.",
+
+			status: {
+				up: "ERREICHBAR",
+				degraded: "BEEINTRÄCHTIGT",
+				down: "AUSGEFALLEN",
+			},
+
+			fields: {
+				url: "URL",
+				status: "Status",
+				previousStatus: "Vorheriger Status",
+				responseStatus: "Antwortstatus",
+				responseTime: "Antwortzeit",
+				checkedAt: "Geprüft am",
+				changedAt: "Geändert am",
+				checks: "Durchgeführte Prüfungen",
+				uptime: "Verfügbarkeit",
+				slowest: "Langsamste Antwort",
+			},
+
+			values: {
+				none: "—",
+				milliseconds: "{{value}}ms",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% Verfügbarkeit",
+				legend: {
+					up: "Erreichbar",
+					degraded: "Beeinträchtigt",
+					down: "Ausgefallen",
+					noData: "Keine Daten",
+				},
+			},
+
+			confirmation: {
+				subject: "Wir prüfen {{url}} jetzt stündlich",
+				preview: "Die stündlichen Prüfungen von {{url}} haben begonnen",
+				heading: "Wir prüfen {{url}} jetzt stündlich",
+				body: "Das ist die Prüfung, die Sie gerade ausgeführt haben. Wir wiederholen sie stündlich bis zum {{until}} und schreiben Ihnen, sobald sich das Ergebnis ändert. Einmal täglich erhalten Sie außerdem eine Zusammenfassung.",
+				footer:
+					"Sie erhalten diese E-Mail, weil Sie uns auf unserer Website gebeten haben, diese URL zu prüfen.",
+			},
+
+			change: {
+				subject: "{{url}} ist {{status}}",
+				preview: "{{url}} ist {{status}}",
+				heading: "{{url}} ist {{status}}",
+				body: "Die stündliche Prüfung um {{time}} hat ein anderes Ergebnis geliefert als die vorherige.",
+				footer:
+					"Sie erhalten diese E-Mail, weil Sie uns gebeten haben, diese URL eine Woche lang zu beobachten.",
+			},
+
+			daily: {
+				subject: "Täglicher Bericht: {{url}}",
+				subjectMany: "Täglicher Bericht: {{total}} URLs",
+				preview: "Die letzten 24 Stunden an Prüfungen von {{url}}",
+				previewMany: "Die letzten 24 Stunden an Prüfungen von {{total}} URLs",
+				heading: "{{url}} in den letzten 24 Stunden",
+				headingMany: "Ihre {{total}} URLs in den letzten 24 Stunden",
+				summaryAll: "Alle {{total}} waren bei der letzten Prüfung erreichbar.",
+				summary: "{{up}} von {{total}} waren bei der letzten Prüfung erreichbar.",
+				target: "{{url}} — {{status}}",
+				rangeStart: "Vor 24 Stunden",
+				rangeEnd: "Jetzt",
+				footer:
+					"Sie erhalten diese E-Mail, weil Sie uns auf unserer Website um diese Prüfungen gebeten haben.",
+			},
+
+			weekly: {
+				subject: "Bericht über sieben Tage: {{url}}",
+				preview: "Die vollständige Woche an Prüfungen von {{url}}",
+				heading: "{{url}} in den letzten sieben Tagen",
+				rangeStart: "Vor 7 Tagen",
+				rangeEnd: "Heute",
+				closing: "Das war der siebte Tag, damit enden die kostenlosen Prüfungen von {{url}} hier.",
+				action: "Diese URL weiter prüfen",
+				footer:
+					"Sie erhalten diese E-Mail, weil Sie uns gebeten haben, diese URL eine Woche lang zu beobachten. Es ist die letzte.",
 			},
 		},
 	},
@@ -2833,6 +2934,164 @@ export default {
 			cta: "Abmelden",
 		},
 
+		trial: {
+			meta: {
+				title: "Eine URL prüfen — Uptime",
+				description:
+					"Führe eine echte Prüfung einer beliebigen URL aus unserem Netz aus, ohne Konto. Danach beobachten wir sie eine Woche lang.",
+			},
+
+			heading: "Prüfe jetzt eine URL",
+			intro:
+				"Gib eine URL ein und wir führen eine echte Prüfung aus unserem Netz aus — dieselbe, die ein bezahlter Monitor ausführt. Nichts wird gespeichert und nichts berechnet, solange du uns nicht bittest weiterzumachen.",
+
+			form: {
+				url: {
+					label: "Zu prüfende URL",
+					description: "Eine http:// oder https:// Adresse im öffentlichen Internet.",
+					placeholder: "https://beispiel.de",
+				},
+				submit: "Prüfung ausführen",
+			},
+
+			refusal: {
+				title: "Die Prüfung wurde nicht ausgeführt",
+				blockedTarget:
+					"Diese Adresse prüfen wir nicht für dich. Es muss eine öffentliche http:// oder https:// URL auf Port 80 oder 443 sein, ohne Benutzername und Passwort, und sie muss auf eine Adresse im offenen Internet auflösen.",
+				failedChallenge:
+					"Wir konnten nicht bestätigen, dass die Anfrage aus einem Browser kam. Lade die Seite neu und versuche es erneut.",
+				rateLimited:
+					"Du hast gerade eine Prüfung ausgeführt. Warte eine Minute und starte die nächste.",
+				rateLimitedFor:
+					"Du hast gerade eine Prüfung ausgeführt. In {{seconds}} Sekunden geht die nächste.",
+				budgetExhausted:
+					"Wir haben heute schon alle kostenlosen Prüfungen ausgeführt, die wir an einem Tag ausführen. Das liegt an uns und nicht an deiner URL — komm morgen wieder, oder starte die Überwachung und wir prüfen sie jede Minute.",
+				unavailable:
+					"Unsere Sonde hat nicht geantwortet, also haben wir nichts über deine URL erfahren. Das liegt an uns und nicht an dir. Versuche es gleich noch einmal.",
+			},
+
+			result: {
+				checkAnother: "Weitere URL prüfen",
+				noResponse: "Keine Antwort",
+				httpStatus: "HTTP {{status}}",
+				milliseconds: "{{value}} ms",
+				checkedAt: "Geprüft am {{time}}",
+
+				redirect: {
+					badge: "Leitet weiter",
+					title: "Diese URL leitet woanders hin",
+					description:
+						"Sie hat geantwortet, und zwar mit einem Verweis auf eine andere Adresse. Dorthin sind wir nicht gegangen: wir prüfen nur die URL, die du uns gegeben hast, und genau das verhindert, dass dieses Feld benutzt wird, um irgendwo hinzukommen, wo es nichts zu suchen hat. Prüfe stattdessen das Ziel, dann bekommst du dafür ein echtes Ergebnis.",
+					destination: "Sie verweist auf {{url}}",
+					action: "Stattdessen die prüfen",
+					unknownDestination:
+						"Wir haben nicht gelesen, wohin sie verweist. Öffne die URL im Browser, sieh nach, wo du landest, und prüfe diese Adresse hier.",
+				},
+
+				status: {
+					up: "Erreichbar",
+					degraded: "Langsam",
+					down: "Ausgefallen",
+				},
+			},
+
+			lead: {
+				title: "E-Mail, sobald sich etwas ändert",
+				description:
+					"Hinterlasse eine E-Mail-Adresse und wir führen dieselbe Prüfung sieben Tage lang stündlich aus, mit einer Zusammenfassung pro Tag. Ohne Konto und ohne Karte.",
+				consent: "Schreibt mir gelegentlich auch über Uptime selbst.",
+				consentNote: "Die Prüfungen bekommst du so oder so.",
+				promise:
+					"Jede E-Mail enthält einen Link, der sie mit einem Klick beendet und deine Adresse löscht.",
+				submit: "Diese URL eine Woche beobachten",
+
+				email: {
+					label: "E-Mail",
+					placeholder: "du@beispiel.de",
+					error: "Das sieht nicht nach einer E-Mail-Adresse aus.",
+				},
+			},
+
+			watching: {
+				title: "Wir kümmern uns darum",
+				description:
+					"Die erste stündliche Prüfung von {{url}} läuft in einer Stunde. Eine Kopie der gerade ausgeführten Prüfung liegt schon in deinem Postfach.",
+			},
+
+			benefits: {
+				title: "So sieht die Woche aus",
+				description:
+					"Alles, was dir ein bezahlter Monitor über diese URL sagen würde — kostenlos, sieben Tage lang.",
+
+				list: {
+					hourly: {
+						title: "Jede Stunde eine Prüfung",
+						description:
+							"Sieben Tage lang, aus demselben Netz, in dem ein bezahlter Monitor läuft.",
+					},
+					changes: {
+						title: "Eine E-Mail, wenn sich etwas ändert",
+						description:
+							"Fällt sie aus oder kommt zurück, du erfährst es. Höchstens eine pro Tag, damit eine flatternde Seite dich nicht überschwemmt.",
+					},
+					digest: {
+						title: "Eine Zusammenfassung pro Tag",
+						description: "Wie sich deine URL gehalten hat, auf einen Blick.",
+					},
+					noAccount: {
+						title: "Kein Konto, keine Karte",
+						description: "Nichts anzumelden, und ein Klick beendet es endgültig.",
+					},
+				},
+			},
+
+			more: {
+				title: "Nicht nur Websites",
+				description:
+					"Die kostenlose Woche deckt HTTP ab. Mit einem bezahlten Konto behalten wir drei weitere Dinge für dich im Auge.",
+
+				list: {
+					tcp: {
+						title: "TCP",
+						description:
+							"Wissen, dass ein Port noch antwortet — für alles, was keine Website ist: Datenbanken, Mailserver, Gameserver.",
+					},
+					dns: {
+						title: "DNS",
+						description:
+							"Wissen, dass ein Eintrag noch dorthin zeigt, wo er soll, damit eine Übernahme oder eine verpatzte Änderung nicht untergeht.",
+					},
+					cron: {
+						title: "Cron-Jobs",
+						description:
+							"Wissen, dass dein nächtliches Backup fertig geworden ist — und es erfahren in der Nacht, in der es das nicht ist.",
+					},
+				},
+			},
+
+			cta: {
+				badge: "Nach der Woche",
+				title: "Behalte die Prüfungen, nimm den Rest dazu",
+				description:
+					"Jede Minute statt jede Stunde, so viele URLs du willst, Benachrichtigungen dort wo du ohnehin arbeitest, Statusseiten und ein Jahr Verlauf. {{price}} im Monat.",
+				action: "Überwachung starten",
+				pricing: "Preise ansehen",
+			},
+		},
+
+		unsubscribe: {
+			confirm: {
+				title: "Diese E-Mails beenden?",
+				body: "Das beendet jede Prüfung, die diese Adresse angefordert hat, und löscht die Adresse samt allem, was dazu festgehalten wurde. Nichts bleibt übrig, also gibt es nichts rückgängig zu machen — aber du kannst jederzeit wieder auf unserer Website anfangen.",
+				cta: "Ja, beenden und löschen",
+			},
+
+			done: {
+				title: "Du bist abgemeldet",
+				body: "Diese Adresse steht nicht mehr auf unserer Liste und die Prüfungen, die sie angefordert hatte, sind beendet. Es wird nichts mehr dorthin geschickt. Du kannst jederzeit wieder auf unserer Website anfangen.",
+				cta: "Zurück zur Website",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Nicht gefunden",

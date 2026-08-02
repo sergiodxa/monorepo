@@ -33,6 +33,15 @@ export default {
 			},
 		},
 
+		try: {
+			title: "任意の URL を無料でチェック",
+			description:
+				"アカウントは不要です。1 回チェックを実行し、モニターが報告する内容をそのままお見せします。",
+			label: "URL をチェック",
+			placeholder: "https://example.com",
+			submit: "チェックを実行",
+		},
+
 		hero: {
 			pill: "稼働時間監視",
 			title: "安心してサービスを<strong>監視</strong>",
@@ -45,6 +54,11 @@ export default {
 				pricing: "料金を見る",
 			},
 
+			try: {
+				label: "URL をチェック",
+				placeholder: "https://example.com",
+				submit: "チェックを実行",
+			},
 			screenshot: {
 				alt: "Uptimeダッシュボードのスクリーンショット。サイドバーにはHTTP・DNS・TCPモニター、cronジョブ、アラート、メンテナンス、ステータスページが並び、月間ping使用量・全体のUptime率・最も遅いエンドポイントの概要カード、種類ごとの稼働中および停止中のモニター数、そしてレイテンシ推移のスパークラインとステータスバッジを備えたHTTPモニターの一覧表が表示されています",
 			},
@@ -793,6 +807,90 @@ export default {
 				domain: "{{domain}}（{{recordType}}）",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}}（{{timezone}}）",
+			},
+		},
+
+		trial: {
+			field: "{{label}}：{{value}}",
+			stopAction: "配信を停止する",
+			stop: "1回のクリックで、監視をご依頼いただいたすべてのURLのチェックを終了し、メールアドレスとデータを削除します。またいつでも当サイトからやり直せます。",
+
+			status: {
+				up: "正常",
+				degraded: "低下",
+				down: "ダウン",
+			},
+
+			fields: {
+				url: "URL",
+				status: "ステータス",
+				previousStatus: "以前のステータス",
+				responseStatus: "応答ステータス",
+				responseTime: "応答時間",
+				checkedAt: "チェック時刻",
+				changedAt: "変化した時刻",
+				checks: "実行したチェック数",
+				uptime: "稼働率",
+				slowest: "最も遅い応答",
+			},
+
+			values: {
+				none: "—",
+				milliseconds: "{{value}}ms",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "稼働率{{value}}%",
+				legend: {
+					up: "正常",
+					degraded: "低下",
+					down: "ダウン",
+					noData: "データなし",
+				},
+			},
+
+			confirmation: {
+				subject: "{{url}}を1時間ごとにチェックしています",
+				preview: "{{url}}の1時間ごとのチェックを開始しました",
+				heading: "{{url}}を1時間ごとにチェックしています",
+				body: "こちらが今実行されたチェックの結果です。{{until}}まで同じチェックを1時間ごとに実行し、結果が変化したらメールでお知らせします。1日1回、まとめもお送りします。",
+				footer: "このメールは、当サイトからこのURLのチェックをご依頼いただいたため送信されました。",
+			},
+
+			change: {
+				subject: "{{url}}：{{status}}",
+				preview: "{{url}}：{{status}}",
+				heading: "{{url}}：{{status}}",
+				body: "{{time}}の定時チェックが、直前のチェックとは異なる結果を返しました。",
+				footer: "このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。",
+			},
+
+			daily: {
+				subject: "日次レポート：{{url}}",
+				subjectMany: "日次レポート：{{total}}件のURL",
+				preview: "{{url}}の過去24時間のチェック結果",
+				previewMany: "{{total}}件のURLの過去24時間のチェック結果",
+				heading: "過去24時間の{{url}}",
+				headingMany: "過去24時間の{{total}}件のURL",
+				summaryAll: "最後のチェックでは{{total}}件すべてが正常でした。",
+				summary: "最後のチェックでは{{total}}件中{{up}}件が正常でした。",
+				target: "{{url}} — {{status}}",
+				rangeStart: "24時間前",
+				rangeEnd: "現在",
+				footer: "このメールは、当サイトからこれらのチェックをご依頼いただいたため送信されました。",
+			},
+
+			weekly: {
+				subject: "7日間レポート：{{url}}",
+				preview: "{{url}}の1週間分のチェック結果",
+				heading: "過去7日間の{{url}}",
+				rangeStart: "7日前",
+				rangeEnd: "今日",
+				closing: "7日目が終わりましたので、{{url}}の無料チェックはここで終了します。",
+				action: "このURLのチェックを続ける",
+				footer:
+					"このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。これが最後のメールです。",
 			},
 		},
 	},
@@ -2792,6 +2890,160 @@ export default {
 			cta: "ログアウト",
 		},
 
+		trial: {
+			meta: {
+				title: "URL をチェック — Uptime",
+				description:
+					"アカウントなしで、任意の URL に対して当社ネットワークから実際のチェックを 1 回実行します。そのまま 1 週間の監視も可能です。",
+			},
+
+			heading: "いますぐ URL をチェック",
+			intro:
+				"URL を入力すると、当社ネットワークから実際のチェックを 1 回実行します。有料モニターが実行するものと同じチェックです。続行を依頼しない限り、何も保存されず、何も課金されません。",
+
+			form: {
+				url: {
+					label: "チェックする URL",
+					description: "公開インターネット上の http:// または https:// のアドレス。",
+					placeholder: "https://example.com",
+				},
+				submit: "チェックを実行する",
+			},
+
+			refusal: {
+				title: "チェックは実行されませんでした",
+				blockedTarget:
+					"そのアドレスは代理でチェックできません。ポート 80 または 443 の公開された http:// もしくは https:// の URL で、ユーザー名とパスワードを含まず、公開インターネット上のアドレスに解決される必要があります。",
+				failedChallenge:
+					"リクエストがブラウザーから送られたことを確認できませんでした。ページを再読み込みしてやり直してください。",
+				rateLimited: "たったいまチェックを実行しました。1 分ほど空けてから次を実行してください。",
+				rateLimitedFor: "たったいまチェックを実行しました。次は {{seconds}} 秒後に実行できます。",
+				budgetExhausted:
+					"本日分の無料チェックはすべて実行済みです。これは当社側の事情で、あなたの URL の問題ではありません。明日また来ていただくか、監視を始めていただければ 1 分ごとにチェックします。",
+				unavailable:
+					"当社のプローブが応答しなかったため、URL について何も分かりませんでした。これは当社側の問題です。少し時間をおいてお試しください。",
+			},
+
+			result: {
+				checkAnother: "別の URL をチェック",
+				noResponse: "応答なし",
+				httpStatus: "HTTP {{status}}",
+				milliseconds: "{{value}} ms",
+				checkedAt: "{{time}} に実行",
+
+				redirect: {
+					badge: "リダイレクト",
+					title: "この URL は別の場所へリダイレクトします",
+					description:
+						"応答はありましたが、その内容は別のアドレスへの案内でした。そこへは行っていません。入力された URL だけをチェックする方針で、これがこの入力欄を本来届くべきでない場所への踏み台にさせない仕組みです。転送先を指定して調べれば、その実際の結果が得られます。",
+					destination: "転送先は {{url}} です",
+					action: "そちらをチェックする",
+					unknownDestination:
+						"転送先は読み取っていません。ブラウザーでこの URL を開いて到達先を確認し、そのアドレスをここでチェックしてください。",
+				},
+
+				status: {
+					up: "正常",
+					degraded: "低速",
+					down: "停止",
+				},
+			},
+
+			lead: {
+				title: "変化があったらメールで通知",
+				description:
+					"メールアドレスを入力いただければ、同じチェックを 7 日間 1 時間ごとに実行し、1 日 1 回のまとめをお送りします。アカウントもカードも不要です。",
+				consent: "Uptime 自体についても、ときどきメールを送ってよい。",
+				consentNote: "どちらを選んでもチェックは届きます。",
+				promise:
+					"すべてのメールに、ワンクリックでチェックを止めてアドレスを削除するリンクが付いています。",
+				submit: "この URL を 1 週間監視する",
+
+				email: {
+					label: "メールアドレス",
+					placeholder: "you@example.com",
+					error: "メールアドレスの形式ではないようです。",
+				},
+			},
+
+			watching: {
+				title: "監視を開始しました",
+				description:
+					"{{url}} の最初の 1 時間ごとのチェックは 1 時間後に実行されます。いま実行したチェックの控えはすでに受信箱に届いています。",
+			},
+
+			benefits: {
+				title: "この 1 週間でできること",
+				description: "有料モニターが教えてくれることを、この URL について 7 日間、無料で。",
+
+				list: {
+					hourly: {
+						title: "1 時間ごとのチェック",
+						description: "7 日間、有料モニターと同じネットワークから。",
+					},
+					changes: {
+						title: "変化したときのメール",
+						description:
+							"落ちても戻っても分かります。1 日 1 通までなので、不安定なサイトでも受信箱があふれません。",
+					},
+					digest: {
+						title: "1 日 1 通のまとめ",
+						description: "URL の 1 日の状態が一目で分かります。",
+					},
+					noAccount: {
+						title: "アカウントもカードも不要",
+						description: "登録は不要で、ワンクリックで完全に停止できます。",
+					},
+				},
+			},
+
+			more: {
+				title: "ウェブサイトだけではありません",
+				description:
+					"無料の 1 週間は HTTP が対象です。有料アカウントでは、さらに 3 つを見守ります。",
+
+				list: {
+					tcp: {
+						title: "TCP",
+						description:
+							"ポートが応答し続けていることが分かります。データベース、メールサーバー、ゲームサーバーなど、ウェブサイト以外にも。",
+					},
+					dns: {
+						title: "DNS",
+						description:
+							"レコードが本来の宛先を指したままであることが分かります。乗っ取りや設定ミスを見逃しません。",
+					},
+					cron: {
+						title: "cron ジョブ",
+						description:
+							"夜間バックアップが終わったことが分かり、終わらなかった夜には知らせが届きます。",
+					},
+				},
+			},
+
+			cta: {
+				badge: "1 週間のあとに",
+				title: "チェックはそのまま、残りを追加",
+				description:
+					"1 時間ごとではなく 1 分ごとに、URL は好きなだけ、通知は普段使っている場所へ。ステータスページと 1 年分の履歴も付いて月 {{price}} です。",
+				action: "監視を始める",
+				pricing: "料金を見る",
+			},
+		},
+
+		unsubscribe: {
+			confirm: {
+				title: "これらのメールを停止しますか？",
+				body: "このアドレスが依頼したチェックをすべて終了し、アドレスとそれに紐づく記録をすべて削除します。何も残らないため元に戻すことはできませんが、いつでも当社サイトからやり直せます。",
+				cta: "はい、停止して削除する",
+			},
+
+			done: {
+				title: "配信を停止しました",
+				body: "そのアドレスはリストから外れ、依頼されていたチェックも停止しました。今後そのアドレスへ何かを送ることはありません。いつでも当社サイトからやり直せます。",
+				cta: "サイトに戻る",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "見つかりません",

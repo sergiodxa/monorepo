@@ -3,14 +3,19 @@
  * `startExternalAuth`, mocked here) and clears the `returnTo` cookie; the GET callback
  * completes the flow (delegated to `finishExternalAuth`/`verifyIdToken`, both mocked so
  * no real network call is made), provisions the Polar customer, resolves or creates the
- * subject's team, writes the session, and redirects — with dedicated cases for a
- * provider callback failure and a missing id token.
+ * subject's team, converts any trial targets the signed-in address is still owed, writes
+ * the session, and redirects — with dedicated cases for a provider callback failure and a
+ * missing id token.
+ *
+ * The conversion cases run the real service against the test database rather than mocking
+ * it, because what they are for is the ordering: the monitors have to land in the team this
+ * very request provisioned, and a mocked service could be handed any team id and still pass.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
@@ -25,12 +30,14 @@ import { renderWith } from "remix/render-middleware";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 
+import Lead from "~/app/data/lead";
+import TrialWatch from "~/app/data/trial-watch";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
-import { teamDomains, teams } from "~/database/schema";
+import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Standing in for the `remix/auth` PKCE runtime, mocked so no real HTTP call is made. */
@@ -279,5 +286,105 @@ describe("GET /auth", () => {
 		expect(response.status).toBe(400);
 		let body = await response.text();
 		expect(body).toContain("The identity provider did not return an ID token.");
+	});
+});
+
+/**
+ * The trial-conversion half of the callback. What these pin is placement rather than the
+ * conversion rule itself, which `~/app/services/trial-conversion.test.ts` covers: the claim
+ * has to run after a team exists and put its monitors in the right one, and it has to be
+ * unable to cost anyone their sign-in.
+ */
+describe("GET /auth trial conversion", () => {
+	afterEach(() => {
+		spyOn(Lead, "findByEmail").mockRestore();
+	});
+
+	/** A lead for the signing-in address with one claimable target. */
+	async function seedClaimableTarget(db: ReturnType<typeof createTestDatabase>["db"]) {
+		let lead = await Lead.upsertByEmail(db, {
+			email: fakeIdToken.email,
+			locale: "en",
+			consented: false,
+		});
+
+		return await TrialWatch.create(db, lead.id, { url: "https://ada.example" });
+	}
+
+	test("converts the targets left under the signed-in address into the team it provisions", async () => {
+		let { db } = createTestDatabase();
+		let watch = await seedClaimableTarget(db);
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: undefined,
+		});
+
+		let { container, router } = createTestRouter(db, new Session());
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+
+		expect(response.status).toBe(303);
+
+		let team = await db.findOne(teams, { where: { owner_id: "user-1" } });
+		let created = await db.findMany(monitors, { where: { team_id: team?.id ?? "" } });
+		expect(created.map((monitor) => monitor.url)).toEqual(["https://ada.example"]);
+		expect((await TrialWatch.findById(db, watch.id))?.converted_at).not.toBeNull();
+	});
+
+	test("puts them in the team the subject owns rather than one they joined by domain", async () => {
+		let { db } = createTestDatabase();
+		await seedClaimableTarget(db);
+
+		let { memberships } = await import("~/database/schema");
+		for (let [slug, ownerId] of [
+			["acme-team", "someone-else"],
+			["ada-own-team", "user-1"],
+		] as const) {
+			let team = await db.create(
+				teams,
+				{ id: crypto.randomUUID(), owner_id: ownerId, name: slug, slug, logo: null },
+				{ touch: true, returnRow: true },
+			);
+			await db.create(
+				memberships,
+				{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "member" },
+				{ touch: true, returnRow: true },
+			);
+		}
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: undefined,
+		});
+
+		let { container, router } = createTestRouter(db, new Session());
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		await container.scope(() => router.fetch(request));
+
+		let owned = await db.findOne(teams, { where: { slug: "ada-own-team" } });
+		let created = await db.findMany(monitors, {});
+		expect(created.map((monitor) => monitor.team_id)).toEqual([owned?.id ?? ""]);
+	});
+
+	test("signs the user in even when the conversion fails outright", async () => {
+		let { db } = createTestDatabase();
+		await seedClaimableTarget(db);
+		spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: undefined,
+		});
+
+		let session = new Session();
+		let { container, router } = createTestRouter(db, session);
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(routes.app.index.href());
+		expect(session.get("id")).toBe("user-1");
+		expect(await db.findMany(monitors, {})).toBeEmpty();
 	});
 });

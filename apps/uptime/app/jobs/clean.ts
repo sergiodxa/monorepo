@@ -17,6 +17,10 @@
  * A row whose date column is still `NULL` (an in-flight or pending check) is never matched
  * by a cutoff and is left alone.
  *
+ * The free-watch tables are swept too, and they are the one part of this job that is not a
+ * plain per-table window: their three sweeps are ordered and the order is load-bearing. See
+ * {@link CleanJob.sweepTrial}.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -25,7 +29,11 @@ import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import type { BatchedSweepResult } from "~/app/lib/retention";
+
+import Lead from "~/app/data/lead";
 import Team from "~/app/data/team";
+import TrialWatch from "~/app/data/trial-watch";
 import { deleteOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
 
@@ -75,6 +83,14 @@ const RETAINED_TABLES: readonly RetainedTable[] = [
 	{ table: "alert_events", dateColumn: "sent_at", retentionDays: ALERT_EVENT_RETENTION_DAYS },
 ];
 
+/** One table's line in the completion log. */
+interface SweptTable {
+	table: string;
+	rowsDeleted: number;
+	batches: number;
+	reachedCeiling: boolean;
+}
+
 export class CleanJob extends Job {
 	/** The "Clean Old Monitor Results" cron monitor this sweep reports itself to when it completes. */
 	static override monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
@@ -93,14 +109,7 @@ export class CleanJob extends Job {
 		 */
 		apportionCost(await Team.countMonitorsByTeam(db));
 
-		let rowsDeleted = 0;
-		let reachedCeiling = false;
-		let tables: Array<{
-			table: string;
-			rowsDeleted: number;
-			batches: number;
-			reachedCeiling: boolean;
-		}> = [];
+		let tables: SweptTable[] = [];
 
 		/**
 		 * One table at a time, and one batch at a time inside each: the point of the
@@ -110,22 +119,58 @@ export class CleanJob extends Job {
 		for (let entry of RETAINED_TABLES) {
 			let cutoff = now - entry.retentionDays * MS_PER_DAY;
 			let swept = await deleteOlderThan(db, entry.table, entry.dateColumn, cutoff);
-
-			rowsDeleted += swept.rowsAffected;
-			reachedCeiling = reachedCeiling || swept.reachedCeiling;
-
-			tables.push({
-				table: entry.table,
-				rowsDeleted: swept.rowsAffected,
-				batches: swept.batches,
-				reachedCeiling: swept.reachedCeiling,
-			});
+			tables.push(record(entry.table, swept));
 		}
 
+		tables.push(...(await this.sweepTrial(db, now)));
+
+		let rowsDeleted = tables.reduce((total, entry) => total + entry.rowsDeleted, 0);
 		/**
 		 * `reachedCeiling` is the field to watch after a window changes: it means a table
 		 * still has rows past its cutoff and the next run will continue draining it.
 		 */
+		let reachedCeiling = tables.some((entry) => entry.reachedCeiling);
+
 		this.logger.info("job.clean.completed", { rowsDeleted, reachedCeiling, tables });
 	}
+
+	/**
+	 * Sweeps the three free-watch tables, in the only order that is correct.
+	 *
+	 * Each sweep's own condition is only sound once the one before it has run, so this is a
+	 * sequence and not a list of independent windows:
+	 *
+	 * 1. **Results** go on a plain seven-day age, which is safe on its own because a result is
+	 *    only ever written during its watch's own seven days — so one older than that provably
+	 *    belongs to a watch that has finished.
+	 * 2. **Watches** go on `converts_until`, thirty days, and never on `expires_at`: a watch
+	 *    whose week of checking ended is still claimable as a real monitor for another three,
+	 *    and sweeping the wrong column would withdraw the offer without anyone noticing. By
+	 *    then every result it owns is long past step 1's cutoff, so nothing is orphaned.
+	 * 3. **Leads** go only when no watch is left to protect, which is the right condition
+	 *    *because* step 2 has already reduced their watches to the ones still worth keeping.
+	 *    Run before it, and someone who tried three URLs on three days would be deleted while
+	 *    two of their attempts were still convertible.
+	 */
+	private async sweepTrial(db: Database, now: number): Promise<SweptTable[]> {
+		let results = await TrialWatch.deleteExpiredResults(db, now);
+		let watches = await TrialWatch.deleteExpired(db, now);
+		let leads = await Lead.deleteOrphaned(db, now);
+
+		return [
+			record("trial_watch_results", results),
+			record("trial_watches", watches),
+			record("leads", leads),
+		];
+	}
+}
+
+/** One sweep's outcome as the completion log reports it. */
+function record(table: string, swept: BatchedSweepResult): SweptTable {
+	return {
+		table,
+		rowsDeleted: swept.rowsAffected,
+		batches: swept.batches,
+		reachedCeiling: swept.reachedCeiling,
+	};
 }

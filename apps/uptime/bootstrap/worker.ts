@@ -30,6 +30,7 @@ import { CheckDnsJob } from "~/app/jobs/check-dns";
 import { CheckHttpJob } from "~/app/jobs/check-http";
 import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
+import { CheckTrialWatchesJob } from "~/app/jobs/check-trial-watches";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
 import { DeadLetterJob } from "~/app/jobs/dead-letter";
@@ -37,6 +38,7 @@ import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
 import { ReportCostsJob } from "~/app/jobs/report-costs";
+import { SendTrialDigestsJob } from "~/app/jobs/send-trial-digests";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
 import { sendQueueBatch, sendQueueMessage } from "~/app/lib/queue";
@@ -75,6 +77,8 @@ const QueueMessageSchema = s.variant("type", {
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
 	reconcileSubscriptions: s.object({ type: s.literal("reconcileSubscriptions") }),
 	reportCosts: s.object({ type: s.literal("reportCosts") }),
+	checkTrialWatches: s.object({ type: s.literal("checkTrialWatches") }),
+	sendTrialDigests: s.object({ type: s.literal("sendTrialDigests") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -176,6 +180,17 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 		waitUntil(sendQueueMessage({ type: "enqueuePendingDomains" }));
 	}
 
+	/**
+	 * Hourly: re-check the URLs left on the public trial page. Its own trigger rather than a
+	 * share of the every-minute one, because an hour is the free watch's whole cadence and is
+	 * fixed by the product — the sweep claims before it checks, so a finer delivery would read
+	 * an indexed range that matches nothing in fifty-nine minutes out of sixty and pay for the
+	 * queue hop each time.
+	 */
+	if (controller.cron === "0 * * * *") {
+		waitUntil(sendQueueMessage({ type: "checkTrialWatches" }));
+	}
+
 	// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
 	if (controller.cron === "0 0 * * *") {
 		waitUntil(sendQueueMessage({ type: "clean" }));
@@ -198,9 +213,20 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 		waitUntil(sendQueueMessage({ type: "reportCosts" }));
 	}
 
-	// Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor.
+	/**
+	 * Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor, and send
+	 * the free trial's daily digests.
+	 *
+	 * The digest rides the last of the daily triggers on purpose. It has to run after midnight
+	 * UTC, since the once-a-day bound it enforces is counted against that boundary, and it has
+	 * to stay clear of the midnight cleanup, which is what deletes expired watches and orphaned
+	 * leads — six hours is more than that sweep can take, so a digest is never assembled from
+	 * rows being deleted underneath it. 06:00 UTC is also the most humane of the five for an
+	 * email a person actually reads.
+	 */
 	if (controller.cron === "0 6 * * *") {
 		waitUntil(sendQueueMessage({ type: "checkSsl" }));
+		waitUntil(sendQueueMessage({ type: "sendTrialDigests" }));
 	}
 }
 
@@ -319,6 +345,12 @@ export default {
 						break;
 					case "reportCosts":
 						waitUntil(ReportCostsJob.run({ message, uptime }));
+						break;
+					case "checkTrialWatches":
+						waitUntil(CheckTrialWatchesJob.run({ message, uptime }));
+						break;
+					case "sendTrialDigests":
+						waitUntil(SendTrialDigestsJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

@@ -11,6 +11,13 @@
  * expressed server-side. Everything else here is static server-rendered HTML,
  * including the FAQ (native `<details>`).
  *
+ * The hero's try-it box is the one form on the page, and it submits with `GET`. Arriving
+ * at `/try?url=…` only pre-fills the field over there, so a link preview, a crawler, or a
+ * URL somebody shared can never spend one of the free probes — running a check is always
+ * a `POST`, made from `/try` itself. The box carries no call to action, no benefits copy
+ * and no email capture either: `/try` is the page that sells, and every control added
+ * beside this field is one more thing between a visitor and their answer.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -37,7 +44,7 @@ import {
 	TimerIcon,
 	ZapIcon,
 } from "@pkg/lucide-remix";
-import { Heading, LinkButton } from "@pkg/r3-ui";
+import { Button, Heading, LinkButton, TextField } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import {
@@ -49,23 +56,34 @@ import {
 	gap,
 	grid,
 	gridTemplate,
+	grow,
 	inlineFlex,
 	insBs,
 	insIs,
 	items,
 	justify,
 	relative,
+	shrink,
 	vstack,
 } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { dark, media } from "@pkg/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
+import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pbe, pbs, pi } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { translateX, translateY } from "@pkg/u/transform";
-import { fontSize, leading, textAlign, textDecoration, tracking, weight } from "@pkg/u/typography";
+import {
+	fontSize,
+	leading,
+	nowrap,
+	textAlign,
+	textDecoration,
+	tracking,
+	weight,
+} from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import {
 	BASE_PRICE_USD,
 	INCLUDED_PINGS,
@@ -73,6 +91,7 @@ import {
 	PRICE_PER_BLOCK_USD,
 } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
+import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -168,6 +187,12 @@ interface TrustIndicator {
 /** GET / — the public marketing homepage. */
 export default createAction(routes.home, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
+	/**
+	 * The landing form posts straight to the run action, so it has to carry the same
+	 * challenge `/try`'s own form does — otherwise the one-click path would be the one way
+	 * into the prober that skips it.
+	 */
+	let siteKey = trialTurnstileSiteKey();
 	let chrome = buildMarketingChrome(ctx.i18next.t);
 	let t = ctx.i18next.t;
 
@@ -454,7 +479,7 @@ export default createAction(routes.home, async (ctx) => {
 								<div
 									mix={[
 										vstack({ gap: 4, align: "center" }),
-										mbs(8),
+										mbs(6),
 										media("(min-width: 640px)", [flexRow(), items("center")]),
 									]}
 								>
@@ -521,6 +546,63 @@ export default createAction(routes.home, async (ctx) => {
 								/>
 							</picture>
 						</div>
+					</div>
+				</section>
+
+				{/* Its own padding rather than `sectionPadding()`, and none at all on top: this is
+				    one line of copy and a field, not a chapter, and the hero above already ends
+				    with 128px of its own. Stacking a second block on that put 184px of nothing
+				    between the trust strip and the heading. */}
+				<section id="try" mix={[pbs(0), pbe(10), media("(min-width: 1024px)", pbe(14))]}>
+					<div mix={[...marketingContainer(), vstack({ gap: 4, align: "center" })]}>
+						<Heading level={2} mix={[m(0), fontSize("2xl"), textAlign("center")]}>
+							{t("landing.try.title")}
+						</Heading>
+						<p mix={[m(0), maxIs("560px"), textAlign("center"), fontSize("sm"), fg("neutral")]}>
+							{t("landing.try.description")}
+						</p>
+
+						{/* Posts straight to `/try` rather than navigating there with the URL in the
+						    query. A GET landing on `/try` could only pre-fill the field — probing on a
+						    GET would let a crawler or a link preview spend a check — so it cost the
+						    visitor a second click for the same intent. A POST is followed by neither,
+						    so the check runs on the first click and its answer comes back in that
+						    same response. */}
+						<form
+							method="post"
+							action={routes.trial.check.action.href()}
+							mix={[
+								vstack({ gap: 3, align: "center" }),
+								mbs(2),
+								mi("auto"),
+								is("full"),
+								maxIs("560px"),
+								media("(min-width: 640px)", [flexRow(), items("end"), gap(3)]),
+							]}
+						>
+							<TextField
+								name={TRIAL_URL_FIELD}
+								type="url"
+								label={t("landing.try.label")}
+								placeholder={t("landing.try.placeholder")}
+								autoComplete="url"
+								required
+								mix={[grow(1), is("full"), textAlign("start")]}
+							/>
+							{siteKey === null ? null : (
+								<div
+									class="cf-turnstile"
+									data-sitekey={siteKey}
+									data-response-field-name={TURNSTILE_FIELD}
+									data-theme="auto"
+								/>
+							)}
+							{/* Pinned to `Input`'s own fixed 40px rather than left to padding, which is
+							    what sizes a Button and what left the two a few pixels apart. */}
+							<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>
+								{t("landing.try.submit")}
+							</Button>
+						</form>
 					</div>
 				</section>
 

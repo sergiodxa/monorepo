@@ -28,6 +28,26 @@ import { DurableObject } from "cloudflare:workers";
 export const PROBE_OUTCOME_HEADER = "X-Probe-Outcome";
 
 /**
+ * Request header asking this object not to follow redirects, stripped before the proxied
+ * request goes out so the monitored target never sees it.
+ *
+ * It exists for the public trial. Every other caller probes a target its own team
+ * configured, so following a redirect goes somewhere that team chose. A stranger's URL is
+ * different: `app/services/trial-guard.ts` validates the address a hostname resolves to
+ * before any probe runs, and a target answering `302 http://169.254.169.254/` walks
+ * straight past that check to cloud metadata if the hop is followed, long after the guard
+ * has finished deciding.
+ *
+ * This header is the belt, not the braces. A request arriving at a `fetch` handler already
+ * carries redirect mode `manual`, so this object was never the one following — the caller
+ * was, in `HttpCheck.probe`'s `stub.fetch`, which is where the mode is actually set and
+ * where the fix has to live. Redirect mode is client-side and no HTTP boundary carries it,
+ * so this header exists only to make the object's own outbound call explicit rather than
+ * incidental, and to fail safe if a future caller reaches it another way.
+ */
+export const NO_REDIRECT_HEADER = "X-No-Redirect";
+
+/**
  * Response header carrying how long this object's handler ran, in milliseconds.
  *
  * A LOWER BOUND on the billed window, never the billed figure. `performance.now()`
@@ -46,9 +66,24 @@ export class GeoFetchDO extends DurableObject<Cloudflare.Env> {
 		/** Opens the billed window; `start` below opens the narrower probe window. */
 		let handlerStart = performance.now();
 
+		/**
+		 * Read and removed here rather than forwarded: it is an instruction to this object,
+		 * and a monitored endpoint has no business seeing which of our callers asked for it.
+		 */
+		let followRedirects = request.headers.get(NO_REDIRECT_HEADER) === null;
+		if (!followRedirects) {
+			request = new Request(request);
+			request.headers.delete(NO_REDIRECT_HEADER);
+		}
+
 		try {
 			let start = performance.now();
-			let response = await fetch(request);
+			/**
+			 * `manual` rather than `error`, so a redirect comes back as the 3xx it is and the
+			 * caller can classify it. Throwing would be indistinguishable from the target being
+			 * unreachable, which is a different fact.
+			 */
+			let response = await fetch(request, { redirect: followRedirects ? "follow" : "manual" });
 			let end = performance.now();
 
 			response = new Response(response.body, response);

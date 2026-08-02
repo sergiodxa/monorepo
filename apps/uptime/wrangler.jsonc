@@ -20,6 +20,11 @@
 		"crons": [
 			"* * * * *", // Every minute - uptime + cron job + TCP + DNS monitors
 			"*/10 * * * *", // Every 10 minutes - domain verification
+			// Every hour - re-check the URLs left on the public trial page. Its own trigger and
+			// not a share of the every-minute one: an hour is the free watch's entire cadence and
+			// is fixed by the product, so a finer delivery would spend a queue hop to read an
+			// indexed range that matches nothing in fifty-nine minutes out of sixty.
+			"0 * * * *",
 			"0 0 * * *", // Every day at midnight - cleanup
 			"0 1 * * *", // Every day at 1 AM UTC - aggregate daily stats
 			"0 2 * * *", // Every day at 2 AM UTC - reconcile Polar subscriptions
@@ -29,7 +34,11 @@
 			// own hour rather than sharing 01:00 or 02:00 so a failure in the daily roll-up
 			// or the subscription reconciliation neither delays nor is delayed by this.
 			"0 3 * * *",
-			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
+			// Every day at 6 AM UTC - SSL checks, plus the free trial's daily digests. The digest
+			// takes the last of the daily triggers because its once-a-day bound is counted from
+			// midnight UTC and it must not assemble an email out of rows the midnight cleanup is
+			// deleting; six hours is far more than that sweep needs.
+			"0 6 * * *",
 		],
 	},
 
@@ -124,5 +133,20 @@
 	// where the reasoning for the numbers lives — the binding reports neither back.
 	"ratelimits": [
 		{ "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+		// A far tighter ceiling than RATE_LIMITER's, because the surface is different: the
+		// cron ping and the ad-hoc API are authenticated and billed, so a caller running
+		// them hard is a caller paying for it, while the public try-it page probes on
+		// behalf of a stranger for free. Five a minute is generous for a person trying the
+		// tool and hostile to a script. A separate binding rather than a second key prefix
+		// because `limit`/`period` are properties of the binding, not of the key.
+		//
+		// One a minute: a person trying the tool runs a check, reads the result, and thinks
+		// — they do not need a second probe inside the same minute, and anything that does
+		// is not a person. The daily budget bounds the spend; this bounds the rate.
+		{
+			"name": "TRIAL_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 1, "period": 60 },
+		},
 	],
 }

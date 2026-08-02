@@ -1,0 +1,78 @@
+/**
+ * The two pieces of arithmetic the free-watch digests share: turning a target's checks into
+ * the segments of an uptime bar, and turning a success ratio into the percentage those emails
+ * print.
+ *
+ * Shared because the same bar is drawn at two scales by two different jobs — one segment per
+ * hour over a day for the daily digest, one per day over a week for the wrap-up — and the
+ * only thing that differs between them is the period. Keeping the bucketing in one place is
+ * what stops a bar in one email disagreeing with the same data in the other.
+ *
+ * Deliberately not in `~/app/emails/`: nothing here renders, and both callers are background
+ * jobs assembling data before an email class ever exists.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
+import type { MonitorStatus } from "~/database/schema";
+
+/**
+ * Severity of each status, for collapsing a period's checks into the one segment a bar draws.
+ * The worst wins: a summary that averaged an outage away would hide the only thing in it a
+ * reader could act on.
+ */
+const SEVERITY: Record<MonitorStatus, number> = { up: 0, degraded: 1, down: 2 };
+
+/** One completed check, as the two facts a bar segment is built from. */
+export interface Segmentable {
+	status: MonitorStatus;
+	checked_at: number;
+}
+
+/**
+ * Collapses checks into one segment per period: the worst status any check in that period
+ * reported, and `null` for a period no check covers.
+ *
+ * A check outside the range is dropped rather than clamped into the nearest period — a stray
+ * row is better missing from the bar than drawn in an hour it did not happen in.
+ *
+ * @param results - Checks to place, in any order.
+ * @param start - Instant the first period begins at.
+ * @param periodMs - Length of one period.
+ * @param periods - How many periods the bar draws.
+ * @returns One status per period, oldest first.
+ * @example segmentsOver(results, dayAgo, 60 * 60 * 1000, 24)
+ */
+export function segmentsOver(
+	results: Segmentable[],
+	start: number,
+	periodMs: number,
+	periods: number,
+): UptimeBar.Status[] {
+	let segments: UptimeBar.Status[] = Array.from({ length: periods }, () => null);
+
+	for (let result of results) {
+		let index = Math.floor((result.checked_at - start) / periodMs);
+		if (index < 0 || index >= periods) continue;
+
+		let current = segments[index] ?? null;
+		if (current === null || SEVERITY[result.status] > SEVERITY[current]) {
+			segments[index] = result.status;
+		}
+	}
+
+	return segments;
+}
+
+/**
+ * A success ratio as the percentage a digest prints, without its sign — the emails add that
+ * themselves, since where the symbol goes is a property of the language.
+ *
+ * @param ratio - Healthy checks over total checks, between 0 and 1.
+ * @returns The percentage to one decimal, e.g. `"99.4"`.
+ */
+export function formatUptime(ratio: number): string {
+	return (ratio * 100).toFixed(1);
+}

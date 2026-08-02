@@ -176,6 +176,9 @@ import privacy from "~/app/http/controllers/privacy";
 import sitemap from "~/app/http/controllers/sitemap";
 import statusPageController from "~/app/http/controllers/status-page";
 import terms from "~/app/http/controllers/terms";
+import trialCheck from "~/app/http/controllers/trial/index";
+import trialLead from "~/app/http/controllers/trial/lead";
+import trialUnsubscribe from "~/app/http/controllers/trial/unsubscribe";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
@@ -276,6 +279,18 @@ export default function application(options: application.Options) {
 	router.map(routes.logout, logoutController);
 	router.map(routes.statusPage, statusPageController);
 	router.map(routes.invite, inviteController);
+
+	// The public try-it surface, outside every auth guard for the same reason the status
+	// page and the marketing pages are: its whole point is that somebody with no account
+	// can use it. Each leaf carries its own protection instead — the POST half of
+	// `trial.check` goes through `trial-guard.ts`, and `trial.unsubscribe` proves itself with
+	// the unguessable token in its own URL. Every POST stays under `cop`: they are
+	// same-origin form posts from pages this app serves, and the one cross-origin caller that
+	// matters — a mail client's RFC 8058 one-click unsubscribe — sends neither
+	// `Sec-Fetch-Site` nor `Origin`, which `cop` allows through by design.
+	router.map(routes.trial.check, trialCheck);
+	router.map(routes.trial.lead, trialLead);
+	router.map(routes.trial.unsubscribe, trialUnsubscribe);
 
 	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous — no
 	// requireUser/requireTeam middleware.

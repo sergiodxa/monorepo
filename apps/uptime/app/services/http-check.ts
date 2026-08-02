@@ -22,7 +22,7 @@ import type { ContentCheckRule } from "~/app/data/content-check";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
-import { DO_WALL_TIME_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
+import { DO_WALL_TIME_HEADER, NO_REDIRECT_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
 import { recordCost } from "~/app/services/cost";
 
 const MS_PER_SECOND = 1000;
@@ -73,6 +73,16 @@ export interface HttpProbeOutcome {
 	 * one, which is the case when this side's timeout aborted the call.
 	 */
 	doWallTimeMs: number | null;
+	/**
+	 * Where a redirect pointed, absolute, or `null` when the response carried no usable
+	 * `Location`. Only ever set when redirects were not followed — a followed redirect
+	 * resolves to its destination and there is no hop left to report.
+	 *
+	 * It exists so the public trial can tell a visitor their URL redirects and offer to
+	 * check the destination instead. Without it the page can say a redirect happened but
+	 * not where to, which is the half of the answer that is no use.
+	 */
+	location: string | null;
 	body: string;
 	failed: boolean;
 }
@@ -82,6 +92,7 @@ const UNREACHABLE: HttpProbeOutcome = {
 	responseStatus: null,
 	responseTimeMs: null,
 	doWallTimeMs: null,
+	location: null,
 	body: "",
 	failed: true,
 };
@@ -109,6 +120,17 @@ export interface HttpCheckOptions {
 	 * fetched at all — an empty list means the probe never reads one.
 	 */
 	contentChecks: ContentCheckRule[];
+	/**
+	 * Whether a 3xx is followed. Defaults to true, which is right for a monitor: the team
+	 * configured the URL, so wherever it redirects is somewhere they chose.
+	 *
+	 * The public trial passes false, and must. `trial-guard.ts` validates the addresses a
+	 * stranger's hostname resolves to before the probe runs, and a target answering
+	 * `302 http://169.254.169.254/` reaches cloud metadata regardless, because `fetch`
+	 * follows the hop after the guard has finished deciding. With this false the redirect
+	 * comes back as a 3xx to classify instead of a request nobody vetted.
+	 */
+	followRedirects?: boolean;
 }
 
 /** Everything {@link HttpCheck.run} learned, for a caller with nothing to interleave. */
@@ -181,11 +203,24 @@ export class HttpCheck {
 		recordCost("doRequest");
 
 		try {
+			let headers = new Headers(this.options.headers);
+			if (this.options.followRedirects === false) headers.set(NO_REDIRECT_HEADER, "1");
+
 			let response = await stub.fetch(this.options.url, {
 				method,
-				headers: this.options.headers,
+				headers,
 				body: this.options.body,
 				signal,
+				/**
+				 * Set here and not only on the object, because this is the side that follows.
+				 * A request arriving at a `fetch` handler already has redirect mode `manual`,
+				 * so `GeoFetchDO` was always handing the 3xx straight back; what resolved the
+				 * `Location` and re-issued it — through this same stub, at whatever the target
+				 * named — was this call taking the platform default. Redirect mode is a
+				 * client-side property and nothing on an HTTP boundary carries it, so the
+				 * header the object reads cannot substitute for this.
+				 */
+				redirect: this.options.followRedirects === false ? "manual" : "follow",
 			});
 
 			/**
@@ -203,6 +238,7 @@ export class HttpCheck {
 				responseStatus: response.status,
 				responseTimeMs: Number(response.headers.get("X-Response-Time") ?? 0),
 				doWallTimeMs: readWallTime(response),
+				location: absoluteLocation(response, this.options.url),
 				body,
 				failed: false,
 			});
@@ -278,6 +314,24 @@ function shardFor(key: string, shards: number): number {
 	}
 
 	return (hash >>> 0) % shards;
+}
+
+/**
+ * Resolves a response's `Location` against the URL that was probed, so a relative hop
+ * (`/login`, the common case) comes back as somewhere a caller can actually name.
+ *
+ * `null` rather than the raw header when it will not parse: a caller offering to check the
+ * destination needs a URL it can probe, and half of one is worse than none.
+ */
+function absoluteLocation(response: Response, probedUrl: string): string | null {
+	let location = response.headers.get("location");
+	if (location === null) return null;
+
+	try {
+		return new URL(location, probedUrl).toString();
+	} catch {
+		return null;
+	}
 }
 
 /**

@@ -22,6 +22,36 @@ export default route({
 	healthcheck: get("/healthcheck"),
 	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
 	statusPage: get("/status/:slug"),
+
+	/**
+	 * The public try-it surface. Unauthenticated by design — the whole point is that a
+	 * visitor with no account can probe one URL and see what monitoring would tell them.
+	 * Every leaf here is reachable by anyone, so each one carries its own protection
+	 * rather than inheriting an auth chain: `trial.check.action` goes through
+	 * `trial-guard.ts` (target blocklist, Turnstile, per-IP limit, daily budget) and
+	 * `trial.unsubscribe` proves itself with the unguessable token in its own URL.
+	 */
+	trial: {
+		/**
+		 * `form()` rather than a page and a separate action at their own URLs: the `GET` is
+		 * an empty box and the `POST` runs the check and renders the answer in its own
+		 * response. Collapsing the two is what lets the page hold no state between requests
+		 * — a reload of the `GET` cannot show somebody else's stale result, and every link
+		 * back here lands on a fresh form.
+		 *
+		 * Running a probe is always the `POST`, so a link preview or a crawler following
+		 * `/try` cannot spend one; arriving with `?url=` only pre-fills the field.
+		 */
+		check: form("/try"),
+		lead: post("/try/lead"),
+		/**
+		 * `form()` rather than `post()`: the GET renders a confirmation page and only the
+		 * POST deletes. A mail scanner that follows every link in an email — Outlook Safe
+		 * Links, Gmail's fetcher — must not be able to unsubscribe somebody who never
+		 * clicked, which is exactly what a GET that deletes would allow.
+		 */
+		unsubscribe: form("/unsubscribe/:token"),
+	},
 	invite: get("/invite/:inviteId"),
 	sitemap: get("/sitemap.xml"),
 

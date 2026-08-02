@@ -106,6 +106,15 @@ export default {
 			},
 		},
 
+		try: {
+			title: "Check any URL, free",
+			description:
+				"No account needed. We'll run one check and show you exactly what a monitor would report.",
+			label: "Check a URL",
+			placeholder: "https://example.com",
+			submit: "Run a check",
+		},
+
 		hero: {
 			pill: "Uptime Monitoring",
 			title: "Monitor your services <strong>with confidence</strong>",
@@ -118,6 +127,11 @@ export default {
 				pricing: "View Pricing",
 			},
 
+			try: {
+				label: "Check a URL",
+				placeholder: "https://example.com",
+				submit: "Run a check",
+			},
 			screenshot: {
 				alt: "Screenshot of the Uptime dashboard: a sidebar listing HTTP, DNS, and TCP monitors, cron jobs, alerts, maintenance, and status pages; summary cards for monthly ping usage, overall uptime percentage, and the slowest endpoint; per-type counts of monitors up and down; and a table of HTTP monitors with latency trend sparklines and status badges",
 			},
@@ -1348,6 +1362,91 @@ export default {
 				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+			},
+		},
+
+		trial: {
+			field: "{{label}}: {{value}}",
+			stopAction: "Stop these emails",
+			stop: "One click ends every URL you asked us to watch and deletes your address and its data. You can start again any time from our website.",
+
+			status: {
+				up: "UP",
+				degraded: "DEGRADED",
+				down: "DOWN",
+			},
+
+			fields: {
+				url: "URL",
+				status: "Status",
+				previousStatus: "Previous status",
+				responseStatus: "Response status",
+				responseTime: "Response time",
+				checkedAt: "Checked at",
+				changedAt: "Changed at",
+				checks: "Checks run",
+				uptime: "Uptime",
+				slowest: "Slowest response",
+			},
+
+			values: {
+				none: "—",
+				milliseconds: "{{value}}ms",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% uptime",
+				legend: {
+					up: "Up",
+					degraded: "Degraded",
+					down: "Down",
+					noData: "No data",
+				},
+			},
+
+			confirmation: {
+				subject: "We are now checking {{url}} every hour",
+				preview: "Hourly checks on {{url}} have started",
+				heading: "We are now checking {{url}} every hour",
+				body: "This is the check you just ran. We will run the same one every hour until {{until}} and email you whenever the result changes. You will also get a summary once a day.",
+				footer: "You received this email because you asked us to check this URL from our website.",
+			},
+
+			change: {
+				subject: "{{url}} is {{status}}",
+				preview: "{{url}} is {{status}}",
+				heading: "{{url}} is {{status}}",
+				body: "The hourly check at {{time}} returned a different result from the one before it.",
+				footer: "You received this email because you asked us to watch this URL for a week.",
+			},
+
+			daily: {
+				subject: "Daily report: {{url}}",
+				subjectMany: "Daily report: {{total}} URLs",
+				preview: "The last 24 hours of checks on {{url}}",
+				previewMany: "The last 24 hours of checks on {{total}} URLs",
+				heading: "{{url}} over the last 24 hours",
+				headingMany: "Your {{total}} URLs over the last 24 hours",
+				summaryAll: "All {{total}} were up at the last check.",
+				summary: "{{up}} of {{total}} were up at the last check.",
+				target: "{{url}} — {{status}}",
+				rangeStart: "24 hours ago",
+				rangeEnd: "Now",
+				footer:
+					"You received this email because you asked us to run these checks from our website.",
+			},
+
+			weekly: {
+				subject: "Seven-day report: {{url}}",
+				preview: "The full week of checks on {{url}}",
+				heading: "{{url}} over the last seven days",
+				rangeStart: "7 days ago",
+				rangeEnd: "Today",
+				closing: "That was the seventh day, so the free checks on {{url}} stop here.",
+				action: "Keep checking this URL",
+				footer:
+					"You received this email because you asked us to watch this URL for a week. This is the last one.",
 			},
 		},
 	},
@@ -3353,6 +3452,160 @@ export default {
 			cta: "Logout",
 		},
 
+		trial: {
+			meta: {
+				title: "Check a URL — Uptime",
+				description:
+					"Run one real check on any URL from our network, with no account. Then have us watch it for a week.",
+			},
+
+			heading: "Check a URL right now",
+			intro:
+				"Type a URL and we run one real check on it from our network — the same check a paid monitor runs. Nothing is stored and nothing is billed unless you ask us to keep going.",
+
+			form: {
+				url: {
+					label: "URL to check",
+					description: "An http:// or https:// address on the public internet.",
+					placeholder: "https://example.com",
+				},
+				submit: "Run the check",
+			},
+
+			refusal: {
+				title: "The check did not run",
+				blockedTarget:
+					"That is not an address we will check on your behalf. It has to be a public http:// or https:// URL on port 80 or 443, carry no username or password, and resolve to somewhere on the open internet.",
+				failedChallenge:
+					"We could not confirm the request came from a browser. Reload the page and try again.",
+				rateLimited: "You have just run a check. Give it a minute and run another.",
+				rateLimitedFor: "You have just run a check. You can run another in {{seconds}} seconds.",
+				budgetExhausted:
+					"We have already run every free check we run in a day. That is about us, not about your URL — come back tomorrow, or start monitoring and we will check it every minute.",
+				unavailable:
+					"Our prober did not answer, so we learned nothing about your URL. That is our side and not yours. Try again in a moment.",
+			},
+
+			result: {
+				checkAnother: "Check another URL",
+				noResponse: "No response",
+				httpStatus: "HTTP {{status}}",
+				milliseconds: "{{value}} ms",
+				checkedAt: "Checked {{time}}",
+
+				redirect: {
+					badge: "Redirects",
+					title: "This URL redirects somewhere else",
+					description:
+						"It answered, and it answered by pointing us at another address. We did not go there: we only check the URL you gave us, which is what keeps this box from being used to reach places it should not. Check the destination instead and you will get a real result for it.",
+					destination: "It points at {{url}}",
+					action: "Check that instead",
+					unknownDestination:
+						"We did not read where it points. Open the URL in a browser, see where you land, and check that address here.",
+				},
+
+				status: {
+					up: "Up",
+					degraded: "Slow",
+					down: "Down",
+				},
+			},
+
+			lead: {
+				title: "Get an email when this changes",
+				description:
+					"Leave an email and we run this same check every hour for seven days, with one summary a day. No account and no card.",
+				consent: "Also email me occasionally about Uptime itself.",
+				consentNote: "Either way you get the checks.",
+				promise: "Every email carries a one-click link that stops them and deletes your address.",
+				submit: "Watch this URL for a week",
+
+				email: {
+					label: "Email",
+					placeholder: "you@example.com",
+					error: "That does not look like an email address.",
+				},
+			},
+
+			watching: {
+				title: "We are on it",
+				description:
+					"The first hourly check on {{url}} runs in an hour. A copy of the check you just ran is already in your inbox.",
+			},
+
+			benefits: {
+				title: "What the week looks like",
+				description:
+					"Everything a paid monitor would tell you about this URL, free, for seven days.",
+
+				list: {
+					hourly: {
+						title: "A check every hour",
+						description: "For seven days, from the same network a paid monitor runs on.",
+					},
+					changes: {
+						title: "An email when it changes",
+						description:
+							"Up or down, you hear about it. At most one a day, so a flapping site cannot flood you.",
+					},
+					digest: {
+						title: "One summary a day",
+						description: "How your URL held up, at a glance.",
+					},
+					noAccount: {
+						title: "No account, no card",
+						description: "Nothing to sign up for, and one click stops it for good.",
+					},
+				},
+			},
+
+			more: {
+				title: "Not just websites",
+				description:
+					"The free week covers HTTP. A paid account keeps an eye on three more things for you.",
+
+				list: {
+					tcp: {
+						title: "TCP",
+						description:
+							"Know a port is still answering, for the things that are not websites: databases, mail servers, game servers.",
+					},
+					dns: {
+						title: "DNS",
+						description:
+							"Know a record still points where it should, so a hijack or a botched change does not go unnoticed.",
+					},
+					cron: {
+						title: "Cron jobs",
+						description:
+							"Know your nightly backup finished, and hear about it on the night it does not.",
+					},
+				},
+			},
+
+			cta: {
+				badge: "After the week",
+				title: "Keep the checks, add the rest",
+				description:
+					"Every minute instead of every hour, as many URLs as you like, alerts wherever you already work, status pages, and a year of history. {{price}} a month.",
+				action: "Start monitoring",
+				pricing: "See pricing",
+			},
+		},
+
+		unsubscribe: {
+			confirm: {
+				title: "Stop these emails?",
+				body: "This ends every check that address asked for and deletes the address along with everything recorded against it. Nothing is kept, so there is nothing to undo — but you can start again from our website whenever you like.",
+				cta: "Yes, stop and delete",
+			},
+
+			done: {
+				title: "You are unsubscribed",
+				body: "That address is no longer on our list and any checks it asked for have stopped. Nothing further will be sent to it. You can start again from our website whenever you like.",
+				cta: "Back to the site",
+			},
+		},
 		splat: {
 			notFound: {
 				title: "Not Found",

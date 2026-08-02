@@ -108,6 +108,7 @@ mock.module("cloudflare:workers", () => ({
 
 let { COST_RESOURCES } = await import("~/app/lib/cost-rates");
 let { CostLedger, trackCost } = await import("~/app/services/cost");
+let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
 let { HttpCheck } = await import("./http-check");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -144,6 +145,7 @@ function outcome(overrides: Partial<HttpProbeOutcome> = {}): HttpProbeOutcome {
 		responseStatus: 200,
 		responseTimeMs: 10,
 		doWallTimeMs: 20,
+		location: null,
 		body: "OK",
 		failed: false,
 		...overrides,
@@ -323,7 +325,11 @@ describe("HttpCheck probe request", () => {
 		).probe();
 
 		expect(doFetchMock.mock.calls[0]?.[0]).toBe("https://example.com");
-		expect(lastRequestInit()?.headers).toEqual({ "X-Token": "secret" });
+		// A `Headers` instance rather than the object passed in, because the probe may add
+		// `X-No-Redirect` to it. Asserted by lookup so the caller's header is still pinned.
+		let sent = new Headers(lastRequestInit()?.headers);
+		expect(sent.get("X-Token")).toBe("secret");
+		expect(sent.has(NO_REDIRECT_HEADER)).toBe(false);
 		expect(lastRequestInit()?.body).toBe("payload");
 	});
 
@@ -342,6 +348,7 @@ describe("HttpCheck probe request", () => {
 			responseStatus: 201,
 			responseTimeMs: 42,
 			doWallTimeMs: 37.5,
+			location: null,
 			body: "",
 			failed: false,
 		});
@@ -374,6 +381,7 @@ describe("HttpCheck probe failures", () => {
 			responseStatus: null,
 			responseTimeMs: null,
 			doWallTimeMs: 10_000,
+			location: null,
 			body: "",
 			failed: true,
 		});

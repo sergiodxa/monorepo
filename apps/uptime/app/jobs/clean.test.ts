@@ -5,6 +5,11 @@
  * completion log carries both the total and the per-table breakdown the first large run
  * is observed through.
  *
+ * The free-watch pass has its own suite, because the thing worth testing there is not a
+ * window per table but the order the three sweeps run in: a watch survives its week of
+ * checking, a lead survives as long as one of its watches does, and both fall over
+ * together once the last conversion window has closed.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -20,8 +25,11 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	alertEvents,
 	dnsMonitorResults,
+	leads,
 	monitorResults,
 	tcpMonitorResults,
+	trialWatchResults,
+	trialWatches,
 } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -191,6 +199,9 @@ describe("CleanJob.perform", () => {
 			{ table: "dns_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
 			{ table: "tcp_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
 			{ table: "alert_events", rowsDeleted: 1, batches: 1, reachedCeiling: false },
+			{ table: "trial_watch_results", rowsDeleted: 0, batches: 1, reachedCeiling: false },
+			{ table: "trial_watches", rowsDeleted: 0, batches: 1, reachedCeiling: false },
+			{ table: "leads", rowsDeleted: 0, batches: 1, reachedCeiling: false },
 		]);
 	});
 
@@ -199,6 +210,141 @@ describe("CleanJob.perform", () => {
 
 		let event = logger.events.find((entry) => entry.event === "job.clean.completed");
 		expect(event?.rowsDeleted).toBe(0);
-		expect(event?.tables).toHaveLength(4);
+		expect(event?.tables).toHaveLength(7);
+	});
+});
+
+/**
+ * The free-watch pass. Its three sweeps are a sequence, not three independent windows, so
+ * these cases are about what each one is allowed to remove given what ran before it.
+ */
+describe("CleanJob.perform trial cleanup", () => {
+	let db: ReturnType<typeof createTestDatabase>["db"];
+	let container: ServiceContainer;
+
+	beforeEach(() => {
+		({ db } = createTestDatabase());
+		container = new ServiceContainer();
+		container.singleton(Database, () => db);
+	});
+
+	async function run() {
+		await container.scope(async () => {
+			await new CleanJob({ logger: new BatchedLogger("test") }, {}).perform();
+		});
+	}
+
+	async function seedLead(id: string, createdAt: number) {
+		return await db.create(leads, {
+			id,
+			created_at: createdAt,
+			updated_at: createdAt,
+			email: `${id}@example.com`,
+			unsubscribe_token: `token-${id}`,
+			locale: "en",
+			consented_at: null,
+			last_digest_at: null,
+		});
+	}
+
+	/** A watch dated from `createdAt`, with both of its deadlines derived the way it is created. */
+	async function seedWatch(id: string, leadId: string, createdAt: number) {
+		return await db.create(trialWatches, {
+			id,
+			created_at: createdAt,
+			updated_at: createdAt,
+			lead_id: leadId,
+			url: "https://example.com",
+			next_due_at: null,
+			expires_at: createdAt + 7 * MS_PER_DAY,
+			converts_until: createdAt + 30 * MS_PER_DAY,
+		});
+	}
+
+	async function seedTrialResult(id: string, watchId: string, checkedAt: number) {
+		return await db.create(trialWatchResults, {
+			id,
+			trial_watch_id: watchId,
+			status: "up",
+			response_time_ms: 42,
+			checked_at: checkedAt,
+		});
+	}
+
+	test("deletes trial results older than the seven days a watch writes them over", async () => {
+		let now = Date.now();
+		await seedTrialResult("old", "watch-1", now - 8 * MS_PER_DAY);
+		await seedTrialResult("recent", "watch-1", now - 6 * MS_PER_DAY);
+
+		await run();
+
+		let remaining = await db.findMany(trialWatchResults, {});
+		expect(remaining.map((row) => row.id)).toEqual(["recent"]);
+	});
+
+	test("keeps a watch whose week of checking is over but whose offer is still open", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 10 * MS_PER_DAY);
+		await seedWatch("watch-1", "lead-1", now - 10 * MS_PER_DAY);
+
+		await run();
+
+		// Ten days old: past `expires_at`, nowhere near `converts_until`.
+		expect(await db.findMany(trialWatches, {})).toHaveLength(1);
+		expect(await db.findMany(leads, {})).toHaveLength(1);
+	});
+
+	test("deletes a watch once its conversion window has closed", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("watch-1", "lead-1", now - 31 * MS_PER_DAY);
+
+		await run();
+
+		expect(await db.findMany(trialWatches, {})).toHaveLength(0);
+	});
+
+	test("deletes the lead in the same run its last watch goes, and not before", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("expired", "lead-1", now - 31 * MS_PER_DAY);
+
+		await run();
+
+		// Watches are swept before leads, so "no watches left" is already true by the time the
+		// lead sweep asks.
+		expect(await db.findMany(leads, {})).toHaveLength(0);
+	});
+
+	test("keeps a lead while any one of its attempts is still convertible", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("expired", "lead-1", now - 31 * MS_PER_DAY);
+		await seedWatch("still-open", "lead-1", now - 20 * MS_PER_DAY);
+
+		await run();
+
+		expect((await db.findMany(trialWatches, {})).map((row) => row.id)).toEqual(["still-open"]);
+		expect(await db.findMany(leads, {})).toHaveLength(1);
+	});
+
+	test("leaves a lead created moments ago alone, so it cannot race its first watch", async () => {
+		await seedLead("lead-1", Date.now());
+
+		await run();
+
+		expect(await db.findMany(leads, {})).toHaveLength(1);
+	});
+
+	test("takes an orphaned lead even when they gave marketing consent", async () => {
+		let now = Date.now();
+		await seedLead("lead-1", now - 31 * MS_PER_DAY);
+		await db.update(leads, "lead-1", { consented_at: now - 31 * MS_PER_DAY }, { touch: false });
+
+		await run();
+
+		// Consent is not an exemption while every email this feature sends is driven by a
+		// watch: with the last watch gone there is nothing left for the consent to authorise.
+		expect(await db.findMany(leads, {})).toHaveLength(0);
 	});
 });

@@ -721,3 +721,214 @@ export const subscriptions = table({
 
 export type SelectSubscription = TableRow<typeof subscriptions>;
 export type InsertSubscription = InsertRow<typeof subscriptions>;
+
+// Trial watches
+
+/**
+ * Someone who probed a target on the public trial page and left an email so the result
+ * could be followed up on. Not a user and not a Polar customer: nothing here is billed and
+ * no customer is provisioned, because a lead only becomes one by actually signing up.
+ *
+ * Identity, consent, and one schedule. Everything tied to a *particular attempt* — how long
+ * that target is checked for, how long a sign-up can still claim it, whether it was claimed
+ * — belongs on {@link trialWatches}, because one person can try three URLs on three
+ * different days and each attempt runs its own clocks.
+ *
+ * The one schedule that is per person is the daily digest, and `last_digest_at` is here for
+ * that reason: someone watching three URLs gets one email a day covering all three, not
+ * three emails. The full split, which is the thing a future reader will assume is an
+ * accident:
+ *
+ * | Schedule            | Lives on        | Why                                          |
+ * | ------------------- | --------------- | -------------------------------------------- |
+ * | hourly check        | `trial_watches` | one target is checked, not one person        |
+ * | on-change email     | `trial_watches` | it is about one target going down            |
+ * | **daily digest**    | **`leads`**     | one reader, one inbox, one email a day       |
+ * | weekly wrap-up      | `trial_watches` | it ends *that* watch's seven days            |
+ *
+ * Two different deletions reach this row and they must not be confused. `Lead.deleteOrphaned`
+ * is the scheduled sweep and is conditional — it only removes a lead once no watch is left
+ * to protect. `Lead.forget` is the unsubscribe cascade and is unconditional: it takes the
+ * lead, its watches and their results, open conversion windows included.
+ */
+export const leads = table({
+	name: "leads",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		/**
+		 * Unique, and deliberately the natural key rather than a surrogate one: the address is
+		 * the only identifier an anonymous visitor gives us, and it is also what the sign-in
+		 * path has in hand when it looks for trial targets to convert. A second row for the
+		 * same address would split one person's watches across two leads and send them two
+		 * digests a day, so the constraint is in the database and not only in
+		 * `Lead.upsertByEmail`.
+		 */
+		email: c.text().unique(),
+		/**
+		 * The random, unguessable token every trial email's unsubscribe link carries.
+		 *
+		 * This is the only credential a lead will ever hold — they never made an account, so
+		 * there is nothing to sign in with and nothing else to prove the request is theirs.
+		 * Random and never derived from the address for exactly that reason: anything
+		 * computable from a known email would let a stranger unsubscribe anyone whose address
+		 * they can guess. Unique and indexed because it is looked up on its own.
+		 */
+		unsubscribe_token: c.text().unique(),
+		/** Optional because the form asks for a first name and does not require one. */
+		/** Which language every follow-up email goes out in, taken from the page they used. */
+		locale: c.enum(supportedLanguages),
+		/**
+		 * When they ticked the marketing opt-in, or `null` when they never did.
+		 *
+		 * `null` is load-bearing and is not the same as "no lead": handing over an email to be
+		 * told about *this target* is not consent to be emailed about anything else. The
+		 * digest and wrap-up emails are the service they asked for and go out either way;
+		 * every other send must read this column first, and a null here forbids it.
+		 *
+		 * It does not extend the row's life. Every email this feature sends is driven by a
+		 * watch, so once a lead's last watch is gone there is nothing for the consent to
+		 * authorise and `Lead.deleteOrphaned` takes the row regardless of this column — see
+		 * that method for when adding a standing mailing list would change the answer.
+		 */
+		consented_at: c.integer().nullable(),
+		/**
+		 * When the last daily digest went out — the one schedule that belongs to the person
+		 * rather than to a target. See `shouldSendDigest` for the once-per-day bound this
+		 * enforces and `Lead.listDueForDigest` for the query it drives.
+		 */
+		last_digest_at: c.integer().nullable(),
+	},
+});
+
+export type SelectLead = TableRow<typeof leads>;
+export type InsertLead = InsertRow<typeof leads>;
+
+/**
+ * One URL from the public trial page, re-checked hourly for seven days.
+ *
+ * HTTP only, which is why there is no type column: the public page probes a URL and nothing
+ * else. The authenticated ping API still offers HTTP, DNS and TCP; adding one of those to
+ * the free page would be a migration then rather than an unused column now.
+ *
+ * Two independent deadlines sit on this row and neither implies the other:
+ *
+ * - `expires_at` (`created_at` + 7 days) ends the **checking**. The hourly checks stop, the
+ *   weekly wrap-up goes out, `next_due_at` goes null.
+ * - `converts_until` (`created_at` + 30 days) ends the **offer**. Until then, signing up
+ *   turns this target into a real monitor.
+ *
+ * They are per watch and not per lead because each attempt is its own offer: someone who
+ * tries URL A on day 0 and URL B on day 3 and signs up on day 32 gets a monitor for B and
+ * not for A. A lead-level window could not express that.
+ *
+ * Nothing may delete this row while `converts_until` is in the future — the URL on it is the
+ * only record of what a conversion should create.
+ */
+export const trialWatches = table({
+	name: "trial_watches",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		lead_id: c.text(),
+		/** The URL being watched, and the one a conversion turns into a real HTTP monitor. */
+		url: c.text(),
+		/**
+		 * Fixed at one hour by the product and not editable anywhere, but stored rather than
+		 * hard-coded in the sweep because it is what makes this table claimable by the same
+		 * `claimDue` statement the three monitor tables use — that statement advances
+		 * `next_due_at` in terms of this column. A cadence the schema states is also one a
+		 * migration can change without touching code.
+		 */
+		interval_seconds: c.integer().default(3600),
+		/**
+		 * When the next hourly check is owed, or `null` when the watch is finished.
+		 *
+		 * Same column, same meaning, same claim as `monitors.next_due_at`: `null` is "not
+		 * scheduled", so nulling it at expiry is exactly how a finished watch leaves the
+		 * sweep's claim, and one index on this column serves the whole predicate. It is also
+		 * what "currently active" means to the daily digest.
+		 */
+		next_due_at: c.integer().nullable(),
+		/** `created_at` + 7 days: when checking stops and the weekly wrap-up goes out. */
+		expires_at: c.integer(),
+		/**
+		 * `created_at` + 30 days: when the offer to turn this target into a real monitor on
+		 * sign-up runs out. Stored rather than derived so the deadline this attempt was
+		 * actually given survives a change to the policy constant, and so the cleanup sweep is
+		 * an indexed range over one column rather than arithmetic in a `WHERE` clause.
+		 */
+		converts_until: c.integer(),
+		/**
+		 * The previous check's status, which is the entire basis for detecting a change — the
+		 * history table below is what a digest renders, but a sweep must not have to read it
+		 * to answer "is this different from last hour?".
+		 */
+		last_status: c.enum(monitorStatuses).nullable(),
+		/**
+		 * Running totals a digest reads directly. Redundant with `trial_watch_results`, and
+		 * worth it: the totals are wanted for every target on every digest while the history
+		 * is only wanted for the bar, and keeping them here means the common read is the row
+		 * the query already returned rather than an aggregate over 168 rows per target.
+		 */
+		checks_run: c.integer().default(0),
+		checks_ok: c.integer().default(0),
+		max_response_time_ms: c.integer().default(0),
+		/**
+		 * When the last "your target changed" email went out. Per watch, because that email is
+		 * about one specific target going down or recovering, and it is the only thing
+		 * bounding how many of them a flapping target can trigger — see `shouldNotifyChange`.
+		 */
+		change_notified_at: c.integer().nullable(),
+		/**
+		 * When this watch's seven-day wrap-up went out; set once, at the same time checking
+		 * stops. Per watch and not per lead on purpose: watches started on different days end
+		 * on different days, so a lead who tried URLs on days 0, 3 and 6 is wrapped up on days
+		 * 7, 10 and 13, each email about the target whose week just ended.
+		 */
+		summary_sent_at: c.integer().nullable(),
+		/**
+		 * The real monitor this target became and when, or `null` while it is still only a
+		 * trial.
+		 *
+		 * Per watch rather than per lead because that is the only shape that can represent a
+		 * partial conversion — two targets claimed, a third already past its own
+		 * `converts_until` — and because it is the exact idempotency guard: signing in a
+		 * second time finds nothing unconverted and creates nothing.
+		 */
+		converted_monitor_id: c.text().nullable(),
+		converted_at: c.integer().nullable(),
+	},
+});
+
+export type SelectTrialWatch = TableRow<typeof trialWatches>;
+export type InsertTrialWatch = InsertRow<typeof trialWatches>;
+
+/**
+ * One trial check, shaped like `dns_monitor_results` and `tcp_monitor_results` so it reads
+ * the same way. A digest draws an uptime bar over these rows, which totals on the watch
+ * cannot produce.
+ *
+ * This is the disposable one of the three trial tables and the only one a retention sweep
+ * may delete from. Rows are bounded by construction — 168 per watch, and then the watch
+ * stops writing — but bounded is not self-deleting, and they are dead the moment the
+ * digests that render them have been sent. Deleting a `trial_watches` row instead would
+ * lose the target a sign-up would have converted.
+ */
+export const trialWatchResults = table({
+	name: "trial_watch_results",
+	columns: {
+		id: c.text().primaryKey(),
+		trial_watch_id: c.text(),
+		status: c.enum(monitorStatuses),
+		response_time_ms: c.integer().nullable(),
+		checked_at: c.integer(),
+	},
+});
+
+export type SelectTrialWatchResult = TableRow<typeof trialWatchResults>;
+export type InsertTrialWatchResult = InsertRow<typeof trialWatchResults>;
