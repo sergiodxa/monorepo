@@ -189,9 +189,27 @@ describe("dashboard-quick-ping", () => {
 		let body = await response.text();
 		expect(body).toContain(en.page.dashboard.quickPing.title);
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
+		// The row is one line and shows no description of its own, so the sentence that used
+		// to be one has to still reach a visitor somewhere: it is the heading's tooltip.
+		expect(body).toContain(`title="${en.page.dashboard.quickPing.description}"`);
 		// Nothing to report yet, so the card carries no status line at all.
 		expect(body).not.toContain(en.page.dashboard.quickPing.result.status.up);
 		expect(body).not.toContain("HTTP");
+	});
+
+	test("names the field for a screen reader even though its caption is not drawn", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await render(db, team, membership)).text();
+
+		// The caption is clipped rather than dropped, so the accessible name now rests on two
+		// things a restyle could quietly take away: the text still being in the document, and
+		// the `<label>` still wrapping the control that would otherwise have nothing naming it.
+		expect(body).toMatch(
+			new RegExp(
+				`<label[^>]*>\\s*<span[^>]*>${en.page.dashboard.quickPing.field.label}</span>\\s*<input[^>]*name="url"`,
+			),
+		);
 	});
 
 	test("renders the status, the code and the timing of the check that just ran", async () => {
@@ -203,8 +221,9 @@ describe("dashboard-quick-ping", () => {
 		expect(body).toContain(en.page.dashboard.quickPing.result.status.up);
 		expect(body).toContain("HTTP 200");
 		expect(body).toContain("12 ms");
-		// The redirect cleared the form, so the target is put back into it.
-		expect(body).toContain("https://example.com/health");
+		// The redirect cleared the form, so the target is put back into it. Asserted as the
+		// attribute, since the placeholder is a URL this one is a prefix of.
+		expect(body).toContain('value="https://example.com/health"');
 	});
 
 	test("says a target never answered rather than reporting a code it never sent", async () => {

@@ -123,6 +123,35 @@ describe("app/team/dashboard", () => {
 		expect(body).toContain(en.page.dashboard.header.action.create);
 	});
 
+	test("places the quick-check frame below the stat cards and above the panel", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.dashboard.index, {
+			middleware: [seedTeam(team, membership)],
+			handler: (dashboardModule.default as { handler: RequestHandler<any> }).handler,
+		});
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let request = new Request(
+			new URL(routes.app.team.dashboard.index.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let body = await (await container.scope(() => router.fetch(request))).text();
+
+		// The page is for the numbers; the quick check is a tool someone reaches for. Frames
+		// stream in whatever order the document lists them, so this is the order they render.
+		let lastStatCard = body.indexOf("dashboard-card-count-ssl");
+		let quickPing = body.indexOf("dashboard-quick-ping");
+		let panel = body.indexOf("dashboard-panel");
+		expect(lastStatCard).toBeGreaterThan(-1);
+		expect(quickPing).toBeGreaterThan(lastStatCard);
+		expect(panel).toBeGreaterThan(quickPing);
+	});
+
 	test("sets the dashboardTab cookie on the response", async () => {
 		let { db, team, membership } = await createFixture();
 

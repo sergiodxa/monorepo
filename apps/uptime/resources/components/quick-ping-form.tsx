@@ -11,6 +11,11 @@
  * scripted and unscripted paths produce identical markup instead of one of them
  * re-implementing the result in the browser.
  *
+ * The field's caption is clipped rather than dropped: the row it sits in already names
+ * the control for anyone who can see it, and the placeholder carries the hint, but the
+ * `<input>` would have no accessible name at all without a `<label>` that wraps it and
+ * still holds its text.
+ *
  * Its labels come in as props rather than through `@pkg/i18n/ui`'s `intl(handle)`,
  * since the fragment this renders inside wires up no `IntlProvider` of its own for the
  * server-rendered pass.
@@ -22,8 +27,8 @@
 import type { Handle } from "remix/ui";
 
 import { Button, Input, Label } from "@pkg/r3-ui";
-import { fieldStackLayout } from "@pkg/r3-ui/styles";
-import { flex, flexWrap, gap, grow, items } from "@pkg/u/layout";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { is, m, maxIs } from "@pkg/u/size";
 import { clientEntry, on } from "remix/ui";
 
@@ -33,7 +38,7 @@ type QuickPingFormProps = {
 	action: string;
 	/** Fragment URL the frame reloads from once the check has run. */
 	src: string;
-	/** Kept after a check so the result rendered below still names its target. */
+	/** Kept after a check so the field still names the target the result beside it is about. */
 	url?: string;
 	label: string;
 	placeholder: string;
@@ -82,9 +87,9 @@ export const QuickPingForm = clientEntry(
 						}),
 					]}
 				>
-					<div mix={[flex(), flexWrap(), gap("8px"), items("end")]}>
-						<Label mix={[fieldStackLayout(), grow(1), is("full"), maxIs("480px")]}>
-							<span>{label}</span>
+					<div mix={[flex(), flexWrap(), gap("8px"), items("center")]}>
+						<Label mix={[is("full"), maxIs("360px")]}>
+							<span mix={[visuallyHidden()]}>{label}</span>
 							<Input
 								type="url"
 								name="url"

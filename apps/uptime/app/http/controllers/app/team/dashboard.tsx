@@ -12,7 +12,9 @@
  * The quick-check card is a `Frame` for a different reason than the rest: not to keep
  * the shell from blocking, but so that running a check swaps only that card. It is the
  * one thing on this page a visitor submits, and a full navigation would refetch every
- * frame above to show one URL's result.
+ * frame around it to show one URL's result. It sits below the stat cards rather than
+ * above them because the numbers are what this page is for; the quick check is a tool
+ * someone reaches for, not the headline.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,11 +88,6 @@ export default createAction(routes.app.team.dashboard.index, {
 					toast={toast}
 				>
 					<div>
-						<Frame
-							name="dashboard-quick-ping"
-							src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
-						/>
-
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
 							<Frame
 								name="dashboard-card-usage"
@@ -151,6 +148,11 @@ export default createAction(routes.app.team.dashboard.index, {
 								fallback={<StatCardSkeleton count={1} />}
 							/>
 						</div>
+
+						<Frame
+							name="dashboard-quick-ping"
+							src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
+						/>
 
 						<Frame
 							name="dashboard-panel"
