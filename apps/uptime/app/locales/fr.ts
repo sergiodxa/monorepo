@@ -1234,6 +1234,31 @@ export default {
 				},
 			},
 
+			quickPing: {
+				title: "Vérification rapide",
+				description:
+					"Vérifiez n'importe quelle URL une fois, immédiatement. Rien n'est enregistré et aucune alerte n'est envoyée — cela compte pour un ping.",
+				field: {
+					label: "URL",
+					placeholder: "https://example.com/healthcheck",
+				},
+				action: {
+					submit: "Lancer la vérification",
+				},
+				result: {
+					noResponse: "Aucune réponse",
+					status: {
+						up: "Actif",
+						degraded: "Dégradé",
+						down: "Hors Service",
+					},
+				},
+				error: {
+					invalidUrl: "Saisissez une URL complète commençant par http:// ou https://.",
+					subscriptionRequired: "Un abonnement actif est nécessaire pour lancer une vérification.",
+				},
+			},
+
 			alert: {
 				subscription: {
 					title: "Vos moniteurs sont en pause !",
@@ -3449,6 +3474,7 @@ export default {
 							"cron-jobs:read": "Lire les tâches Cron",
 							"cron-jobs:write": "Écrire les tâches Cron",
 							"cron-jobs:ping": "Ping Cron Jobs",
+							"ping:trigger": "Déclencher des Pings",
 						},
 					},
 					expiresAt: {

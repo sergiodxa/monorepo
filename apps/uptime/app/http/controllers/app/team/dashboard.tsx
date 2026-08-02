@@ -9,6 +9,11 @@
  * it (notably Polar's API, the slowest of those fetches) before it can render the
  * page shell. Requires `requireUser` + `requireTeam`.
  *
+ * The quick-check card is a `Frame` for a different reason than the rest: not to keep
+ * the shell from blocking, but so that running a check swaps only that card. It is the
+ * one thing on this page a visitor submits, and a full navigation would refetch every
+ * frame above to show one URL's result.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -81,6 +86,11 @@ export default createAction(routes.app.team.dashboard.index, {
 					toast={toast}
 				>
 					<div>
+						<Frame
+							name="dashboard-quick-ping"
+							src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
+						/>
+
 						<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
 							<Frame
 								name="dashboard-card-usage"

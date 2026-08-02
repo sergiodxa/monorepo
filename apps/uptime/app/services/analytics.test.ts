@@ -38,7 +38,7 @@ let {
 	getTeamHttpSummaries,
 	queryAnalytics,
 	queryAnalyticsCached,
-	writeHttpPingResult,
+	writePingResult,
 } = await import("~/app/services/analytics");
 
 /** The Analytics Engine SQL API endpoint every query POSTs to. */
@@ -172,11 +172,12 @@ describe("getCacheTtl", () => {
 	});
 });
 
-describe("writeHttpPingResult", () => {
+describe("writePingResult", () => {
 	test("writes a data point with the expected blobs/doubles/indexes shape", () => {
-		writeHttpPingResult({
+		writePingResult({
 			monitorId: "monitor-1",
 			teamId: "team-1",
+			type: "http",
 			status: "degraded",
 			responseTimeMs: 1234,
 			responseStatus: 200,
@@ -189,6 +190,50 @@ describe("writeHttpPingResult", () => {
 			doubles: [1234, 1, 200, 200],
 			indexes: ["team-1"],
 		});
+	});
+
+	test("puts a non-http check's type in blob2 and its own status vocabulary in blob3", () => {
+		writePingResult({
+			monitorId: "monitor-2",
+			teamId: "team-2",
+			type: "dns",
+			status: "changed",
+			responseTimeMs: 42,
+		});
+
+		expect(writeDataPointMock).toHaveBeenCalledWith({
+			blobs: ["monitor-2", "dns", "changed"],
+			doubles: [42, 1, 0, 0],
+			indexes: ["team-2"],
+		});
+	});
+
+	test("defaults the HTTP-only doubles to zero for a type that has no status of its own", () => {
+		writePingResult({
+			monitorId: "monitor-3",
+			teamId: "team-3",
+			type: "cron",
+			status: "up",
+			responseTimeMs: 0,
+		});
+
+		let [point] = writeDataPointMock.mock.calls[0] as [{ doubles: number[] }];
+		// Zero already spells "unknown" for HTTP itself, so a missing status reads the same
+		// way as an unreachable target's and no query has to special-case it.
+		expect(point.doubles).toEqual([0, 1, 0, 0]);
+	});
+
+	test("tags an ad-hoc ping, which belongs to a team but to no monitor's dashboard", () => {
+		writePingResult({
+			monitorId: "monitor-4",
+			teamId: "team-4",
+			type: "adhoc",
+			status: "error",
+			responseTimeMs: 7,
+		});
+
+		let [point] = writeDataPointMock.mock.calls[0] as [{ blobs: string[] }];
+		expect(point.blobs).toEqual(["monitor-4", "adhoc", "error"]);
 	});
 });
 

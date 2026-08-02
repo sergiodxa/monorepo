@@ -1774,6 +1774,31 @@ export default {
 				},
 			},
 
+			quickPing: {
+				title: "Quick check",
+				description:
+					"Check any URL once, right now. Nothing is saved and no alerts are sent — it counts as one ping.",
+				field: {
+					label: "URL",
+					placeholder: "https://example.com/healthcheck",
+				},
+				action: {
+					submit: "Run check",
+				},
+				result: {
+					noResponse: "No response",
+					status: {
+						up: "Up",
+						degraded: "Degraded",
+						down: "Down",
+					},
+				},
+				error: {
+					invalidUrl: "Enter a full http:// or https:// URL.",
+					subscriptionRequired: "An active subscription is required to run a check.",
+				},
+			},
+
 			alert: {
 				subscription: {
 					title: "Your monitors are paused!",
@@ -3974,6 +3999,7 @@ export default {
 							"cron-jobs:read": "Read Cron Jobs",
 							"cron-jobs:write": "Write Cron Jobs",
 							"cron-jobs:ping": "Ping Cron Jobs",
+							"ping:trigger": "Trigger Pings",
 						},
 					},
 					expiresAt: {

@@ -12,9 +12,27 @@ import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
 
-import type { InsertMonitorContentCheck, SelectMonitorContentCheck } from "~/database/schema";
+import type { InsertMonitorContentCheck } from "~/database/schema";
 
 import { monitorContentChecks } from "~/database/schema";
+
+/**
+ * The fields {@link ContentCheck.evaluate} actually reads, which is less than a stored
+ * row carries. Declared structurally so a rule that was never persisted — the ones an
+ * ad-hoc `POST /api/v1/ping` supplies in its request body — evaluates through the same
+ * code as a monitor's own checks. `SelectMonitorContentCheck` satisfies it.
+ *
+ * `type` is a plain `string` rather than the three-way union, because the stored column
+ * is a text enum the schema types as `string` and narrowing here would stop a row from
+ * satisfying this. {@link evaluateOne}'s `default` branch is what closes that gap: an
+ * unrecognized type fails rather than passing silently.
+ */
+export interface ContentCheckRule {
+	type: string;
+	value: string;
+	case_sensitive: boolean;
+	is_enabled: boolean;
+}
 
 export default class ContentCheck {
 	/** Creates a content check for a monitor. */
@@ -48,12 +66,12 @@ export default class ContentCheck {
 	 *
 	 * @returns `true` when there are no enabled checks or every enabled check passes.
 	 */
-	static evaluate(checks: SelectMonitorContentCheck[], body: string): boolean {
+	static evaluate(checks: ContentCheckRule[], body: string): boolean {
 		return checks.filter((check) => check.is_enabled).every((check) => evaluateOne(check, body));
 	}
 }
 
-function evaluateOne(check: SelectMonitorContentCheck, body: string): boolean {
+function evaluateOne(check: ContentCheckRule, body: string): boolean {
 	let haystack = check.case_sensitive ? body : body.toLowerCase();
 	let needle = check.case_sensitive ? check.value : check.value.toLowerCase();
 

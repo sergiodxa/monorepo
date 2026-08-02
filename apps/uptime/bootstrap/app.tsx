@@ -60,6 +60,7 @@ import {
 	playMonitor,
 	updateMonitor,
 } from "~/app/http/controllers/actions/monitors";
+import { runPing } from "~/app/http/controllers/actions/ping";
 import { updateSsl } from "~/app/http/controllers/actions/ssl";
 import {
 	createStatusPage,
@@ -105,6 +106,7 @@ import monitorContentChecksController, {
 	monitorContentChecksRoutes,
 } from "~/app/http/controllers/api/monitor-content-checks";
 import monitorsController, { monitorsRoutes } from "~/app/http/controllers/api/monitors";
+import pingCreate from "~/app/http/controllers/api/ping";
 import { statusShow } from "~/app/http/controllers/api/status";
 import statusPageApiController, { statusPageRoutes } from "~/app/http/controllers/api/status-page";
 import statusPagesController, { statusPagesRoutes } from "~/app/http/controllers/api/status-pages";
@@ -131,6 +133,7 @@ import dashboardCardSlowestEndpoint from "~/app/http/controllers/app/team/dashbo
 import dashboardCardUptime from "~/app/http/controllers/app/team/dashboard-card-uptime";
 import dashboardCardUsage from "~/app/http/controllers/app/team/dashboard-card-usage";
 import dashboardPanel from "~/app/http/controllers/app/team/dashboard-panel";
+import dashboardQuickPing from "~/app/http/controllers/app/team/dashboard-quick-ping";
 import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
 import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
 import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
@@ -294,6 +297,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.index, teamIndex);
 	router.map(routes.app.team.dashboard.index, teamDashboard);
 	router.map(routes.app.team.dashboard.panel, dashboardPanel);
+	router.map(routes.app.team.dashboard.quickPing, dashboardQuickPing);
 	router.map(routes.app.team.dashboard.cards.usage, dashboardCardUsage);
 	router.map(routes.app.team.dashboard.cards.uptime, dashboardCardUptime);
 	router.map(routes.app.team.dashboard.cards.slowestEndpoint, dashboardCardSlowestEndpoint);
@@ -421,6 +425,8 @@ export default function application(options: application.Options) {
 	// pattern the `app.team.*` page controllers above use, since it's a single `Route`
 	// rather than a `RouteMap` and so can't take a controller-level `middleware` option.
 	router.map(routes.actions.setDashboardTab, setDashboardTab);
+	// `runPing` is a single `Route` too, so it carries the same self-contained chain.
+	router.map(routes.actions.runPing, runPing);
 
 	// A separate group (see `routes/web.ts`'s docblock on `teamAdminActions`), so
 	// `requireRole("admin")` layers on top of the member-level chain the `actions`
@@ -499,6 +505,7 @@ export default function application(options: application.Options) {
 	// plain `createAction()` default exports mapped directly to their one route.
 	router.map(routes.api.v1.status, statusShow);
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
+	router.map(routes.api.v1.ping, pingCreate);
 
 	router.map(monitorsRoutes, monitorsController);
 	router.map(monitorRoutes, monitorController);

@@ -86,6 +86,25 @@ export default class Team {
 		return new Map(rows.map((row) => [row.teamId, Number(row.count)]));
 	}
 
+	/**
+	 * Maps each of `teamIds` to its owner's subject id, in one query.
+	 *
+	 * Exists for the ping meter: a Polar event is billed to a customer, and the customer's
+	 * external id is the team owner's subject id, but the sweeps that perform checks hold
+	 * only `team_id` — the claim projections deliberately read the few columns a check
+	 * needs and nothing else. One lookup per sweep is what keeps that true instead of
+	 * widening every claim to carry a column only billing reads.
+	 *
+	 * A team id that names no team is absent from the map rather than mapped to a
+	 * placeholder, so a caller has to decide what an unbillable ping means.
+	 */
+	static async ownerIdsByTeamIds(db: Database, teamIds: string[]): Promise<Map<string, string>> {
+		if (teamIds.length === 0) return new Map();
+
+		let rows = await db.findMany(teams, { where: inList("id", [...new Set(teamIds)]) });
+		return new Map(rows.map((row) => [row.id, row.owner_id]));
+	}
+
 	/** Lists every membership row for a team. */
 	static async listMembersByTeam(db: Database, teamId: string) {
 		return await db.findMany(memberships, { where: { team_id: teamId } });

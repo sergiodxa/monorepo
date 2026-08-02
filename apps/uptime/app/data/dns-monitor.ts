@@ -130,14 +130,25 @@ export default class DnsMonitor {
 	 * Records a check's outcome: inserts a history row and updates the monitor's cached
 	 * "last checked" fields (including `last_value`, which becomes the next check's
 	 * change-detection baseline) in one call.
+	 *
+	 * @returns The history row's id. It is the only thing about a completed check that is
+	 * unique and already persisted, which is what makes it the idempotency key the ping
+	 * meter bills against: a redelivered sweep that somehow re-recorded the same check
+	 * would ingest a different id and double-bill, whereas anything derived from the clock
+	 * or a fresh random value could never dedupe at all.
 	 */
-	static async recordCheckResult(db: Database, monitorId: string, result: DnsCheckResult) {
+	static async recordCheckResult(
+		db: Database,
+		monitorId: string,
+		result: DnsCheckResult,
+	): Promise<string> {
 		let checkedAt = Date.now();
+		let id = generateUUID();
 
 		await db.create(
 			dnsMonitorResults,
 			{
-				id: generateUUID(),
+				id,
 				dns_monitor_id: monitorId,
 				status: result.status,
 				resolved_value: result.resolvedValue,
@@ -158,5 +169,7 @@ export default class DnsMonitor {
 			},
 			{ touch: true },
 		);
+
+		return id;
 	}
 }

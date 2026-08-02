@@ -1218,6 +1218,31 @@ export default {
 				},
 			},
 
+			quickPing: {
+				title: "クイックチェック",
+				description:
+					"任意のURLを今すぐ1回だけチェックします。何も保存されずアラートも送信されませんが、pingを1回消費します。",
+				field: {
+					label: "URL",
+					placeholder: "https://example.com/healthcheck",
+				},
+				action: {
+					submit: "チェックを実行",
+				},
+				result: {
+					noResponse: "応答なし",
+					status: {
+						up: "稼働中",
+						degraded: "低下",
+						down: "停止中",
+					},
+				},
+				error: {
+					invalidUrl: "http:// または https:// から始まる完全なURLを入力してください。",
+					subscriptionRequired: "チェックを実行するには有効なサブスクリプションが必要です。",
+				},
+			},
+
 			alert: {
 				subscription: {
 					title: "モニターが一時停止されています！",
@@ -3410,6 +3435,7 @@ export default {
 							"cron-jobs:read": "Cronジョブの読み取り",
 							"cron-jobs:write": "Cronジョブの書き込み",
 							"cron-jobs:ping": "Cronジョブ Ping",
+							"ping:trigger": "Pingの実行",
 						},
 					},
 					expiresAt: {

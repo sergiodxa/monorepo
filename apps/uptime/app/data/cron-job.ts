@@ -114,19 +114,26 @@ export default class CronJobMonitor {
 	 * `last_ping_at`, freshly computed `next_expected_at`, and status (`healthy` when
 	 * on time, `late` otherwise — never set directly to `missed`, which only the
 	 * scheduled sweep decides once a job goes silent past its grace period).
+	 *
+	 * @returns The history row's id. Reaching this method is what makes a ping billable —
+	 * everything the endpoint rejects returns before it — and the row's id is the only
+	 * thing about an accepted ping that is unique and already persisted, which is what
+	 * makes it the idempotency key the ping meter bills against. A caller that retries its
+	 * `curl` would be refused by the per-minute rule rather than reaching a second insert.
 	 */
 	static async recordPing(
 		db: Database,
 		monitor: { id: string; cron_expression: string; timezone: string },
 		wasOnTime: boolean,
 		metadata: { sourceIp: string | null; userAgent: string | null },
-	) {
+	): Promise<string> {
 		let now = Date.now();
+		let id = generateUUID();
 
 		await db.create(
 			cronJobPings,
 			{
-				id: generateUUID(),
+				id,
 				cron_job_monitor_id: monitor.id,
 				was_on_time: wasOnTime,
 				source_ip: metadata.sourceIp,
@@ -150,6 +157,8 @@ export default class CronJobMonitor {
 			},
 			{ touch: true },
 		);
+
+		return id;
 	}
 
 	/**

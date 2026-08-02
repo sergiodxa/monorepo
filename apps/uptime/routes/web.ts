@@ -63,6 +63,12 @@ export default route({
 			dashboard: {
 				index: get("/app/:team/dashboard"),
 				/**
+				 * Fragment route: the quick-check card. Its own `Frame` so submitting the
+				 * form swaps just this card — running a check must not cost the page its
+				 * stat cards, its tab table, and every fetch behind them.
+				 */
+				quickPing: get("/app/:team/dashboard/quick-ping"),
+				/**
 				 * Fragment route: renders just one monitor-type table, loaded into the
 				 * dashboard's named "dashboard-panel" `Frame` so switching tabs doesn't
 				 * reload the stat cards above it.
@@ -196,6 +202,12 @@ export default route({
 			delete: del("/actions/:team/delete-status-page"),
 		},
 		setDashboardTab: post("/actions/:team/set-dashboard-tab"),
+		/**
+		 * The dashboard's quick-check form. Its own leaf rather than one of
+		 * `monitor.http`'s, because it acts on no monitor at all — the URL comes from the
+		 * form body and nothing is stored once the check answers.
+		 */
+		runPing: post("/actions/:team/run-ping"),
 	},
 
 	/**
@@ -271,6 +283,14 @@ export default route({
 		v1: {
 			status: get("/api/v1/status"),
 			backfillDailyStats: post("/api/v1/backfill-daily-stats"),
+
+			/**
+			 * One-shot check against a target the caller describes in the request body, with
+			 * no monitor behind it. Not a `resources()` leaf and not nested under a monitor
+			 * type, because it creates nothing and belongs to none of them: the body's `type`
+			 * discriminator picks which kind of check to run.
+			 */
+			ping: post("/api/v1/ping"),
 
 			monitors: {
 				...resources("/api/v1/monitors", { param: "monitorId", exclude: ["new", "edit"] }),

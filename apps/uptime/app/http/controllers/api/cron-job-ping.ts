@@ -12,6 +12,10 @@
  * route is reachable in volume by anyone holding a ping URL, and the product rule
  * alone bounds what is *recorded*, not what is *charged*.
  *
+ * A ping this endpoint accepts is billed as one ping against the team's allowance, and
+ * only an accepted one is: a request refused as unknown, disabled, or too frequent
+ * performed no work, so it never reaches the ingestion below.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -20,16 +24,20 @@ import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
 import type { Middleware } from "remix/fetch-router";
 
 import { conflict, created, notFound, tooManyRequests } from "@pkg/http/response/json";
+import { PolarClient } from "@pkg/polar";
 import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
 import { rateLimit } from "@pkg/rate-limit/middleware";
 import { getServiceContainer } from "@pkg/service-container";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import Team from "~/app/data/team";
 import { notifyCronJobResult } from "~/app/services/alerts";
+import { writePingResult } from "~/app/services/analytics";
+import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
 
 /** Minimum time between accepted pings for a single monitor. */
@@ -153,11 +161,58 @@ export default createAction(routes.api.cronJobPing, {
 				: monitor.next_expected_at + monitor.grace_period_seconds * 1000;
 		let wasOnTime = deadline === null || Date.now() <= deadline;
 
-		await CronJobMonitor.recordPing(db, monitor, wasOnTime, {
+		let pingId = await CronJobMonitor.recordPing(db, monitor, wasOnTime, {
 			sourceIp:
 				ctx.request.headers.get("CF-Connecting-IP") ?? ctx.request.headers.get("X-Forwarded-For"),
 			userAgent: ctx.request.headers.get("User-Agent"),
 		});
+
+		/**
+		 * A cron ping is a report, not a measurement: it carries no latency of its own — the
+		 * job already ran, elsewhere — and the only thing observed about it is whether it
+		 * arrived by its deadline. So on time is `up`, late is `degraded`, and the response
+		 * time is zero rather than a number nothing measured. A job that never pings at all
+		 * produces no row here; the scheduled sweep is what notices that silence.
+		 */
+		writePingResult({
+			monitorId: monitor.id,
+			teamId: monitor.team_id,
+			type: "cron",
+			status: wasOnTime ? "up" : "degraded",
+			responseTimeMs: 0,
+		});
+
+		let ownerIds = await Team.ownerIdsByTeamIds(db, [monitor.team_id]);
+		let ownerId = ownerIds.get(monitor.team_id);
+		if (ownerId === undefined) {
+			/**
+			 * No owner means no Polar customer to ingest against. The ping is still recorded
+			 * and still answered — a billing gap must not turn a caller's healthy job into a
+			 * failed `curl` — so this only leaves a trace.
+			 */
+			ctx.logger.error("api.cron_job_ping.unbillable_team", {
+				monitorId: monitor.id,
+				teamId: monitor.team_id,
+			});
+		} else {
+			/**
+			 * Deferred rather than awaited, unlike the queue sweeps: those already run
+			 * outside a request and their wall time costs nobody a wait, while this one is
+			 * on the response path of a caller whose job is blocked on it. Ingestion is
+			 * best-effort either way, so the round trip belongs after the response.
+			 */
+			waitUntil(
+				ingestPings(getServiceContainer().get(PolarClient), [
+					{
+						externalId: `ping:${pingId}`,
+						ownerId,
+						teamId: monitor.team_id,
+						monitorId: monitor.id,
+						type: "cron",
+					},
+				]),
+			);
+		}
 
 		await notifyCronJobResult(
 			db,

@@ -13,9 +13,7 @@ import type { PolarClient } from "@pkg/polar";
 import type IdToken from "~/app/auth/value-objects/id-token";
 
 import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
-
-/** The Polar meter id tracking ingested `ping` usage events. */
-const PING_METER_ID = "22fabd9b-8b03-4cc2-8981-230717267cd5";
+import { PING_METER_ID } from "~/app/services/ping-meter";
 
 export default class Customer {
 	/**
@@ -36,7 +34,7 @@ export default class Customer {
 	/**
 	 * The team's Polar-billed `ping` usage for the calendar month containing `date`,
 	 * scoped to `teamId` via the meter's ingested metadata (see
-	 * `~/app/jobs/check-http.ts` for where usage would be ingested).
+	 * `~/app/services/ping-meter.ts` for where usage is ingested).
 	 * Throws when the request fails or the owner has no Polar customer — callers on
 	 * a billing dashboard should treat that as "usage unavailable" rather than "0".
 	 */

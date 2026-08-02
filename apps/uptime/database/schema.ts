@@ -113,6 +113,12 @@ export const apiKeyScopes = [
 	"cron-jobs:ping",
 	"api-keys:read",
 	"api-keys:write",
+	// Named for what the holder does rather than for what the server writes: a key with
+	// this scope triggers one-shot checks through `POST /api/v1/ping`, and there is no
+	// stored ping resource for a `:read`/`:write` pair to describe. Appended rather than
+	// inserted in place — the column stores the strings, so position means nothing, but
+	// the checkbox list on the API-key form is rendered in this order.
+	"ping:trigger",
 ] as const;
 
 export type ApiKeyScope = (typeof apiKeyScopes)[number];

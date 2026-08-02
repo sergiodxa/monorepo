@@ -1,5 +1,5 @@
 /**
- * Analytics Engine service for HTTP ping results. Writes ping data points to the
+ * Analytics Engine service for ping results. Writes ping data points to the
  * `PING_RESULTS` binding and reads them back through Cloudflare's Analytics Engine SQL
  * HTTP API (the binding itself only supports writes), with a KV-cached variant so the
  * dashboard doesn't re-query on every load. Every query is a single-table SELECT with
@@ -28,8 +28,21 @@ const MIN_CACHE_TTL_SECONDS = 60;
 /** Maximum KV cache TTL, in seconds. */
 const MAX_CACHE_TTL_SECONDS = 600;
 
-/** A ping's outcome, matching the `blob3` dimension in the Analytics Engine dataset. */
-export type PingStatus = "up" | "down" | "degraded" | "timeout";
+/**
+ * What kind of check produced a ping, matching the `blob2` dimension in the dataset.
+ * `adhoc` is a `POST /api/v1/ping` call, which belongs to a team but to no monitor.
+ */
+export type PingType = "http" | "dns" | "tcp" | "cron" | "adhoc";
+
+/**
+ * A ping's outcome, matching the `blob3` dimension in the Analytics Engine dataset.
+ *
+ * The union spans every monitor type's own status vocabulary rather than flattening them
+ * onto HTTP's — a DNS check answers `ok`/`changed`/`error`, and remapping that onto
+ * up/degraded/down would record a fact nothing observed. Nothing reads `blob3` without
+ * first filtering `blob2` to one type, so the vocabularies never have to agree.
+ */
+export type PingStatus = "up" | "down" | "degraded" | "timeout" | "ok" | "changed" | "error";
 
 /** A monitor's derived 24h status, shown as its dashboard/list badge. */
 export type MonitorHealth = "up" | "degraded" | "down" | "pending";
@@ -126,21 +139,31 @@ export function getCacheTtl(minIntervalSeconds: number): number {
 }
 
 /**
- * Writes one HTTP ping result as an Analytics Engine data point, counted against the check
+ * Writes one ping result as an Analytics Engine data point, counted against the check
  * that produced it.
+ *
+ * Every ping type lands in this one dataset, told apart by `blob2` — the dimension was
+ * always there, but only HTTP ever filled it, which is why DNS and TCP results were
+ * invisible here until they started calling this too.
+ *
+ * `responseStatus`/`expectedStatus` are HTTP's alone and default to 0 for the types that
+ * have no such notion. A zero already means "unknown" for HTTP itself (an unreachable
+ * target has no status), so the two read the same way and no query has to special-case a
+ * missing double.
  */
-export function writeHttpPingResult(params: {
+export function writePingResult(params: {
 	monitorId: string;
 	teamId: string;
+	type: PingType;
 	status: PingStatus;
 	responseTimeMs: number;
-	responseStatus: number;
-	expectedStatus: number;
+	responseStatus?: number;
+	expectedStatus?: number;
 }): void {
 	recordCost("aeDataPoint");
 	env.PING_RESULTS.writeDataPoint({
-		blobs: [params.monitorId, "http", params.status],
-		doubles: [params.responseTimeMs, 1, params.responseStatus, params.expectedStatus],
+		blobs: [params.monitorId, params.type, params.status],
+		doubles: [params.responseTimeMs, 1, params.responseStatus ?? 0, params.expectedStatus ?? 0],
 		indexes: [params.teamId],
 	});
 }
@@ -169,7 +192,7 @@ export async function getTeamHttpSummaries(
 	/**
 	 * Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must have 0
 	 * arguments"), so totals are summed from `double2` (always 1 per row, see
-	 * writeHttpPingResult) instead — matching how the same dataset is queried elsewhere.
+	 * writePingResult) instead — matching how the same dataset is queried elsewhere.
 	 */
 	let sql = `
 		SELECT

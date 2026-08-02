@@ -3,6 +3,9 @@
  * and the response-body evaluation logic (`contains`/`not_contains`/`regex`, ANDed
  * across every enabled check) that decides whether a monitor's content check passes.
  *
+ * Evaluation takes the structural `ContentCheckRule`, so both callers are covered: a
+ * stored row, and a rule that was never persisted at all.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -11,6 +14,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import type { Database } from "remix/data-table";
 
+import type { ContentCheckRule } from "~/app/data/content-check";
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
@@ -157,5 +161,46 @@ describe("ContentCheck.evaluate", () => {
 		];
 		expect(ContentCheck.evaluate(checks, "Status: OK, no problems")).toBe(true);
 		expect(ContentCheck.evaluate(checks, "Status: OK, error occurred")).toBe(false);
+	});
+
+	test("an unrecognized type fails rather than passing silently", () => {
+		expect(ContentCheck.evaluate([check({ type: "jsonpath", value: "OK" })], "Status: OK")).toBe(
+			false,
+		);
+	});
+
+	test("a rule that was never persisted evaluates exactly like the stored row would", () => {
+		/**
+		 * No `id`, no `monitor_id`, no timestamps: the shape an ad-hoc ping supplies in its
+		 * request body, which never becomes a row. It has to reach the same verdict as the
+		 * stored check beside it, or the endpoint and the monitor would disagree about the
+		 * same response body.
+		 */
+		let rule: ContentCheckRule = {
+			type: "contains",
+			value: "OK",
+			case_sensitive: false,
+			is_enabled: true,
+		};
+		let stored = check({ type: "contains", value: "OK" });
+
+		expect(ContentCheck.evaluate([rule], "Status: OK")).toBe(
+			ContentCheck.evaluate([stored], "Status: OK"),
+		);
+		expect(ContentCheck.evaluate([rule], "Status: down")).toBe(
+			ContentCheck.evaluate([stored], "Status: down"),
+		);
+		expect(ContentCheck.evaluate([rule], "Status: OK")).toBe(true);
+		expect(ContentCheck.evaluate([rule], "Status: down")).toBe(false);
+	});
+
+	test("mixes a persisted row and a bare rule in one evaluation", () => {
+		let rules: ContentCheckRule[] = [
+			check({ type: "contains", value: "OK" }),
+			{ type: "not_contains", value: "error", case_sensitive: false, is_enabled: true },
+		];
+
+		expect(ContentCheck.evaluate(rules, "Status: OK")).toBe(true);
+		expect(ContentCheck.evaluate(rules, "Status: OK, error occurred")).toBe(false);
 	});
 });

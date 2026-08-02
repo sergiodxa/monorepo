@@ -1229,6 +1229,31 @@ export default {
 				},
 			},
 
+			quickPing: {
+				title: "Controllo rapido",
+				description:
+					"Controlli qualsiasi URL una volta, subito. Nulla viene salvato e nessun avviso viene inviato — conta come un ping.",
+				field: {
+					label: "URL",
+					placeholder: "https://example.com/healthcheck",
+				},
+				action: {
+					submit: "Esegui Controllo",
+				},
+				result: {
+					noResponse: "Nessuna risposta",
+					status: {
+						up: "Attivo",
+						degraded: "Degradato",
+						down: "Non Funzionante",
+					},
+				},
+				error: {
+					invalidUrl: "Inserisca un URL completo con http:// o https://.",
+					subscriptionRequired: "È richiesto un abbonamento attivo per eseguire un controllo.",
+				},
+			},
+
 			alert: {
 				subscription: {
 					title: "I suoi monitor sono in pausa!",
@@ -3437,6 +3462,7 @@ export default {
 							"cron-jobs:read": "Leggi Cron Jobs",
 							"cron-jobs:write": "Scrivi Cron Jobs",
 							"cron-jobs:ping": "Ping Cron Jobs",
+							"ping:trigger": "Attivare Ping",
 						},
 					},
 					expiresAt: {

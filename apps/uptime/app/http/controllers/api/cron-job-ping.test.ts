@@ -7,19 +7,29 @@
  * registered over a recording transport, and no seeded alerts means
  * `notifyCronJobResult` never dispatches one anyway, so nothing leaves the process.
  *
+ * Billing is covered alongside them, because which requests are billed is the whole
+ * point of the distinction: an accepted ping is one event against the `ping` meter, keyed
+ * on the `cron_job_pings` row it wrote, and every refusal — unknown, disabled, too
+ * frequent, or over the caller's budget — performed no work and must bill nothing.
+ *
  * `cloudflare:workers` is mocked before the dynamic import of the controller because
  * the caller budget reads its backend off `env`. The double stands in for the
  * `RATE_LIMITER` binding, counting per key exactly as the platform's does, which is
- * what lets the budget be asserted without the counting being real.
+ * what lets the budget be asserted without the counting being real. `waitUntil` collects
+ * the deferred ingestion instead of dropping it, so a test can await what the response
+ * deliberately doesn't.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+
+import type { IngestEvent } from "@pkg/polar";
 
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -49,9 +59,50 @@ let rateLimiter = {
 	},
 };
 
-mock.module("cloudflare:workers", () => ({ env: { RATE_LIMITER: rateLimiter } }));
+/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
+interface DataPoint {
+	blobs: string[];
+	doubles: number[];
+	indexes: string[];
+}
+
+/** Records the data points `writePingResult` sends to Analytics Engine. */
+let writeDataPointMock = mock((_point: DataPoint) => {});
+
+/**
+ * Work the handler deferred past the response. Held rather than dropped so a test can
+ * await the ingestion the caller deliberately isn't made to wait for.
+ */
+let deferred: Promise<unknown>[] = [];
+
+mock.module("cloudflare:workers", () => ({
+	env: { RATE_LIMITER: rateLimiter, PING_RESULTS: { writeDataPoint: writeDataPointMock } },
+	waitUntil: (promise: Promise<unknown>) => {
+		deferred.push(promise);
+	},
+}));
 
 let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job-ping");
+
+/**
+ * The billing client the container hands the handler, with the one call `ingestPings`
+ * makes spied on. The client is real — only the request is intercepted — so the events
+ * asserted below are the ones the endpoint actually built.
+ */
+let polar = new PolarClient({ accessToken: "polar_at_test" });
+let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+
+beforeEach(() => {
+	writeDataPointMock.mockClear();
+	ingestEventsSafeMock.mockClear();
+	ingestEventsSafeMock.mockImplementation(async () => true);
+	deferred = [];
+});
+
+/** Every event the endpoint handed Polar, flattened across the calls it made. */
+function ingestedEvents(): IngestEvent[] {
+	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+}
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -90,8 +141,13 @@ async function dispatch(db: Db, request: Request) {
 
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
+	container.singleton(PolarClient, () => polar);
 
-	return container.scope(() => router.fetch(request));
+	let response = await container.scope(() => router.fetch(request));
+	// The platform settles deferred work after the response; this stands in for that, so
+	// asserting on the ingestion doesn't race it.
+	await Promise.all(deferred.splice(0));
+	return response;
 }
 
 /**
@@ -202,5 +258,135 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		// cannot let one job starve every other job behind it.
 		let served = await dispatch(db, ping(quiet.id, address));
 		expect(served.status).toBe(201);
+	});
+});
+
+/**
+ * A ping this endpoint accepts is one ping against the team's allowance, and only an
+ * accepted one is: every refusal below performed no work, so billing it would charge a
+ * caller for a request that recorded nothing.
+ */
+describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
+	test("bills an accepted ping once, keyed on the row it wrote", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+
+		await dispatch(db, ping(monitor.id, "203.0.113.30"));
+
+		let [row] = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
+		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
+		expect(ingestedEvents()).toEqual([
+			{
+				name: "ping",
+				externalCustomerId: team.owner_id,
+				externalId: `ping:${row?.id}`,
+				metadata: { teamId: team.id, type: "cron", monitorId: monitor.id },
+			},
+		]);
+	});
+
+	test("records an accepted ping as up, with no latency it never measured", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+
+		await dispatch(db, ping(monitor.id, "203.0.113.31"));
+
+		// A cron ping is a report, not a measurement: the job already ran, elsewhere.
+		expect(writeDataPointMock).toHaveBeenCalledWith({
+			blobs: [monitor.id, "cron", "up"],
+			doubles: [0, 1, 0, 0],
+			indexes: [team.id],
+		});
+	});
+
+	test("records a ping that missed its deadline as degraded", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+		// Expected an hour ago, with a five-minute grace period: this one is late.
+		await CronJobMonitor.updateById(db, monitor.id, { next_expected_at: Date.now() - 3_600_000 });
+
+		await dispatch(db, ping(monitor.id, "203.0.113.32"));
+
+		expect(writeDataPointMock).toHaveBeenCalledWith({
+			blobs: [monitor.id, "cron", "degraded"],
+			doubles: [0, 1, 0, 0],
+			indexes: [team.id],
+		});
+		// Late is still a ping the team performed, so it is still billed.
+		expect(ingestedEvents()).toHaveLength(1);
+	});
+
+	test("bills nothing for an unknown cron job id", async () => {
+		let { db } = createTestDatabase();
+
+		let response = await dispatch(db, ping(crypto.randomUUID(), "203.0.113.33"));
+
+		expect(response.status).toBe(404);
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(writeDataPointMock).not.toHaveBeenCalled();
+	});
+
+	test("bills nothing for a disabled job", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id, { enabled_at: null });
+
+		let response = await dispatch(db, ping(monitor.id, "203.0.113.34"));
+
+		expect(response.status).toBe(409);
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(writeDataPointMock).not.toHaveBeenCalled();
+	});
+
+	test("bills nothing for a ping inside the per-monitor window", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+		await CronJobMonitor.updateById(db, monitor.id, { last_ping_at: Date.now() - 1000 });
+
+		let response = await dispatch(db, ping(monitor.id, "203.0.113.35"));
+
+		// Nothing was recorded, so there is nothing to charge for — a job retrying inside
+		// its minute must not spend allowance on the refusals.
+		expect(response.status).toBe(429);
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(writeDataPointMock).not.toHaveBeenCalled();
+	});
+
+	test("bills nothing once the caller has spent its budget", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+		let address = "203.0.113.36";
+
+		for (let attempt = 0; attempt <= CALLER_LIMIT; attempt++) {
+			await dispatch(db, ping(monitor.id, address));
+		}
+		ingestEventsSafeMock.mockClear();
+		writeDataPointMock.mockClear();
+
+		// Refused by the middleware, so the handler never ran at all.
+		let refused = await dispatch(db, ping(monitor.id, address));
+
+		expect(refused.status).toBe(429);
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		expect(writeDataPointMock).not.toHaveBeenCalled();
+	});
+
+	test("answers the caller even when ingestion is rejected", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let monitor = await createCronJobRow(db, team.id);
+		ingestEventsSafeMock.mockImplementation(async () => false);
+
+		let response = await dispatch(db, ping(monitor.id, "203.0.113.37"));
+
+		// A billing gap must not turn a caller's healthy job into a failed `curl`.
+		expect(response.status).toBe(201);
+		let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
+		expect(pings).toHaveLength(1);
 	});
 });

@@ -19,9 +19,13 @@
  * `globalThis.fetch` stands in for webhook delivery, and for the Analytics Engine SQL API
  * the check no longer needs to ask anything of.
  *
+ * Polar is the one dependency held as a double: the container is handed a client whose
+ * `ingestEventsSafe` is spied on, so the ping the job bills can be asserted — its
+ * deduplication id, its customer, its metadata — without a request leaving the process.
+ *
  * Two of the suites are about cost rather than correctness (ADR-019): that the job
  * logs the Durable Object's billed wall time next to the probe's response time instead
- * of conflating them, and that one healthy check still costs the five indexed D1
+ * of conflating them, and that one healthy check still costs the six indexed D1
  * statements it is supposed to cost.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -29,13 +33,15 @@
  */
 
 import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { IngestEvent } from "@pkg/polar";
 import type { DataManipulationRequest, DatabaseAdapter } from "remix/data-table";
 
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createDatabase, Database } from "remix/data-table";
 
@@ -51,6 +57,7 @@ import {
 	monitorContentChecks,
 	monitorResults,
 	monitors,
+	teams,
 } from "~/database/schema";
 
 import type { SQLQueryBindings } from "bun:sqlite";
@@ -110,8 +117,16 @@ function makeGeoFetchNamespace(jurisdiction?: string) {
 
 let fakeGeoFetchNamespace = makeGeoFetchNamespace();
 
-/** Records the data points `writeHttpPingResult` sends to Analytics Engine. */
+/** Records the data points `writePingResult` sends to Analytics Engine. */
 let writeDataPointMock = mock((_point: { blobs: string[] }) => {});
+
+/**
+ * The billing client the container hands the job, with the one call `ingestPings` makes
+ * spied on. The client is real — only the request is intercepted — so the event shape
+ * asserted below is the one `ingestPings` actually built.
+ */
+let polar = new PolarClient({ accessToken: "polar_at_test" });
+let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 
 mock.module("cloudflare:workers", () => ({
 	env: {
@@ -129,7 +144,10 @@ mock.module("cloudflare:workers", () => ({
 let { Job } = await import("@pkg/jobs");
 let { CheckHttpJob } = await import("./check-http");
 
-/** Builds a container with the database and a mailer that records instead of sending. */
+/**
+ * Builds a container with the database, a mailer that records instead of sending, and the
+ * spied-on billing client.
+ */
 function makeContainer(db: Database) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
@@ -137,6 +155,7 @@ function makeContainer(db: Database) {
 		Mailer,
 		() => new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }),
 	);
+	container.singleton(PolarClient, () => polar);
 	return container;
 }
 
@@ -154,6 +173,26 @@ async function runJob(db: Database, monitorId: string, options: { jobId?: string
 
 	await makeContainer(db).scope(() => job.perform());
 	return logger;
+}
+
+/**
+ * Seeds the team a monitor belongs to, which is what names the Polar customer the check
+ * is billed to. Most suites here leave it out — the check itself doesn't depend on it —
+ * so the metering and cost suites seed it explicitly.
+ */
+async function seedTeam(db: Database, overrides: Record<string, unknown> = {}) {
+	return await db.create(
+		teams,
+		{
+			id: "team-1",
+			owner_id: "owner-1",
+			name: "Acme",
+			slug: "acme",
+			logo: null,
+			...overrides,
+		} as never,
+		{ touch: true, returnRow: true },
+	);
 }
 
 async function seedMonitor(db: Database, overrides: Record<string, unknown> = {}) {
@@ -231,6 +270,8 @@ beforeEach(() => {
 	);
 	writeDataPointMock.mockClear();
 	idFromNameMock.mockClear();
+	ingestEventsSafeMock.mockClear();
+	ingestEventsSafeMock.mockImplementation(async () => true);
 	probes.length = 0;
 	analyticsUnavailable = false;
 	realFetch = globalThis.fetch;
@@ -780,12 +821,13 @@ describe("CheckHttpJob Durable Object wall time", () => {
  *
  * What is pinned, and why those numbers:
  *
- * - **N = 5 statements**, one per thing the job has to know or record: the
+ * - **N = 6 statements**, one per thing the job has to know or record: the
  *   at-least-once duplicate check on `monitor_results`, the monitor row, its enabled
- *   content checks, the insert of the result, and the write-back of the status that
- *   result put the monitor in. A healthy `up` check dispatches no
- *   alerts (`notifyHttpResult` returns early unless the check is a recovery or not
- *   `up`), so nothing in the alert pipeline runs, and Analytics Engine is not D1.
+ *   content checks, the insert of the result, the write-back of the status that
+ *   result put the monitor in, and the team row naming the owner the ping is billed to.
+ *   A healthy `up` check dispatches no alerts (`notifyHttpResult` returns early unless
+ *   the check is a recovery or not `up`), so nothing in the alert pipeline runs, and
+ *   neither Analytics Engine nor Polar is D1.
  *
  *   It was 4 until ADR-011 moved recovery detection off Analytics Engine and onto a
  *   `monitors.last_status` column, which has to be maintained by a statement of its own —
@@ -794,10 +836,15 @@ describe("CheckHttpJob Durable Object wall time", () => {
  *   query per check, roughly a wash; the saving that paid for it is on the read side,
  *   where the monitors list dropped one uncached Analytics Engine query per monitor per
  *   page view.
- * - **M = 5 rows**, at most one per statement: every statement is a point lookup
+ *
+ *   The sixth is the owner lookup metering needs. Unlike the DNS and TCP sweeps, which
+ *   resolve every owner a sweep touches in one query, this job checks a single monitor,
+ *   so its lookup cannot be amortised over anything — one indexed point lookup per HTTP
+ *   check is the price of billing one.
+ * - **M = 6 rows**, at most one per statement: every statement is a point lookup
  *   through a unique or composite index, so it either finds its row or finds nothing.
- *   A healthy check actually returns 3 (the monitor row, the inserted result, and the
- *   monitor row the status write updates).
+ *   A healthy check actually returns 4 (the monitor row, the inserted result, the
+ *   monitor row the status write updates, and the team row).
  * - **No statement may `SCAN` a table.** This is the assertion that really bounds rows
  *   read: rows read scales with table size the moment a plan degrades to a scan, and
  *   that cannot be seen by counting rows returned. D1's own planner has the final say —
@@ -810,12 +857,13 @@ describe("CheckHttpJob Durable Object wall time", () => {
  */
 describe("CheckHttpJob cost model", () => {
 	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
-	const MAX_STATEMENTS = 5;
+	const MAX_STATEMENTS = 6;
 	/** Row budget for one healthy HTTP check: at most one row per statement. */
-	const MAX_ROWS = 5;
+	const MAX_ROWS = 6;
 
-	test("a healthy check costs no more than 5 statements and 5 rows", async () => {
+	test("a healthy check costs no more than 6 statements and 6 rows", async () => {
 		let { db, statements } = createObservedDatabase();
+		await seedTeam(db);
 		let monitor = await seedMonitor(db);
 		statements.length = 0;
 
@@ -828,17 +876,19 @@ describe("CheckHttpJob cost model", () => {
 			"select",
 			"insert",
 			"update",
+			"select",
 		]);
 
 		let rows = statements.reduce((total, statement) => total + statement.rows, 0);
 		expect(rows).toBeLessThanOrEqual(MAX_ROWS);
-		// The monitor row read, the result row written back with RETURNING, and the monitor
-		// row the cached-status write updates.
-		expect(rows).toBe(3);
+		// The monitor row read, the result row written back with RETURNING, the monitor row
+		// the cached-status write updates, and the team row the ping is billed to.
+		expect(rows).toBe(4);
 	});
 
 	test("every statement resolves through an index instead of scanning a table", async () => {
 		let { db, statements } = createObservedDatabase();
+		await seedTeam(db);
 		let monitor = await seedMonitor(db);
 		await seedContentCheck(db, monitor.id, "expected-token");
 		statements.length = 0;
@@ -852,6 +902,7 @@ describe("CheckHttpJob cost model", () => {
 
 	test("the cost of a healthy check doesn't grow with the size of the tables", async () => {
 		let { db, statements } = createObservedDatabase();
+		await seedTeam(db);
 		let monitor = await seedMonitor(db);
 
 		// Enough unrelated rows that a plan which scanned instead of searching would
@@ -973,5 +1024,106 @@ describe("CheckHttpJob cached status", () => {
 		expect(updated?.last_status).toBeNull();
 		expect(updated?.last_checked_at).toBeNull();
 		expect(updated?.last_response_time_ms).toBeNull();
+	});
+});
+
+/**
+ * The check as a billable ping. One check is one event against the `ping` meter, keyed on
+ * the job id so a redelivery Polar does see is deduplicated on its side as well as
+ * short-circuited on ours, and reported after the commit so it can never bill a check that
+ * produced no result.
+ */
+describe("CheckHttpJob metering", () => {
+	/** Every event the job handed Polar, flattened across the calls it made. */
+	function ingestedEvents(): IngestEvent[] {
+		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+	}
+
+	test("bills one ping, keyed on the job id and charged to the team's owner", async () => {
+		let { db } = createTestDatabase();
+		await seedTeam(db);
+		let monitor = await seedMonitor(db);
+		let jobId = `${monitor.id}:1700000000000`;
+
+		await runJob(db, monitor.id, { jobId });
+
+		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
+		expect(ingestedEvents()).toEqual([
+			{
+				name: "ping",
+				externalCustomerId: "owner-1",
+				externalId: `ping:${jobId}`,
+				metadata: { teamId: "team-1", type: "http", monitorId: monitor.id },
+			},
+		]);
+	});
+
+	test("bills a down check the same as a healthy one", async () => {
+		let { db } = createTestDatabase();
+		await seedTeam(db);
+		let monitor = await seedMonitor(db, { expected_status: 200 });
+		doFetchMock.mockImplementation(
+			async () => new Response("Error", { status: 500, headers: { "X-Response-Time": "5" } }),
+		);
+
+		await runJob(db, monitor.id);
+
+		// The allowance counts checks performed, not endpoints that answered correctly.
+		expect(ingestedEvents()).toHaveLength(1);
+	});
+
+	test("a redelivered job bills the check once", async () => {
+		let { db } = createTestDatabase();
+		await seedTeam(db);
+		let monitor = await seedMonitor(db);
+		let jobId = `${monitor.id}:1700000000000`;
+
+		await runJob(db, monitor.id, { jobId });
+		await runJob(db, monitor.id, { jobId });
+
+		expect(ingestedEvents()).toHaveLength(1);
+	});
+
+	test("records an unbillable team and bills nothing when the team row is gone", async () => {
+		let { db } = createTestDatabase();
+		// No team row: a delete that raced this delivery, so there is no Polar customer.
+		let monitor = await seedMonitor(db);
+
+		let logger = await runJob(db, monitor.id);
+
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+		let unbillable = logger.events.find(
+			(entry) => entry.event === "job.check_http.unbillable_team",
+		);
+		expect(unbillable?.teamId).toBe("team-1");
+		// The check still happened and is still recorded — only the billing is lost.
+		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
+	});
+
+	test("a rejected ingestion doesn't fail a check that already committed a result", async () => {
+		let { db } = createTestDatabase();
+		await seedTeam(db);
+		let monitor = await seedMonitor(db);
+		ingestEventsSafeMock.mockImplementation(async () => false);
+
+		let logger = await runJob(db, monitor.id);
+
+		// Past the commit point a redelivery short-circuits on the job id, so throwing here
+		// would ask the queue for a retry that can only spin.
+		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
+		expect(logger.events.find((entry) => entry.event === "job.check_http.completed")).toBeDefined();
+	});
+
+	test("bills nothing for a check that never committed a result", async () => {
+		let { db } = createTestDatabase();
+		await seedTeam(db);
+		let monitor = await seedMonitor(db);
+		doFetchMock.mockImplementation(async () => {
+			throw new Error("Durable Object reset because its code was updated");
+		});
+
+		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});
 });
