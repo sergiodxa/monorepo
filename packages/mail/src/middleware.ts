@@ -85,7 +85,7 @@ function contextLogger(context: RequestContext): MailLogger | undefined {
  * @param options - Transport and sender configuration; see {@link MailMiddlewareOptions}.
  * @returns A middleware that populates `context.email`.
  * @example
- * router.use(mail({ transport: new ResendTransport(client), from: SENDER }));
+ * router.use(mail({ transport: new CloudflareTransport(env.EMAIL), from: SENDER }));
  */
 export default function mail(options: MailMiddlewareOptions): Middleware {
 	return async (context, next) => {

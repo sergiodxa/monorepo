@@ -15,12 +15,11 @@ import { AuthSDK } from "@pkg/auth-sdk";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { setJobUsageTracker } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
-import { ResendTransport } from "@pkg/mail/resend";
+import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { createDatabase, Database } from "remix/data-table";
-import { Resend } from "resend";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { recordD1Statement, trackJobCost } from "~/app/services/cost";
@@ -61,7 +60,6 @@ container.singleton(Database, () =>
 	}),
 );
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
-container.singleton(Resend, () => new Resend(env.RESEND_API_TOKEN));
 /**
  * Mailer for the send paths with no request behind them — the check jobs and the
  * queue consumer — carrying the same sender identity the mail middleware applies to
@@ -70,12 +68,18 @@ container.singleton(Resend, () => new Resend(env.RESEND_API_TOKEN));
  *
  * Swapping providers is this one line plus the middleware's, because the transport is
  * the only piece that knows which provider the app sends through.
+ *
+ * The `EMAIL` binding's daily send quota starts conservative on a new account and is
+ * raised over time from observed sending behaviour and deliverability, so a burst of
+ * down-alerts is the traffic most likely to meet the ceiling first. A refused send is
+ * a `MailError` the caller already logs rather than a thrown exception, so a monitor
+ * check still completes; the alert is what is lost.
  */
 container.singleton(
 	Mailer,
 	() =>
 		new Mailer({
-			transport: new ResendTransport(container.get(Resend)),
+			transport: new CloudflareTransport(env.EMAIL),
 			from: MAIL_FROM,
 			replyTo: MAIL_REPLY_TO,
 		}),

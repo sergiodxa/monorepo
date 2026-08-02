@@ -668,8 +668,7 @@ export default {
 						body: "Infrastructure, hébergement et diffusion de contenu",
 					},
 					second: { label: "Polar :", body: "Traitement des paiements et gestion des abonnements" },
-					third: { label: "Resend :", body: "Envoi des e-mails d'alerte et de notification" },
-					fourth: { label: "GitHub :", body: "Services d'authentification" },
+					third: { label: "GitHub :", body: "Services d'authentification" },
 					outro:
 						"Nous pouvons également divulguer vos données si la loi l'exige ou pour protéger nos droits et la sécurité de nos utilisateurs.",
 				},

@@ -666,8 +666,7 @@ export default {
 						body: "Infrastruktur, Hosting und Auslieferung von Inhalten",
 					},
 					second: { label: "Polar:", body: "Zahlungsabwicklung und Abonnementverwaltung" },
-					third: { label: "Resend:", body: "E-Mail-Zustellung für Warnungen und Hinweise" },
-					fourth: { label: "GitHub:", body: "Authentifizierung" },
+					third: { label: "GitHub:", body: "Authentifizierung" },
 					outro:
 						"Wir können Ihre Daten außerdem offenlegen, wenn wir gesetzlich dazu verpflichtet sind oder um unsere Rechte und die Sicherheit unserer Nutzer zu schützen.",
 				},

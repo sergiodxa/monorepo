@@ -930,10 +930,12 @@ export default {
 					noSell: "We do not sell your personal data.",
 					intro:
 						"We share data with the following third-party services that help us operate Uptime:",
-					first: { label: "Cloudflare:", body: "Infrastructure, hosting, and content delivery" },
+					first: {
+						label: "Cloudflare:",
+						body: "Infrastructure, hosting, content delivery, and email delivery",
+					},
 					second: { label: "Polar:", body: "Payment processing and subscription management" },
-					third: { label: "Resend:", body: "Email delivery for alerts and notifications" },
-					fourth: { label: "GitHub:", body: "Authentication services" },
+					third: { label: "GitHub:", body: "Authentication services" },
 					outro:
 						"We may also disclose your data if required by law or to protect our rights and the safety of our users.",
 				},

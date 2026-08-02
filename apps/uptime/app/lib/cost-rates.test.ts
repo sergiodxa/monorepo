@@ -61,7 +61,7 @@ describe("priceCostQuantities", () => {
 		let quantities = createCostQuantities();
 		quantities.emailSent = 1_000;
 
-		// Resend's $0.90 per thousand. In dollars this would be 0.9; a 100× error here is
+		// The card's $0.90 per thousand. In dollars this would be 0.9; a 100× error here is
 		// the one that would be hardest to notice downstream.
 		expect(priceCostQuantities(quantities)).toBeCloseTo(90, 9);
 	});

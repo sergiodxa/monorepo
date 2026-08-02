@@ -18,29 +18,27 @@ Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | `@pkg/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
 | `@pkg/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
-| `@pkg/mail/resend`     | `ResendTransport`, for a provider that accepts structured fields                    |
 | `@pkg/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
 | `@pkg/mail/middleware` | The router middleware that publishes `context.email`                                |
 
-Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's dependency into a bundle. `resend` is an **optional peer dependency**: apps that use `@pkg/mail/resend` already have it, and apps that do not never install it. Nothing outside that subpath imports it.
+Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type.
 
-The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their provider, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
+The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their destination, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
 ## Usage
 
 ### Middleware
 
 ```typescript
+import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import mail from "@pkg/mail/middleware";
-import { ResendTransport } from "@pkg/mail/resend";
-import { getServiceContainer } from "@pkg/service-container";
+import { env } from "cloudflare:workers";
 import { createRouter } from "remix/fetch-router";
-import { Resend } from "resend";
 
 let router = createRouter({
 	middleware: [
 		mail({
-			transport: () => new ResendTransport(getServiceContainer().get(Resend)),
+			transport: () => new CloudflareTransport(env.EMAIL),
 			from: { email: "no-reply@example.com", name: "Example" },
 			replyTo: { email: "hello@example.com" },
 		}),
@@ -72,10 +70,11 @@ Queue consumers and scheduled handlers have no request context, so they construc
 
 ```typescript
 import { Mailer } from "@pkg/mail";
-import { ResendTransport } from "@pkg/mail/resend";
+import { CloudflareTransport } from "@pkg/mail/cloudflare";
+import { env } from "cloudflare:workers";
 
 let mailer = new Mailer({
-	transport: new ResendTransport(getServiceContainer().get(Resend)),
+	transport: new CloudflareTransport(env.EMAIL),
 	from: { email: "no-reply@example.com", name: "Example" },
 	replyTo: { email: "hello@example.com" },
 });
@@ -413,16 +412,6 @@ expect(transport.lastMime).toContain("Content-Type: multipart/alternative;");
 
 It is off by default because most tests assert on the normalized message, and assembling MIME for a test that never reads it is wasted work.
 
-### `@pkg/mail/resend`
-
-#### `ResendTransport`
-
-##### `new ResendTransport(resend: Resend)`
-
-Maps a normalized message onto the provider's structured send call; no MIME assembly, because the provider does it. The client is injected rather than built from an API key, so credential handling and client lifetime stay in the app that already registers it through [`@pkg/service-container`](/packages/service-container).
-
-The provider reports API errors in its response rather than by throwing, so both shapes become the same `MailError` failure. The returned `messageId` is the provider's own when it gives one, and the message's generated `Message-ID` otherwise.
-
 ### `@pkg/mail/cloudflare`
 
 #### `CloudflareTransport`
@@ -514,23 +503,13 @@ Sender configuration is a plain object, and the transport is the only provider-a
 
 ```typescript
 let mailer = new Mailer({
-	transport: new ResendTransport(client), // the only line that changes
+	transport: new CloudflareTransport(env.EMAIL), // the only line that changes
 	from: { email: "no-reply@example.com", name: "Example" },
 	replyTo: { email: "hello@example.com" },
 });
 ```
 
-Moving to the binding is the same construction with the other transport, once the domain is verified and `send_email` is declared:
-
-```typescript
-let mailer = new Mailer({
-	transport: new CloudflareTransport(env.EMAIL),
-	from: { email: "no-reply@example.com", name: "Example" },
-	replyTo: { email: "hello@example.com" },
-});
-```
-
-Emails, services, and tests are untouched, which also makes the switch reversible. The two providers do not fail identically, though: verification and recipient rules are stricter on the binding, so a message the structured-field provider accepted can come back as a `MailError` after the switch. Verify the first deliveries for real — headers, both body parts, and spam placement are only observable end to end.
+Emails, services, and tests are untouched, which also makes a switch reversible. Providers do not fail identically, though, and they do not carry identical fields either: the binding takes one `replyTo` mailbox rather than a list, and writes its own `Date` and `Message-ID` over whatever the normalized message holds. Custom headers do survive — `List-Unsubscribe` and the rest reach the composed message — but check any field a new transport is quiet about rather than assuming it maps. Verify the first deliveries for real; headers, both body parts, and spam placement are only observable end to end.
 
 ## Related Packages
 

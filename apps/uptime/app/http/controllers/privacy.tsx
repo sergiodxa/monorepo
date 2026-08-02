@@ -158,10 +158,6 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.third.label")}</strong>{" "}
 							{ctx.i18next.t("legal.privacy.sections.dataSharing.third.body")}
 						</li>
-						<li>
-							<strong>{ctx.i18next.t("legal.privacy.sections.dataSharing.fourth.label")}</strong>{" "}
-							{ctx.i18next.t("legal.privacy.sections.dataSharing.fourth.body")}
-						</li>
 					</ul>
 					<p>{ctx.i18next.t("legal.privacy.sections.dataSharing.outro")}</p>
 

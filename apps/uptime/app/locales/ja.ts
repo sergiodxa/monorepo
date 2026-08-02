@@ -642,10 +642,12 @@ export default {
 					title: "4. データの共有",
 					noSell: "個人データを販売することはありません。",
 					intro: "Uptime の運営を支える次の外部サービスとデータを共有しています。",
-					first: { label: "Cloudflare：", body: "インフラ、ホスティング、コンテンツ配信" },
+					first: {
+						label: "Cloudflare：",
+						body: "インフラ、ホスティング、コンテンツ配信、メール配信",
+					},
 					second: { label: "Polar：", body: "決済処理とサブスクリプションの管理" },
-					third: { label: "Resend：", body: "アラートや通知のメール配信" },
-					fourth: { label: "GitHub：", body: "認証" },
+					third: { label: "GitHub：", body: "認証" },
 					outro:
 						"法令で求められる場合、または当方の権利や利用者の安全を守るために必要な場合には、データを開示することがあります。",
 				},

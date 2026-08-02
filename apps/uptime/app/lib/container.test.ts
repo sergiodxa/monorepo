@@ -1,8 +1,8 @@
 /**
  * Smoke tests for the app service container (ADR-008): every service registered in
  * `./container` resolves to an instance of the right class without throwing. Real
- * `env.*` bindings are replaced with fake strings since `Database`/`PolarClient`/
- * `Resend`/`AuthSDK` only store their config at construction time rather than
+ * `env.*` bindings are replaced with fakes since `Database`/`PolarClient`/`Mailer`/
+ * `AuthSDK` only store their config at construction time rather than
  * performing I/O eagerly. `IdTokenVerificationKeyService` is the one exception — it
  * fires a real outbound fetch from a class field initializer, so `globalThis.fetch`
  * is stubbed for that resolution and its promise is drained to avoid an unhandled
@@ -17,8 +17,8 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 mock.module("cloudflare:workers", () => ({
 	env: {
 		DB: "fake-d1",
+		EMAIL: { send: async () => ({ messageId: "test-message-id" }) },
 		POLAR_ACCESS_TOKEN: "test-polar-token",
-		RESEND_API_TOKEN: "test-resend-token",
 		CLIENT_ID: "test-client-id",
 		CLIENT_SECRET: "test-client-secret",
 	},
@@ -29,7 +29,6 @@ let { Mailer } = await import("@pkg/mail");
 let { PolarClient } = await import("@pkg/polar");
 let { ServiceContainer } = await import("@pkg/service-container");
 let { Database } = await import("remix/data-table");
-let { Resend } = await import("resend");
 let { IdTokenVerificationKeyService } = await import("~/app/services/id-token-verification-key");
 let { container } = await import("./container");
 
@@ -56,13 +55,6 @@ describe("container", () => {
 
 		expect(client).toBeInstanceOf(PolarClient);
 		expect(container.get(PolarClient)).toBe(client);
-	});
-
-	test("resolves a Resend singleton", () => {
-		let resend = container.get(Resend);
-
-		expect(resend).toBeInstanceOf(Resend);
-		expect(container.get(Resend)).toBe(resend);
 	});
 
 	test("resolves an IdTokenVerificationKeyService singleton without a real network call", async () => {

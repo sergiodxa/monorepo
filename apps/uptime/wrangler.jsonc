@@ -51,7 +51,7 @@
 	"routes": [{ "pattern": "uptime.sergiodxa.com", "custom_domain": true }],
 
 	// Plain secrets (COOKIE_SESSION_SECRET, CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
-	// POLAR_WEBHOOK_SECRET, RESEND_API_TOKEN, UPTIME_CRON_API_KEY,
+	// POLAR_WEBHOOK_SECRET, UPTIME_CRON_API_KEY,
 	// CLOUDFLARE_ACCOUNT_ID/ANALYTICS_TOKEN, TURNSTILE_SITE_KEY/SECRET_KEY,
 	// FUNNEL_REPORT_TO) are
 	// set via `.dev.vars` locally and `wrangler secret put` in production — same as the
@@ -159,12 +159,21 @@
 		},
 	],
 
-	// Platform-native email sending, declared so `CloudflareTransport` has a binding to
-	// deliver through. Nothing sends through it yet: mail still goes out over the HTTP API
-	// transport configured in `bootstrap/app.tsx`, and swapping the two is a one-line change
-	// there once the sending domain is verified for this zone. Declaring the binding early
-	// costs nothing at runtime — an unused binding is not billed and not called — and it is
-	// what makes the transport reachable from `wrangler dev` at all.
+	// Platform-native email sending. Every message the app puts in an inbox goes through
+	// this binding: `CloudflareTransport` is the transport both mailers are built with, the
+	// request-scoped one in `bootstrap/app.tsx` and the background one in
+	// `app/lib/container.ts`. Nothing sends over an HTTP API any more, so the binding has to
+	// resolve for the worker to mail at all.
+	//
+	// The account's daily send quota starts conservative and is raised over time from
+	// observed sending behaviour and deliverability. Down-alerts are the traffic that would
+	// meet that ceiling first, and a refused send is reported as a failure rather than
+	// retried, so the quota is worth watching while it is still being earned.
+	//
+	// Per-message limits the send paths stay well inside: 50 recipients across to/cc/bcc,
+	// 16 KB of custom headers combined, a 998-character subject, and 5 MiB total. The trial
+	// emails' RFC 8058 unsubscribe headers are the only custom headers sent and are two
+	// short lines.
 	//
 	// The bare `name` form allows any verified sender and any destination, which is the only
 	// form that fits: alerts go to whoever a team invited, so the recipient set is the user
