@@ -159,6 +159,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] `otpSlots()` — OtpField group; focus advance/retreat between slot inputs, splits pasted codes
 - [x] `validate(schema)` — Form fields; runs the shared `remix/data-schema` field schema client-side via the Constraint Validation API (`setCustomValidity()`, intercepted `invalid` events rendered into `FieldError`)
 - [x] `pressToggle()` — ToggleButton; flips `aria-pressed` without a server round-trip
+- [x] `ariaChecked()` — Switch, Checkbox, RadioGroup.Radio; opt-in `aria-checked`, rendered as the token matching the host's own initial state and rewritten from the live control on every `change`, refreshing a radio's whole group since a sibling loses its checkedness with no event of its own
 - [x] `dismiss(options)` — Toast, Alert; auto-dismiss timers with hover pause, dispatches `ui:dismiss`
 - [x] `dualRange()` — Slider group; native `<input type="range">` is single-thumb, clamps paired inputs into an ordered pair
 - [x] `carouselControls()` — Carousel viewport; handles `--ui-prev`/`--ui-next`/`--ui-goto` commands from static invoker buttons via `scrollBy()`, syncs disabled state at scroll edges

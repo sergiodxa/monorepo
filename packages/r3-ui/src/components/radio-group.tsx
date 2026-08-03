@@ -168,6 +168,12 @@ export function RadioGroup(handle: Handle<RadioGroup.Props, RadioGroup.Context>)
  * dot and focus ring, and the label reads the input's `:disabled` state
  * through `:has()` to dim itself, with no tracked state of its own.
  *
+ * The input carries no `aria-checked` of its own, since its native
+ * checkedness is what assistive technology reports; a hydrated island that
+ * needs the attribute composes the `ariaChecked()` mixin through
+ * `parts.input` on every option in the group, which keeps each one's token
+ * rewritten from the live control as the selection moves between them.
+ *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the option's markup.
  * @example

@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./aria-checked";
 export * from "./attachment-trigger";
 export * from "./calendar-keys";
 export * from "./carousel-controls";

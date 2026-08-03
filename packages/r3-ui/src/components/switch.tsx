@@ -103,6 +103,11 @@ export namespace Switch {
  * native switch behavior directly, while the `role="switch"` fallback keeps
  * the same accessibility semantics everywhere else.
  *
+ * A hydrated island that needs the switch to carry an explicit
+ * `aria-checked` anyway composes the `ariaChecked()` mixin through `mix`,
+ * which renders the token from this render's own state and then keeps
+ * rewriting it from the live control.
+ *
  * Passing `children` wraps the track in a native `<label>` laid out as a
  * row with a small gap, the label text following the track and toggling it
  * when clicked or tapped the same way the track itself does, with the
@@ -138,7 +143,10 @@ export function Switch(handle: Handle<Switch.Props>) {
 		 * produced, so it would take precedence over the live state and go
 		 * wrong the moment somebody flipped the switch, which is the one
 		 * thing a switch exists to let them do. Withholding it keeps the
-		 * announced state and the drawn state the same fact.
+		 * announced state and the drawn state the same fact. A hydrated
+		 * island that needs the attribute anyway composes the
+		 * `ariaChecked()` mixin through `mix`, which keeps rewriting the
+		 * token from the live control instead of pinning this render's.
 		 */
 		let track = (
 			<input

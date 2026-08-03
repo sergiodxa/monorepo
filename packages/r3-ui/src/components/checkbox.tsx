@@ -85,6 +85,12 @@ export namespace Checkbox {
  * renders that state correctly the moment something sets it; the component
  * itself never sets it.
  *
+ * The host carries no `aria-checked` of its own — the native control's
+ * checkedness is what assistive technology reports — so a hydrated island
+ * that needs the attribute composes the `ariaChecked()` mixin through `mix`,
+ * which renders the matching token (including `"mixed"`) and keeps rewriting
+ * it from the live control.
+ *
  * In dev mode, a checkbox whose row carries no plain text and no
  * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
  * technology otherwise has no accessible name to announce for it.
