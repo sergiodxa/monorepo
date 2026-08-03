@@ -2,9 +2,26 @@
 
 ## Status
 
-**Analysis** — 2026-08-02. No code, schema, configuration or infrastructure change has been
-made. Everything below is a proposal and a cost model; §21 is the recommendation and §22 is
-the plan that would follow approval. Nothing in either has been implemented.
+**Analysis** — 2026-08-02, revised the same day against `736614c3`. No code, schema,
+configuration or infrastructure change has been made. Everything below is a proposal and a
+cost model; §21 is the recommendation and §22 is the plan that would follow approval.
+Nothing in either has been implemented.
+
+### Revision note
+
+The first draft was written against the tree before the public-trial work and the mail
+transport change landed. Three things moved, and all three are folded in below rather than
+appended:
+
+- **Email is Cloudflare Email Sending, not Resend** (`a0f33ad7`, `0986d4ed`): $0.35 per
+  1,000 with 3,000 included per month, against Resend's $0.90 per 1,000 with none. Every
+  email figure in the first draft was 2.6× too high, and the conclusion that "email
+  dominates a flapping monitor" no longer holds — rows written does (§19.4).
+- **There is a fifth checked entity**: the public trial's `trial_watches` (`dc2a8614`
+  onward). It is HTTP, hourly, unbilled, and **belongs to no team**, which the proposed
+  architecture has no home for (§5a).
+- **`GeoFetchDO` cannot be retired.** Four of its five callers survive the proposal (§3a).
+  The first draft, and the brief, both said it becomes unnecessary. It does not.
 
 Supersedes nothing. Depends on, and in one place contradicts,
 [ADR-009](./ADR-009-shard-the-geofetch-durable-object-namespace.md), which explicitly
@@ -32,31 +49,38 @@ carry long windows against the same 10 GB:
 | `monitor_results`                           | 7 days       |                      ~200 | ~4,960 1-minute HTTP monitors      |
 | `dns_monitor_results` `tcp_monitor_results` | **90 days**  |                      ~200 | **~386** 1-minute monitors         |
 | `cron_job_pings`                            | **365 days** |                      ~200 | **~95** every-minute cron monitors |
+| `trial_watch_results`                       | 30 days      |                      ~200 | 4.4 GB at the trial rate limiter's own ceiling (§19.8) |
 
 Ninety-five every-minute cron monitors is a wall a single mid-sized customer could walk into.
 That is the strongest argument in the proposal's favour, and it is stronger than the argument
 that was actually made for it.
 
+The last row is the counterexample, and it is worth holding onto. `trial_watch_results` grows
+with no tenant at all and is still bounded, because a fixed 30-day retention meets a fixed
+hourly cadence and a rate limiter caps arrivals. It neither needs a Durable Object nor gets
+one. What needs one is a table whose size is customer count × check rate × retention, with no
+term the platform controls.
+
 **On cost, the proposal wins, but not for the reason it appears to.** Modelled against the
-implementation at `83f6c75d` and Cloudflare's published Workers Paid overage rates (verified
-2026-08-02), the proposed architecture is **2.7× cheaper per check** than the current one:
-$4.95 versus $13.51 per million checks, gross of included allowances. Almost all of that
+implementation at `736614c3` and Cloudflare's published Workers Paid overage rates (verified
+2026-08-02), the proposed architecture is **2.8× cheaper per check** than the current one:
+$4.87 versus $13.43 per million checks, gross of included allowances. Almost all of that
 saving is one line — **rows written**. The current HTTP path writes 11 D1 rows per check; a
 `MonitorDO` as proposed writes 4. It is not the Durable Object that saves the money, it is
 the per-monitor schema: a table that holds one monitor's results needs no `monitor_id`
 column, no `monitor_id` index, and no text primary key, so `checked_at` can be the rowid and
 an insert costs exactly one written row.
 
-**Three findings complicate the recommendation.**
+**Four findings complicate the recommendation.**
 
 1. **`TenantDO` buys nothing on cost.** Modelled side by side, `TenantDO + MonitorDO` costs
-   $213.65/month at 1,000 one-minute monitors and `MonitorDO` alone with the catalog left in
-   D1 costs $212.54 — a 0.5% difference. The `TenantDO` is a correctness-and-isolation
+   $210.35/month at 1,000 one-minute monitors and `MonitorDO` alone with the catalog left in
+   D1 costs $209.24 — a 0.5% difference. The `TenantDO` is a correctness-and-isolation
    argument, not a scaling one, and it carries the entire cost of the proposal's hardest
    parts: two-object lifecycle, projections, leases, orphan GC, and the loss of every
    cross-tenant query.
 2. **A cheaper architecture exists.** One scheduler object per (region, shard) that owns many
-   monitors — a `RegionShardDO` — comes in at $3.33 per million checks, a further 33% below
+   monitors — a `RegionShardDO` — comes in at $3.25 per million checks, a further 33% below
    the proposal, because it amortises the `setAlarm()` write and the billed duration window
    across every monitor it owns. It reintroduces shared state, which is the thing the
    proposal exists to remove, so it is not recommended — but it must be priced, because
@@ -66,14 +90,24 @@ an insert costs exactly one written row.
    the global scheduler on the next minute regardless; under the proposal, a monitor whose
    alarm chain breaks stops being monitored and **nothing in the system notices**. A liveness
    watchdog is not an optional refinement, it is a precondition.
+4. **The public trial is a cost surface no architecture change touches.** A trial watch has
+   no team, so it cannot live in a `TenantDO` and has no `MonitorDO` identity — it stays in
+   global D1 under every option modelled, and it keeps probing through `GeoFetchDO`. At
+   20,000 trial signups a month the whole spread between architectures collapses: $143.63
+   current against $122.95 proposed, because $72.91 of both is email. At the rate limiter's
+   own ceiling it is **$669.53 against $667.29 — a 0.3% difference on $670/month of
+   unbilled work** (§19.8). Every lever that matters for the trial is a product lever, not an
+   architectural one.
 
 **Recommendation (§21): adopt the direction, invert the order, and change the write shape.**
 Build `MonitorDO` first with the catalog left in D1; make `checked_at` the `INTEGER PRIMARY
 KEY`; derive current status from the newest result row rather than maintaining a mutable
 state row; project to the read model on change and at most once every N checks, never per
-check. Treat `TenantDO` as a separate, later decision with its own trigger conditions. Do not
-start either until the liveness watchdog, the entitlement fan-out, and the backup story are
-designed, because all three are regressions the proposal does not currently address.
+check. Leave the public trial in global D1 and keep `GeoFetchDO`, because four of its five
+callers have no monitor to probe from. Treat `TenantDO` as a separate, later decision with
+its own trigger conditions. Do not start any of it until the liveness watchdog, the
+entitlement fan-out, and the backup story are designed, because all three are regressions the
+proposal does not currently address.
 
 ---
 
@@ -85,11 +119,17 @@ Read from the implementation, not from the docs.
 
 `wrangler.jsonc` declares one D1 database (`ping`), one KV namespace, two Queues (`ping` and
 `ping-dlq`), two Analytics Engine datasets (`uptime_monitor_results`, `uptime_costs`), one
-Durable Object class (`GeoFetchDO`), and one rate-limiter binding. Compatibility date
-`2026-04-10`, `nodejs_compat`, smart placement.
+Durable Object class (`GeoFetchDO`), **two** rate-limiter bindings (`RATE_LIMITER` at 60/min
+for the cron ping endpoint, `TRIAL_RATE_LIMITER` at 3/min for the public trial), and a
+`send_email` binding. Compatibility date `2026-04-10`, `nodejs_compat`, smart placement.
 
-Seven cron triggers: `* * * * *`, `*/10 * * * *`, and five daily ones (00:00 cleanup, 01:00
-aggregation, 02:00 subscription reconciliation, 03:00 cost reporting, 06:00 SSL).
+**Mail goes through Cloudflare Email Sending, not Resend** (`a0f33ad7`). The rate card in
+`app/lib/cost-rates.ts` is version `2026-08-02` and prices `emailSent` at $0.35/1,000, with
+3,000 messages a month included on Workers Paid and deliberately not netted off the card.
+
+Nine cron triggers: `* * * * *`, `*/10 * * * *`, `0 * * * *` (the hourly trial sweep), and
+six daily ones — 00:00 cleanup, 01:00 aggregation, 02:00 subscription reconciliation, 03:00
+cost reporting, 06:00 SSL **and the trial digests**, 07:00 the trial funnel report.
 
 ### 2.2 The five monitor types
 
@@ -104,6 +144,41 @@ aggregation, 02:00 subscription reconciliation, 03:00 cost reporting, 06:00 SSL)
 The standalone `ssl_monitors` table exists in the schema and in migrations but **nothing
 reads or writes it** — SSL monitoring runs entirely off the `monitors.ssl_*` columns. It is
 dead weight in any placement discussion.
+
+### 2.2a The sixth checked entity: the public trial
+
+`POST /try` takes a URL and an email address from an anonymous visitor, probes the URL once
+behind Turnstile and an SPF-style egress guard, and then re-probes it **hourly for seven
+days**. Three tables and three lifetimes:
+
+| Table                 | Grain                | Lifetime                                          |
+| --------------------- | -------------------- | ------------------------------------------------- |
+| `leads`               | one person           | until they have no watches left (+1 h grace)      |
+| `trial_watches`       | one URL per person   | `converts_until` = created + 30 days              |
+| `trial_watch_results` | one hourly check     | swept with the watch, by join, not by its own age |
+
+Plus two funnel tables written at sign-up and by the daily report: `trial_conversions` (one
+row per converted account, keyed on the OIDC subject, never swept) and `trial_daily_stats`
+(one immutable row per reported day).
+
+Five properties matter for everything below:
+
+- **A watch belongs to no team.** There is no tenant, no membership, no Polar customer. A
+  lead becomes a customer by signing up, not by being watched.
+- **It is HTTP only, hourly, and free.** `TRIAL_WATCH_INTERVAL_SECONDS = 3600`,
+  `TRIAL_WATCH_DURATION_DAYS = 7` → 168 checks per watch. `ingestPings` is never called.
+- **It uses the same claim and the same prober.** `TrialWatch.claimDue` is `claimDue` from
+  `app/lib/scheduling.ts`; the probe is `HttpCheck` with `trialProbeOptions`, pinned to
+  `wnam` and sharded by URL through `GeoFetchDO`.
+- **No Analytics Engine point is written**, deliberately: every query against
+  `uptime_monitor_results` filters `index1` to a team and `blob1` to a monitor, and a watch
+  has neither. The cost ledger records the sweep under `PLATFORM_TEAM_ID`.
+- **Email is the product.** One confirmation, one digest per lead per day, one wrap-up per
+  watch, plus at most one change notice per watch per day.
+
+The abuse ceiling is set by three things and none of them is architectural: Turnstile (fails
+closed since `8844a9a0`), `TRIAL_RATE_LIMITER` at 3 accepted probes per address per minute,
+and one watch per normalized email per normalized URL per 30 days (`20260802120000`).
 
 ### 2.3 Scheduling: `next_due_at` claims
 
@@ -149,6 +224,16 @@ The sharding decision (ADR-009) is explicitly a trade: a shared object amortises
 duration across concurrent probes, so **per-check duration falls as regional density rises**.
 That is the property one-object-per-monitor destroys, and §19.6 prices it.
 
+It has **five callers**, all through `HttpCheck`, and this matters for §3a:
+
+| Caller                                    | Has a monitor? | Has a team? |
+| ----------------------------------------- | -------------- | ----------- |
+| `app/jobs/check-http.ts`                  | yes            | yes         |
+| `app/http/controllers/api/ping.ts`        | no             | yes         |
+| `app/http/controllers/actions/ping.ts`    | no             | yes         |
+| `app/http/controllers/trial/index.tsx`    | no             | **no**      |
+| `app/jobs/check-trial-watches.ts`         | no             | **no**      |
+
 ### 2.5 Results, aggregation, analytics
 
 Every completed check writes an Analytics Engine data point (`uptime_monitor_results`:
@@ -191,10 +276,11 @@ unit of work, and reported daily to Polar Cost Insights (ADR-007).
 
 ### 2.8 What the current architecture already costs
 
-At the production account (1 team, 5 HTTP + 9 cron monitors, ~232,000 checks/month):
-**$3.88/month gross**, of which $2.74 is D1 rows written and $0.52 is queue operations. Net
-of included allowances it is $0.16/month, because only Queues is over quota — and it is over
-quota because of a fixed overhead that does not depend on monitor count at all:
+At the production account (1 team, 5 HTTP + 9 cron monitors, plus ~100 trial signups a
+month, ~253,000 checks/month): **$4.42/month gross**, of which $2.92 is D1 rows written,
+$0.53 is queue operations and $0.38 is email. Net of included allowances it is $0.13/month,
+because only Queues is over quota — and it is over quota because of a fixed overhead that
+does not depend on monitor count at all:
 
 ```text
 3 sweep messages per every-minute cron delivery x 43,200 minutes x K=2
@@ -241,15 +327,40 @@ Three stores, with a strict rule about what may live in each.
   for monitor lists and status pages: one local SQLite query, never a fan-out.
 - **`MonitorDO`** owns one monitor end to end: full configuration, its alarm, its execution,
   its results, its rollups, its incidents, and its ownership lease. It probes directly from
-  its own region, which makes `GeoFetchDO` unnecessary.
+  its own region, so `GeoFetchDO` stops carrying scheduled-monitor traffic — but see §3a, it
+  does not go away.
 
 Queues are retained, but only for work that genuinely wants at-least-once delivery with
 retries and a dead-letter queue: outbound email, webhook/Slack/Discord delivery, reconciliation
-sweeps, and administrative batch work. Ordinary monitor execution uses no queue.
+sweeps, the hourly trial sweep, and administrative batch work. Ordinary monitor execution
+uses no queue.
 
 Analytics Engine is retained, but demoted: it stops being the source of user-facing monitor
 history and keeps only the two jobs it is actually good at — the cost ledger (ADR-007) and
 cross-tenant product analytics.
+
+### 3a. `GeoFetchDO` survives — the brief is wrong about this
+
+The brief says "the current `GeoFetchDO` should become unnecessary for monitor execution",
+and for *monitor* execution that is right. But §2.4's table shows four of its five callers
+are not monitor execution:
+
+- **`POST /api/v1/ping`** and **the dashboard quick-check** probe a target that has no
+  monitor row and therefore no `MonitorDO` to probe from. They need a region-pinned prober
+  that is not a monitor.
+- **The trial's first probe** and **the hourly trial sweep** probe a target that has no
+  monitor *and no team*. There is no object in the proposed namespace scheme —
+  `${teamId}/${monitorId}` — that could hold either.
+
+So the class stays, its sharding stays (ADR-009), and its jurisdiction branch stays
+(ADR-013). What changes is that it loses the highest-volume caller, which makes ADR-009's
+`SHARDS_PER_REGION = 8` over-provisioned rather than tight, and makes its duration
+amortisation weaker for the callers that remain (§19.6).
+
+Two consequences the migration plan has to absorb: `wrangler.jsonc` keeps its
+`durable_objects` binding and DO migration tags forever, and §22's "remove `GeoFetchDO`
+usage" phase becomes "remove `CheckHttpJob`'s use of `GeoFetchDO`" — a much smaller step
+with no class deletion at the end of it.
 
 ---
 
@@ -315,6 +426,11 @@ whose authority lives elsewhere and which may be rebuilt from that authority.
 | _new_ `durable_object_registry`                         | **Global D1**                                                                         | Expectation set for the administrative GC (§15).                                                                                        |
 | _new_ `orphan_candidates`                               | **Global D1**                                                                         | Quarantine ledger for the GC.                                                                                                           |
 | _new_ `monitor_routes`                                  | **Global D1**                                                                         | `monitor_id → (team_id, type, object_id)`. Needed by admin tooling and by any route that receives a monitor id without a team.          |
+| `leads`                                                 | **Global D1** — unchanged                                                             | No tenant. Identity is a normalized email; the digest schedule and the unsubscribe token live on it. See §5a.                           |
+| `trial_watches`                                         | **Global D1** — unchanged                                                             | No tenant, no monitor. Bounded by construction: hourly, 7 days of checking, deleted at 30.                                              |
+| `trial_watch_results`                                   | **Global D1** — unchanged                                                             | 168 rows per watch, swept by joining to the watch rather than by an age of their own.                                                   |
+| `trial_conversions`                                     | **Global D1** — unchanged                                                             | Cross-account by definition: keyed on the OIDC subject, joined to billing, never swept.                                                 |
+| `trial_daily_stats`                                     | **Global D1** — unchanged                                                             | An immutable per-day snapshot precisely because the tables it summarises are deleted. Cannot be a tenant projection; there is no tenant. |
 
 Two tables the proposal's brief lists that this codebase does not need:
 
@@ -323,6 +439,27 @@ Two tables the proposal's brief lists that this codebase does not need:
   (`CronJobMonitor.findByIdForTeam`). The API-key index already covers it.
 - **A custom-domain route index.** `status_pages.custom_domain` is stored but no code routes
   on it. Add the index when the feature is built, not before.
+
+### 5a. The public trial has no tenant, and that is not a gap to fill
+
+Five of the thirty-two tables above stay in D1 unchanged, and it is worth saying why rather
+than letting it read as an omission. A trial watch has no team id. The proposed identity
+scheme is `${teamId}/${monitorId}`; the lease is validated by asking a `TenantDO` whether the
+monitor is still in its catalog; plan limits, usage counters and alert policies are all
+tenant-scoped. None of that has a value to bind for a stranger's URL.
+
+Three ways to force it in, and why each is worse than leaving it:
+
+| Option                                  | Why not                                                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A synthetic "trial tenant" `TenantDO`    | Every trial watch in the world behind one single-threaded actor, with one shared 10 GB budget — the exact shape this ADR exists to remove, reintroduced for the workload with the least revenue attached. |
+| One `TrialWatchDO` per watch            | 168 checks then destruction. Object churn of one create + one `deleteAll()` per signup, a per-object storage floor of a few pages against ~34 KB of data, and a whole second lifecycle, lease and GC path for something that already deletes itself on a timer. |
+| Leave it in D1                          | **Correct.** Bounded by construction, tenant-free, and the funnel report is a genuinely cross-lead aggregate that only a shared database can answer.                                                   |
+
+This is the clearest instance of §20.1's rule: not everything that grows needs an object.
+What needs one is data whose size the platform does not control. The trial's size is set by
+a rate limiter, a Turnstile, a 30-day delete and a per-URL cap — four knobs, all in the
+product's hands.
 
 ---
 
@@ -857,9 +994,9 @@ Workers Paid overage rates, verified **2026-08-02** against Cloudflare's pricing
 | **DO SQLite stored data**                                   |       5 GB-month | **$0.20 / GB-mo** |                     0.20 |
 | Analytics Engine data points                                |             10 M |         $0.25 / M |                   2.5e-7 |
 | Analytics Engine read queries                               |              1 M |         $1.00 / M |                   1.0e-6 |
-| Resend outbound email                                       |                — |     $0.90 / 1,000 |                   9.0e-4 |
+| **Cloudflare Email Sending** (outbound)                     |            3,000 |     $0.35 / 1,000 |                   3.5e-4 |
 
-Three facts from these pages that shape everything below:
+Five facts from these pages shape everything below:
 
 - **`setAlarm()` is billed as a row written, and so is every delete.** One alarm per check is
   one written row per check, at the same $1.00 per million as a result insert.
@@ -868,6 +1005,10 @@ Three facts from these pages that shape everything below:
   Workers Analytics Engine"). Every AE figure is a future liability.
 - D1 and Durable Object storage have **separate** included allowances. Moving writes from one
   to the other frees D1's 50 M and consumes DO's 50 M.
+- **Email is now $0.35/1,000 with 3,000 included**, since `a0f33ad7` moved the transport from
+  Resend to Cloudflare Email Sending. That is a 2.6× reduction on the rate and, for the first
+  time, a free tier — and 3,000 a month is small enough that the public trial exhausts it
+  before anything else does (§19.8).
 
 ### 19.2 Modelled quantities and assumptions
 
@@ -897,43 +1038,58 @@ column). Eleven per HTTP check, including the eventual delete.
 Gross of included allowances — the scale-invariant figure, and the one that stays true as the
 platform grows.
 
+"Checks/mo" includes trial probes where a scenario has them.
+
 | Scenario                          | Monitors | Checks/mo | Current | Current, `monitor_results` dropped | **Proposed** | MonitorDO only | RegionShardDO |
 | --------------------------------- | -------: | --------: | ------: | ---------------------------------: | -----------: | -------------: | ------------: |
-| Production today                  |       14 |   232,444 |   $3.88 |                              $2.49 |    **$1.21** |          $1.20 |         $2.50 |
-| 10 HTTP @ 1 min                   |       10 |   432,000 |   $6.30 |                              $2.82 |    **$2.14** |          $2.13 |         $3.22 |
-| 100 HTTP @ 1 min                  |      100 |    4.32 M |  $59.53 |                             $24.80 |   **$21.37** |         $21.25 |        $17.08 |
-| 1,000 HTTP @ 1 min                |    1,000 |    43.2 M | $583.47 |                            $236.23 |  **$213.65** |        $212.54 |       $143.65 |
-| Mixed realistic                   |      450 |    10.6 M | $147.36 |                             $88.33 |   **$53.71** |         $53.44 |        $39.29 |
-| Large tenant, 500 monitors        |      500 |    21.6 M | $292.63 |                            $119.01 |  **$106.42** |        $105.88 |        $75.00 |
-| 500 small tenants, 1,000 monitors |    1,000 |    43.2 M | $589.51 |                            $242.27 |  **$213.92** |        $212.80 |       $143.71 |
-| Flapping, 100 @ 10% transitions   |      100 |    4.32 M |  $78.64 |                             $43.92 |   **$40.58** |         $40.31 |        $35.27 |
+| Production today (+100 trials/mo) |       14 |   252,604 |   $4.42 |                              $3.03 |    **$1.75** |          $1.74 |         $3.04 |
+| 10 HTTP @ 1 min                   |       10 |   432,000 |   $6.26 |                              $2.79 |    **$2.11** |          $2.10 |         $3.19 |
+| 100 HTTP @ 1 min                  |      100 |    4.32 M |  $59.20 |                             $24.47 |   **$21.04** |         $20.93 |        $16.75 |
+| 1,000 HTTP @ 1 min                |    1,000 |    43.2 M | $580.17 |                            $232.93 |  **$210.35** |        $209.24 |       $140.35 |
+| Mixed realistic (+2,000 trials)   |      450 |    11.0 M | $157.20 |                             $98.17 |   **$63.55** |         $63.28 |        $49.14 |
+| Large tenant, 500 monitors        |      500 |    21.6 M | $290.98 |                            $117.36 |  **$104.77** |        $104.23 |        $73.35 |
+| 500 small tenants, 1,000 monitors |    1,000 |    43.2 M | $586.22 |                            $238.97 |  **$210.62** |        $209.50 |       $140.41 |
+| **Trial-heavy** (20,000 trials/mo)|       50 |     6.2 M | $143.63 |                            $126.27 |  **$122.95** |        $122.89 |       $121.45 |
+| **Trial at the rate-limit ceiling**|       5 |    22.0 M | $669.53 |                            $667.80 |  **$667.29** |        $667.29 |       $668.67 |
+| Flapping, 100 @ 10% transitions   |      100 |    4.32 M |  $67.64 |                             $32.92 |   **$29.58** |         $29.31 |        $24.27 |
 
 Net of the account-wide included allowances:
 
-| Scenario                   | Current | Proposed | RegionShardDO |
-| -------------------------- | ------: | -------: | ------------: |
-| Production today           | $0.1625 |  $0.0378 |       $0.1047 |
-| 10 HTTP @ 1 min            | $0.4889 |  $0.0540 |       $0.1117 |
-| 100 HTTP @ 1 min           |   $6.14 |    $1.09 |       $0.6004 |
-| 1,000 HTTP @ 1 min         | $516.83 |  $156.27 |        $87.10 |
-| Mixed realistic            |  $84.88 |    $3.91 |         $2.42 |
-| Large tenant, 500 monitors | $231.83 |   $50.45 |        $18.98 |
-| Flapping, 100 @ 10%        |  $24.23 |   $18.75 |        $18.20 |
+| Scenario                    | Current | Proposed | RegionShardDO |
+| --------------------------- | ------: | -------: | ------------: |
+| Production today            | $0.1256 |   $0.000 |       $0.0700 |
+| 10 HTTP @ 1 min             | $0.4359 |   $0.000 |       $0.0577 |
+| 100 HTTP @ 1 min            |   $5.60 |  $0.5457 |       $0.0604 |
+| 1,000 HTTP @ 1 min          | $512.48 |  $151.92 |        $82.75 |
+| Mixed realistic             |  $93.46 |    $8.83 |         $7.34 |
+| Large tenant, 500 monitors  | $229.13 |   $47.75 |        $16.28 |
+| Trial-heavy                 |  $85.49 |   $72.67 |        $72.53 |
+| Trial at the ceiling        | $609.37 |  $606.83 |       $607.07 |
+| Flapping, 100 @ 10%         |  $12.18 |    $6.70 |         $6.15 |
 
 Per unit:
 
-| Scenario            | Current $/monitor/mo | Proposed $/monitor/mo | Current $/1M checks | Proposed $/1M checks | RegionShardDO $/1M |
-| ------------------- | -------------------: | --------------------: | ------------------: | -------------------: | -----------------: |
-| Production today    |              $0.2774 |               $0.0863 |              $16.71 |                $5.20 |             $10.76 |
-| 10 HTTP @ 1 min     |              $0.6296 |               $0.2138 |              $14.57 |                $4.95 |              $7.45 |
-| 100 HTTP @ 1 min    |              $0.5953 |               $0.2137 |              $13.78 |                $4.95 |              $3.95 |
-| 1,000 HTTP @ 1 min  |              $0.5835 |               $0.2136 |              $13.51 |                $4.95 |              $3.33 |
-| Mixed realistic     |              $0.3275 |               $0.1193 |              $13.88 |                $5.06 |              $3.70 |
-| Large tenant, 500   |              $0.5853 |               $0.2128 |              $13.55 |                $4.93 |              $3.47 |
-| Flapping, 100 @ 10% |              $0.7864 |               $0.4058 |              $18.20 |                $9.39 |              $8.16 |
+| Scenario             | Current $/monitor/mo | Proposed $/monitor/mo | Current $/1M checks | Proposed $/1M checks | RegionShardDO $/1M |
+| -------------------- | -------------------: | --------------------: | ------------------: | -------------------: | -----------------: |
+| Production today     |              $0.3159 |               $0.1248 |              $17.51 |                $6.92 |             $12.04 |
+| 10 HTTP @ 1 min      |              $0.6265 |               $0.2106 |              $14.50 |                $4.88 |              $7.38 |
+| 100 HTTP @ 1 min     |              $0.5920 |               $0.2104 |              $13.70 |                $4.87 |              $3.88 |
+| 1,000 HTTP @ 1 min   |              $0.5802 |               $0.2103 |              $13.43 |                $4.87 |              $3.25 |
+| Mixed realistic      |              $0.3493 |               $0.1412 |              $14.26 |                $5.77 |              $4.46 |
+| Large tenant, 500    |              $0.5820 |               $0.2095 |              $13.47 |                $4.85 |              $3.40 |
+| Trial-heavy          |                $2.87 |                 $2.46 |              $23.20 |               $19.86 |             $19.61 |
+| Trial at the ceiling |              $133.91 |               $133.46 |              $30.45 |               $30.35 |             $30.41 |
+| Flapping, 100 @ 10%  |              $0.6764 |               $0.2958 |              $15.66 |                $6.85 |              $5.62 |
 
 Per-check cost is **flat in volume** in both architectures. There is no economy of scale to
 grow into; the only lever is the per-check operation count.
+
+**The two trial rows are the ones to read twice.** Everywhere else the proposal is 2.5–2.8×
+cheaper; in the trial-heavy scenario it is 1.17× and at the rate-limit ceiling it is 1.003×.
+Nothing about the trial moves, so as trial volume grows it dilutes the entire architectural
+argument. That is not a reason to reject the proposal — the trial is a fixed, bounded,
+product-controlled cost — but it does mean **the honest way to state the benefit is per paid
+check, not per account**.
 
 ### 19.4 Where the money actually goes
 
@@ -947,11 +1103,11 @@ At 1,000 one-minute monitors (43.2 M checks/month):
 | DO requests                           |       $6.48 |       $6.96 | alarm invocations replace queue messages                 |
 | Queue operations (130 M)              |      $52.17 |       $0.02 | eliminated                                               |
 | Analytics Engine data points (99.6 M) |      $24.90 |       $0.05 | future liability today, real if AE billing starts        |
-| Email (6,000)                         |       $5.40 |       $5.40 | unchanged; the one line no architecture touches          |
+| Email (6,000)                         |       $2.10 |       $2.10 | unchanged; the one line no architecture touches          |
 | D1 rows read (3.2 B)                  |       $3.23 |       $0.00 | never mattered                                           |
 | Storage                               |       $1.57 |       $1.17 | 2.1 GB D1 → 5.9 GB DO at 90-day retention, and _cheaper_ |
 | Workers requests + CPU                |       $4.03 |       $0.09 |                                                          |
-| **Total**                             | **$583.47** | **$213.65** |                                                          |
+| **Total**                             | **$580.17** | **$210.35** |                                                          |
 
 Proposed, broken down by line inside the dominant component:
 
@@ -995,17 +1151,34 @@ Two of these are worth pursuing and one needs measuring:
   around it.**
 
 Applying the first two takes the proposal from $4.00 to $3.00 per million checks on the
-dominant line, i.e. **$213.65 → $170.45/month** at 1,000 monitors, and per-check cost from
-$4.95 to $3.95 per million.
+dominant line, i.e. **$210.35 → $167.15/month** at 1,000 monitors, and per-check cost from
+$4.87 to $3.87 per million.
+
+### 19.4a The email correction, and what it moves
+
+The first draft priced email at Resend's $0.90/1,000 with no included tier. `a0f33ad7` moved
+the transport to Cloudflare Email Sending: $0.35/1,000 with 3,000 included. Two conclusions
+change:
+
+- **"Email dominates a flapping monitor" is no longer true.** At 100 monitors flapping into
+  20,000 notifications a month, email was $18.00 of a $40.58 total (44%); it is now $7.00 of
+  $29.58 (24%), and **DO rows written at $18.77 is the largest line**. The architectural
+  choice matters more for a flapping fleet than it did, not less.
+- **"Email is the one line no architecture touches" is still true, and now matters most for
+  the trial**, which is email-shaped by design: one confirmation, one digest per lead per
+  day, one wrap-up per watch. See §19.8.
+
+Nothing else in the model is sensitive to the email rate: on a healthy check no email is
+sent at all, which is unchanged.
 
 ### 19.5 Projection frequency sensitivity
 
 | Scenario                   | Project 1-in-15 | Project every check |  Delta | Increase |
 | -------------------------- | --------------: | ------------------: | -----: | -------: |
-| Production today           |           $1.21 |               $1.59 |  $0.38 |     +32% |
-| 100 HTTP @ 1 min           |          $21.37 |              $30.90 |  $9.54 |     +45% |
-| 1,000 HTTP @ 1 min         |         $213.65 |             $309.00 | $95.35 |     +45% |
-| Large tenant, 500 monitors |         $106.42 |             $154.10 | $47.68 |     +45% |
+| Production today           |           $1.75 |               $2.13 |  $0.38 |     +22% |
+| 100 HTTP @ 1 min           |          $21.04 |              $30.57 |  $9.54 |     +45% |
+| 1,000 HTTP @ 1 min         |         $210.35 |             $305.70 | $95.35 |     +45% |
+| Large tenant, 500 monitors |         $104.77 |             $152.45 | $47.68 |     +46% |
 
 Projecting on every check adds **45%** to the whole architecture. The cost is not the two
 written rows in the `TenantDO`; it is the 120 ms of billed duration on _both_ objects while
@@ -1074,23 +1247,83 @@ pages. At 1,000 objects that is tens of megabytes and irrelevant; at 1,000,000 o
 gigabytes of pure overhead before any data. Worth measuring `databaseSize` on a fresh object
 before projecting six-figure monitor counts.
 
-### 19.8 What exhausts first
+### 19.8 The public trial: an unbilled cost surface no architecture moves
+
+A trial watch is 168 hourly HTTP probes over seven days, plus the emails around them. Per
+watch, at the current write shape (claim 2 + result insert 3 + running-totals update 1 +
+eventual delete 3 = **9 D1 rows written per check**, the result table having lost its
+standalone `checked_at` index in `20260802120000`):
+
+| Line                                             | Per watch |
+| ------------------------------------------------ | --------: |
+| D1 rows written (168 × 9, + lead/watch rows)     |  $0.00163 |
+| Emails (~1 confirmation + 7 digests + 1 wrap-up + ~1 change, per lead) |  $0.00350 |
+| `GeoFetchDO` requests + duration (168 × 250 ms)  |  $0.00009 |
+| Everything else (queue share, D1 reads, storage) |  $0.00031 |
+| **Total per free watch**                         | **~$0.0055** |
+
+Half a cent per free watch is cheap. The three things worth stating anyway:
+
+**1. It is identical under every architecture.** A watch has no team, so it does not move
+(§5a). The whole spread between architectures collapses as trial volume rises:
+
+| Scenario                          | Current | Proposed | RegionShardDO | Spread |
+| --------------------------------- | ------: | -------: | ------------: | -----: |
+| 1,000 paid monitors, no trial     | $580.17 |  $210.35 |       $140.35 |  4.13× |
+| Trial-heavy (20,000 signups/mo)   | $143.63 |  $122.95 |       $121.45 |  1.18× |
+| Trial at the rate-limit ceiling   | $669.53 |  $667.29 |       $668.67 |  1.003× |
+
+**2. Email is the dominant line, and it is the first allowance exhausted.** 3,000 messages a
+month is small: 20,000 signups produce ~208,000 emails, **6,943% of the included allowance**
+and $72.91 of a $122.95 total. Even production today, at ~100 signups a month, spends 36% of
+the email allowance on the trial. If the trial grows, email is the line to watch — and it is
+a deliverability and sender-reputation question before it is a billing one.
+
+**3. The rate limiter is the only real bound, and it is generous.** `TRIAL_RATE_LIMITER`
+allows 3 accepted probes per address per minute. Sustained past Turnstile, that is 129,600
+watches a month:
+
+```text
+21.8 M probes/month     ->  $199.89 D1 rows written + $3.30 DO requests + $8.59 DO duration
+1.30 M emails/month     ->  $453.61   (43,201% of the included 3,000)
+4.4 GB in trial_watch_results  ->  44% of the entire 10 GB D1 database, on its own
+                        ------------
+                        ~$670/month of infrastructure, zero revenue, under every architecture
+```
+
+Three defences already stand between that number and reality — Turnstile failing closed
+(`8844a9a0`), the per-address budget, and one watch per normalized email per normalized URL
+per 30 days (`20260802120000`) — and they are the right defences. But note what the last line
+says: **at its own permitted ceiling the free trial fills nearly half of D1 by itself**, which
+is a storage-wall contributor the monitor tables are not responsible for and which this
+migration does not remove. If the trial is expected to grow, the levers are a per-day
+signup cap and a shorter `converts_until`, not a Durable Object.
+
+### 19.9 What exhausts first
 
 | Scenario         | Current                 | Proposed                |
 | ---------------- | ----------------------- | ----------------------- |
-| Production today | **Queues, 131% of 1 M** | DO requests, 31% of 1 M |
-| 10 monitors      | Queues, 209%            | DO requests, 46%        |
+| Production today | **Queues, 131% of 1 M** | **Email, 36% of 3,000** |
+| 10 monitors      | Queues, 209%            | Email                   |
 | 100 monitors     | Queues, 1,375%          | DO requests, 464%       |
 | 1,000 monitors   | Queues, 13,042%         | DO requests, 4,638%     |
+| Trial-heavy      | **Email, 6,943%**       | **Email, 6,943%**       |
+| Flapping         | Queues, 1,505%          | Email, 667%             |
 
 Queues is the first allowance the current platform exhausts, and it exhausts on **fixed
 overhead**: 777,600 operations a month for the three sweep messages sent on every cron
 delivery, at any monitor count. That is 78% of the included allowance before a single monitor
 exists. The proposal eliminates it entirely.
 
-DO requests become the first exhausted allowance under the proposal, but at $0.15/M this is
-the cheapest line in the architecture — $6.96/month at 43.2 M checks. Exhausting an allowance
-early is only interesting when the overage is expensive, and here it is not.
+DO requests become the first exhausted allowance under the proposal once monitor volume is
+real, but at $0.15/M this is the cheapest line in the architecture — $6.96/month at 43.2 M
+checks. Exhausting an allowance early is only interesting when the overage is expensive, and
+here it is not.
+
+**Email's 3,000/month is the allowance that binds soonest in practice**, and it binds
+identically under both architectures. It is already 36% consumed at production scale, and
+past a few thousand trial signups a month it is the only allowance that matters. That is a
+product-shaped constraint, not an architectural one.
 
 A line worth watching that neither architecture makes obvious: **Analytics Engine data points
 from the cost ledger itself**. The ledger writes one point per team per unit of work, and the
@@ -1106,7 +1339,7 @@ At 500 tenants the _measurement_ of cost exceeds its own allowance. AE is unbill
 this is a future liability; the proposal reduces it by ~99% as a side effect of removing the
 per-minute fan-out.
 
-### 19.9 Garbage collection, leases and deletion
+### 19.10 Garbage collection, leases and deletion
 
 | Item                                         |                                             1,000 monitors, monthly |
 | -------------------------------------------- | ------------------------------------------------------------------: |
@@ -1119,7 +1352,7 @@ Lease and GC overhead is immaterial. Retention deletes are not — they are a qu
 whole architecture, which is the strongest argument for measuring the partitioned-retention
 option.
 
-### 19.10 Model limitations
+### 19.11 Model limitations
 
 - Worker CPU and Durable Object duration are **modelled, not measured**. The runtime exposes
   no CPU API. `X-DO-Wall-Time` is a documented _lower bound_ on billed duration. CPU is ≤2% of
@@ -1130,7 +1363,7 @@ option.
 - Row-byte estimates for both stores are modelled. `ctx.storage.sql.databaseSize` would make
   the Durable Object side exact — which is itself an argument for the proposal, since
   `D1_MEAN_ROW_BYTES` is the one quantity ADR-007's ledger currently has to guess.
-- Polar and Resend subscription fees, the $5 Workers Paid account fee, founder time and
+- Polar's fees, the $5 Workers Paid account fee, founder time and
   support are excluded from every figure.
 - The model assumes D1 and Durable Object included allowances are separate line items. They
   are documented on separate pricing pages with separate inclusions; confirm on a real invoice
@@ -1290,6 +1523,33 @@ And two that get **easier**:
 2. Cron-monitor evaluation — from 43,200 evaluations a month per monitor to one per expected
    occurrence (§8.3).
 
+### 20.11 The trial splits the codebase in two
+
+The public trial does not move (§5a), so after the migration the app runs **two probe
+pipelines against one `HttpCheck`**:
+
+- paid monitors: `MonitorDO.alarm()` → direct `fetch` from the object's own region;
+- the trial, the ad-hoc ping API and the dashboard quick-check: Worker → `GeoFetchDO` →
+  `fetch`.
+
+Both must keep producing the same measurement, because the trial's whole pitch is that a
+converting visitor's paid monitor will report what the free week reported. Today that is
+guaranteed structurally: one `HttpCheck`, one `GeoFetchDO`, one code path. After the
+migration it is guaranteed only by discipline — the two paths can drift on timeout handling,
+redirect policy (`followRedirects: false` is load-bearing for the trial's SSRF guard, and
+irrelevant for a paid monitor), region placement, and what "billed duration" even measures.
+
+The mitigation is cheap and should be stated as a requirement, not left implicit: keep
+`HttpCheck` as the single classifier and give it two transports, so the probe/evaluate/
+classify steps stay one implementation and only the "how do I reach the network from here"
+step differs. That also keeps §17 phase 7's comparison job meaningful.
+
+Second-order, but real: a converting lead's watch becomes a monitor
+(`trial_watches.converted_monitor_id`). Under the proposal that conversion now has to create
+a `MonitorDO` — so the sign-in path acquires a Durable Object lifecycle step that can fail
+partway, on the one flow whose whole purpose is turning a stranger into a customer. It needs
+the same `creating`/`active` state machine as §10, driven from the same retry path.
+
 ---
 
 ## 21. Final recommendation
@@ -1307,8 +1567,8 @@ monitoring.
 
 ### 21.2 Defer `TenantDO`; keep the catalog in D1 for now
 
-`MonitorDO` alone with the catalog in D1 costs **$212.54/month** at 1,000 monitors against the
-full proposal's **$213.65** — the `TenantDO` buys nothing on cost, and it carries the entire
+`MonitorDO` alone with the catalog in D1 costs **$209.24/month** at 1,000 monitors against the
+full proposal's **$210.35** — the `TenantDO` buys nothing on cost, and it carries the entire
 weight of the two-object lifecycle, the projections, the lease-versus-catalog authority
 question, the hot-object risk on the status page, and the loss of every cross-tenant query.
 Meanwhile D1 without the result tables is small and stays small: at 1,000 tenants × 500
@@ -1342,28 +1602,52 @@ And one to measure before designing around: **day-partitioned result tables with
 retention**, which removes another quarter of the cost line if `DROP TABLE` is not billed per
 row.
 
-### 21.4 Do not start until three things are designed
+### 21.4 Leave the public trial in D1, and say so in the design
+
+It has no tenant, it is bounded by four product-side knobs, and the funnel report is a
+genuinely cross-lead aggregate (§5a). Forcing it into either object class costs complexity
+and buys nothing. Two follow-ons the design must state rather than discover:
+
+- **`GeoFetchDO` is permanent** (§3a). Four of five callers survive. Plan for two probe
+  transports behind one `HttpCheck`, and keep the classifier single (§20.11).
+- **Trial-to-monitor conversion becomes a Durable Object lifecycle step** on the sign-in
+  path. It needs §10's state machine and §10's retry driver.
+
+### 21.5 Do not start until three things are designed
 
 - **The liveness watchdog** (§16.1). Without it, the product's core failure mode is silent.
 - **The entitlement fan-out** (§20.7). A seven-day lease is not an acceptable billing control.
 - **The bulk-restore tool** (§20.9). Write it before you need it.
 
-### 21.5 Reject `RegionShardDO`, on the record
+### 21.6 Reject `RegionShardDO`, on the record
 
-It is the cheapest option modelled — $3.33 per million checks against the proposal's $4.95 —
+It is the cheapest option modelled — $3.25 per million checks against the proposal's $4.87 —
 because it amortises the `setAlarm()` write and the duration window across every monitor it
 owns. It is rejected because it reintroduces exactly what this work exists to remove: shared
 storage with a shared 10 GB cap, shared blast radius, and a rebalancing problem when a shard
 fills. But it should be rejected knowingly, not by assuming per-monitor objects are cheapest.
 They are not.
 
-### 21.6 The cost verdict, stated plainly
+### 21.7 The cost verdict, stated plainly
 
-At today's production scale the entire argument is worth **$3.88 → $1.21 per month gross**, or
-$0.16 → $0.04 net. **Cost is not the reason to do this.** The reasons are the 10 GB wall,
-tenant isolation, exact un-sampled history, and the removal of a per-minute global scan. The
-cost model's real contribution is negative: it establishes that the change does not _cost_
+At today's production scale the entire argument is worth **$4.42 → $1.75 per month gross**, or
+$0.13 → $0.00 net — the proposed architecture fits inside the Workers Paid allowances
+entirely. **Cost is not the reason to do this.** The reasons are the 10 GB wall, tenant
+isolation, exact un-sampled history, and the removal of a per-minute global scan. The cost
+model's real contribution is negative: it establishes that the change does not _cost_
 anything, which is what makes the other arguments decisive.
+
+Two things sharpen that verdict since the first draft:
+
+- **State the benefit per paid check, not per account.** The public trial is a fixed,
+  architecture-invariant floor, and at 20,000 signups a month it compresses the whole
+  current-versus-proposed gap from 4.1× to 1.18× (§19.8). The architecture is still 2.8×
+  cheaper on the work it actually touches; the account total just says less about it.
+- **The nearest cost cliff is not architectural.** It is 3,000 included emails a month
+  against a product whose free tier sends roughly ten per signup, and 4.4 GB of
+  `trial_watch_results` at the trial rate limiter's own permitted ceiling — 44% of the same
+  10 GB budget this whole migration exists to defend. Both are fixed with a signup cap and a
+  shorter conversion window, and neither is fixed by a Durable Object.
 
 ---
 
@@ -1385,8 +1669,8 @@ No implementation until this analysis is reviewed and approved.
 | **9**  | `next_due_at = NULL` for cut-over monitors. Double-probing stops.                                                                                                                                                                                                                                                                                  | Probe volume halves; cadence unchanged.                                    |
 | **10** | TCP, then DNS, then cron monitors through the same 6–9 sequence. Cron last — it is the one whose scheduling semantics change most (§8.3).                                                                                                                                                                                                          | All types on `MonitorDO`.                                                  |
 | **11** | Move reads: detail pages, charts, uptime bar, heatmap. Keep the list on the D1 projection.                                                                                                                                                                                                                                                         | Analytics Engine no longer serves user-facing history.                     |
-| **12** | Remove `GeoFetchDO` usage; keep the class deployed and unused for one release.                                                                                                                                                                                                                                                                     | No probe path references it.                                               |
-| **13** | Remove the per-minute cron trigger, the check queue messages, the result tables and their indexes, and the dead `ssl_monitors` table. **Only after a full 90-day retention window on the new path.**                                                                                                                                               | Point of no return, taken deliberately.                                    |
+| **12** | Remove **`CheckHttpJob`'s** use of `GeoFetchDO`. The class stays — the ad-hoc ping API, the dashboard quick-check and both trial probe paths still need it (§3a). Keep one `HttpCheck` with two transports (§20.11).                                                                                                                                | Scheduled monitors no longer touch it; the other four callers still do.    |
+| **13** | Remove the per-minute cron trigger, the check queue messages, the result tables and their indexes, and the dead `ssl_monitors` table. Keep the hourly trial sweep, the trial tables and both daily trial jobs. **Only after a full 90-day retention window on the new path.**                                                                       | Point of no return, taken deliberately.                                    |
 | **14** | Administrative GC and lease validation in enforcing mode.                                                                                                                                                                                                                                                                                          | A deliberately orphaned object is quarantined, then reclaimed.             |
 | **15** | Re-evaluate `TenantDO` against the §21.2 trigger conditions.                                                                                                                                                                                                                                                                                       | A decision, with numbers, either way.                                      |
 
@@ -1399,10 +1683,12 @@ only forward-only step.
 
 - **If accepted as recommended:** monitor results, execution and scheduling move into
   per-monitor SQLite Durable Objects; the global D1 keeps every table it has except the four
-  result tables and the dead `ssl_monitors`; `GeoFetchDO`, the per-minute cron trigger and the
-  check queue messages retire; per-check infrastructure cost falls from ~$13.51 to ~$3.95 per
-  million; the 10 GB wall stops being a platform limit and becomes a per-monitor one with
-  three orders of magnitude of headroom.
+  monitor result tables and the dead `ssl_monitors`, and keeps all five trial tables; the
+  per-minute cron trigger and the check queue messages retire; `GeoFetchDO` stays for the
+  four callers that have no monitor to probe from; per-check infrastructure cost on the paid
+  path falls from ~$13.43 to ~$3.87 per million; the 10 GB wall stops being a platform limit
+  for monitor results and becomes a per-monitor one with three orders of magnitude of
+  headroom.
 - **Accepted in full as briefed:** everything above, plus one `TenantDO` per team, plus the
   cross-tenant query loss, the hot-object risk on status pages, and the two-object lifecycle —
   for no cost benefit and a real increase in the number of ways the system can be
@@ -1411,6 +1697,11 @@ only forward-only step.
   90-day DNS/TCP monitors, whichever comes first, and the answer at that point is either
   shortening retention (a product regression) or D1-per-tenant (which moves the wall to
   10 GB per tenant without fixing the 11-rows-per-check write amplification).
+- **In every case, the public trial stays where it is.** It has no tenant, so no architecture
+  here touches it. That leaves two limits this migration does not address and which are worth
+  their own decision: 3,000 included emails a month against ~10 per signup, and 4.4 GB of
+  `trial_watch_results` — 44% of the same 10 GB budget — at the trial rate limiter's own
+  permitted ceiling.
 - Independently of the decision: `dispatchCron` sends three sweep messages on every cron
   delivery whether or not anything is due, which is 777,600 queue operations a month — 78% of
   the included allowance — at any monitor count. That is worth fixing this week regardless of
