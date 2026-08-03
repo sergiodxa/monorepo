@@ -44,11 +44,11 @@ is unlimited on Workers Paid.
 distant because `monitor_results` is purged after 7 days. But three other tables already
 carry long windows against the same 10 GB:
 
-| Table                                       | Retention    | Bytes/row (incl. indexes) | 10 GB reached at                   |
-| ------------------------------------------- | ------------ | ------------------------: | ---------------------------------- |
-| `monitor_results`                           | 7 days       |                      ~200 | ~4,960 1-minute HTTP monitors      |
-| `dns_monitor_results` `tcp_monitor_results` | **90 days**  |                      ~200 | **~386** 1-minute monitors         |
-| `cron_job_pings`                            | **365 days** |                      ~200 | **~95** every-minute cron monitors |
+| Table                                       | Retention    | Bytes/row (incl. indexes) | 10 GB reached at                                       |
+| ------------------------------------------- | ------------ | ------------------------: | ------------------------------------------------------ |
+| `monitor_results`                           | 7 days       |                      ~200 | ~4,960 1-minute HTTP monitors                          |
+| `dns_monitor_results` `tcp_monitor_results` | **90 days**  |                      ~200 | **~386** 1-minute monitors                             |
+| `cron_job_pings`                            | **365 days** |                      ~200 | **~95** every-minute cron monitors                     |
 | `trial_watch_results`                       | 30 days      |                      ~200 | 4.4 GB at the trial rate limiter's own ceiling (§19.8) |
 
 Ninety-five every-minute cron monitors is a wall a single mid-sized customer could walk into.
@@ -151,11 +151,11 @@ dead weight in any placement discussion.
 behind Turnstile and an SPF-style egress guard, and then re-probes it **hourly for seven
 days**. Three tables and three lifetimes:
 
-| Table                 | Grain                | Lifetime                                          |
-| --------------------- | -------------------- | ------------------------------------------------- |
-| `leads`               | one person           | until they have no watches left (+1 h grace)      |
-| `trial_watches`       | one URL per person   | `converts_until` = created + 30 days              |
-| `trial_watch_results` | one hourly check     | swept with the watch, by join, not by its own age |
+| Table                 | Grain              | Lifetime                                          |
+| --------------------- | ------------------ | ------------------------------------------------- |
+| `leads`               | one person         | until they have no watches left (+1 h grace)      |
+| `trial_watches`       | one URL per person | `converts_until` = created + 30 days              |
+| `trial_watch_results` | one hourly check   | swept with the watch, by join, not by its own age |
 
 Plus two funnel tables written at sign-up and by the daily report: `trial_conversions` (one
 row per converted account, keyed on the OIDC subject, never swept) and `trial_daily_stats`
@@ -226,13 +226,13 @@ That is the property one-object-per-monitor destroys, and §19.6 prices it.
 
 It has **five callers**, all through `HttpCheck`, and this matters for §3a:
 
-| Caller                                    | Has a monitor? | Has a team? |
-| ----------------------------------------- | -------------- | ----------- |
-| `app/jobs/check-http.ts`                  | yes            | yes         |
-| `app/http/controllers/api/ping.ts`        | no             | yes         |
-| `app/http/controllers/actions/ping.ts`    | no             | yes         |
-| `app/http/controllers/trial/index.tsx`    | no             | **no**      |
-| `app/jobs/check-trial-watches.ts`         | no             | **no**      |
+| Caller                                 | Has a monitor? | Has a team? |
+| -------------------------------------- | -------------- | ----------- |
+| `app/jobs/check-http.ts`               | yes            | yes         |
+| `app/http/controllers/api/ping.ts`     | no             | yes         |
+| `app/http/controllers/actions/ping.ts` | no             | yes         |
+| `app/http/controllers/trial/index.tsx` | no             | **no**      |
+| `app/jobs/check-trial-watches.ts`      | no             | **no**      |
 
 ### 2.5 Results, aggregation, analytics
 
@@ -342,14 +342,14 @@ cross-tenant product analytics.
 ### 3a. `GeoFetchDO` survives — the brief is wrong about this
 
 The brief says "the current `GeoFetchDO` should become unnecessary for monitor execution",
-and for *monitor* execution that is right. But §2.4's table shows four of its five callers
+and for _monitor_ execution that is right. But §2.4's table shows four of its five callers
 are not monitor execution:
 
 - **`POST /api/v1/ping`** and **the dashboard quick-check** probe a target that has no
   monitor row and therefore no `MonitorDO` to probe from. They need a region-pinned prober
   that is not a monitor.
 - **The trial's first probe** and **the hourly trial sweep** probe a target that has no
-  monitor *and no team*. There is no object in the proposed namespace scheme —
+  monitor _and no team_. There is no object in the proposed namespace scheme —
   `${teamId}/${monitorId}` — that could hold either.
 
 So the class stays, its sharding stays (ADR-009), and its jurisdiction branch stays
@@ -398,38 +398,38 @@ fan-out over Durable Objects.
 Every table in `database/schema.ts`, and where it would go. "Projection" means a derived copy
 whose authority lives elsewhere and which may be rebuilt from that authority.
 
-| Table                                                   | Placement                                                                             | Notes                                                                                                                                   |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `teams`                                                 | **Global D1**                                                                         | Slug routing, billing identity, admin enumeration, tenant registry.                                                                     |
-| `memberships`                                           | **Global D1** (inverse index) + **TenantDO** (authoritative role)                     | D1 answers "which teams", `TenantDO` answers "what role". Duplicated on purpose — see §9.                                               |
-| `invites`                                               | **TenantDO** + **Global D1** id→team index                                            | `Invite.findById` is a global lookup: the acceptance link carries only the invite id.                                                   |
-| `team_domains`                                          | **Global D1**                                                                         | `Team.joinByDomain` matches a verified hostname across every team.                                                                      |
-| `api_keys`                                              | **Global D1** (hash→team, prefix, scopes, expiry) + **TenantDO** (management list)    | The hash lookup happens before any tenant is known. Scopes must be in D1 or auth costs two hops.                                        |
-| `user_preferences`                                      | **Global D1**                                                                         | Read by the i18n middleware before a tenant is resolved.                                                                                |
-| `monitors`                                              | **MonitorDO** (authoritative) + **TenantDO** catalog row (projection)                 | Catalog row: id, object id, type, name, region, lifecycle, enabled, status, last checked, response time, display order.                 |
-| `monitor_results`                                       | **MonitorDO**                                                                         | Retention 7 d → **90 d**. `checked_at` becomes the `INTEGER PRIMARY KEY`.                                                               |
-| `monitor_content_checks`                                | **MonitorDO**                                                                         | Only the probe reads them.                                                                                                              |
-| `dns_monitors`                                          | **MonitorDO** + **TenantDO** catalog row                                              | As `monitors`.                                                                                                                          |
-| `dns_monitor_results`                                   | **MonitorDO**                                                                         | Already 90 d.                                                                                                                           |
-| `tcp_monitors`                                          | **MonitorDO** + **TenantDO** catalog row                                              | As `monitors`.                                                                                                                          |
-| `tcp_monitor_results`                                   | **MonitorDO**                                                                         | Already 90 d.                                                                                                                           |
-| `ssl_monitors`                                          | **Removed**                                                                           | Dead table: nothing reads or writes it. SSL runs off `monitors.ssl_*`.                                                                  |
-| `cron_job_monitors`                                     | **MonitorDO** + **TenantDO** catalog row                                              | The per-minute global evaluation sweep disappears; the monitor's own alarm fires at its next deadline.                                  |
-| `cron_job_pings`                                        | **MonitorDO**                                                                         | 365 d and the largest personal-data surface. Redaction at 30 d stays.                                                                   |
-| `alerts`                                                | **TenantDO**                                                                          | Projected down to `MonitorDO` (§6.3) so an alert decision needs no cross-object hop.                                                    |
-| `alert_events`                                          | **MonitorDO** (authoritative; cooldown is per-monitor) + **TenantDO** tail projection | Cooldown keys on `(alert_id, monitor_id, event_type)`, so the whole decision is local. The team-wide history page needs the projection. |
-| `maintenance_windows`                                   | **TenantDO** (authoritative) + projected down to `MonitorDO`                          | A window covering "all monitors" must reach every `MonitorDO`; see §6.3 and §20.6.                                                      |
-| `status_pages`                                          | **TenantDO** + **Global D1** slug→(team, page) route                                  | Slugs are globally unique today; the uniqueness check must stay global.                                                                 |
-| `status_page_monitors` and the four sibling join tables | **TenantDO**                                                                          | Read only when rendering a page the tenant owns.                                                                                        |
-| `monitor_daily_stats`                                   | **MonitorDO** (own rollup) + **TenantDO** projection                                  | 365-day heatmap per monitor is 365 rows; the team-level card needs the projection.                                                      |
-| `subscriptions`                                         | **Global D1**                                                                         | Daily reconciliation lists every Polar subscription and diffs it against this table.                                                    |
-| _new_ `durable_object_registry`                         | **Global D1**                                                                         | Expectation set for the administrative GC (§15).                                                                                        |
-| _new_ `orphan_candidates`                               | **Global D1**                                                                         | Quarantine ledger for the GC.                                                                                                           |
-| _new_ `monitor_routes`                                  | **Global D1**                                                                         | `monitor_id → (team_id, type, object_id)`. Needed by admin tooling and by any route that receives a monitor id without a team.          |
-| `leads`                                                 | **Global D1** — unchanged                                                             | No tenant. Identity is a normalized email; the digest schedule and the unsubscribe token live on it. See §5a.                           |
-| `trial_watches`                                         | **Global D1** — unchanged                                                             | No tenant, no monitor. Bounded by construction: hourly, 7 days of checking, deleted at 30.                                              |
-| `trial_watch_results`                                   | **Global D1** — unchanged                                                             | 168 rows per watch, swept by joining to the watch rather than by an age of their own.                                                   |
-| `trial_conversions`                                     | **Global D1** — unchanged                                                             | Cross-account by definition: keyed on the OIDC subject, joined to billing, never swept.                                                 |
+| Table                                                   | Placement                                                                             | Notes                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `teams`                                                 | **Global D1**                                                                         | Slug routing, billing identity, admin enumeration, tenant registry.                                                                      |
+| `memberships`                                           | **Global D1** (inverse index) + **TenantDO** (authoritative role)                     | D1 answers "which teams", `TenantDO` answers "what role". Duplicated on purpose — see §9.                                                |
+| `invites`                                               | **TenantDO** + **Global D1** id→team index                                            | `Invite.findById` is a global lookup: the acceptance link carries only the invite id.                                                    |
+| `team_domains`                                          | **Global D1**                                                                         | `Team.joinByDomain` matches a verified hostname across every team.                                                                       |
+| `api_keys`                                              | **Global D1** (hash→team, prefix, scopes, expiry) + **TenantDO** (management list)    | The hash lookup happens before any tenant is known. Scopes must be in D1 or auth costs two hops.                                         |
+| `user_preferences`                                      | **Global D1**                                                                         | Read by the i18n middleware before a tenant is resolved.                                                                                 |
+| `monitors`                                              | **MonitorDO** (authoritative) + **TenantDO** catalog row (projection)                 | Catalog row: id, object id, type, name, region, lifecycle, enabled, status, last checked, response time, display order.                  |
+| `monitor_results`                                       | **MonitorDO**                                                                         | Retention 7 d → **90 d**. `checked_at` becomes the `INTEGER PRIMARY KEY`.                                                                |
+| `monitor_content_checks`                                | **MonitorDO**                                                                         | Only the probe reads them.                                                                                                               |
+| `dns_monitors`                                          | **MonitorDO** + **TenantDO** catalog row                                              | As `monitors`.                                                                                                                           |
+| `dns_monitor_results`                                   | **MonitorDO**                                                                         | Already 90 d.                                                                                                                            |
+| `tcp_monitors`                                          | **MonitorDO** + **TenantDO** catalog row                                              | As `monitors`.                                                                                                                           |
+| `tcp_monitor_results`                                   | **MonitorDO**                                                                         | Already 90 d.                                                                                                                            |
+| `ssl_monitors`                                          | **Removed**                                                                           | Dead table: nothing reads or writes it. SSL runs off `monitors.ssl_*`.                                                                   |
+| `cron_job_monitors`                                     | **MonitorDO** + **TenantDO** catalog row                                              | The per-minute global evaluation sweep disappears; the monitor's own alarm fires at its next deadline.                                   |
+| `cron_job_pings`                                        | **MonitorDO**                                                                         | 365 d and the largest personal-data surface. Redaction at 30 d stays.                                                                    |
+| `alerts`                                                | **TenantDO**                                                                          | Projected down to `MonitorDO` (§6.3) so an alert decision needs no cross-object hop.                                                     |
+| `alert_events`                                          | **MonitorDO** (authoritative; cooldown is per-monitor) + **TenantDO** tail projection | Cooldown keys on `(alert_id, monitor_id, event_type)`, so the whole decision is local. The team-wide history page needs the projection.  |
+| `maintenance_windows`                                   | **TenantDO** (authoritative) + projected down to `MonitorDO`                          | A window covering "all monitors" must reach every `MonitorDO`; see §6.3 and §20.6.                                                       |
+| `status_pages`                                          | **TenantDO** + **Global D1** slug→(team, page) route                                  | Slugs are globally unique today; the uniqueness check must stay global.                                                                  |
+| `status_page_monitors` and the four sibling join tables | **TenantDO**                                                                          | Read only when rendering a page the tenant owns.                                                                                         |
+| `monitor_daily_stats`                                   | **MonitorDO** (own rollup) + **TenantDO** projection                                  | 365-day heatmap per monitor is 365 rows; the team-level card needs the projection.                                                       |
+| `subscriptions`                                         | **Global D1**                                                                         | Daily reconciliation lists every Polar subscription and diffs it against this table.                                                     |
+| _new_ `durable_object_registry`                         | **Global D1**                                                                         | Expectation set for the administrative GC (§15).                                                                                         |
+| _new_ `orphan_candidates`                               | **Global D1**                                                                         | Quarantine ledger for the GC.                                                                                                            |
+| _new_ `monitor_routes`                                  | **Global D1**                                                                         | `monitor_id → (team_id, type, object_id)`. Needed by admin tooling and by any route that receives a monitor id without a team.           |
+| `leads`                                                 | **Global D1** — unchanged                                                             | No tenant. Identity is a normalized email; the digest schedule and the unsubscribe token live on it. See §5a.                            |
+| `trial_watches`                                         | **Global D1** — unchanged                                                             | No tenant, no monitor. Bounded by construction: hourly, 7 days of checking, deleted at 30.                                               |
+| `trial_watch_results`                                   | **Global D1** — unchanged                                                             | 168 rows per watch, swept by joining to the watch rather than by an age of their own.                                                    |
+| `trial_conversions`                                     | **Global D1** — unchanged                                                             | Cross-account by definition: keyed on the OIDC subject, joined to billing, never swept.                                                  |
 | `trial_daily_stats`                                     | **Global D1** — unchanged                                                             | An immutable per-day snapshot precisely because the tables it summarises are deleted. Cannot be a tenant projection; there is no tenant. |
 
 Two tables the proposal's brief lists that this codebase does not need:
@@ -450,11 +450,11 @@ tenant-scoped. None of that has a value to bind for a stranger's URL.
 
 Three ways to force it in, and why each is worse than leaving it:
 
-| Option                                  | Why not                                                                                                                                                                                              |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A synthetic "trial tenant" `TenantDO`    | Every trial watch in the world behind one single-threaded actor, with one shared 10 GB budget — the exact shape this ADR exists to remove, reintroduced for the workload with the least revenue attached. |
-| One `TrialWatchDO` per watch            | 168 checks then destruction. Object churn of one create + one `deleteAll()` per signup, a per-object storage floor of a few pages against ~34 KB of data, and a whole second lifecycle, lease and GC path for something that already deletes itself on a timer. |
-| Leave it in D1                          | **Correct.** Bounded by construction, tenant-free, and the funnel report is a genuinely cross-lead aggregate that only a shared database can answer.                                                   |
+| Option                                | Why not                                                                                                                                                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A synthetic "trial tenant" `TenantDO` | Every trial watch in the world behind one single-threaded actor, with one shared 10 GB budget — the exact shape this ADR exists to remove, reintroduced for the workload with the least revenue attached.                                                       |
+| One `TrialWatchDO` per watch          | 168 checks then destruction. Object churn of one create + one `deleteAll()` per signup, a per-object storage floor of a few pages against ~34 KB of data, and a whole second lifecycle, lease and GC path for something that already deletes itself on a timer. |
+| Leave it in D1                        | **Correct.** Bounded by construction, tenant-free, and the funnel report is a genuinely cross-lead aggregate that only a shared database can answer.                                                                                                            |
 
 This is the clearest instance of §20.1's rule: not everything that grows needs an object.
 What needs one is data whose size the platform does not control. The trial's size is set by
@@ -1040,32 +1040,32 @@ platform grows.
 
 "Checks/mo" includes trial probes where a scenario has them.
 
-| Scenario                          | Monitors | Checks/mo | Current | Current, `monitor_results` dropped | **Proposed** | MonitorDO only | RegionShardDO |
-| --------------------------------- | -------: | --------: | ------: | ---------------------------------: | -----------: | -------------: | ------------: |
-| Production today (+100 trials/mo) |       14 |   252,604 |   $4.42 |                              $3.03 |    **$1.75** |          $1.74 |         $3.04 |
-| 10 HTTP @ 1 min                   |       10 |   432,000 |   $6.26 |                              $2.79 |    **$2.11** |          $2.10 |         $3.19 |
-| 100 HTTP @ 1 min                  |      100 |    4.32 M |  $59.20 |                             $24.47 |   **$21.04** |         $20.93 |        $16.75 |
-| 1,000 HTTP @ 1 min                |    1,000 |    43.2 M | $580.17 |                            $232.93 |  **$210.35** |        $209.24 |       $140.35 |
-| Mixed realistic (+2,000 trials)   |      450 |    11.0 M | $157.20 |                             $98.17 |   **$63.55** |         $63.28 |        $49.14 |
-| Large tenant, 500 monitors        |      500 |    21.6 M | $290.98 |                            $117.36 |  **$104.77** |        $104.23 |        $73.35 |
-| 500 small tenants, 1,000 monitors |    1,000 |    43.2 M | $586.22 |                            $238.97 |  **$210.62** |        $209.50 |       $140.41 |
-| **Trial-heavy** (20,000 trials/mo)|       50 |     6.2 M | $143.63 |                            $126.27 |  **$122.95** |        $122.89 |       $121.45 |
-| **Trial at the rate-limit ceiling**|       5 |    22.0 M | $669.53 |                            $667.80 |  **$667.29** |        $667.29 |       $668.67 |
-| Flapping, 100 @ 10% transitions   |      100 |    4.32 M |  $67.64 |                             $32.92 |   **$29.58** |         $29.31 |        $24.27 |
+| Scenario                            | Monitors | Checks/mo | Current | Current, `monitor_results` dropped | **Proposed** | MonitorDO only | RegionShardDO |
+| ----------------------------------- | -------: | --------: | ------: | ---------------------------------: | -----------: | -------------: | ------------: |
+| Production today (+100 trials/mo)   |       14 |   252,604 |   $4.42 |                              $3.03 |    **$1.75** |          $1.74 |         $3.04 |
+| 10 HTTP @ 1 min                     |       10 |   432,000 |   $6.26 |                              $2.79 |    **$2.11** |          $2.10 |         $3.19 |
+| 100 HTTP @ 1 min                    |      100 |    4.32 M |  $59.20 |                             $24.47 |   **$21.04** |         $20.93 |        $16.75 |
+| 1,000 HTTP @ 1 min                  |    1,000 |    43.2 M | $580.17 |                            $232.93 |  **$210.35** |        $209.24 |       $140.35 |
+| Mixed realistic (+2,000 trials)     |      450 |    11.0 M | $157.20 |                             $98.17 |   **$63.55** |         $63.28 |        $49.14 |
+| Large tenant, 500 monitors          |      500 |    21.6 M | $290.98 |                            $117.36 |  **$104.77** |        $104.23 |        $73.35 |
+| 500 small tenants, 1,000 monitors   |    1,000 |    43.2 M | $586.22 |                            $238.97 |  **$210.62** |        $209.50 |       $140.41 |
+| **Trial-heavy** (20,000 trials/mo)  |       50 |     6.2 M | $143.63 |                            $126.27 |  **$122.95** |        $122.89 |       $121.45 |
+| **Trial at the rate-limit ceiling** |        5 |    22.0 M | $669.53 |                            $667.80 |  **$667.29** |        $667.29 |       $668.67 |
+| Flapping, 100 @ 10% transitions     |      100 |    4.32 M |  $67.64 |                             $32.92 |   **$29.58** |         $29.31 |        $24.27 |
 
 Net of the account-wide included allowances:
 
-| Scenario                    | Current | Proposed | RegionShardDO |
-| --------------------------- | ------: | -------: | ------------: |
-| Production today            | $0.1256 |   $0.000 |       $0.0700 |
-| 10 HTTP @ 1 min             | $0.4359 |   $0.000 |       $0.0577 |
-| 100 HTTP @ 1 min            |   $5.60 |  $0.5457 |       $0.0604 |
-| 1,000 HTTP @ 1 min          | $512.48 |  $151.92 |        $82.75 |
-| Mixed realistic             |  $93.46 |    $8.83 |         $7.34 |
-| Large tenant, 500 monitors  | $229.13 |   $47.75 |        $16.28 |
-| Trial-heavy                 |  $85.49 |   $72.67 |        $72.53 |
-| Trial at the ceiling        | $609.37 |  $606.83 |       $607.07 |
-| Flapping, 100 @ 10%         |  $12.18 |    $6.70 |         $6.15 |
+| Scenario                   | Current | Proposed | RegionShardDO |
+| -------------------------- | ------: | -------: | ------------: |
+| Production today           | $0.1256 |   $0.000 |       $0.0700 |
+| 10 HTTP @ 1 min            | $0.4359 |   $0.000 |       $0.0577 |
+| 100 HTTP @ 1 min           |   $5.60 |  $0.5457 |       $0.0604 |
+| 1,000 HTTP @ 1 min         | $512.48 |  $151.92 |        $82.75 |
+| Mixed realistic            |  $93.46 |    $8.83 |         $7.34 |
+| Large tenant, 500 monitors | $229.13 |   $47.75 |        $16.28 |
+| Trial-heavy                |  $85.49 |   $72.67 |        $72.53 |
+| Trial at the ceiling       | $609.37 |  $606.83 |       $607.07 |
+| Flapping, 100 @ 10%        |  $12.18 |    $6.70 |         $6.15 |
 
 Per unit:
 
@@ -1254,24 +1254,24 @@ watch, at the current write shape (claim 2 + result insert 3 + running-totals up
 eventual delete 3 = **9 D1 rows written per check**, the result table having lost its
 standalone `checked_at` index in `20260802120000`):
 
-| Line                                             | Per watch |
-| ------------------------------------------------ | --------: |
-| D1 rows written (168 × 9, + lead/watch rows)     |  $0.00163 |
-| Emails (~1 confirmation + 7 digests + 1 wrap-up + ~1 change, per lead) |  $0.00350 |
-| `GeoFetchDO` requests + duration (168 × 250 ms)  |  $0.00009 |
-| Everything else (queue share, D1 reads, storage) |  $0.00031 |
-| **Total per free watch**                         | **~$0.0055** |
+| Line                                                                   |    Per watch |
+| ---------------------------------------------------------------------- | -----------: |
+| D1 rows written (168 × 9, + lead/watch rows)                           |     $0.00163 |
+| Emails (~1 confirmation + 7 digests + 1 wrap-up + ~1 change, per lead) |     $0.00350 |
+| `GeoFetchDO` requests + duration (168 × 250 ms)                        |     $0.00009 |
+| Everything else (queue share, D1 reads, storage)                       |     $0.00031 |
+| **Total per free watch**                                               | **~$0.0055** |
 
 Half a cent per free watch is cheap. The three things worth stating anyway:
 
 **1. It is identical under every architecture.** A watch has no team, so it does not move
 (§5a). The whole spread between architectures collapses as trial volume rises:
 
-| Scenario                          | Current | Proposed | RegionShardDO | Spread |
-| --------------------------------- | ------: | -------: | ------------: | -----: |
-| 1,000 paid monitors, no trial     | $580.17 |  $210.35 |       $140.35 |  4.13× |
-| Trial-heavy (20,000 signups/mo)   | $143.63 |  $122.95 |       $121.45 |  1.18× |
-| Trial at the rate-limit ceiling   | $669.53 |  $667.29 |       $668.67 |  1.003× |
+| Scenario                        | Current | Proposed | RegionShardDO | Spread |
+| ------------------------------- | ------: | -------: | ------------: | -----: |
+| 1,000 paid monitors, no trial   | $580.17 |  $210.35 |       $140.35 |  4.13× |
+| Trial-heavy (20,000 signups/mo) | $143.63 |  $122.95 |       $121.45 |  1.18× |
+| Trial at the rate-limit ceiling | $669.53 |  $667.29 |       $668.67 | 1.003× |
 
 **2. Email is the dominant line, and it is the first allowance exhausted.** 3,000 messages a
 month is small: 20,000 signups produce ~208,000 emails, **6,943% of the included allowance**
@@ -1669,8 +1669,8 @@ No implementation until this analysis is reviewed and approved.
 | **9**  | `next_due_at = NULL` for cut-over monitors. Double-probing stops.                                                                                                                                                                                                                                                                                  | Probe volume halves; cadence unchanged.                                    |
 | **10** | TCP, then DNS, then cron monitors through the same 6–9 sequence. Cron last — it is the one whose scheduling semantics change most (§8.3).                                                                                                                                                                                                          | All types on `MonitorDO`.                                                  |
 | **11** | Move reads: detail pages, charts, uptime bar, heatmap. Keep the list on the D1 projection.                                                                                                                                                                                                                                                         | Analytics Engine no longer serves user-facing history.                     |
-| **12** | Remove **`CheckHttpJob`'s** use of `GeoFetchDO`. The class stays — the ad-hoc ping API, the dashboard quick-check and both trial probe paths still need it (§3a). Keep one `HttpCheck` with two transports (§20.11).                                                                                                                                | Scheduled monitors no longer touch it; the other four callers still do.    |
-| **13** | Remove the per-minute cron trigger, the check queue messages, the result tables and their indexes, and the dead `ssl_monitors` table. Keep the hourly trial sweep, the trial tables and both daily trial jobs. **Only after a full 90-day retention window on the new path.**                                                                       | Point of no return, taken deliberately.                                    |
+| **12** | Remove **`CheckHttpJob`'s** use of `GeoFetchDO`. The class stays — the ad-hoc ping API, the dashboard quick-check and both trial probe paths still need it (§3a). Keep one `HttpCheck` with two transports (§20.11).                                                                                                                               | Scheduled monitors no longer touch it; the other four callers still do.    |
+| **13** | Remove the per-minute cron trigger, the check queue messages, the result tables and their indexes, and the dead `ssl_monitors` table. Keep the hourly trial sweep, the trial tables and both daily trial jobs. **Only after a full 90-day retention window on the new path.**                                                                      | Point of no return, taken deliberately.                                    |
 | **14** | Administrative GC and lease validation in enforcing mode.                                                                                                                                                                                                                                                                                          | A deliberately orphaned object is quarantined, then reclaimed.             |
 | **15** | Re-evaluate `TenantDO` against the §21.2 trigger conditions.                                                                                                                                                                                                                                                                                       | A decision, with numbers, either way.                                      |
 
