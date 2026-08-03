@@ -34,7 +34,7 @@ export default function FaqAccordion(handle: Handle<FaqAccordion.Props>) {
 				<Accordion.Item key={faq.question} name={handle.props.name}>
 					<Accordion.Trigger>
 						{faq.question}
-						<ChevronDownIcon size={16} strokeWidth={1.5} data-slot="icon" aria-hidden />
+						<ChevronDownIcon size={16} strokeWidth={1.5} data-slot="icon" />
 					</Accordion.Trigger>
 					<Accordion.Content>
 						<p>{faq.answer}</p>

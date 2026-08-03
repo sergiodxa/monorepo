@@ -197,7 +197,7 @@ export const PricingCalculator = clientEntry(
 									size="sm"
 									mix={[on("click", addMonitor)]}
 								>
-									<PlusIcon size={16} strokeWidth={1.5} aria-hidden />
+									<PlusIcon size={16} strokeWidth={1.5} />
 									{t("landing.pricing.calculator.add")}
 								</Button>
 							</div>
@@ -242,7 +242,7 @@ export const PricingCalculator = clientEntry(
 															size="sm"
 															mix={[on("click", () => removeMonitor(monitor.id))]}
 														>
-															<XIcon size={16} strokeWidth={1.5} aria-hidden />
+															<XIcon size={16} strokeWidth={1.5} />
 															<span mix={[visuallyHidden()]}>
 																{t("landing.pricing.calculator.monitor.delete")}
 															</span>

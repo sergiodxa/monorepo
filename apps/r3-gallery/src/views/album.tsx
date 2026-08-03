@@ -209,7 +209,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 								}),
 							]}
 						>
-							<ChevronLeftIcon aria-hidden />
+							<ChevronLeftIcon />
 						</Button>
 						<Button
 							type="button"
@@ -224,7 +224,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 								}),
 							]}
 						>
-							<ChevronRightIcon aria-hidden />
+							<ChevronRightIcon />
 						</Button>
 						<div
 							mix={width("min(100%, 56rem)")}

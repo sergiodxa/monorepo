@@ -42,7 +42,7 @@ export default function MarketingFeatureRow(handle: Handle<MarketingFeatureRow.P
 				past `brand.tint` in each scheme — that token is the card's own
 				background here, so the tile would be invisible. */}
 				<span
-					aria-hidden
+					aria-hidden="true"
 					mix={[
 						flex(),
 						items("center"),

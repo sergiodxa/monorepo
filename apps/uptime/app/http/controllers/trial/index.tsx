@@ -488,22 +488,22 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 	let benefits: SellingPoint[] = [
 		{
-			icon: <ClockIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <ClockIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.hourly.title"),
 			description: t("page.trial.benefits.list.hourly.description"),
 		},
 		{
-			icon: <BellIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <BellIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.changes.title"),
 			description: t("page.trial.benefits.list.changes.description"),
 		},
 		{
-			icon: <MailIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <MailIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.digest.title"),
 			description: t("page.trial.benefits.list.digest.description"),
 		},
 		{
-			icon: <CreditCardIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <CreditCardIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.noAccount.title"),
 			description: t("page.trial.benefits.list.noAccount.description"),
 		},
@@ -515,17 +515,17 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	 */
 	let beyondHttp: SellingPoint[] = [
 		{
-			icon: <NetworkIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <NetworkIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.more.list.tcp.title"),
 			description: t("page.trial.more.list.tcp.description"),
 		},
 		{
-			icon: <GlobeIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.more.list.dns.title"),
 			description: t("page.trial.more.list.dns.description"),
 		},
 		{
-			icon: <ClockIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <ClockIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.more.list.cron.title"),
 			description: t("page.trial.more.list.cron.description"),
 		},
@@ -770,7 +770,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 														mix={[is("full"), justify("center")]}
 													>
 														{t("page.trial.monitor.create")}
-														<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden />
+														<ArrowRightIcon size={18} strokeWidth={1.5} />
 													</LinkButton>
 													{monitorOffer.subscribeHref === null ? null : (
 														<LinkButton
@@ -922,7 +922,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 										fg("brand"),
 									]}
 								>
-									<ActivityIcon size={14} strokeWidth={2} aria-hidden />
+									<ActivityIcon size={14} strokeWidth={2} />
 									{t("page.trial.cta.badge")}
 								</span>
 								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
@@ -932,7 +932,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 								<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(3), mbs(2)]}>
 									<LinkButton href={routes.app.index.href()} size="lg">
 										{t("page.trial.cta.action")}
-										<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden />
+										<ArrowRightIcon size={18} strokeWidth={1.5} />
 									</LinkButton>
 									<LinkButton
 										href={`${routes.home.href()}#pricing`}

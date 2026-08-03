@@ -167,6 +167,31 @@ describe("GET /", () => {
 		expect(body).toContain(`href="${routes.marketing.audience.href({ slug: "indie-hackers" })}"`);
 	});
 
+	/**
+	 * This page is the densest decorative-icon surface in the app — a glyph per trust
+	 * indicator, feature card, capability row and use case — and every one of them was
+	 * being announced.
+	 *
+	 * `aria-hidden` takes a token, not a flag, and the renderer writes a `true` prop the
+	 * way HTML wants a boolean attribute written: as the bare name. So the JSX shorthand
+	 * these icons carried reached the document as `aria-hidden=""`, which is not a token
+	 * ARIA recognizes, leaving the glyph exposed. Worse, passing it at all suppressed the
+	 * correct `aria-hidden="true"` the icon component adds for itself, so the shorthand
+	 * replaced a right value with a wrong one.
+	 *
+	 * Asserted on the served HTML rather than on the source, because the fix is a deletion
+	 * and the thing that has to be true is what the icon renders in its place.
+	 */
+	test("hides every decorative icon with the token, never with an empty value", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		let hidden = body.match(/aria-hidden(="[^"]*")?/g) ?? [];
+
+		expect(hidden.length).toBeGreaterThan(0);
+		expect([...new Set(hidden)]).toEqual(['aria-hidden="true"']);
+	});
+
 	test("server-renders the pricing calculator's initial estimate", async () => {
 		let response = await getHome(null);
 		let body = await response.text();

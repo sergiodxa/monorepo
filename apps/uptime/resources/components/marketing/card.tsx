@@ -65,7 +65,7 @@ export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 							// palette step past `brand.tint` in each scheme — that token is the
 							// card's own background here, so the tile would be invisible.
 							<span
-								aria-hidden
+								aria-hidden="true"
 								mix={[
 									flex(),
 									items("center"),
@@ -99,7 +99,7 @@ export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 								]}
 							>
 								{learnMore}
-								<ArrowRightIcon size={16} strokeWidth={1.5} aria-hidden />
+								<ArrowRightIcon size={16} strokeWidth={1.5} />
 							</span>
 						</Card.Footer>
 					)}

@@ -262,7 +262,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					 * as a hard-edged disc rather than a glow.
 					 */}
 					<div
-						aria-hidden
+						aria-hidden="true"
 						mix={[
 							absolute(),
 							insBs(0),
@@ -351,7 +351,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 										isSignedIn={isSignedIn}
 										startLabel={startLabel}
 										dashboardLabel={dashboardLabel}
-										icon={<ArrowRightIcon size={20} strokeWidth={1.5} aria-hidden />}
+										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
 									/>
 									{/* Points at the homepage's pricing calculator: these pages carry
 									no pricing section of their own to anchor to. */}
@@ -386,7 +386,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 												fg("neutral.muted"),
 											]}
 										>
-											<CheckIcon size={16} strokeWidth={2} aria-hidden mix={[fg("success")]} />
+											<CheckIcon size={16} strokeWidth={2} mix={[fg("success")]} />
 											{item}
 										</span>
 									))}
@@ -425,7 +425,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 				{trustIndicators && (
 					<MarketingTrustIndicators
 						indicators={trustIndicators.map((indicator) => ({
-							icon: <Icon name={indicator.icon} size={24} strokeWidth={1.5} aria-hidden />,
+							icon: <Icon name={indicator.icon} size={24} strokeWidth={1.5} />,
 							value: indicator.value,
 							label: indicator.label,
 						}))}
@@ -444,11 +444,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							{features.map((feature) => (
 								<MarketingCard
 									key={feature.title}
-									icon={
-										feature.icon && (
-											<Icon name={feature.icon} size={24} strokeWidth={1.5} aria-hidden />
-										)
-									}
+									icon={feature.icon && <Icon name={feature.icon} size={24} strokeWidth={1.5} />}
 									title={feature.title}
 									description={feature.description}
 								/>
@@ -552,7 +548,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								startLabel={startLabel}
 								dashboardLabel={dashboardLabel}
 								color="neutral"
-								icon={<ArrowRightIcon size={20} strokeWidth={1.5} aria-hidden />}
+								icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
 							/>
 						</div>
 					</div>

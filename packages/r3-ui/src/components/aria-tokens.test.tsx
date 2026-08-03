@@ -1,11 +1,14 @@
 /**
  * Enforces the "ARIA values are tokens, not flags" rule from this package's
- * `AGENTS.md`: no module under `src/` may hand a boolean to an ARIA attribute
- * whose value is a token — `aria-hidden`, `aria-invalid`, `aria-busy`,
- * `aria-pressed`, `aria-checked`, `aria-expanded`, `aria-selected`,
- * `aria-current`, `aria-disabled`, `aria-modal`, `aria-required`,
- * `aria-readonly`, `aria-atomic`, `aria-multiselectable`, `aria-haspopup` and
- * `aria-live`.
+ * `AGENTS.md` over this package: no module under `src/` may hand a boolean to an
+ * ARIA attribute whose value is a token, and the states that were found broken here
+ * render the token they should.
+ *
+ * The scanner itself, its own fixture cases, and the repo-wide run of it live at
+ * `test/aria-tokens.ts` and `test/aria-tokens.test.ts` — apps write JSX too, and most
+ * of this mistake turned out to be outside the component library. This file keeps a
+ * package-scoped run of the same scanner so the rule still fails the suite while
+ * somebody is working inside this package alone.
  *
  * The rule exists because the failure is silent in both directions. The
  * renderer writes a `true` prop the way HTML wants a boolean attribute
@@ -18,19 +21,11 @@
  * and the component keeps looking right on screen while announcing the
  * opposite of the truth.
  *
- * Three spellings are all the same mistake and all three are scanned for: the
- * JSX shorthand (`aria-hidden`), an explicit boolean expression
- * (`aria-hidden={true}`), and a boolean inside an `attrs({...})` or plain
- * object literal (`"aria-hidden": true`). Identifiers are scanned too — a
- * `DEFAULT_*` constant declared as a boolean and spread onto one of these
- * attributes is how this defect originally reached ten components at once.
- *
- * The check scans source text rather than rendered output on purpose. Most
- * components in this package have no render test of their own, and the ones
- * that do would each need a case per attribute; scanning covers every module
- * that exists today and every one added later. A handful of fixture-based
- * cases exercise the scanner itself first, since a codebase with zero current
- * violations can't otherwise prove the scanner would catch one.
+ * Scanning source rather than rendered output is what makes the coverage total:
+ * most components here have no render test of their own, and the ones that do would
+ * each need a case per attribute. The rendered-output cases below cover the four
+ * states this defect was actually found in, since an attribute can also be right in
+ * the source and missing from the output.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,115 +38,15 @@ import { join } from "node:path";
 import { Glob } from "bun";
 import { renderToString } from "remix/ui/server";
 
+import type { AriaViolation } from "../../../../test/aria-tokens";
+
+import { findAriaViolations } from "../../../../test/aria-tokens";
+
 import { Attachment } from "./attachment";
 import { Checkbox } from "./checkbox";
 import { Skeleton } from "./skeleton";
 import { TextField } from "./text-field";
 import { ToggleButton } from "./toggle-button";
-
-/**
- * ARIA attributes whose value is a token rather than a flag.
- *
- * Every one of them accepts text — `"true"`, `"false"`, `"mixed"`, `"page"`,
- * `"menu"`, `"polite"` — and none of them is an HTML boolean attribute, which
- * is the whole distinction this rule turns on. `aria-label` and friends are
- * absent because nobody passes a boolean to a string.
- */
-const TOKEN_ATTRIBUTES = [
-	"aria-hidden",
-	"aria-invalid",
-	"aria-busy",
-	"aria-pressed",
-	"aria-checked",
-	"aria-expanded",
-	"aria-selected",
-	"aria-current",
-	"aria-disabled",
-	"aria-modal",
-	"aria-required",
-	"aria-readonly",
-	"aria-atomic",
-	"aria-multiselectable",
-	"aria-haspopup",
-	"aria-live",
-];
-
-/** One offending occurrence, kept with the line it came from for the failure message. */
-interface AriaViolation {
-	file: string;
-	line: number;
-	source: string;
-	reason: string;
-}
-
-/**
- * Every `const NAME = true;`/`= false;` in `source`, which is what an
- * `attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN })` may be hiding behind.
- */
-function booleanConstants(source: string): Set<string> {
-	let names = new Set<string>();
-	for (let match of source.matchAll(
-		/const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(true|false)\s*;/g,
-	)) {
-		if (match[1]) names.add(match[1]);
-	}
-	return names;
-}
-
-/**
- * Scans one module's text for booleans reaching a token-valued ARIA attribute.
- *
- * Comment lines are skipped, so a docblock is free to talk about the mistake —
- * this file's own prose would trip the scanner otherwise.
- */
-export function findAriaViolations(file: string, source: string): AriaViolation[] {
-	let violations: AriaViolation[] = [];
-	let booleans = booleanConstants(source);
-	let attributes = TOKEN_ATTRIBUTES.join("|");
-
-	/** JSX shorthand: `aria-hidden` with no value at all, which means `true`. */
-	let shorthand = new RegExp(`(?<![\\w-])(${attributes})(?=\\s*(?:/?>|[a-zA-Z{]))`, "g");
-	/** An explicit expression: `aria-hidden={true}` or `aria-hidden={SOME_CONST}`. */
-	let expression = new RegExp(`(?<![\\w-])(${attributes})=\\{([^}]*)\\}`, "g");
-	/** An object or `attrs()` entry: `"aria-hidden": true`. */
-	let entry = new RegExp(`["'](${attributes})["']\\s*:\\s*([^,}\\n]+)`, "g");
-
-	let lines = source.split("\n");
-
-	for (let [index, line] of lines.entries()) {
-		let trimmed = line.trim();
-		if (trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.startsWith("/*")) continue;
-
-		let report = (attribute: string, reason: string) => {
-			violations.push({ file, line: index + 1, source: trimmed, reason: `${attribute} ${reason}` });
-		};
-
-		for (let match of line.matchAll(shorthand)) {
-			report(
-				match[1] ?? "",
-				"is written as a valueless JSX shorthand, which renders as an empty value",
-			);
-		}
-
-		for (let match of line.matchAll(expression)) {
-			let value = (match[2] ?? "").trim();
-			if (value === "true" || value === "false")
-				report(match[1] ?? "", `is given the boolean ${value}`);
-			else if (booleans.has(value))
-				report(match[1] ?? "", `is given ${value}, declared as a boolean`);
-		}
-
-		for (let match of line.matchAll(entry)) {
-			let value = (match[2] ?? "").trim();
-			if (value === "true" || value === "false")
-				report(match[1] ?? "", `is given the boolean ${value}`);
-			else if (booleans.has(value))
-				report(match[1] ?? "", `is given ${value}, declared as a boolean`);
-		}
-	}
-
-	return violations;
-}
 
 /**
  * The rendered elements alone, with the `<head>` full of generated `<style>`
@@ -166,51 +61,6 @@ function markup(html: string): string {
 }
 
 describe("ARIA token attributes", () => {
-	describe("the scanner itself", () => {
-		test("catches the valueless JSX shorthand", () => {
-			let violations = findAriaViolations("fixture.tsx", "<CheckIcon aria-hidden />");
-
-			expect(violations).toHaveLength(1);
-			expect(violations[0]?.reason).toContain("aria-hidden");
-		});
-
-		test("catches an explicit boolean in JSX and in an object entry", () => {
-			expect(findAriaViolations("fixture.tsx", "<div aria-busy={true} />")).toHaveLength(1);
-			expect(findAriaViolations("fixture.tsx", 'attrs({ "aria-hidden": false })')).toHaveLength(1);
-		});
-
-		test("catches a boolean hiding behind a constant", () => {
-			let source = [
-				"const DEFAULT_ARIA_HIDDEN = true;",
-				'let mix = attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN });',
-			].join("\n");
-
-			expect(findAriaViolations("fixture.tsx", source)).toHaveLength(1);
-		});
-
-		test("accepts every token spelling, and a value it cannot resolve to a boolean", () => {
-			let source = [
-				'const DEFAULT_ARIA_HIDDEN = "true";',
-				'let mix = attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN });',
-				'<div aria-busy="true" aria-live="polite" aria-current={resolvedAriaCurrent} />',
-				'<div aria-pressed={pressed ? "true" : "false"} />',
-			].join("\n");
-
-			expect(findAriaViolations("fixture.tsx", source)).toEqual([]);
-		});
-
-		test("ignores the mistake being described in a comment", () => {
-			let source = [
-				"/**",
-				" * Never write `aria-hidden` or aria-busy={true} here.",
-				" */",
-				"// <div aria-hidden />",
-			].join("\n");
-
-			expect(findAriaViolations("fixture.tsx", source)).toEqual([]);
-		});
-	});
-
 	test("no module hands a boolean to a token-valued ARIA attribute", () => {
 		let root = join(import.meta.dir, "..");
 		let violations: AriaViolation[] = [];

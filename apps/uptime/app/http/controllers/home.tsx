@@ -200,22 +200,22 @@ export default createAction(routes.home, async (ctx) => {
 
 	let TRUST_INDICATORS: TrustIndicator[] = [
 		{
-			icon: <ZapIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <ZapIcon size={24} strokeWidth={1.5} />,
 			value: "99.9%",
 			label: t("landing.trustIndicators.uptimeSla"),
 		},
 		{
-			icon: <GlobeIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
 			value: "9",
 			label: t("landing.trustIndicators.globalRegions"),
 		},
 		{
-			icon: <ShieldCheckIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <ShieldCheckIcon size={24} strokeWidth={1.5} />,
 			value: "365",
 			label: t("landing.trustIndicators.daysDataRetention"),
 		},
 		{
-			icon: <BellIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <BellIcon size={24} strokeWidth={1.5} />,
 			value: "<1s",
 			label: t("landing.trustIndicators.alertLatency"),
 		},
@@ -226,51 +226,51 @@ export default createAction(routes.home, async (ctx) => {
 			title: t("landing.features.list.first.title"),
 			description: t("landing.features.list.first.description"),
 			slug: "monitors",
-			icon: <ActivityIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <ActivityIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.second.title"),
 			description: t("landing.features.list.second.description"),
 			slug: "alerts",
-			icon: <BellIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <BellIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.fourth.title"),
 			description: t("landing.features.list.fourth.description"),
 			slug: "status-pages",
-			icon: <GlobeIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.fifth.title"),
 			description: t("landing.features.list.fifth.description"),
 			slug: "ssl",
-			icon: <LockIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <LockIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.sixth.title"),
 			description: t("landing.features.list.sixth.description"),
 			slug: "dns",
-			icon: <LinkIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <LinkIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.seventh.title"),
 			description: t("landing.features.list.seventh.description"),
 			slug: "integrations",
-			icon: <MessageSquareIcon size={24} strokeWidth={1.5} aria-hidden />,
+			icon: <MessageSquareIcon size={24} strokeWidth={1.5} />,
 		},
 	];
 
 	let COMPLETE_FEATURES = [
 		{
 			key: "maintenanceWindows",
-			icon: <CirclePauseIcon size={20} strokeWidth={1.5} aria-hidden />,
+			icon: <CirclePauseIcon size={20} strokeWidth={1.5} />,
 		},
-		{ key: "contentMonitoring", icon: <FileTextIcon size={20} strokeWidth={1.5} aria-hidden /> },
-		{ key: "recoveryAlerts", icon: <RefreshCwIcon size={20} strokeWidth={1.5} aria-hidden /> },
-		{ key: "apiAccess", icon: <KeyIcon size={20} strokeWidth={1.5} aria-hidden /> },
-		{ key: "alertCooldowns", icon: <TimerIcon size={20} strokeWidth={1.5} aria-hidden /> },
-		{ key: "customHeaders", icon: <CodeIcon size={20} strokeWidth={1.5} aria-hidden /> },
-		{ key: "cronMonitoring", icon: <ClockIcon size={20} strokeWidth={1.5} aria-hidden /> },
+		{ key: "contentMonitoring", icon: <FileTextIcon size={20} strokeWidth={1.5} /> },
+		{ key: "recoveryAlerts", icon: <RefreshCwIcon size={20} strokeWidth={1.5} /> },
+		{ key: "apiAccess", icon: <KeyIcon size={20} strokeWidth={1.5} /> },
+		{ key: "alertCooldowns", icon: <TimerIcon size={20} strokeWidth={1.5} /> },
+		{ key: "customHeaders", icon: <CodeIcon size={20} strokeWidth={1.5} /> },
+		{ key: "cronMonitoring", icon: <ClockIcon size={20} strokeWidth={1.5} /> },
 	].map((feature) => ({
 		icon: feature.icon,
 		title: t(`landing.completeFeatureSet.list.${feature.key}.title`),
@@ -384,7 +384,7 @@ export default createAction(routes.home, async (ctx) => {
 					 * as a hard-edged disc rather than a glow.
 					 */}
 					<div
-						aria-hidden
+						aria-hidden="true"
 						mix={[
 							absolute(),
 							insBs(0),
@@ -483,7 +483,7 @@ export default createAction(routes.home, async (ctx) => {
 										isSignedIn={isSignedIn}
 										dashboardLabel={t("landing.hero.cta.in")}
 										startLabel={t("landing.hero.cta.out")}
-										icon={<ArrowRightIcon size={20} strokeWidth={1.5} aria-hidden />}
+										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
 									/>
 									<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
 										{t("landing.hero.cta.pricing")}
@@ -511,7 +511,7 @@ export default createAction(routes.home, async (ctx) => {
 												fg("neutral.muted"),
 											]}
 										>
-											<CheckIcon size={16} strokeWidth={2} aria-hidden mix={[fg("success")]} />
+											<CheckIcon size={16} strokeWidth={2} mix={[fg("success")]} />
 											{indicator}
 										</span>
 									))}

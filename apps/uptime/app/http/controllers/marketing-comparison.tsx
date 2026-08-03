@@ -314,7 +314,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 										fg("neutral.muted"),
 									]}
 								>
-									<CheckIcon size={16} strokeWidth={2} aria-hidden mix={[fg("success")]} />
+									<CheckIcon size={16} strokeWidth={2} mix={[fg("success")]} />
 									{item}
 								</span>
 							))}
@@ -417,7 +417,6 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 										<TriangleAlertIcon
 											size={24}
 											strokeWidth={1.5}
-											aria-hidden
 											mix={[shrink(0), fg("warning")]}
 										/>
 										<div>
@@ -496,7 +495,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 													fontSize("sm"),
 												]}
 											>
-												<CheckIcon size={16} strokeWidth={2} aria-hidden />
+												<CheckIcon size={16} strokeWidth={2} />
 												{item}
 											</span>
 										))}

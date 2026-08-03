@@ -100,7 +100,6 @@ SearchField.Input = function SearchFieldInput(handle: Handle<SearchField.InputPr
 		return (
 			<div data-slot="input-wrapper" mix={[relative(), flex(), items("center")]}>
 				<SearchIcon
-					aria-hidden
 					size={16}
 					data-slot="icon"
 					mix={[absolute(), insIs("0.75rem"), pointerEvents(), fg("neutral.muted")]}

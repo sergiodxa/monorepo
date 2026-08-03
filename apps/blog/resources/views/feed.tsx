@@ -93,7 +93,7 @@ export function FeedView() {
 							]}
 						>
 							<span
-								aria-hidden
+								aria-hidden="true"
 								mix={[
 									inlineFlex(),
 									justify("center"),

@@ -247,7 +247,7 @@ export function ColorsView() {
 								{group.tokens.map((token) => (
 									<li key={token.name} mix={[hstack({ gap: 3 }), items("center")]}>
 										<span
-											aria-hidden
+											aria-hidden="true"
 											mix={[
 												is(12),
 												bs(12),
