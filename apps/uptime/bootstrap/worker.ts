@@ -39,7 +39,7 @@ import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
 import { ReportCostsJob } from "~/app/jobs/report-costs";
 import { SendFunnelReportJob } from "~/app/jobs/send-funnel-report";
-import { SendTeamDigestsJob } from "~/app/jobs/send-team-digests";
+import { SendTeamDailyDigestsJob, SendTeamWeeklyDigestsJob } from "~/app/jobs/send-team-digests";
 import { SendTrialDigestsJob } from "~/app/jobs/send-trial-digests";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
@@ -83,14 +83,12 @@ const QueueMessageSchema = s.variant("type", {
 	sendTrialDigests: s.object({ type: s.literal("sendTrialDigests") }),
 	sendFunnelReport: s.object({ type: s.literal("sendFunnelReport") }),
 	/**
-	 * One of the two team digests. The period is in the message rather than in the type
-	 * because one job sends both — see `SendTeamDigestsJob` — so the two triggers that
-	 * enqueue it differ by this field and nothing else.
+	 * The two team digests, one message type each. The period is carried by the type rather
+	 * than by a field, because each schedule reports to its own cron-job monitor and a
+	 * monitor is read off the job class — see `send-team-digests.ts`.
 	 */
-	sendTeamDigests: s.object({
-		type: s.literal("sendTeamDigests"),
-		period: s.enum_(["daily", "weekly"]),
-	}),
+	sendTeamDailyDigests: s.object({ type: s.literal("sendTeamDailyDigests") }),
+	sendTeamWeeklyDigests: s.object({ type: s.literal("sendTeamWeeklyDigests") }),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -263,7 +261,7 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 	 * something a person reads.
 	 */
 	if (controller.cron === "0 8 * * *") {
-		waitUntil(sendQueueMessage({ type: "sendTeamDigests", period: "daily" }));
+		waitUntil(sendQueueMessage({ type: "sendTeamDailyDigests" }));
 	}
 
 	/**
@@ -274,7 +272,7 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 	 * turned one off still gets the other, so neither may depend on the other having run.
 	 */
 	if (controller.cron === "0 9 * * 1") {
-		waitUntil(sendQueueMessage({ type: "sendTeamDigests", period: "weekly" }));
+		waitUntil(sendQueueMessage({ type: "sendTeamWeeklyDigests" }));
 	}
 }
 
@@ -403,8 +401,11 @@ export default {
 					case "sendFunnelReport":
 						waitUntil(SendFunnelReportJob.run({ message, uptime }));
 						break;
-					case "sendTeamDigests":
-						waitUntil(SendTeamDigestsJob.run({ message, uptime }));
+					case "sendTeamDailyDigests":
+						waitUntil(SendTeamDailyDigestsJob.run({ message, uptime }));
+						break;
+					case "sendTeamWeeklyDigests":
+						waitUntil(SendTeamWeeklyDigestsJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

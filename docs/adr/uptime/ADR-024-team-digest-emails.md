@@ -60,16 +60,31 @@ Two consequences follow and both are accepted. The window is whole UTC days endi
 never a rolling one — a rolling window would need rows nothing writes. And both triggers must run
 after the 01:00 roll-up, which they do: 08:00 daily, and 09:00 on Mondays for the weekly.
 
-### 3. One job, two periods
+### 3. One sweep, two scheduled jobs
 
-`SendTeamDigestsJob` takes `{ period: "daily" | "weekly" }` in its message. The two differ in
-three things — how many days they read, which stamp they honour, which email class they construct
-— and agree on everything else: who is owed one, how an address and a language are resolved, how
-rows become a report, and what a failed send does. Two jobs would have duplicated all of that to
-vary those three.
+The two digests differ in three things — how many days they read, which stamp they honour, which
+email class they construct — and agree on everything else: who is owed one, how an address and a
+language are resolved, how rows become a report, and what a failed send does. All of that lives
+once, on an abstract `SendTeamDigestsJob`.
 
-The two emails stay two classes, because `app/emails/` is the inventory of what this app can send
-and each switch on the settings page names one of them.
+What the two subclasses add is a period and a **cron-job monitor**, and the monitor is the reason
+they are subclasses rather than one class reading its period from the message — which is how this
+shipped, and was wrong. A monitor watches one schedule: it holds a single cron expression and
+reports a run late against it. `Job.run` reads `monitorId` off the class it was handed, so one
+class could only ever ping one of the two monitors, leaving the other digest to fail unwatched —
+and the weekly digest is the one whose silence lasts longest, since `missed` means the _following_
+run also failed to arrive, a week later.
+
+Two schedules that fail independently are two things to watch, so the split is not a workaround
+for the jobs package's shape; it is the shape being right. The alternative considered and rejected
+was making `monitorId` a runtime value in `@pkg/jobs`: it would not have reduced the work, because
+two monitors are needed either way and the class would then carry a period-to-monitor lookup
+instead of the type system carrying it, and it would have made "which monitor does this job report
+to" unanswerable by reading the class across the three apps and twenty job classes that package
+serves.
+
+The two emails stay two classes for their own reason: `app/emails/` is the inventory of what this
+app can send, and each switch on the settings page names one of them.
 
 ### 4. A digest names what to look at; the dashboard holds the detail
 
@@ -157,7 +172,12 @@ question one step closer to what the email is about, and it needs no join to bil
 
 ## Consequences
 
-- Two new cron triggers: `0 8 * * *` and `0 9 * * 1`. Each takes its own hour so a failure in the
+- Two new cron triggers, `0 8 * * *` and `0 9 * * 1`, each with a cron-job monitor of its own in
+  the operator's team, pinged on completion like every other scheduled job here. Both carry a
+  15-minute grace period rather than the 5-minute default — the ping lands after the whole sweep,
+  which is a queue hop plus a request per subscribed member plus a send each — and both alert on
+  `late` rather than waiting for `missed`, which for the weekly would be a week away. Each takes
+  its own hour so a failure in the
   SSL sweep, the trial digests or the funnel report cannot delay mail going to paying customers.
 - Both digests are **on by default**, for existing members as well as new ones — that is what
   storing refusals means. Every member of a team with monitors starts receiving one email a day

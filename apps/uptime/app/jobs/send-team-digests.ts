@@ -1,13 +1,19 @@
 /**
- * Scheduled job behind both team digests: for every member of every team owed one, a single
- * email covering that team's monitors over the window the message names.
+ * Scheduled jobs behind both team digests: for every member of every team owed one, a single
+ * email covering that team's monitors over the window their schedule reports.
  *
- * **One job, two periods.** The daily and the weekly digest differ in three things — how many
- * days they read, which stamp they honour, and which email class they construct — and agree on
- * everything else: who is owed one, how an address and a language are resolved for them, how a
- * team's rows become a report, and what happens when a send fails. Splitting it in two would
- * duplicate all of that to vary those three, so the period arrives in the message and the two
- * cron triggers send the same message type with a different one.
+ * **One sweep, two scheduled jobs.** The daily and the weekly digest differ in three things —
+ * how many days they read, which stamp they honour, and which email class they construct — and
+ * agree on everything else: who is owed one, how an address and a language are resolved for
+ * them, how a team's rows become a report, and what happens when a send fails. All of that
+ * lives once, on the abstract class; what the two subclasses add is a period and a cron-job
+ * monitor.
+ *
+ * The monitor is why they are two classes rather than one with the period in its message. A
+ * monitor watches one schedule — it holds a single cron expression and reports a run late
+ * against it — and `Job.run` reads `monitorId` off the class it was handed, so one class
+ * could only ever ping one of the two. Two schedules that can fail independently are two
+ * things to watch, and the type is where that distinction belongs.
  *
  * **The unit is the membership.** A person in three teams gets three emails, because a monitor
  * list only means something beside the name of the team that owns it. That is why the schedule
@@ -42,8 +48,6 @@ import { Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
-import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
@@ -85,10 +89,14 @@ const PREFERENCE: Record<DigestPeriod, OptionalEmail> = {
 };
 
 /**
- * Which digest to send. The only thing this job takes, and the only thing the two cron
- * triggers differ by.
+ * The cron-job monitors each schedule reports itself to, one per trigger because a monitor
+ * holds one cron expression: `0 8 * * *` for the daily and `0 9 * * 1` for the weekly.
+ *
+ * A monitor that does not exist would make every run fail its ping, so these are the ids
+ * of monitors created in the operator's own team, exactly as every other job's are.
  */
-const SendTeamDigestsJobSchema = s.object({ period: s.enum_(["daily", "weekly"]) });
+const DAILY_MONITOR_ID = "03acb710-cd5b-4c8a-8242-c2a2a9dae201";
+const WEEKLY_MONITOR_ID = "4715a9ac-7fe6-4423-816c-b4a711b00dda";
 
 /** The days one run reports, resolved once so every team's report covers the same window. */
 interface DigestWindow {
@@ -112,18 +120,22 @@ interface TeamDigestContext {
 	uptime: string | null;
 }
 
-export class SendTeamDigestsJob extends Job {
-	static schema = SendTeamDigestsJobSchema;
+/**
+ * The sweep both digests run, with the period left to the subclass.
+ *
+ * Abstract because a cron-job monitor watches one schedule: it holds one cron expression
+ * and one expected cadence, and `Job.run` reads `monitorId` off the class it is given. A
+ * single class serving both periods could therefore report to only one of the two
+ * monitors, leaving the other digest to fail unwatched — and the weekly is the one whose
+ * silence would last longest. So the period moves from the message body into the type,
+ * each subclass names the monitor for its own schedule, and everything below stays shared.
+ */
+abstract class SendTeamDigestsJob extends Job {
+	/** Which digest this subclass sends, and therefore which window and which stamp. */
+	protected abstract readonly period: DigestPeriod;
 
 	async perform(): Promise<void> {
-		let parsed = await validate(this.input, SendTeamDigestsJob.schema);
-
-		if (isFailure(parsed)) {
-			this.logger.error("job.send_team_digests.invalid_input", { input: this.input });
-			throw new Job.NonRetriableError("Invalid input", { cause: parsed.error });
-		}
-
-		let { period } = parsed.data;
+		let { period } = this;
 		let db = getServiceContainer().get(Database);
 		let mailer = getServiceContainer().get(Mailer);
 		let sdk = getServiceContainer().get(AuthSDK);
@@ -357,6 +369,33 @@ export class SendTeamDigestsJob extends Job {
 			uptime,
 		});
 	}
+}
+
+/**
+ * The 08:00 UTC run: yesterday, for every team.
+ *
+ * @example waitUntil(SendTeamDailyDigestsJob.run({ message, uptime }));
+ */
+export class SendTeamDailyDigestsJob extends SendTeamDigestsJob {
+	/** The "Team Daily Digest" cron monitor this run reports itself to when it completes. */
+	static override monitorId = DAILY_MONITOR_ID;
+
+	protected override readonly period = "daily" as const;
+}
+
+/**
+ * The Monday 09:00 UTC run: the seven days that just ended.
+ *
+ * Its own class rather than a flag on the one above, so it reports to its own monitor —
+ * see {@link SendTeamDigestsJob}.
+ *
+ * @example waitUntil(SendTeamWeeklyDigestsJob.run({ message, uptime }));
+ */
+export class SendTeamWeeklyDigestsJob extends SendTeamDigestsJob {
+	/** The "Team Weekly Digest" cron monitor this run reports itself to when it completes. */
+	static override monitorId = WEEKLY_MONITOR_ID;
+
+	protected override readonly period = "weekly" as const;
 }
 
 /** Midnight UTC on the day `now` falls in, which is the once-a-day bound as an instant. */

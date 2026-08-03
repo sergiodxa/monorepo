@@ -1,5 +1,5 @@
 /**
- * Unit tests for `SendTeamDigestsJob.perform()`: which digest the message body picks, that the
+ * Unit tests for the two team-digest jobs' shared `perform()`: which digest each class sends, that the
  * unit of delivery is the membership rather than the person or the team, that a member who
  * turned one digest off still receives the other, and that the stamp — the only thing standing
  * between a redelivered trigger and a second copy — moves for exactly the sends the transport
@@ -22,7 +22,6 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import type { Transport } from "@pkg/mail";
 
 import { AuthSDK, SubjectNotFoundError } from "@pkg/auth-sdk";
-import { Job } from "@pkg/jobs";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -37,7 +36,7 @@ import Monitor from "~/app/data/monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
-import { SendTeamDigestsJob } from "~/app/jobs/send-team-digests";
+import { SendTeamDailyDigestsJob, SendTeamWeeklyDigestsJob } from "~/app/jobs/send-team-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	memberships,
@@ -99,10 +98,12 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	);
 	container.instance(AuthSDK, fakeSdk());
 
-	let job = new SendTeamDigestsJob(
-		{ logger: new BatchedLogger("test") },
-		{ type: "sendTeamDigests", period },
-	);
+	/** The period picks the class and its message type, exactly as the worker's routing does. */
+	let [Digest, body] =
+		period === "daily"
+			? ([SendTeamDailyDigestsJob, { type: "sendTeamDailyDigests" }] as const)
+			: ([SendTeamWeeklyDigestsJob, { type: "sendTeamWeeklyDigests" }] as const);
+	let job = new Digest({ logger: new BatchedLogger("test") }, body);
 	await container.scope(() => job.perform());
 	return job;
 }
@@ -271,14 +272,23 @@ describe("SendTeamDigestsJob period", () => {
 		expect(dailyDigests()).toHaveLength(0);
 	});
 
-	test("throws a non-retriable error when the message names no period", async () => {
-		let job = new SendTeamDigestsJob(
-			{ logger: new BatchedLogger("test") },
-			{ type: "sendTeamDigests" },
-		);
+	/**
+	 * The two schedules are two classes so each can report to its own cron-job monitor: a
+	 * monitor holds one cron expression, and `Job.run` reads `monitorId` off the class it was
+	 * handed, so one class serving both periods could only ever ping one of them and the other
+	 * digest would fail unwatched.
+	 *
+	 * Both realistic ways to get this wrong are caught here — leaving an id unset, which
+	 * silently skips the ping, and pasting one id into both classes, which leaves one monitor
+	 * pinged twice and the other never.
+	 */
+	test("gives each schedule its own cron-job monitor to report to", () => {
+		let daily = SendTeamDailyDigestsJob.monitorId;
+		let weekly = SendTeamWeeklyDigestsJob.monitorId;
 
-		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
-		expect(transport.messages).toHaveLength(0);
+		expect(daily).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+		expect(weekly).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+		expect(daily).not.toBe(weekly);
 	});
 });
 
