@@ -401,7 +401,7 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 					mix,
 				]}
 			>
-				{children ?? <ChevronRightIcon aria-hidden size={16} />}
+				{children ?? <ChevronRightIcon size={16} />}
 			</button>
 		);
 	};

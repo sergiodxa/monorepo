@@ -374,7 +374,7 @@ Dialog.Close = function DialogClose(handle: Handle<Dialog.CloseProps>) {
 				data-slot="close"
 				mix={[absolute(), inset(4, 4, "auto", "auto"), mix]}
 			>
-				<XIcon aria-hidden size={16} />
+				<XIcon size={16} />
 			</Button>
 		);
 	};

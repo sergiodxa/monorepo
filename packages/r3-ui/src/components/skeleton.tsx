@@ -21,7 +21,7 @@ import { attrs } from "remix/ui";
  * sets `aria-hidden={false}` (for example, to expose a loading label to
  * assistive technology instead of hiding the block outright).
  */
-const DEFAULT_ARIA_HIDDEN = true;
+const DEFAULT_ARIA_HIDDEN = "true";
 
 /**
  * Props accepted by {@link Skeleton}.

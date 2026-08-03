@@ -40,7 +40,7 @@ const DEFAULT_SIZE: ColorSwatch.Size = "md";
  * with an explicit `aria-hidden={false}` plus an `aria-label` describing the
  * color.
  */
-const DEFAULT_ARIA_HIDDEN = true;
+const DEFAULT_ARIA_HIDDEN = "true";
 
 /**
  * Prop types for {@link ColorSwatch}.

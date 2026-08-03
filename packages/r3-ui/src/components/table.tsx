@@ -365,9 +365,9 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 						]}
 					>
 						{children}
-						{sortDirection === "ascending" && <ArrowUpIcon aria-hidden size={14} />}
-						{sortDirection === "descending" && <ArrowDownIcon aria-hidden size={14} />}
-						{!sortDirection && <ArrowUpDownIcon aria-hidden size={14} mix={[opacity(40)]} />}
+						{sortDirection === "ascending" && <ArrowUpIcon size={14} />}
+						{sortDirection === "descending" && <ArrowDownIcon size={14} />}
+						{!sortDirection && <ArrowUpDownIcon size={14} mix={[opacity(40)]} />}
 					</a>
 				) : (
 					children

@@ -49,7 +49,7 @@ const DEFAULT_LIVE = "polite";
  * overrides it, so assistive technology re-reads the whole alert on update
  * instead of only the part that changed.
  */
-const DEFAULT_ARIA_ATOMIC = true;
+const DEFAULT_ARIA_ATOMIC = "true";
 
 /**
  * Prop types for {@link Alert} and its compound parts.

@@ -1668,7 +1668,7 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 				{...rest}
 				data-slot="rail"
 				mix={[
-					attrs({ "aria-hidden": true }),
+					attrs({ "aria-hidden": "true" }),
 					absolute(),
 					insBs("0"),
 					insBe("0"),
@@ -1744,7 +1744,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
 				]}
 			>
-				<PanelLeftIcon aria-hidden />
+				<PanelLeftIcon />
 				<input type="checkbox" {...rest} data-slot="toggle" mix={[visuallyHidden(), mix]} />
 			</label>
 		);

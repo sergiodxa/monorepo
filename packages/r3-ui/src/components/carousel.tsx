@@ -350,7 +350,7 @@ Carousel.Previous = function CarouselPrevious(handle: Handle<Carousel.PreviousPr
 				data-slot="previous"
 				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
 			>
-				{children ?? <ChevronLeftIcon aria-hidden />}
+				{children ?? <ChevronLeftIcon />}
 			</Button>
 		);
 	};
@@ -393,7 +393,7 @@ Carousel.Next = function CarouselNext(handle: Handle<Carousel.NextProps>) {
 				data-slot="next"
 				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
 			>
-				{children ?? <ChevronRightIcon aria-hidden />}
+				{children ?? <ChevronRightIcon />}
 			</Button>
 		);
 	};

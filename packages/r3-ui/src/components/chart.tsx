@@ -109,7 +109,7 @@ const DEFAULT_MARKER_COUNT = 6;
  * fill out of the accessibility tree — a series' accessible names and hover
  * tooltips live on its point markers instead.
  */
-const DEFAULT_PATH_ARIA_HIDDEN = true;
+const DEFAULT_PATH_ARIA_HIDDEN = "true";
 
 /**
  * Pixel distance from center to every wedge's inner edge {@link Chart.Pie}
@@ -131,7 +131,7 @@ const DEFAULT_SWATCH_COLOR: Chart.Color = 1;
  * `<title>`, accessible name, and series color already carry, so
  * assistive technology gains nothing from encountering it directly.
  */
-const DEFAULT_TOOLTIP_ARIA_HIDDEN = true;
+const DEFAULT_TOOLTIP_ARIA_HIDDEN = "true";
 
 /** Approximate gridline count {@link Chart.Bar} falls back to when `tickCount` is omitted. */
 const DEFAULT_BAR_TICK_COUNT = 5;

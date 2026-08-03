@@ -62,14 +62,17 @@ const DEFAULT_SWITCH_ATTRIBUTE = true;
  */
 export namespace Switch {
 	/**
-	 * Every native `<input>` attribute except `type`, `role`, and
-	 * `aria-checked`, which the host fixes to `"checkbox"`, `"switch"`, and
-	 * a value mirroring `checked`/`defaultChecked` respectively, and never
-	 * exposes for override, plus the `mix` passthrough. Use
-	 * `checked`/`defaultChecked` for the on/off state, `disabled` to disable
-	 * it, `name`/`value` for form submission, and
-	 * `aria-label`/`aria-labelledby` for its accessible name whenever it
-	 * isn't nested inside a {@link Label} or given `children`.
+	 * Every native `<input>` attribute except `type` and `role`, which the
+	 * host fixes to `"checkbox"` and `"switch"` and never exposes for
+	 * override, plus the `mix` passthrough. Use `checked`/`defaultChecked`
+	 * for the on/off state, `disabled` to disable it, `name`/`value` for form
+	 * submission, and `aria-label`/`aria-labelledby` for its accessible name
+	 * whenever it isn't nested inside a {@link Label} or given `children`.
+	 *
+	 * `aria-checked` is also withheld, and for a different reason: the host
+	 * deliberately renders none, so nothing may pin one. See the render
+	 * function's own note on why an authored value is the wrong way to state
+	 * a switch's state.
 	 */
 	export interface Props extends Omit<TagProps<"input">, "type" | "role" | "aria-checked"> {
 		/**
@@ -125,14 +128,24 @@ export namespace Switch {
 export function Switch(handle: Handle<Switch.Props>) {
 	return () => {
 		let { mix, children, ...rest } = handle.props;
-		let resolvedChecked = handle.props.checked ?? handle.props.defaultChecked ?? false;
 
+		/*
+		 * No `aria-checked`, on purpose. It is the checkedness of the native
+		 * control that assistive technology reports for `role="switch"` — the
+		 * same live `checked` state this component's own `&:checked` rules
+		 * draw the thumb from — and that state follows the user's clicks.
+		 * An authored `aria-checked` could only hold the value this render
+		 * produced, so it would take precedence over the live state and go
+		 * wrong the moment somebody flipped the switch, which is the one
+		 * thing a switch exists to let them do. Withholding it keeps the
+		 * announced state and the drawn state the same fact.
+		 */
 		let track = (
 			<input
 				{...rest}
 				type="checkbox"
+				// oxlint-disable-next-line jsx-a11y/role-has-required-aria-props -- The host is a native checkbox, so its own checkedness supplies the switch's checked state; see the note above for why authoring one would be worse than omitting it.
 				role="switch"
-				aria-checked={resolvedChecked}
 				mix={[
 					attrs({ switch: DEFAULT_SWITCH_ATTRIBUTE }),
 					appearance(),

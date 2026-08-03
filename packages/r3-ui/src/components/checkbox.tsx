@@ -189,8 +189,8 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 						parts?.box,
 					]}
 				>
-					<CheckIcon aria-hidden />
-					<MinusIcon aria-hidden />
+					<CheckIcon />
+					<MinusIcon />
 				</span>
 				<input type="checkbox" {...rest} mix={[visuallyHidden(), mix]} />
 				{children}

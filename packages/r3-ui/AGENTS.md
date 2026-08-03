@@ -86,6 +86,17 @@ Components never read the viewport — no `@media (min-width: ...)` for layout. 
 
 At full-viewport container width, components render at their default, unconstrained layout. Embedded narrower — a dashboard column, a split pane, a `<Frame>` — components adapt to the space they actually occupy.
 
+### ARIA values are tokens, never flags
+
+`aria-*` attributes are not HTML boolean attributes. Their values are text, and the renderer writes a `true` prop the way HTML wants a boolean written — as the bare attribute name — so `aria-hidden={true}` reaches the document as `aria-hidden=""`, which is none of the tokens ARIA defines and resolves to the attribute's default. A `false` is dropped from the markup altogether.
+
+- Write the string: `aria-hidden="true"`, `aria-invalid={invalid ? "true" : undefined}`, `aria-pressed={pressed ? "true" : "false"}`. A `DEFAULT_*` constant standing in for one of these values is declared as a string too.
+- Omit rather than write `"false"` where absence already means false (`aria-hidden`, `aria-invalid`, `aria-busy`). Keep the explicit `"false"` where absence means something else — a `<button>` with no `aria-pressed` is not a toggle button at all.
+- A component whose styling keys off one of these attributes (`&[aria-pressed="true"]`, `&[aria-invalid="true"]`) has a second reason to care: an empty value matches neither ARIA nor the selector, so the state goes unannounced _and_ undrawn.
+- Never author an ARIA state a native control already owns. A `<input type="checkbox" role="switch">` reports its checkedness from the live control, and an authored `aria-checked` would take precedence over it and go stale the moment the user clicked.
+
+`src/components/aria-tokens.test.tsx` enforces this by scanning every module under `src/`, so a boolean reaching one of these attributes fails the suite.
+
 ### Accessibility media features
 
 Three user preferences get baseline support, not per-component discretion:

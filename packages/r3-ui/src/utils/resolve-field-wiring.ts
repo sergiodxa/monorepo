@@ -29,6 +29,22 @@ const DEFAULT_FIELD_COLOR: FieldColor = "neutral";
 export type AriaInvalid = boolean | "true" | "false" | "grammar" | "spelling";
 
 /**
+ * What a field actually renders into `aria-invalid`: one of the tokens that
+ * says something, or nothing at all for a valid field.
+ *
+ * Narrower than {@link AriaInvalid} on purpose, and the narrowing is the whole
+ * point. `aria-invalid` takes a token, not a flag, so a `true` reaching the
+ * attribute is serialized the way HTML wants booleans written — as the bare
+ * name — leaving `aria-invalid=""`, which is not a token it recognizes and so
+ * resolves to its default of valid. An invalid field would be announced as
+ * fine. {@link resolveFieldWiring} therefore folds every accepted input into
+ * one of these before it can reach an attribute, and a valid field is spelled
+ * as the absent attribute rather than as `"false"`, since that is what absence
+ * already means.
+ */
+export type AriaInvalidToken = "true" | "grammar" | "spelling";
+
+/**
  * Inputs {@link resolveFieldWiring} reads off a field convenience wrapper's
  * own props to compute its wiring.
  */
@@ -57,8 +73,8 @@ export interface FieldWiringOptions {
 export interface FieldWiring {
 	/** Resolved semantic color role for the control's focus ring. */
 	resolvedColor: FieldColor;
-	/** Resolved invalid state for the control's `aria-invalid`. */
-	resolvedInvalid: AriaInvalid;
+	/** Resolved invalid state for the control's `aria-invalid`, or `undefined` when the field is valid. */
+	resolvedInvalid: AriaInvalidToken | undefined;
 	/** Id for the field's description paragraph, or `undefined` when no description is set. */
 	descriptionId: string | undefined;
 	/** Id for the field's error paragraph, or `undefined` when no error message is set. */
@@ -82,18 +98,31 @@ export interface FieldWiring {
  * @returns The resolved color, invalid state, description/error ids, and joined `aria-describedby` value.
  * @example
  * resolveFieldWiring("email", { color: "brand", errorMessage: "Required" });
- * // { resolvedColor: "brand", resolvedInvalid: true, descriptionId: undefined, errorId: "email-error", describedBy: "email-error" }
+ * // { resolvedColor: "brand", resolvedInvalid: "true", descriptionId: undefined, errorId: "email-error", describedBy: "email-error" }
  * @example
  * resolveFieldWiring("username", { description: "3-20 characters" });
- * // { resolvedColor: "neutral", resolvedInvalid: false, descriptionId: "username-description", errorId: undefined, describedBy: "username-description" }
+ * // { resolvedColor: "neutral", resolvedInvalid: undefined, descriptionId: "username-description", errorId: undefined, describedBy: "username-description" }
  */
 export function resolveFieldWiring(id: string, options: FieldWiringOptions): FieldWiring {
 	let { color, errorMessage, description, ariaInvalid } = options;
 	let resolvedColor = color ?? DEFAULT_FIELD_COLOR;
-	let resolvedInvalid = ariaInvalid ?? Boolean(errorMessage);
+	let resolvedInvalid = resolveAriaInvalid(ariaInvalid ?? Boolean(errorMessage));
 	let descriptionId = description ? `${id}-description` : undefined;
 	let errorId = errorMessage ? `${id}-error` : undefined;
 	let describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
 	return { resolvedColor, resolvedInvalid, descriptionId, errorId, describedBy };
+}
+
+/**
+ * Folds any accepted invalid state into the token a field can safely render,
+ * or `undefined` for a field that is valid.
+ *
+ * @param invalid The state a field resolved from its own props.
+ * @returns The token to render, or `undefined` to render no attribute at all.
+ */
+function resolveAriaInvalid(invalid: AriaInvalid): AriaInvalidToken | undefined {
+	if (invalid === true || invalid === "true") return "true";
+	if (invalid === "grammar" || invalid === "spelling") return invalid;
+	return undefined;
 }

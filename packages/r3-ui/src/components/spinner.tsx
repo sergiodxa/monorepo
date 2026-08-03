@@ -109,7 +109,7 @@ export function Spinner(handle: Handle<Spinner.Props>) {
 					mix,
 				]}
 			>
-				<LoaderCircleIcon aria-hidden />
+				<LoaderCircleIcon />
 			</div>
 		);
 	};

@@ -413,7 +413,7 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 					mix,
 				]}
 			>
-				<GripVerticalIcon aria-hidden size={16} />
+				<GripVerticalIcon size={16} />
 			</button>
 		);
 	};

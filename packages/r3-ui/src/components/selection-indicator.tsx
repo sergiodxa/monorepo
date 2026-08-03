@@ -23,7 +23,7 @@ import { attrs } from "remix/ui";
  * already exposes through `aria-selected`/`aria-current`, so assistive
  * technology gains nothing from encountering the marker itself.
  */
-const DEFAULT_ARIA_HIDDEN = true;
+const DEFAULT_ARIA_HIDDEN = "true";
 
 /**
  * Prop types for {@link SelectionIndicator}.

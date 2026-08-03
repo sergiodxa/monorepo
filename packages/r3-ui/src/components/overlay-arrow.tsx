@@ -31,7 +31,7 @@ const DEFAULT_PLACEMENT: OverlayArrow.Placement = "bottom";
  * overrides it, keeping the purely decorative pointer glyph out of the
  * accessibility tree.
  */
-const DEFAULT_ARIA_HIDDEN = true;
+const DEFAULT_ARIA_HIDDEN = "true";
 
 /**
  * Prop types for {@link OverlayArrow}.

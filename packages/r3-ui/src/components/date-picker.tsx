@@ -339,7 +339,7 @@ DatePicker.Button = function DatePickerButton(handle: Handle<DatePicker.ButtonPr
 					mix,
 				]}
 			>
-				<CalendarIcon aria-hidden />
+				<CalendarIcon />
 			</button>
 		);
 	};

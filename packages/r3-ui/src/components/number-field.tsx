@@ -300,7 +300,7 @@ NumberField.DecrementButton = function NumberFieldDecrementButton(
 				data-slot="decrement"
 				mix={[stepperButtonMix("end"), mix]}
 			>
-				<MinusIcon aria-hidden />
+				<MinusIcon />
 			</button>
 		);
 	};
@@ -347,7 +347,7 @@ NumberField.IncrementButton = function NumberFieldIncrementButton(
 				data-slot="increment"
 				mix={[stepperButtonMix("start"), mix]}
 			>
-				<PlusIcon aria-hidden />
+				<PlusIcon />
 			</button>
 		);
 	};

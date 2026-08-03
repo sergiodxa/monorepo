@@ -313,7 +313,7 @@ export function Button(handle: Handle<Button.Props>) {
 								parts?.spinner,
 							]}
 						>
-							<LoaderCircleIcon aria-hidden />
+							<LoaderCircleIcon />
 						</span>
 						<span
 							data-slot="content"

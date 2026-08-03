@@ -368,7 +368,7 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 					mix,
 				]}
 			>
-				{children ?? <ChevronLeftIcon aria-hidden />}
+				{children ?? <ChevronLeftIcon />}
 			</button>
 		);
 	};
@@ -418,7 +418,7 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 					mix,
 				]}
 			>
-				{children ?? <ChevronRightIcon aria-hidden />}
+				{children ?? <ChevronRightIcon />}
 			</button>
 		);
 	};

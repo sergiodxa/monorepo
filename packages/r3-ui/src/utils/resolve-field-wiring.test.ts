@@ -16,7 +16,7 @@ describe(resolveFieldWiring.name, () => {
 	test("falls back to the neutral color and a valid, undescribed state when every option is omitted", () => {
 		expect(resolveFieldWiring("username", {})).toEqual({
 			resolvedColor: "neutral",
-			resolvedInvalid: false,
+			resolvedInvalid: undefined,
 			descriptionId: undefined,
 			errorId: undefined,
 			describedBy: undefined,
@@ -30,7 +30,7 @@ describe(resolveFieldWiring.name, () => {
 	test("marks the field invalid as soon as an error message is set", () => {
 		let wiring = resolveFieldWiring("username", { errorMessage: "Required" });
 
-		expect(wiring.resolvedInvalid).toBe(true);
+		expect(wiring.resolvedInvalid).toBe("true");
 		expect(wiring.errorId).toBe("username-error");
 	});
 
@@ -38,8 +38,33 @@ describe(resolveFieldWiring.name, () => {
 		expect(
 			resolveFieldWiring("username", { errorMessage: "Required", ariaInvalid: false })
 				.resolvedInvalid,
-		).toBe(false);
-		expect(resolveFieldWiring("username", { ariaInvalid: true }).resolvedInvalid).toBe(true);
+		).toBeUndefined();
+		expect(resolveFieldWiring("username", { ariaInvalid: true }).resolvedInvalid).toBe("true");
+	});
+
+	/**
+	 * The resolved state is rendered straight into an attribute, and `aria-invalid`
+	 * takes a token rather than a flag: a boolean reaching it is serialized as the
+	 * bare attribute name, which is an empty value ARIA resolves to its default of
+	 * valid — so an invalid field would be announced as fine. Every accepted input
+	 * has to leave here as text or as nothing.
+	 */
+	test("resolves every accepted input to an aria-invalid token or to nothing", () => {
+		let states = [true, "true", "grammar", "spelling", false, "false", undefined] as const;
+
+		let resolved = states.map(
+			(ariaInvalid) => resolveFieldWiring("username", { ariaInvalid }).resolvedInvalid,
+		);
+
+		expect(resolved).toEqual([
+			"true",
+			"true",
+			"grammar",
+			"spelling",
+			undefined,
+			undefined,
+			undefined,
+		]);
 	});
 
 	test("reserves a description id only once a description is set", () => {

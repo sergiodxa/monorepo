@@ -34,7 +34,7 @@ const DEFAULT_COLOR: Marker.Color = "neutral";
  * covers the progress-marker case — overrides this to `aria-hidden={false}`
  * so that control still reaches assistive technology.
  */
-const DEFAULT_ICON_ARIA_HIDDEN = true;
+const DEFAULT_ICON_ARIA_HIDDEN = "true";
 
 /**
  * `role` applied through {@link attrs} when `variant` is `"separator"`,

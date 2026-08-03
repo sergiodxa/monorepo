@@ -63,7 +63,7 @@ const DEFAULT_TRIGGER_TYPE: NonNullable<Select.TriggerProps["type"]> = "button";
  * default chevron glyph unless a consumer overrides it, keeping the
  * decorative icon out of the accessibility tree.
  */
-const DEFAULT_ICON_ARIA_HIDDEN = true;
+const DEFAULT_ICON_ARIA_HIDDEN = "true";
 
 /**
  * Prop types for {@link Select} and its compound parts.
@@ -358,7 +358,7 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 								fg("neutral.muted"),
 							]}
 						>
-							<ChevronDownIcon aria-hidden />
+							<ChevronDownIcon />
 						</span>
 					</>
 				)}

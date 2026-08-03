@@ -30,7 +30,7 @@ const DEFAULT_IS_DROP_TARGET = false;
  * region, so assistive technology gains nothing from encountering the bar
  * itself.
  */
-const DEFAULT_ARIA_HIDDEN = true;
+const DEFAULT_ARIA_HIDDEN = "true";
 
 /**
  * Prop types for {@link DropIndicator}.

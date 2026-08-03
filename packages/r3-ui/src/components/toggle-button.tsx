@@ -43,6 +43,32 @@ const DEFAULT_GROUP_ROLE = "toolbar";
 const DEFAULT_GROUP_ORIENTATION: ToggleButtonGroup.Orientation = "horizontal";
 
 /**
+ * Folds the pressed state a consumer passed into the token the host renders.
+ *
+ * `aria-pressed` takes a boolean in the prop type because `aria-pressed={isMuted}`
+ * is how a consumer holds that state, and text in the attribute because that is
+ * what ARIA reads — a `true` would be serialized the way HTML wants booleans
+ * written, as the bare name, and a `false` would vanish. Both break more than the
+ * announcement: this component's own styling matches `&[aria-pressed="true"]`, and
+ * {@link pressToggle} reads the attribute back at click time, so an unpressed
+ * toggle would render with no toggle semantics at all and a pressed one would
+ * render looking unpressed.
+ *
+ * `"false"` is kept rather than dropped, unlike a valid field's `aria-invalid`:
+ * absence there means valid, but absence here means the button is not a toggle.
+ *
+ * @param pressed The state as the consumer expressed it.
+ * @returns The token to render.
+ */
+function resolveAriaPressed(
+	pressed: ToggleButton.Props["aria-pressed"],
+): "true" | "false" | "mixed" {
+	if (pressed === "mixed") return "mixed";
+	if (pressed === true || pressed === "true") return "true";
+	return "false";
+}
+
+/**
  * Prop types for {@link ToggleButton}.
  */
 export namespace ToggleButton {
@@ -120,10 +146,11 @@ export namespace ToggleButton {
  */
 export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 	return () => {
-		let { color, variant, size, children, mix, ...rest } = handle.props;
+		let { color, variant, size, children, mix, "aria-pressed": pressed, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
+		let resolvedPressed = resolveAriaPressed(pressed);
 
 		warnIfNoAccessibleName(
 			handle.props,
@@ -134,6 +161,7 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 		return (
 			<button
 				{...rest}
+				aria-pressed={resolvedPressed}
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}

@@ -72,14 +72,14 @@ const DEFAULT_LIVE: Toast.Live = "polite";
  * overrides it, so assistive technology re-reads the whole toast on update
  * instead of only the part that changed.
  */
-const DEFAULT_ARIA_ATOMIC = true;
+const DEFAULT_ARIA_ATOMIC = "true";
 
 /**
  * `aria-hidden="true"` applied to {@link Toast.Icon} and {@link Toast.Loader}
  * through {@link attrs} unless a consumer overrides it, keeping a purely
  * decorative graphic out of the accessibility tree.
  */
-const DEFAULT_GRAPHIC_ARIA_HIDDEN = true;
+const DEFAULT_GRAPHIC_ARIA_HIDDEN = "true";
 
 /**
  * `type="button"` default applied to {@link Toast.Action} and
@@ -630,7 +630,7 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 					mix,
 				]}
 			>
-				<XIcon aria-hidden size={16} />
+				<XIcon size={16} />
 			</button>
 		);
 	};

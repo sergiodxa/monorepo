@@ -194,7 +194,7 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 					mix,
 				]}
 			>
-				<ChevronDownIcon aria-hidden />
+				<ChevronDownIcon />
 			</button>
 		);
 	};

@@ -243,7 +243,14 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 				{...rest}
 				data-slot="attachment"
 				data-state={resolvedState}
-				aria-busy={isBusy || undefined}
+				/*
+				 * The token, not the boolean: `aria-busy` is an ARIA attribute
+				 * whose value is text, and a `true` here would be serialized as
+				 * the bare attribute name — an empty value it does not recognize,
+				 * which resolves to its default of not-busy and would leave an
+				 * uploading attachment announced as settled.
+				 */
+				aria-busy={isBusy ? "true" : undefined}
 				mix={[
 					relative(),
 					rounded("lg"),

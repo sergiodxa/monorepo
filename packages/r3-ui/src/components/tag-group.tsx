@@ -287,7 +287,7 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 					mix,
 				]}
 			>
-				<XIcon aria-hidden size={12} />
+				<XIcon size={12} />
 			</Button>
 		);
 	};
