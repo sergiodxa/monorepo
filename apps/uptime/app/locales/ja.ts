@@ -1079,6 +1079,65 @@ export default {
 			},
 		},
 
+		teamDigest: {
+			action: "ダッシュボードを開く",
+			footer: "このメールは、あなたがUptimeの{{team}}のメンバーであるため送信されました。",
+			manageAction: "受け取るメールを選ぶ",
+
+			status: {
+				up: "正常",
+				degraded: "低下",
+				down: "ダウン",
+				noData: "未チェック",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cronジョブ",
+			},
+
+			columns: {
+				monitor: "モニター",
+				status: "ステータス",
+				uptime: "稼働率",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "稼働率{{value}}%",
+				legend: {
+					up: "正常",
+					degraded: "低下",
+					down: "ダウン",
+					noData: "データなし",
+				},
+			},
+
+			daily: {
+				subject_other: "{{team}}：昨日はモニター{{count}}件中{{up}}件が正常",
+				subjectAll_other: "{{team}}：昨日はモニター{{count}}件すべてが正常",
+				preview: "{{team}}の直近1日分のチェック結果",
+				heading: "昨日の{{team}}",
+				summaryAll_other: "{{date}}はモニター{{count}}件すべてが正常でした。",
+				summary_other: "{{date}}はモニター{{count}}件中{{up}}件が正常でした。",
+			},
+
+			weekly: {
+				subject_other: "{{team}}：1週間でモニター{{count}}件中{{up}}件が正常",
+				subjectAll_other: "{{team}}：1週間でモニター{{count}}件すべてが正常",
+				preview: "{{team}}の過去7日間のチェック結果",
+				heading: "過去7日間の{{team}}",
+				summaryAll_other: "モニター{{count}}件すべてが毎日正常でした。",
+				summary_other: "モニター{{count}}件中{{up}}件が毎日正常でした。",
+			},
+		},
+
 		trial: {
 			stopAction: "配信を停止する",
 			stop: "1回のクリックで、監視をご依頼いただいたすべてのURLのチェックを終了し、メールアドレスとデータを削除します。またいつでも当サイトからやり直せます。",
@@ -3404,6 +3463,32 @@ export default {
 					},
 
 					cta: "言語を保存",
+				},
+			},
+
+			emails: {
+				title: "メール",
+				description: "お送りするメールを選択してください。",
+
+				card: {
+					title: "メール通知",
+					description: "所属しているすべてのチームに適用されます。アラートと招待には影響しません。",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "モニターの日次レポート",
+						description: "毎朝、チームごとに1通、前日の各モニターの状態をまとめてお送りします。",
+					},
+					teamWeeklyDigest: {
+						name: "モニターの週次レポート",
+						description:
+							"月曜日に、過去7日間の同じレポートを、1週間の稼働率を日ごとに添えてお送りします。",
+					},
+				},
+
+				form: {
+					cta: "メール設定を保存",
 				},
 			},
 

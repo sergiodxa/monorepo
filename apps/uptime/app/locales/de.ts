@@ -1111,6 +1111,73 @@ export default {
 			},
 		},
 
+		teamDigest: {
+			action: "Dashboard öffnen",
+			footer: "Sie erhalten diese E-Mail, weil Sie Mitglied von {{team}} auf Uptime sind.",
+			manageAction: "Wählen, welche E-Mails Sie erhalten",
+
+			status: {
+				up: "Erreichbar",
+				degraded: "Beeinträchtigt",
+				down: "Ausgefallen",
+				noData: "Nicht geprüft",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron-Job",
+			},
+
+			columns: {
+				monitor: "Monitor",
+				status: "Status",
+				uptime: "Verfügbarkeit",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% Verfügbarkeit",
+				legend: {
+					up: "Erreichbar",
+					degraded: "Beeinträchtigt",
+					down: "Ausgefallen",
+					noData: "Keine Daten",
+				},
+			},
+
+			daily: {
+				subject_one: "{{team}}: der Monitor braucht einen Blick",
+				subject_other: "{{team}}: {{up}} von {{count}} Monitoren gestern erreichbar",
+				subjectAll_one: "{{team}}: der Monitor war gestern erreichbar",
+				subjectAll_other: "{{team}}: alle {{count}} Monitore gestern erreichbar",
+				preview: "Der letzte vollständige Tag an Prüfungen bei {{team}}",
+				heading: "Gestern bei {{team}}",
+				summaryAll_one: "Der Monitor des Teams war am {{date}} erreichbar.",
+				summaryAll_other: "Alle {{count}} Monitore waren am {{date}} erreichbar.",
+				summary_one: "Der Monitor des Teams war am {{date}} nicht erreichbar.",
+				summary_other: "{{up}} von {{count}} Monitoren waren am {{date}} erreichbar.",
+			},
+
+			weekly: {
+				subject_one: "{{team}}: der Monitor hatte diese Woche einen schlechten Tag",
+				subject_other: "{{team}}: {{up}} von {{count}} Monitoren die ganze Woche erreichbar",
+				subjectAll_one: "{{team}}: der Monitor war die ganze Woche erreichbar",
+				subjectAll_other: "{{team}}: alle {{count}} Monitore die ganze Woche erreichbar",
+				preview: "Die letzten sieben Tage an Prüfungen bei {{team}}",
+				heading: "Die letzten sieben Tage bei {{team}}",
+				summaryAll_one: "Der Monitor des Teams war an jedem Tag erreichbar.",
+				summaryAll_other: "Alle {{count}} Monitore waren an jedem Tag erreichbar.",
+				summary_one: "Der Monitor des Teams war nicht an jedem Tag erreichbar.",
+				summary_other: "{{up}} von {{count}} Monitoren waren an jedem Tag erreichbar.",
+			},
+		},
+
 		trial: {
 			stopAction: "Diese E-Mails beenden",
 			stop: "Ein Klick beendet alle URLs, um deren Beobachtung Sie uns gebeten haben, und löscht Ihre Adresse samt Daten. Sie können jederzeit über unsere Website neu beginnen.",
@@ -3470,6 +3537,34 @@ export default {
 					},
 
 					cta: "Sprache speichern",
+				},
+			},
+
+			emails: {
+				title: "E-Mails",
+				description: "Wählen Sie, welche E-Mails wir Ihnen senden.",
+
+				card: {
+					title: "E-Mail-Benachrichtigungen",
+					description:
+						"Gilt für alle Teams, bei denen Sie Mitglied sind. Benachrichtigungen und Einladungen sind davon nicht betroffen.",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "Täglicher Monitor-Bericht",
+						description:
+							"Jeden Morgen eine E-Mail pro Team mit dem Zustand jedes seiner Monitore am Vortag.",
+					},
+					teamWeeklyDigest: {
+						name: "Wöchentlicher Monitor-Bericht",
+						description:
+							"Montags derselbe Bericht über die letzten sieben Tage, mit der Verfügbarkeit der Woche Tag für Tag.",
+					},
+				},
+
+				form: {
+					cta: "E-Mails speichern",
 				},
 			},
 

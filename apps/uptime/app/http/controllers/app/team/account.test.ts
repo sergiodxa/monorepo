@@ -24,11 +24,11 @@ import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
 import type { Viewer } from "~/app/http/middleware/auth";
-import type { SelectMembership, SelectTeam } from "~/database/schema";
+import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, teams } from "~/database/schema";
+import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
 
 import * as accountModule from "./account";
@@ -86,6 +86,28 @@ async function createFixture() {
 	return { db, team, membership };
 }
 
+/**
+ * The rendered `<input>` of one email's switch. Matched on its `value`, which is what the
+ * action reads the form back by.
+ */
+function switchTag(body: string, email: OptionalEmail): string {
+	let tag = new RegExp(`<input[^>]*value="${email}"[^>]*>`).exec(body)?.[0];
+	if (tag === undefined) throw new Error(`The page rendered no switch for ${email}`);
+	return tag;
+}
+
+/**
+ * Whether one email's switch arrives on.
+ *
+ * Read off the native `checked` attribute, which is the one a browser submits from. Not off
+ * `aria-checked`: the renderer serializes a true boolean as a bare attribute and drops a false
+ * one, so there is no `"true"`/`"false"` to compare — the lookbehind is only there to keep
+ * `aria-checked` from being mistaken for it.
+ */
+function isSwitchOn(body: string, email: OptionalEmail): boolean {
+	return /(?<!aria-)\bchecked\b/.test(switchTag(body, email));
+}
+
 async function renderAccount(db: Database, team: SelectTeam, membership: SelectMembership) {
 	let router = createRouter({
 		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
@@ -116,6 +138,46 @@ describe("account page", () => {
 		expect(body).toContain(`mailto:viewer@example.com`);
 		expect(body).toContain("viewer@example.com");
 		expect(body).toContain(team.name);
+	});
+
+	/**
+	 * The Emails section is the switches, and what a switch is *worth* is whether it arrives
+	 * reflecting what the viewer chose: a checked switch that should have been off re-subscribes
+	 * the reader the moment they save anything else on the form.
+	 */
+	test("renders one switch per optional email, all on for a viewer who has never chosen", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await renderAccount(db, team, membership);
+		let body = await response.text();
+
+		expect(body).toContain(en.page.account.emails.title);
+		expect(body.match(/name="emails"/g)).toHaveLength(optionalEmails.length);
+
+		for (let email of optionalEmails) {
+			// Checked is subscribed, and the absence of a stored refusal is consent.
+			expect(isSwitchOn(body, email)).toBe(true);
+			expect(body).toContain(en.page.account.emails.list[email].name);
+		}
+	});
+
+	test("renders the switch of an email the viewer turned off as unchecked, leaving the rest on", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			userPreferences,
+			{
+				id: crypto.randomUUID(),
+				subject_id: membership.subject_id,
+				unsubscribed_emails: ["teamDailyDigest"],
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await renderAccount(db, team, membership);
+		let body = await response.text();
+
+		expect(isSwitchOn(body, "teamDailyDigest")).toBe(false);
+		expect(isSwitchOn(body, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("shows the Leave button only for a membership where the viewer is a plain member, not the owner", async () => {

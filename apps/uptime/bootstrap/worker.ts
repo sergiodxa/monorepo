@@ -39,6 +39,7 @@ import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
 import { ReportCostsJob } from "~/app/jobs/report-costs";
 import { SendFunnelReportJob } from "~/app/jobs/send-funnel-report";
+import { SendTeamDigestsJob } from "~/app/jobs/send-team-digests";
 import { SendTrialDigestsJob } from "~/app/jobs/send-trial-digests";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
@@ -81,6 +82,15 @@ const QueueMessageSchema = s.variant("type", {
 	checkTrialWatches: s.object({ type: s.literal("checkTrialWatches") }),
 	sendTrialDigests: s.object({ type: s.literal("sendTrialDigests") }),
 	sendFunnelReport: s.object({ type: s.literal("sendFunnelReport") }),
+	/**
+	 * One of the two team digests. The period is in the message rather than in the type
+	 * because one job sends both — see `SendTeamDigestsJob` — so the two triggers that
+	 * enqueue it differ by this field and nothing else.
+	 */
+	sendTeamDigests: s.object({
+		type: s.literal("sendTeamDigests"),
+		period: s.enum_(["daily", "weekly"]),
+	}),
 	/**
 	 * One monitor status transition to alert on, enqueued by whichever sweep detected it
 	 * so the notification never runs on the sweep's critical path. The statuses are
@@ -242,6 +252,30 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 	if (controller.cron === "0 7 * * *") {
 		waitUntil(sendQueueMessage({ type: "sendFunnelReport" }));
 	}
+
+	/**
+	 * Daily at 8 AM UTC: mail every team's members yesterday's monitor digest.
+	 *
+	 * After the 01:00 roll-up, because that is what writes the day this reports, and on its own
+	 * hour rather than sharing 06:00 or 07:00 so a failure in the SSL sweep, the trial digests or
+	 * the funnel report neither delays nor is delayed by mail going to paying customers. It is
+	 * also the last of the daily triggers, which makes it the most humane hour of the five for
+	 * something a person reads.
+	 */
+	if (controller.cron === "0 8 * * *") {
+		waitUntil(sendQueueMessage({ type: "sendTeamDigests", period: "daily" }));
+	}
+
+	/**
+	 * Mondays at 9 AM UTC: the same digest over the last seven days.
+	 *
+	 * Monday because the week it reports is the one that just ended, and an hour after the daily
+	 * one because on this day a member gets both — the two are separate switches and a reader who
+	 * turned one off still gets the other, so neither may depend on the other having run.
+	 */
+	if (controller.cron === "0 9 * * 1") {
+		waitUntil(sendQueueMessage({ type: "sendTeamDigests", period: "weekly" }));
+	}
 }
 
 export default {
@@ -368,6 +402,9 @@ export default {
 						break;
 					case "sendFunnelReport":
 						waitUntil(SendFunnelReportJob.run({ message, uptime }));
+						break;
+					case "sendTeamDigests":
+						waitUntil(SendTeamDigestsJob.run({ message, uptime }));
 						break;
 					case "notify":
 						waitUntil(NotifyJob.run({ message, uptime }));

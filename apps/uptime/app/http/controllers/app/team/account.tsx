@@ -4,42 +4,56 @@
  * every team the viewer belongs to.
  *
  * Renders the account page body as a series of card-boxed sections (Profile,
- * Language, Your Teams), matching the same section-header-plus-bordered-card
+ * Language, Emails, Your Teams), matching the same section-header-plus-bordered-card
  * layout used across this app's other settings pages. The "Leave" action per team
  * only shows for members who aren't the owner, and is gated behind a confirmation
  * dialog like every other destructive action in this app.
+ *
+ * The Emails section carries the id every digest's footer link and unsubscribe header
+ * ends in (`EMAIL_PREFERENCES_ANCHOR`), so a reader who followed one of those links
+ * lands on the switches rather than at the top of the page. It is on this page and not
+ * in team settings because the choice belongs to the person: somebody in three teams
+ * turns a digest off once, and it stops for all three.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { LogOutIcon, PlusIcon } from "@pkg/lucide-remix";
-import { AlertDialog, Button, Empty, Select, Table } from "@pkg/r3-ui";
+import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { boxSizing, hstack, shrink, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { is, m, maxIs, mi, p } from "@pkg/u/size";
+import { is, m, maxIs, mi, p, pis } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
+import type { OptionalEmail } from "~/database/schema";
+
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
+import { EMAIL_PREFERENCES_ANCHOR } from "~/app/emails/shared/team-digest";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { supportedLanguages } from "~/database/schema";
+import { optionalEmails, supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
 import Field from "~/resources/components/field";
 import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/** DOM id of one email's description, wired to its switch through `aria-describedby`. */
+function emailDescriptionId(email: OptionalEmail) {
+	return `email-${email}-description`;
+}
 
 /** GET /app/:team/account — the signed-in user's account settings. */
 export default createAction(routes.app.team.account, {
@@ -185,6 +199,75 @@ export default createAction(routes.app.team.account, {
 											{ctx.i18next.t("page.account.form.actions.cancel")}
 										</Button>
 										<Button type="submit">{ctx.i18next.t("page.account.language.form.cta")}</Button>
+									</div>
+								</form>
+							</div>
+						</section>
+
+						{/* Emails */}
+						<section
+							id={EMAIL_PREFERENCES_ANCHOR}
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+						>
+							<div mix={[vstack({ gap: "4px" })]}>
+								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
+									{ctx.i18next.t("page.account.emails.title")}
+								</h2>
+								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
+									{ctx.i18next.t("page.account.emails.description")}
+								</p>
+							</div>
+
+							<div mix={[rounded("12px"), border({ color: "neutral", width: 1 }), overflow()]}>
+								<form method="post" action={routes.accountActions.updateEmails.href()}>
+									<div
+										mix={[
+											p("20px", "24px"),
+											borderEdge("block-end", { color: "neutral", width: 1 }),
+										]}
+									>
+										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
+											{ctx.i18next.t("page.account.emails.card.title")}
+										</h3>
+										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("page.account.emails.card.description")}
+										</p>
+									</div>
+
+									<div mix={[p("24px"), vstack({ gap: "20px" })]}>
+										{optionalEmails.map((email) => (
+											<div key={email} mix={[vstack({ gap: "4px" })]}>
+												{/*
+												 * Checked means subscribed, and every switch starts checked for a
+												 * member who has never been here: the stored preference is the list
+												 * of emails they turned off, so the absence of one is consent.
+												 */}
+												<Switch
+													name="emails"
+													value={email}
+													defaultChecked={UserPreferences.wants(preferences, email)}
+													aria-describedby={emailDescriptionId(email)}
+												>
+													{ctx.i18next.t(`page.account.emails.list.${email}.name`)}
+												</Switch>
+												<Description id={emailDescriptionId(email)} mix={pis("1.75rem")}>
+													{ctx.i18next.t(`page.account.emails.list.${email}.description`)}
+												</Description>
+											</div>
+										))}
+									</div>
+
+									<div
+										mix={[
+											p("16px", "24px"),
+											borderEdge("block-start", { color: "neutral", width: 1 }),
+											hstack({ justify: "end", gap: "8px" }),
+										]}
+									>
+										<Button type="reset" variant="outline">
+											{ctx.i18next.t("page.account.form.actions.cancel")}
+										</Button>
+										<Button type="submit">{ctx.i18next.t("page.account.emails.form.cta")}</Button>
 									</div>
 								</form>
 							</div>

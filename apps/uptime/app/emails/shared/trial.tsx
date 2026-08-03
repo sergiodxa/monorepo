@@ -30,6 +30,7 @@ import { formatDateTime } from "@pkg/dates";
 import { Email } from "@pkg/mail";
 
 import { UptimeBar } from "~/app/emails/shared/uptime-bar";
+import { APP_ORIGIN } from "~/app/lib/origin";
 
 /**
  * Result of one check on a watched URL. The public trial is HTTP only, so these three
@@ -41,9 +42,6 @@ import { UptimeBar } from "~/app/emails/shared/uptime-bar";
  * these emails to match it would mean copy for states no reader of theirs can reach.
  */
 export type TrialStatus = "up" | "degraded" | "down";
-
-/** Origin the unsubscribe link points at; the same host the app is served from. */
-const APP_ORIGIN = "https://uptime.sergiodxa.com";
 
 /**
  * The unsubscribe endpoint for one lead, which is the same URL under two methods.

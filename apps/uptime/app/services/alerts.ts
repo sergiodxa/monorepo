@@ -41,6 +41,7 @@ import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
+import { absoluteUrl } from "~/app/lib/origin";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
@@ -54,15 +55,12 @@ import routes from "~/routes/web";
 const MAX_CONSECUTIVE_SENDS = 10;
 
 /**
- * Production origin for links inside alert messages. Background jobs have no request
- * to derive an origin from, so this is a fixed constant — it'll need to move to this
- * app's own custom domain at the Phase 10 cutover.
+ * Builds an absolute dashboard link from a route's relative `href()` path. Kept as its own
+ * name because every call site here is about a dashboard page; the origin it resolves against
+ * is shared with every other email link (`~/app/lib/origin`).
  */
-const DASHBOARD_ORIGIN = "https://uptime.sergiodxa.com";
-
-/** Builds an absolute dashboard link from a route's relative `href()` path. */
 export function dashboardUrl(path: string): string {
-	return `${DASHBOARD_ORIGIN}${path}`;
+	return absoluteUrl(path);
 }
 
 export type AlertEventType = SelectAlertEvent["event_type"];

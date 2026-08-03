@@ -1,7 +1,6 @@
 /**
  * The arithmetic the free-watch reports share: turning a target's checks into the segments of
- * an uptime bar, turning a success ratio into the percentage those emails print, and reading
- * a watch's running totals off as the three numbers under the bar.
+ * an uptime bar, and reading a watch's running totals off as the three numbers under it.
  *
  * Shared because the same bar is drawn at three scales by three different senders — one
  * segment per hour over a day for the daily digest, one per day over a week for the wrap-up,
@@ -9,6 +8,10 @@
  * second free week — and the only thing that differs between them is the period. Keeping the
  * bucketing in one place is what stops a bar in one email disagreeing with the same data in
  * another.
+ *
+ * The two rules every uptime report shares, whoever reads it, live in
+ * `~/app/lib/uptime-report` instead: which status wins when several checks fall in one
+ * period, and how a ratio is printed.
  *
  * Deliberately not in `~/app/emails/`: nothing here renders, and its callers are assembling
  * data before an email class ever exists.
@@ -21,12 +24,7 @@ import type { TrialStats } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { MonitorStatus, SelectTrialWatch } from "~/database/schema";
 
-/**
- * Severity of each status, for collapsing a period's checks into the one segment a bar draws.
- * The worst wins: a summary that averaged an outage away would hide the only thing in it a
- * reader could act on.
- */
-const SEVERITY: Record<MonitorStatus, number> = { up: 0, degraded: 1, down: 2 };
+import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
 
 /** One completed check, as the two facts a bar segment is built from. */
 export interface Segmentable {
@@ -60,24 +58,10 @@ export function segmentsOver(
 		let index = Math.floor((result.checked_at - start) / periodMs);
 		if (index < 0 || index >= periods) continue;
 
-		let current = segments[index] ?? null;
-		if (current === null || SEVERITY[result.status] > SEVERITY[current]) {
-			segments[index] = result.status;
-		}
+		segments[index] = worstStatus(segments[index] ?? null, result.status);
 	}
 
 	return segments;
-}
-
-/**
- * A success ratio as the percentage a digest prints, without its sign — the emails add that
- * themselves, since where the symbol goes is a property of the language.
- *
- * @param ratio - Healthy checks over total checks, between 0 and 1.
- * @returns The percentage to one decimal, e.g. `"99.4"`.
- */
-export function formatUptime(ratio: number): string {
-	return (ratio * 100).toFixed(1);
 }
 
 /**

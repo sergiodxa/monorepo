@@ -1116,6 +1116,73 @@ export default {
 			},
 		},
 
+		teamDigest: {
+			action: "Ouvrir le tableau de bord",
+			footer: "Vous avez reçu cet e-mail parce que vous êtes membre de {{team}} sur Uptime.",
+			manageAction: "Choisir les e-mails que vous recevez",
+
+			status: {
+				up: "En ligne",
+				degraded: "Dégradé",
+				down: "Hors ligne",
+				noData: "Non vérifié",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+			},
+
+			columns: {
+				monitor: "Moniteur",
+				status: "Statut",
+				uptime: "Disponibilité",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{{value}} %",
+			},
+
+			bar: {
+				uptime: "{{value}} % de disponibilité",
+				legend: {
+					up: "En ligne",
+					degraded: "Dégradé",
+					down: "Hors ligne",
+					noData: "Aucune donnée",
+				},
+			},
+
+			daily: {
+				subject_one: "{{team}} : le moniteur mérite un coup d'œil",
+				subject_other: "{{team}} : {{up}} moniteurs sur {{count}} en ligne hier",
+				subjectAll_one: "{{team}} : le moniteur était en ligne hier",
+				subjectAll_other: "{{team}} : les {{count}} moniteurs en ligne hier",
+				preview: "La dernière journée complète de vérifications sur {{team}}",
+				heading: "Hier sur {{team}}",
+				summaryAll_one: "Le moniteur de l'équipe était en ligne le {{date}}.",
+				summaryAll_other: "Les {{count}} moniteurs étaient en ligne le {{date}}.",
+				summary_one: "Le moniteur de l'équipe n'était pas en ligne le {{date}}.",
+				summary_other: "{{up}} moniteurs sur {{count}} étaient en ligne le {{date}}.",
+			},
+
+			weekly: {
+				subject_one: "{{team}} : le moniteur a eu une mauvaise journée cette semaine",
+				subject_other: "{{team}} : {{up}} moniteurs sur {{count}} en ligne toute la semaine",
+				subjectAll_one: "{{team}} : le moniteur est resté en ligne toute la semaine",
+				subjectAll_other: "{{team}} : les {{count}} moniteurs en ligne toute la semaine",
+				preview: "Les sept derniers jours de vérifications sur {{team}}",
+				heading: "Les sept derniers jours sur {{team}}",
+				summaryAll_one: "Le moniteur de l'équipe était en ligne chaque jour.",
+				summaryAll_other: "Les {{count}} moniteurs étaient en ligne chaque jour.",
+				summary_one: "Le moniteur de l'équipe n'a pas été en ligne tous les jours.",
+				summary_other: "{{up}} moniteurs sur {{count}} étaient en ligne chaque jour.",
+			},
+		},
+
 		trial: {
 			stopAction: "Arrêter ces e-mails",
 			stop: "Un clic met fin à toutes les URL que vous nous avez demandé de surveiller et supprime votre adresse et ses données. Vous pouvez recommencer à tout moment depuis notre site.",
@@ -3468,6 +3535,34 @@ export default {
 					},
 
 					cta: "Enregistrer la langue",
+				},
+			},
+
+			emails: {
+				title: "E-mails",
+				description: "Choisissez les e-mails que nous vous envoyons.",
+
+				card: {
+					title: "Notifications par e-mail",
+					description:
+						"S'appliquent à toutes les équipes dont vous êtes membre. Les alertes et les invitations ne sont pas concernées.",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "Rapport quotidien des moniteurs",
+						description:
+							"Chaque matin, un e-mail par équipe avec l'état de chacun de ses moniteurs sur la journée précédente.",
+					},
+					teamWeeklyDigest: {
+						name: "Rapport hebdomadaire des moniteurs",
+						description:
+							"Le lundi, le même rapport sur les sept derniers jours, avec la disponibilité de la semaine jour par jour.",
+					},
+				},
+
+				form: {
+					cta: "Enregistrer les e-mails",
 				},
 			},
 

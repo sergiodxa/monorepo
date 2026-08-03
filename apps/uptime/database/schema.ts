@@ -47,6 +47,17 @@ export const memberships = table({
 		subject_id: c.text(),
 		team_id: c.text(),
 		role: c.enum(["member", "admin"]).default("member"),
+		/**
+		 * When this membership was last sent the daily and the weekly team digest, or `null`
+		 * for one that never has been. The pair is the unit both stamps are on: one person in
+		 * three teams receives three digests, so a stamp on the subject would suppress two of
+		 * them and a stamp on the team would suppress every member but the first.
+		 *
+		 * Each is written only after a send the transport accepted, which is what makes a
+		 * re-delivered trigger a no-op and a failed send a retry.
+		 */
+		last_daily_digest_at: c.integer().nullable(),
+		last_weekly_digest_at: c.integer().nullable(),
 	},
 });
 
@@ -147,6 +158,23 @@ export const supportedLanguages = ["en", "es", "de", "ja", "fr", "it"] as const;
 
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
+/**
+ * Every email a member can turn off, and the value set of
+ * `user_preferences.unsubscribed_emails`. Declared here, next to the column, so adding a
+ * third digest is one edit rather than one per repeated union — the same reason
+ * {@link apiKeyScopes} and {@link monitorStatuses} live beside theirs.
+ *
+ * It holds the *optional* mail only. An invite, an alert and a password-style transactional
+ * message are each the answer to something somebody did, so none of them belongs in a list
+ * whose whole purpose is to be switched off; a digest nobody asked for by name does.
+ *
+ * The settings page renders one switch per entry in this order, and each key names its own
+ * copy under `page.account.emails.list.*` in the locale files.
+ */
+export const optionalEmails = ["teamDailyDigest", "teamWeeklyDigest"] as const;
+
+export type OptionalEmail = (typeof optionalEmails)[number];
+
 export const userPreferences = table({
 	name: "user_preferences",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -156,6 +184,17 @@ export const userPreferences = table({
 		updated_at: c.integer(),
 		subject_id: c.text().unique(),
 		preferred_language: c.enum(supportedLanguages).nullable(),
+		/**
+		 * The {@link optionalEmails} this subject has turned off, or `null` for one who has
+		 * turned nothing off — so the default is subscribed and a member who never opened the
+		 * settings page needs no row here at all.
+		 *
+		 * Stored as the refusals rather than as the acceptances because that is what makes the
+		 * default hold without a backfill: a new digest is opt-out for everybody the moment it
+		 * ships, with no row rewritten and no column added. An unknown string is ignored on
+		 * read (see `UserPreferences.wants`), which is what makes retiring an email safe.
+		 */
+		unsubscribed_emails: (c.json() as ColumnBuilder<Array<OptionalEmail>>).nullable(),
 	},
 });
 

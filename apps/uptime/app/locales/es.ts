@@ -1106,6 +1106,73 @@ export default {
 			},
 		},
 
+		teamDigest: {
+			action: "Abrir el panel de control",
+			footer: "Ha recibido este correo porque es miembro de {{team}} en Uptime.",
+			manageAction: "Elija qué correos recibe",
+
+			status: {
+				up: "Activo",
+				degraded: "Degradado",
+				down: "Caído",
+				noData: "Sin comprobar",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+			},
+
+			columns: {
+				monitor: "Monitor",
+				status: "Estado",
+				uptime: "Disponibilidad",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% de disponibilidad",
+				legend: {
+					up: "Activo",
+					degraded: "Degradado",
+					down: "Caído",
+					noData: "Sin datos",
+				},
+			},
+
+			daily: {
+				subject_one: "{{team}}: el monitor necesita una revisión",
+				subject_other: "{{team}}: {{up}} de {{count}} monitores activos ayer",
+				subjectAll_one: "{{team}}: el monitor estuvo activo ayer",
+				subjectAll_other: "{{team}}: los {{count}} monitores activos ayer",
+				preview: "El último día completo de comprobaciones en {{team}}",
+				heading: "Ayer en {{team}}",
+				summaryAll_one: "El monitor del equipo estuvo activo el {{date}}.",
+				summaryAll_other: "Los {{count}} monitores estuvieron activos el {{date}}.",
+				summary_one: "El monitor del equipo no estuvo activo el {{date}}.",
+				summary_other: "{{up}} de {{count}} monitores estuvieron activos el {{date}}.",
+			},
+
+			weekly: {
+				subject_one: "{{team}}: el monitor tuvo un mal día esta semana",
+				subject_other: "{{team}}: {{up}} de {{count}} monitores activos toda la semana",
+				subjectAll_one: "{{team}}: el monitor estuvo activo toda la semana",
+				subjectAll_other: "{{team}}: los {{count}} monitores activos toda la semana",
+				preview: "Los últimos siete días de comprobaciones en {{team}}",
+				heading: "Los últimos siete días en {{team}}",
+				summaryAll_one: "El monitor del equipo estuvo activo todos los días.",
+				summaryAll_other: "Los {{count}} monitores estuvieron activos todos los días.",
+				summary_one: "El monitor del equipo no estuvo activo todos los días.",
+				summary_other: "{{up}} de {{count}} monitores estuvieron activos todos los días.",
+			},
+		},
+
 		trial: {
 			stopAction: "Dejar de recibir estos correos",
 			stop: "Un clic termina con todas las URL que nos pidió vigilar y borra su dirección y sus datos. Puede volver a empezar cuando quiera desde nuestro sitio web.",
@@ -3456,6 +3523,34 @@ export default {
 					},
 
 					cta: "Guardar idioma",
+				},
+			},
+
+			emails: {
+				title: "Correos",
+				description: "Elija qué correos le enviamos.",
+
+				card: {
+					title: "Notificaciones por correo electrónico",
+					description:
+						"Se aplican a todos los equipos a los que pertenece. Las alertas y las invitaciones no se ven afectadas.",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "Resumen diario de monitores",
+						description:
+							"Cada mañana, un correo por equipo con el estado de cada uno de sus monitores durante el día anterior.",
+					},
+					teamWeeklyDigest: {
+						name: "Resumen semanal de monitores",
+						description:
+							"Los lunes, el mismo informe de los últimos siete días, con la disponibilidad de la semana día a día.",
+					},
+				},
+
+				form: {
+					cta: "Guardar correos",
 				},
 			},
 

@@ -21,7 +21,7 @@ import { generateUUID, isUUID } from "@pkg/uuid";
 import { inList } from "remix/data-table";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
-import type { InsertTeam } from "~/database/schema";
+import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import {
 	alertEvents,
@@ -103,6 +103,23 @@ export default class Team {
 
 		let rows = await db.findMany(teams, { where: inList("id", [...new Set(teamIds)]) });
 		return new Map(rows.map((row) => [row.id, row.owner_id]));
+	}
+
+	/**
+	 * The listed teams themselves, keyed by id, in one query.
+	 *
+	 * For the callers that start from a set of team ids rather than from one team — the digest
+	 * job, which groups its recipients by team and then needs every one of those teams' names and
+	 * slugs. A lookup per team would be one query per group to read two columns.
+	 *
+	 * A team id that names no team is absent from the map, so a caller decides what a team that
+	 * disappeared between two queries means.
+	 */
+	static async findByIds(db: Database, teamIds: string[]): Promise<Map<string, SelectTeam>> {
+		if (teamIds.length === 0) return new Map();
+
+		let rows = await db.findMany(teams, { where: inList("id", [...new Set(teamIds)]) });
+		return new Map(rows.map((row) => [row.id, row]));
 	}
 
 	/** Lists every membership row for a team. */

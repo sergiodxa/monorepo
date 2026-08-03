@@ -12,8 +12,8 @@
  * anything readable — the row would collapse and the bars would have no fill. The
  * construction that survives is different enough that parameterising the web
  * component would put two unrelated code paths in one file, so the duplication is
- * the cheaper of the two. The literal colours below are the same tokens the web
- * component asks for, read out of `resources/css/colors.css`, so the two agree.
+ * the cheaper of the two. The colours come from `shared/palette`, which holds the
+ * same tokens the web component asks for, so the two agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,20 +21,13 @@
 
 import type { Handle } from "remix/ui";
 
-/** Fill of a period every check passed; `--ui-color-success-600`, the web bar's `success.solid`. */
-const UP_COLOR = "#107f04";
-
-/** Fill of a period that answered but not well; `--ui-color-warning-600`. */
-const DEGRADED_COLOR = "#925d00";
-
-/** Fill of a period that failed; `--ui-color-danger-600`. */
-const DOWN_COLOR = "#ba2b2e";
-
-/** Fill of a period no check covers; `--ui-color-neutral-200`, the web bar's `neutral.border`. */
-const NO_DATA_COLOR = "#dde2e6";
-
-/** Caption and legend copy colour; `--ui-color-neutral-600`. */
-const LABEL_COLOR = "#636a71";
+import {
+	DEGRADED_COLOR,
+	DOWN_COLOR,
+	MUTED_COLOR,
+	NO_DATA_COLOR,
+	UP_COLOR,
+} from "~/app/emails/shared/palette";
 
 /** Height of the bar row in pixels, matching the web bar so the two read the same. */
 const BAR_HEIGHT = "32";
@@ -53,7 +46,7 @@ const SEGMENT_GAP = "2";
 const FILLER = " ";
 
 /** Shared style of every caption and legend label. */
-const LABEL_STYLE = `font-family:inherit;font-size:12px;line-height:1.5;color:${LABEL_COLOR};white-space:nowrap;`;
+const LABEL_STYLE = `font-family:inherit;font-size:12px;line-height:1.5;color:${MUTED_COLOR};white-space:nowrap;`;
 
 /** Everything a legend swatch needs except its fill, which the entry supplies. */
 const SWATCH_STYLE = `width:${SWATCH_SIZE}px;height:${SWATCH_SIZE}px;border-radius:2px;font-size:0;line-height:0;`;
@@ -83,8 +76,17 @@ export namespace UptimeBar {
 	}
 }
 
-/** Fill for a segment, total over the union so an unfilled state is impossible. */
-function fillFor(status: UptimeBar.Status): string {
+/**
+ * Fill for a status, total over the union so an unfilled state is impossible.
+ *
+ * Exported because a bar is not the only place a status is coloured — a digest that lists a
+ * team's monitors as rows paints the same four states — and two mappings of the same four
+ * words would eventually disagree about which green.
+ *
+ * @param status - Status to paint.
+ * @returns The colour, as a literal every mail client keeps.
+ */
+export function statusFill(status: UptimeBar.Status): string {
 	if (status === "up") return UP_COLOR;
 	if (status === "degraded") return DEGRADED_COLOR;
 	if (status === "down") return DOWN_COLOR;
@@ -171,7 +173,7 @@ export function UptimeBar(handle: Handle<UptimeBar.Props>) {
 												<td
 													key={index}
 													height={BAR_HEIGHT}
-													style={`height:${BAR_HEIGHT}px;background-color:${fillFor(status)};border-radius:1px;font-size:0;line-height:0;`}
+													style={`height:${BAR_HEIGHT}px;background-color:${statusFill(status)};border-radius:1px;font-size:0;line-height:0;`}
 												>
 													{FILLER}
 												</td>

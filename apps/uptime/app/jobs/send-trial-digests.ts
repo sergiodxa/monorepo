@@ -41,7 +41,8 @@ import TrialWatch, { isHealthyTrialStatus } from "~/app/data/trial-watch";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { formatUptime, segmentsOver } from "~/app/lib/trial-report";
+import { segmentsOver } from "~/app/lib/trial-report";
+import { formatUptime } from "~/app/lib/uptime-report";
 import { recordCost } from "~/app/services/cost";
 
 const MS_PER_HOUR = 60 * 60 * 1000;

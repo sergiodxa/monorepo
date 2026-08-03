@@ -1,7 +1,8 @@
 /**
  * Form actions reached from the account page rather than a specific team's URL
- * scope: creating an additional team, leaving a team, and changing the UI language
- * preference. Each only requires `requireUser` — none take a `:team` route param.
+ * scope: creating an additional team, leaving a team, changing the UI language
+ * preference, and choosing which optional emails to receive. Each only requires
+ * `requireUser` — none take a `:team` route param.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,8 +21,10 @@ import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
+import { UpdateEmailsSchema } from "~/app/http/validators/email-preferences";
 import { UpdateLanguageSchema } from "~/app/http/validators/language";
 import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
+import { optionalEmails } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** POST /actions/create-team */
@@ -72,6 +75,39 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 
 	session?.flash("toast", { intent: "success", message: `Left "${team.name}".` });
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
+});
+
+/**
+ * POST /actions/update-emails
+ *
+ * The form posts one value per switch left on, so this stores the complement: every optional
+ * email the app knows about that the viewer did not ask for. Reading the form the other way
+ * round — treating the posted values as the refusals — would be impossible, because an
+ * unchecked switch posts nothing and a form with everything off is indistinguishable from a
+ * request that touched no switch at all.
+ *
+ * Storing refusals rather than acceptances is also what makes a future digest opt-out for
+ * everybody without a backfill; see the column's docblock in `database/schema.ts`.
+ */
+export const updateEmails = createAction(routes.accountActions.updateEmails, async (ctx) => {
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
+
+	let result = await validate(ctx.formData, UpdateEmailsSchema);
+	if (isFailure(result)) return badRequest("Invalid email preferences.");
+
+	let wanted = new Set(result.data.emails);
+	let unsubscribed = optionalEmails.filter((email) => !wanted.has(email));
+
+	let db = getServiceContainer().get(Database);
+	await UserPreferences.setUnsubscribedEmails(db, viewer.id, unsubscribed);
+
+	let session = ctx.get(Session);
+	session?.flash("toast", { intent: "success", message: "Email preferences saved." });
+
+	return redirect(ctx.request.headers.get("Referer") ?? routes.home.href(), {
+		status: redirect.Status.SeeOther,
+	});
 });
 
 /** POST /actions/update-language */

@@ -1378,6 +1378,73 @@ export default {
 			},
 		},
 
+		teamDigest: {
+			action: "Open the dashboard",
+			footer: "You received this email because you are a member of {{team}} on Uptime.",
+			manageAction: "Choose which emails you get",
+
+			status: {
+				up: "Up",
+				degraded: "Degraded",
+				down: "Down",
+				noData: "Not checked",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+			},
+
+			columns: {
+				monitor: "Monitor",
+				status: "Status",
+				uptime: "Uptime",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{{value}}%",
+			},
+
+			bar: {
+				uptime: "{{value}}% uptime",
+				legend: {
+					up: "Up",
+					degraded: "Degraded",
+					down: "Down",
+					noData: "No data",
+				},
+			},
+
+			daily: {
+				subject_one: "{{team}}: the monitor needs a look",
+				subject_other: "{{team}}: {{up}} of {{count}} monitors up yesterday",
+				subjectAll_one: "{{team}}: the monitor was up yesterday",
+				subjectAll_other: "{{team}}: all {{count}} monitors up yesterday",
+				preview: "The last full day of checks on {{team}}",
+				heading: "Yesterday on {{team}}",
+				summaryAll_one: "The team's monitor was up on {{date}}.",
+				summaryAll_other: "All {{count}} monitors were up on {{date}}.",
+				summary_one: "The team's monitor was not up on {{date}}.",
+				summary_other: "{{up}} of {{count}} monitors were up on {{date}}.",
+			},
+
+			weekly: {
+				subject_one: "{{team}}: the monitor had a bad day this week",
+				subject_other: "{{team}}: {{up}} of {{count}} monitors up all week",
+				subjectAll_one: "{{team}}: the monitor was up all week",
+				subjectAll_other: "{{team}}: all {{count}} monitors up all week",
+				preview: "The last seven days of checks on {{team}}",
+				heading: "The last seven days on {{team}}",
+				summaryAll_one: "The team's monitor was up every day.",
+				summaryAll_other: "All {{count}} monitors were up every day.",
+				summary_one: "The team's monitor was not up every day.",
+				summary_other: "{{up}} of {{count}} monitors were up every day.",
+			},
+		},
+
 		trial: {
 			stopAction: "Stop these emails",
 			stop: "One click ends every URL you asked us to watch and deletes your address and its data. You can start again any time from our website.",
@@ -3710,6 +3777,34 @@ export default {
 					},
 
 					cta: "Save Language",
+				},
+			},
+
+			emails: {
+				title: "Emails",
+				description: "Choose which emails we send you.",
+
+				card: {
+					title: "Email Notifications",
+					description:
+						"These apply to every team you belong to. Alerts and invites are not affected.",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "Daily monitor digest",
+						description:
+							"Every morning, one email per team with the state of each of its monitors over the previous day.",
+					},
+					teamWeeklyDigest: {
+						name: "Weekly monitor digest",
+						description:
+							"On Mondays, the same report over the last seven days, with the week's uptime day by day.",
+					},
+				},
+
+				form: {
+					cta: "Save Emails",
 				},
 			},
 

@@ -1,8 +1,7 @@
 /**
- * Unit tests for the digest arithmetic: that a period with several checks reports the worst
- * of them, that a period with none reports nothing rather than the last known state, that
- * checks outside the range are dropped instead of clamped into the nearest period, and that
- * uptime is printed to one decimal without a sign.
+ * Unit tests for the free-watch bucketing: that a period with several checks reports the
+ * worst of them, that a period with none reports nothing rather than the last known state,
+ * and that checks outside the range are dropped instead of clamped into the nearest period.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +11,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { Segmentable } from "~/app/lib/trial-report";
 
-import { formatUptime, segmentsOver } from "~/app/lib/trial-report";
+import { segmentsOver } from "~/app/lib/trial-report";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -58,13 +57,5 @@ describe("segmentsOver", () => {
 
 	test("reports an all-empty bar for a target with no checks", () => {
 		expect(segmentsOver([], 0, HOUR, 4)).toEqual([null, null, null, null]);
-	});
-});
-
-describe("formatUptime", () => {
-	test("prints one decimal and no sign", () => {
-		expect(formatUptime(0.994)).toBe("99.4");
-		expect(formatUptime(1)).toBe("100.0");
-		expect(formatUptime(0)).toBe("0.0");
 	});
 });

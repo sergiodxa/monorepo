@@ -27,7 +27,12 @@ import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
-import { createTeam, leaveTeam, updateLanguage } from "~/app/http/controllers/actions/account";
+import {
+	createTeam,
+	leaveTeam,
+	updateEmails,
+	updateLanguage,
+} from "~/app/http/controllers/actions/account";
 import { createAlert, deleteAlert, updateAlert } from "~/app/http/controllers/actions/alerts";
 import { createApiKey, deleteApiKey } from "~/app/http/controllers/actions/api-keys";
 import {
@@ -496,6 +501,7 @@ export default function application(options: application.Options) {
 				createTeam,
 				leaveTeam,
 				updateLanguage,
+				updateEmails,
 			},
 		}),
 	);

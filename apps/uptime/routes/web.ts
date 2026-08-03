@@ -280,6 +280,12 @@ export default route({
 		createTeam: post("/actions/create-team"),
 		leaveTeam: post("/actions/leave-team"),
 		updateLanguage: post("/actions/update-language"),
+		/**
+		 * Which optional emails the viewer wants. Not team-scoped for the same reason as its
+		 * neighbours and one of its own: the choice is the person's, so somebody in three
+		 * teams turns a digest off once rather than three times.
+		 */
+		updateEmails: post("/actions/update-emails"),
 	},
 
 	/**

@@ -40,11 +40,21 @@
 			// deleting; six hours is far more than that sweep needs.
 			"0 6 * * *",
 			// Every day at 7 AM UTC - count yesterday's public-trial funnel, write the day to
-			// `trial_daily_stats`, and mail the report. Last of the daily triggers and on its own
-			// hour rather than sharing 06:00, so a failure in the SSL sweep or the digests neither
-			// delays nor is delayed by a report about them. It reads only the previous UTC day, so
-			// the midnight cleanup finished seven hours before it starts.
+			// `trial_daily_stats`, and mail the report. On its own hour rather than sharing 06:00,
+			// so a failure in the SSL sweep or the digests neither delays nor is delayed by a
+			// report about them. It reads only the previous UTC day, so the midnight cleanup
+			// finished seven hours before it starts.
 			"0 7 * * *",
+			// Every day at 8 AM UTC - mail each team's members the digest of yesterday's monitors.
+			// It reports what the 01:00 roll-up wrote, so it has to run after that, and it takes
+			// its own hour so a failure in any of the three jobs above cannot delay mail going to
+			// paying customers. Last of the daily triggers, which also makes it the most humane
+			// hour of the five for something a person reads.
+			"0 8 * * *",
+			// Mondays at 9 AM UTC - the same digest over the seven days that just ended. An hour
+			// after the daily one because on Mondays a member receives both, and the two are
+			// separate switches: neither may depend on the other having run.
+			"0 9 * * 1",
 		],
 	},
 

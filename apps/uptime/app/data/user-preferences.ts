@@ -1,6 +1,13 @@
 /**
- * Data-access model for `user_preferences`. Currently holds a single editable field
- * — the signed-in user's preferred UI language, read by `app/http/middleware/i18n.ts`.
+ * Data-access model for `user_preferences`. Holds the two choices a signed-in user makes
+ * about themselves rather than about a team: the language the UI and their email are
+ * produced in, read by `app/http/middleware/i18n.ts`, and which of the optional emails they
+ * have turned off, read by the digest job.
+ *
+ * Both are stored on one row per subject, and neither has to exist: a user who has never
+ * opened the settings page has no row, which reads as "the browser's language" and "every
+ * email". That is why {@link UserPreferences.wants} takes a nullable row instead of loading
+ * one, and why the writers below upsert.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,8 +16,9 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
+import { inList } from "remix/data-table";
 
-import type { SupportedLanguage } from "~/database/schema";
+import type { OptionalEmail, SelectUserPreferences, SupportedLanguage } from "~/database/schema";
 
 import { userPreferences } from "~/database/schema";
 
@@ -20,22 +28,87 @@ export default class UserPreferences {
 		return await db.findOne(userPreferences, { where: { subject_id: subjectId } });
 	}
 
+	/**
+	 * The preferences of every listed subject, keyed by subject id, in one query.
+	 *
+	 * Exists for the digest job, which resolves a language and an opt-out for every member of
+	 * every team in one run: a lookup per member would be one query per recipient, and the
+	 * majority of them would return nothing at all.
+	 *
+	 * A subject with no row is absent from the map rather than mapped to a default, so the
+	 * caller keeps deciding what "never set any" means.
+	 */
+	static async findBySubjectIds(
+		db: Database,
+		subjectIds: string[],
+	): Promise<Map<string, SelectUserPreferences>> {
+		if (subjectIds.length === 0) return new Map();
+
+		let rows = await db.findMany(userPreferences, {
+			where: inList("subject_id", [...new Set(subjectIds)]),
+		});
+
+		return new Map(rows.map((row) => [row.subject_id, row]));
+	}
+
 	/** Sets (or clears, when `null`) a subject's preferred UI language. */
 	static async setLanguage(db: Database, subjectId: string, language: SupportedLanguage | null) {
+		return await UserPreferences.#upsert(db, subjectId, { preferred_language: language });
+	}
+
+	/**
+	 * Records which optional emails a subject has turned off, replacing whatever was stored.
+	 *
+	 * The whole list is written rather than one flag toggled, because the settings form posts
+	 * the whole list: an unchecked switch sends no value at all, so the only reading of that
+	 * form that cannot lose a choice is "these are the emails they want, everything else they
+	 * do not".
+	 *
+	 * @param unsubscribed - The emails to stop sending; an empty list means send everything.
+	 */
+	static async setUnsubscribedEmails(
+		db: Database,
+		subjectId: string,
+		unsubscribed: OptionalEmail[],
+	) {
+		return await UserPreferences.#upsert(db, subjectId, { unsubscribed_emails: unsubscribed });
+	}
+
+	/**
+	 * Whether one optional email may be sent to the owner of these preferences.
+	 *
+	 * Takes the row rather than a subject id, so a caller that already loaded it for the
+	 * language — which every digest send does — spends no second query on the question.
+	 *
+	 * Defaults to yes in every uncertain case: no row, no list, or a list holding a string
+	 * that is no longer an email this app sends. An email is stopped only by a stored refusal
+	 * naming it, which is what keeps a retired key from silently muting a live digest.
+	 *
+	 * @param preferences - The subject's row, or `null` when they have none.
+	 * @param email - The email being sent.
+	 * @returns Whether to send it.
+	 */
+	static wants(preferences: SelectUserPreferences | null, email: OptionalEmail): boolean {
+		let unsubscribed = preferences?.unsubscribed_emails;
+		if (!Array.isArray(unsubscribed)) return true;
+		return !unsubscribed.includes(email);
+	}
+
+	/** Creates or updates the one row a subject is allowed, touching only the given fields. */
+	static async #upsert(
+		db: Database,
+		subjectId: string,
+		values: Partial<Pick<SelectUserPreferences, "preferred_language" | "unsubscribed_emails">>,
+	) {
 		let existing = await db.findOne(userPreferences, { where: { subject_id: subjectId } });
 
 		if (existing) {
-			return await db.update(
-				userPreferences,
-				existing.id,
-				{ preferred_language: language },
-				{ touch: true },
-			);
+			return await db.update(userPreferences, existing.id, values, { touch: true });
 		}
 
 		return await db.create(
 			userPreferences,
-			{ id: generateUUID(), subject_id: subjectId, preferred_language: language },
+			{ id: generateUUID(), subject_id: subjectId, ...values },
 			{ touch: true, returnRow: true },
 		);
 	}

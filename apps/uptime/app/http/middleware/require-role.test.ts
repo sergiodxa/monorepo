@@ -39,6 +39,8 @@ function createMembership(overrides: Partial<SelectMembership> = {}): SelectMemb
 		subject_id: "member_1",
 		team_id: "team_1",
 		role: "member",
+		last_daily_digest_at: null,
+		last_weekly_digest_at: null,
 		...overrides,
 	};
 }

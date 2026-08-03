@@ -20,12 +20,13 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, teams, userPreferences } from "~/database/schema";
+import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
 
 let accountActions = await import("./account");
 let createTeam = accountActions.createTeam as RequestHandler;
 let leaveTeam = accountActions.leaveTeam as RequestHandler;
+let updateEmails = accountActions.updateEmails as RequestHandler;
 let updateLanguage = accountActions.updateLanguage as RequestHandler;
 
 /** Installs `ctx.get(Auth)` directly, standing in for the real session-backed `auth()` middleware. */
@@ -41,13 +42,17 @@ function viewerMiddleware(viewer: Viewer): Middleware {
  * exercises the real router at runtime. */
 type LooseRouterMap = (target: unknown, handler: unknown) => void;
 
-/** Posts a form body to one of the account-page actions through the real action, DB, and service container. */
+/**
+ * Posts a form body to one of the account-page actions through the real action, DB, and service
+ * container. A field's value may be a list, since the email-preferences form posts one `emails`
+ * value per switch left on and a browser sends those as repeated fields rather than as one.
+ */
 async function postAccountAction(
 	action: RequestHandler,
 	route: { href: (params?: never) => string },
 	viewer: Viewer,
 	db: ReturnType<typeof createTestDatabase>["db"],
-	body: Record<string, string>,
+	body: Record<string, string | string[]>,
 	headers: Record<string, string> = {},
 ) {
 	let container = new ServiceContainer();
@@ -59,9 +64,18 @@ async function postAccountAction(
 		handler: action,
 	});
 
+	let params = new URLSearchParams();
+	for (let [name, value] of Object.entries(body)) {
+		for (let entry of Array.isArray(value) ? value : [value]) params.append(name, entry);
+	}
+
 	let request = new Request(`https://uptime.test${route.href()}`, {
 		method: "POST",
-		body: new URLSearchParams(body),
+		// Serialized rather than handed over as `URLSearchParams`, because Bun's
+		// `URLSearchParams`-backed body stream cannot be read when it is empty — and a form
+		// whose every switch is off is exactly an empty body, which the form the actions here
+		// are reached from can genuinely post.
+		body: params.toString(),
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
@@ -247,6 +261,112 @@ describe("POST /actions/leave-team", () => {
 			where: { team_id: team.id, subject_id: viewer.id },
 		});
 		expect(membership).not.toBeNull();
+	});
+});
+
+/**
+ * The action stores the *complement* of what the form posts, so every case here is really about
+ * that inversion: the switches say which emails the viewer wants, and the row says which ones we
+ * must not send.
+ */
+describe("POST /actions/update-emails", () => {
+	test("stores every optional email the viewer did not ask for", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+
+		let response = await postAccountAction(
+			updateEmails,
+			routes.accountActions.updateEmails,
+			viewer,
+			db,
+			{ emails: "teamDailyDigest" },
+			{ Referer: "https://uptime.test/app/acme/account" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe("https://uptime.test/app/acme/account");
+
+		let preferences = await db.findOne(userPreferences, { where: { subject_id: viewer.id } });
+		expect(preferences?.unsubscribed_emails).toEqual(["teamWeeklyDigest"]);
+	});
+
+	test("stores every optional email when the form posts none, since an unchecked switch posts nothing", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+
+		let response = await postAccountAction(
+			updateEmails,
+			routes.accountActions.updateEmails,
+			viewer,
+			db,
+			{},
+		);
+
+		// Turning everything off is a legal choice, not a form that failed to validate.
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(routes.home.href());
+
+		let preferences = await db.findOne(userPreferences, { where: { subject_id: viewer.id } });
+		expect(preferences?.unsubscribed_emails).toEqual([...optionalEmails]);
+	});
+
+	test("clears a stored refusal when the viewer turns an email back on", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		await db.create(
+			userPreferences,
+			{
+				id: crypto.randomUUID(),
+				subject_id: viewer.id,
+				unsubscribed_emails: ["teamDailyDigest", "teamWeeklyDigest"],
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		await postAccountAction(updateEmails, routes.accountActions.updateEmails, viewer, db, {
+			emails: [...optionalEmails],
+		});
+
+		// The whole list is replaced rather than added to, so the row is left refusing nothing
+		// and one row per subject is all there ever is.
+		let rows = await db.findMany(userPreferences, { where: { subject_id: viewer.id } });
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.unsubscribed_emails).toEqual([]);
+	});
+
+	test("keeps the language preference on the row it shares with the emails", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		await db.create(
+			userPreferences,
+			{ id: crypto.randomUUID(), subject_id: viewer.id, preferred_language: "es" },
+			{ touch: true, returnRow: true },
+		);
+
+		await postAccountAction(updateEmails, routes.accountActions.updateEmails, viewer, db, {
+			emails: "teamWeeklyDigest",
+		});
+
+		let preferences = await db.findOne(userPreferences, { where: { subject_id: viewer.id } });
+		expect(preferences?.preferred_language).toBe("es");
+		expect(preferences?.unsubscribed_emails).toEqual(["teamDailyDigest"]);
+	});
+
+	test("rejects an email outside the optional list and makes no DB mutation", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+
+		let response = await postAccountAction(
+			updateEmails,
+			routes.accountActions.updateEmails,
+			viewer,
+			db,
+			{ emails: ["teamDailyDigest", "alerts"] },
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Invalid email preferences.");
+		expect(await db.count(userPreferences, { where: { subject_id: viewer.id } })).toBe(0);
 	});
 });
 
