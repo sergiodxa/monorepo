@@ -29,7 +29,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,12 +46,15 @@ const SCANNED = ["apps", "packages"];
 /**
  * Paths carrying known, deliberately unfixed occurrences.
  *
- * `packages/ui` is the previous generation of the component library. It is still
- * live — `apps/auth`, `apps/auth-saas` and the two markdown packages depend on it —
- * so its twelve affected files are real defects rather than dead code, and they are
- * listed here rather than fixed because that package was explicitly excluded from
- * the sweep that fixed the rest. An entry here is a debt on the books: deleting it
- * is how the guard starts covering that package.
+ * `packages/ui` is the previous generation of the component library, kept alive only
+ * for the apps still on the old runtime — `apps/auth`, `apps/auth-saas`, and the two
+ * markdown packages — and slated for deletion once those finish migrating to Remix 3.
+ * Its affected files are real defects rather than dead code, so they are exempted
+ * rather than declared clean, but fixing them buys nothing that outlives the package.
+ *
+ * An entry here is a debt with an end date, not a permanent carve-out, and the test
+ * below is what stops it outliving its reason: the exemption fails once the package is
+ * clean or gone, so it is removed by the same change that removes the need for it.
  */
 const EXEMPT = ["packages/ui/"];
 
@@ -154,12 +157,15 @@ describe("ARIA token attributes, repo-wide", () => {
 	});
 
 	/**
-	 * The exemption has to stay a statement about reality. If somebody fixes
-	 * `packages/ui` and leaves the entry behind, this fails and says so — an
-	 * exemption nobody needs is one that will quietly swallow the next regression.
+	 * The exemption has to stay a statement about reality. Whether the exempted path
+	 * gets fixed or deleted, this fails and says which — an exemption nobody needs any
+	 * more is one that will quietly swallow the next regression in whatever moves into
+	 * that path later.
 	 */
 	test("every exemption still has something to exempt", () => {
 		for (let exempt of EXEMPT) {
+			expect(existsSync(join(ROOT, exempt)), `${exempt} is gone — drop it from EXEMPT`).toBe(true);
+
 			let violations: string[] = [];
 
 			for (let file of new Glob("**/*.{ts,tsx}").scanSync(join(ROOT, exempt))) {
