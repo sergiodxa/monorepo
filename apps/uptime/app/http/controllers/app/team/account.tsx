@@ -27,7 +27,8 @@ import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { boxSizing, hstack, shrink, vstack } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { is, m, maxIs, mi, p, pis } from "@pkg/u/size";
+import { media } from "@pkg/u/responsive";
+import { is, m, maxIs, mi, p } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
@@ -49,6 +50,34 @@ import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-me
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/**
+ * Viewport from which a section's card is allowed to bleed past its column.
+ *
+ * `AppShell` pads its content area by 20px below this width and 48px from it up, so a
+ * card reaching 24px further out each side has room only above the threshold — below it
+ * the card would overflow the viewport and the page would scroll sideways. It is the
+ * shell's own breakpoint for the same reason: this is the width at which the shell stops
+ * being a phone-width column.
+ */
+const CARD_BLEED_FROM = "(min-width: 768px)";
+
+/**
+ * The bordered card each section on this page is built around.
+ *
+ * Pulled out by exactly the 24px of inline padding its own rows carry, so the copy inside
+ * the card lines up with the section heading above it instead of sitting 24px to its
+ * right. The heading and the card edge no longer share an edge, which is the point: the
+ * text does.
+ */
+function settingsCard() {
+	return [
+		rounded("12px"),
+		border({ color: "neutral", width: 1 }),
+		overflow(),
+		media(CARD_BLEED_FROM, mi("-24px")),
+	];
+}
 
 /** DOM id of one email's description, wired to its switch through `aria-describedby`. */
 function emailDescriptionId(email: OptionalEmail) {
@@ -95,7 +124,7 @@ export default createAction(routes.app.team.account, {
 								</p>
 							</div>
 
-							<div mix={[rounded("12px"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<div
 									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
 								>
@@ -141,7 +170,7 @@ export default createAction(routes.app.team.account, {
 								</p>
 							</div>
 
-							<div mix={[rounded("12px"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<form method="post" action={routes.accountActions.updateLanguage.href()}>
 									<div
 										mix={[
@@ -218,7 +247,7 @@ export default createAction(routes.app.team.account, {
 								</p>
 							</div>
 
-							<div mix={[rounded("12px"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<form method="post" action={routes.accountActions.updateEmails.href()}>
 									<div
 										mix={[
@@ -250,7 +279,15 @@ export default createAction(routes.app.team.account, {
 												>
 													{ctx.i18next.t(`page.account.emails.list.${email}.name`)}
 												</Switch>
-												<Description id={emailDescriptionId(email)} mix={pis("1.75rem")}>
+												{/*
+												 * Flush with the switch, not indented under its label. A
+												 * checkbox is a small square and hanging its description
+												 * under the label reads as one block, but a switch's track
+												 * is 2.75rem wide — an indent sized for a checkbox lands
+												 * under neither the track nor the label text, so the
+												 * description looks nudged rather than aligned.
+												 */}
+												<Description id={emailDescriptionId(email)}>
 													{ctx.i18next.t(`page.account.emails.list.${email}.description`)}
 												</Description>
 											</div>
@@ -345,7 +382,7 @@ export default createAction(routes.app.team.account, {
 								</form>
 							</dialog>
 
-							<div mix={[rounded("12px"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<div
 									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
 								>

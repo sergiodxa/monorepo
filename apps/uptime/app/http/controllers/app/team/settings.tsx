@@ -122,6 +122,31 @@ function renderInlineCode(text: string): RemixNode {
 	);
 }
 
+/**
+ * Viewport from which a section's card is allowed to bleed past its column.
+ *
+ * `AppShell` pads its content area by 20px below this width and 48px from it up, so a card
+ * reaching a further 6 spacing units out each side has room only above the threshold —
+ * below it the card would overflow the viewport and the page would scroll sideways.
+ */
+const CARD_BLEED_FROM = "(min-width: 768px)";
+
+/**
+ * The bordered card each section on this page is built around.
+ *
+ * Pulled out by exactly the inline padding its own rows carry (`p(5, 6)`), so the copy
+ * inside the card lines up with the section heading above it rather than sitting one
+ * padding-width to its right.
+ */
+function settingsCard() {
+	return [
+		rounded("xl"),
+		border({ color: "neutral", width: 1 }),
+		overflow(),
+		media(CARD_BLEED_FROM, mi(-6)),
+	];
+}
+
 /** Shared visual style for every text/url input across this page's forms. */
 function textInput() {
 	return [
@@ -183,7 +208,7 @@ export default createAction(routes.app.team.settings, {
 								</p>
 							</div>
 
-							<div mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<form
 									method="post"
 									action={routes.teamAdminActions.team.update.href({ team: team.slug })}
@@ -326,7 +351,7 @@ export default createAction(routes.app.team.settings, {
 								</form>
 							</dialog>
 
-							<div mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.members.table.label")}
@@ -510,7 +535,7 @@ export default createAction(routes.app.team.settings, {
 								</Table.Container>
 							</div>
 
-							<div mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 										{ctx.i18next.t("page.settings.members.invitedTable.label")}
@@ -695,7 +720,7 @@ export default createAction(routes.app.team.settings, {
 								</form>
 							</dialog>
 
-							<div mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow()]}>
+							<div mix={settingsCard()}>
 								<div
 									mix={[
 										p(5, 6),
@@ -938,7 +963,7 @@ export default createAction(routes.app.team.settings, {
 									</p>
 								</div>
 
-								<div mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow()]}>
+								<div mix={settingsCard()}>
 									<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
 										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
 											{ctx.i18next.t("page.settings.billing.card.title")}
