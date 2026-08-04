@@ -931,7 +931,7 @@ export default {
 				contact: {
 					title: "13. Contattaci",
 					body: "Se hai domande su questa Informativa sulla privacy o vuoi esercitare i tuoi diritti sui dati, scrivici a:",
-					email: "privacy@sergiodxa.com",
+					email: "hello+privacy@sergiodxa.com",
 				},
 			},
 		},

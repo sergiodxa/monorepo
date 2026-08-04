@@ -900,7 +900,7 @@ export default {
 				contact: {
 					title: "13. お問い合わせ",
 					body: "本プライバシーポリシーについてのご質問や、データに関する権利の行使をご希望の場合は、次のアドレスまでご連絡ください。",
-					email: "privacy@sergiodxa.com",
+					email: "hello+privacy@sergiodxa.com",
 				},
 			},
 		},

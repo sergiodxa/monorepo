@@ -939,7 +939,7 @@ export default {
 				contact: {
 					title: "13. Nous contacter",
 					body: "Si vous avez des questions à propos de cette politique de confidentialité ou si vous souhaitez exercer vos droits sur vos données, contactez-nous à :",
-					email: "privacy@sergiodxa.com",
+					email: "hello+privacy@sergiodxa.com",
 				},
 			},
 		},

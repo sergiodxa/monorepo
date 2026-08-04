@@ -930,7 +930,7 @@ export default {
 				contact: {
 					title: "13. Kontakt",
 					body: "Wenn Sie Fragen zu dieser Datenschutzerklärung haben oder Ihre Datenrechte ausüben möchten, erreichen Sie uns unter:",
-					email: "privacy@sergiodxa.com",
+					email: "hello+privacy@sergiodxa.com",
 				},
 			},
 		},

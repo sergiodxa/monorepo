@@ -978,7 +978,7 @@ export default {
 				contact: {
 					title: "13. Contact Us",
 					body: "If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:",
-					email: "privacy@sergiodxa.com",
+					email: "hello+privacy@sergiodxa.com",
 				},
 			},
 		},
