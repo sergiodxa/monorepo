@@ -12,10 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Typeset } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
-import { m, maxIs, mbe, mbs, pbe, pbs, pi, pis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
+import { m, maxIs, pbe, pbs, pi } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -42,128 +42,102 @@ export default createAction(routes.legal.terms, async (ctx) => {
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				<article
-					mix={[
-						maxIs("720px"),
-						m(0, "auto"),
-						pbs("48px"),
-						pi("24px"),
-						pbe("80px"),
-						leading(1.75),
-						fg("neutral"),
-						when("& h1", [
-							fontSize("2.25rem"),
-							weight(800),
-							tracking("tight"),
-							mbs(0),
-							mbe("32px"),
-							fg("neutral.emphasis"),
-						]),
-						when("& h2", [
-							fontSize("1.5rem"),
-							weight(700),
-							mbs("48px"),
-							mbe("24px"),
-							fg("neutral.emphasis"),
-						]),
-						when("& h3", [
-							fontSize("1.25rem"),
-							weight(600),
-							mbs("24px"),
-							mbe("12px"),
-							fg("neutral.emphasis"),
-						]),
-						when("& p", m("20px", 0)),
-						when("& ul", [m("20px", 0), pis("1.25rem")]),
-						when("& li", mbe("8px")),
-					]}
-				>
-					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-						{ctx.i18next.t("legal.terms.lastUpdated")}
-					</p>
+				{/*
+				 * Type comes from `Typeset`, the same as the docs layout and `/trust` — sizes,
+				 * weights, vertical rhythm, list markers and links are all its decisions, not this
+				 * page's. `preset="reading"` is the long-form rhythm these are.
+				 *
+				 * This element keeps only what is about placement: the measure and its padding.
+				 */}
+				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
+					<Typeset preset="reading">
+						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+							{ctx.i18next.t("legal.terms.lastUpdated")}
+						</p>
 
-					<h1>{ctx.i18next.t("legal.terms.title")}</h1>
+						<h1>{ctx.i18next.t("legal.terms.title")}</h1>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.introduction.title")}</h2>
-					<p>{ctx.i18next.t("legal.terms.sections.introduction.body")}</p>
+						<h2>{ctx.i18next.t("legal.terms.sections.introduction.title")}</h2>
+						<p>{ctx.i18next.t("legal.terms.sections.introduction.body")}</p>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.serviceDescription.title")}</h2>
-					<p>{ctx.i18next.t("legal.terms.sections.serviceDescription.body")}</p>
+						<h2>{ctx.i18next.t("legal.terms.sections.serviceDescription.title")}</h2>
+						<p>{ctx.i18next.t("legal.terms.sections.serviceDescription.body")}</p>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.accountTerms.title")}</h2>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.third")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.accountTerms.fourth")}</li>
-					</ul>
+						<h2>{ctx.i18next.t("legal.terms.sections.accountTerms.title")}</h2>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.third")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.accountTerms.fourth")}</li>
+						</ul>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.acceptableUse.title")}</h2>
-					<p>{ctx.i18next.t("legal.terms.sections.acceptableUse.intro")}</p>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.third")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fourth")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fifth")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.sixth")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.seventh")}</li>
-					</ul>
+						<h2>{ctx.i18next.t("legal.terms.sections.acceptableUse.title")}</h2>
+						<p>{ctx.i18next.t("legal.terms.sections.acceptableUse.intro")}</p>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.third")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fourth")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.fifth")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.sixth")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.acceptableUse.seventh")}</li>
+						</ul>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.paymentTerms.title")}</h2>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.third")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.fourth")}</li>
-					</ul>
+						<h2>{ctx.i18next.t("legal.terms.sections.paymentTerms.title")}</h2>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.third")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.paymentTerms.fourth")}</li>
+						</ul>
 
-					<h2>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
-					<ul>
-						<li>
-							{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
-							<a href={routes.legal.privacy.href()}>
-								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+						<h2>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
+						<ul>
+							<li>
+								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
+								<a href={routes.legal.privacy.href()}>
+									{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+								</a>
+								{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
+							</li>
+							<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.third")}</li>
+						</ul>
+
+						<h2>{ctx.i18next.t("legal.terms.sections.serviceAvailability.title")}</h2>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.third")}</li>
+						</ul>
+
+						<h2>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.title")}</h2>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.third")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
+						</ul>
+
+						<h2>{ctx.i18next.t("legal.terms.sections.termination.title")}</h2>
+						<ul>
+							<li>{ctx.i18next.t("legal.terms.sections.termination.first")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.termination.second")}</li>
+							<li>{ctx.i18next.t("legal.terms.sections.termination.third")}</li>
+						</ul>
+
+						<h2>{ctx.i18next.t("legal.terms.sections.changesToTerms.title")}</h2>
+						<p>{ctx.i18next.t("legal.terms.sections.changesToTerms.body")}</p>
+
+						<h2>{ctx.i18next.t("legal.terms.sections.contact.title")}</h2>
+						<p>
+							{ctx.i18next.t("legal.terms.sections.contact.prefix")}
+							<a href={`mailto:${ctx.i18next.t("legal.terms.sections.contact.email")}`}>
+								{ctx.i18next.t("legal.terms.sections.contact.email")}
 							</a>
-							{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
-						</li>
-						<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.dataAndPrivacy.third")}</li>
-					</ul>
-
-					<h2>{ctx.i18next.t("legal.terms.sections.serviceAvailability.title")}</h2>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.serviceAvailability.third")}</li>
-					</ul>
-
-					<h2>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.title")}</h2>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.third")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
-					</ul>
-
-					<h2>{ctx.i18next.t("legal.terms.sections.termination.title")}</h2>
-					<ul>
-						<li>{ctx.i18next.t("legal.terms.sections.termination.first")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.termination.second")}</li>
-						<li>{ctx.i18next.t("legal.terms.sections.termination.third")}</li>
-					</ul>
-
-					<h2>{ctx.i18next.t("legal.terms.sections.changesToTerms.title")}</h2>
-					<p>{ctx.i18next.t("legal.terms.sections.changesToTerms.body")}</p>
-
-					<h2>{ctx.i18next.t("legal.terms.sections.contact.title")}</h2>
-					<p>
-						{ctx.i18next.t("legal.terms.sections.contact.prefix")}
-						<a href={`mailto:${ctx.i18next.t("legal.terms.sections.contact.email")}`}>
-							{ctx.i18next.t("legal.terms.sections.contact.email")}
-						</a>
-						.
-					</p>
+							.
+						</p>
+					</Typeset>
 				</article>
 			</MarketingLayout>
 		</DocumentLayout>,
