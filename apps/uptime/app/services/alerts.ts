@@ -41,6 +41,7 @@ import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
+import { repeatCooldownMinutes } from "~/app/lib/alert-policy";
 import { absoluteUrl } from "~/app/lib/origin";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
@@ -75,14 +76,15 @@ import routes from "~/routes/web";
  * spaced from and is never suppressed, so no floor can delay it, and a recovery is
  * edge-triggered and keeps the alert's own cooldown as its only gate.
  */
-export const MIN_REPEAT_COOLDOWN_MINUTES = 5;
-
 /**
- * The cooldown a repeat notification for `alert` is actually spaced by: what the team
- * configured, or {@link MIN_REPEAT_COOLDOWN_MINUTES} when that is lower.
+ * The cooldown a repeat notification for `alert` is actually spaced by.
+ *
+ * The numbers themselves live in `~/app/lib/alert-policy`, which has no imports: the alert form
+ * quotes the floor to explain it to a customer, and a view importing this module for it pulled
+ * `~/app/services/cost` and `cloudflare:workers` into the client bundle.
  */
-function repeatCooldownMinutes(alert: SelectAlert): number {
-	return Math.max(alert.cooldown_minutes, MIN_REPEAT_COOLDOWN_MINUTES);
+function repeatCooldown(alert: SelectAlert): number {
+	return repeatCooldownMinutes(alert.cooldown_minutes);
 }
 
 /**
@@ -208,7 +210,7 @@ async function suppressionReason(
 		alert.id,
 		params.monitorId,
 		params.eventType,
-		repeatCooldownMinutes(alert),
+		repeatCooldown(alert),
 	);
 	return inCooldown ? "skipped_cooldown" : null;
 }

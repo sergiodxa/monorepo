@@ -23,7 +23,7 @@ import type { AlertConfig, SelectAlert } from "~/database/schema";
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/http/validators/alert";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 

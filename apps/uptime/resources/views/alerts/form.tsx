@@ -23,8 +23,7 @@ import { fontSize } from "@pkg/u/typography";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/http/validators/alert";
-import { MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/services/alerts";
+import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import Field from "~/resources/components/field";
 
 namespace AlertFormFields {

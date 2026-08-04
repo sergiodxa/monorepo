@@ -13,16 +13,9 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
-const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord"] as const;
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 
-/**
- * Minutes a new alert waits before repeating a notification during an ongoing outage.
- *
- * Named rather than written twice: the create form prefills with it, and a form offering a
- * different default from the one the schema applies to the same submission is a difference
- * nothing would report.
- */
-export const DEFAULT_COOLDOWN_MINUTES = 60;
+const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord"] as const;
 
 const isEmail = checks.email().check;
 const isUrl = checks.url().check;
