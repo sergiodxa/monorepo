@@ -1234,6 +1234,39 @@ export default {
 	},
 
 	emails: {
+		accountDeleted: {
+			subject: "Il suo account Uptime è stato eliminato",
+			preview: "Il suo account e i suoi dati sono stati eliminati.",
+			heading: "Il suo account è stato eliminato",
+			body: "Ci ha chiesto di eliminare il suo account Uptime e lo abbiamo fatto. I suoi team, monitor, avvisi, pagine di stato e preferenze non ci sono più, ogni team di cui era proprietario è stato eliminato insieme a loro e il suo abbonamento è stato disdetto.",
+			retained: {
+				intro:
+					"Alcune cose non abbiamo potuto eliminarle, così sa esattamente come stanno le cose:",
+				billing:
+					"Le fatture e le registrazioni dei pagamenti conservate dal nostro fornitore di fatturazione. La normativa fiscale ci obbliga a conservarle, e per questo motivo la normativa sulla protezione dei dati lo consente.",
+				analytics:
+					"I risultati dei controlli di monitoraggio nel nostro archivio analitico. È a sola aggiunta: non c'è modo di eliminare un record, solo di lasciarlo scadere secondo il suo periodo di conservazione.",
+				logs: "I log delle richieste al server, per lo stesso motivo: scadono secondo un periodo di conservazione e non possono essere eliminati in anticipo.",
+				identity:
+					"La sua identità di accesso, che è conservata dal provider di identità con cui ha effettuato l'accesso e non da noi.",
+			},
+			address:
+				"Questo indirizzo email era conservato solo per poterLe inviare questo messaggio. Ora è stato eliminato anche quello.",
+			footer:
+				"Ha ricevuto questa email perché ci ha chiesto di eliminare il suo account Uptime. Nessun'altra email verrà inviata a questo indirizzo.",
+		},
+
+		teamDeleted: {
+			subject: "{{team}} è stato eliminato su Uptime",
+			preview: "{{team}} e tutto ciò che monitorava non esistono più.",
+			heading: "{{team}} è stato eliminato",
+			body: "Il proprietario di {{team}} ha eliminato il suo account Uptime e il team è stato eliminato insieme a esso. Non ha più accesso al team.",
+			lost: "Tutto ciò che apparteneva al team non c'è più: i suoi monitor, avvisi e pagine di stato non esistono più e nulla di ciò può essere recuperato.",
+			next: "Se ha ancora bisogno di questo monitoraggio, può creare un team suo su Uptime e configurarlo di nuovo.",
+			footer:
+				"Ha ricevuto questa email perché era membro di {{team}} su Uptime. Non c'è nulla che debba fare.",
+		},
+
 		teamInvite: {
 			subject: "È stato invitato a unirsi a {{team}} su Uptime",
 			preview: "Si unisca a {{team}} su Uptime",
@@ -3885,6 +3918,79 @@ export default {
 
 				form: {
 					cta: "Salva Email",
+				},
+			},
+
+			dataExport: {
+				title: "I suoi dati",
+				description: "Scarichi tutto ciò che questa applicazione conserva su di Lei.",
+
+				card: {
+					title: "Esporti i suoi dati",
+					description:
+						"Un unico file JSON, generato nel momento in cui lo richiede. Non viene conservato nulla.",
+					includes:
+						"Include il suo profilo e le sue preferenze, ogni team di cui fa parte e il suo ruolo al suo interno e — per i team di cui è proprietario — i loro monitor, avvisi, finestre di manutenzione, pagine di stato e domini verificati.",
+					excludes:
+						"Esclude tutto ciò che non è suo da portare via: i dati degli altri membri, gli indirizzi degli invitati, gli hash delle chiavi API, i segreti dei webhook e gli URL dei webhook di Slack o Discord. Anche lo storico dei controlli è escluso: è prodotto dalla configurazione di cui sopra, e il file lo dichiara.",
+				},
+
+				form: {
+					cta: "Scarica JSON",
+				},
+			},
+
+			deleteAccount: {
+				title: "Elimina Account",
+				description: "Chiuda il suo account ed elimini i dati che vi stanno dietro.",
+
+				queued: {
+					title: "Eliminazione richiesta",
+					description:
+						"Il suo account è in coda per l'eliminazione e non è stato eliminato ancora nulla. L'operazione viene eseguita entro un giorno e Le invieremo un'email quando sarà avvenuta. Può ancora fermarla: annulli qui sotto in qualsiasi momento prima che venga eseguita.",
+					requestedAt: "Richiesta il {{date}}.",
+					cta: "Annulla eliminazione",
+				},
+
+				card: {
+					title: "Elimini il suo account",
+					description:
+						"Mette il suo account in coda per l'eliminazione. Inviando questo modulo non viene eliminato nulla.",
+
+					whatHappens:
+						"La sua richiesta viene messa in coda e Lei viene disconnesso. Entro un giorno disdiciamo il suo abbonamento, eliminiamo i suoi dati e Le inviamo un'email per confermare che è tutto fatto. Fino a quel momento non è andato perso nulla, e accedendo di nuovo può annullare.",
+
+					noOwnedTeams:
+						"Non è proprietario di alcun team, quindi verranno rimosse solo le sue iscrizioni e le sue preferenze. I team di cui fa parte proseguono senza di Lei.",
+
+					ownedTeamsIntro:
+						"In questa applicazione non c'è modo di cedere un team a qualcun altro, quindi ogni team di cui è proprietario viene eliminato insieme al suo account, insieme ai suoi monitor, avvisi, pagine di stato, chiavi API e membri:",
+					ownedTeam_one: "{{name}} — 1 altro membro perde l'accesso.",
+					ownedTeam_other: "{{name}} — {{count}} altri membri perdono l'accesso.",
+					ownedTeamAlone: "{{name}} — nessun altro membro.",
+
+					othersWarning_one:
+						"1 altra persona perderà l'accesso a un team quando questa operazione verrà eseguita. Non le verrà chiesto nulla e non verrà avvisata.",
+					othersWarning_other:
+						"{{count}} altre persone perderanno l'accesso ai loro team quando questa operazione verrà eseguita. Non verrà chiesto loro nulla e non verranno avvisate.",
+
+					retained: {
+						intro: "Alcune cose non possono essere eliminate, e preferiamo dirlo:",
+						billing:
+							"Le fatture e le registrazioni dei pagamenti conservate dal nostro fornitore di fatturazione: la normativa fiscale ne impone la conservazione.",
+						analytics:
+							"I risultati dei controlli di monitoraggio nel nostro archivio analitico, che è a sola aggiunta: i record scadono secondo un periodo di conservazione e non possono essere eliminati in anticipo.",
+						logs: "I log delle richieste al server, che scadono secondo lo stesso tipo di periodo.",
+						identity:
+							"La sua identità di accesso, che appartiene al provider di identità con cui effettua l'accesso e non a noi.",
+					},
+
+					confirmation: {
+						label: 'Scriva "DELETE" per confermare',
+						placeholder: "DELETE",
+					},
+
+					cta: "Metti in coda l'eliminazione dell'account",
 				},
 			},
 		},

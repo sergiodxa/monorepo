@@ -1242,6 +1242,39 @@ export default {
 	},
 
 	emails: {
+		accountDeleted: {
+			subject: "Votre compte Uptime a été supprimé",
+			preview: "Votre compte et ses données ont été supprimés.",
+			heading: "Votre compte a été supprimé",
+			body: "Vous nous avez demandé de supprimer votre compte Uptime, et c'est fait. Vos équipes, moniteurs, alertes, pages de statut et préférences ont disparu, toute équipe dont vous étiez propriétaire a été supprimée avec eux, et votre abonnement a été annulé.",
+			retained: {
+				intro:
+					"Quelques éléments que nous n'avons pas pu supprimer, pour que vous sachiez exactement où vous en êtes :",
+				billing:
+					"Les factures et les registres de paiement détenus par notre prestataire de facturation. La loi fiscale nous oblige à les conserver, et le droit de la protection des données l'autorise pour cette raison.",
+				analytics:
+					"Les résultats des vérifications de surveillance dans notre entrepôt analytique. Il fonctionne en ajout seul — il n'existe aucun moyen d'y supprimer un enregistrement, seulement de le laisser expirer selon son calendrier de rétention.",
+				logs: "Les journaux de requêtes du serveur, pour la même raison : ils expirent selon un calendrier de rétention et ne peuvent pas être supprimés plus tôt.",
+				identity:
+					"Votre identité de connexion elle-même, qui est détenue par le fournisseur d'identité avec lequel vous vous connectiez, et non par nous.",
+			},
+			address:
+				"Cette adresse e-mail n'était conservée que pour pouvoir vous envoyer ce message. Elle vient d'être supprimée à son tour.",
+			footer:
+				"Vous avez reçu cet e-mail parce que vous nous avez demandé de supprimer votre compte Uptime. Aucun autre e-mail ne sera envoyé à cette adresse.",
+		},
+
+		teamDeleted: {
+			subject: "{{team}} a été supprimée sur Uptime",
+			preview: "{{team}} et tout ce qu'elle surveillait n'existent plus.",
+			heading: "{{team}} a été supprimée",
+			body: "Le propriétaire de {{team}} a supprimé son compte Uptime, et l'équipe a été supprimée avec lui. Vous n'y avez plus accès.",
+			lost: "Tout ce qui appartenait à l'équipe a disparu : ses moniteurs, ses alertes et ses pages de statut n'existent plus, et rien de tout cela ne peut être récupéré.",
+			next: "Si vous avez toujours besoin de cette surveillance, vous pouvez créer votre propre équipe sur Uptime et la reconfigurer.",
+			footer:
+				"Vous avez reçu cet e-mail parce que vous étiez membre de {{team}} sur Uptime. Vous n'avez rien à faire.",
+		},
+
 		teamInvite: {
 			subject: "Vous avez été invité à rejoindre {{team}} sur Uptime",
 			preview: "Rejoignez {{team}} sur Uptime",
@@ -3900,6 +3933,79 @@ export default {
 
 				form: {
 					cta: "Enregistrer les e-mails",
+				},
+			},
+
+			dataExport: {
+				title: "Vos données",
+				description: "Téléchargez tout ce que cette application détient à votre sujet.",
+
+				card: {
+					title: "Exporter vos données",
+					description:
+						"Un seul fichier JSON, généré au moment où vous le demandez. Rien n'est stocké.",
+					includes:
+						"Comprend votre profil et vos préférences, chaque équipe dont vous êtes membre et le rôle que vous y avez, et — pour les équipes dont vous êtes propriétaire — leurs moniteurs, alertes, fenêtres de maintenance, pages de statut et domaines vérifiés.",
+					excludes:
+						"Exclut tout ce qui ne vous appartient pas : les informations des autres membres, les adresses des personnes invitées, les empreintes des clés d'API, les secrets de webhook et les URL de webhook Slack ou Discord. L'historique des vérifications est également laissé de côté — il est produit par la configuration ci-dessus, et le fichier le précise.",
+				},
+
+				form: {
+					cta: "Télécharger le JSON",
+				},
+			},
+
+			deleteAccount: {
+				title: "Supprimer le compte",
+				description: "Fermez votre compte et supprimez les données qui s'y rattachent.",
+
+				queued: {
+					title: "Suppression demandée",
+					description:
+						"Votre compte est en file d'attente pour suppression et rien n'a encore été supprimé. L'opération s'exécute dans la journée, et nous vous enverrons un e-mail dès que ce sera fait. Vous pouvez encore l'arrêter : annulez ci-dessous à tout moment avant son exécution.",
+					requestedAt: "Demandé le {{date}}.",
+					cta: "Annuler la suppression",
+				},
+
+				card: {
+					title: "Supprimer votre compte",
+					description:
+						"Met votre compte en file d'attente pour suppression. Rien n'est supprimé lorsque vous envoyez ce formulaire.",
+
+					whatHappens:
+						"Votre demande est mise en file d'attente et vous êtes déconnecté. Dans la journée, nous annulons votre abonnement, supprimons vos données et vous envoyons un e-mail pour confirmer que c'est fait. Jusque-là, rien n'a disparu, et il vous suffit de vous reconnecter pour annuler.",
+
+					noOwnedTeams:
+						"Vous n'êtes propriétaire d'aucune équipe : seules vos propres adhésions et préférences seront supprimées. Les équipes dont vous êtes membre continuent sans vous.",
+
+					ownedTeamsIntro:
+						"Il n'existe aucun moyen de confier une équipe à quelqu'un d'autre dans cette application : chaque équipe dont vous êtes propriétaire est donc supprimée avec votre compte, ainsi que ses moniteurs, alertes, pages de statut, clés d'API et membres :",
+					ownedTeam_one: "{{name}} — 1 autre membre perd son accès.",
+					ownedTeam_other: "{{name}} — {{count}} autres membres perdent leur accès.",
+					ownedTeamAlone: "{{name}} — aucun autre membre.",
+
+					othersWarning_one:
+						"1 autre personne perdra l'accès à une équipe lors de l'exécution. Elle ne sera ni consultée ni avertie.",
+					othersWarning_other:
+						"{{count}} autres personnes perdront l'accès à leurs équipes lors de l'exécution. Elles ne seront ni consultées ni averties.",
+
+					retained: {
+						intro: "Certains éléments ne peuvent pas être supprimés, et nous préférons le dire :",
+						billing:
+							"Les factures et les registres de paiement détenus par notre prestataire de facturation — la loi fiscale nous oblige à les conserver.",
+						analytics:
+							"Les résultats des vérifications de surveillance dans notre entrepôt analytique, qui fonctionne en ajout seul : les enregistrements expirent selon un calendrier de rétention et ne peuvent pas être supprimés plus tôt.",
+						logs: "Les journaux de requêtes du serveur, qui expirent selon le même type de calendrier.",
+						identity:
+							"Votre identité de connexion, qui appartient au fournisseur d'identité avec lequel vous vous connectez, et non à nous.",
+					},
+
+					confirmation: {
+						label: 'Tapez "DELETE" pour confirmer',
+						placeholder: "DELETE",
+					},
+
+					cta: "Demander la suppression du compte",
 				},
 			},
 		},

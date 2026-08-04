@@ -1235,6 +1235,38 @@ export default {
 	},
 
 	emails: {
+		accountDeleted: {
+			subject: "Ihr Uptime-Konto wurde gelöscht",
+			preview: "Ihr Konto und die dazugehörigen Daten wurden gelöscht.",
+			heading: "Ihr Konto wurde gelöscht",
+			body: "Sie haben uns gebeten, Ihr Uptime-Konto zu löschen, und das haben wir getan. Ihre Teams, Monitore, Benachrichtigungen, Statusseiten und Einstellungen sind weg, jedes Team, das Ihnen gehörte, wurde mit ihnen gelöscht, und Ihr Abonnement wurde gekündigt.",
+			retained: {
+				intro: "Einiges konnten wir nicht löschen, damit Sie genau wissen, wie es um Sie steht:",
+				billing:
+					"Rechnungen und Zahlungsbelege, die unser Abrechnungsdienstleister aufbewahrt. Das Steuerrecht verlangt, dass wir sie behalten, und das Datenschutzrecht erlaubt es aus diesem Grund.",
+				analytics:
+					"Ergebnisse der Monitor-Prüfungen in unserem Analysespeicher. Dieser kann nur angehängt werden — es gibt keine Möglichkeit, einen Datensatz daraus zu löschen, sondern nur, ihn nach seinem Aufbewahrungsplan verfallen zu lassen.",
+				logs: "Server-Anfrageprotokolle, aus dem gleichen Grund: Sie verfallen nach einem Aufbewahrungsplan und lassen sich nicht vorzeitig löschen.",
+				identity:
+					"Ihre Anmelde-Identität selbst, die beim Identitätsanbieter liegt, mit dem Sie sich angemeldet haben, und nicht bei uns.",
+			},
+			address:
+				"Diese E-Mail-Adresse wurde nur gespeichert, damit wir Ihnen diese Nachricht senden konnten. Sie ist jetzt ebenfalls gelöscht.",
+			footer:
+				"Sie erhalten diese E-Mail, weil Sie uns gebeten haben, Ihr Uptime-Konto zu löschen. An diese Adresse wird keine weitere E-Mail gesendet.",
+		},
+
+		teamDeleted: {
+			subject: "{{team}} wurde auf Uptime gelöscht",
+			preview: "{{team}} und alles, was es überwacht hat, existieren nicht mehr.",
+			heading: "{{team}} wurde gelöscht",
+			body: "Die Person, der {{team}} gehörte, hat ihr Uptime-Konto gelöscht, und das Team wurde damit ebenfalls gelöscht. Sie haben keinen Zugriff mehr darauf.",
+			lost: "Alles, was zu dem Team gehörte, ist weg: Seine Monitore, Benachrichtigungen und Statusseiten existieren nicht mehr, und nichts davon lässt sich wiederherstellen.",
+			next: "Wenn Sie diese Überwachung weiterhin brauchen, können Sie auf Uptime ein eigenes Team erstellen und sie neu einrichten.",
+			footer:
+				"Sie erhalten diese E-Mail, weil Sie Mitglied von {{team}} auf Uptime waren. Sie müssen nichts weiter tun.",
+		},
+
 		teamInvite: {
 			subject: "Sie wurden eingeladen, {{team}} auf Uptime beizutreten",
 			preview: "{{team}} auf Uptime beitreten",
@@ -3901,6 +3933,79 @@ export default {
 
 				form: {
 					cta: "E-Mails speichern",
+				},
+			},
+
+			dataExport: {
+				title: "Ihre Daten",
+				description: "Laden Sie alles herunter, was diese App über Sie gespeichert hat.",
+
+				card: {
+					title: "Ihre Daten exportieren",
+					description:
+						"Eine JSON-Datei, erzeugt in dem Moment, in dem Sie sie anfordern. Es wird nichts gespeichert.",
+					includes:
+						"Enthält Ihr Profil und Ihre Einstellungen, jedes Team, dem Sie angehören, samt Ihrer Rolle darin und — für Teams, die Ihnen gehören — deren Monitore, Benachrichtigungen, Wartungsfenster, Statusseiten und verifizierte Domains.",
+					excludes:
+						"Enthält nicht, was nicht Ihnen zusteht: Angaben anderer Mitglieder, Adressen von Eingeladenen, Hashes von API-Schlüsseln, Webhook-Geheimnisse sowie Slack- oder Discord-Webhook-URLs. Auch der Prüfverlauf bleibt außen vor — er entsteht aus der obigen Konfiguration, und die Datei sagt das auch.",
+				},
+
+				form: {
+					cta: "JSON herunterladen",
+				},
+			},
+
+			deleteAccount: {
+				title: "Konto löschen",
+				description: "Schließen Sie Ihr Konto und löschen Sie die Daten dahinter.",
+
+				queued: {
+					title: "Löschung angefordert",
+					description:
+						"Ihr Konto ist zur Löschung vorgemerkt, und es wurde noch nichts gelöscht. Sie wird innerhalb eines Tages ausgeführt, und wir schreiben Ihnen eine E-Mail, sobald das erledigt ist. Sie können sie noch stoppen — brechen Sie sie unten jederzeit ab, bevor sie ausgeführt wird.",
+					requestedAt: "Angefordert am {{date}}.",
+					cta: "Löschung abbrechen",
+				},
+
+				card: {
+					title: "Ihr Konto löschen",
+					description:
+						"Merkt Ihr Konto zur Löschung vor. Beim Absenden dieses Formulars wird nichts gelöscht.",
+
+					whatHappens:
+						"Ihre Anfrage wird vorgemerkt und Sie werden abgemeldet. Innerhalb eines Tages kündigen wir Ihr Abonnement, löschen Ihre Daten und bestätigen Ihnen per E-Mail, dass es erledigt ist. Bis dahin ist nichts verschwunden, und wenn Sie sich wieder anmelden, können Sie abbrechen.",
+
+					noOwnedTeams:
+						"Ihnen gehören keine Teams, daher werden nur Ihre eigenen Mitgliedschaften und Einstellungen entfernt. Die Teams, denen Sie angehören, bestehen ohne Sie weiter.",
+
+					ownedTeamsIntro:
+						"In dieser App gibt es keine Möglichkeit, ein Team an jemand anderen zu übergeben; deshalb wird jedes Team, das Ihnen gehört, mit Ihrem Konto gelöscht — samt seiner Monitore, Benachrichtigungen, Statusseiten, API-Schlüssel und Mitglieder:",
+					ownedTeam_one: "{{name}} — 1 weiteres Mitglied verliert den Zugriff.",
+					ownedTeam_other: "{{name}} — {{count}} weitere Mitglieder verlieren den Zugriff.",
+					ownedTeamAlone: "{{name}} — keine weiteren Mitglieder.",
+
+					othersWarning_one:
+						"1 weitere Person verliert bei der Ausführung den Zugriff auf ein Team. Sie wird nicht gefragt und nicht gewarnt.",
+					othersWarning_other:
+						"{{count}} weitere Personen verlieren bei der Ausführung den Zugriff auf ihre Teams. Sie werden nicht gefragt und nicht gewarnt.",
+
+					retained: {
+						intro: "Manches lässt sich nicht löschen, und wir sagen es lieber offen:",
+						billing:
+							"Rechnungen und Zahlungsbelege, die unser Abrechnungsdienstleister aufbewahrt — das Steuerrecht verlangt, sie zu behalten.",
+						analytics:
+							"Ergebnisse der Monitor-Prüfungen in unserem Analysespeicher, der nur angehängt werden kann: Datensätze verfallen nach einem Aufbewahrungsplan und lassen sich nicht vorzeitig löschen.",
+						logs: "Server-Anfrageprotokolle, die nach einem ebensolchen Plan verfallen.",
+						identity:
+							"Ihre Anmelde-Identität, die dem Identitätsanbieter gehört, mit dem Sie sich anmelden, und nicht uns.",
+					},
+
+					confirmation: {
+						label: 'Geben Sie zur Bestätigung "DELETE" ein',
+						placeholder: "DELETE",
+					},
+
+					cta: "Kontolöschung vormerken",
 				},
 			},
 		},

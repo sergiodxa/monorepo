@@ -1230,6 +1230,39 @@ export default {
 	},
 
 	emails: {
+		accountDeleted: {
+			subject: "Su cuenta de Uptime ha sido eliminada",
+			preview: "Su cuenta y sus datos han sido eliminados.",
+			heading: "Su cuenta ha sido eliminada",
+			body: "Nos pidió eliminar su cuenta de Uptime y ya lo hicimos. Sus equipos, monitores, alertas, páginas de estado y preferencias ya no existen, todo equipo del que era propietario fue eliminado junto con ellos, y su suscripción fue cancelada.",
+			retained: {
+				intro:
+					"Hay algunas cosas que no pudimos eliminar, para que sepa exactamente cómo queda todo:",
+				billing:
+					"Las facturas y los registros de pago que guarda nuestro proveedor de facturación. La ley fiscal nos obliga a conservarlos, y la ley de protección de datos lo permite por esa razón.",
+				analytics:
+					"Los resultados de las comprobaciones de monitoreo en nuestro almacén de analítica. Solo admite agregar datos: no hay forma de eliminar un registro de ahí, únicamente dejar que expire según su calendario de retención.",
+				logs: "Los registros de peticiones del servidor, por la misma razón: expiran según un calendario de retención y no se pueden eliminar antes.",
+				identity:
+					"Su propia identidad de inicio de sesión, que está en manos del proveedor de identidad con el que inició sesión y no en las nuestras.",
+			},
+			address:
+				"Esta dirección de correo se guardó únicamente para poder enviarle este mensaje. Ya ha sido eliminada también.",
+			footer:
+				"Ha recibido este correo porque nos pidió eliminar su cuenta de Uptime. No se enviará ningún otro correo a esta dirección.",
+		},
+
+		teamDeleted: {
+			subject: "{{team}} ha sido eliminado en Uptime",
+			preview: "{{team}} y todo lo que monitoreaba ya no existen.",
+			heading: "{{team}} ha sido eliminado",
+			body: "El propietario de {{team}} eliminó su cuenta de Uptime, y el equipo fue eliminado junto con ella. Usted ya no tiene acceso a él.",
+			lost: "Todo lo que pertenecía al equipo ya no existe: sus monitores, alertas y páginas de estado desaparecieron, y nada de eso se puede recuperar.",
+			next: "Si todavía necesita este monitoreo, puede crear su propio equipo en Uptime y configurarlo de nuevo.",
+			footer:
+				"Ha recibido este correo porque era miembro de {{team}} en Uptime. No hay nada que necesite hacer.",
+		},
+
 		teamInvite: {
 			subject: "Ha sido invitado a unirse a {{team}} en Uptime",
 			preview: "Únase a {{team}} en Uptime",
@@ -3886,6 +3919,78 @@ export default {
 
 				form: {
 					cta: "Guardar correos",
+				},
+			},
+
+			dataExport: {
+				title: "Sus datos",
+				description: "Descargue todo lo que esta aplicación guarda sobre usted.",
+
+				card: {
+					title: "Exporte sus datos",
+					description: "Un solo archivo JSON, generado cuando usted lo pide. No se almacena nada.",
+					includes:
+						"Incluye su perfil y sus preferencias, cada equipo al que pertenece y su rol en él y —para los equipos de los que es propietario— sus monitores, alertas, ventanas de mantenimiento, páginas de estado y dominios verificados.",
+					excludes:
+						"Excluye todo lo que no le corresponde llevarse: los datos de otros miembros, las direcciones de las personas invitadas, los hashes de las claves de API, los secretos de los webhooks y las URL de los webhooks de Slack o Discord. El historial de comprobaciones también queda fuera: lo produce la configuración anterior, y el archivo lo indica.",
+				},
+
+				form: {
+					cta: "Descargar JSON",
+				},
+			},
+
+			deleteAccount: {
+				title: "Eliminar cuenta",
+				description: "Cierre su cuenta y elimine los datos que hay detrás.",
+
+				queued: {
+					title: "Eliminación solicitada",
+					description:
+						"Su cuenta está en cola para ser eliminada y todavía no se ha eliminado nada. Ocurre en menos de un día, y le enviaremos un correo cuando esté hecho. Todavía puede detenerlo: cancele abajo en cualquier momento antes de que se ejecute.",
+					requestedAt: "Solicitada el {{date}}.",
+					cta: "Cancelar eliminación",
+				},
+
+				card: {
+					title: "Elimine su cuenta",
+					description:
+						"Pone su cuenta en cola para ser eliminada. No se elimina nada al enviar este formulario.",
+
+					whatHappens:
+						"Su solicitud queda en cola y se cierra su sesión. En menos de un día cancelamos su suscripción, eliminamos sus datos y le enviamos un correo para confirmar que está hecho. Hasta entonces nada ha desaparecido, y si vuelve a iniciar sesión puede cancelar.",
+
+					noOwnedTeams:
+						"No es propietario de ningún equipo, así que solo se eliminarán sus propias membresías y preferencias. Los equipos a los que pertenece siguen adelante sin usted.",
+
+					ownedTeamsIntro:
+						"En esta aplicación no hay forma de traspasar un equipo a otra persona, así que todo equipo del que es propietario se elimina junto con su cuenta, con sus monitores, alertas, páginas de estado, claves de API y miembros:",
+					ownedTeam_one: "{{name}} — 1 miembro más pierde el acceso.",
+					ownedTeam_other: "{{name}} — {{count}} miembros más pierden el acceso.",
+					ownedTeamAlone: "{{name}} — sin otros miembros.",
+
+					othersWarning_one:
+						"1 persona más perderá el acceso a un equipo cuando esto se ejecute. No se le preguntará ni se le avisará.",
+					othersWarning_other:
+						"{{count}} personas más perderán el acceso a sus equipos cuando esto se ejecute. No se les preguntará ni se les avisará.",
+
+					retained: {
+						intro: "Hay cosas que no se pueden eliminar, y preferimos decirlo:",
+						billing:
+							"Las facturas y los registros de pago que guarda nuestro proveedor de facturación: la ley fiscal obliga a conservarlos.",
+						analytics:
+							"Los resultados de las comprobaciones de monitoreo en nuestro almacén de analítica, que solo admite agregar datos: los registros expiran según un calendario de retención y no se pueden eliminar antes.",
+						logs: "Los registros de peticiones del servidor, que expiran según el mismo tipo de calendario.",
+						identity:
+							"Su identidad de inicio de sesión, que pertenece al proveedor de identidad con el que inicia sesión y no a nosotros.",
+					},
+
+					confirmation: {
+						label: 'Escriba "DELETE" para confirmar',
+						placeholder: "DELETE",
+					},
+
+					cta: "Poner la cuenta en cola para eliminación",
 				},
 			},
 		},

@@ -4008,7 +4008,7 @@ export default {
 
 				card: {
 					title: "Export Your Data",
-					description: "One JSON file, generated when you ask for it. Nothing is stored.",
+					description: "One JSON file, generated when you ask for it. We keep no copy.",
 					includes:
 						"Includes your profile and preferences, every team you belong to and your role in it, and — for teams you own — their monitors, alerts, maintenance windows, status pages and verified domains.",
 					excludes:
