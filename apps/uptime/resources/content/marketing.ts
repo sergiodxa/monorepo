@@ -1168,7 +1168,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		slug: "enterprises",
 		metaTitle: "Uptime for Enterprises | Domain Auto-Provisioning",
 		metaDescription:
-			"Enterprise uptime monitoring with domain verification, auto-provisioning, and role-based access. 99.9% SLA guaranteed.",
+			"Enterprise uptime monitoring with domain verification, auto-provisioning, and role-based access. 99.9% uptime target.",
 		badge: "For Enterprises",
 		title: "Enterprise-ready",
 		highlight: "monitoring",
@@ -1293,7 +1293,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		trustIndicators: [
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "rocket", value: "<2min", label: "Setup Time" },
-			{ icon: "dollar-sign", value: "$5", label: "Base Price" },
+			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
 			{ icon: "globe", value: "9", label: "Global Regions" },
 		],
 		features: [

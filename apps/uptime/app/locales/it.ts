@@ -71,7 +71,7 @@ export default {
 		},
 
 		trustIndicators: {
-			uptimeSla: "SLA Uptime",
+			monitorTypes: "Tipi di Monitor",
 			globalRegions: "Regioni Globali",
 			daysDataRetention: "Giorni Conservazione Dati",
 			alertLatency: "Latenza Avvisi",
@@ -88,7 +88,7 @@ export default {
 				first: {
 					title: "Monitora il tuo uptime",
 					description:
-						"Traccia i suoi servizi 24/7 con il 99,9% di affidabilità del monitoraggio. Ottenga metriche dettagliate e informazioni sulle prestazioni a colpo d'occhio.",
+						"Traccia i suoi servizi 24/7, da nove regioni e con intervalli da un minuto. Ottenga metriche dettagliate e informazioni sulle prestazioni a colpo d'occhio.",
 				},
 				second: {
 					title: "Riceva avvisi ovunque",

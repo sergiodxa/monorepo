@@ -71,7 +71,7 @@ export default {
 		},
 
 		trustIndicators: {
-			uptimeSla: "Uptime-SLA",
+			monitorTypes: "Monitor-Typen",
 			globalRegions: "Globale Regionen",
 			daysDataRetention: "Tage Datenspeicherung",
 			alertLatency: "Benachrichtigungs-Latenz",
@@ -88,7 +88,7 @@ export default {
 				first: {
 					title: "Überwachen Sie Ihre Uptime",
 					description:
-						"Verfolgen Sie Ihre Dienste rund um die Uhr mit 99,9% Überwachungszuverlässigkeit. Erhalten Sie detaillierte Metriken und Leistungseinblicke auf einen Blick.",
+						"Verfolgen Sie Ihre Dienste rund um die Uhr, aus neun Regionen und in Intervallen ab einer Minute. Erhalten Sie detaillierte Metriken und Leistungseinblicke auf einen Blick.",
 				},
 				second: {
 					title: "Erhalten Sie Benachrichtigungen überall",

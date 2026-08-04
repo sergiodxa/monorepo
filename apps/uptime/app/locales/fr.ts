@@ -71,7 +71,7 @@ export default {
 		},
 
 		trustIndicators: {
-			uptimeSla: "SLA de disponibilité",
+			monitorTypes: "Types de moniteur",
 			globalRegions: "Régions mondiales",
 			daysDataRetention: "Jours de rétention des données",
 			alertLatency: "Latence des alertes",
@@ -88,7 +88,7 @@ export default {
 				first: {
 					title: "Surveillez votre disponibilité",
 					description:
-						"Suivez vos services 24h/24 et 7j/7 avec une fiabilité de surveillance de 99,9%. Obtenez des métriques détaillées et des aperçus de performance en un coup d'œil.",
+						"Suivez vos services 24h/24 et 7j/7, depuis neuf régions et à des intervalles dès une minute. Obtenez des métriques détaillées et des aperçus de performance en un coup d'œil.",
 				},
 				second: {
 					title: "Recevez des alertes partout",

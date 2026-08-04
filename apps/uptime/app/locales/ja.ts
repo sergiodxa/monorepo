@@ -71,7 +71,7 @@ export default {
 		},
 
 		trustIndicators: {
-			uptimeSla: "Uptime SLA",
+			monitorTypes: "モニタータイプ",
 			globalRegions: "グローバルリージョン",
 			daysDataRetention: "日間データ保持",
 			alertLatency: "アラート遅延",
@@ -88,7 +88,7 @@ export default {
 				first: {
 					title: "Uptimeを監視",
 					description:
-						"99.9%の監視信頼性で24時間365日サービスを追跡します。詳細なメトリクスとパフォーマンスのインサイトを一目で確認できます。",
+						"9つのリージョンから、1分間隔で24時間365日サービスを追跡します。詳細なメトリクスとパフォーマンスのインサイトを一目で確認できます。",
 				},
 				second: {
 					title: "どこでもアラートを受信",

@@ -17,79 +17,6 @@ export default {
 			description: "Simple & reliable uptime monitoring for developers",
 		},
 
-		vs: {
-			site24x7: {
-				meta: {
-					title: "Uptime vs Site24x7 | Simple Uptime Monitoring Alternative",
-					description:
-						"Compare Uptime and Site24x7 for uptime monitoring. Get transparent, usage-based pricing instead of complex tiered plans. See features, pricing, and find out which is right for you.",
-				},
-			},
-			checkly: {
-				meta: {
-					title: "Uptime vs Checkly | Simple Uptime Monitoring Without the Code",
-					description:
-						"Compare Uptime and Checkly side by side. Simple uptime monitoring without the code. See features, pricing, and find out which is right for you.",
-				},
-			},
-			ohdear: {
-				meta: {
-					title: "Uptime vs Oh Dear | Developer-Focused Monitoring Comparison",
-					description:
-						"Compare Uptime and Oh Dear for uptime monitoring. Both are developer-focused tools - see how usage-based pricing compares to per-site pricing, and find which is right for you.",
-				},
-			},
-			cronitor: {
-				meta: {
-					title: "Uptime vs Cronitor | Simpler Monitoring, Better Pricing",
-					description:
-						"Compare Uptime and Cronitor. Discover why teams choose Uptime for simpler pricing, DNS/TCP monitoring, and a focused approach without feature bloat.",
-				},
-			},
-			healthchecks: {
-				meta: {
-					title: "Uptime vs Healthchecks.io | Complete Monitoring Solution",
-					description:
-						"Compare Uptime and Healthchecks.io. See why teams choose Uptime for complete monitoring with HTTP, DNS, TCP, SSL, and cron job monitoring in one platform.",
-				},
-			},
-			uptimerobot: {
-				meta: {
-					title: "Uptime vs UptimeRobot | Modern Usage-Based Monitoring",
-					description:
-						"Compare Uptime and UptimeRobot. See why teams choose transparent usage-based pricing over tiered plans with hidden limits.",
-				},
-			},
-			betterUptime: {
-				meta: {
-					title: "Uptime vs Better Uptime | Simpler Monitoring Alternative",
-					description:
-						"Compare Uptime and Better Uptime. Discover simpler pricing, powerful features, and why developers are switching.",
-				},
-			},
-			pingdom: {
-				meta: {
-					title: "Uptime vs Pingdom | Affordable Monitoring Alternative",
-					description:
-						"Compare Uptime and Pingdom. Get powerful uptime monitoring without enterprise pricing. See features, pricing, and differences.",
-				},
-			},
-			statuscake: {
-				meta: {
-					title: "Uptime vs StatusCake | Modern Monitoring Comparison",
-					description:
-						"Compare Uptime and StatusCake. Modern interface, transparent pricing, and all the features you need without the complexity.",
-				},
-			},
-			datadog: {
-				meta: {
-					title: "Uptime vs Datadog | Simple Uptime Monitoring Alternative",
-					description:
-						"Compare Uptime and Datadog for uptime monitoring. Get focused monitoring without the complexity of a full observability platform.",
-				},
-			},
-		},
-
 		header: {
 			title: "Uptime",
 
@@ -144,7 +71,7 @@ export default {
 		},
 
 		trustIndicators: {
-			uptimeSla: "Uptime SLA",
+			monitorTypes: "Monitor Types",
 			globalRegions: "Global Regions",
 			daysDataRetention: "Days Data Retention",
 			alertLatency: "Alert Latency",
@@ -257,7 +184,7 @@ export default {
 				first: {
 					title: "Monitor your uptime",
 					description:
-						"Track your services 24/7 with 99.9% monitoring reliability. Get detailed metrics and performance insights at a glance.",
+						"Track your services around the clock, from nine regions, at intervals from one minute. Get detailed metrics and performance insights at a glance.",
 				},
 				second: {
 					title: "Receive alerts anywhere",
@@ -707,51 +634,6 @@ export default {
 				savingsPerYear: "~{{amount}}/year",
 				footnote:
 					"Estimates based on typical usage patterns. {{competitor}} pricing can change and your actual cost depends on your setup.",
-			},
-		},
-
-		for: {
-			soloDevs: {
-				meta: {
-					title: "Uptime for Solo Developers | Free Monitoring",
-					description:
-						"Professional uptime monitoring for solo developers. Start free, upgrade when ready. Perfect for portfolios and side projects.",
-				},
-			},
-			startups: {
-				meta: {
-					title: "Uptime for Startups | Team Monitoring",
-					description:
-						"Uptime monitoring for startups. Team collaboration, instant alerts, and usage-based pricing that scales with you.",
-				},
-			},
-			agencies: {
-				meta: {
-					title: "Uptime for Agencies | Client Monitoring",
-					description:
-						"Monitor all your client websites from one dashboard. Proactive uptime monitoring for digital agencies.",
-				},
-			},
-			enterprises: {
-				meta: {
-					title: "Uptime for Enterprises | Domain Auto-Provisioning",
-					description:
-						"Enterprise uptime monitoring with domain verification, auto-provisioning, and role-based access. 99.9% SLA guaranteed.",
-				},
-			},
-			devops: {
-				meta: {
-					title: "Uptime for DevOps | API-First Monitoring",
-					description:
-						"Uptime monitoring built for DevOps workflows. API-first design, webhook integrations, and fits into your existing toolchain.",
-				},
-			},
-			indieHackers: {
-				meta: {
-					title: "Uptime for Indie Hackers | Simple Monitoring",
-					description:
-						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 100,000 pings.",
-				},
 			},
 		},
 	},

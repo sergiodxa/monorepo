@@ -149,9 +149,13 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body).toContain("99.9%");
-		expect(body).toContain("Uptime SLA");
+		expect(body).toContain("Monitor Types");
 		expect(body).toContain("365");
+
+		// The strip states product facts only. An availability figure here would be a
+		// reliability claim about ourselves, which the Terms explicitly decline to make.
+		expect(body).not.toContain("99.9%");
+		expect(body).not.toContain("SLA");
 
 		// Feature cards link to their own page and carry the "learn more" affordance.
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);

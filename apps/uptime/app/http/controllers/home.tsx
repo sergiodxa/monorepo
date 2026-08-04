@@ -43,7 +43,6 @@ import {
 	RefreshCwIcon,
 	ShieldCheckIcon,
 	TimerIcon,
-	ZapIcon,
 } from "@pkg/lucide-remix";
 import { Button, Heading, LinkButton, TextField } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
@@ -199,10 +198,15 @@ export default createAction(routes.home, async (ctx) => {
 	];
 
 	let TRUST_INDICATORS: TrustIndicator[] = [
+		// Every figure in this strip has to be a fact about what the product does, not a
+		// claim about how well it does it: this is a monitoring tool, so an unbacked
+		// reliability number is the most expensive kind of copy on the page. The count is
+		// the five kinds of check the app actually runs — HTTP, DNS, TCP, SSL and
+		// cron/heartbeat.
 		{
-			icon: <ZapIcon size={24} strokeWidth={1.5} />,
-			value: "99.9%",
-			label: t("landing.trustIndicators.uptimeSla"),
+			icon: <ActivityIcon size={24} strokeWidth={1.5} />,
+			value: "5",
+			label: t("landing.trustIndicators.monitorTypes"),
 		},
 		{
 			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
