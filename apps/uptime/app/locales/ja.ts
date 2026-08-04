@@ -52,7 +52,7 @@ export default {
 				in: "ダッシュボードを開く",
 				out: "監視を始める",
 				pricing: "料金を見る",
-				try: "7日間無料でモニタリング",
+				try: "{{days}}日間無料でモニタリング",
 			},
 
 			try: {
@@ -75,6 +75,37 @@ export default {
 			monitorTypes: "モニタータイプ",
 			globalRegions: "グローバルリージョン",
 			daysDataRetention: "日間データ保持",
+			minCheckInterval: "最短チェック間隔",
+		},
+
+		/**
+		 * The three things that stay true however much somebody ends up monitoring. The price
+		 * and the allowance are interpolated from `~/app/lib/pricing.ts` rather than written
+		 * here — a literal would go stale the day pricing moves, and `app/lib/public-claims.ts`
+		 * fails the build on one.
+		 */
+		benefits: {
+			badge: "Uptime を選ぶ理由",
+			title: "1 つのプランに、すべてのチェック。数える必要はありません",
+			description: "どれだけ監視を増やしても変わらない 3 つのことです。",
+
+			list: {
+				everythingIncluded: {
+					title: "すべて込み",
+					description:
+						"HTTP、DNS、TCP、SSL のチェック、cron ジョブのハートビート、アラート、ステータスページ。1 つのプランにすべて含まれ、追加オプションとして別売りするものはありません。",
+				},
+				noMonitorMath: {
+					title: "モニター数の計算は不要",
+					description:
+						"モニターもチームメンバーも無制限です。見守りたいものをすべて追加し、見る必要のある人を全員招待できます。",
+				},
+				payForUsage: {
+					title: "実際に使った分だけお支払い",
+					description:
+						"月 {{price}} に {{included}} 回のチェックが含まれます。それを超えた分は、実際に実行したチェックの分だけをお支払いいただきます。それ以外の費用はありません。",
+				},
+			},
 		},
 
 		features: {
@@ -468,6 +499,140 @@ export default {
 			faqTitle: "よくある質問",
 			faqDescription: "監視を始める前によく寄せられる質問をまとめました。",
 			finalCtaTitle: "サービスの監視を始めましょう",
+		},
+	},
+
+	/**
+	 * `/trust` — how the monitoring works and who runs it.
+	 */
+	trust: {
+		meta: {
+			title: "信頼性について | Uptime",
+			description:
+				"Uptime の仕組み：誰が運営しているのか、チェックはどこから実行されるのか、インシデントはどう確定されるのか、そして何を保存し何を保存しないのか。",
+		},
+		footerLink: "信頼性",
+		heading: "信頼性について",
+		intro:
+			"モニターの価値は、それをどれだけ信じられるかで決まります。このページでは、このサービスが実際にどう動いているのか——誰が運営し、チェックはどこから来て、障害がどうやって通知になり、何を保持しているのか——を、頼るかどうか判断できる程度の詳しさで説明します。ここに書かれているのはすべて、計画ではなく現在実装されているとおりのシステムです。",
+		regions: {
+			afr: "アフリカ",
+			apac: "アジア太平洋",
+			eeur: "東ヨーロッパ",
+			enam: "北米東部",
+			me: "中東",
+			oc: "オセアニア",
+			sam: "南米",
+			weur: "西ヨーロッパ",
+			wnam: "北米西部",
+		},
+		sections: {
+			whoRuns: {
+				title: "運営者",
+				bodyPrefix: "Uptime は",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					"が個人で開発・運営しています。その名前の後ろにサポートの当番表やオンコールチームはありません。1 人がコードを書き、デプロイし、メールに返信しています。",
+				second:
+					"これは良い面と悪い面の両方で知っておく価値があります。チェックの挙動についての質問は、それを書いた本人に届きます。一方で、その人が眠っている間に起きた問題は、目を覚ますまで待つことになります。",
+			},
+			ownStatus: {
+				title: "当サービス自身のステータスページ",
+				bodyPrefix:
+					"このサービスは、製品として提供しているものと同じ cron ジョブ監視を使って、自身についてのステータスページを公開しています：",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: "。",
+				scope:
+					"そのページが扱う範囲は、名前から想像されるより狭いので、正確なところをお伝えします。サービスの内部で定期実行される各ジョブ——モニターの巡回、日次統計の夜間集計、保持期間切れデータの削除——は、完了時に報告を送ります。そのためこのページからは、それらの定期処理が予定どおり動いているかが分かります。サービス全体を外部から独立に監視するものではなく、アプリ本体と同じプラットフォーム上で動いているため、アプリを止めるほど広範囲の障害が起きれば、このページの報告も止まり得ます。",
+			},
+			whereChecksRun: {
+				title: "チェックの実行場所",
+				intro: "各モニターは、選択したリージョンからチェックされます。次の 9 つが利用できます。",
+				hint: "リージョンは目安であり、約束ではありません。チェックは選んだリージョンの近くに配置されたインフラで実行されますが、プラットフォームの都合で別の場所に配置されることもあります。例外はヨーロッパの 2 リージョンで、こちらは EU に固定されており、希望ではなく確実な制約です。",
+				timing:
+					"チェックで記録される応答時間は、あなたのエンドポイントへのリクエストのみを測っており、その周辺で当社が行う処理は含みません。そのため、その数値はそのリージョンにいる人が体験するものと比較できるままです。",
+			},
+			incidents: {
+				title: "インシデントの確定方法",
+				classification:
+					"すべてのチェックは 3 つの結果のいずれかで終わります。「停止」は、エンドポイントにまったく到達できなかった、期待したものとは異なるステータスで応答した、または設定したコンテンツチェックに失敗したことを意味します。「劣化」は、正しく応答したものの、設定したしきい値より遅かったことを意味します。「正常」は、すべてが一致したことを意味します。",
+				noConfirmation:
+					"最初の通知の前に、確認のための 2 回目のチェックは行いません。1 回の失敗したチェックだけで、モニターを停止と判定してアラートを送ります。これは意図的なトレードオフです——確認のための追加チェックを挟めば、本物のアラートがすべて 1 間隔分遅れます——が、その代わりに、たまたま一度ネットワークが不調だっただけでも受信箱に届き得ることを意味します。",
+				falsePositivesIntro: "その代わりにノイズを抑えているのは、次の仕組みです。",
+				infraFault: {
+					label: "当社側の失敗をあなたの失敗にはしません。",
+					body: "チェックを実行する当社のインフラ自体が失敗した場合、その結果は記録せず再試行します。当社側の不具合が、あなたの履歴の停止記録や受信箱のアラートになることはありません。",
+				},
+				yourThresholds: {
+					label: "タイムアウトもしきい値もあなたのもの。",
+					body: "タイムアウト、期待するステータス、劣化のしきい値はすべてあなたが設定します。そのため、チェックが遅いか失敗かは、あなたが与えた定義によってのみ判断されます。",
+				},
+				cooldown: {
+					label: "クールダウンと、1 インシデントあたりの上限。",
+					body: "各アラートには繰り返しを抑えるクールダウンがあり、さらに 1 つの継続中のインシデントについて送る通知数に厳しい上限があります。停止が続くモニターが、チェックごとに永遠にメールを送ってくることはありません。",
+				},
+				recovery: {
+					label: "復旧の通知は、本当に失敗があったときだけ。",
+					body: "復旧のメッセージは、モニターがそれ以前に失敗状態だった場合にのみ送られます。モニターの一番最初のチェックが、復旧したと名乗ることはありません。",
+				},
+				maintenance: {
+					label: "メンテナンス期間中はアラートを抑止します。",
+					body: "メンテナンス期間がモニターに適用されている間、その通知は完全にスキップされます。そのため、計画された作業で誰かを起こすことはありません。",
+				},
+				accounting: {
+					label: "抑止された通知も報告します。",
+					body: "インシデントが終わると、復旧のメッセージが、何件の通知を送り、何件を抑止したかを報告します。そのため、静かなインシデントと、失われたアラートを区別できます。",
+				},
+			},
+			storage: {
+				title: "保存するものと、保存しないもの",
+				noBodies:
+					"レスポンスの本文は一切保存しません。切り詰めても、ハッシュ化しても、サンプリングしてもいません。データベースのどこにも、そのための列自体が存在しません。",
+				contentChecks:
+					"レスポンスの本文をダウンロードするのは、そのモニターにコンテンツチェックを設定した場合のみです。設定した場合は、チェックの最中にメモリ上であなたのルールと照合し、リクエストの残りとともに破棄します。コンテンツチェックのないモニターは、本文を読むことがありません。",
+				storedIntro: "保持しているものと、その期間は次のとおりです。",
+				httpResults: {
+					label: "個々の HTTP チェックの記録：",
+					body: "返されたステータスコード、リクエストにかかった時間、終了した時刻。1 週間保持します。直近の表示と使用量の集計が読むのはこれだけです。",
+				},
+				dailyStats: {
+					label: "日次統計：",
+					body: "毎晩、前日のチェックがモニターごとに 1 行へ集計されます。この集計が 1 年分のヒートマップの裏にある長期履歴で、365 日間保持されます。",
+				},
+				otherResults: {
+					label: "DNS と TCP のチェック記録：",
+					body: "90 日間保持します。モニターの詳細ページや事後検証が直接読む履歴だからです。",
+				},
+				alertHistory: {
+					label: "アラート履歴：",
+					body: "送信した通知、送信に失敗した通知、意図的に抑止した通知のすべてを 90 日間保持します。何が伝えられ、何が伝えられなかったかを確認できます。",
+				},
+				cronPings: {
+					label: "cron ジョブのチェックイン：",
+					body: "365 日間保持します。それに付随して記録されるリクエスト元のアドレスとユーザーエージェントは 30 日後に消去され、チェックイン自体は残ります。",
+				},
+			},
+			customerData: {
+				title: "アカウントのデータ",
+				bodyPrefix:
+					"アカウント情報、決済の扱い、Cookie、そしてそれらすべてに対するあなたの権利については、",
+				privacyLinkText: "プライバシーポリシー",
+				bodySuffix:
+					"が定めています。要約を二重に書くのではなく、そちらが正式な文書です。短く言えば、あなたのデータは販売されず、監視データはあなたのチームのものです。",
+			},
+			ourIncidents: {
+				title: "Uptime 自身にインシデントが起きたとき",
+				retries:
+					"チェックはその場で実行するのではなくキューに入れられ、当社側の不具合で完了できなかったチェックは、記録せずに再試行されます。当社側の問題が、あなたのサービスの障害としてモニターの履歴に書き込まれることはありません。",
+				gaps: "問題が長引けば、チェックは遅れるかスキップされます。スキップされたチェックは何も書き込まないため、その期間は、実際にはなかったダウンタイムではなく、データのない空白として履歴に現れます。数値は実際に実行されたチェックから計算されます。",
+				missedAlerts:
+					"理解しておく価値があるのは、その次にくる失敗の形です。当社の障害中にあなたのエンドポイントが停止した場合、アラートは遅れて届くか、まったく届かないことがあります。監視サービスは自身が停止している間はあなたに知らせられません。このサービスも例外ではありません。",
+				noSlaPrefix:
+					"当社はサービスレベル契約（SLA）を提供しておらず、自らを縛る可用性の数値も公表していません。",
+				termsLinkText: "利用規約",
+				noSlaSuffix:
+					"にもそのとおり書かれており、このページがそれと違うことをひそかに言うことはありません。代わりにあるのは、上記のステータスページと、メールに返信する人間です。",
+			},
 		},
 	},
 
@@ -1215,6 +1380,8 @@ export default {
 				rangeStart: "7日前",
 				rangeEnd: "今日",
 				closing: "7日目が終わりましたので、{{url}}の無料チェックはここで終了します。",
+				report: "このレポートは、後から開いたり共有したりできるリンクでもご覧いただけます。",
+				reportAction: "オンラインで見る",
 				action: "このURLのチェックを続ける",
 				footer:
 					"このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。これが最後のメールです。",
@@ -1340,6 +1507,22 @@ export default {
 			},
 
 			success: "{{name}}モニターが作成されました。",
+		},
+
+		/**
+		 * A bulk import reports two numbers, and `partial` is the one that matters: a submission
+		 * where some lines landed is a success with a to-do list, not a failure, so it says how
+		 * many monitors exist before it says how many lines need fixing.
+		 */
+		importMonitors: {
+			errors: {
+				generic: "エラーが発生しました。リストを確認して、もう一度お試しください。",
+				none: "そのリストからは何もインポートできませんでした。下記の理由を確認して、もう一度お試しください。",
+			},
+
+			success_other: "{{count}}件のモニターが作成されました。",
+			partial_other:
+				"{{count}}件のモニターが作成されました。残り{{rejected}}件は作成できませんでした。詳細は下記をご覧ください。",
 		},
 
 		updateMonitor: {
@@ -2579,6 +2762,46 @@ export default {
 			},
 		},
 
+		monitorsImport: {
+			meta: { title: "モニターをインポート" },
+			header: { title: "モニターをインポート" },
+
+			form: {
+				fields: {
+					urls: {
+						label: "監視する URL",
+						description:
+							"1 行に 1 つの URL を、最大 {{limit}} 件まで。example.com のようなホスト名だけの場合は https://example.com になります。空行と同じアドレスの重複はスキップされます。",
+						placeholder: "example.com\nhttps://www.example.org/health\nstatus.example.net",
+					},
+					interval: {
+						label: "チェック間隔",
+						description: "このリストのすべてのモニターに適用されます。あとから個別に変更できます。",
+					},
+				},
+				cta: "モニターをインポート",
+			},
+
+			/**
+			 * The rejected lines, shown above the box they get re-pasted into. It leads with what
+			 * *was* created, so a partial import does not read as a failed one.
+			 */
+			report: {
+				title_other: "{{count}}件のモニターが作成されました。次の行は作成されていません：",
+				overflow_other:
+					"さらに {{count}} 行が対象外になりました。1 回のインポートで扱えるのは {{limit}} 行までです。残りを貼り付けてインポートしてください。",
+				table: {
+					label: "インポートされなかった行",
+					columns: { line: "行", input: "貼り付けた内容", reason: "理由" },
+				},
+				reasons: {
+					invalidUrl: "チェックできる URL ではありません。",
+					duplicate: "前の行と同じアドレスです。",
+					tooLong: "URL としては長すぎます。",
+				},
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "HTTPモニター",
@@ -3228,15 +3451,80 @@ export default {
 		},
 
 		trial: {
-			meta: {
-				title: "URL をチェック — Uptime",
-				description:
-					"アカウントなしで、任意の URL に対して当社ネットワークから実際のチェックを 1 回実行します。そのまま 1 週間の監視も可能です。",
+			/**
+			 * The report as its own page, reachable by the watch's token. Every figure is computed
+			 * from stored checks, so each one has a "nothing to report yet" wording beside it: a
+			 * watch with no completed check shows an em dash and says why, and never claims "no
+			 * incidents", because nobody has looked yet.
+			 */
+			report: {
+				meta: {
+					title: "{{days}} 日間のサイト健全性レポート — Uptime",
+					description:
+						"無料の 1 週間の監視で、あなたのサイトについて記録した稼働率、チェック回数、インシデントです。",
+				},
+				eyebrow: "{{days}} 日間の健全性レポート",
+				period: "{{start}} 〜 {{end}}（{{zone}}）を監視",
+				bar: {
+					caption: "{{days}} 日間を 1 日 1 ブロックで、古い順に表示しています。",
+					status: {
+						up: "終日正常",
+						degraded: "1 回以上低速",
+						down: "1 回以上停止",
+						noData: "この日はチェックなし",
+					},
+				},
+				summary: {
+					title: "記録した内容",
+					uptime: "稼働率",
+					checks: "完了したチェック",
+					healthy: "完全に正常だったチェック",
+					noChecks:
+						"まだ完了したチェックがないため、この URL について報告できることはありません。最初の 1 時間ごとのチェックは、監視の開始から 1 時間後に実行されます。",
+				},
+				incidents: {
+					title: "インシデント",
+					unknown:
+						"まだ完了したチェックがないため、この URL にインシデントがあったかどうかは分かりません。",
+					none_other:
+						"インシデントなし：完了した {{count}} 件のチェックはすべて期待どおりに応答しました。",
+					summary_other: "{{count}} 件のインシデント。",
+					entry_other:
+						"最初の失敗を {{started}} に検知——{{count}} 件のチェックが連続して失敗しました。",
+				},
+				timing: {
+					title: "応答時間",
+					fastest: "最速",
+					average: "平均",
+					slowest: "最遅",
+					basis_other: "応答した {{count}} 件のチェックを対象に計測しました。",
+				},
+				cta: {
+					title: "月 {{price}} でこのサイトの監視を続ける",
+					action: "監視を始める",
+					convertible: {
+						body: "サインインしていただければ、この URL を実際のモニターに変え、上記の履歴もそのまま引き継ぎます。",
+					},
+					expired: {
+						body: "この無料の 1 週間は引き継ぎ可能な期間を過ぎているため、上記の履歴はここに残ります。とはいえ、この URL の本格的な監視はいつでも始められます。",
+					},
+					converted: {
+						title: "この URL はすでに監視されています",
+						body: "この対象はモニターに変換済みのため、現在はあなた自身のスケジュールでチェックされています。",
+						action: "ダッシュボードを開く",
+					},
+				},
 			},
 
-			heading: "いますぐ URL をチェック",
+			meta: {
+				title: "無料の {{days}} 日間ウェブサイト健全性レポート — Uptime",
+				description:
+					"いますぐあなたのサイトをチェックし、その後 {{days}} 日間 1 時間ごとにチェックして、分かったことをメールでお送りします。アカウントもカードも不要です。",
+			},
+
+			heading: "あなたのサイトの無料 {{days}} 日間健全性レポート",
 			intro:
-				"URL を入力すると、当社ネットワークから実際のチェックを 1 回実行します。有料モニターが実行するものと同じチェックです。続行を依頼しない限り、何も保存されず、何も課金されません。",
+				"URL を入力すると、当社ネットワークからいますぐチェックを実行します。有料モニターが実行するものと同じチェックです。そのあとメールアドレスを入力いただければ、{{days}} 日間 1 時間ごとにチェックを続け、最後にレポートをお送りします。",
 
 			form: {
 				url: {
@@ -3244,7 +3532,7 @@ export default {
 					description: "公開インターネット上の http:// または https:// のアドレス。",
 					placeholder: "https://example.com",
 				},
-				submit: "チェックを実行する",
+				submit: "最初のチェックを実行する",
 			},
 
 			refusal: {
@@ -3288,14 +3576,29 @@ export default {
 			},
 
 			lead: {
-				title: "変化があったらメールで通知",
+				title: "無料の {{days}} 日間レポートを受け取る",
 				description:
-					"メールアドレスを入力いただければ、同じチェックを 7 日間 1 時間ごとに実行し、1 日 1 回のまとめをお送りします。アカウントもカードも不要です。",
+					"いまご覧になったチェックが 1 回目です。メールアドレスを入力いただければチェックを継続し、{{days}} 日間のチェックで分かったことをお伝えします。",
 				consent: "Uptime 自体についても、ときどきメールを送ってよい。",
 				consentNote: "どちらを選んでもチェックは届きます。",
 				promise:
 					"すべてのメールに、ワンクリックでチェックを止めてアドレスを削除するリンクが付いています。",
-				submit: "この URL を 1 週間監視する",
+				submit: "無料の {{days}} 日間レポートを開始する",
+
+				/**
+				 * What a visitor is agreeing to, stated next to the field rather than after it. Each
+				 * line is something the system actually does — the address is the one we probed and
+				 * not one they can retype, the cadence and the length are the watch's own, and the
+				 * three emails named are the three that exist.
+				 */
+				expectations: {
+					target:
+						"チェックを続けるのは {{url}} です。いまチェックしたアドレスそのものだけで、それ以外は対象になりません。",
+					cadence: "{{days}} 日間、1 時間ごとに 1 回。",
+					emails:
+						"1 日 1 通のまとめ、ステータスが変化したときのお知らせ、そして最後に完全なレポート。",
+					noAccount: "カードもパスワードも不要、作成するアカウントもありません。",
+				},
 
 				email: {
 					label: "メールアドレス",
@@ -3317,23 +3620,24 @@ export default {
 			watching: {
 				title: "監視を開始しました",
 				description:
-					"{{url}} の最初の 1 時間ごとのチェックは 1 時間後に実行されます。いま実行したチェックの控えはすでに受信箱に届いています。",
+					"{{url}} の最初の 1 時間ごとのチェックは 1 時間後に実行され、{{days}} 日間チェックを続けます。いま実行したチェックの控えはすでに受信箱に届いています。",
 			},
 
 			repeated: {
 				title: "このURLはすでにチェック済みです",
 				description:
-					"{{url}} は以前のお申し込みですでに無料の 1 週間をご利用済みです。1 つの URL につき 30 日ごとに 1 回となります。これまでのチェック結果はメールでお送りしましたので、新しい監視は開始していません。",
+					"{{url}} は以前のお申し込みですでに無料レポートをご利用済みです。1 つの URL につき 30 日ごとに 1 回となります。これまでのチェック結果はメールでお送りしましたので、新しい監視は開始していません。",
 			},
 
 			benefits: {
-				title: "この 1 週間でできること",
-				description: "有料モニターが教えてくれることを、この URL について 7 日間、無料で。",
+				title: "レポートに含まれる内容",
+				description:
+					"有料モニターがこの URL について教えてくれることをすべて、{{days}} 日間、無料で。",
 
 				list: {
 					hourly: {
 						title: "1 時間ごとのチェック",
-						description: "7 日間、有料モニターと同じネットワークから。",
+						description: "{{days}} 日間、有料モニターと同じネットワークから。",
 					},
 					changes: {
 						title: "変化したときのメール",
@@ -3342,7 +3646,8 @@ export default {
 					},
 					digest: {
 						title: "1 日 1 通のまとめ",
-						description: "URL の 1 日の状態が一目で分かります。",
+						description:
+							"URL の状態が一目で分かります。最後には {{days}} 日間の全体を 1 通のレポートにまとめます。",
 					},
 					noAccount: {
 						title: "アカウントもカードも不要",
@@ -3354,7 +3659,7 @@ export default {
 			more: {
 				title: "ウェブサイトだけではありません",
 				description:
-					"無料の 1 週間は HTTP が対象です。有料アカウントでは、さらに 3 つを見守ります。",
+					"無料レポートは HTTP が対象です。有料アカウントでは、さらに 3 つを見守ります。",
 
 				list: {
 					tcp: {
@@ -3376,11 +3681,11 @@ export default {
 			},
 
 			cta: {
-				badge: "1 週間のあとに",
-				title: "チェックはそのまま、残りを追加",
+				badge: "レポートが終わったあとに",
+				title: "月 {{price}} でこのサイトの監視を続ける",
 				description:
-					"1 時間ごとではなく 1 分ごとに、URL は好きなだけ、通知は普段使っている場所へ。ステータスページと 1 年分の履歴も付いて月 {{price}} です。",
-				action: "監視を始める",
+					"登録すると、この URL は実際のモニターになり、チェック履歴もそのまま引き継がれるので、何もやり直しにはなりません。1 時間ごとではなく 1 分ごとのチェック、好きなだけの URL、普段使っている場所へのアラート、ステータスページ、そして 1 年分の履歴が付きます。",
+				action: "このサイトの監視を続ける",
 				pricing: "料金を見る",
 			},
 		},

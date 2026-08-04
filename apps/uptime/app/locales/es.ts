@@ -52,7 +52,7 @@ export default {
 				in: "Abrir Panel de control",
 				out: "Comenzar a monitorear",
 				pricing: "Ver precios",
-				try: "Monitorea un sitio gratis 7 días",
+				try: "Monitorea un sitio gratis {{days}} días",
 			},
 
 			try: {
@@ -75,6 +75,37 @@ export default {
 			monitorTypes: "Tipos de Monitor",
 			globalRegions: "Regiones Globales",
 			daysDataRetention: "Días de Retención",
+			minCheckInterval: "Intervalo Mínimo",
+		},
+
+		/**
+		 * Las tres cosas que siguen siendo ciertas por mucho que alguien acabe monitoreando. El
+		 * precio y la cuota incluida se interpolan desde `~/app/lib/pricing.ts` en lugar de
+		 * escribirse aquí — un literal quedaría obsoleto el día que cambie el precio, y
+		 * `app/lib/public-claims.ts` hace fallar el build si aparece uno.
+		 */
+		benefits: {
+			badge: "Por qué Uptime",
+			title: "Un solo plan, todas las comprobaciones, sin contar nada",
+			description: "Tres cosas que siguen siendo ciertas por mucho que acabe monitoreando.",
+
+			list: {
+				everythingIncluded: {
+					title: "Todo incluido",
+					description:
+						"Comprobaciones HTTP, DNS, TCP y SSL, latidos de cron jobs, alertas y páginas de estado. Un solo plan, nada se vende aparte.",
+				},
+				noMonitorMath: {
+					title: "Sin cuentas de monitores",
+					description:
+						"Monitores ilimitados y miembros de equipo ilimitados. Añada todo lo que quiera vigilar, y a todos los que necesiten verlo.",
+				},
+				payForUsage: {
+					title: "Pague por el uso real",
+					description:
+						"{{price}} al mes incluye {{included}} comprobaciones. A partir de ahí paga las comprobaciones que realmente ejecuta, y nada más.",
+				},
+			},
 		},
 
 		features: {
@@ -478,6 +509,140 @@ export default {
 			faqTitle: "Preguntas frecuentes",
 			faqDescription: "Las dudas más habituales antes de empezar a monitorear.",
 			finalCtaTitle: "Comience a monitorear sus servicios",
+		},
+	},
+
+	/**
+	 * `/trust` — cómo funciona el monitoreo y quién lo opera.
+	 */
+	trust: {
+		meta: {
+			title: "Confianza | Uptime",
+			description:
+				"Cómo funciona Uptime: quién lo opera, desde dónde se ejecutan las comprobaciones, cómo se confirma un incidente y qué se guarda y qué no.",
+		},
+		footerLink: "Confianza",
+		heading: "Confianza",
+		intro:
+			"Un monitor vale lo que usted le crea. Esta página describe cómo funciona el servicio en realidad —quién lo opera, de dónde salen sus comprobaciones, cómo un fallo se convierte en una notificación y qué guardamos— con suficiente detalle para que decida si confiar en él. Todo lo que se dice aquí describe el sistema tal y como está construido hoy, no como está planeado.",
+		regions: {
+			afr: "África",
+			apac: "Asia-Pacífico",
+			eeur: "Europa del Este",
+			enam: "América del Norte oriental",
+			me: "Oriente Medio",
+			oc: "Oceanía",
+			sam: "América del Sur",
+			weur: "Europa Occidental",
+			wnam: "América del Norte occidental",
+		},
+		sections: {
+			whoRuns: {
+				title: "Quién lo opera",
+				bodyPrefix: "Uptime está construido y operado por ",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					", de forma independiente. Detrás de ese nombre no hay turnos de soporte ni un equipo de guardia: una sola persona escribe el código, lo despliega y contesta el correo.",
+				second:
+					"Conviene saberlo en los dos sentidos. Una pregunta sobre cómo se comporta una comprobación llega a la persona que la escribió. Un problema que empieza mientras esa persona duerme espera a que despierte.",
+			},
+			ownStatus: {
+				title: "Nuestra propia página de estado",
+				bodyPrefix:
+					"El servicio publica una página de estado sobre sí mismo, construida con el mismo monitoreo de cron jobs que ofrece el producto: ",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: ".",
+				scope:
+					"Lo que cubre esa página es más estrecho de lo que podría parecer, así que aquí va la afirmación precisa. Cada uno de los trabajos internos programados del servicio —los barridos de monitores, la consolidación nocturna de estadísticas diarias, las limpiezas de retención— avisa cuando termina, así que la página muestra si ese trabajo programado se está ejecutando a tiempo. No es una sonda independiente de todo el servicio, y se ejecuta en la misma plataforma que la propia aplicación, así que un problema lo bastante amplio para detener la aplicación puede detener también los avisos de la página.",
+			},
+			whereChecksRun: {
+				title: "Desde dónde se ejecutan las comprobaciones",
+				intro: "Cada monitor se comprueba desde una región que usted elige. Hay nueve disponibles:",
+				hint: "Una región es una indicación, no una promesa. La comprobación se ejecuta en infraestructura situada cerca de la región que eligió, y la plataforma puede ubicarla en otro sitio cuando le hace falta. Las dos regiones europeas son la excepción: están fijadas a la UE, lo que es una restricción firme y no una preferencia.",
+				timing:
+					"El tiempo de respuesta que se registra en una comprobación mide solo la petición a su endpoint, no nuestro propio trabajo alrededor, así que el número sigue siendo comparable a lo que experimentaría alguien en esa región.",
+			},
+			incidents: {
+				title: "Cómo se confirma un incidente",
+				classification:
+					"Cada comprobación termina en uno de tres resultados. Caído significa que no se pudo alcanzar el endpoint en absoluto, que respondió con un estado distinto del que usted espera, o que no pasó una comprobación de contenido que configuró. Degradado significa que respondió correctamente pero más lento que el umbral que fijó. Activo significa que todo coincidió.",
+				noConfirmation:
+					"No hay una segunda comprobación de confirmación antes de la primera notificación: una sola comprobación fallida basta para marcar un monitor como caído y enviar la alerta. Es un compromiso deliberado —una pasada de confirmación retrasaría cada alerta real un intervalo completo— pero sí significa que un único momento desafortunado de red puede llegar a su bandeja de entrada.",
+				falsePositivesIntro: "Lo que sí mantiene el ruido bajo:",
+				infraFault: {
+					label: "Nuestros fallos no son los suyos.",
+					body: "Cuando falla nuestra propia infraestructura de sondeo, la comprobación se reintenta en lugar de registrarse. Un fallo de nuestro lado nunca se convierte en un resultado de caída en su histórico ni en una alerta en su bandeja.",
+				},
+				yourThresholds: {
+					label: "Su timeout, sus umbrales.",
+					body: "El timeout, el estado esperado y el umbral de degradado los fija usted, así que una comprobación solo es lenta o fallida según la definición que usted le dio.",
+				},
+				cooldown: {
+					label: "Enfriamiento, y un tope por incidente.",
+					body: "Cada alerta tiene un tiempo de enfriamiento que limita las repeticiones, más un tope firme de cuántas notificaciones envía por un mismo incidente en curso. Un monitor que sigue caído no le escribe una vez por comprobación para siempre.",
+				},
+				recovery: {
+					label: "Avisos de recuperación solo después de un fallo real.",
+					body: "Un mensaje de recuperación solo se envía cuando el monitor estaba antes en estado de fallo. La primera comprobación de un monitor nunca se anuncia como recuperada.",
+				},
+				maintenance: {
+					label: "Las ventanas de mantenimiento silencian las alertas.",
+					body: "Mientras una ventana de mantenimiento cubre un monitor, sus notificaciones se omiten por completo, así que el trabajo planificado no despierta a nadie.",
+				},
+				accounting: {
+					label: "Las notificaciones retenidas se contabilizan.",
+					body: "Cuando termina un incidente, el mensaje de recuperación informa de cuántas notificaciones salieron y cuántas se retuvieron, así que un incidente silencioso se puede distinguir de unas alertas perdidas.",
+				},
+			},
+			storage: {
+				title: "Qué se guarda y qué no",
+				noBodies:
+					"Los cuerpos de las respuestas nunca se guardan. Ni truncados, ni hasheados, ni muestreados: no existe una columna para ello en ninguna parte de la base de datos.",
+				contentChecks:
+					"El cuerpo de una respuesta solo se descarga cuando usted configura una comprobación de contenido para ese monitor. Cuando lo hace, se compara con sus reglas en memoria durante la comprobación y luego se descarta junto con el resto de la petición. Un monitor sin comprobaciones de contenido nunca lee un cuerpo.",
+				storedIntro: "Qué se conserva, y durante cuánto tiempo:",
+				httpResults: {
+					label: "Registros individuales de comprobaciones HTTP:",
+					body: "el código de estado devuelto, cuánto tardó la petición y cuándo terminó. Se conservan una semana, que es todo lo que leen las vistas recientes y el conteo de uso.",
+				},
+				dailyStats: {
+					label: "Estadísticas diarias:",
+					body: "cada noche las comprobaciones del día anterior se consolidan en una fila por monitor. Esa consolidación es el histórico a largo plazo detrás del mapa de calor anual, y se retiene 365 días.",
+				},
+				otherResults: {
+					label: "Registros de comprobaciones DNS y TCP:",
+					body: "se conservan 90 días, porque ese es el histórico que leen directamente la página de detalle de un monitor y un análisis posterior.",
+				},
+				alertHistory: {
+					label: "Histórico de alertas:",
+					body: "cada notificación que enviamos, que no pudimos enviar o que retuvimos a propósito, conservada 90 días, para que pueda auditar qué se le dijo y qué no.",
+				},
+				cronPings: {
+					label: "Avisos de cron jobs:",
+					body: "se conservan 365 días. La dirección y el agente de usuario que se registran junto a uno se borran a los 30 días; el aviso en sí se queda.",
+				},
+			},
+			customerData: {
+				title: "Los datos de su cuenta",
+				bodyPrefix:
+					"Los datos de la cuenta, la gestión de los pagos, las cookies y sus derechos sobre todo ello se cubren en la ",
+				privacyLinkText: "Política de privacidad",
+				bodySuffix:
+					", que es el documento autoritativo y no un resumen escrito dos veces. La versión corta: sus datos no se venden, y sus datos de monitoreo pertenecen a su equipo.",
+			},
+			ourIncidents: {
+				title: "Cuando Uptime mismo tiene un incidente",
+				retries:
+					"Las comprobaciones se encolan en lugar de ejecutarse en línea, y una comprobación que no pudo terminar por un fallo de nuestro lado se reintenta en lugar de registrarse. Ninguno de nuestros problemas se escribe en el histórico de su monitor como un fallo de su servicio.",
+				gaps: "Si el problema dura, las comprobaciones se retrasan o se omiten. Una comprobación omitida no escribe nada, así que ese periodo aparece en su histórico como un hueco sin datos y no como una caída que nunca tuvo, y sus cifras se calculan a partir de las comprobaciones que realmente se ejecutaron.",
+				missedAlerts:
+					"El modo de fallo que conviene entender es el que viene después: si su endpoint se cae durante nuestra caída, su alerta puede llegar tarde o no llegar. Un servicio de monitoreo no puede avisarle mientras está caído, y este no es una excepción.",
+				noSlaPrefix:
+					"No ofrecemos un acuerdo de nivel de servicio, y no publicamos ninguna cifra de disponibilidad a la que atenernos. Los ",
+				termsLinkText: "Términos de servicio",
+				noSlaSuffix:
+					" lo dicen así, y esta página no va a decir lo contrario por lo bajo. Lo que hay en su lugar: la página de estado de arriba, y una persona que contesta el correo.",
+			},
 		},
 	},
 
@@ -1253,6 +1418,8 @@ export default {
 				rangeEnd: "Hoy",
 				closing:
 					"Este era el séptimo día, así que las comprobaciones gratuitas de {{url}} terminan aquí.",
+				report: "Este informe también vive en un enlace que puede reabrir o compartir:",
+				reportAction: "Verlo en línea",
 				action: "Seguir comprobando esta URL",
 				footer:
 					"Ha recibido este correo porque nos pidió vigilar esta URL durante una semana. Este es el último.",
@@ -1381,6 +1548,24 @@ export default {
 			},
 
 			success: "El monitor {{name}} fue creado.",
+		},
+
+		/**
+		 * Una importación masiva reporta dos números, y `partial` es el que importa: un envío en
+		 * el que algunas líneas entraron es un éxito con una lista de pendientes, no un fallo,
+		 * así que dice cuántos monitores existen antes de decir cuántas líneas hay que corregir.
+		 */
+		importMonitors: {
+			errors: {
+				generic: "¡Ups! Algo salió mal. Revise la lista e inténtelo de nuevo.",
+				none: "No se pudo importar nada de esa lista. Revise los motivos de abajo e inténtelo de nuevo.",
+			},
+
+			success_one: "Se creó 1 monitor.",
+			success_other: "Se crearon {{count}} monitores.",
+			partial_one: "Se creó 1 monitor. Otras {{rejected}} líneas no pudieron ser — vea abajo.",
+			partial_other:
+				"Se crearon {{count}} monitores. Otras {{rejected}} líneas no pudieron ser — vea abajo.",
 		},
 
 		updateMonitor: {
@@ -2636,6 +2821,51 @@ export default {
 			},
 		},
 
+		monitorsImport: {
+			meta: { title: "Importar monitores" },
+			header: { title: "Importar Monitores" },
+
+			form: {
+				fields: {
+					urls: {
+						label: "URL a monitorear",
+						description:
+							"Una URL por línea, hasta {{limit}}. Un host suelto como ejemplo.com se convierte en https://ejemplo.com. Las líneas vacías y las repeticiones de la misma dirección se omiten.",
+						placeholder: "ejemplo.com\nhttps://www.ejemplo.org/health\nstatus.ejemplo.net",
+					},
+					interval: {
+						label: "Intervalo de comprobación",
+						description:
+							"Se aplica a todos los monitores de esta lista. Puede cambiar cualquiera de ellos después.",
+					},
+				},
+				cta: "Importar Monitores",
+			},
+
+			/**
+			 * Las líneas rechazadas, mostradas encima de la caja en la que se vuelven a pegar.
+			 * Empieza por lo que *sí* se creó, para que una importación parcial no se lea como
+			 * una fallida.
+			 */
+			report: {
+				title_one: "Se creó 1 monitor. Estas líneas no:",
+				title_other: "Se crearon {{count}} monitores. Estas líneas no:",
+				overflow_one:
+					"Quedó 1 línea más fuera: una importación acepta {{limit}} líneas a la vez. Pegue el resto para importarlas.",
+				overflow_other:
+					"Quedaron {{count}} líneas más fuera: una importación acepta {{limit}} líneas a la vez. Pegue el resto para importarlas.",
+				table: {
+					label: "Líneas que no se importaron",
+					columns: { line: "Línea", input: "Lo que pegó", reason: "Por qué" },
+				},
+				reasons: {
+					invalidUrl: "No es una URL que podamos comprobar.",
+					duplicate: "La misma dirección que una línea anterior.",
+					tooLong: "Demasiado larga para ser una URL.",
+				},
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "Monitores HTTP",
@@ -3286,15 +3516,86 @@ export default {
 		},
 
 		trial: {
-			meta: {
-				title: "Comprueba una URL — Uptime",
-				description:
-					"Ejecuta una comprobación real sobre cualquier URL desde nuestra red, sin cuenta. Después la vigilamos durante una semana.",
+			/**
+			 * El informe como página propia, accesible con el token de la vigilancia. Cada cifra
+			 * se calcula a partir de las comprobaciones guardadas, así que cada una tiene su
+			 * redacción de «todavía no hay nada que informar»: una vigilancia sin ninguna
+			 * comprobación terminada muestra una raya y explica por qué, y nunca afirma «sin
+			 * incidentes», porque nadie ha mirado aún.
+			 */
+			report: {
+				meta: {
+					title: "Su informe de salud del sitio de {{days}} días — Uptime",
+					description:
+						"El uptime, las comprobaciones y los incidentes que registramos en su sitio durante su semana gratuita de monitoreo.",
+				},
+				eyebrow: "Informe de salud de {{days}} días",
+				period: "Monitoreado del {{start}} al {{end}} ({{zone}})",
+				bar: {
+					caption: "Un bloque por día durante {{days}} días, el más antiguo primero.",
+					status: {
+						up: "Activo todo el día",
+						degraded: "Lento al menos una vez",
+						down: "Caído al menos una vez",
+						noData: "Sin comprobaciones ese día",
+					},
+				},
+				summary: {
+					title: "Lo que registramos",
+					uptime: "Uptime",
+					checks: "Comprobaciones completadas",
+					healthy: "Comprobaciones totalmente sanas",
+					noChecks:
+						"Todavía no ha terminado ninguna comprobación, así que no hay nada que informar sobre esta URL. La primera comprobación horaria se ejecuta una hora después de que empezara la vigilancia.",
+				},
+				incidents: {
+					title: "Incidentes",
+					unknown:
+						"Todavía no ha terminado ninguna comprobación, así que no podemos decir si esta URL tuvo algún incidente.",
+					none_one:
+						"Ningún incidente: la única comprobación completada respondió como se esperaba.",
+					none_other:
+						"Ningún incidente: las {{count}} comprobaciones completadas respondieron como se esperaba.",
+					summary_one: "Un incidente.",
+					summary_other: "{{count}} incidentes.",
+					entry_one: "Primer fallo visto el {{started}} — falló una comprobación.",
+					entry_other:
+						"Primer fallo visto el {{started}} — fallaron {{count}} comprobaciones seguidas.",
+				},
+				timing: {
+					title: "Tiempos de respuesta",
+					fastest: "Más rápido",
+					average: "Promedio",
+					slowest: "Más lento",
+					basis_one: "Medido sobre la única comprobación que respondió.",
+					basis_other: "Medido sobre las {{count}} comprobaciones que respondieron.",
+				},
+				cta: {
+					title: "Siga monitoreando este sitio por {{price}}/mes",
+					action: "Empezar a monitorear",
+					convertible: {
+						body: "Inicie sesión y convertiremos esta URL en un monitor real, con el histórico de arriba ya incorporado.",
+					},
+					expired: {
+						body: "Esta semana gratuita ya pasó su plazo de reclamación, así que el histórico de arriba se queda aquí, pero puede empezar a monitorear esta URL en serio cuando quiera.",
+					},
+					converted: {
+						title: "Esta URL ya se está monitoreando",
+						body: "Convirtió este objetivo en un monitor, así que ahora se comprueba con su propia frecuencia.",
+						action: "Abrir su panel de control",
+					},
+				},
 			},
 
-			heading: "Comprueba una URL ahora mismo",
+			meta: {
+				title: "Informe gratuito de salud web de {{days}} días — Uptime",
+				description:
+					"Comprobamos su sitio ahora, luego cada hora durante {{days}} días, y le enviamos por correo lo que encontramos. Sin cuenta, sin tarjeta.",
+			},
+
+			heading: "Un informe de salud gratuito de {{days}} días para su sitio",
 			intro:
-				"Escribe una URL y ejecutamos una comprobación real desde nuestra red: la misma que hace un monitor de pago. No se guarda nada y no se cobra nada salvo que nos pidas continuar.",
+				"Denos una URL y la comprobamos ahora mismo desde nuestra red: la misma comprobación que ejecuta un monitor de pago. Deje un email después y seguimos comprobando cada hora durante {{days}} días, y luego le enviamos el informe.",
 
 			form: {
 				url: {
@@ -3302,22 +3603,22 @@ export default {
 					description: "Una dirección http:// o https:// en la internet pública.",
 					placeholder: "https://ejemplo.com",
 				},
-				submit: "Ejecutar la comprobación",
+				submit: "Ejecutar la primera comprobación",
 			},
 
 			refusal: {
 				title: "La comprobación no se ejecutó",
 				blockedTarget:
-					"Esa no es una dirección que vayamos a comprobar en tu nombre. Tiene que ser una URL http:// o https:// pública, en el puerto 80 o 443, sin usuario ni contraseña, y resolver a algún sitio de la internet abierta.",
-				challengeIncomplete: "Completa la verificación y podremos ejecutar la comprobación.",
+					"Esa no es una dirección que vayamos a comprobar en su nombre. Tiene que ser una URL http:// o https:// pública, en el puerto 80 o 443, sin usuario ni contraseña, y resolver a algún sitio de la internet abierta.",
+				challengeIncomplete: "Complete la verificación y podremos ejecutar la comprobación.",
 				failedChallenge:
-					"No pudimos confirmar que la petición viniera de un navegador. Recarga la página e inténtalo de nuevo.",
-				rateLimited: "Puedes ejecutar otra comprobación en un minuto.",
-				rateLimitedFor: "Puedes ejecutar otra comprobación en {{seconds}} segundos.",
+					"No pudimos confirmar que la petición viniera de un navegador. Recargue la página e inténtelo de nuevo.",
+				rateLimited: "Puede ejecutar otra comprobación en un minuto.",
+				rateLimitedFor: "Puede ejecutar otra comprobación en {{seconds}} segundos.",
 				budgetExhausted:
-					"Ya hemos hecho todas las comprobaciones gratuitas que hacemos en un día. Esto es cosa nuestra, no de tu URL: vuelve mañana, o empieza a monitorizar y la comprobaremos cada minuto.",
+					"Ya hemos hecho todas las comprobaciones gratuitas que hacemos en un día. Esto es cosa nuestra, no de su URL: vuelva mañana, o empiece a monitorear y la comprobaremos cada minuto.",
 				unavailable:
-					"Algo de nuestro lado impidió que la comprobación llegara a ejecutarse, así que no aprendimos nada sobre tu URL. El problema es nuestro, no tuyo. Inténtalo de nuevo en un momento.",
+					"Algo de nuestro lado impidió que la comprobación llegara a ejecutarse, así que no aprendimos nada sobre su URL. El problema es nuestro, no suyo. Inténtelo de nuevo en un momento.",
 			},
 
 			result: {
@@ -3331,11 +3632,11 @@ export default {
 					badge: "Redirige",
 					title: "Esta URL redirige a otro sitio",
 					description:
-						"Respondió, y respondió señalándonos otra dirección. No fuimos allí: solo comprobamos la URL que nos diste, y eso es lo que impide que esta caja sirva para llegar a donde no debe. Comprueba el destino y tendrás un resultado real de él.",
+						"Respondió, y respondió señalándonos otra dirección. No fuimos allí: solo comprobamos la URL que nos dio, y eso es lo que impide que esta caja sirva para llegar a donde no debe. Compruebe el destino y tendrá un resultado real de él.",
 					destination: "Apunta a {{url}}",
 					action: "Comprobar esa en su lugar",
 					unknownDestination:
-						"No leímos a dónde apunta. Abre la URL en un navegador, mira dónde acabas y comprueba aquí esa dirección.",
+						"No leímos a dónde apunta. Abra la URL en un navegador, mire dónde acaba y compruebe aquí esa dirección.",
 				},
 
 				status: {
@@ -3346,13 +3647,28 @@ export default {
 			},
 
 			lead: {
-				title: "Recibe un email cuando esto cambie",
+				title: "Reciba el informe gratuito de {{days}} días",
 				description:
-					"Déjanos un email y repetimos esta misma comprobación cada hora durante siete días, con un resumen al día. Sin cuenta y sin tarjeta.",
-				consent: "Escríbeme también de vez en cuando sobre Uptime.",
-				consentNote: "En cualquier caso tendrás las comprobaciones.",
-				promise: "Cada email lleva un enlace de un clic que las detiene y borra tu dirección.",
-				submit: "Vigilar esta URL una semana",
+					"La comprobación que acaba de ver era la primera. Deje un email y seguimos, y luego le contamos qué encontraron {{days}} días de comprobaciones.",
+				consent: "Escríbanme también de vez en cuando sobre Uptime.",
+				consentNote: "En cualquier caso tendrá las comprobaciones.",
+				promise: "Cada email lleva un enlace de un clic que los detiene y borra su dirección.",
+				submit: "Empezar el informe gratuito de {{days}} días",
+
+				/**
+				 * Lo que acepta un visitante, dicho junto al campo y no después. Cada línea es algo
+				 * que el sistema hace de verdad: la dirección es la que sondeamos y no una que
+				 * pueda reescribir, la frecuencia y la duración son las de la propia vigilancia, y
+				 * los tres correos que se nombran son los tres que existen.
+				 */
+				expectations: {
+					target:
+						"Seguimos comprobando {{url}}: exactamente la dirección que acabamos de comprobar, y nada más.",
+					cadence: "Una vez por hora, cada hora, durante {{days}} días.",
+					emails:
+						"Un resumen al día, un aviso cuando cambia el estado y el informe completo al final.",
+					noAccount: "Sin tarjeta, sin contraseña, sin cuenta que crear.",
+				},
 
 				email: {
 					label: "Email",
@@ -3362,46 +3678,47 @@ export default {
 			},
 
 			monitor: {
-				title: "Sigue vigilando esta URL",
+				title: "Siga vigilando esta URL",
 				description:
-					"Convierte esta comprobación en un monitor: la misma comprobación con la frecuencia que elijas y un aviso en cuanto algo cambie.",
+					"Convierta esta comprobación en un monitor: la misma comprobación con la frecuencia que elija y un aviso en cuanto algo cambie.",
 				subscribeDescription:
-					"Convierte esta comprobación en un monitor: la misma comprobación con la frecuencia que elijas y un aviso en cuanto algo cambie. Empezará a ejecutarse en cuanto tu suscripción esté activa.",
+					"Convierta esta comprobación en un monitor: la misma comprobación con la frecuencia que elija y un aviso en cuanto algo cambie. Empezará a ejecutarse en cuanto su suscripción esté activa.",
 				create: "Crear un monitor para esta URL",
-				subscribe: "Activar tu suscripción",
+				subscribe: "Activar su suscripción",
 			},
 
 			watching: {
 				title: "Estamos en ello",
 				description:
-					"La primera comprobación horaria de {{url}} se ejecuta dentro de una hora. Ya tienes en tu bandeja una copia de la que acabas de hacer.",
+					"La primera comprobación horaria de {{url}} se ejecuta dentro de una hora, y seguimos comprobando durante {{days}} días. Ya tiene en su bandeja una copia de la que acaba de hacer.",
 			},
 
 			repeated: {
 				title: "Esta ya la hemos comprobado",
 				description:
-					"{{url}} ya tuvo su semana gratuita en una petición anterior: cada URL tiene una cada 30 días. Te hemos enviado por correo todo lo que encontraron esas comprobaciones, así que no hemos iniciado nada nuevo.",
+					"{{url}} ya tuvo su informe gratuito en una petición anterior: cada URL tiene uno cada 30 días. Le hemos enviado por correo todo lo que encontraron esas comprobaciones, así que no hemos iniciado nada nuevo.",
 			},
 
 			benefits: {
-				title: "Cómo será la semana",
+				title: "Qué cubre el informe",
 				description:
-					"Todo lo que un monitor de pago te diría sobre esta URL, gratis y durante siete días.",
+					"Todo lo que un monitor de pago le diría sobre esta URL, gratis, durante {{days}} días.",
 
 				list: {
 					hourly: {
 						title: "Una comprobación cada hora",
 						description:
-							"Durante siete días, desde la misma red en la que corre un monitor de pago.",
+							"Durante {{days}} días, desde la misma red en la que corre un monitor de pago.",
 					},
 					changes: {
 						title: "Un email cuando cambia",
 						description:
-							"Se cae o vuelve, y te enteras. Como mucho uno al día, para que un sitio inestable no te desborde.",
+							"Se cae o vuelve, y se entera. Como mucho uno al día, para que un sitio inestable no le desborde.",
 					},
 					digest: {
 						title: "Un resumen al día",
-						description: "Cómo aguantó tu URL, de un vistazo.",
+						description:
+							"Cómo aguantó su URL, de un vistazo, y los {{days}} días completos en un informe al final.",
 					},
 					noAccount: {
 						title: "Sin cuenta y sin tarjeta",
@@ -3413,7 +3730,7 @@ export default {
 			more: {
 				title: "No solo sitios web",
 				description:
-					"La semana gratis cubre HTTP. Con una cuenta de pago te vigilamos tres cosas más.",
+					"El informe gratuito cubre HTTP. Con una cuenta de pago le vigilamos tres cosas más.",
 
 				list: {
 					tcp: {
@@ -3429,17 +3746,17 @@ export default {
 					cron: {
 						title: "Tareas programadas",
 						description:
-							"Saber que tu copia de seguridad nocturna terminó, y enterarte la noche en que no.",
+							"Saber que su copia de seguridad nocturna terminó, y enterarse la noche en que no.",
 					},
 				},
 			},
 
 			cta: {
-				badge: "Después de la semana",
-				title: "Quédate las comprobaciones y añade el resto",
+				badge: "Cuando acabe el informe",
+				title: "Siga monitoreando este sitio por {{price}} al mes",
 				description:
-					"Cada minuto en lugar de cada hora, todas las URL que quieras, alertas donde ya trabajas, páginas de estado y un año de histórico. {{price}} al mes.",
-				action: "Empezar a monitorizar",
+					"Registrarse convierte esta URL en un monitor real y arrastra su histórico de comprobaciones, así que nada empieza de cero. Una comprobación cada minuto en lugar de cada hora, todas las URL que quiera, alertas donde ya trabaja, páginas de estado y un año de histórico.",
+				action: "Seguir monitoreando este sitio",
 				pricing: "Ver precios",
 			},
 		},

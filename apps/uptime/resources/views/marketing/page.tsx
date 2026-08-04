@@ -52,6 +52,7 @@ import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typograph
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
+import { FREE_TRIAL_DAYS } from "~/app/lib/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -197,7 +198,10 @@ export function buildMarketingPageChrome(t: TFunction): MarketingPageView.Chrome
 		startLabel: t("landing.hero.cta.out"),
 		dashboardLabel: t("landing.hero.cta.in"),
 		pricingLabel: t("landing.hero.cta.pricing"),
-		tryLabel: t("landing.hero.cta.try"),
+		// The offer's length comes from the pricing module, so this label cannot outlive a change
+		// to it — it was written as a literal "7 days" in all six locales until a translator
+		// noticed the number had no source.
+		tryLabel: t("landing.hero.cta.try", { days: FREE_TRIAL_DAYS }),
 		screenshotAlt: t("landing.hero.screenshot.alt"),
 		everythingBadge: t("landing.marketingPage.everythingBadge"),
 		everythingTitle: t("landing.marketingPage.everythingTitle"),

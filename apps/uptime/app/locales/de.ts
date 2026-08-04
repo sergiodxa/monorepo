@@ -52,7 +52,7 @@ export default {
 				in: "Dashboard öffnen",
 				out: "Überwachung starten",
 				pricing: "Preise ansehen",
-				try: "7 Tage gratis überwachen",
+				try: "{{days}} Tage gratis überwachen",
 			},
 
 			try: {
@@ -75,6 +75,37 @@ export default {
 			monitorTypes: "Monitor-Typen",
 			globalRegions: "Globale Regionen",
 			daysDataRetention: "Tage Datenspeicherung",
+			minCheckInterval: "Min. Prüfintervall",
+		},
+
+		/**
+		 * Die drei Dinge, die wahr bleiben, egal wie viel jemand am Ende überwacht. Preis und
+		 * Freikontingent werden aus `~/app/lib/pricing.ts` eingesetzt und nicht hier
+		 * geschrieben — ein fester Wert wäre am Tag einer Preisänderung veraltet, und
+		 * `app/lib/public-claims.ts` lässt den Build daran scheitern.
+		 */
+		benefits: {
+			badge: "Warum Uptime",
+			title: "Ein Tarif, alle Prüfungen, kein Rechnen",
+			description: "Drei Dinge, die wahr bleiben, egal wie viel Sie am Ende überwachen.",
+
+			list: {
+				everythingIncluded: {
+					title: "Alles inklusive",
+					description:
+						"HTTP-, DNS-, TCP- und SSL-Prüfungen, Cron-Job-Heartbeats, Benachrichtigungen und Statusseiten. Ein Tarif, nichts als Zusatzoption verkauft.",
+				},
+				noMonitorMath: {
+					title: "Kein Monitor-Rechnen",
+					description:
+						"Unbegrenzt Monitore und unbegrenzt Teammitglieder. Nehmen Sie alles auf, was beobachtet werden soll, und jeden, der es sehen muss.",
+				},
+				payForUsage: {
+					title: "Zahlen für tatsächliche Nutzung",
+					description:
+						"{{price}} pro Monat enthalten {{included}} Prüfungen. Darüber hinaus zahlen Sie für die Prüfungen, die Sie tatsächlich ausführen, und für nichts anderes.",
+				},
+			},
 		},
 
 		features: {
@@ -480,6 +511,140 @@ export default {
 			faqTitle: "Häufig gestellte Fragen",
 			faqDescription: "Die häufigsten Fragen, bevor Sie mit der Überwachung beginnen.",
 			finalCtaTitle: "Überwachen Sie jetzt Ihre Dienste",
+		},
+	},
+
+	/**
+	 * `/trust` — wie die Überwachung funktioniert und wer sie betreibt.
+	 */
+	trust: {
+		meta: {
+			title: "Vertrauen | Uptime",
+			description:
+				"Wie Uptime funktioniert: wer es betreibt, von wo die Prüfungen laufen, wie ein Vorfall bestätigt wird und was genau gespeichert wird und was nicht.",
+		},
+		footerLink: "Vertrauen",
+		heading: "Vertrauen",
+		intro:
+			"Ein Monitor ist nur so viel wert, wie Sie ihm glauben. Diese Seite beschreibt, wie der Dienst tatsächlich funktioniert — wer ihn betreibt, woher Ihre Prüfungen kommen, wie aus einem Fehler eine Benachrichtigung wird und was wir behalten — ausführlich genug, dass Sie entscheiden können, ob Sie sich darauf verlassen wollen. Alles hier beschreibt das System, wie es heute gebaut ist, nicht wie es geplant ist.",
+		regions: {
+			afr: "Afrika",
+			apac: "Asien-Pazifik",
+			eeur: "Osteuropa",
+			enam: "Östliches Nordamerika",
+			me: "Naher Osten",
+			oc: "Ozeanien",
+			sam: "Südamerika",
+			weur: "Westeuropa",
+			wnam: "Westliches Nordamerika",
+		},
+		sections: {
+			whoRuns: {
+				title: "Wer es betreibt",
+				bodyPrefix: "Uptime wird gebaut und betrieben von ",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					", eigenständig. Hinter diesem Namen steht kein Support-Schichtplan und kein Bereitschaftsteam: eine Person schreibt den Code, veröffentlicht ihn und antwortet auf die E-Mails.",
+				second:
+					"Das ist in beide Richtungen wissenswert. Eine Frage zum Verhalten einer Prüfung erreicht die Person, die sie geschrieben hat. Ein Problem, das beginnt, während diese Person schläft, wartet, bis sie aufwacht.",
+			},
+			ownStatus: {
+				title: "Unsere eigene Statusseite",
+				bodyPrefix:
+					"Der Dienst veröffentlicht eine Statusseite über sich selbst, gebaut mit derselben Cron-Job-Überwachung, die das Produkt anbietet: ",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: ".",
+				scope:
+					"Was diese Seite abdeckt, ist enger, als es klingen mag, deshalb hier die genaue Aussage. Jeder der internen geplanten Jobs des Dienstes — die Monitor-Durchläufe, die nächtliche Zusammenfassung der Tagesstatistiken, die Aufräumarbeiten zur Datenspeicherung — meldet sich, wenn er fertig ist, sodass die Seite zeigt, ob diese geplante Arbeit rechtzeitig läuft. Sie ist keine unabhängige Prüfung des gesamten Dienstes, und sie läuft auf derselben Plattform wie die App selbst; eine Störung, die groß genug ist, um die App zu stoppen, kann also auch die Meldungen dieser Seite stoppen.",
+			},
+			whereChecksRun: {
+				title: "Von wo die Prüfungen laufen",
+				intro:
+					"Jeder Monitor wird aus einer Region geprüft, die Sie wählen. Neun stehen zur Verfügung:",
+				hint: "Eine Region ist ein Hinweis, kein Versprechen. Die Prüfung läuft auf Infrastruktur in der Nähe der gewählten Region, und die Plattform kann sie anderswo platzieren, wenn sie muss. Die zwei europäischen Regionen sind die Ausnahme: sie sind an die EU gebunden, und das ist eine harte Vorgabe und keine Vorliebe.",
+				timing:
+					"Die für eine Prüfung erfasste Antwortzeit misst nur die Anfrage an Ihren Endpunkt, nicht unsere eigene Arbeit darum herum, damit der Wert vergleichbar bleibt mit dem, was jemand in dieser Region erleben würde.",
+			},
+			incidents: {
+				title: "Wie ein Vorfall bestätigt wird",
+				classification:
+					"Jede Prüfung endet in einem von drei Ergebnissen. Ausgefallen bedeutet, der Endpunkt war überhaupt nicht erreichbar, hat mit einem anderen Status als dem erwarteten geantwortet oder eine von Ihnen konfigurierte Inhaltsprüfung nicht bestanden. Beeinträchtigt bedeutet, er hat korrekt geantwortet, aber langsamer als der von Ihnen gesetzte Schwellenwert. Erreichbar bedeutet, alles hat gepasst.",
+				noConfirmation:
+					"Vor der ersten Benachrichtigung gibt es keine zweite bestätigende Prüfung: eine fehlgeschlagene Prüfung genügt, um einen Monitor als ausgefallen zu markieren und die Benachrichtigung zu senden. Das ist eine bewusste Abwägung — ein Bestätigungsdurchlauf würde jede echte Benachrichtigung um ein ganzes Intervall verzögern — aber es bedeutet auch, dass ein einzelner unglücklicher Netzwerkmoment Ihr Postfach erreichen kann.",
+				falsePositivesIntro: "Was den Lärm stattdessen klein hält:",
+				infraFault: {
+					label: "Unsere Fehler sind nicht Ihre.",
+					body: "Wenn unsere eigene Prüfinfrastruktur ausfällt, wird die Prüfung wiederholt statt erfasst. Ein Fehler auf unserer Seite wird niemals zu einem Ausfall in Ihrem Verlauf oder zu einer Benachrichtigung in Ihrem Postfach.",
+				},
+				yourThresholds: {
+					label: "Ihr Timeout, Ihre Schwellenwerte.",
+					body: "Das Timeout, der erwartete Status und der Schwellenwert für Beeinträchtigung werden alle von Ihnen gesetzt, eine Prüfung ist also nur nach Ihrer eigenen Definition langsam oder fehlgeschlagen.",
+				},
+				cooldown: {
+					label: "Abkühlzeit und eine Obergrenze pro Vorfall.",
+					body: "Jede Benachrichtigung hat eine Abkühlzeit, die Wiederholungen bremst, plus eine harte Obergrenze dafür, wie viele Meldungen sie für einen laufenden Vorfall sendet. Ein Monitor, der ausgefallen bleibt, schreibt Ihnen nicht endlos einmal pro Prüfung.",
+				},
+				recovery: {
+					label: "Wiederherstellungsmeldungen nur nach einem echten Fehler.",
+					body: "Eine Wiederherstellungsmeldung wird nur gesendet, wenn der Monitor zuvor in einem Fehlerzustand war. Die allererste Prüfung eines Monitors meldet sich nie als wiederhergestellt.",
+				},
+				maintenance: {
+					label: "Wartungsfenster unterdrücken Benachrichtigungen.",
+					body: "Solange ein Wartungsfenster einen Monitor abdeckt, werden seine Benachrichtigungen vollständig übersprungen, damit geplante Arbeiten niemanden wecken.",
+				},
+				accounting: {
+					label: "Zurückgehaltene Benachrichtigungen werden ausgewiesen.",
+					body: "Wenn ein Vorfall endet, berichtet die Wiederherstellungsmeldung, wie viele Benachrichtigungen hinausgingen und wie viele zurückgehalten wurden, sodass ein stiller Vorfall von verlorenen Benachrichtigungen unterschieden werden kann.",
+				},
+			},
+			storage: {
+				title: "Was gespeichert wird und was nicht",
+				noBodies:
+					"Antwortinhalte werden nie gespeichert. Nicht gekürzt, nicht gehasht, nicht als Stichprobe — es gibt nirgends in der Datenbank eine Spalte dafür.",
+				contentChecks:
+					"Ein Antwortinhalt wird überhaupt nur heruntergeladen, wenn Sie für diesen Monitor eine Inhaltsprüfung konfigurieren. Wenn Sie das tun, wird er während der Prüfung im Speicher gegen Ihre Regeln abgeglichen und dann mit dem Rest der Anfrage verworfen. Ein Monitor ohne Inhaltsprüfungen liest nie einen Antwortinhalt.",
+				storedIntro: "Was behalten wird, und wie lange:",
+				httpResults: {
+					label: "Einzelne HTTP-Prüfdatensätze:",
+					body: "der zurückgegebene Statuscode, wie lange die Anfrage gedauert hat und wann sie abgeschlossen war. Eine Woche lang aufbewahrt, was alles ist, was die aktuellen Ansichten und die Nutzungszählung lesen.",
+				},
+				dailyStats: {
+					label: "Tagesstatistiken:",
+					body: "jede Nacht werden die Prüfungen des Vortags zu einer Zeile pro Monitor zusammengefasst. Diese Zusammenfassung ist der Langzeitverlauf hinter der Jahres-Heatmap und wird 365 Tage lang aufbewahrt.",
+				},
+				otherResults: {
+					label: "DNS- und TCP-Prüfdatensätze:",
+					body: "90 Tage lang aufbewahrt, denn das ist der Verlauf, den die Detailseite eines Monitors und eine Nachbetrachtung direkt lesen.",
+				},
+				alertHistory: {
+					label: "Benachrichtigungsverlauf:",
+					body: "jede Benachrichtigung, die wir gesendet haben, nicht senden konnten oder absichtlich zurückgehalten haben, 90 Tage lang aufbewahrt, damit Sie nachvollziehen können, was Ihnen mitgeteilt wurde und was nicht.",
+				},
+				cronPings: {
+					label: "Cron-Job-Rückmeldungen:",
+					body: "365 Tage lang aufbewahrt. Die anfragende Adresse und der User-Agent, die dazu erfasst werden, werden nach 30 Tagen gelöscht; die Rückmeldung selbst bleibt.",
+				},
+			},
+			customerData: {
+				title: "Ihre Kontodaten",
+				bodyPrefix: "Kontodaten, Zahlungsabwicklung, Cookies und Ihre Rechte daran werden von der ",
+				privacyLinkText: "Datenschutzerklärung",
+				bodySuffix:
+					" abgedeckt, die das maßgebliche Dokument ist und keine zweimal geschriebene Zusammenfassung. Die Kurzfassung: Ihre Daten werden nicht verkauft, und Ihre Überwachungsdaten gehören Ihrem Team.",
+			},
+			ourIncidents: {
+				title: "Wenn Uptime selbst einen Vorfall hat",
+				retries:
+					"Prüfungen werden in eine Warteschlange gestellt und nicht direkt ausgeführt, und eine Prüfung, die wegen eines Fehlers auf unserer Seite nicht abgeschlossen werden konnte, wird wiederholt statt erfasst. Keine unserer eigenen Störungen wird als Fehler Ihres Dienstes in den Verlauf Ihres Monitors geschrieben.",
+				gaps: "Hält die Störung an, werden Prüfungen verzögert oder übersprungen. Eine übersprungene Prüfung schreibt nichts, deshalb erscheint der Zeitraum in Ihrem Verlauf als Lücke ohne Daten und nicht als Ausfall, den Sie nie hatten, und Ihre Werte werden aus den Prüfungen berechnet, die tatsächlich gelaufen sind.",
+				missedAlerts:
+					"Der Fehlerfall, den man verstehen sollte, ist der, der daraus folgt: fällt Ihr Endpunkt während unserer Störung aus, kann Ihre Benachrichtigung zu spät oder überhaupt nicht ankommen. Ein Überwachungsdienst kann Sie nicht benachrichtigen, während er selbst ausgefallen ist, und dieser ist keine Ausnahme.",
+				noSlaPrefix:
+					"Wir bieten keine Dienstgütevereinbarung an, und wir veröffentlichen keinen Verfügbarkeitswert, an dem wir uns messen lassen. Die ",
+				termsLinkText: "Nutzungsbedingungen",
+				noSlaSuffix:
+					" sagen das auch, und diese Seite wird nicht stillschweigend etwas anderes behaupten. Was es stattdessen gibt: die Statusseite oben und eine Person, die auf E-Mails antwortet.",
+			},
 		},
 	},
 
@@ -1258,6 +1423,9 @@ export default {
 				rangeStart: "Vor 7 Tagen",
 				rangeEnd: "Heute",
 				closing: "Das war der siebte Tag, damit enden die kostenlosen Prüfungen von {{url}} hier.",
+				report:
+					"Diesen Bericht gibt es auch unter einem Link, den Sie erneut öffnen oder teilen können:",
+				reportAction: "Online ansehen",
 				action: "Diese URL weiter prüfen",
 				footer:
 					"Sie erhalten diese E-Mail, weil Sie uns gebeten haben, diese URL eine Woche lang zu beobachten. Es ist die letzte.",
@@ -1387,6 +1555,26 @@ export default {
 			},
 
 			success: "Monitor {{name}} wurde erstellt.",
+		},
+
+		/**
+		 * Ein Massenimport meldet zwei Zahlen, und `partial` ist die entscheidende: eine Eingabe,
+		 * bei der einige Zeilen durchgekommen sind, ist ein Erfolg mit einer To-do-Liste und kein
+		 * Fehlschlag, deshalb nennt sie zuerst die Zahl der angelegten Monitore und dann die Zahl
+		 * der Zeilen, die korrigiert werden müssen.
+		 */
+		importMonitors: {
+			errors: {
+				generic:
+					"Hoppla! Etwas ist schiefgelaufen. Bitte prüfen Sie die Liste und versuchen Sie es erneut.",
+				none: "Aus dieser Liste konnte nichts importiert werden. Prüfen Sie die Gründe unten und versuchen Sie es erneut.",
+			},
+
+			success_one: "1 Monitor wurde erstellt.",
+			success_other: "{{count}} Monitore wurden erstellt.",
+			partial_one: "1 Monitor wurde erstellt. {{rejected}} weitere konnten es nicht — siehe unten.",
+			partial_other:
+				"{{count}} Monitore wurden erstellt. {{rejected}} weitere konnten es nicht — siehe unten.",
 		},
 
 		updateMonitor: {
@@ -2646,6 +2834,51 @@ export default {
 			},
 		},
 
+		monitorsImport: {
+			meta: { title: "Monitore importieren" },
+			header: { title: "Monitore importieren" },
+
+			form: {
+				fields: {
+					urls: {
+						label: "Zu überwachende URLs",
+						description:
+							"Eine URL pro Zeile, bis zu {{limit}}. Ein reiner Host wie beispiel.de wird zu https://beispiel.de. Leere Zeilen und Wiederholungen derselben Adresse werden übersprungen.",
+						placeholder: "beispiel.de\nhttps://www.beispiel.org/health\nstatus.beispiel.net",
+					},
+					interval: {
+						label: "Prüfintervall",
+						description:
+							"Gilt für jeden Monitor in dieser Liste. Sie können jeden davon später ändern.",
+					},
+				},
+				cta: "Monitore importieren",
+			},
+
+			/**
+			 * Die abgelehnten Zeilen, angezeigt über dem Feld, in das sie neu eingefügt werden.
+			 * Es beginnt mit dem, was *erstellt* wurde, damit ein teilweiser Import nicht wie ein
+			 * fehlgeschlagener klingt.
+			 */
+			report: {
+				title_one: "1 Monitor wurde erstellt. Diese Zeilen nicht:",
+				title_other: "{{count}} Monitore wurden erstellt. Diese Zeilen nicht:",
+				overflow_one:
+					"1 weitere Zeile wurde ausgelassen: ein Import nimmt {{limit}} Zeilen auf einmal. Fügen Sie den Rest ein, um ihn zu importieren.",
+				overflow_other:
+					"{{count}} weitere Zeilen wurden ausgelassen: ein Import nimmt {{limit}} Zeilen auf einmal. Fügen Sie den Rest ein, um ihn zu importieren.",
+				table: {
+					label: "Zeilen, die nicht importiert wurden",
+					columns: { line: "Zeile", input: "Was Sie eingefügt haben", reason: "Warum" },
+				},
+				reasons: {
+					invalidUrl: "Keine URL, die wir prüfen können.",
+					duplicate: "Dieselbe Adresse wie in einer früheren Zeile.",
+					tooLong: "Zu lang für eine URL.",
+				},
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "HTTP-Monitore",
@@ -3298,15 +3531,85 @@ export default {
 		},
 
 		trial: {
-			meta: {
-				title: "Eine URL prüfen — Uptime",
-				description:
-					"Führe eine echte Prüfung einer beliebigen URL aus unserem Netz aus, ohne Konto. Danach beobachten wir sie eine Woche lang.",
+			/**
+			 * Der Bericht als eigene Seite, erreichbar über das Token der Beobachtung. Jeder Wert
+			 * wird aus gespeicherten Prüfungen berechnet, deshalb hat jeder eine Formulierung für
+			 * „noch nichts zu berichten“ daneben: eine Beobachtung ohne abgeschlossene Prüfung
+			 * zeigt einen Gedankenstrich und sagt warum, und behauptet nie „keine Vorfälle“, weil
+			 * noch niemand nachgesehen hat.
+			 */
+			report: {
+				meta: {
+					title: "Ihr Gesundheitsbericht über {{days}} Tage — Uptime",
+					description:
+						"Die Uptime, Prüfungen und Vorfälle, die wir für Ihre Website in ihrer kostenlosen Überwachungswoche erfasst haben.",
+				},
+				eyebrow: "Gesundheitsbericht über {{days}} Tage",
+				period: "Überwacht von {{start}} bis {{end}} ({{zone}})",
+				bar: {
+					caption: "Ein Block pro Tag über {{days}} Tage, ältester zuerst.",
+					status: {
+						up: "Den ganzen Tag erreichbar",
+						degraded: "Mindestens einmal langsam",
+						down: "Mindestens einmal ausgefallen",
+						noData: "Keine Prüfungen an diesem Tag",
+					},
+				},
+				summary: {
+					title: "Was wir erfasst haben",
+					uptime: "Uptime",
+					checks: "Abgeschlossene Prüfungen",
+					healthy: "Vollständig fehlerfreie Prüfungen",
+					noChecks:
+						"Es ist noch keine Prüfung abgeschlossen, deshalb gibt es zu dieser URL nichts zu berichten. Die erste stündliche Prüfung läuft eine Stunde nach dem Start der Beobachtung.",
+				},
+				incidents: {
+					title: "Vorfälle",
+					unknown:
+						"Es ist noch keine Prüfung abgeschlossen, deshalb können wir nicht sagen, ob diese URL einen Vorfall hatte.",
+					none_one: "Kein Vorfall: die eine abgeschlossene Prüfung hat wie erwartet geantwortet.",
+					none_other:
+						"Keine Vorfälle: alle {{count}} abgeschlossenen Prüfungen haben wie erwartet geantwortet.",
+					summary_one: "Ein Vorfall.",
+					summary_other: "{{count}} Vorfälle.",
+					entry_one: "Erster Fehler gesehen {{started}} — eine Prüfung ist fehlgeschlagen.",
+					entry_other:
+						"Erster Fehler gesehen {{started}} — {{count}} Prüfungen in Folge sind fehlgeschlagen.",
+				},
+				timing: {
+					title: "Antwortzeiten",
+					fastest: "Schnellste",
+					average: "Durchschnitt",
+					slowest: "Langsamste",
+					basis_one: "Gemessen über die eine Prüfung, die geantwortet hat.",
+					basis_other: "Gemessen über die {{count}} Prüfungen, die geantwortet haben.",
+				},
+				cta: {
+					title: "Diese Website weiter überwachen für {{price}}/Monat",
+					action: "Überwachung starten",
+					convertible: {
+						body: "Melden Sie sich an und wir machen aus dieser URL einen echten Monitor, mit dem Verlauf von oben übernommen.",
+					},
+					expired: {
+						body: "Diese kostenlose Woche liegt außerhalb ihres Übernahmezeitraums, deshalb bleibt der Verlauf von oben hier — aber Sie können diese URL jederzeit richtig überwachen lassen.",
+					},
+					converted: {
+						title: "Diese URL wird bereits überwacht",
+						body: "Sie haben aus diesem Ziel einen Monitor gemacht, es wird also jetzt in Ihrem eigenen Intervall geprüft.",
+						action: "Dashboard öffnen",
+					},
+				},
 			},
 
-			heading: "Prüfe jetzt eine URL",
+			meta: {
+				title: "Kostenloser Website-Gesundheitsbericht über {{days}} Tage — Uptime",
+				description:
+					"Wir prüfen Ihre Website jetzt, dann {{days}} Tage lang jede Stunde, und senden Ihnen per E-Mail, was wir gefunden haben. Kein Konto, keine Karte.",
+			},
+
+			heading: "Ein kostenloser Gesundheitsbericht über {{days}} Tage für Ihre Website",
 			intro:
-				"Gib eine URL ein und wir führen eine echte Prüfung aus unserem Netz aus — dieselbe, die ein bezahlter Monitor ausführt. Nichts wird gespeichert und nichts berechnet, solange du uns nicht bittest weiterzumachen.",
+				"Geben Sie uns eine URL und wir prüfen sie jetzt aus unserem Netz — dieselbe Prüfung, die ein bezahlter Monitor ausführt. Hinterlassen Sie danach eine E-Mail-Adresse und wir prüfen {{days}} Tage lang jede Stunde weiter und senden Ihnen dann den Bericht.",
 
 			form: {
 				url: {
@@ -3314,7 +3617,7 @@ export default {
 					description: "Eine http:// oder https:// Adresse im öffentlichen Internet.",
 					placeholder: "https://beispiel.de",
 				},
-				submit: "Prüfung ausführen",
+				submit: "Erste Prüfung ausführen",
 			},
 
 			refusal: {
@@ -3359,14 +3662,29 @@ export default {
 			},
 
 			lead: {
-				title: "E-Mail, sobald sich etwas ändert",
+				title: "Den kostenlosen Bericht über {{days}} Tage erhalten",
 				description:
-					"Hinterlasse eine E-Mail-Adresse und wir führen dieselbe Prüfung sieben Tage lang stündlich aus, mit einer Zusammenfassung pro Tag. Ohne Konto und ohne Karte.",
+					"Die Prüfung, die Sie gerade gesehen haben, war die erste. Hinterlassen Sie eine E-Mail-Adresse und wir machen weiter und sagen Ihnen dann, was {{days}} Tage Prüfen ergeben haben.",
 				consent: "Schreibt mir gelegentlich auch über Uptime selbst.",
-				consentNote: "Die Prüfungen bekommst du so oder so.",
+				consentNote: "Die Prüfungen bekommen Sie so oder so.",
 				promise:
-					"Jede E-Mail enthält einen Link, der sie mit einem Klick beendet und deine Adresse löscht.",
-				submit: "Diese URL eine Woche beobachten",
+					"Jede E-Mail enthält einen Link, der sie mit einem Klick beendet und Ihre Adresse löscht.",
+				submit: "Kostenlosen Bericht über {{days}} Tage starten",
+
+				/**
+				 * Worauf sich ein Besucher einlässt, neben dem Feld statt darunter genannt. Jede
+				 * Zeile ist etwas, das das System tatsächlich tut — die Adresse ist die, die wir
+				 * geprüft haben, und keine, die neu eingetippt werden kann, Takt und Dauer sind die
+				 * der Beobachtung selbst, und die drei genannten E-Mails sind die drei, die es gibt.
+				 */
+				expectations: {
+					target:
+						"Wir prüfen {{url}} weiter — genau die Adresse, die wir gerade geprüft haben, und keine andere.",
+					cadence: "Einmal pro Stunde, jede Stunde, {{days}} Tage lang.",
+					emails:
+						"Eine Zusammenfassung pro Tag, eine Nachricht bei jedem Statuswechsel und am Ende der vollständige Bericht.",
+					noAccount: "Keine Karte, kein Passwort, kein Konto anzulegen.",
+				},
 
 				email: {
 					label: "E-Mail",
@@ -3388,34 +3706,35 @@ export default {
 			watching: {
 				title: "Wir kümmern uns darum",
 				description:
-					"Die erste stündliche Prüfung von {{url}} läuft in einer Stunde. Eine Kopie der gerade ausgeführten Prüfung liegt schon in deinem Postfach.",
+					"Die erste stündliche Prüfung von {{url}} läuft in einer Stunde, und wir prüfen {{days}} Tage lang weiter. Eine Kopie der gerade ausgeführten Prüfung liegt schon in Ihrem Postfach.",
 			},
 
 			repeated: {
 				title: "Diese haben wir schon geprüft",
 				description:
-					"{{url}} hatte ihre kostenlose Woche bereits durch eine frühere Anfrage — jede URL bekommt alle 30 Tage eine. Wir haben dir per E-Mail geschickt, was diese Prüfungen ergeben haben; neu gestartet wurde nichts.",
+					"{{url}} hatte ihren kostenlosen Bericht bereits durch eine frühere Anfrage — jede URL bekommt alle 30 Tage einen. Wir haben Ihnen per E-Mail geschickt, was diese Prüfungen ergeben haben; neu gestartet wurde nichts.",
 			},
 
 			benefits: {
-				title: "So sieht die Woche aus",
+				title: "Was der Bericht abdeckt",
 				description:
-					"Alles, was dir ein bezahlter Monitor über diese URL sagen würde — kostenlos, sieben Tage lang.",
+					"Alles, was Ihnen ein bezahlter Monitor über diese URL sagen würde — kostenlos, {{days}} Tage lang.",
 
 				list: {
 					hourly: {
 						title: "Jede Stunde eine Prüfung",
 						description:
-							"Sieben Tage lang, aus demselben Netz, in dem ein bezahlter Monitor läuft.",
+							"{{days}} Tage lang, aus demselben Netz, in dem ein bezahlter Monitor läuft.",
 					},
 					changes: {
 						title: "Eine E-Mail, wenn sich etwas ändert",
 						description:
-							"Fällt sie aus oder kommt zurück, du erfährst es. Höchstens eine pro Tag, damit eine flatternde Seite dich nicht überschwemmt.",
+							"Fällt sie aus oder kommt zurück, Sie erfahren es. Höchstens eine pro Tag, damit eine flatternde Seite Sie nicht überschwemmt.",
 					},
 					digest: {
 						title: "Eine Zusammenfassung pro Tag",
-						description: "Wie sich deine URL gehalten hat, auf einen Blick.",
+						description:
+							"Wie sich Ihre URL gehalten hat, auf einen Blick — und am Ende die ganzen {{days}} Tage in einem Bericht.",
 					},
 					noAccount: {
 						title: "Kein Konto, keine Karte",
@@ -3427,7 +3746,7 @@ export default {
 			more: {
 				title: "Nicht nur Websites",
 				description:
-					"Die kostenlose Woche deckt HTTP ab. Mit einem bezahlten Konto behalten wir drei weitere Dinge für dich im Auge.",
+					"Der kostenlose Bericht deckt HTTP ab. Mit einem bezahlten Konto behalten wir drei weitere Dinge für Sie im Auge.",
 
 				list: {
 					tcp: {
@@ -3443,17 +3762,17 @@ export default {
 					cron: {
 						title: "Cron-Jobs",
 						description:
-							"Wissen, dass dein nächtliches Backup fertig geworden ist — und es erfahren in der Nacht, in der es das nicht ist.",
+							"Wissen, dass Ihr nächtliches Backup fertig geworden ist — und es erfahren in der Nacht, in der es das nicht ist.",
 					},
 				},
 			},
 
 			cta: {
-				badge: "Nach der Woche",
-				title: "Behalte die Prüfungen, nimm den Rest dazu",
+				badge: "Wenn der Bericht endet",
+				title: "Diese Website weiter überwachen für {{price}} im Monat",
 				description:
-					"Jede Minute statt jede Stunde, so viele URLs du willst, Benachrichtigungen dort wo du ohnehin arbeitest, Statusseiten und ein Jahr Verlauf. {{price}} im Monat.",
-				action: "Überwachung starten",
+					"Mit der Anmeldung wird aus dieser URL ein echter Monitor, und ihr Prüfverlauf wird übernommen, sodass nichts von vorn beginnt. Eine Prüfung jede Minute statt jede Stunde, so viele URLs Sie möchten, Benachrichtigungen dort, wo Sie ohnehin arbeiten, Statusseiten und ein Jahr Verlauf.",
+				action: "Diese Website weiter überwachen",
 				pricing: "Preise ansehen",
 			},
 		},

@@ -52,7 +52,7 @@ export default {
 				in: "Apri Dashboard",
 				out: "Inizia il Monitoraggio",
 				pricing: "Vedi Prezzi",
-				try: "Monitora un sito gratis per 7 giorni",
+				try: "Monitora un sito gratis per {{days}} giorni",
 			},
 
 			try: {
@@ -75,6 +75,37 @@ export default {
 			monitorTypes: "Tipi di Monitor",
 			globalRegions: "Regioni Globali",
 			daysDataRetention: "Giorni Conservazione Dati",
+			minCheckInterval: "Intervallo Minimo di Controllo",
+		},
+
+		/**
+		 * Le tre cose che restano vere qualunque sia la quantità di servizi monitorati. Il prezzo
+		 * e la quota inclusa arrivano da `~/app/lib/pricing.ts` invece di essere scritti qui —
+		 * un valore letterale diventerebbe obsoleto il giorno in cui i prezzi cambiano, e
+		 * `app/lib/public-claims.ts` fa fallire la build se ne trova uno.
+		 */
+		benefits: {
+			badge: "Perché Uptime",
+			title: "Un solo piano, tutti i controlli, nessun calcolo",
+			description: "Tre cose che restano vere qualunque sia la quantità di servizi che monitora.",
+
+			list: {
+				everythingIncluded: {
+					title: "Tutto incluso",
+					description:
+						"Controlli HTTP, DNS, TCP e SSL, heartbeat dei cron job, avvisi e pagine di stato. Un solo piano, niente venduto come componente aggiuntivo.",
+				},
+				noMonitorMath: {
+					title: "Nessun calcolo sui monitor",
+					description:
+						"Monitor illimitati e membri del team illimitati. Aggiunga tutto ciò che vuole tenere d'occhio, e tutte le persone che devono vederlo.",
+				},
+				payForUsage: {
+					title: "Paghi per l'utilizzo effettivo",
+					description:
+						"{{price}} al mese includono {{included}} controlli. Oltre quella soglia paga i controlli che esegue davvero, e nient'altro.",
+				},
+			},
 		},
 
 		features: {
@@ -476,6 +507,141 @@ export default {
 			faqTitle: "Domande Frequenti",
 			faqDescription: "Le domande più comuni prima di iniziare a monitorare.",
 			finalCtaTitle: "Inizi a monitorare i suoi servizi",
+		},
+	},
+
+	/**
+	 * `/trust` — come funziona il monitoraggio e chi lo gestisce.
+	 */
+	trust: {
+		meta: {
+			title: "Trasparenza | Uptime",
+			description:
+				"Come funziona Uptime: chi lo gestisce, da dove partono i controlli, come viene confermato un incidente e cosa viene conservato e cosa no.",
+		},
+		footerLink: "Trasparenza",
+		heading: "Trasparenza",
+		intro:
+			"Un monitor vale solo quanto la fiducia che Le ispira. Questa pagina descrive come funziona davvero il servizio — chi lo gestisce, da dove partono i suoi controlli, come un guasto diventa una notifica e cosa conserviamo — con dettagli sufficienti per decidere se affidarsi a esso. Tutto quanto è scritto qui descrive il sistema così com'è costruito oggi, non come è previsto che sia.",
+		regions: {
+			afr: "Africa",
+			apac: "Asia-Pacifico",
+			eeur: "Europa orientale",
+			enam: "America del Nord orientale",
+			me: "Medio Oriente",
+			oc: "Oceania",
+			sam: "America del Sud",
+			weur: "Europa occidentale",
+			wnam: "America del Nord occidentale",
+		},
+		sections: {
+			whoRuns: {
+				title: "Chi lo gestisce",
+				bodyPrefix: "Uptime è sviluppato e gestito da ",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					", in modo indipendente. Dietro quel nome non c'è alcun turno di assistenza né una squadra di reperibilità: una sola persona scrive il codice, lo mette in produzione e risponde alle email.",
+				second:
+					"Vale la pena saperlo in entrambe le direzioni. Una domanda sul comportamento di un controllo arriva alla persona che l'ha scritto. Un problema che comincia mentre quella persona dorme aspetta che si svegli.",
+			},
+			ownStatus: {
+				title: "La nostra pagina di stato",
+				bodyPrefix:
+					"Il servizio pubblica una pagina di stato su se stesso, costruita con lo stesso monitoraggio dei cron job che il prodotto offre: ",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: ".",
+				scope:
+					"Ciò che quella pagina copre è più ristretto di quanto possa sembrare, quindi ecco l'affermazione precisa. Ognuno dei lavori interni pianificati del servizio — i cicli di controllo dei monitor, il consolidamento notturno delle statistiche giornaliere, le pulizie di conservazione — segnala quando termina, così la pagina mostra se quel lavoro pianificato viene eseguito nei tempi previsti. Non è una sonda indipendente dell'intero servizio, e gira sulla stessa piattaforma dell'applicazione, quindi un problema abbastanza ampio da fermare l'applicazione può fermare anche i rapporti della pagina.",
+			},
+			whereChecksRun: {
+				title: "Da dove partono i controlli",
+				intro:
+					"Ogni monitor viene controllato da una regione che scelga Lei. Ne sono disponibili nove:",
+				hint: "Una regione è un'indicazione, non una promessa. Il controllo viene eseguito su infrastruttura collocata vicino alla regione scelta, e la piattaforma può collocarlo altrove quando è necessario. Le due regioni europee sono l'eccezione: sono vincolate all'UE, che è un requisito rigido e non una preferenza.",
+				timing:
+					"Il tempo di risposta registrato per un controllo misura solo la richiesta al suo endpoint, non il lavoro che facciamo attorno a essa, così il valore resta confrontabile con ciò che sperimenterebbe qualcuno in quella regione.",
+			},
+			incidents: {
+				title: "Come viene confermato un incidente",
+				classification:
+					"Ogni controllo si chiude con uno di tre esiti. Non raggiungibile significa che l'endpoint non è stato raggiunto affatto, ha risposto con uno stato diverso da quello che si aspetta, oppure non ha superato un controllo sul contenuto che ha configurato. Degradato significa che ha risposto correttamente, ma più lentamente della soglia che ha impostato. Attivo significa che tutto corrispondeva.",
+				noConfirmation:
+					"Non c'è un secondo controllo di conferma prima della prima notifica: un solo controllo fallito basta a marcare un monitor come non raggiungibile e a inviare l'avviso. È un compromesso deliberato — una verifica di conferma ritarderebbe ogni avviso reale di un intervallo intero — ma significa anche che un singolo momento sfortunato della rete può arrivarLe nella casella di posta.",
+				falsePositivesIntro: "Ciò che invece tiene basso il rumore:",
+				infraFault: {
+					label: "I nostri guasti non sono i suoi.",
+					body: "Quando è la nostra infrastruttura di controllo a guastarsi, il controllo viene riprovato invece di essere registrato. Un guasto dalla nostra parte non diventa mai un esito negativo nel suo storico né un avviso nella sua casella di posta.",
+				},
+				yourThresholds: {
+					label: "Il suo timeout, le sue soglie.",
+					body: "Il timeout, lo stato atteso e la soglia di degrado li imposta Lei, quindi un controllo risulta lento o fallito solo secondo la definizione che gli ha dato.",
+				},
+				cooldown: {
+					label: "Attesa fra gli avvisi, e un tetto per incidente.",
+					body: "Ogni avviso ha un tempo di attesa che limita le ripetizioni, più un tetto massimo al numero di notifiche inviate per un singolo incidente in corso. Un monitor che resta non raggiungibile non Le scrive una volta per controllo all'infinito.",
+				},
+				recovery: {
+					label: "Avvisi di ripristino solo dopo un guasto reale.",
+					body: "Un messaggio di ripristino viene inviato solo se il monitor si trovava prima in uno stato di guasto. Il primo controllo in assoluto di un monitor non si annuncia mai come ripristinato.",
+				},
+				maintenance: {
+					label: "Le finestre di manutenzione sospendono gli avvisi.",
+					body: "Mentre una finestra di manutenzione copre un monitor, le sue notifiche vengono saltate del tutto, così il lavoro pianificato non sveglia nessuno.",
+				},
+				accounting: {
+					label: "Le notifiche trattenute vengono conteggiate.",
+					body: "Quando un incidente si chiude, il messaggio di ripristino riporta quante notifiche sono state inviate e quante sono state trattenute, così un incidente silenzioso si distingue da avvisi persi.",
+				},
+			},
+			storage: {
+				title: "Cosa viene conservato e cosa no",
+				noBodies:
+					"I corpi delle risposte non vengono mai conservati. Né troncati, né sottoposti ad hash, né campionati: nel database non esiste alcuna colonna per contenerli.",
+				contentChecks:
+					"Il corpo di una risposta viene scaricato soltanto quando configura un controllo sul contenuto per quel monitor. In quel caso viene confrontato con le sue regole in memoria durante il controllo e poi scartato insieme al resto della richiesta. Un monitor senza controlli sul contenuto non legge mai un corpo.",
+				storedIntro: "Cosa viene conservato, e per quanto tempo:",
+				httpResults: {
+					label: "Singoli record dei controlli HTTP:",
+					body: "il codice di stato restituito, quanto è durata la richiesta e quando è terminata. Conservati per una settimana, che è tutto ciò che leggono le viste recenti e il conteggio dell'utilizzo.",
+				},
+				dailyStats: {
+					label: "Statistiche giornaliere:",
+					body: "ogni notte i controlli del giorno precedente vengono consolidati in una riga per monitor. Quel consolidamento è lo storico di lungo periodo dietro la mappa di calore annuale, e viene conservato per 365 giorni.",
+				},
+				otherResults: {
+					label: "Record dei controlli DNS e TCP:",
+					body: "conservati per 90 giorni, perché sono lo storico che la pagina di dettaglio di un monitor e un'analisi post mortem leggono direttamente.",
+				},
+				alertHistory: {
+					label: "Storico degli avvisi:",
+					body: "ogni notifica che abbiamo inviato, che non siamo riusciti a inviare o che abbiamo trattenuto deliberatamente, conservata per 90 giorni, così può verificare cosa Le è stato detto e cosa no.",
+				},
+				cronPings: {
+					label: "Segnalazioni dei cron job:",
+					body: "conservate per 365 giorni. L'indirizzo di provenienza e lo user agent registrati insieme a una segnalazione vengono cancellati dopo 30 giorni; la segnalazione in sé resta.",
+				},
+			},
+			customerData: {
+				title: "I dati del suo account",
+				bodyPrefix:
+					"I dati dell'account, la gestione dei pagamenti, i cookie e i suoi diritti su tutto questo sono trattati nell'",
+				privacyLinkText: "Informativa sulla privacy",
+				bodySuffix:
+					", che è il documento di riferimento e non un riassunto scritto due volte. In breve: i suoi dati non vengono venduti, e i suoi dati di monitoraggio appartengono al suo team.",
+			},
+			ourIncidents: {
+				title: "Quando è Uptime stesso ad avere un incidente",
+				retries:
+					"I controlli vengono messi in coda invece di essere eseguiti in linea, e un controllo che non è potuto terminare per un guasto dalla nostra parte viene riprovato invece di essere registrato. Nessun nostro problema viene scritto nello storico del suo monitor come un guasto del suo servizio.",
+				gaps: "Se il problema si prolunga, i controlli vengono ritardati o saltati. Un controllo saltato non scrive nulla, quindi quel periodo compare nel suo storico come un intervallo senza dati e non come un'indisponibilità che non ha mai avuto, e i suoi valori vengono calcolati sui controlli effettivamente eseguiti.",
+				missedAlerts:
+					"La modalità di guasto che vale la pena capire è quella che ne consegue: se il suo endpoint va giù durante una nostra interruzione, il suo avviso può arrivare in ritardo o non arrivare affatto. Un servizio di monitoraggio non può avvisarLa mentre è fuori servizio, e questo non fa eccezione.",
+				noSlaPrefix:
+					"Non offriamo alcun accordo sul livello di servizio, e non pubblichiamo alcun valore di disponibilità a cui vincolarci. I ",
+				termsLinkText: "Termini di servizio",
+				noSlaSuffix:
+					" dicono altrettanto, e questa pagina non dirà di nascosto il contrario. Ciò che c'è invece: la pagina di stato di cui sopra, e una persona che risponde alle email.",
+			},
 		},
 	},
 
@@ -1257,6 +1423,8 @@ export default {
 				rangeEnd: "Oggi",
 				closing:
 					"Questo era il settimo giorno, quindi i controlli gratuiti su {{url}} terminano qui.",
+				report: "Questo rapporto vive anche a un link che può riaprire o condividere:",
+				reportAction: "Visualizzarlo online",
 				action: "Continuare a controllare questo URL",
 				footer:
 					"Ha ricevuto questa email perché ci ha chiesto di sorvegliare questo URL per una settimana. È l'ultima.",
@@ -1385,6 +1553,26 @@ export default {
 			},
 
 			success: "Il monitor {{name}} è stato creato.",
+		},
+
+		/**
+		 * Un'importazione in blocco riporta due numeri, e `partial` è quello che conta: un invio
+		 * in cui alcune righe sono andate a buon fine è un successo con una lista di cose da
+		 * fare, non un errore, quindi dice quanti monitor esistono prima di dire quante righe
+		 * vanno corrette.
+		 */
+		importMonitors: {
+			errors: {
+				generic: "Ops! Qualcosa è andato storto. Controlli la lista e riprovi.",
+				none: "Nessuna voce di quella lista è stata importata. Controlli i motivi qui sotto e riprovi.",
+			},
+
+			success_one: "1 monitor è stato creato.",
+			success_other: "{{count}} monitor sono stati creati.",
+			partial_one:
+				"1 monitor è stato creato. Altri {{rejected}} non sono stati creati — veda qui sotto.",
+			partial_other:
+				"{{count}} monitor sono stati creati. Altri {{rejected}} non sono stati creati — veda qui sotto.",
 		},
 
 		updateMonitor: {
@@ -2634,6 +2822,50 @@ export default {
 			},
 		},
 
+		monitorsImport: {
+			meta: { title: "Importa monitor" },
+			header: { title: "Importa Monitor" },
+
+			form: {
+				fields: {
+					urls: {
+						label: "URL da monitorare",
+						description:
+							"Un URL per riga, fino a {{limit}}. Un host semplice come esempio.com diventa https://esempio.com. Le righe vuote e le ripetizioni dello stesso indirizzo vengono ignorate.",
+						placeholder: "esempio.com\nhttps://www.esempio.org/health\nstato.esempio.net",
+					},
+					interval: {
+						label: "Intervallo di Controllo",
+						description:
+							"Applicato a ogni monitor di questa lista. Può cambiarlo per ciascuno in seguito.",
+					},
+				},
+				cta: "Importa Monitor",
+			},
+
+			/**
+			 * Le righe scartate, mostrate sopra il campo in cui vengono reincollate. Si apre con
+			 * ciò che *è* stato creato, così un'importazione parziale non si legge come un errore.
+			 */
+			report: {
+				title_one: "1 monitor è stato creato. Queste righe no:",
+				title_other: "{{count}} monitor sono stati creati. Queste righe no:",
+				overflow_one:
+					"1 altra riga è stata esclusa: un'importazione accetta {{limit}} righe per volta. Incolli le restanti per importarle.",
+				overflow_other:
+					"Altre {{count}} righe sono state escluse: un'importazione accetta {{limit}} righe per volta. Incolli le restanti per importarle.",
+				table: {
+					label: "Righe che non sono state importate",
+					columns: { line: "Riga", input: "Cosa ha incollato", reason: "Perché" },
+				},
+				reasons: {
+					invalidUrl: "Non è un URL che possiamo controllare.",
+					duplicate: "Stesso indirizzo di una riga precedente.",
+					tooLong: "Troppo lungo per essere un URL.",
+				},
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "Monitor HTTP",
@@ -3283,15 +3515,85 @@ export default {
 		},
 
 		trial: {
-			meta: {
-				title: "Controlla una URL — Uptime",
-				description:
-					"Esegui un controllo reale su qualsiasi URL dalla nostra rete, senza account. Poi la teniamo d'occhio per una settimana.",
+			/**
+			 * Il rapporto come pagina a sé, raggiungibile con il token della sorveglianza. Ogni
+			 * valore è calcolato dai controlli registrati, quindi ognuno ha accanto una formula
+			 * per "ancora niente da riportare": una sorveglianza senza alcun controllo completato
+			 * mostra un trattino e spiega perché, e non afferma mai "nessun incidente", perché
+			 * nessuno ha ancora guardato.
+			 */
+			report: {
+				meta: {
+					title: "Il rapporto sullo stato del suo sito in {{days}} giorni — Uptime",
+					description:
+						"L'uptime, i controlli e gli incidenti che abbiamo registrato sul suo sito nella sua settimana di monitoraggio gratuito.",
+				},
+				eyebrow: "Rapporto sullo stato in {{days}} giorni",
+				period: "Monitorato dal {{start}} al {{end}} ({{zone}})",
+				bar: {
+					caption: "Un blocco al giorno su {{days}} giorni, dal più vecchio al più recente.",
+					status: {
+						up: "Attivo tutto il giorno",
+						degraded: "Lento almeno una volta",
+						down: "Non raggiungibile almeno una volta",
+						noData: "Nessun controllo in questo giorno",
+					},
+				},
+				summary: {
+					title: "Cosa abbiamo registrato",
+					uptime: "Uptime",
+					checks: "Controlli completati",
+					healthy: "Controlli completamente regolari",
+					noChecks:
+						"Nessun controllo è ancora stato completato, quindi non c'è nulla da riportare su questo URL. Il primo controllo orario parte un'ora dopo l'avvio della sorveglianza.",
+				},
+				incidents: {
+					title: "Incidenti",
+					unknown:
+						"Nessun controllo è ancora stato completato, quindi non possiamo dire se questo URL abbia avuto un incidente.",
+					none_one: "Nessun incidente: l'unico controllo completato ha risposto come previsto.",
+					none_other:
+						"Nessun incidente: tutti i {{count}} controlli completati hanno risposto come previsto.",
+					summary_one: "Un incidente.",
+					summary_other: "{{count}} incidenti.",
+					entry_one: "Primo guasto rilevato {{started}} — un controllo è fallito.",
+					entry_other:
+						"Primo guasto rilevato {{started}} — {{count}} controlli consecutivi sono falliti.",
+				},
+				timing: {
+					title: "Tempi di risposta",
+					fastest: "Il più rapido",
+					average: "Media",
+					slowest: "Il più lento",
+					basis_one: "Misurato sull'unico controllo che ha risposto.",
+					basis_other: "Misurato sui {{count}} controlli che hanno risposto.",
+				},
+				cta: {
+					title: "Continui a monitorare questo sito per {{price}}/mese",
+					action: "Inizi a monitorare",
+					convertible: {
+						body: "Acceda e trasformeremo questo URL in un monitor vero, con lo storico qui sopra riportato al suo interno.",
+					},
+					expired: {
+						body: "Questa settimana gratuita ha superato la finestra per il riscatto, quindi lo storico qui sopra resta qui — ma può iniziare a monitorare questo URL per davvero quando vuole.",
+					},
+					converted: {
+						title: "Questo URL è già sotto monitoraggio",
+						body: "Ha trasformato questo obiettivo in un monitor, quindi ora viene controllato secondo la sua frequenza.",
+						action: "Apri la sua dashboard",
+					},
+				},
 			},
 
-			heading: "Controlla una URL adesso",
+			meta: {
+				title: "Rapporto gratuito sullo stato del sito in {{days}} giorni — Uptime",
+				description:
+					"Controlliamo il suo sito adesso, poi ogni ora per {{days}} giorni, e Le inviamo per email quello che abbiamo trovato. Senza account, senza carta.",
+			},
+
+			heading: "Un rapporto gratuito sullo stato del suo sito in {{days}} giorni",
 			intro:
-				"Scrivi una URL e eseguiamo un controllo reale dalla nostra rete: lo stesso che esegue un monitor a pagamento. Non viene salvato nulla e non viene addebitato nulla finché non ci chiedi di continuare.",
+				"Ci dia un URL e lo controlliamo subito dalla nostra rete: lo stesso controllo che esegue un monitor a pagamento. Ci lasci poi una email e continuiamo a controllarlo ogni ora per {{days}} giorni, poi Le inviamo il rapporto.",
 
 			form: {
 				url: {
@@ -3299,26 +3601,26 @@ export default {
 					description: "Un indirizzo http:// o https:// sulla rete pubblica.",
 					placeholder: "https://esempio.com",
 				},
-				submit: "Esegui il controllo",
+				submit: "Esegui il primo controllo",
 			},
 
 			refusal: {
 				title: "Il controllo non è stato eseguito",
 				blockedTarget:
-					"Quello non è un indirizzo che controlliamo per conto tuo. Deve essere una URL http:// o https:// pubblica, sulla porta 80 o 443, senza nome utente né password, e deve risolvere a un indirizzo sulla rete aperta.",
-				challengeIncomplete: "Completa la verifica e potremo eseguire il controllo.",
+					"Quello non è un indirizzo che controlliamo per suo conto. Deve essere un URL http:// o https:// pubblico, sulla porta 80 o 443, senza nome utente né password, e deve risolvere a un indirizzo sulla rete aperta.",
+				challengeIncomplete: "Completi la verifica e potremo eseguire il controllo.",
 				failedChallenge:
-					"Non siamo riusciti a confermare che la richiesta arrivasse da un browser. Ricarica la pagina e riprova.",
-				rateLimited: "Puoi eseguire un altro controllo tra un minuto.",
-				rateLimitedFor: "Puoi eseguire un altro controllo tra {{seconds}} secondi.",
+					"Non siamo riusciti a confermare che la richiesta arrivasse da un browser. Ricarichi la pagina e riprovi.",
+				rateLimited: "Può eseguire un altro controllo tra un minuto.",
+				rateLimitedFor: "Può eseguire un altro controllo tra {{seconds}} secondi.",
 				budgetExhausted:
-					"Abbiamo già eseguito tutti i controlli gratuiti che facciamo in un giorno. Dipende da noi, non dalla tua URL: torna domani, oppure inizia a monitorare e la controlleremo ogni minuto.",
+					"Abbiamo già eseguito tutti i controlli gratuiti che facciamo in un giorno. Dipende da noi, non dal suo URL: torni domani, oppure inizi a monitorare e lo controlleremo ogni minuto.",
 				unavailable:
-					"Qualcosa dalla nostra parte ha impedito al controllo di partire, quindi non abbiamo scoperto nulla sulla tua URL. È un problema nostro, non tuo. Riprova fra poco.",
+					"Qualcosa dalla nostra parte ha impedito al controllo di partire, quindi non abbiamo scoperto nulla sul suo URL. È un problema nostro, non suo. Riprovi fra poco.",
 			},
 
 			result: {
-				checkAnother: "Controlla un'altra URL",
+				checkAnother: "Controlla un altro URL",
 				noResponse: "Nessuna risposta",
 				httpStatus: "HTTP {{status}}",
 				milliseconds: "{{value}} ms",
@@ -3326,13 +3628,13 @@ export default {
 
 				redirect: {
 					badge: "Reindirizza",
-					title: "Questa URL reindirizza altrove",
+					title: "Questo URL reindirizza altrove",
 					description:
-						"Ha risposto, e la risposta ci indicava un altro indirizzo. Non ci siamo andati: controlliamo solo la URL che ci hai dato, ed è questo che impedisce a questo campo di servire per raggiungere posti dove non dovrebbe. Controlla la destinazione e ne avrai un risultato reale.",
+						"Ha risposto, e la risposta ci indicava un altro indirizzo. Non ci siamo andati: controlliamo solo l'URL che ci ha dato, ed è questo che impedisce a questo campo di servire per raggiungere posti dove non dovrebbe. Controlli invece la destinazione e ne otterrà un risultato reale.",
 					destination: "Punta a {{url}}",
-					action: "Controlla quella",
+					action: "Controlla quello",
 					unknownDestination:
-						"Non abbiamo letto dove punta. Apri la URL in un browser, guarda dove arrivi e controlla qui quell'indirizzo.",
+						"Non abbiamo letto dove punta. Apra l'URL in un browser, guardi dove arriva e controlli qui quell'indirizzo.",
 				},
 
 				status: {
@@ -3343,62 +3645,79 @@ export default {
 			},
 
 			lead: {
-				title: "Ricevi una email quando cambia",
+				title: "Riceva il rapporto gratuito in {{days}} giorni",
 				description:
-					"Lasciaci una email e ripetiamo questo stesso controllo ogni ora per sette giorni, con un riepilogo al giorno. Senza account e senza carta.",
-				consent: "Scrivimi ogni tanto anche di Uptime.",
-				consentNote: "In ogni caso i controlli li ricevi.",
+					"Il controllo che ha appena visto era il primo. Ci lasci una email e andiamo avanti, poi Le raccontiamo cosa hanno rilevato {{days}} giorni di controlli.",
+				consent: "Scrivetemi ogni tanto anche di Uptime.",
+				consentNote: "In ogni caso i controlli li riceve.",
 				promise:
-					"Ogni email contiene un link che con un clic li ferma e cancella il tuo indirizzo.",
-				submit: "Tieni d'occhio questa URL per una settimana",
+					"Ogni email contiene un link che con un clic le ferma e cancella il suo indirizzo.",
+				submit: "Avvia il rapporto gratuito in {{days}} giorni",
+
+				/**
+				 * Ciò a cui un visitatore acconsente, indicato accanto al campo e non dopo. Ogni
+				 * riga è qualcosa che il sistema fa davvero — l'indirizzo è quello che abbiamo
+				 * appena sondato e non uno che si possa riscrivere, la frequenza e la durata sono
+				 * quelle della sorveglianza stessa, e le tre email citate sono le tre che esistono.
+				 */
+				expectations: {
+					target:
+						"Continuiamo a controllare {{url}} — esattamente l'indirizzo che abbiamo appena controllato, e nient'altro.",
+					cadence: "Una volta all'ora, ogni ora, per {{days}} giorni.",
+					emails:
+						"Un riepilogo al giorno, un avviso quando lo stato cambia, e il rapporto completo alla fine.",
+					noAccount: "Nessuna carta, nessuna password, nessun account da creare.",
+				},
 
 				email: {
 					label: "Email",
-					placeholder: "tu@esempio.com",
+					placeholder: "lei@esempio.com",
 					error: "Non sembra un indirizzo email.",
 				},
 			},
 
 			monitor: {
-				title: "Continua a tenere d'occhio questa URL",
+				title: "Continui a tenere d'occhio questo URL",
 				description:
-					"Trasforma questo singolo controllo in un monitor: lo stesso controllo alla frequenza che scegli, con un avviso appena qualcosa cambia.",
+					"Trasformi questo singolo controllo in un monitor: lo stesso controllo alla frequenza che sceglie, con un avviso appena qualcosa cambia.",
 				subscribeDescription:
-					"Trasforma questo singolo controllo in un monitor: lo stesso controllo alla frequenza che scegli, con un avviso appena qualcosa cambia. Partirà non appena il tuo abbonamento sarà attivo.",
-				create: "Crea un monitor per questa URL",
-				subscribe: "Attiva il tuo abbonamento",
+					"Trasformi questo singolo controllo in un monitor: lo stesso controllo alla frequenza che sceglie, con un avviso appena qualcosa cambia. Partirà non appena il suo abbonamento sarà attivo.",
+				create: "Crea un monitor per questo URL",
+				subscribe: "Attiva il suo abbonamento",
 			},
 
 			watching: {
-				title: "Ci stiamo pensando noi",
+				title: "Ci pensiamo noi",
 				description:
-					"Il primo controllo orario di {{url}} parte fra un'ora. Una copia del controllo appena eseguito è già nella tua casella.",
+					"Il primo controllo orario di {{url}} parte fra un'ora, e continuiamo a controllarlo per {{days}} giorni. Una copia del controllo appena eseguito è già nella sua casella di posta.",
 			},
 
 			repeated: {
 				title: "Questo l'abbiamo già controllato",
 				description:
-					"{{url}} ha già avuto la sua settimana gratuita con una richiesta precedente: ogni URL ne ha una ogni 30 giorni. Ti abbiamo inviato per email tutto quello che quei controlli hanno rilevato, quindi non è stato avviato niente di nuovo.",
+					"{{url}} ha già avuto il suo rapporto gratuito con una richiesta precedente: ogni URL ne ha uno ogni 30 giorni. Le abbiamo inviato per email tutto quello che quei controlli hanno rilevato, quindi non è stato avviato niente di nuovo.",
 			},
 
 			benefits: {
-				title: "Come sarà la settimana",
+				title: "Cosa contiene il rapporto",
 				description:
-					"Tutto quello che un monitor a pagamento ti direbbe su questa URL, gratis, per sette giorni.",
+					"Tutto quello che un monitor a pagamento Le direbbe su questo URL, gratis, per {{days}} giorni.",
 
 				list: {
 					hourly: {
 						title: "Un controllo ogni ora",
-						description: "Per sette giorni, dalla stessa rete su cui gira un monitor a pagamento.",
+						description:
+							"Per {{days}} giorni, dalla stessa rete su cui gira un monitor a pagamento.",
 					},
 					changes: {
 						title: "Una email quando cambia",
 						description:
-							"Va giù o torna su, lo sai. Al massimo una al giorno, così un sito instabile non ti sommerge.",
+							"Va giù o torna su, lo viene a sapere. Al massimo una al giorno, così un sito instabile non La sommerge.",
 					},
 					digest: {
 						title: "Un riepilogo al giorno",
-						description: "Come ha retto la tua URL, a colpo d'occhio.",
+						description:
+							"Come ha retto il suo URL, a colpo d'occhio — e tutti i {{days}} giorni in un unico rapporto alla fine.",
 					},
 					noAccount: {
 						title: "Niente account, niente carta",
@@ -3410,7 +3729,7 @@ export default {
 			more: {
 				title: "Non solo siti web",
 				description:
-					"La settimana gratuita copre l'HTTP. Con un account a pagamento teniamo d'occhio altre tre cose per te.",
+					"Il rapporto gratuito copre l'HTTP. Con un account a pagamento teniamo d'occhio altre tre cose per Lei.",
 
 				list: {
 					tcp: {
@@ -3432,11 +3751,11 @@ export default {
 			},
 
 			cta: {
-				badge: "Dopo la settimana",
-				title: "Tieni i controlli, aggiungi il resto",
+				badge: "Quando il rapporto finisce",
+				title: "Continui a monitorare questo sito per {{price}} al mese",
 				description:
-					"Ogni minuto invece che ogni ora, tutte le URL che vuoi, avvisi dove già lavori, pagine di stato e un anno di storico. {{price}} al mese.",
-				action: "Inizia a monitorare",
+					"Registrandosi questo URL diventa un monitor vero e il suo storico dei controlli viene trasferito, così nulla ricomincia da zero. Un controllo ogni minuto invece che ogni ora, tutti gli URL che vuole, avvisi dove già lavora, pagine di stato e un anno di storico.",
+				action: "Continui a monitorare questo sito",
 				pricing: "Vedi i prezzi",
 			},
 		},

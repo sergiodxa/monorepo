@@ -39,6 +39,7 @@ import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { trialWatches } from "~/database/schema";
+import routes from "~/routes/web";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -365,6 +366,36 @@ describe("CheckTrialWatchesJob wrap-up", () => {
 		);
 		expect(completed?.wrappedUp).toBe(1);
 		expect(completed?.probed).toBe(0);
+	});
+
+	/**
+	 * The wrap-up is the only email that carries a link to the report as a page, and the token
+	 * is what addresses it. A summary sent without one renders no link at all — the email still
+	 * looks complete, so nothing else here would notice.
+	 *
+	 * Asserted against the watch's own stored token rather than any token, since passing the
+	 * wrong watch's would point a reader at somebody else's report.
+	 */
+	test("carries the watch's own report token, so the wrap-up can link the report page", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		let watch = await seedWatch(db, lead.id, {
+			created_at: Date.now() - 8 * MS_PER_DAY,
+			expires_at: Date.now() - MS_PER_DAY,
+			last_status: "up",
+			checks_run: 168,
+			checks_ok: 168,
+		});
+
+		await runJob(db);
+
+		expect(transport.last?.email).toBeInstanceOf(TrialWeeklyDigestEmail);
+
+		// Asserted against the rendered body rather than the constructor argument, because the
+		// argument being right is not the thing that matters — the email carrying a working link
+		// is, and the token reaching the template but rendering nothing would pass either way.
+		expect(watch.report_token).toBeTruthy();
+		expect(transport.last?.html).toContain(routes.trial.report.href({ token: watch.report_token }));
 	});
 
 	test("never claims a watch again once its wrap-up has gone out", async () => {
