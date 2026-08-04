@@ -4,8 +4,8 @@
  * completes the flow (delegated to `finishExternalAuth`/`verifyIdToken`, both mocked so
  * no real network call is made), provisions the Polar customer, resolves or creates the
  * subject's team, converts any trial targets the signed-in address is still owed, writes
- * the session, and redirects — with dedicated cases for a provider callback failure and a
- * missing id token.
+ * the session, seeds the `language` cookie from any stored preference, and redirects — with
+ * dedicated cases for a provider callback failure and a missing id token.
  *
  * The conversion cases run the real service against the test database rather than mocking
  * it, because what they are for is the ordering: the monitors have to land in the team this
@@ -32,6 +32,8 @@ import { renderToString } from "remix/ui/server";
 
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
+import UserPreferences from "~/app/data/user-preferences";
+import { language as languageCookie } from "~/app/http/cookies";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
@@ -255,6 +257,41 @@ describe("GET /auth", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("/app/ada-team/settings");
+	});
+
+	test("seeds the language cookie from the subject's stored preference", async () => {
+		let { db } = createTestDatabase();
+		await UserPreferences.setLanguage(db, "user-1", "es");
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: undefined,
+		});
+
+		let { container, router } = createTestRouter(db, new Session());
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+
+		expect(response.status).toBe(303);
+		expect(response.headers.getSetCookie()).toContain(await languageCookie.serialize("es"));
+	});
+
+	test("sets no language cookie when the subject has no stored preference", async () => {
+		let { db } = createTestDatabase();
+
+		finishExternalAuthImpl = async () => ({
+			result: { tokens: { idToken: "raw-id-token" } },
+			returnTo: undefined,
+		});
+
+		let { container, router } = createTestRouter(db, new Session());
+		let request = new Request(`https://uptime.test${routes.auth.index.href()}`);
+		let response = await container.scope(() => router.fetch(request));
+
+		expect(response.status).toBe(303);
+		expect(
+			response.headers.getSetCookie().some((value) => value.startsWith("uptime:language=")),
+		).toBe(false);
 	});
 
 	test("renders the sign-in-failed page when the provider callback fails", async () => {

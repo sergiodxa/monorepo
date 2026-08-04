@@ -37,7 +37,8 @@ import { createAuthProvider } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
 import Team from "~/app/data/team";
-import { returnTo, safeReturnTo } from "~/app/http/cookies";
+import UserPreferences from "~/app/data/user-preferences";
+import { language as languageCookie, returnTo, safeReturnTo } from "~/app/http/cookies";
 import { TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
@@ -108,6 +109,29 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	});
 
 	return created;
+}
+
+/**
+ * Seeds the `language` cookie from the subject's stored preference, so the page this sign-in
+ * redirects to is already in their language.
+ *
+ * The cookie is the only thing language resolution reads on a normal request (see
+ * `~/app/http/middleware/i18n.ts`), and a new browser has none — without this, somebody with a
+ * stored preference would land on one page in whatever `Accept-Language` says before the
+ * middleware's database fallback corrects it. One read on a path that already makes several is
+ * not worth avoiding; a first page in the wrong language is.
+ *
+ * Returns no header at all for a subject who has never chosen a language: there is nothing to
+ * say, and writing an empty cookie would only claim otherwise.
+ */
+async function languageHeaders(db: Database, subjectId: string): Promise<Headers | undefined> {
+	let preferences = await UserPreferences.findBySubjectId(db, subjectId);
+	if (!preferences?.preferred_language) return undefined;
+
+	let headers = new Headers();
+	headers.append("Set-Cookie", await languageCookie.serialize(preferences.preferred_language));
+
+	return headers;
 }
 
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
@@ -214,6 +238,7 @@ export default createController(routes.auth, {
 
 				return redirect(safeReturnTo(finished.returnTo, routes.app.index.href()), {
 					status: redirect.Status.SeeOther,
+					headers: await languageHeaders(db, idToken.subject),
 				});
 			},
 		),

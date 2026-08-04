@@ -1,10 +1,13 @@
 /**
  * Integration tests for the language-resolution middleware. `@pkg/i18n/middleware`'s
- * generic cookie/header detection is covered by that package's own tests; these
- * focus on this file's app-specific configuration — the `language` cookie takes
- * priority over the `Accept-Language` header, falling back to English — using the
- * real session + auth chain to resolve the viewer (resolution is identical for a
- * signed-in viewer and an anonymous request, since neither queries the database).
+ * generic cookie/header detection is covered by that package's own tests; these focus on
+ * this file's app-specific configuration — the `language` cookie first, then a signed-in
+ * viewer's stored preference, then the `Accept-Language` header, falling back to English —
+ * using the real session + auth chain to resolve the viewer.
+ *
+ * Every case also pins the cost: the database is counted, because "the cookie resolves the
+ * language without a query" is the property the design exists for, and a test that only
+ * checked the resolved locale would pass just as happily with a query on every request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +23,7 @@ import { createRouter } from "remix/fetch-router";
 import { session } from "remix/session-middleware";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
+import UserPreferences from "~/app/data/user-preferences";
 import { language } from "~/app/http/cookies";
 import { auth, login, type Viewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
@@ -28,6 +32,29 @@ import { createTestDatabase } from "~/app/lib/test/db";
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
 let viewer: Viewer = { id: "user_1", name: "Ada", email: "ada@example.com", avatar: "" };
+
+/**
+ * Wraps a database so every call through it is counted, which is how the zero-query claims
+ * below are checked. Counting at the handle rather than at one model means a query added
+ * anywhere on the request path shows up here.
+ */
+function counting(db: Db) {
+	let calls = { count: 0 };
+
+	let counted = new Proxy(db, {
+		get(target, property) {
+			let value = Reflect.get(target, property) as unknown;
+			if (typeof value !== "function") return value;
+
+			return (...args: unknown[]) => {
+				calls.count += 1;
+				return (value as (...args: unknown[]) => unknown).apply(target, args);
+			};
+		},
+	}) as Db;
+
+	return { db: counted, calls };
+}
 
 async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersInit } = {}) {
 	let cookie = createCookie("test-session", { secrets: ["test-secret"] });
@@ -55,6 +82,11 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 	return container.scope(() => router.fetch(request));
 }
 
+/** The `language` cookie the response asks the browser to store, if it asks for one. */
+function languageCookieHeader(response: Response) {
+	return response.headers.getSetCookie().find((value) => value.startsWith("uptime:language="));
+}
+
 describe("i18n middleware", () => {
 	test("prefers the language cookie over the Accept-Language header for a signed-in viewer", async () => {
 		let { db } = createTestDatabase();
@@ -68,22 +100,74 @@ describe("i18n middleware", () => {
 		expect(body.locale).toBe("es");
 	});
 
-	test("falls back to the Accept-Language header when the viewer has no language cookie", async () => {
+	test("uses the Accept-Language header for an anonymous request without touching the database", async () => {
+		let { db: raw } = createTestDatabase();
+		let { db, calls } = counting(raw);
+
+		let response = await dispatch(db, { headers: { "Accept-Language": "de" } });
+
+		let body = (await response.json()) as { locale: string };
+		expect(body.locale).toBe("de");
+		expect(calls.count).toBe(0);
+		expect(languageCookieHeader(response)).toBeUndefined();
+	});
+
+	test("keeps the cookie's language over a conflicting stored preference, without a query", async () => {
+		let { db: raw } = createTestDatabase();
+		await UserPreferences.setLanguage(raw, viewer.id, "es");
+
+		let { db, calls } = counting(raw);
+		let response = await dispatch(db, {
+			viewer,
+			headers: { "Accept-Language": "fr", Cookie: await language.serialize("ja") },
+		});
+
+		let body = (await response.json()) as { locale: string };
+		expect(body.locale).toBe("ja");
+		expect(calls.count).toBe(0);
+		expect(languageCookieHeader(response)).toBeUndefined();
+	});
+
+	test("resolves from the stored preference and re-sets the cookie when the cookie is gone", async () => {
+		let { db } = createTestDatabase();
+		await UserPreferences.setLanguage(db, viewer.id, "es");
+
+		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
+
+		let body = (await response.json()) as { locale: string };
+		expect(body.locale).toBe("es");
+		expect(languageCookieHeader(response)).toBe(await language.serialize("es"));
+	});
+
+	test("falls back to the Accept-Language header, setting no cookie, when nothing is stored", async () => {
 		let { db } = createTestDatabase();
 
 		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
 
 		let body = (await response.json()) as { locale: string };
 		expect(body.locale).toBe("fr");
+		expect(languageCookieHeader(response)).toBeUndefined();
 	});
 
-	test("uses the Accept-Language header for an anonymous request without touching the database", async () => {
+	test("ignores a stored language the app no longer supports", async () => {
 		let { db } = createTestDatabase();
+		let { userPreferences } = await import("~/database/schema");
+		await db.create(
+			userPreferences,
+			{
+				id: crypto.randomUUID(),
+				subject_id: viewer.id,
+				// A language this app once served and no longer lists; the row outlives the support.
+				preferred_language: "pt" as never,
+			},
+			{ touch: true, returnRow: true },
+		);
 
-		let response = await dispatch(db, { headers: { "Accept-Language": "de" } });
+		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
 
 		let body = (await response.json()) as { locale: string };
-		expect(body.locale).toBe("de");
+		expect(body.locale).toBe("fr");
+		expect(languageCookieHeader(response)).toBeUndefined();
 	});
 
 	test("uses the language cookie for an anonymous request when no header is sent", async () => {
