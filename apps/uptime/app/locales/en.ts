@@ -639,6 +639,142 @@ export default {
 		},
 	},
 
+	/**
+	 * `/trust` — how the monitoring works and who runs it. Only populated here for now,
+	 * falling back to English in every other locale until translated, the same way the
+	 * legal pages' body prose does.
+	 */
+	trust: {
+		meta: {
+			title: "Trust | Uptime",
+			description:
+				"How Uptime works: who operates it, where checks run from, how an incident is confirmed, and exactly what is and is not stored.",
+		},
+		footerLink: "Trust",
+		heading: "Trust",
+		intro:
+			"A monitor is only worth what you believe it. This page describes how the service actually works — who runs it, where your checks come from, how a failure becomes a notification, and what we keep — in enough detail for you to decide whether to rely on it. Everything here describes the system as it is built today, not as it is planned.",
+		regions: {
+			afr: "Africa",
+			apac: "Asia-Pacific",
+			eeur: "Eastern Europe",
+			enam: "Eastern North America",
+			me: "Middle East",
+			oc: "Oceania",
+			sam: "South America",
+			weur: "Western Europe",
+			wnam: "Western North America",
+		},
+		sections: {
+			whoRuns: {
+				title: "Who runs it",
+				bodyPrefix: "Uptime is built and operated by ",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					", independently. There is no support rota and no on-call team behind that name: one person writes the code, deploys it, and answers the email.",
+				second:
+					"That is worth knowing in both directions. A question about how a check behaves reaches the person who wrote it. A problem that starts while that person is asleep waits until they wake up.",
+			},
+			ownStatus: {
+				title: "Our own status page",
+				bodyPrefix:
+					"The service publishes a status page about itself, built with the same cron-job monitoring the product offers: ",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: ".",
+				scope:
+					"What that page covers is narrower than it might sound, so here is the precise claim. Each of the service's scheduled internal jobs — the monitor sweeps, the nightly roll-up of daily statistics, the retention cleanups — reports in when it finishes, so the page shows whether that scheduled work is running on time. It is not an independent probe of the whole service, and it runs on the same platform as the app itself, so trouble broad enough to stop the app can stop the page reporting too.",
+			},
+			whereChecksRun: {
+				title: "Where checks run from",
+				intro: "Each monitor is checked from a region you choose. Nine are available:",
+				hint: "A region is a hint, not a promise. The check runs on infrastructure placed near the region you picked, and the platform may place it elsewhere when it has to. The two European regions are the exception: they are pinned to the EU, which is a hard constraint rather than a preference.",
+				timing:
+					"The response time recorded for a check measures only the request to your endpoint, not our own work around it, so the number stays comparable to what somebody in that region would experience.",
+			},
+			incidents: {
+				title: "How an incident is confirmed",
+				classification:
+					"Every check ends in one of three outcomes. Down means the endpoint could not be reached at all, answered with a status other than the one you expect, or failed a content check you configured. Degraded means it answered correctly but slower than the threshold you set. Up means everything matched.",
+				noConfirmation:
+					"There is no second confirming check before the first notification: one failing check is enough to mark a monitor down and send the alert. That is a deliberate trade — a confirmation pass would delay every real alert by a full interval — but it does mean a single unlucky network moment can reach your inbox.",
+				falsePositivesIntro: "What keeps the noise down instead:",
+				infraFault: {
+					label: "Our failures are not yours.",
+					body: "When our own probing infrastructure fails, the check is retried rather than recorded. A fault on our side never becomes a down result in your history or an alert in your inbox.",
+				},
+				yourThresholds: {
+					label: "Your timeout, your thresholds.",
+					body: "The timeout, the expected status, and the degraded threshold are all yours to set, so a check is only slow or failed by the definition you gave it.",
+				},
+				cooldown: {
+					label: "Cooldown, and a ceiling per incident.",
+					body: "Each alert has a cooldown that throttles repeats, plus a hard ceiling on how many notifications it sends for one ongoing incident. A monitor that stays down does not mail you once per check forever.",
+				},
+				recovery: {
+					label: "Recovery notices only after a real failure.",
+					body: "A recovery message is only sent when the monitor was previously in a failing state. A monitor's first ever check never announces itself as recovered.",
+				},
+				maintenance: {
+					label: "Maintenance windows suppress alerts.",
+					body: "While a maintenance window covers a monitor, its notifications are skipped entirely, so planned work does not wake anyone.",
+				},
+				accounting: {
+					label: "Held-back notifications are accounted for.",
+					body: "When an incident ends, the recovery message reports how many notifications went out and how many were held back, so a quiet incident can be told apart from lost alerts.",
+				},
+			},
+			storage: {
+				title: "What is stored, and what is not",
+				noBodies:
+					"Response bodies are never stored. Not truncated, not hashed, not sampled — there is no column for one anywhere in the database.",
+				contentChecks:
+					"A response body is only downloaded at all when you configure a content check for that monitor. When you do, it is matched against your rules in memory during the check and then discarded along with the rest of the request. A monitor without content checks never reads a body.",
+				storedIntro: "What is kept, and for how long:",
+				httpResults: {
+					label: "Individual HTTP check records:",
+					body: "the status code returned, how long the request took, and when it finished. Kept for one week, which is all the recent views and the usage counting read.",
+				},
+				dailyStats: {
+					label: "Daily statistics:",
+					body: "each night the previous day's checks are rolled up into one row per monitor. That roll-up is the long-term history behind the year-long heatmap, and it is retained for 365 days.",
+				},
+				otherResults: {
+					label: "DNS and TCP check records:",
+					body: "kept for 90 days, because those are the history a monitor's detail page and a post-mortem read directly.",
+				},
+				alertHistory: {
+					label: "Alert history:",
+					body: "every notification we sent, failed to send, or deliberately held back, kept for 90 days, so you can audit what you were and were not told.",
+				},
+				cronPings: {
+					label: "Cron job check-ins:",
+					body: "kept for 365 days. The requesting address and user agent recorded alongside one are cleared after 30 days; the check-in itself stays.",
+				},
+			},
+			customerData: {
+				title: "Your account data",
+				bodyPrefix:
+					"Account details, payment handling, cookies, and your rights over all of it are covered by the ",
+				privacyLinkText: "Privacy Policy",
+				bodySuffix:
+					", which is the authoritative document rather than a summary written twice. The short version: your data is not sold, and your monitoring data belongs to your team.",
+			},
+			ourIncidents: {
+				title: "When Uptime itself has an incident",
+				retries:
+					"Checks are queued rather than run inline, and a check that could not finish because of a fault on our side is retried instead of recorded. None of our own trouble is written into your monitor's history as a failure of your service.",
+				gaps: "If the trouble lasts, checks are delayed or skipped. A skipped check writes nothing, so the period shows up in your history as a gap with no data rather than as downtime you never had, and your figures are calculated from the checks that actually ran.",
+				missedAlerts:
+					"The failure mode worth understanding is the one that follows: if your endpoint goes down during our outage, your alert can arrive late or not at all. A monitoring service cannot alert you while it is down, and this one is no exception.",
+				noSlaPrefix:
+					"We do not offer a service level agreement, and we publish no availability figure to hold ourselves to. The ",
+				termsLinkText: "Terms of Service",
+				noSlaSuffix:
+					" say as much, and this page will not quietly say otherwise. What there is instead: the status page above, and a person who answers email.",
+			},
+		},
+	},
+
 	legal: {
 		terms: {
 			meta: {

@@ -213,6 +213,12 @@ export function buildMarketingChrome(
 			links: [
 				{ label: t("landing.footer.sections.legal.terms"), href: routes.legal.terms.href() },
 				{ label: t("landing.footer.sections.legal.privacy"), href: routes.legal.privacy.href() },
+				/**
+				 * Grouped with the legal pages rather than with the product ones: like them it
+				 * is a standing statement about how the service is run, and a reader looking for
+				 * accountability looks in this corner of a footer first.
+				 */
+				{ label: t("trust.footerLink"), href: routes.trust.href() },
 			],
 		},
 	];
