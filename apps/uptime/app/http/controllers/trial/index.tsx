@@ -1,5 +1,11 @@
 /**
- * `/try` — the public try-it page, and the only page in this feature that sells.
+ * `/try` — the public offer of a free multi-day health report on one site, and the only page
+ * in this feature that sells.
+ *
+ * What the visitor is asking for is a week of evidence about a real site, not a temporary
+ * account: the check that runs on submit is the first of the run, and the copy says so
+ * everywhere, with the length interpolated from `~/app/lib/pricing` so the page and the
+ * emails cannot disagree about how long the offer lasts.
  *
  * One URL, two methods. The `GET` renders the URL box and nothing else; the `POST` guards
  * the submission, runs the check, and renders that same page with the answer in it. There
@@ -77,6 +83,7 @@ import {
 	ActivityIcon,
 	ArrowRightIcon,
 	BellIcon,
+	CheckIcon,
 	ClockIcon,
 	CreditCardIcon,
 	GlobeIcon,
@@ -101,6 +108,7 @@ import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { bg, fg, linearGradient } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
+import { listStyle } from "@pkg/u/general";
 import {
 	flex,
 	flexWrap,
@@ -149,11 +157,16 @@ import {
 import { getViewer } from "~/app/http/middleware/auth";
 import { MONITOR_URL_PREFILL } from "~/app/http/validators/monitor";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
-import { BASE_PRICE_USD } from "~/app/lib/pricing";
+import { BASE_PRICE_USD, FREE_TRIAL_DAYS } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apportionCostByTeam } from "~/app/services/cost";
+import {
+	hostnameOf,
+	trackUrlCheckCompleted,
+	trackUrlCheckStarted,
+} from "~/app/services/funnel-events";
 import { HttpCheck } from "~/app/services/http-check";
 import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import { guardTrialProbe } from "~/app/services/trial-guard";
@@ -477,6 +490,13 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 	let chrome = buildMarketingChrome(t);
 
+	/**
+	 * How long the free report runs for. Interpolated into every line that quotes it, so the
+	 * page, the emails and the scheduling that actually stops the watch all read the term from
+	 * `~/app/lib/pricing` instead of each spelling out a number of their own.
+	 */
+	let days = FREE_TRIAL_DAYS;
+
 	let prefill = (view.prefill ?? "").slice(0, MAX_PREFILL_LENGTH);
 	let redirected = probe !== undefined && isRedirectProbe(probe);
 
@@ -490,7 +510,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 		{
 			icon: <ClockIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.hourly.title"),
-			description: t("page.trial.benefits.list.hourly.description"),
+			description: t("page.trial.benefits.list.hourly.description", { days }),
 		},
 		{
 			icon: <BellIcon size={24} strokeWidth={1.5} />,
@@ -500,7 +520,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 		{
 			icon: <MailIcon size={24} strokeWidth={1.5} />,
 			title: t("page.trial.benefits.list.digest.title"),
-			description: t("page.trial.benefits.list.digest.description"),
+			description: t("page.trial.benefits.list.digest.description", { days }),
 		},
 		{
 			icon: <CreditCardIcon size={24} strokeWidth={1.5} />,
@@ -532,6 +552,22 @@ export function renderTrialPage(view: TrialPageView = {}) {
 	];
 
 	/**
+	 * What handing over an address actually buys, spelled out before it is asked for: the
+	 * address we will keep checking, how often, for how long, which emails arrive, and what is
+	 * not required. Every line describes what the run *will* do — none of them counts checks
+	 * that have not happened or implies anything about what was found.
+	 */
+	let expectations =
+		probe === undefined
+			? []
+			: [
+					t("page.trial.lead.expectations.target", { url: probe.url }),
+					t("page.trial.lead.expectations.cadence", { days }),
+					t("page.trial.lead.expectations.emails"),
+					t("page.trial.lead.expectations.noAccount"),
+				];
+
+	/**
 	 * The subscription price, formatted for the request's locale and interpolated rather
 	 * than written into six translations, so `~/app/lib/pricing` stays the only place the
 	 * product's price is stated.
@@ -555,10 +591,10 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 	return ctx.render(
 		<DocumentLayout
-			title={t("page.trial.meta.title")}
+			title={t("page.trial.meta.title", { days })}
 			locale={ctx.locale}
 			seo={{
-				description: t("page.trial.meta.description"),
+				description: t("page.trial.meta.description", { days }),
 				canonical: SEO.canonical(new URL(routes.trial.check.index.href(), ctx.url)),
 			}}
 		>
@@ -590,11 +626,11 @@ export function renderTrialPage(view: TrialPageView = {}) {
 									media("(min-width: 640px)", fontSize("3xl")),
 								]}
 							>
-								{t("page.trial.heading")}
+								{t("page.trial.heading", { days })}
 							</Heading>
 							{probe !== undefined ? null : (
 								<p mix={[m(0), maxIs("560px"), fontSize("sm"), leading(1.6), fg("neutral")]}>
-									{t("page.trial.intro")}
+									{t("page.trial.intro", { days })}
 								</p>
 							)}
 						</div>
@@ -657,7 +693,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 								<Alert.Content>
 									<Alert.Title>{t("page.trial.watching.title")}</Alert.Title>
 									<Alert.Description>
-										{t("page.trial.watching.description", { url: watching })}
+										{t("page.trial.watching.description", { url: watching, days })}
 									</Alert.Description>
 								</Alert.Content>
 							</Alert>
@@ -786,11 +822,43 @@ export function renderTrialPage(view: TrialPageView = {}) {
 											</div>
 										) : (
 											<div mix={[vstack({ gap: 6 })]}>
-												<div mix={[vstack({ gap: 2 })]}>
+												<div mix={[vstack({ gap: 3 })]}>
 													<Heading level={3} mix={[m(0), fontSize("base")]}>
-														{t("page.trial.lead.title")}
+														{t("page.trial.lead.title", { days })}
 													</Heading>
-													<Text>{t("page.trial.lead.description")}</Text>
+													<Text>{t("page.trial.lead.description", { days })}</Text>
+
+													{/*
+													 * The terms of the offer, above the field that accepts them rather
+													 * than under the button that submits it: what we will check, how
+													 * often, for how long, what arrives by email, and what is not being
+													 * asked for. A list and not a paragraph because it is scanned, and
+													 * `listStyle("none")` with a check per row because the marker is
+													 * carrying no meaning the icon does not.
+													 */}
+													<ul
+														mix={[
+															m(0),
+															p(0),
+															listStyle("none"),
+															grid(),
+															gap(2),
+															fontSize("sm"),
+															leading(1.5),
+															fg("neutral"),
+														]}
+													>
+														{expectations.map((item) => (
+															<li key={item} mix={[flex(), items("start"), gap(2)]}>
+																<CheckIcon
+																	size={16}
+																	strokeWidth={2}
+																	mix={[fg("brand"), mbs("2px")]}
+																/>
+																<span mix={[wordBreak("break-word")]}>{item}</span>
+															</li>
+														))}
+													</ul>
 												</div>
 
 												<form
@@ -823,7 +891,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 													<Description>{t("page.trial.lead.promise")}</Description>
 
-													<Button type="submit">{t("page.trial.lead.submit")}</Button>
+													<Button type="submit">{t("page.trial.lead.submit", { days })}</Button>
 												</form>
 											</div>
 										)}
@@ -868,7 +936,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
 									{t("page.trial.benefits.title")}
 								</Heading>
-								<Text>{t("page.trial.benefits.description")}</Text>
+								<Text>{t("page.trial.benefits.description", { days })}</Text>
 							</div>
 
 							<SellingGrid points={benefits} />
@@ -925,10 +993,15 @@ export function renderTrialPage(view: TrialPageView = {}) {
 									<ActivityIcon size={14} strokeWidth={2} />
 									{t("page.trial.cta.badge")}
 								</span>
+								{/*
+								 * The offer's continuity is the whole argument, so it is the heading and not a
+								 * line inside the paragraph: what is on sale is the same watching carrying on
+								 * at a shorter interval, not a second thing that starts from nothing.
+								 */}
 								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
-									{t("page.trial.cta.title")}
+									{t("page.trial.cta.title", { price })}
 								</Heading>
-								<Text>{t("page.trial.cta.description", { price })}</Text>
+								<Text>{t("page.trial.cta.description", { price, days })}</Text>
 								<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(3), mbs(2)]}>
 									<LinkButton href={routes.app.index.href()} size="lg">
 										{t("page.trial.cta.action")}
@@ -1139,6 +1212,18 @@ export default createController(routes.trial.check, {
 			}
 
 			let url = grant.data.url.toString();
+
+			/**
+			 * Recorded here rather than before the guard, so a blocked target, a failed challenge
+			 * or an exhausted budget is a refusal and not a started check — the pair of counts is
+			 * meant to measure probes that ran against probes that answered, and folding refusals
+			 * into the first would make every guard tightening look like a drop in completion.
+			 */
+			trackUrlCheckStarted(ctx.logger, {
+				hostname: hostnameOf(url),
+				sourcePage: ctx.url.pathname,
+				signedIn: account !== null,
+			});
 			/**
 			 * The options come from `trialProbeOptions` rather than from here, because the hourly
 			 * sweep builds its checks the same way: the number this page shows and the numbers a
@@ -1175,6 +1260,15 @@ export default createController(routes.trial.check, {
 				location: outcome.location,
 				checkedAt: Date.now(),
 			};
+
+			trackUrlCheckCompleted(ctx.logger, {
+				hostname: hostnameOf(url),
+				sourcePage: ctx.url.pathname,
+				signedIn: account !== null,
+				status: probe.status,
+				succeeded: probe.status === "up",
+				responseTimeMs: probe.responseTimeMs,
+			});
 
 			if (billedTeam !== null) {
 				recordAdhocPing({

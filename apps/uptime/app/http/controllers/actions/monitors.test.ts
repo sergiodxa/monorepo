@@ -15,6 +15,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
+import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
@@ -86,6 +87,20 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
+/**
+ * Wraps `seeded` so a logger the funnel-event assertions can read back is installed first,
+ * standing in for the request logger middleware. Composed into one middleware rather than
+ * added beside it, because a route's middleware list here is a fixed-length tuple. Only the
+ * suite that asserts on events passes a logger — every other test runs with none, which is
+ * what pins that instrumentation is optional.
+ */
+function seedLogger(logger: BatchedLogger | undefined, seeded: Middleware): Middleware {
+	return (ctx, next) => {
+		if (logger) (ctx as unknown as { logger: BatchedLogger }).logger = logger;
+		return seeded(ctx, next);
+	};
+}
+
 /** Sends a form request through a minimal router mapping a single action route. */
 async function send(
 	db: Database,
@@ -95,12 +110,16 @@ async function send(
 	handler: RequestHandler<any>,
 	method: string,
 	params: Record<string, string>,
+	logger?: BatchedLogger,
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 
 	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
-	router.map(route, { middleware: [seedTeam(team, membership)], handler });
+	router.map(route, {
+		middleware: [seedLogger(logger, seedTeam(team, membership))],
+		handler,
+	});
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
 		method,
@@ -391,5 +410,110 @@ describe("playMonitor", () => {
 
 		expect(response.status).toBe(404);
 		expect(queueSend).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * The `funnel.second_monitor_created` event — the activation step. The first monitor can be
+ * the one a sign-in converted or the one somebody made to see whether the product works; the
+ * second is somebody who decided to keep using it, so the boundary is what these tests pin.
+ */
+describe("createMonitor funnel event", () => {
+	/** Every activation event the request emitted. */
+	function funnelEvents(logger: BatchedLogger) {
+		return logger.events.filter((event) => event.event === "funnel.second_monitor_created");
+	}
+
+	/** Creates one monitor through the real action, optionally with a logger installed. */
+	async function create(
+		db: Database,
+		team: SelectTeam,
+		membership: SelectMembership,
+		name: string,
+		url: string,
+		logger?: BatchedLogger,
+	) {
+		return await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.create,
+			createMonitor as RequestHandler<any>,
+			"POST",
+			{ name, url },
+			logger,
+		);
+	}
+
+	test("stays silent on a team's first monitor", async () => {
+		let { db, team, membership } = await createFixture();
+		let logger = new BatchedLogger("test");
+
+		await create(db, team, membership, "First", "https://one.example.com", logger);
+
+		expect(funnelEvents(logger)).toBeEmpty();
+	});
+
+	test("fires on the second, with the team, the author and the count", async () => {
+		let { db, team, membership } = await createFixture();
+		let logger = new BatchedLogger("test");
+
+		await create(db, team, membership, "First", "https://one.example.com", logger);
+		await create(db, team, membership, "Second", "https://two.example.com", logger);
+
+		expect(funnelEvents(logger)).toHaveLength(1);
+		expect(funnelEvents(logger)[0]).toMatchObject({
+			teamId: team.id,
+			authorId: membership.subject_id,
+			monitorType: "http",
+			monitorCount: 2,
+		});
+	});
+
+	test("fires once per team however many monitors follow", async () => {
+		let { db, team, membership } = await createFixture();
+		let logger = new BatchedLogger("test");
+
+		await create(db, team, membership, "First", "https://one.example.com", logger);
+		await create(db, team, membership, "Second", "https://two.example.com", logger);
+		await create(db, team, membership, "Third", "https://three.example.com", logger);
+		await create(db, team, membership, "Fourth", "https://four.example.com", logger);
+
+		expect(funnelEvents(logger)).toHaveLength(1);
+	});
+
+	test("names no monitored URL", async () => {
+		let { db, team, membership } = await createFixture();
+		let logger = new BatchedLogger("test");
+
+		await create(db, team, membership, "First", "https://one.example.com", logger);
+		await create(db, team, membership, "Second", "https://private.example.com/admin", logger);
+
+		let [event] = funnelEvents(logger);
+		expect(event).toBeDefined();
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain("private.example.com");
+		}
+	});
+
+	test("a rejected submission created nothing, so nothing activates", async () => {
+		let { db, team, membership } = await createFixture();
+		let logger = new BatchedLogger("test");
+
+		await create(db, team, membership, "First", "https://one.example.com", logger);
+		await create(db, team, membership, "Second", "not-a-url", logger);
+
+		expect(funnelEvents(logger)).toBeEmpty();
+	});
+
+	test("the second monitor is still created when no logger is installed", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await create(db, team, membership, "First", "https://one.example.com");
+		let response = await create(db, team, membership, "Second", "https://two.example.com");
+
+		expect(response.status).toBe(303);
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(2);
 	});
 });

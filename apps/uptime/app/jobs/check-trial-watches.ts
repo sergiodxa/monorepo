@@ -68,6 +68,7 @@ import type { MonitorStatus, SelectLead } from "~/database/schema";
 import Lead from "~/app/data/lead";
 import TrialWatch, {
 	TRIAL_WATCH_DURATION_DAYS,
+	isHealthyTrialStatus,
 	shouldNotifyChange,
 	shouldSendSummary,
 } from "~/app/data/trial-watch";
@@ -78,10 +79,26 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
+import {
+	hostnameOf,
+	trackFirstTrialAlertSent,
+	trackFirstTrialCheckCompleted,
+} from "~/app/services/funnel-events";
 import { HttpCheck } from "~/app/services/http-check";
 import routes from "~/routes/web";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * How long after a watch is created its first unattended check is still looked for.
+ *
+ * A gate on cost and nothing else. `checks_run === 1` is the exact fact that says a check was
+ * a watch's first, and it lives on a column the claim does not project — so confirming it
+ * costs one indexed read. A watch's first check is due one hour after it is created, so a day
+ * is enormously generous about a delayed sweep while keeping the read off the other 167 checks
+ * of the week.
+ */
+const FIRST_CHECK_WINDOW_MS = MS_PER_DAY;
 
 /** Origin the wrap-up's call to action points at; the host this app is served from. */
 const APP_ORIGIN = "https://uptime.sergiodxa.com";
@@ -177,11 +194,18 @@ export class CheckTrialWatchesJob extends Job {
 		let previousStatus = watch.last_status;
 		/** Read from the claimed row before `recordCheck` overwrites the column it compares. */
 		let notify = shouldNotifyChange(watch, result.status, now);
+		/**
+		 * Read before the send stamps it, for the same reason: `null` here is what makes the
+		 * email below this watch's *first* alert, and a later flap is not a new funnel step.
+		 */
+		let firstAlert = watch.change_notified_at === null;
 
 		await TrialWatch.recordCheck(db, watch, {
 			status: result.status,
 			responseTimeMs: result.outcome.responseTimeMs,
 		});
+
+		await this.reportFirstCheck(db, watch, result.status, now);
 
 		/**
 		 * `shouldNotifyChange` already refused a watch with no previous status; naming that
@@ -200,9 +224,59 @@ export class CheckTrialWatchesJob extends Job {
 			await TrialWatch.markChangeNotified(db, watch.id, now);
 			/** Same condition, one row up: the funnel counts what landed, not what was tried. */
 			await Lead.recordEmailSent(db, watch.lead_id, now);
+
+			if (firstAlert) {
+				trackFirstTrialAlertSent(this.logger, {
+					leadId: watch.lead_id,
+					watchId: watch.id,
+					hostname: hostnameOf(watch.url),
+					monitorType: "http",
+					status: result.status,
+					previousStatus,
+				});
+			}
 		}
 
 		return { probed: true, changed: sent, wrappedUp: false };
+	}
+
+	/**
+	 * Emits the funnel's first-unattended-check event, when this check was one.
+	 *
+	 * The condition is the watch's own `checks_run` reading exactly `1` after `recordCheck`
+	 * incremented it, which is the only statement of the fact that cannot drift — the column the
+	 * claim projects is `last_status`, and that is never null for a trial watch because the
+	 * visitor's own probe seeds it. Reading the row costs one indexed lookup, so
+	 * {@link FIRST_CHECK_WINDOW_MS} keeps it off the rest of the week's checks.
+	 *
+	 * Its own try/catch: a sweep must not lose a checked watch because a count could not be read.
+	 */
+	private async reportFirstCheck(
+		db: Database,
+		watch: ClaimedTrialWatch,
+		status: MonitorStatus,
+		now: number,
+	): Promise<void> {
+		if (now - watch.created_at > FIRST_CHECK_WINDOW_MS) return;
+
+		try {
+			let row = await TrialWatch.findById(db, watch.id);
+			if (row?.checks_run !== 1) return;
+
+			trackFirstTrialCheckCompleted(this.logger, {
+				leadId: watch.lead_id,
+				watchId: watch.id,
+				hostname: hostnameOf(watch.url),
+				monitorType: "http",
+				status,
+				succeeded: isHealthyTrialStatus(status),
+			});
+		} catch (error) {
+			this.logger.error("job.check_trial_watches.first_check_report_failed", {
+				watchId: watch.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
 
 	/**
@@ -341,6 +415,12 @@ export class CheckTrialWatchesJob extends Job {
 				segments: segmentsOver(results, row.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
 				stats: watchStats(row),
 				subscribeUrl,
+				/**
+				 * The same report as a page, so a reader who comes back to it in a month — or
+				 * forwards it to the client whose site it describes — is not depending on having
+				 * kept the email. `row` is the whole watch, so the token is already in hand.
+				 */
+				reportToken: row.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
 				locale,
 				t,

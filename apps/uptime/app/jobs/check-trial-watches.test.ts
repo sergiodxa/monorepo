@@ -435,3 +435,134 @@ describe("CheckTrialWatchesJob metering", () => {
 		expect(await TrialWatch.listResults(db, watch.id)).toHaveLength(1);
 	});
 });
+
+/**
+ * The two funnel events the sweep emits. Both are "first" events, so what is pinned is the
+ * boundary in each: the second check and the second alert are not new funnel steps, and
+ * neither event may name the URL it is about.
+ */
+describe("CheckTrialWatchesJob funnel events", () => {
+	/** Every `funnel.*` line of one kind a run emitted. */
+	function funnelEvents(job: { logger: BatchedLogger }, name: string) {
+		return job.logger.events.filter((event) => event.event === `funnel.${name}`);
+	}
+
+	test("reports the first unattended check with its host and outcome", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		let watch = await seedWatch(db, lead.id, {}, "https://example.com/health?token=secret");
+		answering("up");
+
+		let job = await runJob(db);
+
+		let events = funnelEvents(job, "first_trial_check_completed");
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			leadId: lead.id,
+			watchId: watch.id,
+			hostname: "example.com",
+			monitorType: "http",
+			status: "up",
+			succeeded: true,
+		});
+	});
+
+	test("names the host and never the URL, the path or the query string", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		await seedWatch(db, lead.id, {}, "https://example.com/health?token=secret");
+
+		let job = await runJob(db);
+
+		let [event] = funnelEvents(job, "first_trial_check_completed");
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain("token=secret");
+			expect(value).not.toContain("/health");
+		}
+	});
+
+	test("reports a failed first check as one, rather than not reporting it", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		await seedWatch(db, lead.id);
+		answering("down", null);
+
+		let job = await runJob(db);
+
+		expect(funnelEvents(job, "first_trial_check_completed")[0]).toMatchObject({
+			status: "down",
+			succeeded: false,
+		});
+	});
+
+	test("the second hour's check is not a first check", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		let watch = await seedWatch(db, lead.id);
+
+		await runJob(db);
+		await makeDue(db, watch.id);
+		let second = await runJob(db);
+
+		expect(funnelEvents(second, "first_trial_check_completed")).toBeEmpty();
+	});
+
+	test("reports the first on-change email with both statuses", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		let watch = await seedWatch(db, lead.id, { last_status: "up" });
+		answering("down", null);
+
+		let job = await runJob(db);
+
+		let events = funnelEvents(job, "first_trial_alert_sent");
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			leadId: lead.id,
+			watchId: watch.id,
+			hostname: "example.com",
+			monitorType: "http",
+			status: "down",
+			previousStatus: "up",
+		});
+	});
+
+	test("a later change on the same watch is not a first alert", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		let watch = await seedWatch(db, lead.id, { last_status: "up" });
+		answering("down", null);
+
+		let first = await runJob(db);
+		expect(funnelEvents(first, "first_trial_alert_sent")).toHaveLength(1);
+
+		/**
+		 * The change email is capped at one a day, so the stamp has to be backdated for a second
+		 * one to go out at all — which is exactly the case this asserts is not a first alert.
+		 */
+		await db.update(
+			trialWatches,
+			watch.id,
+			{ change_notified_at: Date.now() - 2 * MS_PER_DAY, next_due_at: Date.now() - 1000 },
+			{ touch: false },
+		);
+		answering("up");
+
+		let second = await runJob(db);
+		expect(sentOf(TrialChangeEmail)).toBe(2);
+		expect(funnelEvents(second, "first_trial_alert_sent")).toBeEmpty();
+	});
+
+	test("emits no alert event when the send was refused", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedLead(db);
+		await seedWatch(db, lead.id, { last_status: "up" });
+		await db.exec("DELETE FROM leads WHERE id = ?", [lead.id]);
+		answering("down", null);
+
+		let job = await runJob(db);
+
+		expect(funnelEvents(job, "first_trial_alert_sent")).toBeEmpty();
+	});
+});

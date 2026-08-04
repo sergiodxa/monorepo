@@ -40,6 +40,7 @@ import Team from "~/app/data/team";
 import { returnTo, safeReturnTo } from "~/app/http/cookies";
 import { TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
 import { login, setIdToken } from "~/app/http/middleware/auth";
+import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
 import DocumentLayout from "~/resources/layouts/document";
@@ -84,7 +85,29 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	let [first] = teams;
 	if (first) return teams.find((team) => team.owner_id === idToken.subject) ?? first;
 
-	return (await Team.joinByDomain(db, idToken)) ?? (await Team.createTeam(db, idToken));
+	let joined = await Team.joinByDomain(db, idToken);
+	if (joined) return joined;
+
+	/**
+	 * A brand-new personal team, which is the one branch that means an account was just created.
+	 * The trial's own `account_created` is emitted by `convertTrialWatches` for somebody who came
+	 * through the free page; this covers everybody else, so a count of all new accounts is the
+	 * union of the two and neither double-counts the other.
+	 *
+	 * Emitted here rather than after the sign-in completes because this is the only place that
+	 * knows a team was *created* rather than resolved — a returning user reaches neither branch.
+	 */
+	let created = await Team.createTeam(db, idToken);
+
+	trackAccountCreated(getContext().logger, {
+		ownerId: idToken.subject,
+		fromTrial: false,
+		watchCount: 0,
+		emailsSent: 0,
+		...attributionProperties(),
+	});
+
+	return created;
 }
 
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */

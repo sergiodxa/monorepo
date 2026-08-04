@@ -44,6 +44,7 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { segmentsOver } from "~/app/lib/trial-report";
 import { formatUptime } from "~/app/lib/uptime-report";
 import { recordCost } from "~/app/services/cost";
+import { trackTrialProgressEmailSent } from "~/app/services/funnel-events";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -155,6 +156,19 @@ export class SendTrialDigestsJob extends Job {
 		await Lead.markDigestSent(db, lead.id, now);
 		/** And on the same condition, because the funnel counts what landed, not what was tried. */
 		await Lead.recordEmailSent(db, lead.id, now);
+
+		/**
+		 * On the same condition again, and with no URL in it: how many targets the email covered
+		 * and whether any of them was unhealthy is the whole of what makes one of these worth
+		 * having opened, and it is the part that cannot be recovered once the lead is deleted.
+		 */
+		trackTrialProgressEmailSent(this.logger, {
+			leadId: lead.id,
+			period: "daily",
+			targets: targets.length,
+			hadIncident: targets.some((target) => !isHealthyTrialStatus(target.status)),
+		});
+
 		return true;
 	}
 }

@@ -25,6 +25,7 @@ import {
 	type CreateAlertValues,
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
+import { trackAlertConfigured } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
 /** Builds the strategy-specific `AlertConfig` JSON column from the flat form values. */
@@ -81,6 +82,20 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 		notify_on_recovery: result.data.notify_on_recovery,
 		cooldown_minutes: result.data.cooldown_minutes,
 		config: buildConfig(result.data),
+	});
+
+	/**
+	 * The count comes from the cap check above rather than a second query, plus this one: the
+	 * cap already read it and nothing between the two can have changed it for this team.
+	 * Neither the destination nor any part of the config is recorded — three of the four
+	 * strategies configure a secret webhook URL and the fourth an address.
+	 */
+	trackAlertConfigured(ctx.logger, {
+		teamId: ctx.team.id,
+		alertId: alert.id,
+		strategy: result.data.strategy,
+		monitorScoped: alert.monitor_id !== null,
+		alertCount: existingCount + 1,
 	});
 
 	session?.flash("toast", { intent: "success", message: `Alert "${alert.name}" created.` });

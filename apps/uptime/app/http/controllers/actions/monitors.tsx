@@ -21,7 +21,14 @@ import { Session } from "remix/session";
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import { CreateMonitorSchema, UpdateMonitorSchema } from "~/app/http/validators/monitor";
+import { trackSecondMonitorCreated } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
+
+/**
+ * The monitor count that means a team came back and added one — see
+ * {@link trackSecondMonitorCreated} for why the second and not the first.
+ */
+const ACTIVATION_MONITOR_COUNT = 2;
 
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
@@ -46,6 +53,22 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 	let monitor = await Monitor.create(db, ctx.team.id, viewer.id, result.data);
 	// Kicks off a first check right away; skipped without a subscription, like every check.
 	await Monitor.ping(db, monitor.id, ctx.team.owner_id);
+
+	/**
+	 * Counted after the creation, so the number is the team's total including this one, and
+	 * compared for equality rather than `>=` so the event fires exactly once per team however
+	 * many monitors they go on to add. The count is one indexed aggregate on a path that has
+	 * already done two writes.
+	 */
+	let monitorCount = await Monitor.countByTeam(db, ctx.team.id);
+	if (monitorCount === ACTIVATION_MONITOR_COUNT) {
+		trackSecondMonitorCreated(ctx.logger, {
+			teamId: ctx.team.id,
+			authorId: viewer.id,
+			monitorType: "http",
+			monitorCount,
+		});
+	}
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${monitor.name}" created.` });
 	return redirect(

@@ -17,6 +17,11 @@
  * "we stopped for today" apart from "your site is down"; the one that means "you have not
  * finished the form" is also asserted to render on the field rather than in the Alert.
  *
+ * What the page *offers* is asserted structurally rather than by quoting its sentences: the
+ * terms of the free run are asserted to sit ahead of the field that accepts them, and the
+ * closing pitch to carry the price as `~/app/lib/pricing` formats it. Copy gets rewritten;
+ * where the terms sit and whether the price is stated are the parts that must not.
+ *
  * The signed-in half is a different page from the same handler, so it gets its own block at
  * the bottom: a real team row, a real entitlement projection, and assertions on all three
  * of who is charged, which budgets are asked for, and what the card offers. The anonymous
@@ -58,6 +63,7 @@ import type {
 import type { SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
+import { BASE_PRICE_USD } from "~/app/lib/pricing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, teams } from "~/database/schema";
@@ -248,6 +254,17 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 	return { response, session, body: await response.text() };
 }
 
+/**
+ * The subscription price as the page states it, built from `~/app/lib/pricing` rather than
+ * written out, so a price change moves the assertion with the product instead of failing it.
+ */
+const PRICE = BASE_PRICE_USD.toLocaleString("en", {
+	style: "currency",
+	currency: "USD",
+	minimumFractionDigits: 0,
+	maximumFractionDigits: 2,
+});
+
 /** Loads `/try` with a session seeded however the test needs it. */
 async function getTry(session = new Session(), search = "") {
 	let url = `https://uptime.test${routes.trial.check.index.href()}${search}`;
@@ -306,6 +323,32 @@ describe("GET /try", () => {
 		expect(probes).toHaveLength(0);
 	});
 
+	/**
+	 * The page offers a run of checks rather than a single one, which is exactly the framing
+	 * that would make a crawler's `GET` expensive if the method ever started one. So the
+	 * prohibition is asserted on the bare `GET` and on the pre-filled one separately: neither
+	 * consults the guard, neither reaches the network, and neither bills anything.
+	 */
+	test("a bare GET starts nothing, whatever the page is offering", async () => {
+		let { response, body } = await getTry();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain('name="url"');
+		expect(guardTrialProbe).not.toHaveBeenCalled();
+		expect(probes).toHaveLength(0);
+		expect(writtenPoints).toHaveLength(0);
+	});
+
+	test("a pre-filled GET starts nothing either — the field is filled, not submitted", async () => {
+		let { body } = await getTry(new Session(), "?url=https%3A%2F%2Fexample.com");
+
+		expect(body).toContain('value="https://example.com"');
+		expect(body).toContain('method="post"');
+		expect(guardTrialProbe).not.toHaveBeenCalled();
+		expect(probes).toHaveLength(0);
+		expect(writtenPoints).toHaveLength(0);
+	});
+
 	test("comes back empty even when a probe is still sitting in the session", async () => {
 		let session = new Session();
 		session.set(TRIAL_PROBE, probeState());
@@ -326,12 +369,17 @@ describe("GET /try", () => {
 		expect(session.get(TRIAL_PROBE)).toBeDefined();
 	});
 
+	/**
+	 * Each section is identified by a line that names the thing it sells rather than by its
+	 * own heading, so a rewrite of the pitch cannot quietly delete a section's coverage by
+	 * renaming it.
+	 */
 	test("sells nothing before a check has run", async () => {
 		let { body } = await getTry();
 
-		expect(body).not.toContain("What the week looks like");
+		expect(body).not.toContain("A check every hour");
 		expect(body).not.toContain("Not just websites");
-		expect(body).not.toContain("Keep the checks, add the rest");
+		expect(body).not.toContain("See pricing");
 	});
 
 	test("renders no Turnstile widget when the deployment has no site key", async () => {
@@ -530,12 +578,45 @@ describe("POST /try", () => {
 		expect(guardTrialProbe.mock.calls[0]?.[0].token).toBeNull();
 	});
 
-	test("sells the week only once there is something to have an opinion about", async () => {
+	test("sells the free run only once there is something to have an opinion about", async () => {
 		let { body } = await runTry({ url: "example.com" });
 
-		expect(body).toContain("What the week looks like");
+		expect(body).toContain("A check every hour");
 		expect(body).toContain("Not just websites");
-		expect(body).toContain("Keep the checks, add the rest");
+		expect(body).toContain("See pricing");
+	});
+
+	/**
+	 * The closing pitch is about carrying on rather than starting over, and what it costs to
+	 * carry on has to be on it. The price is asserted as `pricing.ts` formats it and the two
+	 * destinations are asserted beside it, so the section cannot lose its price or its links
+	 * to a rewrite of the copy around them.
+	 */
+	test("closes on the price the subscription actually costs", async () => {
+		let { body } = await runTry({ url: "example.com" });
+
+		expect(body).toContain(PRICE);
+		expect(body).toContain(`href="${routes.app.index.href()}"`);
+		expect(body).toContain(`${routes.home.href()}#pricing`);
+	});
+
+	/**
+	 * The terms sit above the field that accepts them, never below the button that submits it.
+	 * Asserted by position rather than by wording so the copy can be rewritten without the
+	 * guarantee moving: the list is inside the result card and ahead of the email form.
+	 */
+	test("sets out what is being asked for before the email field", async () => {
+		let { body } = await runTry({ url: "example.com" });
+
+		let cardAt = body.indexOf("https://example.com/");
+		let formAt = body.indexOf(`action="${routes.trial.lead.href()}"`);
+		let listAt = body.lastIndexOf("<ul", formAt);
+
+		expect(cardAt).toBeGreaterThan(-1);
+		expect(listAt).toBeGreaterThan(cardAt);
+		expect(formAt).toBeGreaterThan(listAt);
+		// What will be checked, how often, which emails arrive, and what is not required.
+		expect(body.slice(listAt, formAt).match(/<li/g) ?? []).toHaveLength(4);
 	});
 });
 
@@ -640,7 +721,9 @@ describe("POST /try refusals", () => {
 
 		let formStart = body.indexOf(`action="${routes.trial.check.action.href()}"`);
 		let alertAt = body.indexOf("every free check we run in a day");
-		let submitAt = body.indexOf("Run the check");
+		// The button, found by its type rather than its label: where the alert lands relative
+		// to the control that produced it is the guarantee, not what the control says.
+		let submitAt = body.lastIndexOf('type="submit"');
 
 		expect(formStart).toBeGreaterThan(-1);
 		expect(alertAt).toBeGreaterThan(formStart);
@@ -712,7 +795,7 @@ describe("POST /try for a signed-in viewer", () => {
 			`${routes.app.team.monitors.new.href({ team: actor.team.slug })}?url=https%3A%2F%2Fexample.com%2F`,
 		);
 		expect(body).not.toContain(`action="${routes.trial.lead.href()}"`);
-		expect(body).not.toContain("Get an email when this changes");
+		expect(body).not.toContain("Also email me occasionally about Uptime itself.");
 	});
 
 	test("drops the free-week pitch, which describes an offer they were not made", async () => {
@@ -720,10 +803,15 @@ describe("POST /try for a signed-in viewer", () => {
 
 		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
 
+		// Scoped past `</head>`: the page's own meta description quotes "no card, no account"
+		// for search results and social previews, which every visitor's document carries
+		// whoever they are. What must not appear is the *section*, in the body.
+		let rendered = body.slice(body.indexOf("</head>"));
+
 		// "No account, no card" is the closing argument of that section, and it is the line
 		// that reads worst to somebody who has both.
-		expect(body).not.toContain("What the week looks like");
-		expect(body).not.toContain("No account, no card");
+		expect(rendered).not.toContain("A check every hour");
+		expect(rendered).not.toContain("No account, no card");
 	});
 
 	test("offers billing alongside the monitor when the subscription is not active", async () => {
@@ -761,7 +849,7 @@ describe("POST /try for a signed-in viewer", () => {
 		expect(writtenPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 		expect(body).toContain(`action="${routes.trial.lead.href()}"`);
-		expect(body).toContain("Get an email when this changes");
+		expect(body).toContain("Also email me occasionally about Uptime itself.");
 		expect(body).not.toContain("Create a monitor for this URL");
 	});
 });

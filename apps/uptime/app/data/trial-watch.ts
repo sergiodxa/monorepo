@@ -127,8 +127,14 @@ export type ClaimedTrialWatch = Pick<SelectTrialWatch, (typeof CLAIM_COLUMNS)[nu
  * what makes "a watch whose key does not match its own URL" unrepresentable rather than
  * merely discouraged. The URL is required for the same reason: it is the one field the key
  * is computed from, and every other column is optional or stamped by `create` itself.
+ *
+ * `report_token` is absent for a different reason: it is a credential, and a caller that
+ * could choose it could choose a guessable one. It is generated inside `create` and nowhere
+ * else, so no request body can ever reach it.
  */
-export type NewTrialWatch = Omit<InsertTrialWatch, "normalized_url" | "url"> & { url: string };
+export type NewTrialWatch = Omit<InsertTrialWatch, "normalized_url" | "report_token" | "url"> & {
+	url: string;
+};
 
 /** One completed trial check, as the thing to record. */
 export interface TrialCheckResult {
@@ -257,6 +263,7 @@ export default class TrialWatch {
 				lead_id: leadId,
 				...input,
 				normalized_url: normalizeTrialUrl(input.url),
+				report_token: generateUUID(),
 				expires_at: now + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY,
 				converts_until: now + TRIAL_WATCH_CONVERSION_WINDOW_DAYS * MS_PER_DAY,
 				next_due_at: now + TRIAL_WATCH_INTERVAL_SECONDS * 1000,
@@ -288,6 +295,26 @@ export default class TrialWatch {
 		return await db.findOne(trialWatches, {
 			where: { lead_id: leadId, normalized_url: normalizeTrialUrl(url) },
 		});
+	}
+
+	/**
+	 * The watch a report link identifies, or `null` when the token is unknown — which includes
+	 * the token of a watch already swept thirty days after it was created. That is the whole
+	 * authorization for the report page: there is no account behind a trial, so holding the
+	 * token *is* being allowed to read it, and a caller that has one gets exactly the one watch
+	 * it names.
+	 *
+	 * Unlike {@link TrialWatch.findByNormalizedUrl} this takes no lead: a reader arriving from
+	 * an email weeks later has no session, and the whole point of the token is that nothing
+	 * else has to be known. Whether the watch is still being checked is not consulted either —
+	 * a finished week is precisely what the report describes.
+	 *
+	 * @param db - Database handle.
+	 * @param token - The token out of the URL, unvalidated beyond being a string.
+	 * @returns The watch, or `null` for a token this database has never issued.
+	 */
+	static async findByReportToken(db: Database, token: string) {
+		return await db.findOne(trialWatches, { where: { report_token: token } });
 	}
 
 	/**

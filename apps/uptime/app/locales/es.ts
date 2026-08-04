@@ -75,7 +75,6 @@ export default {
 			monitorTypes: "Tipos de Monitor",
 			globalRegions: "Regiones Globales",
 			daysDataRetention: "Días de Retención",
-			alertLatency: "Latencia de Alertas",
 		},
 
 		features: {
@@ -2026,11 +2025,6 @@ export default {
 				cta: "Guardar cambios",
 			},
 
-			ssl: {
-				title: "Monitoreo de certificado SSL",
-				cta: "Guardar configuración SSL",
-			},
-
 			dangerZone: {
 				title: "Zona de peligro",
 				delete: "Eliminar monitor",
@@ -3552,47 +3546,6 @@ export default {
 
 				form: {
 					cta: "Guardar correos",
-				},
-			},
-
-			teams: {
-				title: "Sus Equipos",
-				description: "Equipos de los que es miembro.",
-
-				actions: {
-					createTeam: "Crear Equipo",
-				},
-
-				empty: {
-					title: "Aún no hay equipos",
-					description: "Cree un equipo para comenzar a monitorear sus servicios.",
-					cta: "Crear Equipo",
-				},
-
-				table: {
-					label: "Equipos",
-					description: "Todos los equipos a los que pertenece.",
-
-					columns: {
-						team: "Equipo",
-						role: "Rol",
-						actions: "Acciones",
-					},
-
-					role: {
-						member: "Miembro",
-						admin: "Administrador",
-						owner: "Propietario",
-					},
-
-					actions: {
-						menu: "Menú de acciones",
-						leave: "Abandonar Equipo",
-					},
-
-					confirmation: {
-						leaveTeam: "¿Está seguro de que desea abandonar {{name}}?",
-					},
 				},
 			},
 		},

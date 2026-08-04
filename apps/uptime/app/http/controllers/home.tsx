@@ -1,10 +1,10 @@
 /**
  * Home controller. Renders the public marketing homepage — a split hero with a product
- * screenshot, trust indicators, feature and use-case grids, an interactive usage-based
- * pricing calculator, and a two-column FAQ — inside the shared `MarketingLayout`
- * chrome. It exists as the top-of-funnel entry point for anonymous visitors, and as
- * the redirect target for unauthenticated `requireUser` guards (signed-in viewers see
- * a "Go to dashboard" call to action instead of a sign-in form).
+ * screenshot, trust indicators, three benefit rows, feature and use-case grids, an
+ * interactive usage-based pricing calculator, and a two-column FAQ — inside the shared
+ * `MarketingLayout` chrome. It exists as the top-of-funnel entry point for anonymous
+ * visitors, and as the redirect target for unauthenticated `requireUser` guards
+ * (signed-in viewers see a "Go to dashboard" call to action instead of a sign-in form).
  *
  * The pricing calculator is the one part of this page that ships JavaScript: it's a
  * `clientEntry` island, since a running total that responds to a slider drag can't be
@@ -34,15 +34,18 @@ import {
 	CirclePauseIcon,
 	ClockIcon,
 	CodeIcon,
+	CreditCardIcon,
 	FileTextIcon,
 	GlobeIcon,
 	KeyIcon,
+	LayersIcon,
 	LinkIcon,
 	LockIcon,
 	MessageSquareIcon,
 	RefreshCwIcon,
 	ShieldCheckIcon,
 	TimerIcon,
+	UsersIcon,
 } from "@pkg/lucide-remix";
 import { Button, Heading, LinkButton, TextField } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
@@ -218,10 +221,15 @@ export default createAction(routes.home, async (ctx) => {
 			value: "365",
 			label: t("landing.trustIndicators.daysDataRetention"),
 		},
+		// The check-interval floor rather than an alert-delivery time: how fast a
+		// notification arrives depends on an inbox, a webhook endpoint and a chat
+		// provider we don't run, so a latency figure here would be a promise about
+		// somebody else's infrastructure. The floor is ours, and it's enforced —
+		// `interval_seconds` is validated at a 60-second minimum.
 		{
-			icon: <BellIcon size={24} strokeWidth={1.5} />,
-			value: "<1s",
-			label: t("landing.trustIndicators.alertLatency"),
+			icon: <ClockIcon size={24} strokeWidth={1.5} />,
+			value: "1min",
+			label: t("landing.trustIndicators.minCheckInterval"),
 		},
 	];
 
@@ -294,13 +302,18 @@ export default createAction(routes.home, async (ctx) => {
 		description: t(`landing.useCases.list.${useCase.key}.description`),
 	}));
 
+	/**
+	 * The three audiences this row points at, not all six `/for/:slug` pages. Six pills
+	 * of equal weight tell a visitor nothing about who the product is for — the row reads
+	 * as a tag cloud, and the two audiences the product is least shaped for (enterprises,
+	 * platform teams with their own on-call stack) borrow the same prominence as the ones
+	 * it is. The other pages stay in the footer's solutions column and in the sitemap, so
+	 * every one of them is still crawlable and one click from the chrome.
+	 */
 	let AUDIENCE_LINKS = [
-		{ key: "indieHackers", slug: "indie-hackers" },
+		{ key: "agencies", slug: "agencies" },
 		{ key: "soloDevelopers", slug: "solo-devs" },
 		{ key: "startups", slug: "startups" },
-		{ key: "agencies", slug: "agencies" },
-		{ key: "enterprises", slug: "enterprises" },
-		{ key: "devops", slug: "devops" },
 	].map((audience) => ({
 		slug: audience.slug,
 		label: t(`landing.useCases.audiences.${audience.key}`),
@@ -317,6 +330,25 @@ export default createAction(routes.home, async (ctx) => {
 		blockPrice: formatMoney(ctx.locale, PRICE_PER_BLOCK_USD),
 		blockSize: formatCount(ctx.locale, PINGS_PER_BLOCK),
 	};
+
+	/**
+	 * The three reasons to keep reading, stated as product facts a visitor can check on
+	 * this page: what a subscription covers, what it doesn't count, and what it costs.
+	 * The cost line interpolates {@link pricingCopyValues} rather than spelling the
+	 * figures out, so `app/lib/pricing.ts` stays the only place a price is stated.
+	 */
+	let BENEFITS = [
+		{
+			key: "everythingIncluded",
+			icon: <LayersIcon size={20} strokeWidth={1.5} />,
+		},
+		{ key: "noMonitorMath", icon: <UsersIcon size={20} strokeWidth={1.5} /> },
+		{ key: "payForUsage", icon: <CreditCardIcon size={20} strokeWidth={1.5} /> },
+	].map((benefit) => ({
+		icon: benefit.icon,
+		title: t(`landing.benefits.list.${benefit.key}.title`),
+		description: t(`landing.benefits.list.${benefit.key}.description`, pricingCopyValues),
+	}));
 
 	let FAQS = [
 		"first",
@@ -603,6 +635,33 @@ export default createAction(routes.home, async (ctx) => {
 				</section>
 
 				<MarketingTrustIndicators indicators={TRUST_INDICATORS} />
+
+				{/* Directly after the hero block — the try-it box and the figure strip above are
+				    part of it — and before the feature grid, because a visitor decides whether the
+				    product is for them before they care which checks it runs. Rendered with the
+				    same icon-beside-text rows the capability list below uses rather than a fourth
+				    kind of card: three claims about the product don't need a visual treatment of
+				    their own, and inventing one would make the page look like it has two heroes. */}
+				<section id="benefits" mix={[...sectionPadding()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader
+							badge={t("landing.benefits.badge")}
+							title={t("landing.benefits.title")}
+							description={t("landing.benefits.description")}
+						/>
+
+						<div mix={[grid(), gap(6), ...responsiveGrid()]}>
+							{BENEFITS.map((benefit) => (
+								<MarketingFeatureRow
+									key={benefit.title}
+									icon={benefit.icon}
+									title={benefit.title}
+									description={benefit.description}
+								/>
+							))}
+						</div>
+					</div>
+				</section>
 
 				<section id="features" mix={[...sectionPadding()]}>
 					<div mix={[...marketingContainer()]}>

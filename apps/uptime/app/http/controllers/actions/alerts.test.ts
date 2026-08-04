@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 
+import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -33,6 +34,18 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	};
 }
 
+/**
+ * Installs a logger the funnel-event assertions can read back, standing in for the request
+ * logger middleware. Only the suites that assert on events install it — the rest of this file
+ * runs without one, which is itself the check that instrumentation is optional.
+ */
+function loggerMiddleware(logger: BatchedLogger): Middleware {
+	return (ctx, next) => {
+		(ctx as unknown as { logger: BatchedLogger }).logger = logger;
+		return next();
+	};
+}
+
 /** Posts a form body to one of the alert actions through the real action, DB, and service container. */
 async function postAlertAction(
 	action: unknown,
@@ -42,6 +55,7 @@ async function postAlertAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string>,
 	headers: Record<string, string> = {},
+	logger?: BatchedLogger,
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
@@ -52,7 +66,9 @@ async function postAlertAction(
 	 * several differently-shaped routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		middleware: [teamContextMiddleware(team, membership)],
+		middleware: logger
+			? [loggerMiddleware(logger), teamContextMiddleware(team, membership)]
+			: [teamContextMiddleware(team, membership)],
 		handler: action,
 	});
 
@@ -406,5 +422,144 @@ describe("POST /actions/:team/delete-alert", () => {
 			routes.app.team.alerts.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(alerts, { where: { id: alert.id } })).not.toBeNull();
+	});
+});
+
+/**
+ * The `funnel.alert_configured` event. A team that has said where to reach it is a team that
+ * expects to be reached, which is the other half of activation — and the strategy's config is
+ * a webhook secret or an address, so the event names the strategy and nothing else.
+ */
+describe("create-alert funnel event", () => {
+	/** Every alert-configured event the request emitted. */
+	function funnelEvents(logger: BatchedLogger) {
+		return logger.events.filter((event) => event.event === "funnel.alert_configured");
+	}
+
+	test("reports the strategy, the scope, and the team's alert count", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let logger = new BatchedLogger("test");
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody(),
+			{},
+			logger,
+		);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(funnelEvents(logger)).toHaveLength(1);
+		expect(funnelEvents(logger)[0]).toMatchObject({
+			teamId: team.id,
+			alertId: created?.id ?? "",
+			strategy: "email",
+			monitorScoped: false,
+			alertCount: 1,
+		});
+	});
+
+	test("counts the team's second alert as the second", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let logger = new BatchedLogger("test");
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody(),
+			{},
+			logger,
+		);
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ name: "Second" }),
+			{},
+			logger,
+		);
+
+		expect(funnelEvents(logger).map((event) => event.alertCount)).toEqual([1, 2]);
+	});
+
+	test("never records the destination, only the strategy that reaches it", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let logger = new BatchedLogger("test");
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			{
+				name: "Slack",
+				strategy: "slack",
+				slack_webhook_url: "https://hooks.slack.com/services/T000/B000/XXXXXXXXXXXX",
+				slack_channel: "#ops",
+			},
+			{},
+			logger,
+		);
+
+		let [event] = funnelEvents(logger);
+		expect(event).toMatchObject({ strategy: "slack" });
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain("hooks.slack.com");
+			expect(value).not.toContain("ops@example.com");
+		}
+	});
+
+	test("a rejected submission created nothing and so reports nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let logger = new BatchedLogger("test");
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ name: "" }),
+			{},
+			logger,
+		);
+
+		expect(funnelEvents(logger)).toBeEmpty();
+	});
+
+	test("a create with no logger installed still creates the alert", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody(),
+		);
+
+		expect(response.status).toBe(303);
+		expect(await db.findOne(alerts, { where: { team_id: team.id } })).not.toBeNull();
 	});
 });

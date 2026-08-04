@@ -15,6 +15,12 @@
  * out entirely rather than guessed. `honestTake` exists for the same reason: a
  * comparison page that only lists our wins reads as marketing.
  *
+ * Alert-delivery times are deliberately absent from every figure here. The last hop of a
+ * notification belongs to an inbox, a webhook endpoint or a chat provider we don't run, so
+ * any number stated for it is a promise about somebody else's infrastructure. Where a page
+ * wants a figure about how fast a failure is caught, it states the check-interval floor,
+ * which is ours and is enforced.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -260,15 +266,15 @@ export const features: Record<string, MarketingContent.Page> = {
 		slug: "alerts",
 		metaTitle: "Uptime Alerts | Email & Webhook Notifications",
 		metaDescription:
-			"Instant email and webhook alerts for downtime detection. Under 1 second delivery. Integrates with Slack, Discord, PagerDuty, and more.",
+			"Email and webhook alerts on every failed check, from intervals as short as one minute. Integrates with Slack, Discord, PagerDuty, and more.",
 		badge: "Alerts",
 		title: "Get notified the moment something",
 		highlight: "breaks",
 		description:
-			"Instant email, Slack, Discord, and webhook alerts for downtime detection, with recovery notifications and configurable cooldowns.",
-		highlights: ["Under 1s delivery", "4 alert channels", "Recovery notifications"],
+			"Email, Slack, Discord, and webhook alerts for downtime detection, with recovery notifications and configurable cooldowns.",
+		highlights: ["Alerts on every failed check", "4 alert channels", "Recovery notifications"],
 		trustIndicators: [
-			{ icon: "zap", value: "<1s", label: "Alert Latency" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "mail", value: "Email", label: "Notifications" },
 			{ icon: "webhook", value: "Webhooks", label: "Integrations" },
 			{ icon: "bell", value: "4", label: "Alert Channels" },
@@ -887,7 +893,7 @@ export const features: Record<string, MarketingContent.Page> = {
 		highlights: ["Heartbeat pings", "Cron expressions", "Late/missed detection"],
 		trustIndicators: [
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
-			{ icon: "zap", value: "<60s", label: "Alert Latency" },
+			{ icon: "activity", value: "5", label: "Monitor Types" },
 			{ icon: "clock", value: "24/7", label: "Monitoring" },
 			{ icon: "calendar", value: "365d", label: "Retention" },
 		],
@@ -1070,7 +1076,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		highlights: ["Unlimited team members", "Role-based access", "Usage-based pricing"],
 		trustIndicators: [
 			{ icon: "users", value: "Unlimited", label: "Team Members" },
-			{ icon: "zap", value: "<1s", label: "Alert Latency" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
@@ -1398,7 +1404,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		highlights: ["9 global regions", "SSL expiry tracking", "Instant alerts"],
 		trustIndicators: [
 			{ icon: "globe", value: "Any", label: "Website" },
-			{ icon: "bell", value: "<1s", label: "Alerts" },
+			{ icon: "calendar", value: "365d", label: "Retention" },
 			{ icon: "map", value: "9", label: "Regions" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 		],
@@ -1627,7 +1633,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		trustIndicators: [
 			{ icon: "shopping-cart", value: "Checkout", label: "Monitoring" },
 			{ icon: "credit-card", value: "Payment", label: "APIs" },
-			{ icon: "zap", value: "<1s", label: "Alerts" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "dollar-sign", value: "Revenue", label: "Protected" },
 		],
 		features: [

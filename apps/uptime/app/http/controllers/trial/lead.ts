@@ -82,6 +82,7 @@ import {
 import { TrialLeadSchema } from "~/app/http/validators/trial";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
+import { hostnameOf, trackTrialMonitorStarted } from "~/app/services/funnel-events";
 import { supportedLanguages } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -186,7 +187,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		return back;
 	}
 
-	await TrialWatch.create(db, lead.id, {
+	let watch = await TrialWatch.create(db, lead.id, {
 		url: probe.url,
 		/**
 		 * The status the visitor just saw, so change detection has a baseline from the very
@@ -194,6 +195,21 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		 * interval out precisely because this one already happened.
 		 */
 		last_status: probe.status,
+	});
+
+	/**
+	 * Emitted here rather than in the capped branch above, because this is the only branch that
+	 * started anything: a submission that found an existing watch is answered with a report and
+	 * adds no step to the funnel. Before the send, so a mail provider outage cannot cost the
+	 * event — the watch already exists either way, and that is what this records.
+	 */
+	trackTrialMonitorStarted(ctx.logger, {
+		leadId: lead.id,
+		watchId: watch.id,
+		hostname: hostnameOf(probe.url),
+		monitorType: "http",
+		immediateCheckSucceeded: probe.status === "up",
+		consented: result.data.consent,
 	});
 
 	// Counted before the send, because a rejected send is a billed one.

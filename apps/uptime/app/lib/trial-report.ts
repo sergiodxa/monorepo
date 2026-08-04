@@ -1,6 +1,7 @@
 /**
  * The arithmetic the free-watch reports share: turning a target's checks into the segments of
- * an uptime bar, and reading a watch's running totals off as the three numbers under it.
+ * an uptime bar, reading a watch's running totals off as the three numbers under it, and
+ * grouping its failures into the incidents a report can name.
  *
  * Shared because the same bar is drawn at three scales by three different senders — one
  * segment per hour over a day for the daily digest, one per day over a week for the wrap-up,
@@ -62,6 +63,58 @@ export function segmentsOver(
 	}
 
 	return segments;
+}
+
+/** One run of consecutive failed checks on a watched target, as a report states it. */
+export interface TrialIncident {
+	/** The first check that came back `down`. */
+	startedAt: number;
+	/** The last consecutive check that came back `down`; equal to {@link startedAt} for one. */
+	lastFailureAt: number;
+	/** How many consecutive checks failed. Always at least one. */
+	checks: number;
+}
+
+/**
+ * Groups a target's checks into incidents: maximal runs of consecutive `down` results.
+ *
+ * **Only `down` opens an incident.** `degraded` is a slow answer, not an outage, and calling
+ * it one would make a report claim something the reader can check and disprove. It is still
+ * visible — it colours its own segment of the bar, and it is excluded from `checks_ok` — so
+ * nothing is hidden by leaving it out of this count.
+ *
+ * **No duration is derived, deliberately.** Checks are an hour apart, so the only honest
+ * statements available are when the first failure was seen, when the last one was, and how
+ * many there were. Turning that into "down for 3 hours" would assert something about the
+ * fifty-nine minutes between checks that nothing observed, and the error is one-sided:
+ * every such figure reads as more precise than the data it came from.
+ *
+ * @param results - Checks in any order; sorted here so a caller cannot change the answer.
+ * @returns The incidents, oldest first, empty when nothing ever failed.
+ * @example incidentsFrom(await TrialWatch.listResults(db, watch.id))
+ */
+export function incidentsFrom(results: Segmentable[]): TrialIncident[] {
+	let ordered = [...results].sort((a, b) => a.checked_at - b.checked_at);
+	let incidents: TrialIncident[] = [];
+	let current: TrialIncident | null = null;
+
+	for (let result of ordered) {
+		if (result.status !== "down") {
+			current = null;
+			continue;
+		}
+
+		if (current === null) {
+			current = { startedAt: result.checked_at, lastFailureAt: result.checked_at, checks: 1 };
+			incidents.push(current);
+			continue;
+		}
+
+		current.lastFailureAt = result.checked_at;
+		current.checks += 1;
+	}
+
+	return incidents;
 }
 
 /**

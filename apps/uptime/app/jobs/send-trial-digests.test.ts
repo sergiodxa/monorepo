@@ -282,3 +282,85 @@ describe("SendTrialDigestsJob", () => {
 		expect(row?.last_digest_at).toBeNull();
 	});
 });
+
+/**
+ * The `funnel.trial_progress_email_sent` event. It is emitted on the same condition as the
+ * stamp — a send the transport accepted — because a report of an email nobody received would
+ * overstate the only engagement measure this funnel has.
+ */
+describe("SendTrialDigestsJob funnel events", () => {
+	/** Every progress-email event a run emitted. */
+	function funnelEvents(job: { logger: BatchedLogger }) {
+		return job.logger.events.filter((event) => event.event === "funnel.trial_progress_email_sent");
+	}
+
+	test("reports one event per email, with the target count the email covered", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db);
+		await seedWatch(db, lead.id, "https://one.example.com", { last_status: "up" });
+		await seedWatch(db, lead.id, "https://two.example.com", { last_status: "up" });
+
+		let job = await runJob(db);
+
+		expect(funnelEvents(job)).toHaveLength(1);
+		expect(funnelEvents(job)[0]).toMatchObject({
+			leadId: lead.id,
+			period: "daily",
+			targets: 2,
+			hadIncident: false,
+		});
+	});
+
+	test("flags a window in which any target was unhealthy", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db);
+		await seedWatch(db, lead.id, "https://one.example.com", { last_status: "up" });
+		await seedWatch(db, lead.id, "https://two.example.com", { last_status: "down" });
+
+		let job = await runJob(db);
+
+		expect(funnelEvents(job)[0]).toMatchObject({ targets: 2, hadIncident: true });
+	});
+
+	test("names no address and no URL, only the lead's opaque id", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db, "reader@example.com");
+		await seedWatch(db, lead.id, "https://private.example.com/admin", { last_status: "up" });
+
+		let job = await runJob(db);
+
+		let [event] = funnelEvents(job);
+		expect(event).toBeDefined();
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain("reader@example.com");
+			expect(value).not.toContain("private.example.com");
+		}
+	});
+
+	test("emits nothing for a lead with nothing to report", async () => {
+		let { db } = createTestDatabase();
+		await seedDueLead(db);
+
+		let job = await runJob(db);
+
+		expect(funnelEvents(job)).toBeEmpty();
+	});
+
+	test("emits nothing when the transport refuses the digest", async () => {
+		let { db } = createTestDatabase();
+		let lead = await seedDueLead(db);
+		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
+
+		let container = new ServiceContainer();
+		container.singleton(Database, () => db);
+		container.singleton(
+			Mailer,
+			() => new Mailer({ transport: new RefusingTransport(), from: MAIL_FROM }),
+		);
+		let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
+		await container.scope(() => job.perform());
+
+		expect(funnelEvents(job)).toBeEmpty();
+	});
+});

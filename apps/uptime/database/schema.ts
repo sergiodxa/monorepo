@@ -924,6 +924,25 @@ export const trialWatches = table({
 		 */
 		normalized_url: c.text(),
 		/**
+		 * The random, unguessable token the seven-day report page is addressed by, generated
+		 * when the watch is created and never rotated.
+		 *
+		 * Per watch and not per lead, and deliberately not the lead's `unsubscribe_token`. A
+		 * report is meant to be reopened, forwarded to a colleague or handed to a client, and
+		 * the unsubscribe token *acts*: it deletes an address and everything attached to it.
+		 * Sharing a page must never hand over that power, and one token doing both jobs is the
+		 * only way it could. Two tokens also keep the blast radius of a leaked link to the one
+		 * URL the report is about rather than to every URL that reader ever tried.
+		 *
+		 * Never rotated for the reason `leads.unsubscribe_token` is never rotated: the link is
+		 * already sitting in an inbox, and a new token would silently turn it into a 404.
+		 *
+		 * Unique and indexed because it is looked up on its own, with no lead in hand — the URL
+		 * is the whole of the request, since nobody behind a trial has an account to prove
+		 * anything with.
+		 */
+		report_token: c.text().unique(),
+		/**
 		 * Fixed at one hour by the product and not editable anywhere, but stored rather than
 		 * hard-coded in the sweep because it is what makes this table claimable by the same
 		 * `claimDue` statement the three monitor tables use — that statement advances

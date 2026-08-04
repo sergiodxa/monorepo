@@ -92,12 +92,64 @@ describe("TrialWatch.create", () => {
 		expect((await createWatch({ last_status: "up" })).last_status).toBe("up");
 	});
 
+	test("issues a report token, so every watch has a page it can be read at", async () => {
+		let watch = await createWatch();
+
+		expect(watch.report_token).toBeString();
+		// Long enough that guessing one is not a strategy; the UUID form is 36 characters.
+		expect(watch.report_token.length).toBeGreaterThanOrEqual(32);
+		// Never the id: the id is a key other tables carry, and a report URL derived from it
+		// would be reachable from anywhere an id is exposed.
+		expect(watch.report_token).not.toBe(watch.id);
+	});
+
+	test("issues a different report token per attempt", async () => {
+		let first = await createWatch({ url: "https://a.example" });
+		let second = await createWatch({ url: "https://b.example" });
+
+		expect(second.report_token).not.toBe(first.report_token);
+	});
+
 	test("gives each attempt its own deadlines rather than inheriting the first one's", async () => {
 		let first = await createWatch({ url: "https://a.example" });
 		await db.update(trialWatches, first.id, { converts_until: Date.now() - 1 });
 		let second = await createWatch({ url: "https://b.example" });
 
 		expect(second.converts_until).toBeGreaterThan(Date.now());
+	});
+});
+
+/**
+ * The report page's only read, and its whole authorization: a token in a URL, with no lead and
+ * no session to narrow it. The unknown-token case is the one that must stay a `null` rather
+ * than a wrong watch, since that is what makes the page a 404 instead of somebody else's data.
+ */
+describe("TrialWatch.findByReportToken", () => {
+	test("finds the watch its token was issued for", async () => {
+		let watch = await createWatch();
+
+		expect((await TrialWatch.findByReportToken(db, watch.report_token))?.id).toBe(watch.id);
+	});
+
+	test("finds a watch whose week is over, which is what a report describes", async () => {
+		let watch = await createWatch();
+		await db.update(trialWatches, watch.id, { next_due_at: null, summary_sent_at: Date.now() });
+
+		expect(await TrialWatch.findByReportToken(db, watch.report_token)).not.toBeNull();
+	});
+
+	test("answers null for a token nothing issued", async () => {
+		await createWatch();
+
+		expect(await TrialWatch.findByReportToken(db, "not-a-real-token")).toBeNull();
+	});
+
+	test("never answers with another watch's row", async () => {
+		let mine = await createWatch({ url: "https://mine.example" });
+		let theirs = await TrialWatch.create(db, "lead-2", { url: "https://theirs.example" });
+
+		expect((await TrialWatch.findByReportToken(db, mine.report_token))?.id).toBe(mine.id);
+		expect((await TrialWatch.findByReportToken(db, theirs.report_token))?.id).toBe(theirs.id);
 	});
 });
 

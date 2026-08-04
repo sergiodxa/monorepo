@@ -263,6 +263,10 @@ describe("CleanJob.perform trial cleanup", () => {
 			lead_id: leadId,
 			url,
 			normalized_url: url,
+			// Seeded rather than left out: `report_token` is `NOT NULL` and unique, and this
+			// helper writes the row directly instead of going through `TrialWatch.create`, which
+			// is where a real watch gets its token.
+			report_token: `report-${id}`,
 			next_due_at: null,
 			expires_at: createdAt + 7 * MS_PER_DAY,
 			converts_until: createdAt + 30 * MS_PER_DAY,

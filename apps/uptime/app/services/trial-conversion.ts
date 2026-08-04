@@ -43,6 +43,7 @@ import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import TrialConversion from "~/app/data/trial-conversion";
 import TrialWatch from "~/app/data/trial-watch";
 import { dailyStatsFromChecks } from "~/app/lib/trial-history";
+import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 
 /**
  * The cadence a converted monitor runs at.
@@ -218,6 +219,23 @@ async function recordSignup(
 				ownerId: subject.authorId,
 				emailsSent: lead.emails_sent,
 				watchCount: watches.length,
+			});
+
+			/**
+			 * The funnel's account-created step, emitted on the same `created` flag that guards the
+			 * snapshot — `TrialConversion.recordSignup` writes at most one row per subject, so a
+			 * repeat sign-in cannot double-count an account. It covers the accounts that came from
+			 * the free page, which are the only ones whose campaign is knowable at all: an account
+			 * with no lead never reaches this function, and `fromTrial` says so for the reader of a
+			 * report that also counts those. The attribution goes in here because this is the last
+			 * request that still holds the anonymous session's copy of it.
+			 */
+			trackAccountCreated(logger, {
+				ownerId: subject.authorId,
+				fromTrial: true,
+				watchCount: watches.length,
+				emailsSent: lead.emails_sent,
+				...attributionProperties(subject.attribution),
 			});
 		}
 	} catch (error) {

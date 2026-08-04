@@ -138,6 +138,33 @@ describe("TrialWeeklyDigestEmail", () => {
 		});
 	});
 
+	test("links the report's own page when the sender supplies the watch's token", async () => {
+		let email = await makeEmail({ reportToken: "report-tok-123" });
+
+		let { text, html } = await render(email.body());
+
+		expect(text).toContain("https://uptime.sergiodxa.com/try/report/report-tok-123");
+		// In the footer, so the subscribe button is still the only call to action; three links
+		// now, the third being the way out.
+		expect(html.split("<a ").length - 1).toBe(3);
+	});
+
+	test("never puts the unsubscribe token in the report link", async () => {
+		let email = await makeEmail({ reportToken: "report-tok-123" });
+
+		let { text } = await render(email.body());
+
+		expect(text).not.toContain("/try/report/tok-abc123");
+	});
+
+	test("sends without the link rather than a broken one when no token is given", async () => {
+		let email = await makeEmail();
+
+		let { text } = await render(email.body());
+
+		expect(text).not.toContain("/try/report/");
+	});
+
 	test("writes the copy in the language it was constructed for", async () => {
 		let { locale, t } = await emailTranslator("it");
 		let email = await makeEmail({ locale, t });

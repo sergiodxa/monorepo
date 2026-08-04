@@ -487,6 +487,91 @@ describe("the funnel record", () => {
 	});
 });
 
+/**
+ * The `funnel.account_created` event, read off the console the immediate logger writes to.
+ * The snapshot above is the durable record; this is the per-account line a funnel query
+ * reads, and the two have to agree about when an account was created exactly once.
+ */
+describe("the account-created funnel event", () => {
+	let logged: Record<string, unknown>[] = [];
+
+	beforeEach(() => {
+		logged = [];
+		spyOn(console, "info").mockImplementation((...args: unknown[]) => {
+			let [entry] = args;
+			if (entry && typeof entry === "object") logged.push(entry as Record<string, unknown>);
+		});
+	});
+
+	afterEach(() => {
+		spyOn(console, "info").mockRestore();
+	});
+
+	/** Every `funnel.account_created` line this run emitted. */
+	function events(): Record<string, unknown>[] {
+		return logged.filter((entry) => entry.event === "funnel.account_created");
+	}
+
+	test("fires once with the counts and the campaign the sign-in carried", async () => {
+		let lead = await createLead();
+		await threeAttempts(lead.id, 30);
+		await Lead.recordEmailSent(db, lead.id);
+
+		await convertTrialWatches(db, {
+			email: EMAIL,
+			teamId: TEAM_ID,
+			authorId: AUTHOR_ID,
+			attribution: {
+				landingPath: "/for/agencies",
+				source: "outreach",
+				campaign: "agencies-august",
+			},
+		});
+
+		expect(events()).toHaveLength(1);
+		expect(events()[0]).toMatchObject({
+			ownerId: AUTHOR_ID,
+			fromTrial: true,
+			watchCount: 3,
+			emailsSent: 1,
+			source: "outreach",
+			campaign: "agencies-august",
+			landingPath: "/for/agencies",
+		});
+	});
+
+	test("carries no address and no URL, only opaque ids and counts", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://secret.example/private/path?token=abc", 1);
+
+		await convert();
+
+		let [event] = events();
+		expect(event).toBeDefined();
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain(EMAIL);
+			expect(value).not.toContain("secret.example");
+		}
+	});
+
+	test("a second sign-in does not emit a second account", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://example.com", 1);
+
+		await convert();
+		await convert();
+
+		expect(events()).toHaveLength(1);
+	});
+
+	test("an address that never left a lead emits nothing", async () => {
+		await convert();
+
+		expect(events()).toBeEmpty();
+	});
+});
+
 describe("never blocking sign-in", () => {
 	afterEach(() => {
 		spyOn(Lead, "findByEmail").mockRestore();

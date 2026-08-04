@@ -34,6 +34,7 @@ import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
+import { BatchedLogger } from "@pkg/logger";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { ServiceContainer } from "@pkg/service-container";
@@ -119,6 +120,7 @@ async function submit(
 	body: Record<string, string>,
 	session: Session,
 	existing?: ReturnType<typeof createTestDatabase>["db"],
+	logger?: BatchedLogger,
 ) {
 	let db = existing ?? createTestDatabase().db;
 	let container = new ServiceContainer();
@@ -133,6 +135,11 @@ async function submit(
 			}) as Middleware,
 			((ctx, next) => {
 				ctx.set(Session, session, { property: "session" });
+				/**
+				 * Installed only when a test asks for it. Every other test in this file runs with
+				 * no logger at all, which is what pins that the funnel event is optional.
+				 */
+				if (logger) (ctx as unknown as { logger: BatchedLogger }).logger = logger;
 				return next();
 			}) as Middleware,
 			mail({ transport, from: MAIL_FROM }),
@@ -443,5 +450,108 @@ describe("POST /try/lead validation", () => {
 		expect(body).toContain("Check another URL");
 		expect(body).toContain("https://probed.example/");
 		expect(session.get(TRIAL_PROBE)).toBeDefined();
+	});
+});
+
+/**
+ * The `funnel.trial_monitor_started` event: the funnel's first commitment, emitted only for a
+ * submission that actually started a week of checks. A capped submission is answered with a
+ * report and starts nothing, so it is not one of these — and the event names the host and
+ * never the URL or the address the visitor typed.
+ */
+describe("POST /try/lead funnel event", () => {
+	/** Every trial-monitor-started event the request emitted. */
+	function funnelEvents(logger: BatchedLogger) {
+		return logger.events.filter((event) => event.event === "funnel.trial_monitor_started");
+	}
+
+	test("reports the watch, the host, and the check the visitor was shown", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState({ url: "https://probed.example/health?token=secret" }));
+		let logger = new BatchedLogger("test");
+
+		let { db } = await submit(
+			{ email: "reader@example.com", consent: "true" },
+			session,
+			undefined,
+			logger,
+		);
+
+		let lead = await Lead.findByEmail(db, "reader@example.com");
+		let watches = await TrialWatch.listByLead(db, lead!.id);
+
+		expect(funnelEvents(logger)).toHaveLength(1);
+		expect(funnelEvents(logger)[0]).toMatchObject({
+			leadId: lead!.id,
+			watchId: watches[0]!.id,
+			hostname: "probed.example",
+			monitorType: "http",
+			immediateCheckSucceeded: true,
+			consented: true,
+		});
+	});
+
+	test("records a probe the visitor saw fail as one", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState({ status: "down" }));
+		let logger = new BatchedLogger("test");
+
+		await submit({ email: "reader@example.com" }, session, undefined, logger);
+
+		expect(funnelEvents(logger)[0]).toMatchObject({
+			immediateCheckSucceeded: false,
+			consented: false,
+		});
+	});
+
+	test("names neither the address nor the URL", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState({ url: "https://probed.example/admin?token=secret" }));
+		let logger = new BatchedLogger("test");
+
+		await submit({ email: "reader@example.com" }, session, undefined, logger);
+
+		let [event] = funnelEvents(logger);
+		expect(event).toBeDefined();
+		for (let value of Object.values(event ?? {})) {
+			if (typeof value !== "string") continue;
+			expect(value).not.toContain("reader@example.com");
+			expect(value).not.toContain("token=secret");
+			expect(value).not.toContain("/admin");
+		}
+	});
+
+	test("a capped submission started nothing and so reports nothing", async () => {
+		let first = new Session();
+		first.set(TRIAL_PROBE, probeState());
+		let { db } = await submit({ email: "reader@example.com" }, first);
+
+		let second = new Session();
+		second.set(TRIAL_PROBE, probeState());
+		let logger = new BatchedLogger("test");
+		await submit({ email: "reader@example.com" }, second, db, logger);
+
+		expect(funnelEvents(logger)).toBeEmpty();
+	});
+
+	test("a rejected address wrote nothing and so reports nothing", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+		let logger = new BatchedLogger("test");
+
+		await submit({ email: "not-an-address" }, session, undefined, logger);
+
+		expect(funnelEvents(logger)).toBeEmpty();
+	});
+
+	test("a submission with no logger installed still opens the watch", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response, db } = await submit({ email: "reader@example.com" }, session);
+
+		expect(response.status).toBe(303);
+		let lead = await Lead.findByEmail(db, "reader@example.com");
+		expect(await TrialWatch.listByLead(db, lead!.id)).toHaveLength(1);
 	});
 });

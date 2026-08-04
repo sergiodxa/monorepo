@@ -3,6 +3,9 @@
  * worst of them, that a period with none reports nothing rather than the last known state,
  * and that checks outside the range are dropped instead of clamped into the nearest period.
  *
+ * Plus the incident grouping a report names its outages from, whose tests are about what it
+ * refuses to call an outage.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -11,7 +14,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { Segmentable } from "~/app/lib/trial-report";
 
-import { segmentsOver } from "~/app/lib/trial-report";
+import { incidentsFrom, segmentsOver } from "~/app/lib/trial-report";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -57,5 +60,61 @@ describe("segmentsOver", () => {
 
 	test("reports an all-empty bar for a target with no checks", () => {
 		expect(segmentsOver([], 0, HOUR, 4)).toEqual([null, null, null, null]);
+	});
+});
+
+/**
+ * Incidents are the one figure on a report that is derived rather than counted, so the tests
+ * are about what the derivation refuses to claim: `degraded` is not an outage, consecutive
+ * failures are one incident rather than several, and a run is closed by the first check that
+ * comes back at all.
+ */
+describe("incidentsFrom", () => {
+	test("reports nothing for a target that never failed", () => {
+		expect(incidentsFrom([at(0, "up"), at(HOUR, "up")])).toBeEmpty();
+	});
+
+	test("reports nothing for a target that was only ever slow", () => {
+		expect(incidentsFrom([at(0, "up"), at(HOUR, "degraded")])).toBeEmpty();
+	});
+
+	test("groups consecutive failures into one incident, counting its checks", () => {
+		let incidents = incidentsFrom([
+			at(0, "up"),
+			at(HOUR, "down"),
+			at(2 * HOUR, "down"),
+			at(3 * HOUR, "up"),
+		]);
+
+		expect(incidents).toEqual([{ startedAt: HOUR, lastFailureAt: 2 * HOUR, checks: 2 }]);
+	});
+
+	test("separates two outages that recovered in between", () => {
+		let incidents = incidentsFrom([
+			at(0, "down"),
+			at(HOUR, "up"),
+			at(2 * HOUR, "down"),
+			at(3 * HOUR, "down"),
+		]);
+
+		expect(incidents).toHaveLength(2);
+		expect(incidents[0]).toEqual({ startedAt: 0, lastFailureAt: 0, checks: 1 });
+		expect(incidents[1]).toEqual({ startedAt: 2 * HOUR, lastFailureAt: 3 * HOUR, checks: 2 });
+	});
+
+	test("closes a run on a degraded check, which is a check that answered", () => {
+		let incidents = incidentsFrom([at(0, "down"), at(HOUR, "degraded"), at(2 * HOUR, "down")]);
+
+		expect(incidents).toHaveLength(2);
+	});
+
+	test("reads the timeline in time order whatever order it was handed", () => {
+		let incidents = incidentsFrom([at(2 * HOUR, "down"), at(0, "down"), at(HOUR, "down")]);
+
+		expect(incidents).toEqual([{ startedAt: 0, lastFailureAt: 2 * HOUR, checks: 3 }]);
+	});
+
+	test("reports nothing for a target with no checks at all", () => {
+		expect(incidentsFrom([])).toBeEmpty();
 	});
 });

@@ -29,9 +29,13 @@ import { createAction } from "remix/fetch-router";
 
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 import TrialConversion from "~/app/data/trial-conversion";
+import { attributionProperties, trackSubscriptionStarted } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
 /** POST /webhooks/polar */
+/** Milliseconds in a day, for the days-to-convert figure the funnel event carries. */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 export default createAction(routes.webhooks.polar, {
 	handler: async (ctx) => {
 		let polar = getServiceContainer().get(PolarClient);
@@ -89,6 +93,40 @@ export default createAction(routes.webhooks.polar, {
 		 * row to stamp — which is the ordinary case and a no-op rather than an error.
 		 */
 		let firstPayment = entitled && (await TrialConversion.markPaid(db, ownerId));
+
+		/**
+		 * Emitted off `firstPayment` rather than off `entitled`, which is what keeps a conversion
+		 * count from counting every renewal: `markPaid` only stamps a row whose `paid_at` was
+		 * still null, so this is true exactly once per customer.
+		 *
+		 * The conversion row is re-read for the attribution it copied at sign-in — the campaign
+		 * that produced a paying customer is the one number this whole funnel exists to answer,
+		 * and by now the session that captured it is months gone. An owner with no row never came
+		 * through the free page: `fromTrial` is false and the campaign fields are absent, which is
+		 * the honest shape rather than a default.
+		 */
+		if (firstPayment) {
+			let conversion = await TrialConversion.findByOwner(db, ownerId);
+
+			trackSubscriptionStarted(logger, {
+				ownerId,
+				fromTrial: conversion !== null,
+				monitorCount: monitors,
+				daysToConvert:
+					conversion === null
+						? null
+						: Math.floor((Date.now() - conversion.lead_created_at) / MS_PER_DAY),
+				...attributionProperties(
+					conversion === null
+						? undefined
+						: {
+								landingPath: conversion.landing_path,
+								source: conversion.campaign_source,
+								campaign: conversion.campaign_name,
+							},
+				),
+			});
+		}
 
 		logger.info("webhook.polar.subscription", {
 			type: result.data.type,

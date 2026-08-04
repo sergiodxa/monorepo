@@ -75,7 +75,37 @@ export default {
 			monitorTypes: "Monitor Types",
 			globalRegions: "Global Regions",
 			daysDataRetention: "Days Data Retention",
-			alertLatency: "Alert Latency",
+			minCheckInterval: "Min Check Interval",
+		},
+
+		/**
+		 * The three things that stay true however much somebody ends up monitoring. The price
+		 * and the allowance are interpolated from `~/app/lib/pricing.ts` rather than written
+		 * here — a literal would go stale the day pricing moves, and `app/lib/public-claims.ts`
+		 * fails the build on one.
+		 */
+		benefits: {
+			badge: "Why Uptime",
+			title: "One plan, every check, no counting",
+			description: "Three things that stay true however much you end up monitoring.",
+
+			list: {
+				everythingIncluded: {
+					title: "Everything included",
+					description:
+						"HTTP, DNS, TCP and SSL checks, cron job heartbeats, alerts and status pages. One plan, nothing sold as an add-on.",
+				},
+				noMonitorMath: {
+					title: "No monitor math",
+					description:
+						"Unlimited monitors and unlimited team members. Add everything you want watched, and everyone who needs to see it.",
+				},
+				payForUsage: {
+					title: "Pay for actual usage",
+					description:
+						"{{price}} a month includes {{included}} checks. Past that you pay for the checks you actually run, and nothing else.",
+				},
+			},
 		},
 
 		features: {
@@ -84,102 +114,6 @@ export default {
 				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
 			badge: "Features",
 			learnMore: "Learn more",
-
-			monitors: {
-				meta: {
-					title: "HTTP Monitoring | Uptime Monitors",
-					description:
-						"HTTP health checks from 9 global regions. Monitor any URL with 1-60 minute intervals and 365-day data retention.",
-				},
-			},
-
-			alerts: {
-				meta: {
-					title: "Uptime Alerts | Email & Webhook Notifications",
-					description:
-						"Instant email and webhook alerts for downtime detection. Under 1 second delivery. Integrates with Slack, Discord, PagerDuty, and more.",
-				},
-			},
-
-			"status-pages": {
-				meta: {
-					title: "Status Pages | Uptime Monitors",
-					description:
-						"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and uptime history.",
-				},
-			},
-
-			analytics: {
-				meta: {
-					title: "Uptime Analytics | Heatmaps & Trends",
-					description:
-						"Visual heatmaps, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
-				},
-			},
-
-			teams: {
-				meta: {
-					title: "Team Collaboration | Uptime Teams",
-					description:
-						"Collaborate on uptime monitoring with unlimited team members. Role-based access and domain auto-provisioning included.",
-				},
-			},
-
-			api: {
-				meta: {
-					title: "Public API | Uptime Monitors",
-					description:
-						"Integrate monitoring into your workflow with our REST API. Create monitors, manage alerts, and access metrics programmatically.",
-				},
-			},
-
-			integrations: {
-				meta: {
-					title: "Integrations | Uptime",
-					description:
-						"Connect monitoring to your workflow with Slack, Discord, PagerDuty, and custom webhooks. Native integrations for instant notifications.",
-				},
-			},
-
-			maintenance: {
-				meta: {
-					title: "Maintenance Windows | Uptime",
-					description:
-						"Schedule planned downtime, suppress alerts during maintenance, and keep your team informed with maintenance windows.",
-				},
-			},
-
-			dns: {
-				meta: {
-					title: "DNS Monitoring | Uptime",
-					description:
-						"Monitor DNS records for unexpected changes. Track A, AAAA, CNAME, MX, TXT, and NS records to catch hijacking attempts.",
-				},
-			},
-
-			ssl: {
-				meta: {
-					title: "SSL Certificate Monitoring | Uptime",
-					description:
-						"Track SSL certificate expiry and get alerts before they expire. Automatic daily checks with configurable warning thresholds.",
-				},
-			},
-
-			"cron-jobs": {
-				meta: {
-					title: "Cron Job Monitoring | Uptime",
-					description:
-						"Monitor scheduled tasks and background jobs. Get alerted when cron jobs are late or miss their execution window.",
-				},
-			},
-
-			"content-monitoring": {
-				meta: {
-					title: "Content Monitoring | Uptime",
-					description:
-						"Verify specific content appears on your pages. Check for keywords, patterns, or specific text to ensure page integrity.",
-				},
-			},
 
 			list: {
 				first: {
@@ -1542,6 +1476,8 @@ export default {
 				rangeStart: "7 days ago",
 				rangeEnd: "Today",
 				closing: "That was the seventh day, so the free checks on {{url}} stop here.",
+				report: "This report also lives at a link you can reopen or share:",
+				reportAction: "View it online",
 				action: "Keep checking this URL",
 				footer:
 					"You received this email because you asked us to watch this URL for a week. This is the last one.",
@@ -1669,6 +1605,23 @@ export default {
 			},
 
 			success: "{{name}} monitor was created.",
+		},
+
+		/**
+		 * A bulk import reports two numbers, and `partial` is the one that matters: a submission
+		 * where some lines landed is a success with a to-do list, not a failure, so it says how
+		 * many monitors exist before it says how many lines need fixing.
+		 */
+		importMonitors: {
+			errors: {
+				generic: "Oops! Something went wrong. Please check the list and try again.",
+				none: "Nothing in that list could be imported. Check the reasons below and try again.",
+			},
+
+			success_one: "1 monitor was created.",
+			success_other: "{{count}} monitors were created.",
+			partial_one: "1 monitor was created. {{rejected}} more could not be — see below.",
+			partial_other: "{{count}} monitors were created. {{rejected}} more could not be — see below.",
 		},
 
 		updateMonitor: {
@@ -2917,6 +2870,50 @@ export default {
 			},
 		},
 
+		monitorsImport: {
+			meta: { title: "Import monitors" },
+			header: { title: "Import Monitors" },
+
+			form: {
+				fields: {
+					urls: {
+						label: "URLs to monitor",
+						description:
+							"One URL per line, up to {{limit}}. A bare host like example.com becomes https://example.com. Blank lines and repeats of the same address are skipped.",
+						placeholder: "example.com\nhttps://www.example.org/health\nstatus.example.net",
+					},
+					interval: {
+						label: "Check Interval",
+						description:
+							"Applied to every monitor in this list. You can change any of them afterwards.",
+					},
+				},
+				cta: "Import Monitors",
+			},
+
+			/**
+			 * The rejected lines, shown above the box they get re-pasted into. It leads with what
+			 * *was* created, so a partial import does not read as a failed one.
+			 */
+			report: {
+				title_one: "1 monitor was created. These lines weren't:",
+				title_other: "{{count}} monitors were created. These lines weren't:",
+				overflow_one:
+					"1 more line was left out: an import takes {{limit}} lines at a time. Paste the rest to import them.",
+				overflow_other:
+					"{{count}} more lines were left out: an import takes {{limit}} lines at a time. Paste the rest to import them.",
+				table: {
+					label: "Lines that were not imported",
+					columns: { line: "Line", input: "What you pasted", reason: "Why" },
+				},
+				reasons: {
+					invalidUrl: "Not a URL we can check.",
+					duplicate: "Same address as an earlier line.",
+					tooLong: "Too long to be a URL.",
+				},
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "HTTP Monitors",
@@ -3565,15 +3562,81 @@ export default {
 		},
 
 		trial: {
-			meta: {
-				title: "Check a URL — Uptime",
-				description:
-					"Run one real check on any URL from our network, with no account. Then have us watch it for a week.",
+			/**
+			 * The report as its own page, reachable by the watch's token. Every figure is computed
+			 * from stored checks, so each one has a "nothing to report yet" wording beside it: a
+			 * watch with no completed check shows an em dash and says why, and never claims "no
+			 * incidents", because nobody has looked yet.
+			 */
+			report: {
+				meta: {
+					title: "Your {{days}}-day site health report — Uptime",
+					description:
+						"The uptime, checks and incidents we recorded for your site over its free week of monitoring.",
+				},
+				eyebrow: "{{days}}-day health report",
+				period: "Monitored {{start}} to {{end}} ({{zone}})",
+				bar: {
+					caption: "One block per day over {{days}} days, oldest first.",
+					status: {
+						up: "Up all day",
+						degraded: "Slow at least once",
+						down: "Down at least once",
+						noData: "No checks this day",
+					},
+				},
+				summary: {
+					title: "What we recorded",
+					uptime: "Uptime",
+					checks: "Checks completed",
+					healthy: "Fully healthy checks",
+					noChecks:
+						"No check has completed yet, so there is nothing to report on this URL. The first hourly check runs an hour after the watch started.",
+				},
+				incidents: {
+					title: "Incidents",
+					unknown: "No check has completed yet, so we cannot say whether this URL had an incident.",
+					none_one: "No incident: the one completed check answered as expected.",
+					none_other: "No incidents: all {{count}} completed checks answered as expected.",
+					summary_one: "One incident.",
+					summary_other: "{{count}} incidents.",
+					entry_one: "First failure seen {{started}} — one check failed.",
+					entry_other: "First failure seen {{started}} — {{count}} checks in a row failed.",
+				},
+				timing: {
+					title: "Response times",
+					fastest: "Fastest",
+					average: "Average",
+					slowest: "Slowest",
+					basis_one: "Measured over the one check that answered.",
+					basis_other: "Measured over the {{count}} checks that answered.",
+				},
+				cta: {
+					title: "Keep monitoring this site for {{price}}/month",
+					action: "Start monitoring",
+					convertible: {
+						body: "Sign in and we will turn this URL into a real monitor, with the history above carried over.",
+					},
+					expired: {
+						body: "This free week is past its claim window, so the history above stays here — but you can start monitoring this URL properly any time.",
+					},
+					converted: {
+						title: "This URL is already being monitored",
+						body: "You turned this target into a monitor, so it is being checked on your own schedule now.",
+						action: "Open your dashboard",
+					},
+				},
 			},
 
-			heading: "Check a URL right now",
+			meta: {
+				title: "Free {{days}}-day website health report — Uptime",
+				description:
+					"We check your site now, then every hour for {{days}} days, and email you what we found. No account, no card.",
+			},
+
+			heading: "A free {{days}}-day health report for your site",
 			intro:
-				"Type a URL and we run one real check on it from our network — the same check a paid monitor runs. Nothing is stored and nothing is billed unless you ask us to keep going.",
+				"Give us a URL and we check it right now from our network — the same check a paid monitor runs. Leave an email after that and we keep checking every hour for {{days}} days, then send you the report.",
 
 			form: {
 				url: {
@@ -3581,7 +3644,7 @@ export default {
 					description: "An http:// or https:// address on the public internet.",
 					placeholder: "https://example.com",
 				},
-				submit: "Run the check",
+				submit: "Run the first check",
 			},
 
 			refusal: {
@@ -3625,13 +3688,27 @@ export default {
 			},
 
 			lead: {
-				title: "Get an email when this changes",
+				title: "Get the free {{days}}-day report",
 				description:
-					"Leave an email and we run this same check every hour for seven days, with one summary a day. No account and no card.",
+					"The check you just watched was the first one. Leave an email and we keep going, then tell you what {{days}} days of checking found.",
 				consent: "Also email me occasionally about Uptime itself.",
 				consentNote: "Either way you get the checks.",
 				promise: "Every email carries a one-click link that stops them and deletes your address.",
-				submit: "Watch this URL for a week",
+				submit: "Start the free {{days}}-day report",
+
+				/**
+				 * What a visitor is agreeing to, stated next to the field rather than after it. Each
+				 * line is something the system actually does — the address is the one we probed and
+				 * not one they can retype, the cadence and the length are the watch's own, and the
+				 * three emails named are the three that exist.
+				 */
+				expectations: {
+					target: "We keep checking {{url}} — the exact address we just checked, and nothing else.",
+					cadence: "Once an hour, every hour, for {{days}} days.",
+					emails:
+						"One summary a day, a note when the status changes, and the full report at the end.",
+					noAccount: "No card, no password, no account to create.",
+				},
 
 				email: {
 					label: "Email",
@@ -3653,24 +3730,24 @@ export default {
 			watching: {
 				title: "We are on it",
 				description:
-					"The first hourly check on {{url}} runs in an hour. A copy of the check you just ran is already in your inbox.",
+					"The first hourly check on {{url}} runs in an hour, and we keep checking for {{days}} days. A copy of the check you just ran is already in your inbox.",
 			},
 
 			repeated: {
 				title: "We have already checked this one",
 				description:
-					"{{url}} already had its free week from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
+					"{{url}} already had its free report from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
 			},
 
 			benefits: {
-				title: "What the week looks like",
+				title: "What the report covers",
 				description:
-					"Everything a paid monitor would tell you about this URL, free, for seven days.",
+					"Everything a paid monitor would tell you about this URL, free, for {{days}} days.",
 
 				list: {
 					hourly: {
 						title: "A check every hour",
-						description: "For seven days, from the same network a paid monitor runs on.",
+						description: "For {{days}} days, from the same network a paid monitor runs on.",
 					},
 					changes: {
 						title: "An email when it changes",
@@ -3679,7 +3756,8 @@ export default {
 					},
 					digest: {
 						title: "One summary a day",
-						description: "How your URL held up, at a glance.",
+						description:
+							"How your URL held up, at a glance — and the whole {{days}} days in one report at the end.",
 					},
 					noAccount: {
 						title: "No account, no card",
@@ -3691,7 +3769,7 @@ export default {
 			more: {
 				title: "Not just websites",
 				description:
-					"The free week covers HTTP. A paid account keeps an eye on three more things for you.",
+					"The free report covers HTTP. A paid account keeps an eye on three more things for you.",
 
 				list: {
 					tcp: {
@@ -3713,11 +3791,11 @@ export default {
 			},
 
 			cta: {
-				badge: "After the week",
-				title: "Keep the checks, add the rest",
+				badge: "When the report ends",
+				title: "Keep monitoring this site for {{price}} a month",
 				description:
-					"Every minute instead of every hour, as many URLs as you like, alerts wherever you already work, status pages, and a year of history. {{price}} a month.",
-				action: "Start monitoring",
+					"Signing up turns this URL into a real monitor and carries its check history across, so nothing starts over. A check every minute instead of every hour, as many URLs as you like, alerts wherever you already work, status pages, and a year of history.",
+				action: "Keep monitoring this site",
 				pricing: "See pricing",
 			},
 		},

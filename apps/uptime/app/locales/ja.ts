@@ -75,7 +75,6 @@ export default {
 			monitorTypes: "モニタータイプ",
 			globalRegions: "グローバルリージョン",
 			daysDataRetention: "日間データ保持",
-			alertLatency: "アラート遅延",
 		},
 
 		features: {
@@ -1979,11 +1978,6 @@ export default {
 				cta: "変更を保存",
 			},
 
-			ssl: {
-				title: "SSL証明書の監視",
-				cta: "SSL設定を保存",
-			},
-
 			dangerZone: {
 				title: "危険ゾーン",
 				delete: "モニターを削除",
@@ -3490,47 +3484,6 @@ export default {
 
 				form: {
 					cta: "メール設定を保存",
-				},
-			},
-
-			teams: {
-				title: "チーム一覧",
-				description: "所属しているチーム。",
-
-				actions: {
-					createTeam: "チームを作成",
-				},
-
-				empty: {
-					title: "チームがありません",
-					description: "サービスの監視を開始するためにチームを作成してください。",
-					cta: "チームを作成",
-				},
-
-				table: {
-					label: "チーム",
-					description: "所属しているすべてのチーム。",
-
-					columns: {
-						team: "チーム",
-						role: "役割",
-						actions: "アクション",
-					},
-
-					role: {
-						member: "メンバー",
-						admin: "管理者",
-						owner: "オーナー",
-					},
-
-					actions: {
-						menu: "アクションメニュー",
-						leave: "チームを離れる",
-					},
-
-					confirmation: {
-						leaveTeam: "{{name}}を離れてもよろしいですか？",
-					},
 				},
 			},
 		},

@@ -3,14 +3,19 @@
  * shared document/marketing chrome for both anonymous and signed-in viewers, with the
  * hero CTA switching between a sign-in form and a dashboard link, its full head
  * metadata set and `WebSite` structured data, and every section of the page — hero
- * screenshot, trust indicators, feature/use-case grids, the pricing calculator's
- * server-rendered baseline, and the FAQ — present in the markup.
+ * screenshot, trust indicators, benefit rows, feature/use-case grids, the pricing
+ * calculator's server-rendered baseline, and the FAQ — present in the markup.
+ *
+ * Two assertions here are about copy the page must *not* carry: an alert-latency figure,
+ * which is a claim about mail and chat infrastructure we don't run, and a price typed into
+ * the controller rather than read from `app/lib/pricing`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
@@ -27,6 +32,8 @@ import { renderToString } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
+import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/app/lib/pricing";
+import { findClaimViolations } from "~/app/lib/public-claims";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
@@ -157,6 +164,16 @@ describe("GET /", () => {
 		expect(body).not.toContain("99.9%");
 		expect(body).not.toContain("SLA");
 
+		// Same rule, one step further: an alert-latency figure is a claim about how fast
+		// somebody else's inbox, webhook endpoint or chat provider accepts a message, so
+		// it can't be true end to end no matter what we measure. What replaced it is the
+		// check-interval floor the monitor validator actually enforces.
+		expect(body).not.toContain("&lt;1s");
+		expect(body).not.toContain("<1s");
+		expect(body).not.toContain("Alert Latency");
+		expect(body).toContain("1min");
+		expect(body).toContain("Min Check Interval");
+
 		// Feature cards link to their own page and carry the "learn more" affordance.
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
 		expect(body).toContain("Learn more");
@@ -168,7 +185,76 @@ describe("GET /", () => {
 		expect(body).toContain(
 			`href="${routes.marketing.useCase.href({ slug: "website-monitoring" })}"`,
 		);
-		expect(body).toContain(`href="${routes.marketing.audience.href({ slug: "indie-hackers" })}"`);
+		expect(body).toContain(`href="${routes.marketing.audience.href({ slug: "agencies" })}"`);
+	});
+
+	/**
+	 * Three audience pills, not all six `/for/:slug` pages. Six of equal weight say nothing
+	 * about who the product is for, and they hand the audiences it fits least the same
+	 * prominence as the ones it fits best. The rest stay in the footer's solutions column
+	 * and in the sitemap — narrowing this row must never cost a page its links.
+	 */
+	test("gives three audiences the prominent row and leaves the rest to the chrome", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		for (let slug of ["agencies", "solo-devs", "startups"]) {
+			expect(body).toContain(`href="${routes.marketing.audience.href({ slug })}"`);
+		}
+
+		// Present exactly once each — the footer's own link — rather than absent, which is
+		// what tells the two cases apart: a deleted page would be missing from both.
+		for (let slug of ["indie-hackers", "enterprises", "devops"]) {
+			let href = `href="${routes.marketing.audience.href({ slug })}"`;
+			expect(body.split(href)).toHaveLength(2);
+		}
+	});
+
+	test("renders the three benefit rows between the hero and the feature grid", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).toContain('id="benefits"');
+
+		// The rendered headings, not the key names: a key-name assertion would have gone on
+		// passing for a section whose copy was never written.
+		for (let title of ["Everything included", "No monitor math", "Pay for actual usage"]) {
+			expect(body).toContain(title);
+		}
+
+		// And the one benefit that quotes the pricing model, with the figures interpolated.
+		expect(body).toContain(`${formatUsd(BASE_PRICE_USD)} a month includes`);
+		expect(body).toContain(formatPings(INCLUDED_PINGS));
+
+		// Ahead of the capability grid, which is the ordering the section exists for: a
+		// visitor decides whether the product is for them before they read which checks it
+		// runs.
+		expect(body.indexOf('id="benefits"')).toBeLessThan(body.indexOf('id="features"'));
+	});
+
+	/**
+	 * A section heading that renders as `landing.benefits.badge` is a missing locale key, and
+	 * it looks like ordinary copy in a screenshot. Asserting no `landing.` key name survives
+	 * into the HTML catches the whole class at once, for this section and every other.
+	 */
+	test("renders no unresolved locale keys", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		expect(body).not.toMatch(/landing\.[a-zA-Z]+\./);
+	});
+
+	/**
+	 * The cost benefit quotes the pricing model, and the one way that copy goes stale is a
+	 * figure typed into this controller instead of interpolated from `app/lib/pricing`.
+	 * Asserted against the source, since at runtime `$5` and `{{price}}` render the same
+	 * characters — the same reason `public-claims.test.ts` scans source for the locale and
+	 * marketing-content modules.
+	 */
+	test("states no price of its own", () => {
+		let source = readFileSync(new URL("./home.tsx", import.meta.url), "utf8");
+
+		expect(findClaimViolations(source)).toEqual([]);
 	});
 
 	/**
