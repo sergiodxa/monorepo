@@ -1305,6 +1305,15 @@ export default {
 
 		trial: {
 			stopAction: "配信を停止する",
+
+			/**
+			 * The report page every per-target trial report links, shared because the wrap-up and the
+			 * repeat-submission answer point at the same page with the same sentence.
+			 */
+			reportLink: {
+				body: "このレポートは、後から開いたり共有したりできるリンクでもご覧いただけます。",
+				action: "オンラインで見る",
+			},
 			stop: "1回のクリックで、監視をご依頼いただいたすべてのURLのチェックを終了し、メールアドレスとデータを削除します。またいつでも当サイトからやり直せます。",
 
 			status: {
@@ -1380,8 +1389,6 @@ export default {
 				rangeStart: "7日前",
 				rangeEnd: "今日",
 				closing: "7日目が終わりましたので、{{url}}の無料チェックはここで終了します。",
-				report: "このレポートは、後から開いたり共有したりできるリンクでもご覧いただけます。",
-				reportAction: "オンラインで見る",
 				action: "このURLのチェックを続ける",
 				footer:
 					"このメールは、このURLを1週間監視するようご依頼いただいたため送信されました。これが最後のメールです。",

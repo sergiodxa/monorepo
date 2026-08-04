@@ -312,6 +312,25 @@ describe("POST /try/lead free-watch cap", () => {
 		expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
 	});
 
+	/**
+	 * Asserted through the rendered body rather than the argument: a token that reaches the
+	 * template and renders no anchor would satisfy the weaker check, and the whole point of the
+	 * link is that the reader can come back to the report after the mail is buried.
+	 */
+	test("links the existing watch's report page, addressed by that watch's own token", async () => {
+		let { db } = await submitTwice(
+			{ email: "reader@example.com", url: "https://probed.example/" },
+			{},
+		);
+
+		let [watch] = await allWatches(db);
+		expect(watch?.report_token).toBeTruthy();
+
+		expect(transport.last?.html).toContain(
+			routes.trial.report.href({ token: watch?.report_token ?? "" }),
+		);
+	});
+
 	test("leaves the capped receipt rather than the one that claims a watch started", async () => {
 		let { session, response } = await submitTwice(
 			{ email: "reader@example.com", url: "https://probed.example/" },

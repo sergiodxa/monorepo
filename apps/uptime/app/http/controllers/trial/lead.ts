@@ -162,6 +162,13 @@ export default createAction(routes.trial.lead, async (ctx) => {
 				segments: segmentsOver(results, existing.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
 				stats: watchStats(existing),
 				subscribeUrl: `${APP_ORIGIN}${routes.app.index.href()}`,
+				/**
+				 * The report as a page, which this message wants more than any other: it answers a
+				 * submission somebody made deliberately, and the answer is "here is what the watch
+				 * already found" — so a durable copy of exactly that is what they were reaching for
+				 * when they submitted the URL a second time.
+				 */
+				reportToken: existing.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
 				locale,
 				t: ctx.i18next.getFixedT(locale),

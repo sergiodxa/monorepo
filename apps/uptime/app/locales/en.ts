@@ -1400,6 +1400,15 @@ export default {
 
 		trial: {
 			stopAction: "Stop these emails",
+
+			/**
+			 * The report page every per-target trial report links, shared because the wrap-up and the
+			 * repeat-submission answer point at the same page with the same sentence.
+			 */
+			reportLink: {
+				body: "This report also lives at a link you can reopen or share:",
+				action: "View it online",
+			},
 			stop: "One click ends every URL you asked us to watch and deletes your address and its data. You can start again any time from our website.",
 
 			status: {
@@ -1476,8 +1485,6 @@ export default {
 				rangeStart: "7 days ago",
 				rangeEnd: "Today",
 				closing: "That was the seventh day, so the free checks on {{url}} stop here.",
-				report: "This report also lives at a link you can reopen or share:",
-				reportAction: "View it online",
 				action: "Keep checking this URL",
 				footer:
 					"You received this email because you asked us to watch this URL for a week. This is the last one.",

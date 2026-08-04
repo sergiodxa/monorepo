@@ -43,6 +43,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import {
 	TrialReport,
+	TrialReportLink,
 	TrialUnsubscribe,
 	trialDateTime,
 	trialDisplayUrl,
@@ -64,6 +65,17 @@ export namespace TrialRepeatReportEmail {
 		stats: TrialStats;
 		/** Absolute URL that starts a paid monitor for the same target. */
 		subscribeUrl: string;
+		/**
+		 * The watch's own `report_token`, which turns the week described here into a page the
+		 * reader can reopen or forward.
+		 *
+		 * This message is the one most worth linking: it answers a submission somebody made on
+		 * purpose, and the reply is "here is what the watch already found" — a durable copy of
+		 * exactly that is the thing they were reaching for. Optional for the same reason the
+		 * wrap-up's is: a report link built from a missing token would be a 404 in an inbox
+		 * forever, so a sender with no token sends the mail without the link.
+		 */
+		reportToken?: string;
 		/** The lead's unguessable token, which the footer link and the headers are built from. */
 		unsubscribeToken: string;
 		/** Language the copy is produced in, recorded beside the translator it came from. */
@@ -121,8 +133,17 @@ export class TrialRepeatReportEmail implements Email {
 	 * button, and the footer.
 	 */
 	body(): RemixElement {
-		let { t, locale, url, watchingSince, segments, stats, subscribeUrl, unsubscribeToken } =
-			this.#report;
+		let {
+			t,
+			locale,
+			url,
+			watchingSince,
+			segments,
+			stats,
+			subscribeUrl,
+			reportToken,
+			unsubscribeToken,
+		} = this.#report;
 
 		let display = trialDisplayUrl(url);
 		let heading = t("emails.trial.repeat.heading", { url: display });
@@ -150,6 +171,7 @@ export class TrialRepeatReportEmail implements Email {
 				<Email.Text>{t("emails.trial.repeat.closing", { url: display })}</Email.Text>
 				<Email.Button href={subscribeUrl}>{t("emails.trial.repeat.action")}</Email.Button>
 				<Email.Footer>
+					{reportToken ? <TrialReportLink token={reportToken} t={t} /> : null}
 					{t("emails.trial.repeat.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
 				</Email.Footer>
 			</Email.Layout>

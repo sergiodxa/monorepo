@@ -46,6 +46,36 @@ async function makeEmail(overrides: Partial<TrialRepeatReportEmail.Data> = {}) {
 }
 
 describe("TrialRepeatReportEmail", () => {
+	/**
+	 * The message this link matters most on. A repeat submission is somebody asking a second
+	 * time about a URL we already hold real measurements for, so the durable copy of those
+	 * measurements is what they were reaching for — and unlike the wrap-up, this can arrive on
+	 * day two of a week still running, when the page has more to say later than the email does.
+	 */
+	test("links the report's own page when the sender supplies the watch's token", async () => {
+		let email = await makeEmail({ reportToken: "report-tok-123" });
+
+		let { text } = await render(email.body());
+
+		expect(text).toContain("https://uptime.sergiodxa.com/try/report/report-tok-123");
+	});
+
+	test("never puts the unsubscribe token in the report link", async () => {
+		let email = await makeEmail({ reportToken: "report-tok-123" });
+
+		let { text } = await render(email.body());
+
+		expect(text).not.toContain("/try/report/tok-abc123");
+	});
+
+	test("sends without the link rather than a broken one when no token is given", async () => {
+		let email = await makeEmail();
+
+		let { text } = await render(email.body());
+
+		expect(text).not.toContain("/try/report/");
+	});
+
 	test("addresses the spelling the submission came from", async () => {
 		let email = await makeEmail({ to: "hello+news@sergiodxa.com" });
 

@@ -35,27 +35,11 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import {
 	TrialReport,
+	TrialReportLink,
 	TrialUnsubscribe,
 	trialDisplayUrl,
 	trialUnsubscribeHeaders,
 } from "~/app/emails/shared/trial";
-import { absoluteUrl } from "~/app/lib/origin";
-import routes from "~/routes/web";
-
-/**
- * Where the same report lives as a page, for a reader who comes back to it after the message
- * has scrolled out of their inbox.
- *
- * The watch's own report token and never the lead's unsubscribe token: this link is the one in
- * the message somebody might forward to a colleague or a client, and the other token deletes
- * an address.
- *
- * @param token - The watch's `report_token`.
- * @returns The absolute URL of the report page.
- */
-function reportUrl(token: string): string {
-	return absoluteUrl(routes.trial.report.href({ token }));
-}
 
 export namespace TrialWeeklyDigestEmail {
 	/** One URL's completed week, and the link that keeps it being watched. */
@@ -72,7 +56,7 @@ export namespace TrialWeeklyDigestEmail {
 		subscribeUrl: string;
 		/**
 		 * The watch's own `report_token`, which turns this report into a page the reader can
-		 * reopen — see {@link reportUrl}. Omitted when the sender has no token to give: a mail
+		 * reopen — see `TrialReportLink`. Omitted when the sender has no token to give: a mail
 		 * is worth sending without the link, and a report link built from a missing token would
 		 * be a 404 in somebody's inbox forever.
 		 */
@@ -147,24 +131,8 @@ export class TrialWeeklyDigestEmail implements Email {
 				/>
 				<Email.Text>{t("emails.trial.weekly.closing", { url: trialDisplayUrl(url) })}</Email.Text>
 				<Email.Button href={subscribeUrl}>{t("emails.trial.weekly.action")}</Email.Button>
-				{/*
-				 * The page this report also lives on, in the footer rather than beside the button:
-				 * it is the same facts at a stable address, not a second thing to do, and the one
-				 * call to action this family of emails is allowed is the subscribe link above.
-				 */}
 				<Email.Footer>
-					{reportToken ? (
-						<>
-							{t("emails.trial.weekly.report")}{" "}
-							<a
-								href={reportUrl(reportToken)}
-								style="color:inherit;text-decoration:underline;font-weight:600;"
-							>
-								{t("emails.trial.weekly.reportAction")}
-							</a>
-							{". "}
-						</>
-					) : null}
+					{reportToken ? <TrialReportLink token={reportToken} t={t} /> : null}
 					{t("emails.trial.weekly.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
 				</Email.Footer>
 			</Email.Layout>

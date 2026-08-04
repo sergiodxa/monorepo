@@ -1340,6 +1340,15 @@ export default {
 
 		trial: {
 			stopAction: "Dejar de recibir estos correos",
+
+			/**
+			 * The report page every per-target trial report links, shared because the wrap-up and the
+			 * repeat-submission answer point at the same page with the same sentence.
+			 */
+			reportLink: {
+				body: "Este informe también vive en un enlace que puede reabrir o compartir:",
+				action: "Verlo en línea",
+			},
 			stop: "Un clic termina con todas las URL que nos pidió vigilar y borra su dirección y sus datos. Puede volver a empezar cuando quiera desde nuestro sitio web.",
 
 			status: {
@@ -1418,8 +1427,6 @@ export default {
 				rangeEnd: "Hoy",
 				closing:
 					"Este era el séptimo día, así que las comprobaciones gratuitas de {{url}} terminan aquí.",
-				report: "Este informe también vive en un enlace que puede reabrir o compartir:",
-				reportAction: "Verlo en línea",
 				action: "Seguir comprobando esta URL",
 				footer:
 					"Ha recibido este correo porque nos pidió vigilar esta URL durante una semana. Este es el último.",

@@ -31,6 +31,7 @@ import { Email } from "@pkg/mail";
 
 import { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import { APP_ORIGIN } from "~/app/lib/origin";
+import routes from "~/routes/web";
 
 /**
  * Result of one check on a watched URL. The public trial is HTTP only, so these three
@@ -111,6 +112,60 @@ export function TrialUnsubscribe(handle: Handle<TrialUnsubscribe.Props>) {
 					{t("emails.trial.stopAction")}
 				</a>{" "}
 				{t("emails.trial.stop")}
+			</>
+		);
+	};
+}
+
+/**
+ * Absolute URL of a watch's report page, which only its own token addresses.
+ *
+ * Built from the typed route rather than a string, so the path cannot drift from the route
+ * table; the origin comes from {@link APP_ORIGIN}, same as every other link these emails
+ * carry, because a relative href in mail resolves against nothing.
+ */
+export function trialReportUrl(token: string): string {
+	return `${APP_ORIGIN}${routes.trial.report.href({ token })}`;
+}
+
+export namespace TrialReportLink {
+	/** Props accepted by {@link TrialReportLink}. */
+	export interface Props {
+		/** The watch's own `report_token`. */
+		token: string;
+		/** Translator already bound to the reader's language. */
+		t: TFunction;
+	}
+}
+
+/**
+ * The footer sentence pointing at the report as a page.
+ *
+ * Shared by the wrap-up and by the answer to a repeat submission, because both describe one
+ * target's checks and both point at the same page with the same words — and because the
+ * report only becomes worth anything as an artifact if every email that reports on a target
+ * offers the durable copy of it.
+ *
+ * It belongs in the footer and not beside the subscribe button on purpose: it is the same
+ * facts at a stable address rather than a second thing to do, and these emails are allowed
+ * exactly one call to action.
+ *
+ * @example <TrialReportLink token={watch.report_token} t={t} />
+ */
+export function TrialReportLink(handle: Handle<TrialReportLink.Props>) {
+	return () => {
+		let { token, t } = handle.props;
+
+		return (
+			<>
+				{t("emails.trial.reportLink.body")}{" "}
+				<a
+					href={trialReportUrl(token)}
+					style="color:inherit;text-decoration:underline;font-weight:600;"
+				>
+					{t("emails.trial.reportLink.action")}
+				</a>
+				{". "}
 			</>
 		);
 	};
