@@ -453,6 +453,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 						indicators={trustIndicators.map((indicator) => ({
 							icon: <Icon name={indicator.icon} size={24} strokeWidth={1.5} />,
 							value: indicator.value,
+							valueLabel: indicator.valueLabel,
 							label: indicator.label,
 						}))}
 					/>

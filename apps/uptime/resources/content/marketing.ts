@@ -63,6 +63,12 @@ export namespace MarketingContent {
 		/** Lucide icon name, same convention as {@link Feature.icon}. */
 		icon: IconName;
 		value: string;
+		/**
+		 * What {@link TrustIndicator.value} says out loud, for the figures that are a symbol
+		 * rather than something readable (`"∞"`). Passed straight through to the strip, which
+		 * announces this instead of the glyph — see `resources/components/marketing/trust-indicators.tsx`.
+		 */
+		valueLabel?: string;
 		label: string;
 	}
 
@@ -497,7 +503,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			"Collaborate on uptime monitoring with unlimited team members, role-based access, and domain auto-provisioning.",
 		highlights: ["Unlimited members", "Owner/Admin/Member roles", "Domain auto-provisioning"],
 		trustIndicators: [
-			{ icon: "users", value: "Unlimited", label: "Team Members" },
+			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
 			{ icon: "shield", value: "3", label: "Role Levels" },
 			{ icon: "globe", value: "Domain", label: "Verification" },
 			{ icon: "user-plus", value: "Auto", label: "Provisioning" },
@@ -1075,7 +1081,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			"Team collaboration, instant alerts, and usage-based pricing that scales with you as your product — and your on-call rotation — grows.",
 		highlights: ["Unlimited team members", "Role-based access", "Usage-based pricing"],
 		trustIndicators: [
-			{ icon: "users", value: "Unlimited", label: "Team Members" },
+			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "globe", value: "9", label: "Regions" },
@@ -1133,7 +1139,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		// rather than "multi-team": client sites live side by side in one team, so a multi-team
 		// figure would misdescribe the workflow an agency actually uses.
 		trustIndicators: [
-			{ icon: "monitor", value: "Unlimited", label: "Monitors & Members" },
+			{ icon: "monitor", value: "∞", valueLabel: "Unlimited", label: "Monitors & Members" },
 			{ icon: "layers", value: "5", label: "Monitor Types" },
 			{ icon: "globe", value: "9", label: "Regions" },
 			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
@@ -1738,7 +1744,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Monitor distributed systems and microservices architecture. Catch failures before they cascade across your infrastructure.",
 		highlights: ["Per-service monitors", "TCP port checks", "DNS change detection"],
 		trustIndicators: [
-			{ icon: "boxes", value: "Unlimited", label: "Services" },
+			{ icon: "boxes", value: "∞", valueLabel: "Unlimited", label: "Services" },
 			{ icon: "network", value: "Distributed", label: "Architecture" },
 			{ icon: "activity", value: "Per-service", label: "Health" },
 			{ icon: "zap", value: "Fast", label: "Detection" },

@@ -19,8 +19,8 @@
 
 import { fg } from "@pkg/u/color";
 import { m, maxIs, mbe, mbs, pbe, pbs, pi, pis } from "@pkg/u/size";
-import { when } from "@pkg/u/state";
-import { fontSize, leading, tracking, weight } from "@pkg/u/typography";
+import { hover, when } from "@pkg/u/state";
+import { fontSize, leading, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -92,6 +92,14 @@ export default createAction(routes.trust, async (ctx) => {
 						when("& p", m("20px", 0)),
 						when("& ul", [m("20px", 0), pis("1.25rem")]),
 						when("& li", mbe("8px")),
+						/**
+						 * Underlined by default, unlike the standalone links elsewhere in the app that
+						 * only underline on hover. These sit mid-sentence in long prose, where colour
+						 * alone is the whole affordance — and this is the page that asks a reader to go
+						 * verify its claims against the founder's site and the status page, so the two
+						 * links the argument rests on must not read as plain text.
+						 */
+						when("& a", [fg("brand"), textDecoration("underline"), hover(textDecoration("none"))]),
 					]}
 				>
 					<h1>{ctx.i18next.t("trust.heading")}</h1>

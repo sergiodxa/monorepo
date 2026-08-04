@@ -605,7 +605,7 @@ export default {
 				bodyPrefix: "Uptime is built and operated by ",
 				founderName: "Sergio Xalambrí",
 				bodySuffix:
-					", independently. There is no support rota and no on-call team behind that name: one person writes the code, deploys it, and answers the email.",
+					", independently. There is no support rotation and no on-call team behind that name: one person writes the code, deploys it, and answers the email.",
 				second:
 					"That is worth knowing in both directions. A question about how a check behaves reaches the person who wrote it. A problem that starts while that person is asleep waits until they wake up.",
 			},

@@ -29,6 +29,15 @@ namespace MarketingTrustIndicators {
 		icon: RemixNode;
 		/** The figure, rendered in the mono face so digits align across columns (`"9"`, `"1-60m"`, `"365d"`). */
 		value: string;
+		/**
+		 * What {@link Indicator.value} says out loud, for a figure that is a symbol rather than
+		 * something readable — `"∞"` is announced as "infinity", or at low symbol verbosity as
+		 * nothing at all, which would leave the column as a label with no figure under it.
+		 *
+		 * Supplying it swaps the glyph for this text entirely rather than adding to it, so the
+		 * figure is heard once and as a word.
+		 */
+		valueLabel?: string;
 		label: string;
 	}
 
@@ -89,7 +98,18 @@ export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIn
 								]}
 							>
 								<span mix={[fg("brand")]}>{indicator.icon}</span>
-								<span mix={[font("mono")]}>{indicator.value}</span>
+								{/*
+								 * `role="img"` with the name on it, rather than the glyph plus visually
+								 * hidden text: it makes the span an opaque labelled node, so the symbol
+								 * inside is never announced alongside the word or spelled out.
+								 */}
+								{indicator.valueLabel ? (
+									<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
+										{indicator.value}
+									</span>
+								) : (
+									<span mix={[font("mono")]}>{indicator.value}</span>
+								)}
 							</div>
 							<p mix={[m(0), fontSize("sm"), fg("neutral")]}>{indicator.label}</p>
 						</div>
