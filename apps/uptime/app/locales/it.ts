@@ -544,6 +544,20 @@ export default {
 				second:
 					"Vale la pena saperlo in entrambe le direzioni. Una domanda sul comportamento di un controllo arriva alla persona che l'ha scritto. Un problema che comincia mentre quella persona dorme aspetta che si svegli.",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "Può leggere il codice",
+				bodyPrefix:
+					"Il codice che fa funzionare questo servizio è pubblico, quindi le affermazioni di questa pagina si possono verificare invece di accettarle per fiducia: come viene classificato un controllo, cosa contiene un risultato memorizzato, quando parte una notifica: ",
+				linkText: "apps/uptime su GitHub",
+				bodySuffix: ".",
+				caveat:
+					"Questo le mostra il codice, non il deployment in esecuzione in questo momento. È una cosa in più che può verificare da sé, non una garanzia di per sé.",
+			},
 			ownStatus: {
 				title: "La nostra pagina di stato",
 				bodyPrefix:

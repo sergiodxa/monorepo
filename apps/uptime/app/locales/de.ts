@@ -548,6 +548,20 @@ export default {
 				second:
 					"Das ist in beide Richtungen wissenswert. Eine Frage zum Verhalten einer Prüfung erreicht die Person, die sie geschrieben hat. Ein Problem, das beginnt, während diese Person schläft, wartet, bis sie aufwacht.",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "Sie können den Code lesen",
+				bodyPrefix:
+					"Der Code, der diesen Dienst betreibt, ist öffentlich — die Aussagen auf dieser Seite lassen sich also überprüfen, statt auf Vertrauen hin geglaubt zu werden: wie eine Prüfung eingeordnet wird, was ein gespeichertes Ergebnis enthält, wann eine Benachrichtigung rausgeht: ",
+				linkText: "apps/uptime auf GitHub",
+				bodySuffix: ".",
+				caveat:
+					"Das zeigt Ihnen den Code, nicht die gerade laufende Bereitstellung. Es ist eine weitere Sache, die Sie selbst überprüfen können, für sich allein aber keine Garantie.",
+			},
 			ownStatus: {
 				title: "Unsere eigene Statusseite",
 				bodyPrefix:

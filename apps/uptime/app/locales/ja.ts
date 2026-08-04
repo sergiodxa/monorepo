@@ -536,6 +536,20 @@ export default {
 				second:
 					"これは良い面と悪い面の両方で知っておく価値があります。チェックの挙動についての質問は、それを書いた本人に届きます。一方で、その人が眠っている間に起きた問題は、目を覚ますまで待つことになります。",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "コードを読めます",
+				bodyPrefix:
+					"このサービスを動かしているコードは公開されています。チェックがどう分類されるか、保存される結果に何が含まれるか、通知がいつ送られるか — このページの記述は、信じるしかないものではなく確認できるものです: ",
+				linkText: "GitHub の apps/uptime",
+				bodySuffix: "。",
+				caveat:
+					"そこで見えるのはコードであって、今動いているデプロイそのものではありません。ご自身で確認できることが一つ増えるという話で、それ自体が保証ではありません。",
+			},
 			ownStatus: {
 				title: "当サービス自身のステータスページ",
 				bodyPrefix:

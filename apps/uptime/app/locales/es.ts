@@ -546,6 +546,20 @@ export default {
 				second:
 					"Conviene saberlo en los dos sentidos. Una pregunta sobre cómo se comporta una comprobación llega a la persona que la escribió. Un problema que empieza mientras esa persona duerme espera a que despierte.",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "Puede leer el código",
+				bodyPrefix:
+					"El código que hace funcionar este servicio es público, así que las afirmaciones de esta página se pueden comprobar en lugar de aceptarse por fe: cómo se clasifica una comprobación, qué contiene un resultado almacenado, cuándo sale una notificación: ",
+				linkText: "apps/uptime en GitHub",
+				bodySuffix: ".",
+				caveat:
+					"Eso le muestra el código, no el despliegue que está corriendo ahora mismo. Es una cosa más que puede verificar por su cuenta, no una garantía por sí sola.",
+			},
 			ownStatus: {
 				title: "Nuestra propia página de estado",
 				bodyPrefix:

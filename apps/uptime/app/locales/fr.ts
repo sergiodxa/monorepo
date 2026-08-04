@@ -548,6 +548,20 @@ export default {
 				second:
 					"C'est bon à savoir dans les deux sens. Une question sur le comportement d'une vérification arrive directement à la personne qui l'a écrite. Un problème qui survient pendant que cette personne dort attend son réveil.",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "Vous pouvez lire le code",
+				bodyPrefix:
+					"Le code qui fait tourner ce service est public : les affirmations de cette page peuvent donc être vérifiées plutôt que crues sur parole — comment une vérification est classée, ce que contient un résultat stocké, quand une notification part : ",
+				linkText: "apps/uptime sur GitHub",
+				bodySuffix: ".",
+				caveat:
+					"Cela vous montre le code, pas le déploiement en cours d'exécution. C'est une chose de plus que vous pouvez vérifier vous-même, pas une garantie à elle seule.",
+			},
 			ownStatus: {
 				title: "Notre propre page de statut",
 				bodyPrefix:

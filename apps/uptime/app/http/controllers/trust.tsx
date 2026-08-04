@@ -35,6 +35,13 @@ import routes from "~/routes/web";
 const FOUNDER_URL = "https://sergiodxa.com";
 
 /**
+ * Where this app's source lives. "Code-available" rather than "open source" in the copy: the
+ * repository carries its own license with conditions, and the claim being made here is only
+ * that a reader can go and check the code, not that they may reuse it.
+ */
+const SOURCE_URL = "https://github.com/sergiodxa/monorepo/tree/main/apps/uptime";
+
+/**
  * This service's own status page, built with the same cron-job monitoring the product
  * sells. It reports the app's scheduled internal work checking in on time — which is a
  * narrower claim than "everything is fine", and the copy beside it says so.
@@ -86,6 +93,16 @@ export default createAction(routes.trust, async (ctx) => {
 							{ctx.i18next.t("trust.sections.whoRuns.bodySuffix")}
 						</p>
 						<p>{ctx.i18next.t("trust.sections.whoRuns.second")}</p>
+
+						<h2>{ctx.i18next.t("trust.sections.source.title")}</h2>
+						<p>
+							{ctx.i18next.t("trust.sections.source.bodyPrefix")}
+							<a href={SOURCE_URL} target="_blank" rel="noreferrer">
+								{ctx.i18next.t("trust.sections.source.linkText")}
+							</a>
+							{ctx.i18next.t("trust.sections.source.bodySuffix")}
+						</p>
+						<p>{ctx.i18next.t("trust.sections.source.caveat")}</p>
 
 						<h2>{ctx.i18next.t("trust.sections.ownStatus.title")}</h2>
 						<p>

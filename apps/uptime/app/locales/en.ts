@@ -609,6 +609,20 @@ export default {
 				second:
 					"That is worth knowing in both directions. A question about how a check behaves reaches the person who wrote it. A problem that starts while that person is asleep waits until they wake up.",
 			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "You can read the code",
+				bodyPrefix:
+					"The code that runs this service is public, so the claims on this page can be checked rather than taken on faith — how a check is classified, what a stored result holds, when a notification goes out: ",
+				linkText: "apps/uptime on GitHub",
+				bodySuffix: ".",
+				caveat:
+					"That shows you the code, not the deployment running right now. It is one more thing you can verify for yourself, not a guarantee on its own.",
+			},
 			ownStatus: {
 				title: "Our own status page",
 				bodyPrefix:
