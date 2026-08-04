@@ -38,8 +38,10 @@ import type { SelectLead, SelectTrialWatch } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import Monitor from "~/app/data/monitor";
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import TrialConversion from "~/app/data/trial-conversion";
 import TrialWatch from "~/app/data/trial-watch";
+import { dailyStatsFromChecks } from "~/app/lib/trial-history";
 
 /**
  * The cadence a converted monitor runs at.
@@ -54,6 +56,17 @@ import TrialWatch from "~/app/data/trial-watch";
  * `~/app/http` would invert the dependency between the two layers for one integer.
  */
 const CONVERTED_INTERVAL_SECONDS = 600;
+
+/**
+ * How many of a watch's checks the carried history reads.
+ *
+ * A watch runs hourly for seven days, so 168 is the whole of one and this is that with room
+ * for the boundary check a claim can add. Stated as its own bound rather than left to
+ * `listResults`'s default because the two are unrelated numbers that happen to be close: that
+ * default sizes a digest's bar, and changing it must not silently start truncating somebody's
+ * carried week.
+ */
+const CARRIED_RESULT_LIMIT = 200;
 
 /** Who signed in, and where their claimed targets go. */
 export interface TrialConversionSubject {
@@ -236,6 +249,7 @@ async function convertWatch(
 			interval_seconds: CONVERTED_INTERVAL_SECONDS,
 		});
 
+		await carryHistory(db, watch, monitor.id);
 		await TrialWatch.markConverted(db, watch.id, monitor.id);
 		return true;
 	} catch (error) {
@@ -245,6 +259,66 @@ async function convertWatch(
 			error: error instanceof Error ? error.message : String(error),
 		});
 		return false;
+	}
+}
+
+/**
+ * Carries the week a watch already observed onto the monitor it just became: one
+ * `monitor_daily_stats` row per day it covers, and the last check it ran as the monitor's
+ * current status.
+ *
+ * **This is the difference between converting and starting over.** Everything else about a
+ * conversion hands the person their configuration back; without this they still open a
+ * dashboard with an empty graph and a monitor reading "pending", having just been mailed a
+ * report about seven days of checks. The evidence is the reason they subscribed, so losing it
+ * at the moment they pay is the worst possible time to lose it.
+ *
+ * **Its failures are not the conversion's.** A monitor with no carried history is a monitor;
+ * a sign-in that threw here would cost somebody their account, and the caller's own catch
+ * would abandon the remaining watches. So this swallows and logs in the shape the rest of
+ * this module uses, and the `markConverted` stamp after it runs either way — a claim is spent
+ * on the monitor existing, never on its history being complete.
+ *
+ * **Seeding the status is a separate write from the rows**, because they answer different
+ * questions and the second is not derivable from the first. A day's rollup cannot say what
+ * the last check reported, and the dashboard badge reads exactly that. `last_checked_at`
+ * takes the watch's own instant rather than now, so the monitor does not claim to have run a
+ * check it did not.
+ */
+async function carryHistory(
+	db: Database,
+	watch: SelectTrialWatch,
+	monitorId: string,
+): Promise<void> {
+	try {
+		let results = await TrialWatch.listResults(db, watch.id, CARRIED_RESULT_LIMIT);
+		if (results.length === 0) return;
+
+		for (let day of dailyStatsFromChecks(results, monitorId)) {
+			await MonitorDailyStats.upsertDay(db, day);
+		}
+
+		// Newest first out of `listResults`, so the head is the watch's most recent check.
+		let latest = results[0];
+		if (latest) {
+			await Monitor.updateById(db, monitorId, {
+				last_status: latest.status,
+				last_checked_at: latest.checked_at,
+				last_response_time_ms: latest.response_time_ms,
+			});
+		}
+
+		logger.info("trial_conversion.history_carried", {
+			watchId: watch.id,
+			monitorId,
+			checks: results.length,
+		});
+	} catch (error) {
+		logger.error("trial_conversion.history_failed", {
+			watchId: watch.id,
+			monitorId,
+			error: error instanceof Error ? error.message : String(error),
+		});
 	}
 }
 

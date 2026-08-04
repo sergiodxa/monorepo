@@ -21,7 +21,9 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
 import type { Database } from "remix/data-table";
 
-import type { SelectMonitor } from "~/database/schema";
+import { generateUUID } from "@pkg/uuid";
+
+import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
 import Monitor from "~/app/data/monitor";
@@ -32,7 +34,7 @@ import TrialWatch, {
 } from "~/app/data/trial-watch";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
-import { monitors, trialWatches } from "~/database/schema";
+import { monitorDailyStats, monitors, trialWatches, trialWatchResults } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
@@ -188,6 +190,136 @@ describe("matching a subject to a lead", () => {
 		await convertAs("he.llo@gmail.com");
 
 		expect(await created()).toBeEmpty();
+	});
+});
+
+/**
+ * The evidence a trial produced is the reason somebody subscribes, so the moment they pay is
+ * the worst possible moment to lose it. What is pinned here is that the week of checks arrives
+ * on the monitor as daily history and as a current status, and — separately — that failing to
+ * carry it never costs anyone the conversion itself.
+ */
+describe("the history a claimed target arrives with", () => {
+	/**
+	 * A check recorded at a fixed instant. Written straight to the table because
+	 * `TrialWatch.recordCheck` stamps `checked_at` from the clock, and every case here is about
+	 * which past day a check falls in.
+	 */
+	async function recordAt(watchId: string, at: number, status: MonitorStatus, ms: number | null) {
+		await db.create(
+			trialWatchResults,
+			{
+				id: generateUUID(),
+				trial_watch_id: watchId,
+				status,
+				response_time_ms: ms,
+				checked_at: at,
+			},
+			{ touch: true },
+		);
+	}
+
+	/** Hourly checks over `days`, ending an hour before now — one converted watch's whole life. */
+	async function hourlyWeek(watchId: string, days: number, status: MonitorStatus = "up") {
+		let end = Date.now() - MS_PER_HOUR;
+
+		for (let hour = 0; hour < days * 24; hour++) {
+			await recordAt(watchId, end - hour * MS_PER_HOUR, status, 150);
+		}
+	}
+
+	/** The carried daily rows for a monitor, oldest first. */
+	async function history(monitorId: string) {
+		return await db.findMany(monitorDailyStats, {
+			where: { monitor_id: monitorId },
+			orderBy: ["date", "asc"],
+		});
+	}
+
+	test("carries a week of hourly checks as one daily row per day", async () => {
+		let lead = await createLead();
+		let watchId = await attempt(lead.id, "https://example.com", 1);
+		await hourlyWeek(watchId, 7);
+
+		await convert();
+
+		let [monitor] = await created();
+		let rows = await history(monitor?.id ?? "");
+
+		// Seven days of hourly checks span eight calendar days unless they happen to start at
+		// midnight, so the count is bounded rather than fixed — what matters is that every day
+		// is present and none is empty.
+		expect(rows.length).toBeGreaterThanOrEqual(7);
+		expect(rows.every((row) => row.total_checks > 0)).toBe(true);
+		expect(rows.reduce((sum, row) => sum + row.total_checks, 0)).toBe(7 * 24);
+		expect(rows.every((row) => row.status === "up")).toBe(true);
+	});
+
+	test("carries the last check as the monitor's current status, at the instant it ran", async () => {
+		let lead = await createLead();
+		let watchId = await attempt(lead.id, "https://example.com", 1);
+
+		let lastCheckedAt = Date.now() - 2 * MS_PER_HOUR;
+		await recordAt(watchId, lastCheckedAt - MS_PER_HOUR, "up", 120);
+		await recordAt(watchId, lastCheckedAt, "down", null);
+
+		await convert();
+
+		let [monitor] = await created();
+		expect(monitor?.last_status).toBe("down");
+		expect(monitor?.last_checked_at).toBe(lastCheckedAt);
+		expect(monitor?.last_response_time_ms).toBeNull();
+	});
+
+	/** A monitor reading "pending" is what the carry exists to prevent. */
+	test("leaves a watch that never ran a check with no history and no status", async () => {
+		let lead = await createLead();
+		await attempt(lead.id, "https://example.com", 1);
+
+		await convert();
+
+		let [monitor] = await created();
+		expect(await history(monitor?.id ?? "")).toBeEmpty();
+		expect(monitor?.last_checked_at).toBeNull();
+	});
+
+	test("a down day is carried as down, not smoothed away", async () => {
+		let lead = await createLead();
+		let watchId = await attempt(lead.id, "https://example.com", 1);
+		await hourlyWeek(watchId, 2, "down");
+
+		await convert();
+
+		let [monitor] = await created();
+		let rows = await history(monitor?.id ?? "");
+
+		expect(rows.every((row) => row.status === "down")).toBe(true);
+		expect(rows.every((row) => row.successful_checks === 0)).toBe(true);
+	});
+
+	/**
+	 * The carry is a nicety on the one path a user cannot route around. A monitor with no
+	 * history is a monitor; a sign-in that threw would cost somebody their account.
+	 */
+	test("still converts the target when carrying its history fails", async () => {
+		let lead = await createLead();
+		let watchId = await attempt(lead.id, "https://example.com", 1);
+		await hourlyWeek(watchId, 1);
+
+		let listResults = spyOn(TrialWatch, "listResults").mockRejectedValue(new Error("nope"));
+
+		try {
+			await convert();
+		} finally {
+			listResults.mockRestore();
+		}
+
+		let [monitor] = await created();
+		expect(monitor?.url).toBe("https://example.com");
+
+		// And the claim is still spent, so the next sign-in does not make a second monitor.
+		let watch = await TrialWatch.findById(db, watchId);
+		expect(watch?.converted_monitor_id).toBe(monitor?.id ?? null);
 	});
 });
 
