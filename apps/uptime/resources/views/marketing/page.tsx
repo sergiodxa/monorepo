@@ -150,6 +150,15 @@ namespace MarketingPageView {
 		dashboardLabel: string;
 		/** Label for the hero's secondary CTA, linking to the homepage's pricing calculator (`landing.hero.cta.pricing`). */
 		pricingLabel: string;
+		/**
+		 * Label for the free-trial CTA, linking to `/try` (`landing.hero.cta.try`).
+		 *
+		 * The primary action for a visitor with no account, ahead of signing in. Every one of
+		 * these pages sells a seven-day free watch that needs no account and no card, and until
+		 * this existed not one of them had a link to it — the strongest offer on the page was
+		 * reachable only from the homepage and the nav.
+		 */
+		tryLabel: string;
 		/** Alternative text for the hero's product screenshot (`landing.hero.screenshot.alt`). */
 		screenshotAlt: string;
 		/** Eyebrow badge above the feature grid (`landing.marketingPage.everythingBadge`). */
@@ -188,6 +197,7 @@ export function buildMarketingPageChrome(t: TFunction): MarketingPageView.Chrome
 		startLabel: t("landing.hero.cta.out"),
 		dashboardLabel: t("landing.hero.cta.in"),
 		pricingLabel: t("landing.hero.cta.pricing"),
+		tryLabel: t("landing.hero.cta.try"),
 		screenshotAlt: t("landing.hero.screenshot.alt"),
 		everythingBadge: t("landing.marketingPage.everythingBadge"),
 		everythingTitle: t("landing.marketingPage.everythingTitle"),
@@ -211,6 +221,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 			startLabel,
 			dashboardLabel,
 			pricingLabel,
+			tryLabel,
 			screenshotAlt,
 			badge,
 			title,
@@ -347,12 +358,23 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 								</p>
 
 								<div mix={[...ctaRow()]}>
-									<AuthCta
-										isSignedIn={isSignedIn}
-										startLabel={startLabel}
-										dashboardLabel={dashboardLabel}
-										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-									/>
+									{/* For a visitor with no account the free watch is the strongest thing on
+									offer — it needs no account and no card — so it leads, and signing in
+									becomes the secondary action. A signed-in reader has no use for it and
+									gets the dashboard link as primary instead. */}
+									{isSignedIn ? (
+										<AuthCta
+											isSignedIn
+											startLabel={startLabel}
+											dashboardLabel={dashboardLabel}
+											icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+										/>
+									) : (
+										<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
+											{tryLabel}
+											<ArrowRightIcon size={20} strokeWidth={1.5} />
+										</LinkButton>
+									)}
 									{/* Points at the homepage's pricing calculator: these pages carry
 									no pricing section of their own to anchor to. */}
 									<LinkButton

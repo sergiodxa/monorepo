@@ -52,6 +52,7 @@ export default {
 				in: "Dashboard öffnen",
 				out: "Überwachung starten",
 				pricing: "Preise ansehen",
+				try: "7 Tage gratis überwachen",
 			},
 
 			try: {

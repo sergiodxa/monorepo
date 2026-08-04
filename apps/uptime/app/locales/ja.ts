@@ -52,6 +52,7 @@ export default {
 				in: "ダッシュボードを開く",
 				out: "監視を始める",
 				pricing: "料金を見る",
+				try: "7日間無料でモニタリング",
 			},
 
 			try: {

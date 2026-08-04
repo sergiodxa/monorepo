@@ -52,6 +52,7 @@ export default {
 				in: "Ouvrir le tableau de bord",
 				out: "Commencer la surveillance",
 				pricing: "Voir les tarifs",
+				try: "Surveiller un site 7 jours, gratuit",
 			},
 
 			try: {

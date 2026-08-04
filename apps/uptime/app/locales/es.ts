@@ -52,6 +52,7 @@ export default {
 				in: "Abrir Panel de control",
 				out: "Comenzar a monitorear",
 				pricing: "Ver precios",
+				try: "Monitorea un sitio gratis 7 días",
 			},
 
 			try: {

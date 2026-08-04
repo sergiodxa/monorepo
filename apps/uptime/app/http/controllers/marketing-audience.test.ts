@@ -23,6 +23,13 @@ import { renderWith } from "remix/render-middleware";
 import { renderToString } from "remix/ui/server";
 
 import i18n from "~/app/http/middleware/i18n";
+import {
+	BASE_PRICE_USD,
+	formatPings,
+	formatUsd,
+	FREE_TRIAL_DAYS,
+	INCLUDED_PINGS,
+} from "~/app/lib/pricing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { audiences } from "~/resources/content/marketing";
 import routes from "~/routes/web";
@@ -87,6 +94,34 @@ describe("GET /for/:slug", () => {
 		// Canonical on the production origin, not the `uptime.test` host that served it.
 		expect(body).toContain(`<link rel="canonical" href="https://uptime.sergiodxa.com/for/${slug}"`);
 		if (content.faqs.length > 0) expect(body).toContain('"@type":"FAQPage"');
+	});
+
+	/**
+	 * `/for/agencies` is the page personalized outreach links point at, so it is the one
+	 * audience page whose content is pinned rather than sampled. What is asserted is what an
+	 * agency has to be able to read without clicking further: the positioning, the free offer,
+	 * the two "unlimited" facts that answer per-site pricing, and a way to start.
+	 */
+	test("the agency page carries its positioning, the free offer, and a CTA", async () => {
+		let response = await getAudience("agencies");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+
+		// The positioning, which is the whole reason this page reads differently from the others.
+		expect(body).toContain("before they call you");
+
+		// The pricing objection an agency actually raises, answered in its own words.
+		expect(body).toContain("Unlimited");
+		expect(body).toContain(formatUsd(BASE_PRICE_USD));
+		expect(body).toContain(formatPings(INCLUDED_PINGS));
+
+		// The offer, stated with the same duration the trial actually runs for.
+		expect(body).toContain(`${FREE_TRIAL_DAYS} days`);
+
+		// And somewhere to go. The shared page chrome points its calls to action at `/try`, which
+		// is where a visitor with no account can start without talking to anyone.
+		expect(body).toContain(`href="${routes.trial.check.index.href()}"`);
 	});
 
 	test("renders the not-found page for an unknown slug", async () => {

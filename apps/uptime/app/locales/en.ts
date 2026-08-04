@@ -52,6 +52,7 @@ export default {
 				in: "Open Dashboard",
 				out: "Start Monitoring",
 				pricing: "View Pricing",
+				try: "Monitor a site free for 7 days",
 			},
 
 			try: {

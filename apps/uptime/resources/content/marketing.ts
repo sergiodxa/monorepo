@@ -27,7 +27,9 @@ import {
 	BASE_PRICE_USD,
 	formatPings,
 	formatUsd,
+	FREE_TRIAL_DAYS,
 	INCLUDED_PINGS,
+	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
 } from "~/app/lib/pricing";
@@ -1110,48 +1112,91 @@ export const audiences: Record<string, MarketingContent.Page> = {
 
 	agencies: {
 		slug: "agencies",
-		metaTitle: "Uptime for Agencies | Client Monitoring",
-		metaDescription:
-			"Monitor all your client websites from one dashboard. Proactive uptime monitoring for digital agencies.",
-		badge: "For Agencies",
-		title: "One dashboard for",
-		highlight: "every client site",
-		description:
-			"Monitor all your client websites from a single dashboard. Catch problems before a client notices — or calls.",
-		highlights: ["One team, many sites", "Status pages per client", "Proactive alerts"],
-		// "Multi-site", not the old page's "Multi-team": client sites live side by side
-		// in a single team, so a multi-team claim would misdescribe the workflow.
+		metaTitle: "Uptime for Agencies | Know Before the Client Calls",
+		metaDescription: `Monitor every client site, API, certificate and cron job from one dashboard. Unlimited monitors and team members from ${formatUsd(BASE_PRICE_USD)}/month. Watch one client site free for ${FREE_TRIAL_DAYS} days.`,
+		badge: "For Agencies & Freelancers",
+		title: "Know a client site is down",
+		highlight: "before they call you",
+		description: `Monitor client websites, APIs, SSL certificates, DNS records, ports and scheduled jobs from one dashboard. Unlimited monitors and unlimited team members, from ${formatUsd(BASE_PRICE_USD)}/month.`,
+		highlights: [
+			"Unlimited sites, no per-site pricing",
+			"A status page per client",
+			`Free for ${FREE_TRIAL_DAYS} days, no card`,
+		],
+		// Product facts only, and none of them a claim about how reliable we are. "Multi-site"
+		// rather than "multi-team": client sites live side by side in one team, so a multi-team
+		// figure would misdescribe the workflow an agency actually uses.
 		trustIndicators: [
-			{ icon: "building", value: "Multi-site", label: "One Dashboard" },
-			{ icon: "monitor", value: "Unlimited", label: "Monitors" },
-			{ icon: "bell", value: "<1s", label: "Alerts" },
+			{ icon: "monitor", value: "Unlimited", label: "Monitors & Members" },
+			{ icon: "layers", value: "5", label: "Monitor Types" },
 			{ icon: "globe", value: "9", label: "Regions" },
+			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
 		],
 		features: [
 			{
-				title: "Centralized monitoring",
-				description: "Every client site, in one team, on one dashboard.",
-				icon: "layout-dashboard",
-			},
-			{
-				title: "Client-facing status pages",
-				description: "Give each client their own branded status page.",
-				icon: "layout-template",
-			},
-			{
-				title: "Fast incident response",
-				description: "Instant alerts mean you're already investigating before the client calls.",
+				title: "Find out before the client does",
+				description:
+					"The call you don't want is the client telling you their site is down. Checks run as often as every minute and the alert goes to you first.",
 				icon: "siren",
 			},
 			{
-				title: "SSL & DNS coverage",
+				title: "No monitor math",
 				description:
-					"Catch expiring certificates and DNS misconfiguration across every domain you manage.",
+					"Unlimited monitors and unlimited team members. Add a client, add their staging site, add the whole team — the price doesn't move because you added rows.",
+				icon: "infinity",
+			},
+			{
+				title: "Certificates you'd otherwise forget",
+				description:
+					"An expired certificate takes a client's site down as effectively as an outage, on a date nobody has in a calendar. SSL expiry is watched per site and warned on ahead of time.",
 				icon: "shield-check",
 			},
+			{
+				title: "DNS you didn't change",
+				description:
+					"Records get edited at the registrar by someone who isn't you. DNS monitors tell you what changed and when.",
+				icon: "globe",
+			},
+			{
+				title: "The jobs nobody watches",
+				description:
+					"Backups, imports, and nightly syncs fail silently. A cron monitor expects a ping on a schedule and tells you when one doesn't arrive.",
+				icon: "timer",
+			},
+			{
+				title: "A status page per client",
+				description:
+					"Point a client at their own status page instead of answering the same question by email. Each one shows only that client's monitors.",
+				icon: "layout-template",
+			},
 		],
-		steps: DEFAULT_STEPS,
+		steps: [
+			{
+				title: `Watch one client site free for ${FREE_TRIAL_DAYS} days`,
+				description:
+					"Give us a URL and an email. We check it hourly for a week and send you a health report at the end — no account and no card.",
+			},
+			{
+				title: "Bring the rest of the roster over",
+				description:
+					"Sign up and the site you were already watching becomes a real monitor, with the week it has behind it. Add the others at whatever interval each one deserves.",
+			},
+			{
+				title: "Point alerts where you already work",
+				description:
+					"Email, Slack, Discord, or a webhook, with cooldowns so a flapping site doesn't bury the rest of the roster.",
+			},
+		],
 		faqs: [
+			{
+				question: "How does pricing work if I have thirty client sites?",
+				answer: `You're billed for checks, not for sites. ${formatUsd(BASE_PRICE_USD)}/month includes ${formatPings(INCLUDED_PINGS)} checks, and usage past that is ${formatUsd(PRICE_PER_BLOCK_USD)} per ${formatPings(PINGS_PER_BLOCK)} checks in whole blocks. Thirty sites checked every fifteen minutes is about ${formatPings(monthlyPings({ monitors: 30, intervalMinutes: 15 }))} checks a month, so what you pay depends on how often you check rather than on how many clients you have.`,
+			},
+			{
+				question: "Do I pay per team member?",
+				answer:
+					"No. Invite everyone who might pick up an incident — members are unlimited and don't affect the price.",
+			},
 			{
 				question: "Can I give each client their own status page?",
 				answer: "Yes — create one status page per client and attach only that client's monitors.",
@@ -1160,6 +1205,11 @@ export const audiences: Record<string, MarketingContent.Page> = {
 				question: "Can I monitor client domains I don't own?",
 				answer:
 					"You need authorization to monitor any endpoint you don't own — see the Terms of Service.",
+			},
+			{
+				question: "What happens to the free week if I sign up partway through?",
+				answer:
+					"It carries over. The site becomes a monitor on your account with the checks it has already run behind it, so you don't set it up twice or start the graph from zero.",
 			},
 		],
 	},

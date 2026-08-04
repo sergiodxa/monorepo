@@ -18,6 +18,18 @@
 /** Monthly subscription price, in USD. */
 export const BASE_PRICE_USD = 5;
 
+/**
+ * Days the public trial watches a URL for before it reports and stops.
+ *
+ * Here rather than beside the scheduling that enforces it, because it is a commercial term
+ * before it is a cadence: it is quoted on the marketing pages, in the trial page's own copy,
+ * and in every email the trial sends, and `resources/content/marketing.ts` cannot reach into
+ * `app/data` to read it — nothing under `resources/` imports a data model, and this one
+ * integer is not the reason to start. `~/app/data/trial-watch` imports it from here and keeps
+ * owning what it *means* for a watch to expire.
+ */
+export const FREE_TRIAL_DAYS = 7;
+
 /** Pings the {@link BASE_PRICE_USD} subscription covers before metered usage starts. */
 export const INCLUDED_PINGS = 100_000;
 

@@ -51,13 +51,20 @@ import type {
 	SelectTrialWatchResult,
 } from "~/database/schema";
 
+import { FREE_TRIAL_DAYS } from "~/app/lib/pricing";
 import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES, deleteOlderThan } from "~/app/lib/retention";
 import { claimDue } from "~/app/lib/scheduling";
 import { normalizeTrialUrl } from "~/app/lib/trial-identity";
 import { trialWatchResults, trialWatches } from "~/database/schema";
 
-/** How long a target is re-checked for before the wrap-up goes out and checking stops. */
-export const TRIAL_WATCH_DURATION_DAYS = 7;
+/**
+ * How long a target is re-checked for before the wrap-up goes out and checking stops.
+ *
+ * The number itself lives in `~/app/lib/pricing` — it is quoted by marketing copy that cannot
+ * import a data model — and is re-exported here under the name the scheduling reads it by, so
+ * every existing caller keeps one import and there is still only one definition.
+ */
+export const TRIAL_WATCH_DURATION_DAYS = FREE_TRIAL_DAYS;
 
 /**
  * How long after an attempt that target can still be turned into a real monitor on sign-up.
