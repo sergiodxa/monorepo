@@ -578,8 +578,8 @@ export default {
 					body: "El timeout, el estado esperado y el umbral de degradado los fija usted, así que una comprobación solo es lenta o fallida según la definición que usted le dio.",
 				},
 				cooldown: {
-					label: "Enfriamiento, y un tope por incidente.",
-					body: "Cada alerta tiene un tiempo de enfriamiento que limita las repeticiones, más un tope firme de cuántas notificaciones envía por un mismo incidente en curso. Un monitor que sigue caído no le escribe una vez por comprobación para siempre.",
+					label: "Las repeticiones se espacian, y la recuperación llega siempre.",
+					body: "La primera alerta de un incidente sale de inmediato. Mientras un monitor sigue caído, las repeticiones se espacian según el tiempo de espera de esa alerta — una hora por defecto — así que una caída prolongada sigue avisándole en lugar de quedarse en silencio. Cuando se recupera, recibe un mensaje más diciéndolo.",
 				},
 				recovery: {
 					label: "Avisos de recuperación solo después de un fallo real.",
@@ -1231,8 +1231,8 @@ export default {
 			preview: "{{monitor}} está {{status}}",
 			heading: "{{monitor}} está {{status}}",
 			action: "Abrir el panel de control",
-			incident:
-				"Notificaciones de este incidente: {{sent}} enviadas, {{suppressed}} suprimidas por el tiempo de espera y el límite de {{cap}} por incidente.",
+			incidentCooldown:
+				"Notificaciones de este incidente: {{sent}} enviadas, {{suppressed}} retenidas por el tiempo de espera de la alerta.",
 			footer:
 				"Ha recibido este correo porque una de las alertas de su equipo coincidió con este evento.",
 
@@ -2659,7 +2659,9 @@ export default {
 					},
 
 					cooldownMinutes: {
-						label: "Tiempo de espera (minutos, 0 = sin tiempo de espera)",
+						label: "Tiempo de espera (minutos)",
+						description:
+							"Cuánto esperar antes de repetir una alerta mientras un monitor sigue caído. La primera alerta de un incidente se envía siempre de inmediato, y la recuperación se envía siempre. Las repeticiones nunca se espacian menos de {{floor}} minutos, sea lo que ponga aquí.",
 					},
 
 					legends: {
@@ -2691,7 +2693,7 @@ export default {
 				},
 
 				cooldown: {
-					none: "Ninguno",
+					none: "Lo más rápido permitido",
 					minutes: "{{count}} min",
 					hours: "{{count}} hr",
 				},

@@ -1,7 +1,8 @@
 /**
  * Unit tests for the alert-dispatch pipeline: maintenance-window suppression,
  * candidate resolution (monitor-specific + team-wide for HTTP/SSL, team-wide-only for
- * everything else), cooldown skipping, the per-incident send cap and the suppression
+ * everything else), the repeat policy (immediate first alert, cooldown-spaced repeats for
+ * as long as the outage lasts, always-delivered recovery) and the suppression
  * totals a recovery message reports, delivery success/failure recording, the
  * per-strategy delivery mechanics (email/webhook/Slack/Discord, including the webhook
  * HMAC signature), the recovery/notify-on-recovery branching in every `notify*`
@@ -60,6 +61,14 @@ let summarizeIncidentMock = mock(async (..._args: unknown[]) => ({ sent: 0, supp
 let realAlertModule = await import("~/app/data/alert");
 let realAlertEventModule = await import("~/app/data/alert-event");
 
+/**
+ * The two history reads, captured as function values before `mock.module` rebinds the module
+ * they came from — reaching for them through the module namespace later would find the mocks
+ * and recurse. Neither reads `this`, so calling them unbound runs the real queries.
+ */
+let realIsInCooldown = realAlertEventModule.default.isInCooldown;
+let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceRecovery;
+
 beforeAll(async () => {
 	class FakeAlert extends realAlertModule.default {
 		static override listForHttpMonitor = listForHttpMonitorMock;
@@ -83,7 +92,7 @@ afterAll(async () => {
 });
 
 let { createTestDatabase } = await import("~/app/lib/test/db");
-let { teams, monitors, maintenanceWindows } = await import("~/database/schema");
+let { alertEvents, teams, monitors, maintenanceWindows } = await import("~/database/schema");
 let {
 	dashboardUrl,
 	dispatchAlerts,
@@ -441,10 +450,11 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 		let a = makeAlert({ id: "a", notify_on_recovery: true });
 		let b = makeAlert({ id: "b", notify_on_recovery: false });
 		listForHttpMonitorMock.mockImplementation(async () => [a, b]);
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
 			db,
-			mailer: makeMailer(),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -454,7 +464,7 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(isInCooldownMock).toHaveBeenCalledTimes(2);
+		expect(transport.messages).toHaveLength(2);
 	});
 });
 
@@ -463,6 +473,7 @@ describe("dispatchAlerts — cooldown", () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({ cooldown_minutes: 30 });
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 1);
 		isInCooldownMock.mockImplementation(async () => true);
 		let transport = new MemoryTransport();
 
@@ -490,6 +501,7 @@ describe("dispatchAlerts — cooldown", () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({ id: "alert-7", cooldown_minutes: 15 });
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		countSentSinceRecoveryMock.mockImplementation(async () => 1);
 
 		await dispatchAlerts({
 			db,
@@ -507,12 +519,58 @@ describe("dispatchAlerts — cooldown", () => {
 	});
 });
 
-describe("dispatchAlerts — per-incident send cap", () => {
-	test("skips delivery and records skipped_cap once the incident is at the cap", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({ id: "alert-9" });
+/**
+ * The alert repeat policy, one test per requirement: alert immediately when a monitor is
+ * detected down, stay quiet while it is still down until the cooldown has passed and then
+ * alert again for as long as the outage lasts, and always alert once on recovery.
+ *
+ * These run the real `isInCooldown`/`countSentSinceRecovery` against a seeded in-memory
+ * database — the whole point is the interaction between the two, so mocked answers would
+ * assert the mocks. `record` stays mocked because `dispatchAlerts` always records a snapshot
+ * and this harness's SQLite adapter can't bind an object into a JSON column, so history is
+ * seeded by writing rows (with a null snapshot) instead. Every instant is a fixed offset from
+ * one captured `now`, so nothing here waits on the clock.
+ */
+describe("dispatchAlerts — repeat policy", () => {
+	/** Points the two history reads at their real implementations for this test. */
+	function useRealHistoryReads(): void {
+		isInCooldownMock.mockImplementation(async (...args: unknown[]) =>
+			realIsInCooldown(...(args as Parameters<typeof realIsInCooldown>)),
+		);
+		countSentSinceRecoveryMock.mockImplementation(async (...args: unknown[]) =>
+			realCountSentSinceRecovery(...(args as Parameters<typeof realCountSentSinceRecovery>)),
+		);
+	}
+
+	/** Writes one delivered event into the history at an exact instant. */
+	async function seedSent(
+		db: Db,
+		alertId: string,
+		eventType: "down" | "up" | "degraded",
+		sentAt: number,
+	): Promise<void> {
+		await db.create(alertEvents, {
+			id: crypto.randomUUID(),
+			created_at: sentAt,
+			sent_at: sentAt,
+			alert_id: alertId,
+			monitor_id: "monitor-1",
+			event_type: eventType,
+			status: "sent",
+			error_message: null,
+			monitor_type: "http",
+			monitor_name: "Homepage",
+			snapshot: null,
+		});
+	}
+
+	/** Dispatches one event for `alert` and reports what came of it. */
+	async function dispatchOne(
+		db: Db,
+		alert: SelectAlert,
+		eventType: "down" | "up" | "degraded",
+	): Promise<{ delivered: number; status: unknown }> {
 		listForHttpMonitorMock.mockImplementation(async () => [alert]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 10);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
@@ -522,69 +580,88 @@ describe("dispatchAlerts — per-incident send cap", () => {
 			monitorId: "monitor-1",
 			monitorType: "http",
 			monitorName: "Homepage",
-			eventType: "down",
+			eventType,
 			snapshot: httpSnapshot,
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(countSentSinceRecoveryMock).toHaveBeenCalledWith(db, "alert-9", "monitor-1", "down", 10);
-		expect(transport.messages).toHaveLength(0);
-		expect(recordMock).toHaveBeenCalledTimes(1);
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("skipped_cap");
-		expect(call.error_message).toBeNull();
-		expect(call.snapshot).toEqual(httpSnapshot);
+		let call = recordMock.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+		return { delivered: transport.messages.length, status: call.status };
+	}
+
+	test("alerts immediately the first time a monitor is detected down", async () => {
+		let { db } = createTestDatabase();
+		useRealHistoryReads();
+		let now = Date.now();
+		let alert = makeAlert({ id: "alert-first", cooldown_minutes: 60 });
+		// A previous outage this alert already reported and saw recover, minutes ago: an
+		// hour-long cooldown must not hold back the news that it is down *again*.
+		await seedSent(db, alert.id, "down", now - 10 * 60_000);
+		await seedSent(db, alert.id, "up", now - 9 * 60_000);
+
+		expect(await dispatchOne(db, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
-	test("delivers while the incident is still below the cap", async () => {
-		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 9);
-		let transport = new MemoryTransport();
+	test("skips a repeat while it is still down until the hour has passed, then alerts again", async () => {
+		let now = Date.now();
+		let alert = makeAlert({ id: "alert-repeat", cooldown_minutes: 60 });
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(transport),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		let inside = createTestDatabase().db;
+		useRealHistoryReads();
+		await seedSent(inside, alert.id, "down", now - 30 * 60_000);
+		expect(await dispatchOne(inside, alert, "down")).toEqual({
+			delivered: 0,
+			status: "skipped_cooldown",
 		});
 
-		expect(transport.messages).toHaveLength(1);
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("sent");
+		let after = createTestDatabase().db;
+		await seedSent(after, alert.id, "down", now - 61 * 60_000);
+		expect(await dispatchOne(after, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
-	test("never caps a recovery, and doesn't even count for one", async () => {
+	test("alerts on recovery however long the outage lasted, with no ceiling to stop it", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 10);
-		let transport = new MemoryTransport();
+		useRealHistoryReads();
+		let now = Date.now();
+		let alert = makeAlert({ id: "alert-recovers", cooldown_minutes: 60 });
+		// Twelve hours of hourly notifications — more than the per-incident ceiling this
+		// policy replaced ever allowed — and the twelfth was a minute ago.
+		for (let hour = 12; hour >= 1; hour--) {
+			await seedSent(db, alert.id, "down", now - hour * 60 * 60_000);
+		}
+		await seedSent(db, alert.id, "down", now - 60_000);
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(transport),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "up",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		expect(await dispatchOne(db, alert, "up")).toEqual({ delivered: 1, status: "sent" });
+	});
+
+	test("an alert storing a cooldown of 0 still can't notify once per check", async () => {
+		let now = Date.now();
+		let alert = makeAlert({ id: "alert-zero", cooldown_minutes: 0 });
+
+		// The previous check, one minute ago: without the floor this is one email per check
+		// for the whole outage, which is what the removed ceiling used to prevent.
+		let perCheck = createTestDatabase().db;
+		useRealHistoryReads();
+		await seedSent(perCheck, alert.id, "down", now - 60_000);
+		expect(await dispatchOne(perCheck, alert, "down")).toEqual({
+			delivered: 0,
+			status: "skipped_cooldown",
 		});
 
-		expect(countSentSinceRecoveryMock).not.toHaveBeenCalled();
-		expect(transport.messages).toHaveLength(1);
+		// The floor is a floor, not the default: a row asking for the fastest cadence gets
+		// the fastest allowed one rather than being quietly moved to an hour.
+		let afterFloor = createTestDatabase().db;
+		await seedSent(afterFloor, alert.id, "down", now - 6 * 60_000);
+		expect(await dispatchOne(afterFloor, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
-	test("caps SSL reminders too, since they repeat without a recovery to end them", async () => {
+	test("repeats an SSL reminder on its cooldown, even though nothing ever recovers it", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 10);
+		useRealHistoryReads();
+		let now = Date.now();
+		let alert = makeAlert({ id: "alert-ssl", cooldown_minutes: 60 });
+		await seedSent(db, alert.id, "degraded", now - 30 * 60_000);
+		listForHttpMonitorMock.mockImplementation(async () => [alert]);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
@@ -606,21 +683,37 @@ describe("dispatchAlerts — per-incident send cap", () => {
 		});
 
 		expect(transport.messages).toHaveLength(0);
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("skipped_cap");
+		let call = recordMock.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+		expect(call.status).toBe("skipped_cooldown");
 	});
 });
 
 describe("dispatchAlerts — recovery reports what was suppressed", () => {
+	/**
+	 * Asserted on the webhook channel, which puts the pipeline's own `text` on the wire
+	 * verbatim. The email channel renders the same totals through a locale key instead, so
+	 * asserting there would be asserting the translation rather than the sentence this
+	 * pipeline writes — and the sentence is what changed: nothing is held back by a
+	 * per-incident limit any more, only by the alert's cooldown.
+	 */
 	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert({ id: "alert-11" })]);
+		listForHttpMonitorMock.mockImplementation(async () => [
+			makeAlert({
+				id: "alert-11",
+				config: {
+					strategy: "webhook",
+					config: { url: "https://hooks.example.com/uptime", secret: "" },
+				},
+			}),
+		]);
 		summarizeIncidentMock.mockImplementation(async () => ({ sent: 10, suppressed: 300 }));
-		let transport = new MemoryTransport();
+		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
-			mailer: makeMailer(transport),
+			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -631,7 +724,11 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		});
 
 		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
-		expect(transport.last?.text).toContain("10 sent, 300 suppressed");
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		let parsed = JSON.parse(init.body as string) as { message: string };
+		expect(parsed.message).toContain(
+			"Notifications for this incident: 10 sent, 300 held back by the alert's cooldown.",
+		);
 	});
 
 	test("leaves a recovery message alone when nothing was suppressed", async () => {

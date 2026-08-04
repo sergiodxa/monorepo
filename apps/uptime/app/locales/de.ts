@@ -581,8 +581,8 @@ export default {
 					body: "Das Timeout, der erwartete Status und der Schwellenwert für Beeinträchtigung werden alle von Ihnen gesetzt, eine Prüfung ist also nur nach Ihrer eigenen Definition langsam oder fehlgeschlagen.",
 				},
 				cooldown: {
-					label: "Abkühlzeit und eine Obergrenze pro Vorfall.",
-					body: "Jede Benachrichtigung hat eine Abkühlzeit, die Wiederholungen bremst, plus eine harte Obergrenze dafür, wie viele Meldungen sie für einen laufenden Vorfall sendet. Ein Monitor, der ausgefallen bleibt, schreibt Ihnen nicht endlos einmal pro Prüfung.",
+					label: "Wiederholungen haben Abstand, und eine Wiederherstellung kommt immer.",
+					body: "Die erste Benachrichtigung eines Vorfalls geht sofort raus. Solange ein Monitor ausgefallen bleibt, liegen Wiederholungen um die Abkühlzeit dieser Benachrichtigung auseinander — standardmäßig eine Stunde — sodass ein anhaltender Ausfall Sie weiter erinnert statt zu verstummen. Bei der Wiederherstellung erhalten Sie eine weitere Nachricht.",
 				},
 				recovery: {
 					label: "Wiederherstellungsmeldungen nur nach einem echten Fehler.",
@@ -1236,8 +1236,8 @@ export default {
 			preview: "{{monitor}} ist {{status}}",
 			heading: "{{monitor}} ist {{status}}",
 			action: "Dashboard öffnen",
-			incident:
-				"Benachrichtigungen für diesen Vorfall: {{sent}} gesendet, {{suppressed}} durch die Abkühlzeit und das Limit von {{cap}} pro Vorfall unterdrückt.",
+			incidentCooldown:
+				"Benachrichtigungen für diesen Vorfall: {{sent}} gesendet, {{suppressed}} durch die Abkühlzeit der Benachrichtigung zurückgehalten.",
 			footer:
 				"Sie erhalten diese E-Mail, weil eine der Benachrichtigungen Ihres Teams zu diesem Ereignis passt.",
 
@@ -2675,7 +2675,9 @@ export default {
 					},
 
 					cooldownMinutes: {
-						label: "Cooldown (Minuten, 0 = kein Cooldown)",
+						label: "Abkühlzeit (Minuten)",
+						description:
+							"Wie lange gewartet wird, bevor eine Benachrichtigung wiederholt wird, solange ein Monitor noch ausgefallen ist. Die erste Benachrichtigung eines Vorfalls geht immer sofort raus, und eine Wiederherstellung wird immer gesendet. Wiederholungen liegen niemals weniger als {{floor}} Minuten auseinander, was Sie hier auch eintragen.",
 					},
 
 					legends: {
@@ -2707,7 +2709,7 @@ export default {
 				},
 
 				cooldown: {
-					none: "Keiner",
+					none: "Schnellstmöglich",
 					minutes: "{{count}} Min.",
 					hours: "{{count}} Std.",
 				},

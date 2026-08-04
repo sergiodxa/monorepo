@@ -5,12 +5,24 @@ section:
   title: API Resources
   order: 5
 order: 6
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-04
 ---
 
 Alerts notify you when monitors detect issues. Each team can have up to 10 alerts with different notification strategies: email, webhook, Slack, or Discord.
 
 Sensitive data such as webhook URLs and secrets are never returned in API responses for security.
+
+## Repeat Behaviour
+
+`cooldownMinutes` controls how far apart _repeat_ notifications are spaced while a monitor stays broken. For one outage an alert notifies:
+
+1. **Immediately** on the first failing check. The first notification of an outage ignores `cooldownMinutes` entirely, so no value you set can delay it.
+2. **Again every `cooldownMinutes`** for as long as the monitor stays broken. Nothing bounds the total number of notifications one outage produces.
+3. **Once on recovery**, when `notifyOnRecovery` is `true`.
+
+Repeats are additionally floored at **five minutes**: however low `cooldownMinutes` is, repeats are never sent more often than once every five minutes. A `cooldownMinutes` of `0` therefore means "as often as allowed" (at most 12 notifications an hour), not one notification per check. The floor does not apply to the recovery notification, which is spaced only by the `cooldownMinutes` you set.
+
+Omitting `cooldownMinutes` defaults it to `60` — one hour — matching the default an alert created in the dashboard gets. Send `0` explicitly if you want repeats as often as the floor allows.
 
 ## GET /api/v1/alerts
 
@@ -140,13 +152,13 @@ Creates a new alert. The request body varies based on the notification strategy.
 
 ### Common Fields
 
-| Field              | Type    | Required | Description                                                  |
-| ------------------ | ------- | -------- | ------------------------------------------------------------ |
-| `name`             | string  | Yes      | Display name for the alert                                   |
-| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`               |
-| `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)    |
-| `cooldownMinutes`  | integer | No       | Minimum minutes between notifications, 0-1440 (default: `0`) |
-| `monitorId`        | string  | No       | Limit alert to a specific monitor                            |
+| Field              | Type    | Required | Description                                                                                                                                                                                                                       |
+| ------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`             | string  | Yes      | Display name for the alert                                                                                                                                                                                                        |
+| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`                                                                                                                                                                                    |
+| `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)                                                                                                                                                                         |
+| `cooldownMinutes`  | integer | No       | Minutes between repeat notifications while a monitor stays broken, 0-1440 (default: `60`; repeats are floored at 5 minutes, and the first notification of an outage is never delayed — see [Repeat Behaviour](#repeat-behaviour)) |
+| `monitorId`        | string  | No       | Limit alert to a specific monitor                                                                                                                                                                                                 |
 
 ### Strategy: Email
 
@@ -298,7 +310,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 1440,
-			"default": 0
+			"default": 60
 		},
 		"monitorId": {
 			"type": "string",
@@ -339,7 +351,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 1440,
-			"default": 0
+			"default": 60
 		},
 		"monitorId": {
 			"type": "string",
@@ -380,7 +392,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 1440,
-			"default": 0
+			"default": 60
 		},
 		"monitorId": {
 			"type": "string",
@@ -418,7 +430,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 1440,
-			"default": 0
+			"default": 60
 		},
 		"monitorId": {
 			"type": "string",

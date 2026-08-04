@@ -123,19 +123,24 @@ describe("CreateAlertSchema", () => {
 	});
 
 	/**
-	 * `cooldown_minutes` defaults to 15, not 0 (ADR-004). Zero is still a legal value a user
-	 * can choose, but it must not be what they get by accident: at 0 a down monitor on a
-	 * 1-minute interval emails every minute for as long as it stays down.
+	 * `cooldown_minutes` defaults to 60: an alert nobody configures repeats once an hour
+	 * while the monitor is still down, for as long as the outage lasts, so an hourly monitor
+	 * always alerts.
 	 */
 	test("defaults notify_on_recovery and cooldown_minutes when omitted", () => {
 		let result = s.parseSafe(CreateAlertSchema, baseFormData());
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.value.notify_on_recovery).toBe(false);
-			expect(result.value.cooldown_minutes).toBe(15);
+			expect(result.value.cooldown_minutes).toBe(60);
 		}
 	});
 
+	/**
+	 * 0 stays accepted rather than being raised to the dispatch-time floor, because the edit
+	 * form posts back what the row already stores and rows storing 0 exist. What it now
+	 * means is "as often as allowed"; `app/services/alerts.ts` decides that.
+	 */
 	test("still accepts an explicit cooldown of 0", () => {
 		let result = s.parseSafe(CreateAlertSchema, baseFormData({ cooldown_minutes: "0" }));
 		expect(result.success).toBe(true);

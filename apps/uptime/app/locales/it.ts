@@ -577,8 +577,8 @@ export default {
 					body: "Il timeout, lo stato atteso e la soglia di degrado li imposta Lei, quindi un controllo risulta lento o fallito solo secondo la definizione che gli ha dato.",
 				},
 				cooldown: {
-					label: "Attesa fra gli avvisi, e un tetto per incidente.",
-					body: "Ogni avviso ha un tempo di attesa che limita le ripetizioni, più un tetto massimo al numero di notifiche inviate per un singolo incidente in corso. Un monitor che resta non raggiungibile non Le scrive una volta per controllo all'infinito.",
+					label: "Le ripetizioni sono distanziate, e il ripristino arriva sempre.",
+					body: "Il primo avviso di un incidente parte immediatamente. Finché un monitor resta non raggiungibile, le ripetizioni sono distanziate dal periodo di attesa di quell'avviso — un'ora per impostazione predefinita — così un'interruzione prolungata continua ad avvisarla invece di ammutolirsi. Al ripristino riceve un ulteriore messaggio.",
 				},
 				recovery: {
 					label: "Avvisi di ripristino solo dopo un guasto reale.",
@@ -1235,8 +1235,8 @@ export default {
 			preview: "{{monitor}} è {{status}}",
 			heading: "{{monitor}} è {{status}}",
 			action: "Apri la dashboard",
-			incident:
-				"Notifiche per questo incidente: {{sent}} inviate, {{suppressed}} soppresse dal periodo di attesa e dal limite di {{cap}} per incidente.",
+			incidentCooldown:
+				"Notifiche per questo incidente: {{sent}} inviate, {{suppressed}} trattenute dal periodo di attesa dell'avviso.",
 			footer:
 				"Ha ricevuto questa email perché uno degli avvisi del suo team corrisponde a questo evento.",
 
@@ -2664,7 +2664,9 @@ export default {
 					},
 
 					cooldownMinutes: {
-						label: "Cooldown (minuti, 0 = nessun cooldown)",
+						label: "Periodo di attesa (minuti)",
+						description:
+							"Quanto attendere prima di ripetere un avviso mentre un monitor è ancora non raggiungibile. Il primo avviso di un incidente viene sempre inviato immediatamente, e il ripristino viene sempre inviato. Le ripetizioni non sono mai distanziate meno di {{floor}} minuti, qualunque valore imposti qui.",
 					},
 
 					legends: {
@@ -2696,7 +2698,7 @@ export default {
 				},
 
 				cooldown: {
-					none: "Nessuno",
+					none: "Il più rapido consentito",
 					minutes: "{{count}} min",
 					hours: "{{count}} ore",
 				},

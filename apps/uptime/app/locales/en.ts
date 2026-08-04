@@ -641,8 +641,8 @@ export default {
 					body: "The timeout, the expected status, and the degraded threshold are all yours to set, so a check is only slow or failed by the definition you gave it.",
 				},
 				cooldown: {
-					label: "Cooldown, and a ceiling per incident.",
-					body: "Each alert has a cooldown that throttles repeats, plus a hard ceiling on how many notifications it sends for one ongoing incident. A monitor that stays down does not mail you once per check forever.",
+					label: "Repeats are spaced, and a recovery always arrives.",
+					body: "The first alert of an incident goes out immediately. While a monitor stays down, repeats are spaced by the cooldown on that alert — an hour by default — so a lasting outage keeps reminding you instead of going quiet. When it recovers, you get one more message saying so.",
 				},
 				recovery: {
 					label: "Recovery notices only after a real failure.",
@@ -1292,8 +1292,8 @@ export default {
 			preview: "{{monitor}} is {{status}}",
 			heading: "{{monitor}} is {{status}}",
 			action: "Open the dashboard",
-			incident:
-				"Notifications for this incident: {{sent}} sent, {{suppressed}} suppressed by cooldown and the {{cap}}-per-incident limit.",
+			incidentCooldown:
+				"Notifications for this incident: {{sent}} sent, {{suppressed}} held back by the alert's cooldown.",
 			footer: "You received this email because one of your team's alerts matched this event.",
 
 			status: {
@@ -2710,7 +2710,9 @@ export default {
 					},
 
 					cooldownMinutes: {
-						label: "Cooldown (minutes, 0 = no cooldown)",
+						label: "Cooldown (minutes)",
+						description:
+							"How long to wait before repeating an alert while a monitor is still down. The first alert of an incident is always sent immediately, and a recovery is always sent. Repeats are never spaced closer than {{floor}} minutes, whatever you set here.",
 					},
 
 					legends: {
@@ -2742,7 +2744,8 @@ export default {
 				},
 
 				cooldown: {
-					none: "None",
+					// Not "None": a repeat is spaced by a floor even when the team configured 0.
+					none: "Fastest allowed",
 					minutes: "{{count}} min",
 					hours: "{{count}} hr",
 				},

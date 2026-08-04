@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 6
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-04
 ---
 
 When a monitor detects an issue—a website goes down, an API returns errors, a cron job misses its schedule—alerts deliver that information to the right people through the right channels.
@@ -22,6 +22,16 @@ The flow is straightforward:
 4. The alert event is recorded in your alert history
 
 You can link alerts to specific monitors or configure them to trigger for any monitor on your team. This flexibility lets you set up focused alerts for critical services while maintaining a catch-all alert for everything else.
+
+### When an Alert Fires During an Outage
+
+For any single outage, an alert follows the same three-part pattern:
+
+1. **Immediately, as soon as the monitor is detected down.** The first notification of an outage is never held back—no confirming second check, and no cooldown applies to it. Whatever cooldown you configure, the news that something just broke reaches you on the first failing check.
+2. **Again, each time the cooldown expires while the monitor is still down.** An ongoing outage keeps reminding you at your configured interval for as long as it lasts. There is no limit on how many notifications one outage can produce: a monitor that stays down for three days on a one-hour cooldown sends roughly one notification an hour for three days.
+3. **Once more when it recovers**, if "notify on recovery" is enabled.
+
+Between those, failing checks that fall inside the cooldown window are recorded in your alert history as skipped rather than sent, and the recovery notification reports how many were held back—so a quiet incident never looks like dropped alerts.
 
 ## Alert Channels
 
@@ -131,19 +141,25 @@ Recovery notifications are strongly recommended for most alert configurations.
 
 ### Cooldown Period
 
-Cooldown periods prevent alert fatigue by limiting how frequently an alert can fire. After an alert triggers, it won't trigger again until the cooldown period expires.
+The cooldown is how far apart repeat notifications are spaced while a monitor stays broken. It does not delay the first notification of an outage—that one always goes out immediately—it only decides how often the outage keeps reminding you afterwards.
 
-Available cooldown options:
+Cooldown is set per alert, in minutes, anywhere from 0 to 1440 (24 hours). When you don't choose one, Uptime uses **60 minutes**: an ongoing outage reports itself once an hour, which is frequent enough to stay in front of you and quiet enough that a day-long outage is 24 notifications rather than hundreds.
 
-- **None** — Alert on every status change (no cooldown)
-- **5 minutes** — Good for critical services where you want frequent updates
-- **15 minutes** — A reasonable default for most services
-- **30 minutes** — Reduces noise for less critical services
-- **1 hour** — For services where hourly updates are sufficient
-- **2 hours** — Minimizes interruptions for low-priority monitors
-- **Custom** — Set any duration that fits your needs
+Common choices:
 
-Cooldowns are especially valuable when services are "flapping"—rapidly alternating between up and down states. Without a cooldown, you might receive dozens of alerts in minutes. With a 15-minute cooldown, you get one alert and then silence until the situation stabilizes or the cooldown expires.
+- **5 minutes** — Critical services where you want frequent updates during an outage
+- **15 minutes** — Tighter than the default, for services with short recovery targets
+- **60 minutes** — The default; hourly reminders for as long as the outage lasts
+- **120 minutes or more** — Minimizes interruptions for low-priority monitors
+- **0** — As often as allowed, for an alert you want to hear from on nearly every failing check
+
+Repeat notifications are never sent more often than **once every five minutes**, whatever the cooldown says. That floor is why a cooldown of `0` means "as often as allowed" rather than "one notification per check"—the fastest monitor interval is 60 seconds, so a `0` cooldown produces at most 12 notifications an hour instead of 60.
+
+Cooldowns are especially valuable when services are "flapping"—rapidly alternating between up and down states. With a 60-minute cooldown, you get one notification and then silence for an hour, however many times the monitor bounces in between.
+
+Recovery notifications are spaced by the cooldown you configured, and the five-minute floor does not apply to them. Setting a very low cooldown on a flapping monitor can therefore produce a "recovered" message per flap; raising the cooldown is what stops that.
+
+Changing an alert's cooldown only affects that alert. Alerts you configured before the one-hour default existed keep the cooldown you gave them, including `0`.
 
 ### Linked Monitor
 
@@ -168,7 +184,9 @@ Every time an alert fires (or would fire but is in cooldown), Uptime records an 
 - **Monitor** — Which monitor triggered the alert
 - **Event type** — Down, up, degraded, or recovery
 - **Channel** — Which notification channel was used
-- **Status** — Whether the notification was sent successfully
+- **Status** — Whether the notification was sent, skipped because the cooldown had not expired, or failed
+
+Older events may show a "Skipped (Repeat Limit)" status. That came from a previous policy that stopped notifying after a fixed number of notifications per incident; nothing produces it any more, and the label is kept only so historical events still read correctly.
 
 Alert history helps you:
 
@@ -183,9 +201,9 @@ Events are retained according to your plan's data retention policy.
 
 ### Use Cooldowns to Prevent Alert Fatigue
 
-Nothing burns out an on-call engineer faster than constant notifications. If a service is flapping, a 15-minute cooldown means you'll know something is wrong without being bombarded every 60 seconds.
+Nothing burns out an on-call engineer faster than constant notifications. You will always hear about a new outage on the first failing check, so the cooldown is purely about how insistently the same outage repeats itself.
 
-Start with a 15-minute cooldown for most alerts and adjust based on how critical the service is and how quickly you need to respond.
+Start with the 60-minute default and shorten it for the services where an hour of silence is too long. Lengthening it never costs you the initial notification, and shortening it never gets you more than one notification every five minutes.
 
 ### Enable Recovery Notifications
 

@@ -15,6 +15,15 @@ import * as f from "remix/data-schema/form-data";
 
 const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord"] as const;
 
+/**
+ * Minutes a new alert waits before repeating a notification during an ongoing outage.
+ *
+ * Named rather than written twice: the create form prefills with it, and a form offering a
+ * different default from the one the schema applies to the same submission is a difference
+ * nothing would report.
+ */
+export const DEFAULT_COOLDOWN_MINUTES = 60;
+
 const isEmail = checks.email().check;
 const isUrl = checks.url().check;
 
@@ -24,8 +33,18 @@ const alertFields = {
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	monitor_id: f.field(s.optional(s.string())),
 	notify_on_recovery: f.field(s.defaulted(coerce.boolean(), false)),
-	/** 0 is legal (notify on every check) but 15 is the default — see ADR-004. */
-	cooldown_minutes: f.field(s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), 15)),
+	/**
+	 * Minutes an ongoing outage stays quiet between notifications; 60 by default, so an
+	 * alert nobody configures repeats once an hour for as long as the outage lasts.
+	 *
+	 * The minimum stays 0 rather than being raised to the dispatch-time floor: the edit form
+	 * is populated from the stored row, so a validator that rejected the values already in
+	 * the database would make those alerts unsaveable. What a value below the floor buys is
+	 * "as often as allowed", and the floor in `app/services/alerts.ts` is what decides that.
+	 */
+	cooldown_minutes: f.field(
+		s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), DEFAULT_COOLDOWN_MINUTES),
+	),
 	email_to: f.field(s.optional(s.string())),
 	email_subject_prefix: f.field(s.optional(s.string())),
 	webhook_url: f.field(s.optional(s.string())),

@@ -5,9 +5,9 @@
  * every qualifying event it: skips entirely when an active, suppressing maintenance
  * window covers the monitor; otherwise resolves the applicable alerts
  * (monitor-specific + team-wide for HTTP, team-wide only for other monitor types —
- * see `app/data/alert.ts`), skips any alert still in cooldown or already at the
- * per-incident send cap, delivers the rest (email/webhook/Slack/Discord), and records
- * every outcome to `alert_events`.
+ * see `app/data/alert.ts`), skips any repeat notification still inside its cooldown,
+ * delivers the rest (email/webhook/Slack/Discord), and records every outcome to
+ * `alert_events`.
  * Cooldown and recovery notifications, and a real HMAC-SHA256 signature on webhook
  * deliveries, are enforced uniformly for every monitor type.
  *
@@ -47,12 +47,43 @@ import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 /**
- * Ceiling on the notifications one alert sends for the same monitor and event type in a
- * single incident (ADR-004). Cooldown throttles the rate but doesn't bound the total, and
- * `cooldown_minutes: 0` stays a legal choice — without a ceiling, a down monitor checked
- * every minute is one email per minute for as long as the outage lasts.
+ * Floor on the cooldown a *repeat* notification is spaced by, in minutes.
+ *
+ * This replaces the per-incident send ceiling this constant's slot used to hold (10 sends per
+ * incident, ADR-004). The ceiling existed for one reason: `cooldown_minutes: 0` is a legal
+ * stored value, and without a bound a down monitor checked every minute is one email per
+ * minute for as long as the outage lasts. But the ceiling bounded the wrong axis. The policy
+ * is that an ongoing outage keeps alerting at its configured cadence for as long as it lasts,
+ * and a ceiling of 10 silences an hourly alert after ten hours of downtime — exactly the
+ * outage worth being told about. So the total is deliberately unbounded now, and the rate is
+ * bounded twice: by the alert's own `cooldown_minutes`, and by this floor underneath it.
+ *
+ * A floor was chosen over the alternatives because it is the only one that reaches the rows
+ * that need reaching. Raising the validator's minimum above 0 would leave every row already
+ * storing 0 spamming, and would reject the values the edit form loads from those same rows.
+ * Treating 0 as a sentinel for the default would fix 0 and leave `1` — also legal, also one
+ * email per check on a 1-minute monitor — untouched. Flooring the effective value covers
+ * stored rows, form-created rows, and API-created rows at once, honours every configured
+ * value at or above it, and needs no data migration.
+ *
+ * Five minutes: the fastest check this app schedules is every 60 seconds, so any floor above
+ * one minute makes "one notification per check" unrepresentable, and five keeps the worst
+ * case at 12 notifications an hour — the same order of magnitude the old ceiling allowed per
+ * incident, without ever going silent.
+ *
+ * It applies to repeats only. The first notification of an incident has no earlier send to be
+ * spaced from and is never suppressed, so no floor can delay it, and a recovery is
+ * edge-triggered and keeps the alert's own cooldown as its only gate.
  */
-const MAX_CONSECUTIVE_SENDS = 10;
+export const MIN_REPEAT_COOLDOWN_MINUTES = 5;
+
+/**
+ * The cooldown a repeat notification for `alert` is actually spaced by: what the team
+ * configured, or {@link MIN_REPEAT_COOLDOWN_MINUTES} when that is lower.
+ */
+function repeatCooldownMinutes(alert: SelectAlert): number {
+	return Math.max(alert.cooldown_minutes, MIN_REPEAT_COOLDOWN_MINUTES);
+}
 
 /**
  * Builds an absolute dashboard link from a route's relative `href()` path. Kept as its own
@@ -127,40 +158,59 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 type SuppressionReason = Extract<SelectAlertEvent["status"], `skipped_${string}`>;
 
 /**
- * Why this alert must not be delivered right now, or `null` to deliver it. Both current
- * reasons bound repetition on different axes: cooldown bounds the rate, the cap bounds the
- * total — a `cooldown_minutes` of 0 is legal, and a level-triggered down alert would
- * otherwise repeat for as long as the outage lasts (ADR-004). A recovery is edge-triggered
- * and is what ends the incident the cap counts against, so it's never capped itself.
+ * Why this alert must not be delivered right now, or `null` to deliver it. The one reason
+ * bounds the rate of a level-triggered repeat, and nothing bounds the total: an outage that
+ * lasts a day keeps saying so at its configured cadence.
  *
- * A third reason belongs here as another branch: add the `skipped_*` value to
+ * The three cases the policy is written in terms of are all here:
+ *
+ * - The **first** notification of an incident goes out immediately. It's recognised by having
+ *   no `sent` event since the last recovery, which is what makes it structurally impossible
+ *   for a cooldown — the alert's own, or {@link MIN_REPEAT_COOLDOWN_MINUTES} — to delay the
+ *   news that something just went down, however long that cooldown is.
+ * - A **repeat** while it's still down waits out {@link repeatCooldownMinutes}, then fires
+ *   again, and again, for as long as the outage lasts.
+ * - A **recovery** is edge-triggered: it's only dispatched on a genuine transition back to
+ *   healthy, and it ends the incident. It keeps the alert's configured cooldown as its only
+ *   gate, unfloored, because that cooldown is all that stands between a flapping monitor and
+ *   a "recovered" email per flap.
+ *
+ * Another reason belongs here as another branch: add the `skipped_*` value to
  * `alert_events.status` and return it, and recording, toning, and labelling it follow.
  */
 async function suppressionReason(
 	alert: SelectAlert,
 	params: DispatchAlertsParams,
 ): Promise<SuppressionReason | null> {
+	if (params.eventType === "up") {
+		let recentRecovery = await AlertEvent.isInCooldown(
+			params.db,
+			alert.id,
+			params.monitorId,
+			params.eventType,
+			alert.cooldown_minutes,
+		);
+		return recentRecovery ? "skipped_cooldown" : null;
+	}
+
+	// Bounded at 1: this only asks whether the incident has been notified at all yet.
+	let alreadyNotified = await AlertEvent.countSentSinceRecovery(
+		params.db,
+		alert.id,
+		params.monitorId,
+		params.eventType,
+		1,
+	);
+	if (alreadyNotified === 0) return null;
+
 	let inCooldown = await AlertEvent.isInCooldown(
 		params.db,
 		alert.id,
 		params.monitorId,
 		params.eventType,
-		alert.cooldown_minutes,
+		repeatCooldownMinutes(alert),
 	);
-	if (inCooldown) return "skipped_cooldown";
-
-	if (params.eventType === "up") return null;
-
-	let sent = await AlertEvent.countSentSinceRecovery(
-		params.db,
-		alert.id,
-		params.monitorId,
-		params.eventType,
-		MAX_CONSECUTIVE_SENDS,
-	);
-	if (sent >= MAX_CONSECUTIVE_SENDS) return "skipped_cap";
-
-	return null;
+	return inCooldown ? "skipped_cooldown" : null;
 }
 
 async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Promise<void> {
@@ -186,12 +236,12 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 
 	let message = buildMessage(params);
 
-	/** Without this a capped incident is indistinguishable from alerts having been dropped. */
+	/** Without this a throttled incident is indistinguishable from alerts having been dropped. */
 	if (params.eventType === "up") {
 		let summary = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
 		if (summary.suppressed > 0) {
-			message.incident = { ...summary, cap: MAX_CONSECUTIVE_SENDS };
-			message.text += `\n\nNotifications for this incident: ${summary.sent} sent, ${summary.suppressed} suppressed by cooldown and the ${MAX_CONSECUTIVE_SENDS}-per-incident limit.`;
+			message.incident = summary;
+			message.text += `\n\nNotifications for this incident: ${summary.sent} sent, ${summary.suppressed} held back by the alert's cooldown.`;
 		}
 	}
 
@@ -618,9 +668,11 @@ export async function notifyCronJobResult(
  * Unlike the other `notify*` helpers, this isn't edge-triggered — it fires every day
  * {@link shouldAlertOnSslStatus} says to, matching `docs/ssl-monitoring.md`'s "alerts
  * happen around key warning thresholds... and again on expiry" (repeated reminders,
- * not a one-time transition). Per-alert cooldown throttles the repetition and
- * {@link MAX_CONSECUTIVE_SENDS} bounds it — a certificate nobody renews is otherwise one
- * email a day forever. SSL never dispatches an `up` event, so nothing resets that count.
+ * not a one-time transition). Per-alert cooldown, floored by
+ * {@link MIN_REPEAT_COOLDOWN_MINUTES}, throttles the repetition; nothing bounds the total, so
+ * a certificate nobody renews is one email a day until it's renewed or the alert is turned
+ * off. SSL never dispatches an `up` event, so an SSL reminder's "incident" is every reminder
+ * that alert has ever sent for that monitor, and only the very first one skipped the cooldown.
  */
 export async function notifySslResult(
 	db: Database,

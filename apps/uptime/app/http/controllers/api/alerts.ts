@@ -23,6 +23,7 @@ import type { AlertConfig, SelectAlert } from "~/database/schema";
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/http/validators/alert";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -64,7 +65,18 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
 const commonAlertFields = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	notifyOnRecovery: s.defaulted(s.boolean(), true),
-	cooldownMinutes: s.defaulted(s.number().pipe(checks.min(0), checks.max(1440)), 0),
+	/**
+	 * Defaulted to the same {@link DEFAULT_COOLDOWN_MINUTES} the form applies, not to `0`.
+	 *
+	 * It was `0`, which made an alert created through the API repeat as fast as dispatch allows
+	 * while one created through the form waited — the same resource behaving differently
+	 * depending on which surface made it, and the noisier of the two being the one nobody
+	 * chose. A caller who wants that can still send `0` explicitly.
+	 */
+	cooldownMinutes: s.defaulted(
+		s.number().pipe(checks.min(0), checks.max(1440)),
+		DEFAULT_COOLDOWN_MINUTES,
+	),
 	monitorId: s.optional(s.string()),
 };
 

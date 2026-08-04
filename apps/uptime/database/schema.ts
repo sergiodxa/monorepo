@@ -487,10 +487,14 @@ export const alerts = table({
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		notify_on_recovery: c.boolean().default(true),
-		// 0 is still legal (notify on every check) but is no longer the default: an
-		// unthrottled alert on a 1-minute monitor is one email per minute for as long as
-		// the outage lasts (ADR-004).
-		cooldown_minutes: c.integer().default(15),
+		// How long an ongoing outage stays quiet between notifications. An hour by
+		// default, so a monitor that is still down alerts again once an hour for as long
+		// as it lasts, and an hourly monitor always alerts. Rows created before this
+		// default keep whatever they stored — including `0`, which is still legal here
+		// and is floored at dispatch time rather than rewritten (see
+		// `app/services/alerts.ts`), because an unthrottled alert on a 1-minute monitor
+		// would otherwise be one email per minute for the whole outage.
+		cooldown_minutes: c.integer().default(60),
 		config: c.json() as ColumnBuilder<AlertConfig>,
 	},
 });
@@ -535,6 +539,11 @@ export type AlertEventSnapshot =
  * value set is a real union rather than `string` — the alert pipeline and the history view
  * both branch on it. Every reason an alert was recorded without being delivered is named
  * `skipped_*`, which is what lets both of them treat suppressions as a group.
+ *
+ * `skipped_cap` is no longer produced — the per-incident send ceiling it recorded is gone,
+ * see `app/services/alerts.ts` — but it stays in the union because rows written while the
+ * ceiling existed still carry it, and dropping the value would make that history unreadable
+ * by everything that branches on this column.
  */
 export const alertEventStatuses = ["sent", "skipped_cooldown", "skipped_cap", "failed"] as const;
 

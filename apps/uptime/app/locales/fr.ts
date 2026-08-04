@@ -581,8 +581,8 @@ export default {
 					body: "Le délai d'attente, le statut attendu et le seuil de dégradation sont tous à vous de définir : une vérification n'est lente ou en échec que selon la définition que vous avez donnée.",
 				},
 				cooldown: {
-					label: "Un délai de carence, et un plafond par incident.",
-					body: "Chaque alerte a un délai de carence qui limite les répétitions, plus un plafond strict sur le nombre de notifications envoyées pour un même incident en cours. Un moniteur qui reste hors ligne ne vous écrit pas une fois par vérification indéfiniment.",
+					label: "Les répétitions sont espacées, et un rétablissement arrive toujours.",
+					body: "La première alerte d'un incident part immédiatement. Tant qu'un moniteur reste en panne, les répétitions sont espacées par le délai d'attente de cette alerte — une heure par défaut — de sorte qu'une panne durable continue de vous relancer au lieu de se taire. Au rétablissement, vous recevez un message de plus.",
 				},
 				recovery: {
 					label: "Des avis de rétablissement seulement après une vraie panne.",
@@ -1243,8 +1243,8 @@ export default {
 			preview: "{{monitor}} est {{status}}",
 			heading: "{{monitor}} est {{status}}",
 			action: "Ouvrir le tableau de bord",
-			incident:
-				"Notifications pour cet incident : {{sent}} envoyées, {{suppressed}} supprimées par le délai d'attente et la limite de {{cap}} par incident.",
+			incidentCooldown:
+				"Notifications pour cet incident : {{sent}} envoyées, {{suppressed}} retenues par le délai d'attente de l'alerte.",
 			footer:
 				"Vous avez reçu cet e-mail parce qu'une des alertes de votre équipe correspond à cet événement.",
 
@@ -2677,7 +2677,9 @@ export default {
 					},
 
 					cooldownMinutes: {
-						label: "Délai (minutes, 0 = aucun délai)",
+						label: "Délai d'attente (minutes)",
+						description:
+							"Combien de temps attendre avant de répéter une alerte pendant qu'un moniteur est toujours en panne. La première alerte d'un incident part toujours immédiatement, et un rétablissement est toujours envoyé. Les répétitions ne sont jamais espacées de moins de {{floor}} minutes, quelle que soit la valeur saisie ici.",
 					},
 
 					legends: {
@@ -2709,7 +2711,7 @@ export default {
 				},
 
 				cooldown: {
-					none: "Aucun",
+					none: "Au plus vite",
 					minutes: "{{count}} min",
 					hours: "{{count}} h",
 				},

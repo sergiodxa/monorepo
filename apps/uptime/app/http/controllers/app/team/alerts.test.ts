@@ -146,7 +146,9 @@ describe("alerts", () => {
 		expect(body).toContain("Team-wide");
 		expect(body).toContain("Webhook");
 		expect(body).toContain("Yes");
-		expect(body).toContain("None");
+		// A stored cooldown of 0 reads as the fastest repeat allowed, not as "None": repeats are
+		// floored at dispatch, so no alert notifies once per check however it is configured.
+		expect(body).toContain("Fastest allowed");
 	});
 
 	test("resolves a monitor-scoped alert's monitor name", async () => {

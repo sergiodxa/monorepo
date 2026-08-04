@@ -23,6 +23,8 @@ import { fontSize } from "@pkg/u/typography";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/http/validators/alert";
+import { MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/services/alerts";
 import Field from "~/resources/components/field";
 
 namespace AlertFormFields {
@@ -158,13 +160,26 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 					{t("notifyOnRecovery.label")}
 				</Switch>
 
-				<Field label={t("cooldownMinutes.label")}>
+				<Field
+					label={t("cooldownMinutes.label")}
+					description={t("cooldownMinutes.description", {
+						floor: MIN_REPEAT_COOLDOWN_MINUTES,
+					})}
+				>
 					<Input
 						type="number"
 						name="cooldown_minutes"
+						/**
+						 * `min` stays 0 even though a repeat is never spaced closer than
+						 * {@link MIN_REPEAT_COOLDOWN_MINUTES}. Raising it would make every alert already
+						 * storing a smaller value unsaveable — the field is prefilled from the row, so
+						 * the form would refuse to submit until somebody noticed why. The floor is
+						 * enforced at dispatch, where it reaches stored rows too, and the description
+						 * says so.
+						 */
 						min={0}
 						max={1440}
-						defaultValue={alert?.cooldown_minutes ?? 15}
+						defaultValue={alert?.cooldown_minutes ?? DEFAULT_COOLDOWN_MINUTES}
 					/>
 				</Field>
 			</>

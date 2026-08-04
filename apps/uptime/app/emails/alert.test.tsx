@@ -10,6 +10,8 @@
 
 import { describe, expect, test } from "bun:test";
 
+import type { TFunction } from "@pkg/i18n";
+
 import { render } from "@pkg/mail";
 
 import type { AlertEventSnapshot } from "~/database/schema";
@@ -84,15 +86,27 @@ describe("AlertEmail", () => {
 		expect(text).toContain("https://uptime.test/app/team-1/monitors/monitor-1");
 	});
 
-	test("reports the incident totals on a recovery that suppressed something", async () => {
-		let email = await makeEmail({
-			eventType: "up",
-			incident: { sent: 10, suppressed: 300, cap: 10 },
+	/**
+	 * Asserted as the key the email asks for, with its interpolations, rather than as
+	 * rendered copy: the totals moved to a key of their own when the per-incident ceiling
+	 * was removed, because the old key's every translation names that ceiling. Written this
+	 * way the test states the contract the locale files have to satisfy, and keeps stating
+	 * it once they do.
+	 */
+	test("reports the incident totals on a recovery that held notifications back", async () => {
+		let asked: { key: string; options: unknown }[] = [];
+		let t = ((key: string, options?: unknown) => {
+			asked.push({ key, options });
+			return key;
+		}) as unknown as TFunction;
+		let email = await makeEmail({ eventType: "up", incident: { sent: 10, suppressed: 300 }, t });
+
+		await render(email.body());
+
+		expect(asked).toContainEqual({
+			key: "emails.alert.incidentCooldown",
+			options: { sent: 10, suppressed: 300 },
 		});
-
-		let { text } = await render(email.body());
-
-		expect(text).toContain("10 sent, 300 suppressed");
 	});
 
 	test("says nothing about an incident when there is nothing to report", async () => {

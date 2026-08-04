@@ -63,15 +63,18 @@ function snapshotDateTime(iso: string | null, locale: string, fallback: string):
 export namespace AlertEmail {
 	/**
 	 * What an incident cost in notifications, reported only on the recovery that ends
-	 * it. Without it a capped incident is indistinguishable from alerts being dropped.
+	 * it. Without it a throttled incident is indistinguishable from alerts being dropped.
 	 */
 	export interface Incident {
 		/** Notifications actually delivered during the incident. */
 		sent: number;
-		/** Notifications withheld by cooldown or by the per-incident cap. */
+		/**
+		 * Notifications the alert's cooldown held back. There is no longer a ceiling on how
+		 * many an incident may send, so cooldown is the only thing this counts — the totals
+		 * of an incident that carries `skipped_cap` events from before the ceiling was
+		 * removed are reported the same way, since both were withheld to space out repeats.
+		 */
 		suppressed: number;
-		/** The per-incident ceiling that withheld them. */
-		cap: number;
 	}
 
 	/** Everything the alert email needs, already resolved by the dispatch pipeline. */
@@ -155,10 +158,14 @@ export class AlertEmail implements Email {
 				<Email.Button href={dashboardUrl}>{t("emails.alert.action")}</Email.Button>
 				{incident ? (
 					<Email.Text muted>
-						{t("emails.alert.incident", {
+						{/*
+						 * A key of its own rather than a reworded `emails.alert.incident`: that one
+						 * interpolates the per-incident ceiling that no longer exists, and every
+						 * translation of it names the ceiling too.
+						 */}
+						{t("emails.alert.incidentCooldown", {
 							sent: incident.sent,
 							suppressed: incident.suppressed,
-							cap: incident.cap,
 						})}
 					</Email.Text>
 				) : null}

@@ -1,7 +1,8 @@
 /**
  * Data-access model for alert delivery history (`alert_events`): recording outcomes,
  * the cooldown check `app/services/alerts.ts` uses to decide whether an alert may fire
- * again yet, and the per-incident send count that bounds how many times it ever can.
+ * again yet, and the per-incident send count that tells it whether the notification it is
+ * about to make is the incident's first one (which is never held back) or a repeat.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -79,10 +80,12 @@ export default class AlertEvent {
 
 	/**
 	 * How many notifications `alertId` has already sent for `monitorId`+`eventType` in the
-	 * current incident — the `sent` events after the pair's last recovery.
+	 * current incident — the `sent` events after the pair's last recovery. The dispatch
+	 * pipeline asks for at most one, since all it needs to know is whether the incident has
+	 * been notified at all yet; a `0` is what makes a notification the incident's first.
 	 *
 	 * Counted through a `limit`-bounded read instead of `COUNT(*)`, because the caller only
-	 * needs to know whether a ceiling is reached: both statements seek into
+	 * needs to know whether a threshold is reached: both statements seek into
 	 * `alert_events_alert_monitor_event_sent_idx` and neither one reads the whole incident.
 	 */
 	static async countSentSinceRecovery(
@@ -111,8 +114,12 @@ export default class AlertEvent {
 	/**
 	 * Delivery totals for the incident `alertId` is about to report a recovery for: every
 	 * non-recovery event after the pair's previous recovery, split into the ones that were
-	 * notified and the ones cooldown or the per-incident cap held back. The recovery email
-	 * reports both, so a capped incident doesn't look like alerts were dropped.
+	 * notified and the ones cooldown held back. The recovery email reports both, so a
+	 * throttled incident doesn't look like alerts were dropped.
+	 *
+	 * `skipped_cap` still counts as suppressed even though nothing produces it any more: an
+	 * incident that started before the per-incident ceiling was removed can carry those rows,
+	 * and they were withheld for the same reason — spacing out repeats.
 	 */
 	static async summarizeIncident(
 		db: Database,
