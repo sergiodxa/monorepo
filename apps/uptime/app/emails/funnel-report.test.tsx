@@ -35,6 +35,7 @@ const PAID: FunnelReportEmail.Conversion = {
 	leadCreatedAt: new Date("2026-07-26T09:00:00.000Z"),
 	signedUpAt: new Date("2026-07-31T09:00:00.000Z"),
 	paidAt: new Date("2026-08-01T09:00:00.000Z"),
+	attribution: "outreach/agencies-august → /for/agencies",
 };
 
 /** A signup that has not paid. */
@@ -45,6 +46,8 @@ const FREE: FunnelReportEmail.Conversion = {
 	leadCreatedAt: new Date("2026-07-30T09:00:00.000Z"),
 	signedUpAt: new Date("2026-08-01T09:00:00.000Z"),
 	paidAt: null,
+	// The ordinary case for a session that never carried a campaign, printed as "unknown".
+	attribution: null,
 };
 
 function makeEmail(overrides: Partial<FunnelReportEmail.Data> = {}) {

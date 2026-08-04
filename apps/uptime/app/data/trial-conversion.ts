@@ -39,6 +39,9 @@ const COLUMNS = [
 	"emails_sent",
 	"watch_count",
 	"urls",
+	"landing_path",
+	"campaign_source",
+	"campaign_name",
 	"signed_up_at",
 	"paid_at",
 ] as const;
@@ -57,6 +60,21 @@ export interface TrialSignup {
 	watchCount: number;
 	/** When this sign-in happened. */
 	signedUpAt: number;
+	/**
+	 * Where they first arrived, when the session still carried it.
+	 *
+	 * Absent is the expected case rather than a fault: first touch rides in a session cookie,
+	 * so anyone who blocks it or signs in from a new session has none, and it must be recorded
+	 * as unknown rather than defaulted to anything.
+	 */
+	attribution?: TrialSignupAttribution;
+}
+
+/** The first-touch fields a signup can carry, as they are stored. */
+export interface TrialSignupAttribution {
+	landingPath: string | null;
+	source: string | null;
+	campaign: string | null;
 }
 
 /**
@@ -108,8 +126,9 @@ export default class TrialConversion {
 		let result = await db.exec(
 			`INSERT INTO ${getTableName(trialConversions)}
 			        (id, created_at, updated_at, owner_id, lead_created_at, emails_sent,
-			         watch_count, urls, signed_up_at, paid_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+			         watch_count, urls, landing_path, campaign_source, campaign_name,
+			         signed_up_at, paid_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
 			 ON CONFLICT (owner_id) DO NOTHING`,
 			[
 				generateUUID(),
@@ -120,6 +139,9 @@ export default class TrialConversion {
 				signup.emailsSent,
 				signup.watchCount,
 				JSON.stringify(signup.urls),
+				signup.attribution?.landingPath ?? null,
+				signup.attribution?.source ?? null,
+				signup.attribution?.campaign ?? null,
 				signup.signedUpAt,
 			],
 		);

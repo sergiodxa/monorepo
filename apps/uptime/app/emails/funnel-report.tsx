@@ -55,6 +55,15 @@ export namespace FunnelReportEmail {
 		signedUpAt: Date;
 		/** When their first payment landed, or `null` for a free signup. */
 		paidAt: Date | null;
+		/**
+		 * Where they first arrived, or `null` when the session never carried it.
+		 *
+		 * The whole reason to record it: without this the report says a conversion happened and
+		 * cannot say which outreach link produced it, which is the one question founder-led sales
+		 * needs answered. Printed as "unknown" rather than folded into a direct-traffic bucket,
+		 * because a blocked cookie and a direct visit are not the same fact.
+		 */
+		attribution: string | null;
 	}
 
 	/** Everything the report shows; all of it already counted by the job. */
@@ -107,6 +116,7 @@ function ConversionSection(handle: Handle<ConversionSection.Props>) {
 			},
 			{ label: "Emails received", value: String(conversion.emailsSent) },
 			{ label: "URLs tried", value: `${conversion.urls.length} (${conversion.watchCount} tries)` },
+			{ label: "Came from", value: conversion.attribution ?? "unknown" },
 		];
 
 		if (conversion.paidAt) {

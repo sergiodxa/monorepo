@@ -28,14 +28,17 @@ import { getContext } from "remix/async-context-middleware";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
+import { Session } from "remix/session";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
+import type { TrialAttribution } from "~/app/http/middleware/attribution";
 
 import { createAuthProvider } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import Customer from "~/app/data/customer";
 import Team from "~/app/data/team";
 import { returnTo, safeReturnTo } from "~/app/http/cookies";
+import { TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
 import { login, setIdToken } from "~/app/http/middleware/auth";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
@@ -166,6 +169,16 @@ export default createController(routes.auth, {
 					email: idToken.email,
 					teamId: team.id,
 					authorId: idToken.subject,
+					/**
+					 * Read here rather than inside the service, because this is the last request that
+					 * still has the anonymous session the record was written into: `attribution`
+					 * captured it on whichever page they first landed on, and after this redirect it
+					 * has served its purpose. Left in the session rather than unset — a
+					 * repeat sign-in finds the conflict and writes nothing, so there is nothing to
+					 * protect against, and clearing it would lose the attribution of somebody whose
+					 * first sign-in raced a second tab.
+					 */
+					attribution: ctx.get(Session)?.get(TRIAL_ATTRIBUTION) as TrialAttribution | undefined,
 				});
 
 				login({

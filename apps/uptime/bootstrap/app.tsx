@@ -184,6 +184,7 @@ import trialCheck from "~/app/http/controllers/trial/index";
 import trialLead from "~/app/http/controllers/trial/lead";
 import trialUnsubscribe from "~/app/http/controllers/trial/unsubscribe";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
+import { attribution } from "~/app/http/middleware/attribution";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
@@ -253,6 +254,12 @@ export default function application(options: application.Options) {
 		// building an i18next instance is wasted work for a response nothing translates,
 		// the unauthenticated cron-ping and webhook endpoints included.
 		htmlOnly(i18n),
+		// First-touch acquisition, recorded while the visitor is still anonymous — which is the
+		// only time it is knowable. `htmlOnly` for the same reason as the language detector: a
+		// webhook or an API call has no campaign and no session worth writing to. It writes at
+		// most once per session and never on a `POST`, so the steady-state cost on every other
+		// page view is a session read.
+		htmlOnly(attribution),
 		// Cross-origin protection doesn't apply to the machine surfaces either. A webhook
 		// sender authenticates by signing the request body, which is a stronger claim than an
 		// `Origin` header, and has no browser to send one from.

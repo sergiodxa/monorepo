@@ -34,6 +34,7 @@ import type { Database } from "remix/data-table";
 
 import { logger } from "@pkg/logger";
 
+import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
 import type { SelectLead, SelectTrialWatch } from "~/database/schema";
 
 import Lead from "~/app/data/lead";
@@ -81,6 +82,15 @@ export interface TrialConversionSubject {
 	teamId: string;
 	/** The subject, recorded as the created monitors' author. */
 	authorId: string;
+	/**
+	 * Where they first arrived, off the anonymous session the sign-in still has in hand.
+	 *
+	 * Passed in rather than read here because this is a service and the record lives in a
+	 * request's session — and because this is the last request that has it: the redirect after
+	 * sign-in lands on a page whose session is no longer the one that captured anything.
+	 * Optional, and absent for anybody whose session never carried it.
+	 */
+	attribution?: TrialSignupAttribution;
 }
 
 /**
@@ -200,6 +210,7 @@ async function recordSignup(
 			urls: [...new Set(watches.map((watch) => watch.url))],
 			watchCount: watches.length,
 			signedUpAt: now,
+			attribution: subject.attribution,
 		});
 
 		if (created) {

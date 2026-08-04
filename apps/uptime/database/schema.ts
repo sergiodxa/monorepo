@@ -1074,6 +1074,21 @@ export const trialConversions = table({
 		 * this row does.
 		 */
 		urls: c.text(),
+		/**
+		 * Where they first arrived, copied off the session's first-touch record: the landing
+		 * path, and the campaign the link carried when it carried one.
+		 *
+		 * Nullable and expected to be null for plenty of rows. Attribution lives in a session
+		 * cookie, so anyone who blocks it, arrives in a fresh session, or signed up before this
+		 * existed has none — and a missing attribution has to read as "unknown" rather than as
+		 * "direct", which is a different and much more flattering claim.
+		 *
+		 * Three short slugs and a path, never a query string, a referrer, or anything the person
+		 * typed. This row outlives an unsubscribe by design, so nothing personal may reach it.
+		 */
+		landing_path: c.text().nullable(),
+		campaign_source: c.text().nullable(),
+		campaign_name: c.text().nullable(),
 		/** The first sign-in that claimed a trial target; never moved by a later one. */
 		signed_up_at: c.integer(),
 		/**

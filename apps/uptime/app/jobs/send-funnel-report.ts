@@ -169,5 +169,25 @@ function toConversion(row: SelectTrialConversion): FunnelReportEmail.Conversion 
 		leadCreatedAt: new Date(row.lead_created_at),
 		signedUpAt: new Date(row.signed_up_at),
 		paidAt: row.paid_at === null ? null : new Date(row.paid_at),
+		attribution: describeAttribution(row),
 	};
+}
+
+/**
+ * The three attribution columns as one line, or `null` when the row carries none.
+ *
+ * Composed here rather than in the email so the email prints a string it does not have to
+ * decide the shape of, and so "unknown" stays the email's word for a missing value rather than
+ * something this has to invent. A campaign is shown with its source when both are present,
+ * since `outreach/agencies-august` is the identifier an operator actually recognises, and the
+ * landing path is the fallback for a visit that arrived with no campaign at all — which still
+ * says whether they came in through the agency page or the homepage.
+ */
+function describeAttribution(row: SelectTrialConversion): string | null {
+	let campaign = [row.campaign_source, row.campaign_name].filter(Boolean).join("/");
+
+	if (campaign && row.landing_path) return `${campaign} → ${row.landing_path}`;
+	if (campaign) return campaign;
+
+	return row.landing_path;
 }
