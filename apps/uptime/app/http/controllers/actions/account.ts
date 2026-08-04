@@ -1,8 +1,14 @@
 /**
  * Form actions reached from the account page rather than a specific team's URL
  * scope: creating an additional team, leaving a team, changing the UI language
- * preference, and choosing which optional emails to receive. Each only requires
- * `requireUser` — none take a `:team` route param.
+ * preference, choosing which optional emails to receive, downloading everything the app
+ * holds about the viewer, and asking for — or calling off — the deletion of the account.
+ * Each only requires `requireUser` — none take a `:team` route param.
+ *
+ * Deletion is the odd one out: {@link requestDeletion} deletes nothing at all. It writes a row
+ * to the queue the daily sweep works through and signs the person out, which is what buys the
+ * grace period {@link cancelDeletion} spends. Doing it on the click would leave no window to
+ * change one's mind in, and the queue makes that window free.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,13 +23,16 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
+import AccountDeletion from "~/app/data/account-deletion";
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
+import { RequestAccountDeletionSchema } from "~/app/http/validators/account";
 import { UpdateEmailsSchema } from "~/app/http/validators/email-preferences";
 import { UpdateLanguageSchema } from "~/app/http/validators/language";
 import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
+import { accountExportFilename, buildAccountExport } from "~/app/services/account-export";
 import { optionalEmails } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -104,6 +113,95 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 
 	let session = ctx.get(Session);
 	session?.flash("toast", { intent: "success", message: "Email preferences saved." });
+
+	return redirect(ctx.request.headers.get("Referer") ?? routes.home.href(), {
+		status: redirect.Status.SeeOther,
+	});
+});
+
+/**
+ * POST /actions/export-data
+ *
+ * Answers with the whole document rather than a link to one: it is assembled in a handful of
+ * indexed reads scoped to one person, so there is nothing to schedule and nothing to store —
+ * and a stored export would be a second copy of everything sensitive, sitting somewhere with a
+ * URL, which is a worse thing to hold than the request that produced it.
+ *
+ * `no-store` because the response body is an entire account and the browser is the only place
+ * it should land.
+ */
+export const exportData = createAction(routes.accountActions.exportData, async () => {
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
+
+	let db = getServiceContainer().get(Database);
+	let now = new Date();
+	let document = await buildAccountExport(
+		db,
+		{ id: viewer.id, name: viewer.name, email: viewer.email },
+		now,
+	);
+
+	return new Response(JSON.stringify(document, null, 2), {
+		headers: {
+			"content-type": "application/json; charset=utf-8",
+			"content-disposition": `attachment; filename="${accountExportFilename(viewer.id, now)}"`,
+			"cache-control": "no-store",
+		},
+	});
+});
+
+/**
+ * POST /actions/request-account-deletion
+ *
+ * Queues the account and signs the person out. Nothing is deleted here — the daily sweep does
+ * that — but they must not be left browsing an account they have just asked to have erased, so
+ * the session is destroyed and they land on the marketing home page.
+ *
+ * The queued row is written before the session goes, and the two are not atomic: a failure
+ * between them leaves a queued request and a live session, which the next page load reports as
+ * the queued state. The reverse order would leave somebody signed out with no request recorded
+ * and no way to see that nothing happened.
+ */
+export const requestDeletion = createAction(routes.accountActions.requestDeletion, async (ctx) => {
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
+
+	let result = await validate(ctx.formData, RequestAccountDeletionSchema);
+	if (isFailure(result)) {
+		return badRequest('Type "DELETE" to confirm.');
+	}
+
+	let db = getServiceContainer().get(Database);
+	// The address is captured here because it exists nowhere else: an account is an OIDC
+	// subject, and this is the only request that can hand the confirmation mail somewhere to go.
+	await AccountDeletion.enqueue(db, viewer.id, viewer.email);
+
+	ctx.get(Session)?.destroy();
+
+	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
+});
+
+/**
+ * DELETE /actions/cancel-account-deletion
+ *
+ * Drops the queued request, which is all it takes: the sweep reads the queue, so a row that is
+ * gone is a deletion that never runs. Reaching this needs signing back in, which is exactly the
+ * check that matters — whoever can still authenticate as the account is whoever gets to keep it.
+ *
+ * Silent about a viewer who has no queued request. Cancelling nothing leaves the account in the
+ * state the person wanted it in either way, and an error page would only be a worse way of
+ * saying "you are not being deleted".
+ */
+export const cancelDeletion = createAction(routes.accountActions.cancelDeletion, async (ctx) => {
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
+
+	let db = getServiceContainer().get(Database);
+	await AccountDeletion.remove(db, viewer.id);
+
+	let session = ctx.get(Session);
+	session?.flash("toast", { intent: "success", message: "Account deletion cancelled." });
 
 	return redirect(ctx.request.headers.get("Referer") ?? routes.home.href(), {
 		status: redirect.Status.SeeOther,

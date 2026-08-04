@@ -28,8 +28,11 @@ import { renderToStream } from "remix/ui/server";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import {
+	cancelDeletion,
 	createTeam,
+	exportData,
 	leaveTeam,
+	requestDeletion,
 	updateEmails,
 	updateLanguage,
 } from "~/app/http/controllers/actions/account";
@@ -517,6 +520,9 @@ export default function application(options: application.Options) {
 				leaveTeam,
 				updateLanguage,
 				updateEmails,
+				exportData,
+				requestDeletion,
+				cancelDeletion,
 			},
 		}),
 	);

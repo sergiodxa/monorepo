@@ -26,6 +26,7 @@ import { renderToStream } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/schema";
 
+import AccountDeletion from "~/app/data/account-deletion";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
@@ -214,5 +215,113 @@ describe("account page", () => {
 		// leavable row renders the label twice — once in its row menu, once in its
 		// confirmation dialog's submit button.
 		expect(occurrences).toBe(2);
+	});
+});
+
+describe("account page — Your Data", () => {
+	test("offers the export as a POST form rather than a link, and says what it leaves out", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await renderAccount(db, team, membership);
+		let body = await response.text();
+
+		expect(body).toContain(en.page.account.dataExport.title);
+		expect(body).toContain(en.page.account.dataExport.form.cta);
+		// A GET that returned a whole account would be a URL another site could point at.
+		expect(body).toContain(`action="${routes.accountActions.exportData.href()}"`);
+		expect(body).toContain("API key hashes");
+	});
+});
+
+describe("account page — Delete Account", () => {
+	test("renders the typed confirmation, natively gated, and no bare button", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await renderAccount(db, team, membership);
+		let body = await response.text();
+
+		expect(body).toContain(en.page.account.deleteAccount.title);
+		expect(body).toContain(`action="${routes.accountActions.requestDeletion.href()}"`);
+		expect(body).toContain('name="confirmation"');
+		expect(body).toContain('pattern="DELETE"');
+	});
+
+	/** The copy has to say queued, because that is what the action does. */
+	test("says the account is queued and not deleted, and that signing back in cancels it", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(body).toContain(en.page.account.deleteAccount.card.whatHappens);
+		expect(body).toContain("signing back in lets you cancel");
+	});
+
+	/**
+	 * The honesty requirement. Each of these four is a retention this app genuinely cannot
+	 * avoid, and the confirmation must not imply a clean wipe by omitting them.
+	 */
+	test("lists what cannot be deleted", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(body).toContain(en.page.account.deleteAccount.card.retained.billing);
+		expect(body).toContain(en.page.account.deleteAccount.card.retained.analytics);
+		expect(body).toContain(en.page.account.deleteAccount.card.retained.logs);
+		expect(body).toContain(en.page.account.deleteAccount.card.retained.identity);
+	});
+
+	test("warns about no one when the owned team has no other members", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		// The personal-team case is most accounts, and a warning here would cry wolf.
+		expect(body).toContain(team.name);
+		expect(body).not.toContain("will lose access");
+	});
+
+	test("names the owned team and counts exactly the other members who lose access", async () => {
+		let { db, team, membership } = await createFixture();
+		for (let subjectId of ["colleague-1", "colleague-2"]) {
+			await db.create(
+				memberships,
+				{ id: crypto.randomUUID(), subject_id: subjectId, team_id: team.id, role: "member" },
+				{ touch: true, returnRow: true },
+			);
+		}
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(body).toContain(`${team.name} — 2 other members lose access.`);
+		expect(body).toContain("2 other people will lose access");
+		// A count, not a roster: the warning must not name other people.
+		expect(body).not.toContain("colleague-1");
+	});
+
+	/**
+	 * There is no owner transfer in this app — `teams.owner_id` is written at creation and by
+	 * nothing else — so the copy must not send anybody to a page that cannot do it.
+	 */
+	test("does not suggest handing the team over first", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(body).toContain("no way to hand a team over");
+		expect(body).not.toContain("change the owner");
+	});
+
+	test("shows a viewer who is already queued that state plus a cancel button, and not the form", async () => {
+		let { db, team, membership } = await createFixture();
+		await AccountDeletion.enqueue(db, membership.subject_id, "viewer@example.com");
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(body).toContain(en.page.account.deleteAccount.queued.title);
+		expect(body).toContain(en.page.account.deleteAccount.queued.cta);
+		expect(body).toContain(`action="${routes.accountActions.cancelDeletion.href()}"`);
+		// Offering the confirmation again would suggest the first request did not take.
+		expect(body).not.toContain('pattern="DELETE"');
 	});
 });

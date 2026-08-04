@@ -314,6 +314,21 @@ export default route({
 		 * teams turns a digest off once rather than three times.
 		 */
 		updateEmails: post("/actions/update-emails"),
+		/**
+		 * The viewer's own data as a JSON download. A `POST` rather than a `GET`, even though it
+		 * mutates nothing: a `GET` that returns somebody's whole account is a URL another site
+		 * can point an image or an iframe at, and cross-origin protection only applies to the
+		 * unsafe methods. The form is a button, so nothing is lost by it.
+		 */
+		exportData: post("/actions/export-data"),
+		/**
+		 * Queues the account for deletion — it deletes nothing itself; the daily sweep does. The
+		 * gap between the two is the grace period, which is what {@link cancelDeletion} exists
+		 * to use.
+		 */
+		requestDeletion: post("/actions/request-account-deletion"),
+		/** Removes a queued deletion request, undoing it while it is still only a request. */
+		cancelDeletion: del("/actions/cancel-account-deletion"),
 	},
 
 	/**

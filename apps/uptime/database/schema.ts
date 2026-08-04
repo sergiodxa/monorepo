@@ -201,6 +201,45 @@ export const userPreferences = table({
 export type SelectUserPreferences = TableRow<typeof userPreferences>;
 export type InsertUserPreferences = InsertRow<typeof userPreferences>;
 
+/**
+ * The queue of accounts asked to be deleted, one row per person waiting for the daily sweep.
+ *
+ * The row *is* the queue and the retry policy both: the sweep deletes it only after the whole
+ * erasure succeeded and the confirmation mail was accepted, so a run that failed halfway
+ * leaves it in place and tomorrow's run picks it up again. Nothing here records an attempt or
+ * a backoff, because "it failed" and "it will be retried tomorrow" are the same statement.
+ *
+ * It is also the grace period. Deletion takes effect up to a day after it is asked for, which
+ * is not a limitation of running the sweep daily — it is the window in which somebody who
+ * clicked by mistake can sign back in and cancel, and the queue makes it free to offer.
+ *
+ * **Why `email` is stored here, on the one table whose purpose is erasure.** This app holds no
+ * account-holder address anywhere else: an account is an OIDC subject, `invites.email` is an
+ * invitee's address and `leads.email` a trial visitor's, and the account holder's own address
+ * exists only in the ID token on the request that carries it. So the confirmation mail that
+ * says "your account has been deleted" has no address to go to unless the request that asked
+ * for the deletion captures one. The irony is deliberate and bounded: an erasure request is
+ * the one place that must store an address in order to be fulfilled, and this row — the only
+ * copy of it — is deleted at the very end of the erasure, after the mail has gone out.
+ */
+export const accountDeletions = table({
+	name: "account_deletions",
+	timestamps: { createdAt: "created_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		/** The OIDC subject to erase. Unique: asking twice is one request, not two. */
+		subject_id: c.text().unique(),
+		/** Address the confirmation mail goes to; see this table's docblock for why it is here. */
+		email: c.text(),
+		/** When the person asked, which is what the queued-state copy tells them back. */
+		requested_at: c.integer(),
+	},
+});
+
+export type SelectAccountDeletion = TableRow<typeof accountDeletions>;
+export type InsertAccountDeletion = InsertRow<typeof accountDeletions>;
+
 // HTTP monitors
 
 /**

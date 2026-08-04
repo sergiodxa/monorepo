@@ -1291,6 +1291,27 @@ export default {
 	},
 
 	emails: {
+		accountDeleted: {
+			subject: "Your Uptime account has been deleted",
+			preview: "Your account and its data have been deleted.",
+			heading: "Your account has been deleted",
+			body: "You asked us to delete your Uptime account, and we have. Your teams, monitors, alerts, status pages and preferences are gone, any team you owned was deleted along with them, and your subscription has been cancelled.",
+			retained: {
+				intro: "A few things we could not delete, so you know exactly where you stand:",
+				billing:
+					"Invoices and payment records held by our billing provider. Tax law requires us to keep them, and data-protection law allows it for that reason.",
+				analytics:
+					"Monitoring check results in our analytics store. It is append-only — there is no way to delete a record from it, only to let it expire on its retention schedule.",
+				logs: "Server request logs, for the same reason: they expire on a retention schedule and cannot be deleted early.",
+				identity:
+					"Your sign-in identity itself, which is held by the identity provider you signed in with rather than by us.",
+			},
+			address:
+				"This email address was stored only so we could send you this message. It has now been deleted too.",
+			footer:
+				"You received this email because you asked us to delete your Uptime account. No further email will be sent to this address.",
+		},
+
 		teamInvite: {
 			subject: "You've been invited to join {{team}} on Uptime",
 			preview: "Join {{team}} on Uptime",
@@ -3967,6 +3988,78 @@ export default {
 					confirmation: {
 						leaveTeam: "Are you sure you want to leave {{name}}?",
 					},
+				},
+			},
+
+			dataExport: {
+				title: "Your Data",
+				description: "Download everything this app holds about you.",
+
+				card: {
+					title: "Export Your Data",
+					description: "One JSON file, generated when you ask for it. Nothing is stored.",
+					includes:
+						"Includes your profile and preferences, every team you belong to and your role in it, and — for teams you own — their monitors, alerts, maintenance windows, status pages and verified domains.",
+					excludes:
+						"Excludes anything that is not yours to take: other members' details, invitee addresses, API key hashes, webhook secrets and Slack or Discord webhook URLs. Check history is left out too — it is produced by the configuration above, and the file says so.",
+				},
+
+				form: {
+					cta: "Download JSON",
+				},
+			},
+
+			deleteAccount: {
+				title: "Delete Account",
+				description: "Close your account and delete the data behind it.",
+
+				queued: {
+					title: "Deletion Requested",
+					description:
+						"Your account is queued for deletion and nothing has been deleted yet. It runs within a day, and we will email you once it has. You can still stop it — cancel below any time before it runs.",
+					requestedAt: "Requested {{date}}.",
+					cta: "Cancel Deletion",
+				},
+
+				card: {
+					title: "Delete Your Account",
+					description:
+						"Queues your account for deletion. Nothing is deleted when you submit this form.",
+
+					whatHappens:
+						"Your request is queued and you are signed out. Within a day we cancel your subscription, delete your data, and email you to confirm it is done. Until then nothing has gone, and signing back in lets you cancel.",
+
+					noOwnedTeams:
+						"You own no teams, so only your own memberships and preferences will be removed. The teams you belong to carry on without you.",
+
+					ownedTeamsIntro:
+						"There is no way to hand a team over to somebody else in this app, so every team you own is deleted with your account, along with its monitors, alerts, status pages, API keys and members:",
+					ownedTeam_one: "{{name}} — 1 other member loses access.",
+					ownedTeam_other: "{{name}} — {{count}} other members lose access.",
+					ownedTeamAlone: "{{name}} — no other members.",
+
+					othersWarning_one:
+						"1 other person will lose access to a team when this runs. They will not be asked and will not be warned.",
+					othersWarning_other:
+						"{{count}} other people will lose access to their teams when this runs. They will not be asked and will not be warned.",
+
+					retained: {
+						intro: "Some things cannot be deleted, and we would rather say so:",
+						billing:
+							"Invoices and payment records held by our billing provider — tax law requires keeping them.",
+						analytics:
+							"Monitoring check results in our analytics store, which is append-only: records expire on a retention schedule and cannot be deleted early.",
+						logs: "Server request logs, which expire on the same kind of schedule.",
+						identity:
+							"Your sign-in identity, which belongs to the identity provider you sign in with rather than to us.",
+					},
+
+					confirmation: {
+						label: 'Type "DELETE" to confirm',
+						placeholder: "DELETE",
+					},
+
+					cta: "Queue Account Deletion",
 				},
 			},
 		},

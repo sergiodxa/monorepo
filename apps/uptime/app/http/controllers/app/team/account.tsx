@@ -15,11 +15,19 @@
  * in team settings because the choice belongs to the person: somebody in three teams
  * turns a digest off once, and it stops for all three.
  *
+ * The last two sections are the account's own lifecycle. Your Data downloads everything the
+ * app holds about the viewer; Delete Account queues the account for erasure and, for a viewer
+ * whose request is already queued, replaces the whole form with that state plus the button that
+ * calls it off. Both of those are honest by construction: the delete card names every team that
+ * will be destroyed and counts the people who lose access with it, says plainly that nothing is
+ * deleted on submit, and lists the things that genuinely cannot be deleted rather than implying
+ * a clean wipe.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LogOutIcon, PlusIcon } from "@pkg/lucide-remix";
+import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@pkg/lucide-remix";
 import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
@@ -37,12 +45,14 @@ import { createAction } from "remix/fetch-router";
 
 import type { OptionalEmail } from "~/database/schema";
 
+import AccountDeletion from "~/app/data/account-deletion";
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
 import { EMAIL_PREFERENCES_ANCHOR } from "~/app/emails/shared/team-digest";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { planAccountErasure } from "~/app/services/account-erasure";
 import { optionalEmails, supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
 import Field from "~/resources/components/field";
@@ -84,6 +94,40 @@ function emailDescriptionId(email: OptionalEmail) {
 	return `email-${email}-description`;
 }
 
+/**
+ * The bordered card the delete section is built around: the same geometry as
+ * {@link settingsCard}, in the danger colour, so the section reads as belonging to the page
+ * while never being mistaken for one of the forms above it.
+ */
+function dangerCard() {
+	return [
+		rounded("12px"),
+		border({ color: "danger", width: 1 }),
+		overflow(),
+		media(CARD_BLEED_FROM, mi("-24px")),
+	];
+}
+
+/**
+ * The typed-confirmation field. `pattern="DELETE"` does the gating natively, so the submit
+ * button is disabled-in-effect until the text matches exactly with no client JS involved —
+ * and the action validates the same word again, since a constraint in the page is a
+ * convenience and not a check.
+ */
+function confirmationInput() {
+	return [
+		is("full"),
+		boxSizing("border-box"),
+		p("8px", "12px"),
+		rounded("6px"),
+		border({ color: "neutral", width: 1 }),
+		fontSize("0.875rem"),
+		font("inherit"),
+		bg("neutral.tint"),
+		fg("inherit"),
+	];
+}
+
 /** GET /app/:team/account — the signed-in user's account settings. */
 export default createAction(routes.app.team.account, {
 	middleware: [requireUser, requireTeam],
@@ -92,9 +136,11 @@ export default createAction(routes.app.team.account, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let [memberships, preferences] = await Promise.all([
+		let [memberships, preferences, plan, queuedDeletion] = await Promise.all([
 			Team.listWithRoleBySubjectId(db, viewer.id),
 			UserPreferences.findBySubjectId(db, viewer.id),
+			planAccountErasure(db, viewer.id),
+			AccountDeletion.findBySubjectId(db, viewer.id),
 		]);
 
 		let preferredLanguage = preferences?.preferred_language ?? null;
@@ -508,6 +554,250 @@ export default createAction(routes.app.team.account, {
 									</Table.Container>
 								)}
 							</div>
+						</section>
+
+						{/* Your Data */}
+						<section
+							id="data"
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+						>
+							<div mix={[vstack({ gap: "4px" })]}>
+								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
+									{ctx.i18next.t("page.account.dataExport.title")}
+								</h2>
+								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
+									{ctx.i18next.t("page.account.dataExport.description")}
+								</p>
+							</div>
+
+							<div mix={settingsCard()}>
+								{/*
+								 * A POST rather than a link, even though it changes nothing: a GET that
+								 * returns a whole account is a URL another site could point an iframe at,
+								 * and only the unsafe methods are covered by cross-origin protection.
+								 */}
+								<form method="post" action={routes.accountActions.exportData.href()}>
+									<div
+										mix={[
+											p("20px", "24px"),
+											borderEdge("block-end", { color: "neutral", width: 1 }),
+										]}
+									>
+										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
+											{ctx.i18next.t("page.account.dataExport.card.title")}
+										</h3>
+										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("page.account.dataExport.card.description")}
+										</p>
+									</div>
+
+									<div mix={[p("24px"), vstack({ gap: "12px" })]}>
+										<p mix={[m(0), fontSize("0.875rem")]}>
+											{ctx.i18next.t("page.account.dataExport.card.includes")}
+										</p>
+										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("page.account.dataExport.card.excludes")}
+										</p>
+									</div>
+
+									<div
+										mix={[
+											p("16px", "24px"),
+											borderEdge("block-start", { color: "neutral", width: 1 }),
+											hstack({ justify: "end" }),
+										]}
+									>
+										<Button type="submit">
+											<DownloadIcon size={16} strokeWidth={1.5} />
+											<span>{ctx.i18next.t("page.account.dataExport.form.cta")}</span>
+										</Button>
+									</div>
+								</form>
+							</div>
+						</section>
+
+						{/* Delete Account */}
+						<section
+							id="delete-account"
+							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+						>
+							<div mix={[vstack({ gap: "4px" })]}>
+								<h2 mix={[m(0), fontSize("1.25rem"), weight(600), fg("danger")]}>
+									{ctx.i18next.t("page.account.deleteAccount.title")}
+								</h2>
+								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
+									{ctx.i18next.t("page.account.deleteAccount.description")}
+								</p>
+							</div>
+
+							{queuedDeletion ? (
+								/*
+								 * The queued state replaces the form rather than sitting above it. Offering
+								 * the confirmation again to somebody already in the queue would suggest the
+								 * first request did not take, and the only thing left to do about it is the
+								 * one button here.
+								 */
+								<div mix={dangerCard()}>
+									<div
+										mix={[
+											p("20px", "24px"),
+											borderEdge("block-end", { color: "danger", width: 1 }),
+										]}
+									>
+										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
+											{ctx.i18next.t("page.account.deleteAccount.queued.title")}
+										</h3>
+										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("page.account.deleteAccount.queued.requestedAt", {
+												date: new Date(queuedDeletion.requested_at).toISOString().slice(0, 10),
+											})}
+										</p>
+									</div>
+
+									<div mix={[p("24px")]}>
+										<p mix={[m(0), fontSize("0.875rem")]}>
+											{ctx.i18next.t("page.account.deleteAccount.queued.description")}
+										</p>
+									</div>
+
+									<form method="post" action={routes.accountActions.cancelDeletion.href()}>
+										<input type="hidden" name="_method" value="DELETE" />
+										<div
+											mix={[
+												p("16px", "24px"),
+												borderEdge("block-start", { color: "danger", width: 1 }),
+												hstack({ justify: "end" }),
+											]}
+										>
+											<Button type="submit" variant="outline">
+												{ctx.i18next.t("page.account.deleteAccount.queued.cta")}
+											</Button>
+										</div>
+									</form>
+								</div>
+							) : (
+								<div mix={dangerCard()}>
+									<form method="post" action={routes.accountActions.requestDeletion.href()}>
+										<div
+											mix={[
+												p("20px", "24px"),
+												borderEdge("block-end", { color: "danger", width: 1 }),
+											]}
+										>
+											<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
+												{ctx.i18next.t("page.account.deleteAccount.card.title")}
+											</h3>
+											<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+												{ctx.i18next.t("page.account.deleteAccount.card.description")}
+											</p>
+										</div>
+
+										<div mix={[p("24px"), vstack({ gap: "16px" })]}>
+											<p mix={[m(0), fontSize("0.875rem")]}>
+												{ctx.i18next.t("page.account.deleteAccount.card.whatHappens")}
+											</p>
+
+											{plan.ownedTeams.length === 0 ? (
+												<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
+													{ctx.i18next.t("page.account.deleteAccount.card.noOwnedTeams")}
+												</p>
+											) : (
+												<div mix={[vstack({ gap: "8px" })]}>
+													<p mix={[m(0), fontSize("0.875rem")]}>
+														{ctx.i18next.t("page.account.deleteAccount.card.ownedTeamsIntro")}
+													</p>
+													<ul mix={[m(0), p(0, 0, 0, "20px"), fontSize("0.875rem")]}>
+														{plan.ownedTeams.map((team) => (
+															<li key={team.id}>
+																{team.otherMemberCount === 0
+																	? ctx.i18next.t(
+																			"page.account.deleteAccount.card.ownedTeamAlone",
+																			{ name: team.name },
+																		)
+																	: ctx.i18next.t("page.account.deleteAccount.card.ownedTeam", {
+																			name: team.name,
+																			count: team.otherMemberCount,
+																		})}
+															</li>
+														))}
+													</ul>
+												</div>
+											)}
+
+											{/*
+											 * The total, stated separately and in the danger colour, because it is
+											 * the fact a person is most likely to have not considered: their own
+											 * data going is their decision, and somebody else's access going is
+											 * not.
+											 */}
+											{plan.othersLosingAccess > 0 && (
+												<p mix={[m(0), fontSize("0.875rem"), weight(600), fg("danger")]}>
+													{ctx.i18next.t("page.account.deleteAccount.card.othersWarning", {
+														count: plan.othersLosingAccess,
+													})}
+												</p>
+											)}
+
+											<div mix={[vstack({ gap: "4px" })]}>
+												<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+													{ctx.i18next.t("page.account.deleteAccount.card.retained.intro")}
+												</p>
+												<ul
+													mix={[
+														m(0),
+														p(0, 0, 0, "20px"),
+														fontSize("0.8125rem"),
+														fg("neutral.muted"),
+													]}
+												>
+													<li>
+														{ctx.i18next.t("page.account.deleteAccount.card.retained.billing")}
+													</li>
+													<li>
+														{ctx.i18next.t("page.account.deleteAccount.card.retained.analytics")}
+													</li>
+													<li>{ctx.i18next.t("page.account.deleteAccount.card.retained.logs")}</li>
+													<li>
+														{ctx.i18next.t("page.account.deleteAccount.card.retained.identity")}
+													</li>
+												</ul>
+											</div>
+
+											<Field
+												label={ctx.i18next.t("page.account.deleteAccount.card.confirmation.label")}
+											>
+												<input
+													type="text"
+													name="confirmation"
+													required
+													autocomplete="off"
+													pattern="DELETE"
+													title={ctx.i18next.t(
+														"page.account.deleteAccount.card.confirmation.label",
+													)}
+													placeholder={ctx.i18next.t(
+														"page.account.deleteAccount.card.confirmation.placeholder",
+													)}
+													mix={confirmationInput()}
+												/>
+											</Field>
+										</div>
+
+										<div
+											mix={[
+												p("16px", "24px"),
+												borderEdge("block-start", { color: "danger", width: 1 }),
+												hstack({ justify: "end" }),
+											]}
+										>
+											<Button type="submit" color="danger">
+												<Trash2Icon size={16} strokeWidth={1.5} />
+												<span>{ctx.i18next.t("page.account.deleteAccount.card.cta")}</span>
+											</Button>
+										</div>
+									</form>
+								</div>
+							)}
 						</section>
 					</div>
 				</AppShell>

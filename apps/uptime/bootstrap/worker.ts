@@ -34,6 +34,7 @@ import { CheckTrialWatchesJob } from "~/app/jobs/check-trial-watches";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
 import { DeadLetterJob } from "~/app/jobs/dead-letter";
+import { DeleteAccountsJob } from "~/app/jobs/delete-accounts";
 import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { NotifyJob } from "~/app/jobs/notify";
 import { ReconcileSubscriptionsJob } from "~/app/jobs/reconcile-subscriptions";
@@ -79,6 +80,7 @@ const QueueMessageSchema = s.variant("type", {
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
 	reconcileSubscriptions: s.object({ type: s.literal("reconcileSubscriptions") }),
 	reportCosts: s.object({ type: s.literal("reportCosts") }),
+	deleteAccounts: s.object({ type: s.literal("deleteAccounts") }),
 	checkTrialWatches: s.object({ type: s.literal("checkTrialWatches") }),
 	sendTrialDigests: s.object({ type: s.literal("sendTrialDigests") }),
 	sendFunnelReport: s.object({ type: s.literal("sendFunnelReport") }),
@@ -221,6 +223,19 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 	// Daily at 3 AM UTC: price yesterday's recorded cost per team and report it to Polar.
 	if (controller.cron === "0 3 * * *") {
 		waitUntil(sendQueueMessage({ type: "reportCosts" }));
+	}
+
+	/**
+	 * Daily at 4 AM UTC: erase the accounts queued for deletion.
+	 *
+	 * After 02:00, so the subscription reconciliation has already finished and cannot re-write a
+	 * projection row for an account being deleted, and on its own hour rather than sharing 03:00
+	 * so a failure in the cost report neither delays nor is delayed by somebody's erasure. Once
+	 * a day is what makes the delay a grace period rather than a limitation: the request is
+	 * cancellable for as long as it sits in the queue.
+	 */
+	if (controller.cron === "0 4 * * *") {
+		waitUntil(sendQueueMessage({ type: "deleteAccounts" }));
 	}
 
 	/**
@@ -391,6 +406,9 @@ export default {
 						break;
 					case "reportCosts":
 						waitUntil(ReportCostsJob.run({ message, uptime }));
+						break;
+					case "deleteAccounts":
+						waitUntil(DeleteAccountsJob.run({ message, uptime }));
 						break;
 					case "checkTrialWatches":
 						waitUntil(CheckTrialWatchesJob.run({ message, uptime }));

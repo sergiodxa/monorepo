@@ -1,13 +1,20 @@
 /**
  * Tests the account-page actions: creating an additional team, leaving a team (with
- * its owner/admin guard rails), and updating the UI language preference. *
+ * its owner/admin guard rails), updating the UI language preference, downloading the viewer's
+ * own data, and the two halves of deletion — queueing it and calling it off.
+ *
+ * The deletion cases are all about the same thing: the action must queue and sign out, and must
+ * delete nothing. A test that asserted rows disappearing here would be asserting the wrong
+ * design.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
+import type { Session as SessionType } from "remix/session";
 
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
@@ -15,10 +22,12 @@ import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
+import { Session } from "remix/session";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
+import AccountDeletion from "~/app/data/account-deletion";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
@@ -28,11 +37,27 @@ let createTeam = accountActions.createTeam as RequestHandler;
 let leaveTeam = accountActions.leaveTeam as RequestHandler;
 let updateEmails = accountActions.updateEmails as RequestHandler;
 let updateLanguage = accountActions.updateLanguage as RequestHandler;
+let exportData = accountActions.exportData as RequestHandler;
+let requestDeletion = accountActions.requestDeletion as RequestHandler;
+let cancelDeletion = accountActions.cancelDeletion as RequestHandler;
+
+/**
+ * A session recording only what these actions do to it: destroy it, or flash a toast. Enough to
+ * assert that queueing a deletion signs the person out, which is the half of that action that
+ * has no database trace.
+ */
+function createFakeSession() {
+	return { destroy: mock(() => {}), flash: mock(() => {}) };
+}
 
 /** Installs `ctx.get(Auth)` directly, standing in for the real session-backed `auth()` middleware. */
-function viewerMiddleware(viewer: Viewer): Middleware {
+function viewerMiddleware(
+	viewer: Viewer,
+	session?: ReturnType<typeof createFakeSession>,
+): Middleware {
 	return (ctx, next) => {
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+		if (session) ctx.set(Session, session as unknown as SessionType);
 		return next();
 	};
 }
@@ -54,13 +79,18 @@ async function postAccountAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string | string[]>,
 	headers: Record<string, string> = {},
+	options: {
+		/** HTTP method, for the one action mapped to `DELETE` rather than `POST`. */
+		method?: string;
+		session?: ReturnType<typeof createFakeSession>;
+	} = {},
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	(router.map as LooseRouterMap)(route, {
-		middleware: [viewerMiddleware(viewer)],
+		middleware: [viewerMiddleware(viewer, options.session)],
 		handler: action,
 	});
 
@@ -70,7 +100,7 @@ async function postAccountAction(
 	}
 
 	let request = new Request(`https://uptime.test${route.href()}`, {
-		method: "POST",
+		method: options.method ?? "POST",
 		// Serialized rather than handed over as `URLSearchParams`, because Bun's
 		// `URLSearchParams`-backed body stream cannot be read when it is empty — and a form
 		// whose every switch is off is exactly an empty body, which the form the actions here
@@ -429,5 +459,171 @@ describe("POST /actions/update-language", () => {
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid language.");
 		expect(await db.count(userPreferences, { where: { subject_id: viewer.id } })).toBe(0);
+	});
+});
+
+describe("POST /actions/export-data", () => {
+	test("answers with the viewer's data as a JSON attachment the browser must not cache", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		let team = await createTeamRow(db, { owner_id: viewer.id, name: "Owned" });
+		await createMembershipRow(db, team.id, viewer.id, "admin");
+
+		let response = await postAccountAction(
+			exportData,
+			routes.accountActions.exportData,
+			viewer,
+			db,
+			{},
+		);
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("application/json");
+		expect(response.headers.get("cache-control")).toBe("no-store");
+
+		let disposition = response.headers.get("content-disposition") ?? "";
+		expect(disposition).toStartWith("attachment;");
+		expect(disposition).toContain(viewer.id);
+		expect(disposition).toEndWith('.json"');
+
+		let document = (await response.json()) as {
+			subject: { id: string };
+			ownedTeams: { name: string }[];
+		};
+		expect(document.subject.id).toBe(viewer.id);
+		expect(document.ownedTeams[0]?.name).toBe("Owned");
+	});
+});
+
+/**
+ * The action queues and signs out. Everything about it that could be mistaken for a deletion is
+ * asserted negatively: the team is still there when it returns.
+ */
+describe("POST /actions/request-account-deletion", () => {
+	test("queues the request, destroys the session, and deletes nothing", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		let team = await createTeamRow(db, { owner_id: viewer.id });
+		await createMembershipRow(db, team.id, viewer.id, "admin");
+		let session = createFakeSession();
+
+		let response = await postAccountAction(
+			requestDeletion,
+			routes.accountActions.requestDeletion,
+			viewer,
+			db,
+			{ confirmation: "DELETE" },
+			{},
+			{ session },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(routes.home.href());
+
+		let queued = await AccountDeletion.findBySubjectId(db, viewer.id);
+		expect(queued).not.toBeNull();
+		// The address is captured here because nothing else in this app stores it.
+		expect(queued?.email).toBe(viewer.email);
+
+		expect(session.destroy).toHaveBeenCalledTimes(1);
+
+		// Nothing is gone yet — the daily sweep is what deletes.
+		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
+		expect(await db.count(memberships, { where: { subject_id: viewer.id } })).toBe(1);
+	});
+
+	test("rejects a confirmation that is not exactly DELETE, queueing nothing", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		let session = createFakeSession();
+
+		let response = await postAccountAction(
+			requestDeletion,
+			routes.accountActions.requestDeletion,
+			viewer,
+			db,
+			{ confirmation: "delete" },
+			{},
+			{ session },
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain('Type "DELETE" to confirm.');
+		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
+		expect(session.destroy).not.toHaveBeenCalled();
+	});
+
+	test("submitting twice leaves one request, not two the sweep would run in sequence", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+
+		let submit = () =>
+			postAccountAction(requestDeletion, routes.accountActions.requestDeletion, viewer, db, {
+				confirmation: "DELETE",
+			});
+
+		await submit();
+		await submit();
+
+		expect(await AccountDeletion.listPending(db)).toHaveLength(1);
+	});
+});
+
+describe("DELETE /actions/cancel-account-deletion", () => {
+	test("drops the queued request and returns the viewer where they came from", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		await AccountDeletion.enqueue(db, viewer.id, viewer.email);
+
+		let response = await postAccountAction(
+			cancelDeletion,
+			routes.accountActions.cancelDeletion,
+			viewer,
+			db,
+			{},
+			{ Referer: "https://uptime.test/app/acme/account" },
+			{ method: "DELETE" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe("https://uptime.test/app/acme/account");
+		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
+	});
+
+	test("cancels only the viewer's own request, never somebody else's", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		await AccountDeletion.enqueue(db, viewer.id, viewer.email);
+		await AccountDeletion.enqueue(db, "someone-else", "other@example.com");
+
+		await postAccountAction(
+			cancelDeletion,
+			routes.accountActions.cancelDeletion,
+			viewer,
+			db,
+			{},
+			{},
+			{ method: "DELETE" },
+		);
+
+		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
+		expect(await AccountDeletion.findBySubjectId(db, "someone-else")).not.toBeNull();
+	});
+
+	test("is silent for a viewer who has nothing queued", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+
+		let response = await postAccountAction(
+			cancelDeletion,
+			routes.accountActions.cancelDeletion,
+			viewer,
+			db,
+			{},
+			{},
+			{ method: "DELETE" },
+		);
+
+		expect(response.status).toBe(303);
 	});
 });

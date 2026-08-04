@@ -34,6 +34,14 @@
 			// own hour rather than sharing 01:00 or 02:00 so a failure in the daily roll-up
 			// or the subscription reconciliation neither delays nor is delayed by this.
 			"0 3 * * *",
+			// Every day at 4 AM UTC - erase the accounts queued for deletion. Its own hour rather
+			// than sharing 03:00 for the same reason that one has one: it cancels subscriptions in
+			// Polar, and a failure in the cost report must neither delay nor be delayed by
+			// somebody's erasure. After 02:00 on purpose, so the subscription reconciliation has
+			// finished before rows are revoked and cannot re-write a projection for an account
+			// being deleted. A queued request is therefore honoured within a day of being made,
+			// and that day is the grace period a person can still cancel in.
+			"0 4 * * *",
 			// Every day at 6 AM UTC - SSL checks, plus the free trial's daily digests. The digest
 			// takes the last of the daily triggers because its once-a-day bound is counted from
 			// midnight UTC and it must not assemble an email out of rows the midnight cleanup is
