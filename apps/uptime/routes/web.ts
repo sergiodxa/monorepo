@@ -45,6 +45,16 @@ export default route({
 		check: form("/try"),
 		lead: post("/try/lead"),
 		/**
+		 * The seven-day health report as a page, addressed by the watch's own unguessable
+		 * `report_token` — the same way `unsubscribe` proves itself, and for the same reason:
+		 * there is no account behind a trial, so the URL is the only credential available.
+		 *
+		 * A separate token from the lead's unsubscribe one on purpose. That token *acts* (it
+		 * deletes an address), and a report is something a reader may forward to a colleague or a
+		 * client; sharing a link must never hand over the power to unsubscribe somebody.
+		 */
+		report: get("/try/report/:token"),
+		/**
 		 * `form()` rather than `post()`: the GET renders a confirmation page and only the
 		 * POST deletes. A mail scanner that follows every link in an email — Outlook Safe
 		 * Links, Gmail's fetcher — must not be able to unsubscribe somebody who never
@@ -71,6 +81,14 @@ export default route({
 		useCase: get("/use-cases/:slug"),
 		comparison: get("/vs/:slug"),
 	},
+
+	/**
+	 * How the monitoring works and who runs it. Its own top-level leaf rather than a
+	 * `marketing.*` slug, because it is not a page that sells: it is the one a prospective
+	 * customer reads to decide whether to believe the rest of the site, and it is linked from
+	 * the footer next to the legal pages for that reason.
+	 */
+	trust: get("/trust"),
 
 	legal: {
 		privacy: get("/privacy"),
@@ -138,6 +156,14 @@ export default route({
 					heatmap: get("/app/:team/monitors/:monitorId/cards/heatmap"),
 				},
 			},
+			/**
+			 * Paste-a-list bulk creation. `/app/:team/import-monitors` rather than a leaf under the
+			 * monitors base path, because `monitors.show` is `/app/:team/monitors/:monitorId` —
+			 * anything at `/app/:team/monitors/import` is also a valid `show` with the id
+			 * `"import"`, and which of the two wins would be a property of match ordering rather
+			 * than of this table.
+			 */
+			monitorsImport: get("/app/:team/import-monitors"),
 			dnsMonitors: resources("/app/:team/dns", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],
@@ -193,6 +219,8 @@ export default route({
 				update: post("/actions/:team/update-monitor"),
 				delete: del("/actions/:team/delete-monitor"),
 				play: post("/actions/:team/play-monitor"),
+				/** Creates one monitor per URL in a pasted list, in a single submission. */
+				import: post("/actions/:team/import-monitors"),
 				updateSsl: post("/actions/:team/update-ssl"),
 				createContentCheck: post("/actions/:team/create-content-check"),
 				deleteContentCheck: del("/actions/:team/delete-content-check"),

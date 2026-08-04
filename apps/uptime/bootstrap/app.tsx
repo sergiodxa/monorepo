@@ -64,6 +64,7 @@ import {
 	playMonitor,
 	updateMonitor,
 } from "~/app/http/controllers/actions/monitors";
+import { importMonitors } from "~/app/http/controllers/actions/monitors-import";
 import { runPing } from "~/app/http/controllers/actions/ping";
 import { updateSsl } from "~/app/http/controllers/actions/ssl";
 import {
@@ -155,6 +156,7 @@ import monitorCardUsage from "~/app/http/controllers/app/team/monitor-card-usage
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
+import monitorsImport from "~/app/http/controllers/app/team/monitors-import";
 import settings from "~/app/http/controllers/app/team/settings";
 import statusPageEdit from "~/app/http/controllers/app/team/status-page-edit";
 import statusPageNew from "~/app/http/controllers/app/team/status-page-new";
@@ -182,7 +184,9 @@ import statusPageController from "~/app/http/controllers/status-page";
 import terms from "~/app/http/controllers/terms";
 import trialCheck from "~/app/http/controllers/trial/index";
 import trialLead from "~/app/http/controllers/trial/lead";
+import trialReport from "~/app/http/controllers/trial/report";
 import trialUnsubscribe from "~/app/http/controllers/trial/unsubscribe";
+import trust from "~/app/http/controllers/trust";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
 import auth from "~/app/http/middleware/auth";
@@ -302,6 +306,7 @@ export default function application(options: application.Options) {
 	router.map(routes.trial.check, trialCheck);
 	router.map(routes.trial.lead, trialLead);
 	router.map(routes.trial.unsubscribe, trialUnsubscribe);
+	router.map(routes.trial.report, trialReport);
 
 	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous — no
 	// requireUser/requireTeam middleware.
@@ -309,6 +314,7 @@ export default function application(options: application.Options) {
 	router.map(routes.marketing.audience, marketingAudience);
 	router.map(routes.marketing.useCase, marketingUseCase);
 	router.map(routes.marketing.comparison, marketingComparison);
+	router.map(routes.trust, trust);
 	router.map(routes.legal.privacy, privacy);
 	router.map(routes.legal.terms, terms);
 	router.map(routes.docs.index, docsIndex);
@@ -328,6 +334,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dashboard.cards.uptime, dashboardCardUptime);
 	router.map(routes.app.team.dashboard.cards.slowestEndpoint, dashboardCardSlowestEndpoint);
 	router.map(routes.app.team.dashboard.cards.count, dashboardCardCount);
+	router.map(routes.app.team.monitorsImport, monitorsImport);
 	router.map(routes.app.team.monitors.index, httpMonitors);
 	router.map(routes.app.team.monitors.new, monitorNew);
 	router.map(routes.app.team.monitors.show, monitorShow);
@@ -383,6 +390,7 @@ export default function application(options: application.Options) {
 				update: updateMonitor,
 				delete: deleteMonitor,
 				play: playMonitor,
+				import: importMonitors,
 				updateSsl,
 				createContentCheck,
 				deleteContentCheck,
