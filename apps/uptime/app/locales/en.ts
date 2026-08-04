@@ -1312,6 +1312,17 @@ export default {
 				"You received this email because you asked us to delete your Uptime account. No further email will be sent to this address.",
 		},
 
+		teamDeleted: {
+			subject: "{{team}} has been deleted on Uptime",
+			preview: "{{team}} and everything it was monitoring no longer exist.",
+			heading: "{{team}} has been deleted",
+			body: "The owner of {{team}} deleted their Uptime account, and the team was deleted along with it. You no longer have access to it.",
+			lost: "Everything that belonged to the team is gone: its monitors, alerts and status pages no longer exist, and none of it can be recovered.",
+			next: "If you still need this monitoring, you can create a team of your own on Uptime and set it up again.",
+			footer:
+				"You received this email because you were a member of {{team}} on Uptime. There is nothing you need to do.",
+		},
+
 		teamInvite: {
 			subject: "You've been invited to join {{team}} on Uptime",
 			preview: "Join {{team}} on Uptime",

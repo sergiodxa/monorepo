@@ -23,6 +23,22 @@
  * account-holder email anywhere else, so deleting the row first would leave a completed erasure
  * that can never be confirmed to the person who asked for it.
  *
+ * ## The other members are told, and that mail is never allowed to matter
+ *
+ * Deleting an owner deletes their teams, and with them every other member's monitoring. Those
+ * people are mailed right after the erasure — the run that performed it is the only one that can,
+ * because the membership rows naming them are what it just deleted, which is why the erasure hands
+ * their subject ids back rather than the sweep querying for them.
+ *
+ * That notification is best-effort and deliberately does not gate anything. By the time it is
+ * sent the data is already gone, so the usual remedy — keep the row and retry tomorrow — would
+ * buy nothing and cost something: a person who asked to be deleted would keep a pending deletion
+ * request (with their address in it) because somebody *else*'s mail bounced, and tomorrow's re-run
+ * would re-erase an empty account and find no memberships left, so it could not resend the notice
+ * anyway. A failed notice is therefore logged and the sweep carries on; whether the row survives
+ * stays decided by the account holder's own confirmation mail, exactly as before. The same goes
+ * for a member the identity provider cannot resolve: log them, and mail everybody who did resolve.
+ *
  * ## Idempotence is load-bearing
  *
  * A failed run has already deleted part of an account, so every step must survive being run
@@ -37,6 +53,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { AuthSDK } from "@pkg/auth-sdk";
 import { Job } from "@pkg/jobs";
 import { Mailer } from "@pkg/mail";
 import { PolarClient } from "@pkg/polar";
@@ -44,19 +61,25 @@ import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import type { DeletedTeamNotice } from "~/app/services/account-erasure";
 import type { SelectAccountDeletion } from "~/database/schema";
 
 import AccountDeletion from "~/app/data/account-deletion";
+import UserPreferences from "~/app/data/user-preferences";
 import { AccountDeletedEmail } from "~/app/emails/account-deleted";
 import { emailTranslator } from "~/app/emails/locale";
+import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import { eraseAccount } from "~/app/services/account-erasure";
 import { recordCost } from "~/app/services/cost";
+import { resolveSubjects } from "~/app/services/subjects";
 
 export class DeleteAccountsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
 		let mailer = getServiceContainer().get(Mailer);
 		let polar = getServiceContainer().get(PolarClient);
+		/** Only ever used to turn a former member's subject id into an address to notify. */
+		let sdk = getServiceContainer().get(AuthSDK);
 
 		let pending = await AccountDeletion.listPending(db);
 
@@ -71,7 +94,7 @@ export class DeleteAccountsJob extends Job {
 		 */
 		for (let request of pending) {
 			try {
-				if (await this.erase(db, mailer, polar, request)) deleted++;
+				if (await this.erase(db, mailer, polar, sdk, request)) deleted++;
 				else errorCount++;
 			} catch (error) {
 				errorCount++;
@@ -99,6 +122,7 @@ export class DeleteAccountsJob extends Job {
 		db: Database,
 		mailer: Mailer,
 		polar: PolarClient,
+		sdk: AuthSDK,
 		request: SelectAccountDeletion,
 	): Promise<boolean> {
 		let erased = await eraseAccount(db, polar, request.subject_id, request.email);
@@ -114,6 +138,22 @@ export class DeleteAccountsJob extends Job {
 				error: erased.error.message,
 			});
 			return false;
+		}
+
+		/**
+		 * Before the account holder's own confirmation, because this is the only run that can send
+		 * it: the erasure above just deleted the rows naming these people, so a run that reached
+		 * the confirmation, failed it, and came back tomorrow would have nobody to notify. Its own
+		 * `try` because nothing it does may change what happens to this request — see the module
+		 * docblock.
+		 */
+		try {
+			await this.notifyFormerMembers(db, mailer, sdk, erased.data.deletedTeams);
+		} catch (error) {
+			this.logger.error("job.delete_accounts.notify_members_failed", {
+				subjectId: request.subject_id,
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
 
 		let { locale, t } = await emailTranslator();
@@ -146,5 +186,79 @@ export class DeleteAccountsJob extends Job {
 		});
 
 		return true;
+	}
+
+	/**
+	 * Mails everybody who lost a team to this erasure, one message per team they were in.
+	 *
+	 * Sequential, like the queue above: a destroyed team's members are few, and the run is already
+	 * inside a long cascade of D1 work. Each recipient's own language is honoured where they set
+	 * one, since the reader is not the person whose account was deleted.
+	 *
+	 * Every failure is contained: an unresolvable subject is skipped, a refused send is logged, and
+	 * neither is reported back to the caller, because the deletion must complete either way.
+	 *
+	 * @param teams - The destroyed teams that had other members, as captured before the delete.
+	 */
+	private async notifyFormerMembers(
+		db: Database,
+		mailer: Mailer,
+		sdk: AuthSDK,
+		teams: DeletedTeamNotice[],
+	): Promise<void> {
+		if (teams.length === 0) return;
+
+		let subjectIds = teams.flatMap((team) => team.memberIds);
+		let [profiles, preferences] = await Promise.all([
+			resolveSubjects(sdk, subjectIds),
+			UserPreferences.findBySubjectIds(db, subjectIds),
+		]);
+
+		let notified = 0;
+		let skipped = 0;
+
+		for (let team of teams) {
+			for (let subjectId of team.memberIds) {
+				let profile = profiles.get(subjectId);
+
+				/**
+				 * The identity provider holds the only copy of a member's address, so a profile that
+				 * did not resolve is a notice this run cannot send — and there is no later run that
+				 * could, so it is simply recorded and the rest go out.
+				 */
+				if (!profile) {
+					skipped++;
+					this.logger.error("job.delete_accounts.member_profile_missing", { subjectId });
+					continue;
+				}
+
+				let { locale, t } = await emailTranslator(
+					preferences.get(subjectId)?.preferred_language ?? undefined,
+				);
+
+				// Counted before the send, because a rejected send is still a billed one.
+				recordCost("emailSent");
+				let sent = await mailer.send(
+					new TeamDeletedEmail({ team: team.teamName, email: profile.emailAddress, locale, t }),
+				);
+
+				if (isFailure(sent)) {
+					skipped++;
+					this.logger.error("job.delete_accounts.member_email_failed", {
+						subjectId,
+						error: sent.error.message,
+					});
+					continue;
+				}
+
+				notified++;
+			}
+		}
+
+		this.logger.info("job.delete_accounts.members_notified", {
+			teams: teams.length,
+			notified,
+			skipped,
+		});
 	}
 }

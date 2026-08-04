@@ -202,6 +202,60 @@ describe("eraseAccount", () => {
 		expect(await db.count(memberships, { where: { team_id: team.id } })).toBe(0);
 	});
 
+	/**
+	 * The snapshot exists because the delete destroys the evidence: after `Team.deleteById` there
+	 * is no row left saying who was in the team, so anything that wants to tell them has to be
+	 * handed the ids by the erasure itself.
+	 */
+	test("reports the other members of each destroyed team, without the erased subject", async () => {
+		let { db } = createTestDatabase();
+		let first = await createTeamRow(db, { name: "First" });
+		let second = await createTeamRow(db, { name: "Second" });
+		await addMember(db, first.id, SUBJECT);
+		await addMember(db, first.id, "colleague-1", "member");
+		await addMember(db, first.id, "colleague-2", "admin");
+		await addMember(db, second.id, SUBJECT);
+		await addMember(db, second.id, "colleague-3", "member");
+
+		let result = await eraseAccount(db, asPolar(createFakePolar()), SUBJECT, EMAIL);
+
+		expect(isSuccess(result)).toBe(true);
+		if (!isSuccess(result)) return;
+
+		let byName = new Map(
+			result.data.deletedTeams.map((team) => [team.teamName, [...team.memberIds].sort()]),
+		);
+		expect(byName.get("First")).toEqual(["colleague-1", "colleague-2"]);
+		expect(byName.get("Second")).toEqual(["colleague-3"]);
+		for (let ids of byName.values()) expect(ids).not.toContain(SUBJECT);
+	});
+
+	test("reports no destroyed team for an owned team nobody else joined", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		await addMember(db, team.id, SUBJECT);
+
+		let result = await eraseAccount(db, asPolar(createFakePolar()), SUBJECT, EMAIL);
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.teamsDeleted).toBe(1);
+			expect(result.data.deletedTeams).toEqual([]);
+		}
+	});
+
+	test("reports no destroyed team when the subject only belonged to one", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db, { owner_id: "owner-2" });
+		await addMember(db, team.id, "owner-2");
+		await addMember(db, team.id, SUBJECT, "member");
+
+		let result = await eraseAccount(db, asPolar(createFakePolar()), SUBJECT, EMAIL);
+
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.deletedTeams).toEqual([]);
+	});
+
 	test("revokes the subject's active subscriptions and clears the local projection", async () => {
 		let { db } = createTestDatabase();
 		let polar = createFakePolar();
@@ -316,6 +370,9 @@ describe("eraseAccount", () => {
 			expect(second.data.teamsDeleted).toBe(0);
 			expect(second.data.membershipsRemoved).toBe(0);
 			expect(second.data.subscriptionsRevoked).toBe(0);
+			// Nothing was destroyed this time, so there is nobody left to be notified about it —
+			// which is why the notification cannot be deferred to a later run.
+			expect(second.data.deletedTeams).toEqual([]);
 		}
 		expect(polar.revokeSubscription).not.toHaveBeenCalled();
 

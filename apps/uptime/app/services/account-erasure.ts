@@ -32,6 +32,14 @@
  * "still being billed" indistinguishable from "cancelled", and the whole point of the ordering
  * is to be able to tell those apart and stop.
  *
+ * ## The other members are snapshotted, not looked up
+ *
+ * Destroying a team destroys the membership rows that say who was in it, so the people who lose
+ * access can only be identified while the team still exists. {@link eraseAccount} therefore reads
+ * each owned team's other members immediately before deleting it and reports them in
+ * {@link AccountErasureReport.deletedTeams}, purely so the sweep can tell them. Doing it after the
+ * fact is not a worse ordering, it is an impossible one.
+ *
  * ## Every step is idempotent
  *
  * A run that failed halfway has already deleted some of the account, and the queued row that
@@ -86,6 +94,22 @@ export interface AccountErasurePlan {
 	othersLosingAccess: number;
 }
 
+/**
+ * One destroyed team and the people who lost it, snapshotted so they can be told.
+ *
+ * Only the team's display name and the other members' subject ids: the name is what makes the
+ * notice mean anything to a reader, and the ids are all that is needed to ask the identity
+ * provider for an address. The erased subject is excluded — they get their own confirmation, and
+ * a notice blaming them by name or address would put a deleted person's personal data into
+ * somebody else's mailbox.
+ */
+export interface DeletedTeamNotice {
+	/** Display name of the team that no longer exists. */
+	teamName: string;
+	/** Subjects other than the erased one who were members when it was deleted. */
+	memberIds: string[];
+}
+
 /** What one completed erasure removed, for the sweep's log line. */
 export interface AccountErasureReport {
 	subjectId: string;
@@ -95,6 +119,14 @@ export interface AccountErasureReport {
 	membershipsRemoved: number;
 	/** Polar subscriptions revoked on this run; `0` on a re-run of an already-cancelled account. */
 	subscriptionsRevoked: number;
+	/**
+	 * The destroyed teams that had other members, for the sweep to notify.
+	 *
+	 * Empty for the common case of a personal team nobody else joined, and empty on a re-run of
+	 * an already-erased account — the membership rows this is read from are gone by then, which
+	 * is exactly why it is captured here, before the delete, rather than looked up afterwards.
+	 */
+	deletedTeams: DeletedTeamNotice[];
 }
 
 /**
@@ -166,13 +198,24 @@ export async function eraseAccount(
 	let memberships = await Team.listWithRoleBySubjectId(db, subjectId);
 	let teamsDeleted = 0;
 	let membershipsRemoved = 0;
+	let deletedTeams: DeletedTeamNotice[] = [];
 
 	for (let { team, isOwner } of memberships) {
 		if (isOwner) {
+			/**
+			 * Who else is in this team is read *before* the delete and never after. The membership
+			 * rows are the only record of it and `Team.deleteById` removes them, so a caller that
+			 * wanted to tell those people anything would have nobody left to tell.
+			 */
+			let others = (await Team.listMembersByTeam(db, team.id))
+				.map((member) => member.subject_id)
+				.filter((memberId) => memberId !== subjectId);
+
 			// Removes every membership on the team along with its monitors, alerts, status
 			// pages, keys and invites — which is what makes the other members lose access.
 			await Team.deleteById(db, team.id);
 			teamsDeleted++;
+			if (others.length > 0) deletedTeams.push({ teamName: team.name, memberIds: others });
 			continue;
 		}
 
@@ -205,6 +248,7 @@ export async function eraseAccount(
 		teamsDeleted,
 		membershipsRemoved,
 		subscriptionsRevoked: revoked.data,
+		deletedTeams,
 	});
 }
 
