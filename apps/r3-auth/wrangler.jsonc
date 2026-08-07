@@ -3,7 +3,8 @@
 	"name": "r3-auth",
 	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2026-04-10",
-	// Required: the OIDC engine imports `timingSafeEqual` from `node:crypto`.
+	// Node built-ins must resolve: the billing and JWT dependencies reach for them, and
+	// dropping the flag is a change to verify on its own rather than a side effect.
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
 	"dev": { "port": 3002 },

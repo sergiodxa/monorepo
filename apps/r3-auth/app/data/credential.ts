@@ -36,4 +36,27 @@ export default class Credential {
 			{ touch: true, returnRow: true },
 		);
 	}
+
+	/**
+	 * Replaces the stored hash for a subject that already has a credential, which is
+	 * how a hash written under an older scheme is retired after it verified.
+	 *
+	 * Scoped by subject and never an insert: a subject with no credential must stay
+	 * without one rather than gain a password they never set.
+	 *
+	 * @returns How many credentials were rewritten — zero when the subject has none.
+	 */
+	static async updatePasswordHash(
+		db: Database,
+		subjectId: string,
+		passwordHash: string,
+	): Promise<number> {
+		let result = await db.updateMany(
+			credentials,
+			{ password_hash: passwordHash },
+			{ where: { subject_id: subjectId } },
+		);
+
+		return result.affectedRows ?? 0;
+	}
 }
