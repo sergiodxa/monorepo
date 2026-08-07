@@ -51,6 +51,44 @@ describe("Email.Layout", () => {
 		expect(text).toBe("Body copy");
 	});
 
+	test("ships the dark half of the color scheme it declares", async () => {
+		let { html, text } = await render(
+			<Email.Layout>
+				<Email.Text>Body copy</Email.Text>
+			</Email.Layout>,
+		);
+
+		expect(html).toContain('name="color-scheme" content="light dark"');
+		expect(html).toContain("@media (prefers-color-scheme:dark)");
+		expect(html).toContain(".mail-surface{background-color:#18181b !important;}");
+		expect(html).toContain('class="mail-text"');
+		// The stylesheet is document furniture, not copy, so it stays out of the text part.
+		expect(text).toBe("Body copy");
+	});
+
+	test("appends the app's own dark rules to that block", async () => {
+		let { html } = await render(
+			<Email.Layout darkStyles=".app-chart{background-color:#000000 !important;}">
+				<Email.Text>Body copy</Email.Text>
+			</Email.Layout>,
+		);
+
+		expect(html).toContain(".app-chart{background-color:#000000 !important;}}");
+	});
+
+	test("drops the dark rule for any color the caller overrode", async () => {
+		let { html } = await render(
+			<Email.Layout surface="#111111">
+				<Email.Heading color="#eeeeee">Title</Email.Heading>
+			</Email.Layout>,
+		);
+
+		// The rule stays in the stylesheet; nothing wears the class that would answer it.
+		expect(html).not.toContain('class="mail-surface"');
+		expect(html).toContain("background-color:#111111");
+		expect(html).toContain("<h1 style=");
+	});
+
 	test("renders a logo only when one is given", async () => {
 		let withLogo = await render(
 			<Email.Layout logo={{ src: "https://example.com/logo.png", alt: "Acme" }}>

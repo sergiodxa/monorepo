@@ -44,6 +44,49 @@ const CONTENT_WIDTH = 600;
 /** Font size in pixels per heading level. */
 const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 24, 2: 20, 3: 16 };
 
+/**
+ * The dark counterpart of every color above, as the rules a client applies when the
+ * reader is in dark mode.
+ *
+ * It exists because declaring a color scheme without shipping one is worse than
+ * declaring nothing: Apple Mail reads `color-scheme: light dark` as a promise that the
+ * message paints its own dark mode, so it stops remapping colors and leaves the copy
+ * exactly as authored. On macOS it darkens the card anyway and the near-black body copy
+ * on it becomes unreadable; on iOS it honours the promise in full and a dark inbox gets
+ * a white email. Both are the same missing half.
+ *
+ * The rules are keyed on classes rather than on elements so they only reach what this
+ * kit painted, and they are `!important` because the light values they replace are
+ * inline styles, which is the only place a mail client is guaranteed to read them from.
+ * Every element therefore carries both: the inline style is the light baseline and the
+ * one clients that strip `<style>` keep, and the class is the dark override.
+ *
+ * A class is emitted only when the caller left that color to the kit — pass a color and
+ * the element opts out of the dark rule for it, since the kit has no dark counterpart
+ * for a color it has never seen.
+ */
+const DARK_RULES = [
+	".mail-page{background-color:#09090b !important;}",
+	".mail-surface{background-color:#18181b !important;}",
+	".mail-text{color:#fafafa !important;}",
+	".mail-muted{color:#a1a1aa !important;}",
+	".mail-rule{border-color:#3f3f46 !important;}",
+	".mail-action{background-color:#fafafa !important;}",
+	".mail-action-label{color:#18181b !important;}",
+].join("");
+
+/**
+ * Builds the document stylesheet: the kit's dark mode, then whatever the caller adds.
+ *
+ * The result is a text node, so the renderer escapes it — CSS written here or passed in
+ * cannot use `>` or `&`, which rules out child combinators. Descendant and class
+ * selectors are enough for everything a mail body contains.
+ */
+function stylesheet(extra: string | undefined): string {
+	let dark = `@media (prefers-color-scheme:dark){${DARK_RULES}${extra ?? ""}}`;
+	return `:root{color-scheme:light dark;}${dark}`;
+}
+
 export namespace Layout {
 	/** Props accepted by {@link Layout}. */
 	export interface Props {
@@ -70,6 +113,12 @@ export namespace Layout {
 		fontFamily?: string;
 		/** Content width in pixels. */
 		width?: number;
+		/**
+		 * CSS appended inside the kit's `prefers-color-scheme: dark` block, for the dark
+		 * counterpart of colors the app's own components paint with. It is escaped as a
+		 * text node, so it cannot contain `>` or `&`.
+		 */
+		darkStyles?: string;
 	}
 }
 
@@ -77,6 +126,10 @@ export namespace Layout {
  * Wraps an email body in a centered, fixed-width card inside a full HTML document.
  * Every rule is an inline style on a table, which is the only layout mail clients
  * agree on; the card and page colors are props so the kit stays unbranded.
+ *
+ * It also carries the one stylesheet the document has: the dark counterpart of the
+ * kit's colors, which is why the layout is the only component that renders a `<head>`.
+ * See {@link DARK_RULES} for why an email that declares a color scheme has to ship one.
  *
  * @example <Email.Layout preview="Your invite is ready"><Email.Text>Hi</Email.Text></Email.Layout>
  */
@@ -88,12 +141,20 @@ export function Layout(handle: Handle<Layout.Props>) {
 			logo,
 			title,
 			lang = "en",
-			background = PAGE_COLOR,
-			surface = SURFACE_COLOR,
-			color = TEXT_COLOR,
+			background,
+			surface,
+			color,
 			fontFamily = FONT_FAMILY,
 			width = CONTENT_WIDTH,
+			darkStyles,
 		} = handle.props;
+
+		let page = background ?? PAGE_COLOR;
+		let card = surface ?? SURFACE_COLOR;
+		let ink = color ?? TEXT_COLOR;
+		let pageClass = background === undefined ? "mail-page" : undefined;
+		let cardClass = surface === undefined ? "mail-surface" : undefined;
+		let inkClass = color === undefined ? "mail-text" : undefined;
 
 		return (
 			<html lang={lang}>
@@ -101,10 +162,13 @@ export function Layout(handle: Handle<Layout.Props>) {
 					<meta charset="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<meta name="color-scheme" content="light dark" />
+					<meta name="supported-color-schemes" content="light dark" />
 					{title ? <title>{title}</title> : null}
+					<style>{stylesheet(darkStyles)}</style>
 				</head>
 				<body
-					style={`margin:0;padding:0;width:100%;background-color:${background};color:${color};font-family:${fontFamily};`}
+					class={pageClass}
+					style={`margin:0;padding:0;width:100%;background-color:${page};color:${ink};font-family:${fontFamily};`}
 				>
 					{preview ? (
 						<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">
@@ -116,7 +180,8 @@ export function Layout(handle: Handle<Layout.Props>) {
 						width="100%"
 						cellPadding="0"
 						cellSpacing="0"
-						style={`width:100%;background-color:${background};`}
+						class={pageClass}
+						style={`width:100%;background-color:${page};`}
 					>
 						<tbody>
 							<tr>
@@ -126,7 +191,8 @@ export function Layout(handle: Handle<Layout.Props>) {
 										width={width}
 										cellPadding="0"
 										cellSpacing="0"
-										style={`width:100%;max-width:${width}px;background-color:${surface};border-radius:8px;`}
+										class={cardClass}
+										style={`width:100%;max-width:${width}px;background-color:${card};border-radius:8px;`}
 									>
 										<tbody>
 											{logo ? (
@@ -143,7 +209,8 @@ export function Layout(handle: Handle<Layout.Props>) {
 											) : null}
 											<tr>
 												<td
-													style={`padding:24px;font-family:${fontFamily};color:${color};font-size:16px;line-height:1.6;`}
+													class={inkClass}
+													style={`padding:24px;font-family:${fontFamily};color:${ink};font-size:16px;line-height:1.6;`}
 												>
 													{children}
 												</td>
@@ -182,12 +249,27 @@ export namespace Heading {
  */
 export function Heading(handle: Handle<Heading.Props>) {
 	return () => {
-		let { children, level = 1, color = TEXT_COLOR, align = "left" } = handle.props;
-		let style = `margin:0 0 16px;padding:0;font-family:inherit;font-size:${HEADING_SIZES[level]}px;line-height:1.3;font-weight:600;color:${color};text-align:${align};`;
+		let { children, level = 1, color, align = "left" } = handle.props;
+		let className = color === undefined ? "mail-text" : undefined;
+		let style = `margin:0 0 16px;padding:0;font-family:inherit;font-size:${HEADING_SIZES[level]}px;line-height:1.3;font-weight:600;color:${color ?? TEXT_COLOR};text-align:${align};`;
 
-		if (level === 3) return <h3 style={style}>{children}</h3>;
-		if (level === 2) return <h2 style={style}>{children}</h2>;
-		return <h1 style={style}>{children}</h1>;
+		if (level === 3)
+			return (
+				<h3 class={className} style={style}>
+					{children}
+				</h3>
+			);
+		if (level === 2)
+			return (
+				<h2 class={className} style={style}>
+					{children}
+				</h2>
+			);
+		return (
+			<h1 class={className} style={style}>
+				{children}
+			</h1>
+		);
 	};
 }
 
@@ -217,9 +299,11 @@ export function Text(handle: Handle<Text.Props>) {
 	return () => {
 		let { children, muted = false, color, size = 16, align = "left" } = handle.props;
 		let resolved = color ?? (muted ? MUTED_COLOR : TEXT_COLOR);
+		let className = color === undefined ? (muted ? "mail-muted" : "mail-text") : undefined;
 
 		return (
 			<p
+				class={className}
 				style={`margin:0 0 16px;padding:0;font-family:inherit;font-size:${size}px;line-height:1.6;color:${resolved};text-align:${align};`}
 			>
 				{children}
@@ -253,22 +337,23 @@ export namespace Button {
  */
 export function Button(handle: Handle<Button.Props>) {
 	return () => {
-		let {
-			href,
-			children,
-			background = ACTION_COLOR,
-			color = ACTION_LABEL_COLOR,
-			radius = 6,
-		} = handle.props;
+		let { href, children, background, color, radius = 6 } = handle.props;
+		let fillClass = background === undefined ? "mail-action" : undefined;
+		let labelClass = color === undefined ? "mail-action-label" : undefined;
 
 		return (
 			<table role="presentation" cellPadding="0" cellSpacing="0" style="margin:0 0 16px;">
 				<tbody>
 					<tr>
-						<td align="center" style={`background-color:${background};border-radius:${radius}px;`}>
+						<td
+							align="center"
+							class={fillClass}
+							style={`background-color:${background ?? ACTION_COLOR};border-radius:${radius}px;`}
+						>
 							<a
 								href={href}
-								style={`display:inline-block;padding:12px 20px;font-family:inherit;font-size:16px;line-height:1.2;font-weight:600;color:${color};text-decoration:none;`}
+								class={labelClass}
+								style={`display:inline-block;padding:12px 20px;font-family:inherit;font-size:16px;line-height:1.2;font-weight:600;color:${color ?? ACTION_LABEL_COLOR};text-decoration:none;`}
 							>
 								{children}
 							</a>
@@ -315,8 +400,10 @@ export namespace Table {
  */
 export function Table(handle: Handle<Table.Props>) {
 	return () => {
-		let { rows, borderColor = BORDER_COLOR } = handle.props;
+		let { rows, borderColor } = handle.props;
 		if (rows.length === 0) return null;
+
+		let rule = borderColor === undefined ? " mail-rule" : "";
 
 		return (
 			<table
@@ -330,17 +417,19 @@ export function Table(handle: Handle<Table.Props>) {
 					{rows.map((row, index) => {
 						// Hairlines go between rows, so the first one does without a top border and
 						// the block sits flush against whatever precedes it.
-						let border = index === 0 ? "none" : `1px solid ${borderColor}`;
+						let border = index === 0 ? "none" : `1px solid ${borderColor ?? BORDER_COLOR}`;
 
 						return (
 							<tr key={row.label}>
 								<td
+									class={`mail-muted${rule}`}
 									style={`padding:10px 12px 10px 0;border-top:${border};font-family:inherit;font-size:14px;line-height:1.4;color:${MUTED_COLOR};white-space:nowrap;vertical-align:top;`}
 								>
 									{row.label}
 								</td>
 								<td
 									align="right"
+									class={`mail-text${rule}`}
 									style={`padding:10px 0;border-top:${border};font-family:inherit;font-size:14px;line-height:1.4;font-weight:600;color:${TEXT_COLOR};text-align:right;word-break:break-word;vertical-align:top;`}
 								>
 									{row.value}
@@ -374,14 +463,20 @@ export namespace Footer {
  */
 export function Footer(handle: Handle<Footer.Props>) {
 	return () => {
-		let { children, color = MUTED_COLOR, borderColor = BORDER_COLOR } = handle.props;
+		let { children, color, borderColor } = handle.props;
 
 		return (
 			<table role="presentation" width="100%" cellPadding="0" cellSpacing="0" style="width:100%;">
 				<tbody>
 					<tr>
-						<td style={`padding:16px 0 0;border-top:1px solid ${borderColor};`}>
-							<div style={`font-family:inherit;font-size:12px;line-height:1.5;color:${color};`}>
+						<td
+							class={borderColor === undefined ? "mail-rule" : undefined}
+							style={`padding:16px 0 0;border-top:1px solid ${borderColor ?? BORDER_COLOR};`}
+						>
+							<div
+								class={color === undefined ? "mail-muted" : undefined}
+								style={`font-family:inherit;font-size:12px;line-height:1.5;color:${color ?? MUTED_COLOR};`}
+							>
 								{children}
 							</div>
 						</td>

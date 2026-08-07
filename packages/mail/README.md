@@ -285,11 +285,27 @@ The single error type the package reports. The original provider or render error
 Unbranded components for email bodies. Every rule is an inline style on a table, which is the only layout mail clients agree on, and every color is a prop so the kit ships no product identity.
 
 - **`Email.Layout`** — a full HTML document wrapping the body in a centered card.
-  **Props:** `children?`, `preview?` (inbox preheader, hidden in the body and dropped from the text part), `logo?` (`{ src, alt, width? }`), `title?`, `lang?`, `background?`, `surface?`, `color?`, `fontFamily?`, `width?`
+  **Props:** `children?`, `preview?` (inbox preheader, hidden in the body and dropped from the text part), `logo?` (`{ src, alt, width? }`), `title?`, `lang?`, `background?`, `surface?`, `color?`, `fontFamily?`, `width?`, `darkStyles?`
 - **`Email.Heading`** — **Props:** `children?`, `level?` (`1 | 2 | 3`), `color?`, `align?`
 - **`Email.Text`** — **Props:** `children?`, `color?`, `muted?`, `size?`, `align?`
 - **`Email.Button`** — a padded link in a single-cell table, so the fill survives clients that drop CSS backgrounds on anchors. **Props:** `href`, `children?`, `background?`, `color?`, `radius?`
 - **`Email.Footer`** — de-emphasized content under a hairline. **Props:** `children?`, `color?`, `borderColor?`
+
+#### Dark mode
+
+The layout declares `color-scheme: light dark` and ships the dark half of it, because declaring one without shipping it is worse than declaring nothing: Apple Mail reads the declaration as a promise the message paints its own dark mode and stops remapping colors, so on macOS the card darkens under near-black copy and on iOS a dark inbox gets a white email.
+
+Every element therefore carries two things. The inline style is the light baseline, and the one clients that strip `<style>` keep. A class — `mail-page`, `mail-surface`, `mail-text`, `mail-muted`, `mail-rule`, `mail-action`, `mail-action-label` — is what the layout's `prefers-color-scheme: dark` block overrides, with `!important`, since it is overriding an inline style.
+
+A class is emitted only when the caller left that color to the kit. Pass `color` to a `Heading` and it opts out of the dark rule for it, because the kit has no dark counterpart for a color it never chose.
+
+Apps whose own components paint inside the card pass their rules as `darkStyles`, appended inside that same media query:
+
+```typescript
+<Email.Layout darkStyles=".app-status-down{color:#f87171 !important;}">
+```
+
+The stylesheet is a text node, so it is escaped: CSS passed here cannot use `>` or `&`, which rules out child combinators. Descendant and class selectors cover everything a mail body contains.
 
 ### Types
 
