@@ -6,6 +6,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./markdown": "./src/markdown.tsx",
 		"./memory": "./src/memory.ts",
 		"./middleware": "./src/middleware.ts",
 		"./cloudflare": "./src/cloudflare.ts"
@@ -14,10 +15,13 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@markdoc/markdoc": "^0.5.8",
 		"@pkg/result": "workspace:*",
+		"prismjs": "^1.30.0",
 		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.3.14"
+		"@types/bun": "^1.3.14",
+		"@types/prismjs": "^1.26.6"
 	}
 }

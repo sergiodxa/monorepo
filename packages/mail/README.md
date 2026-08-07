@@ -10,18 +10,19 @@ Delivery is a value rather than an exception. `Mailer.send()` returns a [`Result
 
 An email can be a plain `Message` object or an `Email` class. The class form keeps a recipient, a subject, and a body together with the data they were derived from, which makes the directory holding them the inventory of what an app can send. The package has no i18n dependency: a subject reaches it as a string that the application has already translated for the recipient, so nothing here resolves locales.
 
-Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and derives the plain-text alternative from the same tree, so every message ships both parts without a second authoring step. A small unbranded layout kit (`Email.Layout`, `Email.Heading`, `Email.Text`, `Email.Button`, `Email.Footer`) covers the constraints mail clients impose: table layout, inline styles, and no external stylesheet.
+Bodies are `remix/ui` trees. `render()` serializes one with `renderToString` and derives the plain-text alternative from the same tree, so every message ships both parts without a second authoring step. An unbranded layout kit covers the constraints mail clients impose: table layout, inline styles, and no external stylesheet. Markdown, with highlighted code fences, renders through the same kit from a separate entry point.
 
 ### Entry points
 
 | Entry                  | Contents                                                                            |
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | `@pkg/mail`            | Contracts, `Mailer`, `render()`, `buildMimeMessage()`, the `Email` contract and kit |
+| `@pkg/mail/markdown`   | `Markdown` and `CodeBlock`, which carry a parser and a highlighter                  |
 | `@pkg/mail/memory`     | `MemoryTransport`, the recording fake for tests                                     |
 | `@pkg/mail/cloudflare` | `CloudflareTransport`, for the Workers email sending binding                        |
 | `@pkg/mail/middleware` | The router middleware that publishes `context.email`                                |
 
-Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type.
+Transports are separate subpaths and are never re-exported from the root, so importing one never pulls another's runtime-specific import into a bundle: a build for a non-Workers context that never imports `@pkg/mail/cloudflare` never resolves a platform type. `@pkg/mail/markdown` is split off for the same reason and a different cost: Markdoc and Prism are the only heavy dependencies here, and most mail is not markdown.
 
 The MIME builder is the exception to that split: it ships from the root rather than from a transport subpath, because it is plain string assembly with no runtime-specific import. Both shipped transports hand structured fields to their destination, so neither needs it; it exists for a transport whose provider takes a raw message, and for `MemoryTransport` to record the wire form a test wants to assert on.
 
@@ -226,6 +227,8 @@ Renders an email body tree to both body parts.
 
 - `{ html, text }`, where `text` is derived from that same HTML
 
+A whole document is given an XHTML 1.0 Transitional doctype; a fragment is left alone, so rendering one component on its own returns just that component. The doctype is the one the renderers that read a doctype at all were built for — Outlook hands the document to Word, which drops into a quirks mode that collapses table cell heights without it.
+
 **Example:**
 
 ```typescript
@@ -274,7 +277,7 @@ Coerces the single-or-list shape callers write into the list shape transports re
 
 #### `htmlToText(html: string): string`
 
-Derives the plain-text alternative of an email from its rendered HTML. Link targets survive as `label (href)`, list items become `- ` bullets, block elements become blank lines while table rows become single lines, and hidden preheader blocks are dropped. `render()` applies this for you; call it directly only to post-process a text part.
+Derives the plain-text alternative of an email from its rendered HTML. Link targets survive as `label (href)`, an image becomes its alt text, an ordered list numbers its items while an unordered one bullets them, block elements become blank lines while table rows become single lines, and hidden preheader blocks are dropped. Anything marked `data-skip-in-text` is dropped whether it is hidden or not, which is how an element says it belongs to the HTML part alone. `render()` applies this for you; call it directly only to post-process a text part.
 
 #### `MailError`
 
@@ -284,12 +287,41 @@ The single error type the package reports. The original provider or render error
 
 Unbranded components for email bodies. Every rule is an inline style on a table, which is the only layout mail clients agree on, and every color is a prop so the kit ships no product identity.
 
-- **`Email.Layout`** — a full HTML document wrapping the body in a centered card.
-  **Props:** `children?`, `preview?` (inbox preheader, hidden in the body and dropped from the text part), `logo?` (`{ src, alt, width? }`), `title?`, `lang?`, `background?`, `surface?`, `color?`, `fontFamily?`, `width?`, `darkStyles?`
+**The document**
+
+- **`Email.Layout`** — a full HTML document wrapping the body in a centered card. It renders the only `<head>` and the only `<style>`, which is why web fonts and the dark stylesheet are its props rather than components of their own.
+  **Props:** `children?`, `preview?` (inbox preheader, hidden in the body and padded so the body copy cannot leak into the snippet), `logo?` (`{ src, alt, width? }`), `title?`, `lang?`, `background?`, `surface?`, `color?`, `fontFamily?`, `fonts?` (`EmailFont[]`), `width?`, `darkStyles?`
+
+**Copy**
+
 - **`Email.Heading`** — **Props:** `children?`, `level?` (`1 | 2 | 3`), `color?`, `align?`
 - **`Email.Text`** — **Props:** `children?`, `color?`, `muted?`, `size?`, `align?`
-- **`Email.Button`** — a padded link in a single-cell table, so the fill survives clients that drop CSS backgrounds on anchors. **Props:** `href`, `children?`, `background?`, `color?`, `radius?`
+- **`Email.Link`** — an inline link, opening in a new tab. The colour is inherited rather than declared, so it is already whatever dark mode made the copy around it, leaving the underline to say it is a link. **Props:** `href`, `children?`, `color?`, `underline?`
+- **`Email.CodeInline`** — a short run of code inside a sentence, sized in `em` so it tracks whatever it is set inside. **Props:** `children?`
+
+**Layout**
+
+- **`Email.Section`** — a full-width band, as a single-cell table. Padding goes on the cell and everything else on the table, which is the split Outlook needs and what keeps a background painting the whole band. **Props:** `children?`, `padding?`, `background?`, `align?`
+- **`Email.Row`** — puts its columns side by side as one table row. This is what an email uses instead of flex or grid, both of which collapse to a stacked column in Outlook. It does not wrap, so keep the count low. **Props:** `children?`, `gap?`
+- **`Email.Column`** — one cell of a `Row`. A numeric width is written to the attribute bare and to the style in pixels, because Outlook reads the first and everything newer reads the second. **Props:** `children?`, `width?`, `align?`, `valign?`, `padding?`
+
+**Furniture**
+
+- **`Email.Button`** — a link in a single-cell table, so the fill survives clients that drop CSS backgrounds on anchors. The padding is on the cell, which is what makes it a button in Outlook: Word supports neither `display:inline-block` nor padding on an inline element, so a padded anchor arrives as bare text on a coloured strip. **Props:** `href`, `children?`, `background?`, `color?`, `radius?`
+- **`Email.Table`** — a set of facts as label/value rows. **Props:** `rows`, `borderColor?`
+- **`Email.Img`** — an image with the resets an inbox needs: `display:block` so no gap opens under it, and a cleared border, outline and underline. `alt` is required because most readers see it — every major client blocks remote images until asked. **Props:** `src`, `alt`, `width?`, `height?`, `radius?`, `gap?`
+- **`Email.Hr`** — a rule drawn as a top border rather than the native element, which several clients render as an inset two-tone groove. **Props:** `color?`, `gap?`
 - **`Email.Footer`** — de-emphasized content under a hairline. **Props:** `children?`, `color?`, `borderColor?`
+
+#### Web fonts
+
+`Email.Layout` takes `fonts` and emits an `@font-face` for each, plus `mso-font-alt` — Outlook's own fallback declaration, which Word reads even though it ignores the rule around it, and without which an unavailable family lands on Times New Roman instead of the chosen stack.
+
+```typescript
+<Email.Layout fonts={[{ family: "Inter", fallback: "Helvetica, Arial, sans-serif", src: { url, format: "woff2" } }]}>
+```
+
+`fallback` is required, and is the font the email is actually set in for most readers: `@font-face` is unsupported in Gmail, Yahoo, and Outlook on Windows. With `fonts` set and `fontFamily` omitted, the document stack is built from the first entry.
 
 #### Dark mode
 
@@ -391,6 +423,36 @@ interface SentMessage {
 	messageId: string;
 }
 ```
+
+### `@pkg/mail/markdown`
+
+Markdown as an email body, and the highlighted code block it renders fences with. Behind its own entry point because it carries the only heavy dependencies in the package — Markdoc and Prism — and most mail is not markdown.
+
+Both build a component tree rather than an HTML string, which is why neither is a thin wrapper over an existing renderer: Markdoc renders to HTML, Prism highlights to HTML, and `remix/ui` escapes a text node, so a string of markup would arrive in the inbox as its own source. The tree is walked here instead, and every node comes out as a component from the kit with its styles already inline.
+
+#### `Markdown`
+
+Renders markdown through the layout kit.
+
+**Props:** `children` (the markdown source)
+
+```tsx
+import { Markdown } from "@pkg/mail/markdown";
+
+<Email.Layout title="Release notes">
+	<Markdown>{notes}</Markdown>
+</Email.Layout>;
+```
+
+The mapping is deliberately lossy, because markdown can express things an inbox cannot lay out and the honest response is to render the content in a form that reads rather than one that half-works. Headings stop at level three, which is as many sizes as fit inside a card before the smallest is body copy again. Anything with no email-safe counterpart keeps its content and loses its box. Loose list items lose the paragraph markdown wraps them in, whose bottom margin would otherwise turn a five-item list into five separated blocks.
+
+#### `CodeBlock`
+
+A fenced block of code, highlighted, inside a single-cell table — a `<pre>` with a background is painted to the width of the text by Outlook rather than the width of the column. Long lines wrap rather than scroll, because an inbox has no horizontal scrollbar to offer.
+
+**Props:** `code`, `language?`
+
+Prism's token types collapse to six buckets — comment, keyword, string, number, function, punctuation — which is enough for code to read as code in a notification, and few enough that the dark half stays six rules. An unknown language renders unpainted rather than failing.
 
 ### `@pkg/mail/memory`
 

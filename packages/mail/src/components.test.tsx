@@ -167,3 +167,109 @@ describe("Email.Footer", () => {
 		expect(text).toBe("You received this because you were invited.");
 	});
 });
+
+describe("Email.Section", () => {
+	test("puts the padding on the cell and the fill on the table", async () => {
+		let { html } = await render(
+			<Email.Section padding="16px 0" background="#fafafa">
+				<Email.Text>Grouped</Email.Text>
+			</Email.Section>,
+		);
+
+		expect(html).toContain("background-color:#fafafa");
+		expect(html).toContain("padding:16px 0;");
+		// Outlook drops padding declared on a table, so it must not be the one carrying it.
+		expect(html).not.toContain("width:100%;background-color:#fafafa;padding");
+	});
+});
+
+describe("Email.Row and Email.Column", () => {
+	test("lays its columns out as one table row", async () => {
+		let { html } = await render(
+			<Email.Row>
+				<Email.Column width={120}>Left</Email.Column>
+				<Email.Column align="right">Right</Email.Column>
+			</Email.Row>,
+		);
+
+		expect(html.split("<tr").length - 1).toBe(1);
+		expect(html.split("<td").length - 1).toBe(2);
+	});
+
+	test("gives a numeric width to the attribute bare and to the style in pixels", async () => {
+		let { html } = await render(<Email.Column width={120}>Left</Email.Column>);
+
+		expect(html).toContain('width="120"');
+		expect(html).toContain("width:120px;");
+	});
+});
+
+describe("Email.Link", () => {
+	test("inherits the surrounding color so dark mode carries it", async () => {
+		let { html, text } = await render(<Email.Link href="https://example.com">docs</Email.Link>);
+
+		expect(html).toContain("color:inherit");
+		expect(html).toContain("text-decoration:underline");
+		expect(html).toContain('target="_blank"');
+		expect(text).toBe("docs (https://example.com)");
+	});
+});
+
+describe("Email.Img", () => {
+	test("carries the resets that stop a client framing it or spacing under it", async () => {
+		let { html, text } = await render(
+			<Email.Img src="https://example.com/logo.png" alt="Acme" width={120} />,
+		);
+
+		expect(html).toContain("display:block");
+		expect(html).toContain("border:0");
+		expect(html).toContain("outline:none");
+		// Alt text is what most readers get: clients block remote images until asked.
+		expect(text).toBe("Acme");
+	});
+});
+
+describe("Email.Hr", () => {
+	test("draws the rule as a top border rather than the native element", async () => {
+		let { html } = await render(<Email.Hr />);
+
+		expect(html).toContain("border:none");
+		expect(html).toContain("border-top:1px solid #e4e4e7");
+		expect(html).toContain('class="mail-rule"');
+	});
+});
+
+describe("Email.CodeInline", () => {
+	test("sizes itself against whatever it is set inside", async () => {
+		let { html, text } = await render(<Email.CodeInline>DEBUG=1</Email.CodeInline>);
+
+		expect(html).toContain("font-size:0.9em");
+		expect(html).toContain('class="mail-code"');
+		expect(text).toBe("DEBUG=1");
+	});
+});
+
+describe("web fonts", () => {
+	test("declares the face, names Outlook's fallback, and sets the document stack", async () => {
+		let { html } = await render(
+			<Email.Layout
+				fonts={[
+					{
+						family: "Inter",
+						fallback: "Helvetica, Arial, sans-serif",
+						src: { url: "https://example.com/i.woff2", format: "woff2" },
+					},
+				]}
+			>
+				<Email.Text>Body copy</Email.Text>
+			</Email.Layout>,
+		);
+
+		expect(html).toContain("@font-face{font-family:'Inter'");
+		expect(html).toContain("mso-font-alt:'Helvetica'");
+		expect(html).toContain("format('woff2')");
+		// Unquoted, or the renderer escapes the quotes and the declaration names nothing.
+		expect(html).toContain("font-family:Inter, Helvetica, Arial, sans-serif;");
+		expect(html).not.toContain("&#39;Inter&#39;");
+	});
+});

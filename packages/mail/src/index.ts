@@ -23,6 +23,9 @@ export type { RenderedEmail } from "./render";
  */
 export type EmailTableRow = EmailComponents.Table.Row;
 
+/** A web font for `Email.Layout` to declare, named here for the same reason as above. */
+export type EmailFont = EmailComponents.Font;
+
 export { MailError } from "./errors";
 export { formatAddress, toAddressList } from "./lib/address";
 export { htmlToText } from "./lib/html-to-text";
@@ -40,8 +43,14 @@ export { render } from "./render";
 export type Email = EmailContract;
 
 /**
- * Layout kit for email bodies: `Email.Layout`, `Email.Heading`, `Email.Text`,
- * `Email.Button`, and `Email.Footer`. Named as a namespace because that is how the
- * components are addressed, and it shares the identifier with the `Email` contract.
+ * Layout kit for email bodies: the document (`Email.Layout`), the copy (`Email.Heading`,
+ * `Email.Text`, `Email.Link`, `Email.CodeInline`), the layout primitives
+ * (`Email.Section`, `Email.Row`, `Email.Column`), and the furniture (`Email.Button`,
+ * `Email.Table`, `Email.Img`, `Email.Hr`, `Email.Footer`). Named as a namespace because
+ * that is how the components are addressed, and it shares the identifier with the
+ * `Email` contract.
+ *
+ * `Markdown` and `CodeBlock` are not here: they live behind `@pkg/mail/markdown`, which
+ * keeps their parser and highlighter out of an app that sends neither.
  */
 export const Email = EmailComponents;

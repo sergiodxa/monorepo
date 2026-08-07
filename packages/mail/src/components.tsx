@@ -73,6 +73,16 @@ const DARK_RULES = [
 	".mail-rule{border-color:#3f3f46 !important;}",
 	".mail-action{background-color:#fafafa !important;}",
 	".mail-action-label{color:#18181b !important;}",
+	// Code is painted by `Email.CodeInline` here and by `CodeBlock` in the markdown
+	// subpath, but the rules stay in this one list because the layout renders the only
+	// stylesheet the document has. Unused rules cost a few bytes and nothing else.
+	".mail-code{background-color:#27272a !important;color:#fafafa !important;}",
+	".mail-tok-comment{color:#8b949e !important;}",
+	".mail-tok-keyword{color:#ff7b72 !important;}",
+	".mail-tok-string{color:#a5d6ff !important;}",
+	".mail-tok-number{color:#79c0ff !important;}",
+	".mail-tok-function{color:#d2a8ff !important;}",
+	".mail-tok-punctuation{color:#c9d1d9 !important;}",
 ].join("");
 
 /**
@@ -82,9 +92,95 @@ const DARK_RULES = [
  * cannot use `>` or `&`, which rules out child combinators. Descendant and class
  * selectors are enough for everything a mail body contains.
  */
-function stylesheet(extra: string | undefined): string {
+function stylesheet(fonts: Font[], extra: string | undefined): string {
+	let faces = fonts.map(fontFace).join("");
 	let dark = `@media (prefers-color-scheme:dark){${DARK_RULES}${extra ?? ""}}`;
-	return `:root{color-scheme:light dark;}${dark}`;
+	return `:root{color-scheme:light dark;}${faces}${dark}`;
+}
+
+/**
+ * A web font to load, and what to use instead everywhere it does not arrive.
+ *
+ * It is a prop of {@link Layout} rather than a component of its own because `@font-face`
+ * is only honoured inside `<head>`, and the layout is the only component that renders
+ * one. A `<Font>` placed in the body would look like it worked — the rule would be in
+ * the document — and would be ignored by every client that sanitises stray style
+ * elements out of a message body.
+ */
+export interface Font {
+	/** Family name, as the `@font-face` rule declares it and the copy asks for it. */
+	family: string;
+	/**
+	 * What to fall back to, as a CSS font list. It is required because most readers get
+	 * it: `@font-face` is unsupported in Gmail, Yahoo, and Outlook on Windows, which is
+	 * most of any list, so this is the font the email is actually set in.
+	 */
+	fallback: string;
+	/** Where to fetch the font, omitted for a family the reader is assumed to have. */
+	src?: {
+		/** Absolute URL of the font file. */
+		url: string;
+		/** Format at that URL, which the rule has to name for the client to accept it. */
+		format: "woff" | "woff2" | "truetype" | "opentype" | "embedded-opentype" | "svg";
+	};
+	/** Weight this file provides. */
+	weight?: number;
+	/** Style this file provides. */
+	style?: "normal" | "italic";
+}
+
+/**
+ * One `@font-face` rule.
+ *
+ * `mso-font-alt` is Outlook's own fallback declaration: Word ignores the rule entirely
+ * but reads that one property, and without it an unavailable family lands on Times New
+ * Roman rather than on the stack the email chose.
+ */
+function fontFace(font: Font): string {
+	let { family, fallback, src, weight = 400, style = "normal" } = font;
+	let source = src ? `src:url(${src.url}) format('${src.format}');` : "";
+	let alt = fallback.split(",")[0]?.trim() ?? "sans-serif";
+	return `@font-face{font-family:'${family}';font-style:${style};font-weight:${weight};mso-font-alt:'${alt}';${source}}`;
+}
+
+/**
+ * The font stack a set of web fonts asks for: the first family, then its fallbacks.
+ *
+ * The family is not quoted, even when it has a space in it. The stack ends up in a
+ * `style` attribute, where the renderer escapes a quote to `&#39;` and leaves the
+ * declaration naming a family no font has — and CSS has allowed an unquoted family name
+ * to be a sequence of identifiers since 2.1, so the quotes buy nothing to begin with.
+ */
+function fontStack(fonts: Font[]): string | undefined {
+	let first = fonts[0];
+	if (!first) return undefined;
+	return `${first.family}, ${first.fallback}`;
+}
+
+/** How much of an inbox snippet a client will show before it stops reading. */
+const PREVIEW_LENGTH = 200;
+
+/**
+ * Characters that occupy a snippet without printing: no-break space, the zero-width
+ * non-joiner, space, joiner, the two directional marks, and the byte-order mark. Seven
+ * of them, cycled, so no client's duplicate-run collapsing shortens the padding.
+ */
+const BLANKS = " ‌​‍‎‏﻿";
+
+/**
+ * Pads a preheader out to the length a client reads, with characters that render as
+ * nothing.
+ *
+ * Without it the snippet is the preheader followed by whatever the body starts with,
+ * because a client fills its preview line from the document and does not stop at the
+ * hidden block. An alert whose preheader is six words arrives in the inbox reading
+ * `... is RECOVERED Monitor Book Landing http Status`, which is the layout's first table
+ * leaking into the one line the reader decides from.
+ */
+function previewPadding(preview: string): string {
+	let missing = PREVIEW_LENGTH - preview.length;
+	if (missing <= 0) return "";
+	return BLANKS.repeat(Math.ceil(missing / BLANKS.length)).slice(0, missing);
 }
 
 export namespace Layout {
@@ -109,8 +205,13 @@ export namespace Layout {
 		surface?: string;
 		/** Body copy color. */
 		color?: string;
-		/** Font stack applied to the whole document. */
+		/**
+		 * Font stack applied to the whole document. Omitted with `fonts` set, the stack is
+		 * built from the first of those; omitted with neither, the kit's own stack is used.
+		 */
 		fontFamily?: string;
+		/** Web fonts to declare, in preference order. */
+		fonts?: Font[];
 		/** Content width in pixels. */
 		width?: number;
 		/**
@@ -144,11 +245,13 @@ export function Layout(handle: Handle<Layout.Props>) {
 			background,
 			surface,
 			color,
-			fontFamily = FONT_FAMILY,
+			fontFamily,
+			fonts = [],
 			width = CONTENT_WIDTH,
 			darkStyles,
 		} = handle.props;
 
+		let family = fontFamily ?? fontStack(fonts) ?? FONT_FAMILY;
 		let page = background ?? PAGE_COLOR;
 		let card = surface ?? SURFACE_COLOR;
 		let ink = color ?? TEXT_COLOR;
@@ -163,16 +266,27 @@ export function Layout(handle: Handle<Layout.Props>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<meta name="color-scheme" content="light dark" />
 					<meta name="supported-color-schemes" content="light dark" />
+					{/*
+					 * Stops iOS Mail auto-scaling the copy. It resizes text it judges too small
+					 * for the screen, which it does by rewriting font sizes the layout has
+					 * already chosen, and the result is a card whose type no longer relates to
+					 * its padding.
+					 */}
+					<meta name="x-apple-disable-message-reformatting" />
 					{title ? <title>{title}</title> : null}
-					<style>{stylesheet(darkStyles)}</style>
+					<style>{stylesheet(fonts, darkStyles)}</style>
 				</head>
 				<body
 					class={pageClass}
-					style={`margin:0;padding:0;width:100%;background-color:${page};color:${ink};font-family:${fontFamily};`}
+					style={`margin:0;padding:0;width:100%;background-color:${page};color:${ink};font-family:${family};`}
 				>
 					{preview ? (
-						<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">
+						<div
+							data-skip-in-text
+							style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;"
+						>
 							{preview}
+							{previewPadding(preview)}
 						</div>
 					) : null}
 					<table
@@ -185,7 +299,17 @@ export function Layout(handle: Handle<Layout.Props>) {
 					>
 						<tbody>
 							<tr>
-								<td align="center" style="padding:24px 12px;">
+								{/*
+								 * The body's own colour and font are repeated here because Yahoo and AOL
+								 * rewrite `<body>` as a `<div>` and drop its styles on the way, leaving the
+								 * document with no font stack at all. This is the outermost cell that
+								 * survives that rewrite.
+								 */}
+								<td
+									align="center"
+									class={inkClass}
+									style={`padding:24px 12px;color:${ink};font-family:${family};`}
+								>
 									<table
 										role="presentation"
 										width={width}
@@ -210,7 +334,7 @@ export function Layout(handle: Handle<Layout.Props>) {
 											<tr>
 												<td
 													class={inkClass}
-													style={`padding:24px;font-family:${fontFamily};color:${ink};font-size:16px;line-height:1.6;`}
+													style={`padding:24px;font-family:${family};color:${ink};font-size:16px;line-height:1.6;`}
 												>
 													{children}
 												</td>
@@ -329,9 +453,15 @@ export namespace Button {
 }
 
 /**
- * Renders a call-to-action as a padded link inside a single-cell table, the only
- * button construction that keeps its fill in clients that drop CSS backgrounds on
- * anchors. The link is a real `<a href>`, so the plain-text part keeps its target.
+ * Renders a call-to-action as a link inside a single-cell table, the only button
+ * construction that keeps its fill in clients that drop CSS backgrounds on anchors.
+ * The link is a real `<a href>`, so the plain-text part keeps its target.
+ *
+ * The padding is on the cell rather than on the link, which is what makes the button a
+ * button in Outlook. Word, which renders it, supports neither `display:inline-block`
+ * nor padding on an inline element, so a padded anchor arrives as bare text on a
+ * coloured strip exactly as wide as the words. A padded cell is a table cell, which
+ * Word has always been able to do.
  *
  * @example <Email.Button href={url}>Accept invite</Email.Button>
  */
@@ -348,12 +478,12 @@ export function Button(handle: Handle<Button.Props>) {
 						<td
 							align="center"
 							class={fillClass}
-							style={`background-color:${background ?? ACTION_COLOR};border-radius:${radius}px;`}
+							style={`padding:12px 20px;background-color:${background ?? ACTION_COLOR};border-radius:${radius}px;`}
 						>
 							<a
 								href={href}
 								class={labelClass}
-								style={`display:inline-block;padding:12px 20px;font-family:inherit;font-size:16px;line-height:1.2;font-weight:600;color:${color ?? ACTION_LABEL_COLOR};text-decoration:none;`}
+								style={`display:inline-block;font-family:inherit;font-size:16px;line-height:1.2;font-weight:600;color:${color ?? ACTION_LABEL_COLOR};text-decoration:none;`}
 							>
 								{children}
 							</a>
@@ -485,4 +615,296 @@ export function Footer(handle: Handle<Footer.Props>) {
 			</table>
 		);
 	};
+}
+
+export namespace Section {
+	/** Props accepted by {@link Section}. */
+	export interface Props {
+		/** Content of the section. */
+		children?: RemixNode;
+		/** Padding shorthand applied inside the section, in CSS syntax. */
+		padding?: string;
+		/** Fill behind the section; omitted means it inherits whatever it sits on. */
+		background?: string;
+		/** Horizontal alignment of the content. */
+		align?: "left" | "center" | "right";
+	}
+}
+
+/**
+ * A full-width band of content, as a single-cell table.
+ *
+ * The padding goes on the cell and everything else on the table, which is the split
+ * Outlook needs — it drops padding declared on a `<table>` — and which keeps a
+ * background painting the whole band rather than stopping at the content.
+ *
+ * @example <Email.Section padding="24px 0"><Email.Text>Grouped copy</Email.Text></Email.Section>
+ */
+export function Section(handle: Handle<Section.Props>) {
+	return () => {
+		let { children, padding, background, align = "left" } = handle.props;
+		let fill = background ? `background-color:${background};` : "";
+
+		return (
+			<table
+				role="presentation"
+				width="100%"
+				cellPadding="0"
+				cellSpacing="0"
+				style={`width:100%;${fill}`}
+			>
+				<tbody>
+					<tr>
+						<td
+							align={align}
+							style={`${padding ? `padding:${padding};` : ""}font-family:inherit;text-align:${align};`}
+						>
+							{children}
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		);
+	};
+}
+
+export namespace Row {
+	/** Props accepted by {@link Row}. */
+	export interface Props {
+		/** The row's cells, which should be {@link Column} elements. */
+		children?: RemixNode;
+		/** Space below the row in pixels. */
+		gap?: number;
+	}
+}
+
+/**
+ * Puts its columns side by side, as one table row.
+ *
+ * This is how an email does what a page would do with flex or grid: those collapse to
+ * a single stacked column in Outlook, whose renderer implements neither, whereas a
+ * table row is the one horizontal arrangement no client has ever got wrong. The cost
+ * is that it does not wrap — a row of four on a phone stays a row of four, so keep the
+ * count low or give the narrow case its own layout.
+ *
+ * @example <Email.Row><Email.Column width="50%">Left</Email.Column><Email.Column>Right</Email.Column></Email.Row>
+ */
+export function Row(handle: Handle<Row.Props>) {
+	return () => {
+		let { children, gap = 16 } = handle.props;
+
+		return (
+			<table
+				role="presentation"
+				width="100%"
+				cellPadding="0"
+				cellSpacing="0"
+				style={`width:100%;margin:0 0 ${gap}px;border-collapse:collapse;`}
+			>
+				<tbody>
+					<tr>{children}</tr>
+				</tbody>
+			</table>
+		);
+	};
+}
+
+export namespace Column {
+	/** Props accepted by {@link Column}. */
+	export interface Props {
+		/** Content of the cell. */
+		children?: RemixNode;
+		/**
+		 * Width as a CSS length or percentage; a bare number is read as pixels. Omitted
+		 * lets the table divide the space.
+		 */
+		width?: string | number;
+		/** Horizontal alignment of the content. */
+		align?: "left" | "center" | "right";
+		/** Vertical alignment of the content against the tallest cell in the row. */
+		valign?: "top" | "middle" | "bottom";
+		/** Padding shorthand inside the cell, in CSS syntax. */
+		padding?: string;
+	}
+}
+
+/**
+ * One cell of a {@link Row}.
+ *
+ * The width is set as both the `width` attribute and a style, because Outlook reads
+ * the attribute and ignores the style while everything newer does the reverse.
+ *
+ * @example <Email.Column width="120" valign="top"><Email.Img src={logo} alt="Acme" /></Email.Column>
+ */
+export function Column(handle: Handle<Column.Props>) {
+	return () => {
+		let { children, width, align = "left", valign = "top", padding } = handle.props;
+		// The attribute takes the bare number Outlook wants; the style needs a unit or the
+		// declaration is invalid and every other client falls back to dividing the row.
+		let length = typeof width === "number" ? `${width}px` : width;
+
+		return (
+			<td
+				align={align}
+				valign={valign}
+				width={width}
+				style={`${length ? `width:${length};` : ""}${padding ? `padding:${padding};` : ""}font-family:inherit;text-align:${align};vertical-align:${valign};`}
+			>
+				{children}
+			</td>
+		);
+	};
+}
+
+export namespace Link {
+	/** Props accepted by {@link Link}. */
+	export interface Props {
+		/** Where the link goes. */
+		href: string;
+		/** Link text. */
+		children?: RemixNode;
+		/** Link color; omitted inherits the surrounding copy, so dark mode carries it. */
+		color?: string;
+		/** Whether the link is underlined. */
+		underline?: boolean;
+	}
+}
+
+/**
+ * An inline link, opening in a new tab.
+ *
+ * The colour is inherited rather than set, which is deliberate: a link inside body copy
+ * that declares its own colour is a colour the dark rules have to know about, whereas
+ * an inherited one is already whatever the copy around it became. That leaves the
+ * underline to say it is a link, which is what a reader in a mail client expects
+ * anyway.
+ *
+ * @example <Email.Link href={url}>the settings page</Email.Link>
+ */
+export function Link(handle: Handle<Link.Props>) {
+	return () => {
+		let { href, children, color, underline = true } = handle.props;
+		let decoration = underline ? "underline" : "none";
+
+		return (
+			<a
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				style={`color:${color ?? "inherit"};text-decoration:${decoration};font-family:inherit;`}
+			>
+				{children}
+			</a>
+		);
+	};
+}
+
+export namespace Img {
+	/** Props accepted by {@link Img}. */
+	export interface Props {
+		/** Absolute URL of the image; a relative one resolves against nothing in an inbox. */
+		src: string;
+		/**
+		 * What the image says, for the reader who never sees it. Required rather than
+		 * optional because most readers are that reader: every major client blocks remote
+		 * images until asked, so the alt text is the first thing shown and often the only
+		 * thing. Pass an empty string for an image that carries no meaning.
+		 */
+		alt: string;
+		/** Width in pixels. */
+		width?: number;
+		/** Height in pixels; omitted lets the image keep its ratio. */
+		height?: number;
+		/** Corner radius in pixels. */
+		radius?: number;
+		/** Space below the image in pixels. */
+		gap?: number;
+	}
+}
+
+/**
+ * An image with the four resets an inbox needs: `display:block` so no line-height gap
+ * opens underneath it, and a cleared border, outline and underline so a client that
+ * inherits link styling does not frame it.
+ *
+ * @example <Email.Img src="https://acme.com/logo.png" alt="Acme" width={120} />
+ */
+export function Img(handle: Handle<Img.Props>) {
+	return () => {
+		let { src, alt, width, height, radius, gap } = handle.props;
+
+		return (
+			<img
+				src={src}
+				alt={alt}
+				width={width}
+				height={height}
+				style={`display:block;border:0;outline:none;text-decoration:none;max-width:100%;${radius ? `border-radius:${radius}px;` : ""}${gap ? `margin:0 0 ${gap}px;` : ""}`}
+			/>
+		);
+	};
+}
+
+export namespace Hr {
+	/** Props accepted by {@link Hr}. */
+	export interface Props {
+		/** Rule color. */
+		color?: string;
+		/** Space above and below the rule in pixels. */
+		gap?: number;
+	}
+}
+
+/**
+ * A horizontal rule drawn as a top border rather than as the element's own border,
+ * because clients disagree about what an `<hr>` looks like by default and several
+ * render the native one as an inset two-tone groove.
+ *
+ * @example <Email.Hr />
+ */
+export function Hr(handle: Handle<Hr.Props>) {
+	return () => {
+		let { color, gap = 24 } = handle.props;
+
+		return (
+			<hr
+				class={color === undefined ? "mail-rule" : undefined}
+				style={`width:100%;margin:${gap}px 0;padding:0;border:none;border-top:1px solid ${color ?? BORDER_COLOR};`}
+			/>
+		);
+	};
+}
+
+/** Monospace stack, chosen so no family needs quoting inside a `style` attribute. */
+export const MONO_FAMILY =
+	"ui-monospace, SFMono-Regular, Menlo, Consolas, Liberation Mono, monospace";
+
+/** Fill behind code, light enough to sit inside the card without reading as a block. */
+export const CODE_COLOR = "#f4f4f5";
+
+export namespace CodeInline {
+	/** Props accepted by {@link CodeInline}. */
+	export interface Props {
+		/** The code, as text. */
+		children?: RemixNode;
+	}
+}
+
+/**
+ * A short run of code inside a sentence.
+ *
+ * The size is `0.9em` rather than a pixel value so it tracks whatever it is set inside —
+ * a heading, body copy, a footer — instead of turning into body-sized code in a caption.
+ *
+ * @example <Email.Text>Set <Email.CodeInline>DEBUG=1</Email.CodeInline> and retry.</Email.Text>
+ */
+export function CodeInline(handle: Handle<CodeInline.Props>) {
+	return () => (
+		<code
+			class="mail-code"
+			style={`font-family:${MONO_FAMILY};font-size:0.9em;padding:2px 5px;border-radius:4px;background-color:${CODE_COLOR};color:${TEXT_COLOR};`}
+		>
+			{handle.props.children}
+		</code>
+	);
 }

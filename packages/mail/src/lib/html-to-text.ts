@@ -21,6 +21,21 @@ const DOCTYPE = /<!doctype[^>]*>/gi;
  */
 const HIDDEN_BLOCK = /<(div|span|p)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi;
 
+/**
+ * Blocks marked `data-skip-in-text`, which is how an element says it belongs to the
+ * HTML part alone.
+ *
+ * It exists beside {@link HIDDEN_BLOCK} rather than instead of it because the two answer
+ * different questions. That one infers the intent from `display:none`, which is right
+ * often enough but is a guess about a style; this one is the author saying so, and it
+ * covers content that is visible and still has no business in the text part — a
+ * decorative rule, a spacer, a logo's alt text.
+ */
+const SKIPPED_BLOCK = /<(\w+)\b[^>]*\bdata-skip-in-text\b[^>]*>[\s\S]*?<\/\1>/gi;
+
+/** The same marker on an element that closes itself, which has nothing to drop between tags. */
+const SKIPPED_VOID = /<\w+\b[^>]*\bdata-skip-in-text\b[^>]*\/?>/gi;
+
 /** Elements whose content belongs to the document, not to the message body. */
 const DROPPED_BLOCK = /<(head|script|style|title)\b[^>]*>[\s\S]*?<\/\1>/gi;
 
@@ -35,6 +50,18 @@ const LIST_ITEM_END = /<\/li\s*>/gi;
 
 /** Start of a list item, replaced by a bullet marker. */
 const LIST_ITEM_START = /<li\b[^>]*>/gi;
+
+/**
+ * An ordered list, whose items carry their number instead of a bullet. Same-tag nesting
+ * is not supported, so an ordered list inside an ordered list numbers as one sequence.
+ */
+const ORDERED_LIST = /<ol\b[^>]*>[\s\S]*?<\/ol\s*>/gi;
+
+/**
+ * An image, replaced by what it says. Alt text is the whole of an image in a text part,
+ * and often in the HTML one too: every major client blocks remote images until asked.
+ */
+const IMAGE = /<img\b[^>]*\balt\s*=\s*("([^"]*)"|'([^']*)')[^>]*>/gi;
 
 /** Boundaries that read as a paragraph break. */
 const PARAGRAPH_BOUNDARY =
@@ -108,10 +135,12 @@ function formatLink(href: string, label: string): string {
 /**
  * Converts rendered email HTML into its plain-text alternative.
  *
- * Link targets survive as `label (href)`, list items become `- ` bullets, block
+ * Link targets survive as `label (href)`, an image becomes its alt text, an ordered
+ * list numbers its items while an unordered one bullets them, block
  * elements become blank lines while table rows become single lines with their cells
  * spaced apart, and hidden preheader blocks are dropped so the text part does not
- * repeat them.
+ * repeat them. An element marked `data-skip-in-text` is dropped whether it is hidden
+ * or not.
  *
  * @param html - Rendered HTML of an email body.
  * @returns The plain-text alternative, trimmed and with runs of blank lines collapsed.
@@ -122,6 +151,8 @@ export function htmlToText(html: string): string {
 		.replace(COMMENT, "")
 		.replace(DOCTYPE, "")
 		.replace(HIDDEN_BLOCK, "")
+		.replace(SKIPPED_BLOCK, "")
+		.replace(SKIPPED_VOID, "")
 		.replace(DROPPED_BLOCK, "")
 		.replace(LINE_BREAK, "\n")
 		.replace(
@@ -135,6 +166,13 @@ export function htmlToText(html: string): string {
 				label: string,
 			) => formatLink(double ?? single ?? bare ?? "", stripTags(label)),
 		)
+		.replace(IMAGE, (_match, _quoted, double: string | undefined, single: string | undefined) => {
+			return double ?? single ?? "";
+		})
+		.replace(ORDERED_LIST, (list: string) => {
+			let position = 0;
+			return list.replace(LIST_ITEM_START, () => `${(position += 1)}. `);
+		})
 		.replace(LIST_ITEM_END, "\n")
 		.replace(LIST_ITEM_START, "- ")
 		.replace(CELL_END, " ")
