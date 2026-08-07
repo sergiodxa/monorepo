@@ -30,15 +30,12 @@ export default {
 			description: "Sign in to continue",
 		},
 
+		// One line per OAuth error code a refused sign-in can carry, since the sign-in
+		// page shows the reason as a single sentence above the form.
 		errors: {
-			invalidRequest: {
-				title: "Invalid request",
-				description: "The request is invalid.",
-			},
-			unauthorizedClient: {
-				title: "Unauthorized client",
-				description: "This application is not authorized to use your account.",
-			},
+			missingValidation: "Verify your email address to continue.",
+			accessDenied: "Invalid email or password.",
+			serverError: "Something went wrong. Please try again.",
 		},
 
 		forms: {
@@ -56,7 +53,6 @@ export default {
 
 			github: {
 				cta: "Login with GitHub",
-				reminder: "Last time you logged in with GitHub",
 			},
 
 			error: "Sign in failed",

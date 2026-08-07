@@ -34,6 +34,7 @@ import {
 	signIn,
 	submitSignIn,
 } from "~/app/lib/test/seed";
+import en from "~/app/locales/en";
 import routes from "~/routes/web";
 
 /** The verifier a PKCE flow commits to, long enough to satisfy RFC 7636 §4.1. */
@@ -290,7 +291,7 @@ describe("POST /authorize", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain("Invalid email or password.");
+		expect(await response.text()).toContain(en.authorize.errors.accessDenied);
 	});
 
 	test("an existing subject signs in and is answered with a code", async () => {
@@ -361,7 +362,12 @@ describe("POST /authorize", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain("Verify your email address.");
+
+		let body = await response.text();
+		// The locale copy, not the engine's own `missing_validation` description, which
+		// stays an internal diagnostic.
+		expect(body).toContain(en.authorize.errors.missingValidation);
+		expect(body).not.toContain("Verify your email address.");
 	});
 });
 

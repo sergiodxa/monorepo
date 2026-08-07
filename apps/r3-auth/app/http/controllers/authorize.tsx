@@ -54,6 +54,32 @@ import routes from "~/routes/web";
 const CODE_CHALLENGE_METHODS: readonly string[] = ["S256", "plain"];
 
 /**
+ * Locale key per RFC 6749 error code a refused credential sign-in can carry.
+ *
+ * The engine is framework-agnostic and knows nothing about languages, so its error
+ * descriptions stay internal diagnostics and the stable `code` is what crosses into
+ * the UI. These three are every code `loginWithCredential` can fail with; anything
+ * else falls back to the generic message.
+ */
+const SIGN_IN_ERROR_KEYS: Readonly<Record<string, string>> = {
+	missing_validation: "authorize.errors.missingValidation",
+	access_denied: "authorize.errors.accessDenied",
+	internal_server_error: "authorize.errors.serverError",
+};
+
+/** The generic message shown for an error code with no message of its own. */
+const SIGN_IN_ERROR_FALLBACK_KEY = "authorize.forms.error";
+
+/**
+ * Translates a refused sign-in into the sentence shown above the form.
+ *
+ * @param code - The `error` value the engine reported.
+ */
+function signInErrorMessage(ctx: RequestContext, code: string): string {
+	return ctx.i18next.t(SIGN_IN_ERROR_KEYS[code] ?? SIGN_IN_ERROR_FALLBACK_KEY);
+}
+
+/**
  * The subject signed in to this server itself, read from the session's own access
  * token. A token that cannot be read clears both tokens, so a session left over from
  * an older format becomes "signed out" rather than a request that keeps failing.
@@ -111,7 +137,8 @@ async function errorRedirect(
 /**
  * Renders the sign-in page for a parked authorization request.
  *
- * @param error - Why the previous attempt was refused, when this is a re-render.
+ * @param error - Why the previous attempt was refused, already translated, when this
+ * is a re-render.
  */
 function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
 	return ctx.render(
@@ -340,15 +367,15 @@ export default createController(routes.authorize, {
 			});
 
 			if (login.status === "failure") {
-				// The email is logged, the reason is not: `access_denied` versus
-				// `missing_validation` is exactly the difference between a wrong password and
-				// an unverified address, and the page must not tell them apart either.
+				// The code is logged, never the address or the password it was tried with.
 				ctx.logger.info("authz_credential_login_failed", { error: login.error.code });
 
 				let client = await Client.findById(db, authz.clientId);
 				if (!client) return badRequest({ message: "Invalid request" });
 
-				return signInPage(ctx, client, authz, login.error.description);
+				// The engine's own description never reaches the page: it is English-only and,
+				// for an internal failure, carries the underlying exception's message.
+				return signInPage(ctx, client, authz, signInErrorMessage(ctx, login.error.code));
 			}
 
 			ctx.logger.info("authz_credential_login_success", { subjectId: login.data.subjectId });
