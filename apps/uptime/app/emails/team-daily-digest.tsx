@@ -26,6 +26,7 @@ import { Email } from "@pkg/mail";
 
 import type { TeamDigestMonitor } from "~/app/emails/shared/team-digest";
 
+import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TeamDigestFooter,
 	TeamDigestMonitorList,
@@ -115,6 +116,7 @@ export class TeamDailyDigestEmail implements Email {
 				lang={locale}
 				title={heading}
 				preview={t("emails.teamDigest.daily.preview", { team: teamName })}
+				darkStyles={DARK_STYLES}
 			>
 				<Email.Heading>{heading}</Email.Heading>
 				<Email.Text>{this.#summary()}</Email.Text>

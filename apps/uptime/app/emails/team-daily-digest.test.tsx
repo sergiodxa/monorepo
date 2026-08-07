@@ -160,6 +160,17 @@ describe("TeamDailyDigestEmail", () => {
 			expect(text).toContain(`Open the dashboard (${DASHBOARD_URL})`);
 		});
 
+		test("ships the dark counterpart of the colours it paints the statuses in", async () => {
+			let email = await makeEmail();
+
+			let { html } = await render(email.body());
+
+			expect(html).toContain(".uptime-ink-down{color:#f87171 !important;}");
+			expect(html).toContain('class="uptime-ink-down mail-rule"');
+			// An unchecked row is muted copy, which the kit's own dark rules already cover.
+			expect(html).toContain('class="mail-muted mail-rule"');
+		});
+
 		test("names the team in the footer and links to the switches that stop the email", async () => {
 			let email = await makeEmail();
 

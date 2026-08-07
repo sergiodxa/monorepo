@@ -27,7 +27,7 @@ import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
 import { BORDER_COLOR, MUTED_COLOR, TEXT_COLOR } from "~/app/emails/shared/palette";
-import { statusFill } from "~/app/emails/shared/uptime-bar";
+import { statusClass, statusFill } from "~/app/emails/shared/uptime-bar";
 import { absoluteUrl } from "~/app/lib/origin";
 import routes from "~/routes/web";
 
@@ -232,12 +232,18 @@ export function TeamDigestMonitorList(handle: Handle<TeamDigestMonitorList.Props
 			>
 				<thead>
 					<tr>
-						<th scope="col" align="left" style={`padding:0 12px 8px 0;${HEADER_STYLE}`}>
+						<th
+							scope="col"
+							align="left"
+							class="mail-muted"
+							style={`padding:0 12px 8px 0;${HEADER_STYLE}`}
+						>
 							{t("emails.teamDigest.columns.monitor")}
 						</th>
 						<th
 							scope="col"
 							align="right"
+							class="mail-muted"
 							style={`padding:0 12px 8px 0;${HEADER_STYLE}text-align:right;`}
 						>
 							{t("emails.teamDigest.columns.status")}
@@ -245,6 +251,7 @@ export function TeamDigestMonitorList(handle: Handle<TeamDigestMonitorList.Props
 						<th
 							scope="col"
 							align="right"
+							class="mail-muted"
 							style={`padding:0 0 8px;${HEADER_STYLE}text-align:right;`}
 						>
 							{t("emails.teamDigest.columns.uptime")}
@@ -255,21 +262,24 @@ export function TeamDigestMonitorList(handle: Handle<TeamDigestMonitorList.Props
 					{monitors.map((monitor) => (
 						<tr key={`${monitor.type}:${monitor.id}`}>
 							<td
+								class="mail-text mail-rule"
 								style={`padding:10px 12px 10px 0;border-top:1px solid ${BORDER_COLOR};${CELL_STYLE}color:${TEXT_COLOR};font-weight:600;word-break:break-word;`}
 							>
 								{monitor.name}{" "}
-								<span style={`font-weight:400;color:${MUTED_COLOR};`}>
+								<span class="mail-muted" style={`font-weight:400;color:${MUTED_COLOR};`}>
 									{t(teamDigestTypeKey(monitor.type))}
 								</span>
 							</td>
 							<td
 								align="right"
+								class={`${monitor.status === null ? "mail-muted" : statusClass(monitor.status, "ink")} mail-rule`}
 								style={`padding:10px 12px 10px 0;border-top:1px solid ${BORDER_COLOR};${CELL_STYLE}text-align:right;white-space:nowrap;font-weight:600;color:${monitor.status === null ? MUTED_COLOR : statusFill(monitor.status)};`}
 							>
 								{t(teamDigestStatusKey(monitor.status))}
 							</td>
 							<td
 								align="right"
+								class="mail-text mail-rule"
 								style={`padding:10px 0;border-top:1px solid ${BORDER_COLOR};${CELL_STYLE}text-align:right;white-space:nowrap;color:${TEXT_COLOR};`}
 							>
 								{monitor.uptime === null

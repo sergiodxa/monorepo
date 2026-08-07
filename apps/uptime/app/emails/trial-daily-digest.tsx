@@ -30,6 +30,7 @@ import { Email } from "@pkg/mail";
 import type { TrialStats, TrialStatus } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
+import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TrialReport,
 	TrialUnsubscribe,
@@ -158,7 +159,7 @@ export class TrialDailyDigestEmail implements Email {
 			: t("emails.trial.daily.previewMany", { total: targets.length });
 
 		return (
-			<Email.Layout lang={locale} title={heading} preview={preview}>
+			<Email.Layout lang={locale} title={heading} preview={preview} darkStyles={DARK_STYLES}>
 				<Email.Heading>{heading}</Email.Heading>
 				{only ? null : <Email.Text>{this.#summary()}</Email.Text>}
 				{targets.map((target) => (

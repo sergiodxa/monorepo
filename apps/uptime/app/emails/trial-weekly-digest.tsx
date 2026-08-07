@@ -33,6 +33,7 @@ import { Email } from "@pkg/mail";
 import type { TrialStats } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
+import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TrialReport,
 	TrialReportLink,
@@ -120,6 +121,7 @@ export class TrialWeeklyDigestEmail implements Email {
 				lang={locale}
 				title={heading}
 				preview={t("emails.trial.weekly.preview", { url: trialDisplayUrl(url) })}
+				darkStyles={DARK_STYLES}
 			>
 				<Email.Heading>{heading}</Email.Heading>
 				<TrialReport

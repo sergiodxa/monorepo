@@ -94,17 +94,37 @@ export function statusFill(status: UptimeBar.Status): string {
 }
 
 /**
+ * The name a status answers `palette`'s dark rules by, in the two properties a status is
+ * ever painted in: `fill` for a box behind it, `ink` for the word itself.
+ *
+ * The inline colour stays whatever {@link statusFill} returned, so a client that strips
+ * the stylesheet still shows the light bar it always did; the class is only what the
+ * dark block has to aim at.
+ *
+ * @param status - Status being painted.
+ * @param property - Whether it is being painted as a fill or as copy.
+ * @returns The class name, or none for a state that has no dark counterpart.
+ * @example <td class={statusClass(status, "fill")} style={`background-color:${statusFill(status)};`} />
+ */
+export function statusClass(status: UptimeBar.Status, property: "fill" | "ink"): string {
+	// An unchecked period is a fill and never a word: the digest prints those rows in the
+	// muted copy colour, which the kit already flips.
+	if (status === null) return property === "fill" ? "uptime-fill-none" : "";
+	return `uptime-${property}-${status}`;
+}
+
+/**
  * The four legend entries, each paired with the fill it names. The caller renders them
  * as sibling cells rather than as a nested table per entry — one table level fewer is
  * one less thing for Outlook's renderer to get wrong, and flattening them keeps every
  * cell individually keyed without needing a fragment inside the row.
  */
-function legendEntries(labels: UptimeBar.Labels): { color: string; label: string }[] {
+function legendEntries(labels: UptimeBar.Labels): { status: UptimeBar.Status; label: string }[] {
 	return [
-		{ color: UP_COLOR, label: labels.legend.up },
-		{ color: DEGRADED_COLOR, label: labels.legend.degraded },
-		{ color: DOWN_COLOR, label: labels.legend.down },
-		{ color: NO_DATA_COLOR, label: labels.legend.noData },
+		{ status: "up", label: labels.legend.up },
+		{ status: "degraded", label: labels.legend.degraded },
+		{ status: "down", label: labels.legend.down },
+		{ status: null, label: labels.legend.noData },
 	];
 }
 
@@ -141,13 +161,13 @@ export function UptimeBar(handle: Handle<UptimeBar.Props>) {
 							>
 								<tbody>
 									<tr>
-										<td align="left" style={LABEL_STYLE}>
+										<td align="left" class="mail-muted" style={LABEL_STYLE}>
 											{labels.start}
 										</td>
-										<td align="center" style={LABEL_STYLE}>
+										<td align="center" class="mail-muted" style={LABEL_STYLE}>
 											{labels.uptime}
 										</td>
-										<td align="right" style={LABEL_STYLE}>
+										<td align="right" class="mail-muted" style={LABEL_STYLE}>
 											{labels.end}
 										</td>
 									</tr>
@@ -173,6 +193,7 @@ export function UptimeBar(handle: Handle<UptimeBar.Props>) {
 												<td
 													key={index}
 													height={BAR_HEIGHT}
+													class={statusClass(status, "fill")}
 													style={`height:${BAR_HEIGHT}px;background-color:${statusFill(status)};border-radius:1px;font-size:0;line-height:0;`}
 												>
 													{FILLER}
@@ -195,11 +216,16 @@ export function UptimeBar(handle: Handle<UptimeBar.Props>) {
 												key={`${entry.label}-swatch`}
 												width={SWATCH_SIZE}
 												height={SWATCH_SIZE}
-												style={`${SWATCH_STYLE}background-color:${entry.color};`}
+												class={statusClass(entry.status, "fill")}
+												style={`${SWATCH_STYLE}background-color:${statusFill(entry.status)};`}
 											>
 												{FILLER}
 											</td>,
-											<td key={entry.label} style={`padding:0 12px 0 4px;${LABEL_STYLE}`}>
+											<td
+												key={entry.label}
+												class="mail-muted"
+												style={`padding:0 12px 0 4px;${LABEL_STYLE}`}
+											>
 												{entry.label}
 											</td>,
 										])}

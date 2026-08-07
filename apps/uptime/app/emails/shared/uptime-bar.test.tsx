@@ -105,7 +105,15 @@ describe("UptimeBar", () => {
 		let { html } = await renderBar(["up", "down"]);
 
 		expect(html).not.toContain("<style");
-		expect(html).not.toContain("class=");
 		expect(html).toContain(`background-color:${UP}`);
+	});
+
+	test("names each fill so the layout's dark block can reach it", async () => {
+		let { html } = await renderBar(["up", "down", null]);
+
+		expect(html).toContain('class="uptime-fill-up"');
+		expect(html).toContain('class="uptime-fill-down"');
+		expect(html).toContain('class="uptime-fill-none"');
+		expect(html).toContain('class="mail-muted"');
 	});
 });
