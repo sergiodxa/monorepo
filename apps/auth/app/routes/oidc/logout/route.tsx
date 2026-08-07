@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { badRequest } from "@pkg/http/response/json";
 import { iife } from "@pkg/iife";
 import { isFailure } from "@pkg/result";
 import { Button, Form } from "@pkg/ui";
@@ -23,6 +24,7 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
+import { OIDCProvider } from "~/modules/oauth2";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
 
@@ -61,13 +63,27 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return null;
 	}
 
-	let result = await oidc.logout({
-		idTokenHint: params.data.id_token_hint,
-		postLogoutRedirectUri: params.data.post_logout_redirect_uri,
-		sessionSubject,
-		clientId: params.data.client_id,
-		state: params.data.state,
-	});
+	let result: Awaited<ReturnType<typeof oidc.logout>>;
+
+	try {
+		result = await oidc.logout({
+			idTokenHint: params.data.id_token_hint,
+			postLogoutRedirectUri: params.data.post_logout_redirect_uri,
+			sessionSubject,
+			clientId: params.data.client_id,
+			state: params.data.state,
+		});
+	} catch (error) {
+		// A refused logout request is the client's mistake — a hint we did not sign, a
+		// post-logout address nobody registered — so it is answered as one instead of
+		// letting the browser be sent to an address this server never validated.
+		if (error instanceof OIDCProvider.InvalidRequestError) {
+			logger.info("logout_rejected", { reason: error.message });
+			return badRequest({ error: "invalid_request", error_description: error.message });
+		}
+
+		throw error;
+	}
 
 	// Send back-channel logout tokens to all RPs before deleting sessions
 	// Exclude the client that initiated the logout (they already know)

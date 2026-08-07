@@ -582,6 +582,37 @@ describe("OIDCProvider", () => {
 			).rejects.toThrow(OIDCProvider.InvalidRequestError);
 		});
 
+		test("rejects post_logout_redirect_uri when no client can be resolved", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDCProvider(ISSUER, repo);
+
+			// A session cookie is enough to name the subject, so without an id_token_hint
+			// or a client_id nothing vouches for the address the browser would be sent to.
+			await expect(
+				provider.logout({
+					sessionSubject: testSubject.id,
+					postLogoutRedirectUri: "https://malicious.com/logout",
+				}),
+			).rejects.toThrow(OIDCProvider.InvalidRequestError);
+
+			// The refusal happens before anything is destroyed.
+			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+		});
+
+		test("accepts a registered post_logout_redirect_uri resolved from client_id", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDCProvider(ISSUER, repo);
+
+			let result = await provider.logout({
+				sessionSubject: testSubject.id,
+				clientId: testClient.id,
+				postLogoutRedirectUri: testClient.logoutUri,
+			});
+
+			expect(result.redirectUri).toBe(testClient.logoutUri);
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
+		});
+
 		test("requires id_token_hint or session subject", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDCProvider(ISSUER, repo);

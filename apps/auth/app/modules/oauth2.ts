@@ -532,8 +532,11 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidRequestError("Invalid subject");
 
-		if (args.postLogoutRedirectUri && client) {
-			if (client.logoutUri !== args.postLogoutRedirectUri) {
+		// A post-logout destination is only honored when a registered client vouches for
+		// it. When no client could be resolved there is nothing to check it against, so
+		// it is refused rather than followed, and refused before anything is deleted.
+		if (args.postLogoutRedirectUri) {
+			if (!client || client.logoutUri !== args.postLogoutRedirectUri) {
 				throw new InvalidRequestError("Invalid redirect uri");
 			}
 		}
