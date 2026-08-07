@@ -114,6 +114,17 @@ describe("MemoryTransport", () => {
 		expect(transport.last?.email).toBeInstanceOf(WelcomeEmail);
 	});
 
+	test("leaves a plain message without a source email, so a type assertion stays honest", async () => {
+		let transport = new MemoryTransport();
+		let mailer = new Mailer({ transport, from: SENDER });
+
+		await mailer.send(new WelcomeEmail({ email: "a@example.com" }));
+		await mailer.send({ to: { email: "b@example.com" }, subject: "Hi", text: "Hi" });
+
+		expect(transport.messages).toHaveLength(2);
+		expect(transport.last?.email).toBeUndefined();
+	});
+
 	test("assembles no MIME unless it was asked to, since most tests never read it", async () => {
 		let transport = new MemoryTransport();
 

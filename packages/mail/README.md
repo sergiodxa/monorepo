@@ -163,7 +163,7 @@ let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" } });
 await mailer.send(new TeamInviteEmail(invite));
 
 expect(transport.messages).toHaveLength(1);
-expect(transport.find((message) => message.email instanceof TeamInviteEmail)).toBeDefined();
+expect(transport.last?.email).toBeInstanceOf(TeamInviteEmail);
 expect(transport.last?.text).toContain(invite.url);
 ```
 
@@ -476,6 +476,8 @@ What an instance exposes:
 - **`transport.clear()`** — forgets every delivery, so one instance serves several tests
 
 Recorded messages are the normalized ones a provider would have received, so defaults, coerced address lists, and the derived text part are all visible.
+
+A delivery that came from an email class carries that object as `message.email`, so `transport.last?.email` identifies a send by its type rather than by copy that will change. A message written inline is recorded like any other, it just has no email object to assert on.
 
 With `{ mime: true }` each delivery also carries the assembled MIME message, which makes a MIME regression assertable without a provider or a Workers environment:
 
