@@ -110,10 +110,12 @@ export default {
 	},
 
 	logout: {
+		documentTitle: "Logout",
 		title: "Are you sure you want to logout?",
 		cta: "Logout",
 		signing_out: "Signing you out from all applications...",
 		redirecting: "Redirecting...",
+		continue: "Click here to continue",
 	},
 
 	splat: {

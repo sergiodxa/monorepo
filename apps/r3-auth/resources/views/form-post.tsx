@@ -39,9 +39,9 @@ namespace FormPostView {
 /**
  * Renders the auto-submitting authorization response form.
  *
- * The submit is wired through the `onload` attribute rather than a `<script>` element
- * so the page ships no script body at all, which keeps it working under a strict
- * content policy and leaves nothing to escape.
+ * The submit is a one-line `<script>` text node rather than an inline event attribute,
+ * which `remix/ui` does not type. Browsers that will not run it fall through to the
+ * `<noscript>` button, so the response is never stranded.
  */
 export default function FormPostView(handle: Handle<FormPostView.Setup>) {
 	return () => {

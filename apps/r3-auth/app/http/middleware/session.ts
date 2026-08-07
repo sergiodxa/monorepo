@@ -139,6 +139,17 @@ export function unsetTokens(): void {
 }
 
 /**
+ * Discards the whole session record, not just its contents: the KV entry is deleted
+ * and the response replaces the cookie with an empty one.
+ *
+ * Nothing may read or write the session afterwards — a destroyed session throws on
+ * access — so call this last, once the response is decided.
+ */
+export function destroySession(): void {
+	readSession().destroy();
+}
+
+/**
  * The authorization request currently in flight, or `null` when none is parked.
  *
  * The stored value is validated structurally rather than trusted: a record written by

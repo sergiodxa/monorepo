@@ -104,7 +104,10 @@ export const WELL_KNOWN = {
 	scopes_supported: SCOPES_SUPPORTED,
 	subject_types_supported: ["public"],
 	authorization_response_iss_parameter_supported: true,
-	token_endpoint_auth_methods_supported: ["client_secret_basic"],
+	// Both methods are advertised because the token endpoint accepts both: credentials
+	// in an HTTP Basic header, and credentials in the form body. Advertising only the
+	// first told clients to use the one path, while the other has always worked.
+	token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post"],
 	token_endpoint: new URL("/oauth/token", ISSUER_HOST),
 	userinfo_endpoint: new URL("/userinfo", ISSUER_HOST),
 	end_session_endpoint: new URL("/oidc/logout", ISSUER_HOST),

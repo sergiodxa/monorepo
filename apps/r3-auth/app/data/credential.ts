@@ -1,6 +1,6 @@
 /**
  * Data access for password credentials. A subject has at most one, so this is a
- * lookup by subject and an insert of a bcrypt hash — the two operations the password
+ * lookup by subject and an insert of a password hash — the two operations the password
  * login and registration flows need, kept away from the hashing itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -23,7 +23,7 @@ export default class Credential {
 
 	/**
 	 * Stores a password credential for a subject. `password_hash` must already be a
-	 * bcrypt hash: this never sees a plaintext password.
+	 * PBKDF2 hash: this never sees a plaintext password.
 	 */
 	static async create(
 		db: Database,

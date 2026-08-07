@@ -14,6 +14,12 @@
 			"port": 3001
 		},
 		{
+			"name": "r3-auth",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/r3-auth", "dev"],
+			"port": 3002
+		},
+		{
 			"name": "r3-gallery",
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/r3-gallery", "dev", "--port", "3010"],

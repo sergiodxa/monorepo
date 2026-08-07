@@ -8,21 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@pkg/result";
-
 import { JWK, JWT } from "@edgefirst-dev/jwt";
-import {
-	Base64Url,
-	CryptoError,
-	Hex,
-	password,
-	randomBytes,
-	sha256,
-	timingSafeEqual,
-} from "@pkg/crypto";
+import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@pkg/crypto";
 import { elapsed } from "@pkg/dates";
 import { failure, isFailure, success } from "@pkg/result";
-import bcrypt from "bcryptjs";
 
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";
@@ -40,13 +29,6 @@ const SESSION_STATE_SALT_BYTES = 16;
  * iframe, so its encoding cannot change while old cookies are still in flight.
  */
 const OP_BROWSER_STATE_BYTES = 32;
-
-/**
- * Shape of a bcrypt hash (`$2a$`, `$2b$`, `$2y$`), used to route a stored
- * credential to the legacy verifier. Hashes written today are PBKDF2 and carry
- * their own `$pbkdf2-sha256$` tag instead.
- */
-const BCRYPT_HASH_PATTERN = /^\$2[aby]?\$/;
 
 // =============================================================================
 // Errors
@@ -610,7 +592,12 @@ export class OIDC {
 	 * and validates `post_logout_redirect_uri` against the client's registered logout
 	 * URI so the browser can never be sent somewhere unregistered.
 	 *
-	 * @returns The subject logged out, the initiating client, and the redirect to honor.
+	 * The relying parties to notify are collected **before** the sessions are deleted
+	 * and returned alongside the result. They are derived from those very session rows,
+	 * so reading them afterwards would find nothing and the logout fan-out would
+	 * silently reach nobody.
+	 *
+	 * @returns The subject logged out, the initiating client, the redirect to honor, and whom to notify.
 	 * @throws {InvalidRequestError} When neither hint nor session is given, or a parameter contradicts the hint.
 	 */
 	async logout(args: {
@@ -656,7 +643,12 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidRequestError("Invalid subject");
 
-		if (args.postLogoutRedirectUri && client) {
+		// A redirect target is honored only when it is the registered logout URI of a
+		// client this request actually identified. Without the client half of that check
+		// the parameter is an open redirect: anybody could hand a signed-in browser a
+		// logout link that lands on their own page wearing this server's flow.
+		if (args.postLogoutRedirectUri) {
+			if (!client) throw new InvalidRequestError("Invalid redirect uri");
 			if (client.logoutUri !== args.postLogoutRedirectUri) {
 				throw new InvalidRequestError("Invalid redirect uri");
 			}
@@ -666,12 +658,19 @@ export class OIDC {
 			throw new InvalidRequestError("Invalid session subject");
 		}
 
+		let [backchannelSessions, frontchannelSessions] = await Promise.all([
+			this.repository.findSessionsForBackchannelLogout(subject.id, clientId),
+			this.repository.findSessionsForFrontchannelLogout(subject.id, clientId),
+		]);
+
 		await this.repository.deleteSessionBySubjectId(subject.id);
 
 		return {
 			subjectId: subject.id,
 			clientId,
 			redirectUri: args.postLogoutRedirectUri,
+			backchannelSessions,
+			frontchannelUrls: this.buildFrontchannelLogoutUrls(frontchannelSessions),
 		};
 	}
 
@@ -767,7 +766,7 @@ export class OIDC {
 				return failure(new MissingValidationError("Verify your email address."));
 			}
 
-			let passwordValid = await verifyPassword(credential.passwordHash, input.password);
+			let passwordValid = await password.verify(credential.passwordHash, input.password);
 			if (isFailure(passwordValid) || !passwordValid.data) {
 				return failure(new AccessDeniedError("Invalid email or password."));
 			}
@@ -833,6 +832,25 @@ export class OIDC {
 			excludeClientId,
 		);
 
+		await this.deliverBackchannelLogoutTokens(subjectId, sessions);
+	}
+
+	/**
+	 * Delivers back-channel logout tokens to an already-collected set of sessions.
+	 *
+	 * Separate from {@link sendBackchannelLogoutTokens} because the RP-initiated flow has
+	 * to read the sessions before it deletes them: once they are gone there is nothing
+	 * left to derive the recipient list from.
+	 *
+	 * Delivery is best effort and settled in parallel: one unreachable relying party must
+	 * not hold up or fail the logout the person asked for.
+	 *
+	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
+	 */
+	async deliverBackchannelLogoutTokens(
+		subjectId: string,
+		sessions: OIDC.SessionWithClient[],
+	): Promise<void> {
 		let clientsToNotify = sessions.filter((s) => s.backchannelLogoutUri);
 
 		if (clientsToNotify.length === 0) {
@@ -880,6 +898,20 @@ export class OIDC {
 			excludeClientId,
 		);
 
+		return this.buildFrontchannelLogoutUrls(sessions);
+	}
+
+	/**
+	 * Turns already-collected sessions into the iframe URLs the browser loads.
+	 *
+	 * Pure: it issues no query, which is what lets the RP-initiated flow build the list
+	 * from sessions it read before deleting them.
+	 *
+	 * @param sessions - Sessions to notify, already filtered to exclude the initiating client.
+	 */
+	private buildFrontchannelLogoutUrls(
+		sessions: OIDC.SessionWithClient[],
+	): OIDC.FrontchannelLogoutUrl[] {
 		let clientsToNotify = sessions.filter((s) => s.frontchannelLogoutUri);
 
 		if (clientsToNotify.length === 0) {
@@ -1135,10 +1167,11 @@ export class OIDC {
 	 * Replaces a stored hash that is behind current policy, right after the only
 	 * moment the plaintext exists: a successful sign-in.
 	 *
-	 * A bcrypt hash can never be converted without the password, so this is the
-	 * one chance to retire it. The upgrade is best effort — a failed re-hash or a
-	 * failed write leaves the old hash in place and the next sign-in tries again,
-	 * because refusing a correct password would be far worse than a late upgrade.
+	 * A hash cannot be strengthened without the password, so a sign-in is the one
+	 * chance to rewrite one written under a weaker cost. The upgrade is best
+	 * effort — a failed re-hash or a failed write leaves the old hash in place and
+	 * the next sign-in tries again, because refusing a correct password would be
+	 * far worse than a late upgrade.
 	 *
 	 * @param subjectId - Owner of the credential being upgraded.
 	 * @param stored - The hash that was just verified.
@@ -1226,31 +1259,4 @@ async function sha256Hex(message: string): Promise<string> {
 	if (isFailure(digest)) throw new InternalServerError(digest.error.message);
 
 	return Hex.encode(digest.data);
-}
-
-/**
- * Checks a password against a stored credential hash, in whichever format it was
- * written.
- *
- * Both formats are self-identifying, so the stored value picks its own verifier:
- * a `$2…$` prefix means bcrypt, from before this server moved to PBKDF2, and
- * anything else is handed to the PBKDF2 verifier. A wrong password is
- * `success(false)`; only a hash no verifier can read is a failure, which keeps
- * "wrong password" apart from "cannot check".
- *
- * @param stored - The hash held for the subject.
- * @param plaintext - The password presented at sign-in.
- * @returns Whether the password matches, or why the check could not run.
- */
-async function verifyPassword(
-	stored: string,
-	plaintext: string,
-): Promise<Result<boolean, CryptoError>> {
-	if (!BCRYPT_HASH_PATTERN.test(stored)) return await password.verify(stored, plaintext);
-
-	try {
-		return success(await bcrypt.compare(plaintext, stored));
-	} catch {
-		return failure(new CryptoError("bcrypt verification failed"));
-	}
 }

@@ -14,9 +14,11 @@
 
 import { mock } from "bun:test";
 
+import type { Customer } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace, createR2Bucket, createRateLimit } from "@pkg/cloudflare-mocks";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
@@ -45,7 +47,43 @@ export interface RateLimitBudgets {
 export interface TestAppOptions {
 	/** Per-limiter budgets, so a test can drive one limiter to its threshold. */
 	limits?: RateLimitBudgets;
+	/**
+	 * The billing client provisioning resolves. Defaults to one that answers every call
+	 * with a canned customer, so a test that is not about billing never reaches the
+	 * network; pass a failing one to exercise the provisioning rollback.
+	 */
+	polar?: PolarClient;
 }
+
+/**
+ * A billing client that succeeds without talking to anything.
+ *
+ * Shaped as the subset of the real client provisioning calls, because the vendor SDK
+ * would otherwise be loaded and a request issued for a concern no HTTP test is about.
+ */
+function createStubPolarClient(): PolarClient {
+	let customer = { id: "cus_test", email: "", externalId: null } as unknown as Customer;
+
+	let stub: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
+		async createCustomer(email) {
+			return { ...customer, email } as Customer;
+		},
+		async findCustomerByEmail() {
+			return null;
+		},
+		async updateCustomer(_id, updates) {
+			return { ...customer, externalId: updates.externalId ?? null } as Customer;
+		},
+	};
+
+	return stub as unknown as PolarClient;
+}
+
+/** Secrets read from `env` at call time, given values no real provider would accept. */
+const TEST_ENV = {
+	GITHUB_CLIENT_ID: "test-github-client-id",
+	GITHUB_CLIENT_SECRET: "test-github-client-secret",
+};
 
 let kv = createKVNamespace();
 let r2 = createR2Bucket();
@@ -130,7 +168,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	kv = createKVNamespace();
 	r2 = createR2Bucket();
-	mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 } }));
+	mock.module("cloudflare:workers", () => ({ env: { ...TEST_ENV, KV: kv, R2: r2 } }));
 
 	// Captured after the reset so this instance keeps its own bindings even once a
 	// later `createTestApp()` has replaced the module-level ones.
@@ -141,6 +179,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	let container = new ServiceContainer();
 	container.singleton(DatabaseKey, () => db);
+	container.singleton(PolarClient, () => options.polar ?? createStubPolarClient());
 	container.singleton(
 		RateLimiters,
 		() =>

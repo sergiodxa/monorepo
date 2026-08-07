@@ -1,8 +1,8 @@
 /**
  * Test suite for the OIDC engine. Exercises the token endpoint's three
  * grant types, plus revoke, introspect, userinfo, logout, ID-token claim
- * behavior, and the password login flow — including the bcrypt-to-PBKDF2
- * upgrade — against a mocked repository.
+ * behavior, and the password login flow — including the upgrade of a hash
+ * written under an outdated cost — against a mocked repository.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,9 +11,8 @@
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { JWK } from "@edgefirst-dev/jwt";
-import { Hex, password, sha256 } from "@pkg/crypto";
+import { Base64Url, Hex, password, randomBytes, sha256 } from "@pkg/crypto";
 import { unwrap } from "@pkg/result";
-import bcrypt from "bcryptjs";
 
 import { OIDC } from "~/app/auth/oidc-provider";
 import { ISSUER } from "~/app/config";
@@ -79,6 +78,8 @@ function createMockRepository(): OIDC.Repository {
 		deleteSessionBySubjectId: mock(async () => {}),
 		deleteSessionById: mock(async () => {}),
 		touchSession: mock(async () => {}),
+		findSessionsForBackchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
+		findSessionsForFrontchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
 	} as unknown as OIDC.Repository;
 }
 
@@ -587,6 +588,56 @@ describe("OIDC", () => {
 
 			await expect(provider.logout({})).rejects.toThrow(OIDC.InvalidRequestError);
 		});
+
+		test("rejects post_logout_redirect_uri when no client is identified", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			// Neither an id_token_hint nor a client_id, so nothing says this address was
+			// ever registered. Honoring it would make the endpoint an open redirect.
+			await expect(
+				provider.logout({
+					sessionSubject: testSubject.id,
+					postLogoutRedirectUri: "https://malicious.com/logout",
+				}),
+			).rejects.toThrow(OIDC.InvalidRequestError);
+
+			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+		});
+
+		test("collects the logout fan-out before the sessions are deleted", async () => {
+			let repo = createMockRepository();
+			let target: OIDC.SessionWithClient = {
+				sessionId: "session-1",
+				clientId: "other-client",
+				backchannelLogoutUri: "https://other.example.com/backchannel",
+				backchannelLogoutSessionRequired: "true",
+				frontchannelLogoutUri: "https://other.example.com/frontchannel",
+				frontchannelLogoutSessionRequired: "true",
+			};
+
+			// The recipient list is derived from the very rows logout deletes, so a
+			// repository that stops answering once they are gone is exactly what
+			// production looks like.
+			let deleted = false;
+			repo.deleteSessionBySubjectId = mock(async () => {
+				deleted = true;
+			});
+			repo.findSessionsForBackchannelLogout = mock(async () => (deleted ? [] : [target]));
+			repo.findSessionsForFrontchannelLogout = mock(async () => (deleted ? [] : [target]));
+
+			let provider = new OIDC(ISSUER, repo);
+			let result = await provider.logout({ sessionSubject: testSubject.id });
+
+			expect(result.backchannelSessions).toEqual([target]);
+			expect(result.frontchannelUrls).toEqual([
+				{
+					clientId: "other-client",
+					url: `https://other.example.com/frontchannel?iss=https%3A%2F%2F${ISSUER}&sid=session-1`,
+				},
+			]);
+			expect(deleted).toBe(true);
+		});
 	});
 
 	describe("ID Token claims", () => {
@@ -673,11 +724,50 @@ describe("OIDC", () => {
 /** Password every credential login case signs in with. */
 const LOGIN_PASSWORD = "correct horse battery staple";
 
-/** Cost factor the bcrypt hashes stored before the PBKDF2 migration were written with. */
-const LEGACY_BCRYPT_ROUNDS = 10;
-
-/** Prefix the self-describing PBKDF2 format writes, used to tell the two schemes apart. */
+/** Prefix the self-describing PBKDF2 format writes, used to recognize a stored hash. */
 const PBKDF2_PREFIX = "$pbkdf2-sha256$";
+
+/** Iteration count standing in for a hash written before the current cost policy. */
+const OUTDATED_ITERATIONS = 1_000;
+
+/** Salt length, in bytes, the encoded format is built with. */
+const SALT_BYTES = 16;
+
+/** Derived key length, in bytes, the encoded format is built with. */
+const KEY_BYTES = 32;
+
+/** Bits per byte, to turn the key length into a `deriveBits` length. */
+const BITS_PER_BYTE = 8;
+
+/**
+ * Hashes a password at an outdated iteration count, standing in for a credential
+ * stored before the current cost policy and therefore due for an upgrade on login.
+ *
+ * @param secret - Plaintext password to hash.
+ * @returns An encoded PBKDF2 hash that verifies but reports as needing a rehash.
+ */
+async function outdatedHash(secret: string): Promise<string> {
+	let salt = randomBytes(SALT_BYTES);
+
+	let key = await crypto.subtle.importKey(
+		"raw",
+		new TextEncoder().encode(secret),
+		"PBKDF2",
+		false,
+		["deriveBits"],
+	);
+
+	let bits = await crypto.subtle.deriveBits(
+		{ name: "PBKDF2", salt, iterations: OUTDATED_ITERATIONS, hash: "SHA-256" },
+		key,
+		KEY_BYTES * BITS_PER_BYTE,
+	);
+
+	let encodedSalt = Base64Url.encode(salt);
+	let encodedKey = Base64Url.encode(new Uint8Array(bits));
+
+	return `${PBKDF2_PREFIX}i=${OUTDATED_ITERATIONS}$${encodedSalt}$${encodedKey}`;
+}
 
 /** Mutable record of what a login repository double holds and was asked to persist. */
 interface LoginRepositoryState {
@@ -775,8 +865,8 @@ function loginInput(
 }
 
 describe("loginWithCredential()", () => {
-	test("authenticates a subject whose stored hash is bcrypt", async () => {
-		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+	test("authenticates a subject whose stored hash is behind the current cost policy", async () => {
+		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
 		let result = await provider.loginWithCredential(loginInput());
@@ -784,8 +874,8 @@ describe("loginWithCredential()", () => {
 		expect(result.status).toBe("success");
 	});
 
-	test("upgrades a bcrypt hash to PBKDF2 after a successful sign-in", async () => {
-		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+	test("upgrades an outdated hash to the current policy after a successful sign-in", async () => {
+		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
 		await provider.loginWithCredential(loginInput());
@@ -799,7 +889,7 @@ describe("loginWithCredential()", () => {
 	});
 
 	test("verifies against the upgraded hash on the next sign-in, without upgrading again", async () => {
-		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
 		await provider.loginWithCredential(loginInput());
@@ -812,8 +902,8 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(0);
 	});
 
-	test("rejects a wrong password against a bcrypt hash and leaves it alone", async () => {
-		let state = loginState({ storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS) });
+	test("rejects a wrong password against an outdated hash and leaves it alone", async () => {
+		let state = loginState({ storedHash: await outdatedHash(LOGIN_PASSWORD) });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
 		let result = await provider.loginWithCredential(loginInput({ password: "wrong password" }));
@@ -833,7 +923,7 @@ describe("loginWithCredential()", () => {
 		if (result.status === "failure") expect(result.error).toBeInstanceOf(OIDC.AccessDeniedError);
 	});
 
-	test("refuses a hash in neither format instead of letting the sign-in through", async () => {
+	test("refuses a hash it cannot read instead of letting the sign-in through", async () => {
 		let state = loginState({ storedHash: "not-a-hash-at-all" });
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
@@ -845,7 +935,7 @@ describe("loginWithCredential()", () => {
 
 	test("still signs the subject in when persisting the upgrade fails", async () => {
 		let state = loginState({
-			storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS),
+			storedHash: await outdatedHash(LOGIN_PASSWORD),
 			upgradeError: new Error("database unavailable"),
 		});
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
@@ -858,7 +948,7 @@ describe("loginWithCredential()", () => {
 
 	test("refuses an unverified credential without checking the password", async () => {
 		let state = loginState({
-			storedHash: await bcrypt.hash(LOGIN_PASSWORD, LEGACY_BCRYPT_ROUNDS),
+			storedHash: await outdatedHash(LOGIN_PASSWORD),
 			verifiedAt: null,
 		});
 		let provider = new OIDC(ISSUER, createLoginRepository(state));

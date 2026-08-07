@@ -115,9 +115,11 @@ describe("cross-origin protection", () => {
 	});
 
 	test("lets a cross-origin POST through to /oidc/logout", async () => {
+		// The end-session endpoint answers with its redirect rather than a refusal, which
+		// is what proves the request reached it instead of stopping at the boundary.
 		let response = await app.fetch(crossOriginPost(routes.oidc.logout.action.href()));
 
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(303);
 	});
 
 	test("does not bypass a path that merely starts like a bypassed one", async () => {

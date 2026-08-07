@@ -22,6 +22,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import {
 	authorizeUrl,
@@ -89,7 +90,10 @@ describe("GET /authorize", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Client App");
-		expect(body).toContain('name="password"');
+		// The provider button is what an ordinary sign-in offers; the credential form is
+		// only rendered for a request that asked to create an account.
+		expect(body).toContain('action="/auth/github"');
+		expect(body).not.toContain('name="password"');
 	});
 
 	test("refuses a redirect_uri that is not the registered one, character for character", async () => {
@@ -134,14 +138,29 @@ describe("GET /authorize", () => {
 
 		let response = await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "login" })));
 
+		// The sign-in page rather than a code: an existing session must not answer a
+		// request that asked for the person to authenticate again.
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain('action="/auth/github"');
+	});
+
+	test("prompt=login and prompt=create together ask for credentials again", async () => {
+		await signIn(app, fixtures);
+
+		let response = await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "login create" })));
+
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain('name="password"');
 	});
 
-	test("prompt=create opens the registration fields", async () => {
+	test("prompt=create renders the registration fields", async () => {
 		let response = await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
 
-		expect(await response.text()).toContain("<details open");
+		let body = await response.text();
+		expect(body).toContain('name="name"');
+		expect(body).toContain('name="username"');
+		expect(body).toContain('name="email"');
+		expect(body).toContain('name="password"');
 	});
 
 	test("prompt=consent and prompt=select_account still perform SSO", async () => {
@@ -248,6 +267,40 @@ describe("POST /authorize", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("Invalid email or password.");
+	});
+
+	test("an existing subject signs in and is answered with a code", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures)));
+
+		let response = await submitSignIn(app);
+		let location = new URL(response.headers.get("location")!);
+
+		expect(response.status).toBe(303);
+		expect(`${location.origin}${location.pathname}`).toBe(REDIRECT_URI);
+		expect(location.searchParams.get("code")).toBeTruthy();
+	});
+
+	test("an unknown email registers the subject and still refuses the sign-in", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures)));
+
+		let response = await app.fetch(
+			new Request(`${ORIGIN}${routes.authorize.action.href()}`, {
+				method: "POST",
+				headers: { "content-type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({
+					email: "newcomer@example.com",
+					password: "a-brand-new-password",
+					name: "New Comer",
+					username: "newcomer",
+				}),
+			}),
+		);
+
+		// The registration is recorded, but the credential is unverified, so the answer
+		// is the same refusal a wrong password gets: the page must not reveal which
+		// addresses are registered.
+		expect(response.status).toBe(200);
+		expect(await Subject.findByEmail(app.db, "newcomer@example.com")).not.toBeNull();
 	});
 });
 

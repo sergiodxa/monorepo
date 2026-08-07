@@ -29,13 +29,10 @@ export default function defaultHandler(ctx: NotFoundContext) {
 		title: ctx.i18next.t("splat.notFound.title"),
 		description: ctx.i18next.t("splat.notFound.description"),
 	});
-	let renderDocument = DocumentLayout();
-
 	return ctx.render(
-		renderDocument({
-			title: props.title,
-			children: <NotFoundView {...props} />,
-		}),
+		<DocumentLayout title={props.title}>
+			<NotFoundView {...props} />
+		</DocumentLayout>,
 		{ status: 404 },
 	);
 }

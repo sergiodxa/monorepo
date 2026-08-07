@@ -31,7 +31,7 @@ import type { AuthorizeQuery } from "~/app/http/validators/authorize";
 import type { SelectClient } from "~/database/schema";
 
 import { createOidcProvider } from "~/app/auth/repository";
-import { ISSUER } from "~/app/config";
+import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
 import Client from "~/app/data/client";
 import {
 	getAccessToken,
@@ -43,6 +43,7 @@ import {
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
 import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators/authorize";
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
+import { startGitHubLogin } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
 import DocumentLayout from "~/resources/layouts/document";
@@ -113,31 +114,39 @@ async function errorRedirect(
  * @param error - Why the previous attempt was refused, when this is a re-render.
  */
 function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
-	let renderDocument = DocumentLayout();
-
 	return ctx.render(
-		renderDocument({
-			title: ctx.i18next.t("authorize.header.title", { client: client.name }),
-			children: (
-				<AuthorizeView
-					clientName={client.name}
-					clientDescription={client.description}
-					title={ctx.i18next.t("authorize.header.titleShort")}
-					description={ctx.i18next.t("authorize.header.description")}
-					showRegistration={authz.prompt?.includes("create") ?? false}
-					error={error ?? null}
-					labels={{
-						name: ctx.i18next.t("authorize.forms.credentials.fields.name.label"),
-						username: ctx.i18next.t("authorize.forms.credentials.fields.username.label"),
-						email: ctx.i18next.t("authorize.forms.credentials.fields.email.label"),
-						password: ctx.i18next.t("authorize.forms.credentials.fields.password.label"),
-						submit: ctx.i18next.t("authorize.forms.credentials.cta"),
-						github: ctx.i18next.t("authorize.forms.github.cta"),
-						separator: ctx.i18next.t("authorize.forms.separator"),
-					}}
-				/>
-			),
-		}),
+		<DocumentLayout title={ctx.i18next.t("authorize.header.title", { client: client.name })}>
+			<AuthorizeView
+				clientName={client.name}
+				clientDescription={client.description}
+				clientLogoUrl={client.logo_url}
+				title={ctx.i18next.t("authorize.header.titleShort")}
+				description={ctx.i18next.t("authorize.header.description")}
+				showRegistration={authz.prompt?.includes("create") ?? false}
+				error={error ?? null}
+				labels={{
+					name: {
+						label: ctx.i18next.t("authorize.forms.credentials.fields.name.label"),
+						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.name.placeholder"),
+					},
+					username: {
+						label: ctx.i18next.t("authorize.forms.credentials.fields.username.label"),
+						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.username.placeholder"),
+					},
+					email: {
+						label: ctx.i18next.t("authorize.forms.credentials.fields.email.label"),
+						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.email.placeholder"),
+					},
+					password: {
+						label: ctx.i18next.t("authorize.forms.credentials.fields.password.label"),
+						placeholder: ctx.i18next.t("authorize.forms.credentials.fields.password.placeholder"),
+					},
+					submit: ctx.i18next.t("authorize.forms.credentials.cta"),
+					github: ctx.i18next.t("authorize.forms.github.cta"),
+					separator: ctx.i18next.t("authorize.forms.separator"),
+				}}
+			/>
+		</DocumentLayout>,
 	);
 }
 
@@ -277,10 +286,13 @@ export default createController(routes.authorize, {
 			ctx.logger.info("authz_session_started", { clientId: query.client_id });
 			setAuthz(authz);
 
-			if (query.provider) {
-				return redirect(routes.auth.provider.href({ provider: query.provider }), {
-					status: redirect.Status.SeeOther,
-				});
+			// Started here rather than by redirecting to the provider route, which only
+			// answers `POST`: a redirect is followed with `GET`, which that route does not
+			// serve. An unrecognized provider falls through to the sign-in page instead of
+			// erroring, since a page offering every way in is the better answer.
+			if (query.provider === "github") {
+				ctx.logger.info("oauth_login_started", { provider: "github" });
+				return await startGitHubLogin(ctx);
 			}
 
 			return signInPage(ctx, client, authz);
@@ -340,7 +352,10 @@ export default createController(routes.authorize, {
 			}
 
 			ctx.logger.info("authz_credential_login_success", { subjectId: login.data.subjectId });
-			unsetAuthz();
+			// Cleared once answered, except for this server's own client: its callback is
+			// the next request in the same flow and still has to check the `state` and the
+			// redirect URI this request parked.
+			if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 
 			return await authorizationResponse(
 				ctx,

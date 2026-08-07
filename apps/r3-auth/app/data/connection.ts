@@ -44,4 +44,17 @@ export default class Connection {
 			{ touch: true, returnRow: true },
 		);
 	}
+
+	/**
+	 * Unlinks a provider identity.
+	 *
+	 * Exists so provisioning can undo itself: this database has no transactions, so a
+	 * sign-up that fails after the connection is written has to remove it explicitly
+	 * rather than roll back.
+	 *
+	 * @returns Whether a row was removed.
+	 */
+	static async delete(db: Database, id: string): Promise<boolean> {
+		return await db.delete(connections, id);
+	}
 }

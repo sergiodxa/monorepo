@@ -20,6 +20,9 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import selfCallback from "~/app/http/controllers/auth/callback";
+import providerLogin from "~/app/http/controllers/auth/provider";
+import providerCallback from "~/app/http/controllers/auth/provider-callback";
 import authorizeController from "~/app/http/controllers/authorize";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
@@ -27,7 +30,12 @@ import home from "~/app/http/controllers/home";
 import introspect from "~/app/http/controllers/oauth/introspect";
 import revoke from "~/app/http/controllers/oauth/revoke";
 import token from "~/app/http/controllers/oauth/token";
+import checkSession from "~/app/http/controllers/oidc/check-session";
+import logout from "~/app/http/controllers/oidc/logout";
 import userinfo from "~/app/http/controllers/userinfo";
+import jwks from "~/app/http/controllers/well-known/jwks";
+import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
+import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
@@ -87,9 +95,20 @@ export default function application(options: application.Options) {
 	router.map(routes.userinfo, userinfo);
 	router.map(routes.authorize, authorizeController);
 
+	router.map(routes.auth.provider, providerLogin);
+	router.map(routes.auth.providerCallback, providerCallback);
+	router.map(routes.auth.callback, selfCallback);
+
 	router.map(routes.oauth.token, token);
 	router.map(routes.oauth.revoke, revoke);
 	router.map(routes.oauth.introspect, introspect);
+
+	router.map(routes.oidc.logout, logout);
+	router.map(routes.oidc.checkSession, checkSession);
+
+	router.map(routes.wellKnown.openidConfiguration, openidConfiguration);
+	router.map(routes.wellKnown.oauthAuthorizationServer, oauthAuthorizationServer);
+	router.map(routes.wellKnown.jwks, jwks);
 
 	return router;
 }

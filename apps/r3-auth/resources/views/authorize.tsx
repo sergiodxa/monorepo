@@ -1,12 +1,12 @@
 /**
  * The sign-in page shown when an authorization request needs a person to authenticate.
- * Renders the requesting client's identity, the credential form, and the provider
- * button, all posting to URLs the flow already knows.
+ * Two columns on a wide viewport — the requesting client's identity on the left, the
+ * sign-in card on the right — collapsing to the card alone on a narrow one, where the
+ * client's name becomes the card's own heading so it is never lost.
  *
- * This is the functional skeleton of the page: the markup carries the whole flow, and
- * the two-column layout, palette and component library are layered over it when the
- * sign-in UI is built. Everything visual belongs in that later pass; everything a form
- * submits belongs here.
+ * The provider button is always offered; the credential form appears only for a request
+ * asking to create an account, which is what keeps the password surface off the page
+ * for the flows that do not use it. Neither needs a line of script to work.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,31 +14,72 @@
 
 import type { Handle } from "remix/ui";
 
+import { Button, Card, Form, Heading, Logo, Separator, Text, TextField } from "@pkg/r3-ui";
+import { bg, fg } from "@pkg/u/color";
+import {
+	block,
+	flex,
+	flexCol,
+	gap,
+	grid,
+	gridTemplate,
+	hidden,
+	items,
+	justify,
+	relative,
+} from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { at, dark } from "@pkg/u/responsive";
+import { is, m, maxIs, minBs, p, pbs } from "@pkg/u/size";
+import { text, textAlign, weight } from "@pkg/u/typography";
+import { css } from "remix/ui";
+
 import routes from "~/routes/web";
 
+/**
+ * Width at which the page splits into two columns.
+ *
+ * A literal length rather than a scale step on purpose: a step resolves to a `var()`,
+ * and a container query's condition is evaluated before custom properties are, so a
+ * `var()` there makes the whole rule inert and the layout silently never switches.
+ */
+const TWO_COLUMN_WIDTH = "64rem";
+
+/** Radii of the decorative rings, largest first, drawn from the panel's bottom-left. */
+const RING_RADII = [560, 490, 420, 350, 280, 210, 140, 70];
+
 namespace AuthorizeView {
+	/** A credential field's visible caption and the hint shown while it is empty. */
+	export interface Field {
+		label: string;
+		placeholder: string;
+	}
+
 	export interface Setup {
 		/** Name of the client the person is signing in to, shown so they can recognize it. */
 		clientName: string;
 		/** The client's own description of itself, when it registered one. */
 		clientDescription: string | null;
-		/** Heading above the form. */
+		/** The client's logo, shown in the identity panel; initials stand in when absent. */
+		clientLogoUrl: string | null;
+		/** Heading above the form on a wide viewport, where the client panel carries the name. */
 		title: string;
 		/** Sentence under the heading. */
 		description: string;
-		/** Labels for the credential form's fields and its submit button. */
+		/** Copy for the credential form's fields and both submit buttons. */
 		labels: {
-			name: string;
-			username: string;
-			email: string;
-			password: string;
+			name: Field;
+			username: Field;
+			email: Field;
+			password: Field;
 			submit: string;
 			github: string;
 			separator: string;
 		};
 		/**
-		 * Whether the registration fields are shown expanded. Registration and sign-in
-		 * post the same form; `prompt=create` only decides which one the page leads with.
+		 * Whether the credential form is offered at all, which `prompt=create` asks for.
+		 * The same form registers and signs in — the server decides from the email — and
+		 * every field is required either way, so it is shown whole or not shown.
 		 */
 		showRegistration: boolean;
 		/** Why the previous attempt was refused, when there was one. */
@@ -46,57 +87,230 @@ namespace AuthorizeView {
 	}
 }
 
+/**
+ * The concentric rings filling the identity panel's lower-left corner.
+ *
+ * Every ring carries the same color at the same low opacity: the depth comes from
+ * them overlapping, not from a gradient, so the figure survives any palette change.
+ */
+function ConcentricRings() {
+	return () => (
+		<svg
+			viewBox="0 0 600 600"
+			aria-hidden="true"
+			mix={css({
+				position: "absolute",
+				insetBlockEnd: 0,
+				insetInlineStart: 0,
+				blockSize: "37.5rem",
+				inlineSize: "37.5rem",
+				// The alpha is mixed into the color rather than set as `fill-opacity`, so
+				// each ring is translucent on its own and the overlaps still accumulate
+				// into the figure's depth. One opacity on the element would flatten them.
+				fill: "color-mix(in oklab, var(--ui-color-brand-500) 5%, transparent)",
+				".dark &": {
+					fill: "color-mix(in oklab, var(--ui-color-brand-400) 5%, transparent)",
+				},
+				"@media (prefers-color-scheme: dark)": {
+					".system &": {
+						fill: "color-mix(in oklab, var(--ui-color-brand-400) 5%, transparent)",
+					},
+				},
+			})}
+		>
+			{RING_RADII.map((radius) => (
+				<circle key={radius} cx="0" cy="600" r={radius} />
+			))}
+		</svg>
+	);
+}
+
 /** Renders the credential and provider sign-in page for an authorization request. */
 export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 	return () => {
-		let { clientName, clientDescription, title, description, labels, showRegistration, error } =
-			handle.props;
+		let {
+			clientName,
+			clientDescription,
+			clientLogoUrl,
+			title,
+			description,
+			labels,
+			showRegistration,
+			error,
+		} = handle.props;
 
 		return (
-			<main>
-				<section>
-					<h2>{clientName}</h2>
-					{clientDescription && <p>{clientDescription}</p>}
-				</section>
+			<main
+				mix={[
+					grid(),
+					is("100%"),
+					minBs("100dvh"),
+					at(TWO_COLUMN_WIDTH, gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" })),
+				]}
+			>
+				{/* The identity panel is decoration plus context, and the narrow layout's card
+				repeats the client's name, so hiding it there loses nothing. */}
+				<aside
+					mix={[
+						hidden(),
+						relative(),
+						overflow("hidden"),
+						p(12),
+						bg("color.neutral.100"),
+						fg("color.neutral.900"),
+						dark([bg("color.neutral.800"), fg("color.neutral.100")]),
+						at(TWO_COLUMN_WIDTH, [flex(), flexCol(), justify("between")]),
+					]}
+				>
+					<div mix={[flex(), flexCol(), gap(4)]}>
+						<div mix={[flex(), items("center"), gap(3)]}>
+							<Logo size="md">
+								{clientLogoUrl ? (
+									<Logo.Image src={clientLogoUrl} alt={clientName} />
+								) : (
+									<Logo.Fallback
+										mix={[
+											bg("color.neutral.200"),
+											dark(bg("color.neutral.700")),
+											text("xl"),
+											weight("semibold"),
+										]}
+									>
+										{clientName.charAt(0).toUpperCase()}
+									</Logo.Fallback>
+								)}
+							</Logo>
 
-				<section>
-					<h1>{title}</h1>
-					<p>{description}</p>
-					{error && <p role="alert">{error}</p>}
+							<Heading level={2} mix={[m(0), text("xl"), weight("semibold")]}>
+								{clientName}
+							</Heading>
+						</div>
 
-					<form method="post" action={routes.authorize.action.href()}>
-						<details open={showRegistration}>
-							<summary>{labels.submit}</summary>
+						{clientDescription && (
+							<Text mix={[maxIs("24rem"), fg("color.neutral.600"), dark(fg("color.neutral.400"))]}>
+								{clientDescription}
+							</Text>
+						)}
+					</div>
 
-							<label>
-								{labels.name}
-								<input type="text" name="name" required />
-							</label>
+					<ConcentricRings />
+				</aside>
 
-							<label>
-								{labels.username}
-								<input type="text" name="username" required />
-							</label>
-						</details>
+				<section
+					mix={[
+						flex(),
+						flexCol(),
+						items("center"),
+						justify("center"),
+						p(6),
+						bg("color.neutral.50"),
+						dark(bg("color.neutral.900")),
+						// Pushed well down the small viewport so the card sits under the browser
+						// chrome rather than behind it, and centered normally once there is room.
+						pbs("15vh"),
+						at(TWO_COLUMN_WIDTH, pbs(6)),
+					]}
+				>
+					<Card mix={[is("100%"), maxIs("22.5rem")]}>
+						<Card.Header mix={[textAlign("center")]}>
+							{/* The name on the small viewport, the generic heading where the
+							panel beside it already carries the name. */}
+							<Card.Title mix={[at(TWO_COLUMN_WIDTH, hidden())]}>{clientName}</Card.Title>
+							<Card.Title mix={[hidden(), at(TWO_COLUMN_WIDTH, block())]}>{title}</Card.Title>
+							<Card.Description>{description}</Card.Description>
+						</Card.Header>
 
-						<label>
-							{labels.email}
-							<input type="email" name="email" required />
-						</label>
+						<Card.Content mix={[flex(), flexCol(), gap(4)]}>
+							{error && (
+								<Text
+									role="alert"
+									mix={[text("sm"), fg("danger.emphasis"), dark(fg("color.danger.300"))]}
+								>
+									{error}
+								</Text>
+							)}
 
-						<label>
-							{labels.password}
-							<input type="password" name="password" required />
-						</label>
+							{/* One form for both registering and signing in — the server decides from
+							the email which it is — and every field is required either way, so it is
+							shown whole or not at all rather than behind a disclosure a required
+							field could not be submitted from. */}
+							{showRegistration && (
+								<Form
+									method="post"
+									action={routes.authorize.action.href()}
+									mix={[flex(), flexCol(), gap(6)]}
+								>
+									<TextField
+										name="name"
+										required
+										label={labels.name.label}
+										placeholder={labels.name.placeholder}
+										autoComplete="name"
+									/>
 
-						<button type="submit">{labels.submit}</button>
-					</form>
+									<TextField
+										name="username"
+										required
+										label={labels.username.label}
+										placeholder={labels.username.placeholder}
+										autoComplete="username"
+									/>
 
-					<p>{labels.separator}</p>
+									<TextField
+										type="email"
+										name="email"
+										required
+										label={labels.email.label}
+										placeholder={labels.email.placeholder}
+										autoComplete="email"
+									/>
 
-					<form method="post" action={routes.auth.provider.href({ provider: "github" })}>
-						<button type="submit">{labels.github}</button>
-					</form>
+									<TextField
+										type="password"
+										name="password"
+										required
+										label={labels.password.label}
+										placeholder={labels.password.placeholder}
+										autoComplete="current-password"
+										minLength={8}
+									/>
+
+									<Button type="submit" color="brand" mix={[is("100%")]}>
+										{labels.submit}
+									</Button>
+								</Form>
+							)}
+
+							{showRegistration && (
+								<div mix={[relative(), flex(), items("center")]}>
+									<Separator mix={[css({ flex: "1 1 0%" })]} />
+									<Text mix={[p(0, 4), text("sm"), fg("neutral.muted")]}>{labels.separator}</Text>
+									<Separator mix={[css({ flex: "1 1 0%" })]} />
+								</div>
+							)}
+
+							<Form method="post" action={routes.auth.provider.href({ provider: "github" })}>
+								<Button
+									type="submit"
+									color="neutral"
+									mix={[is("100%"), flex(), items("center"), justify("center"), gap(2)]}
+								>
+									<svg
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+										mix={css({ inlineSize: "1.25rem", blockSize: "1.25rem", fill: "currentColor" })}
+									>
+										<path
+											fillRule="evenodd"
+											clipRule="evenodd"
+											d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+										/>
+									</svg>
+									<span>{labels.github}</span>
+								</Button>
+							</Form>
+						</Card.Content>
+					</Card>
 				</section>
 			</main>
 		);
