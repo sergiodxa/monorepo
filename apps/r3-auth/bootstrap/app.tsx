@@ -8,44 +8,88 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext, Router } from "remix/fetch-router";
+import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { asyncContext } from "remix/async-context-middleware";
-import { Database } from "remix/data-table";
+import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import authorizeController from "~/app/http/controllers/authorize";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import database from "~/app/http/middleware/database";
+import healthcheck from "~/app/http/controllers/healthcheck";
+import home from "~/app/http/controllers/home";
+import introspect from "~/app/http/controllers/oauth/introspect";
+import revoke from "~/app/http/controllers/oauth/revoke";
+import token from "~/app/http/controllers/oauth/token";
+import userinfo from "~/app/http/controllers/userinfo";
+import i18n from "~/app/http/middleware/i18n";
+import logger from "~/app/http/middleware/logger";
+import { createSessionMiddleware } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
+
+/**
+ * Paths cross-origin protection must not apply to.
+ *
+ * Every one of them is a cross-origin `POST` by design: a relying party exchanging a
+ * code, a resource server introspecting a token, and a client's back-channel logout
+ * call all arrive from another origin with credentials of their own — a client secret,
+ * a signed token — which is a stronger claim than an `Origin` header. Getting this list
+ * wrong does not fail loudly: it fails as every relying party's login breaking at once.
+ */
+const COP_BYPASS_PATTERNS = ["/oauth/{path...}", "/api/{path...}", "/oidc/logout"];
 
 namespace application {
 	export interface Options {
-		database: Database;
+		/** KV namespace backing session storage. */
+		kv: KVNamespace;
+		/** Secret the session cookie is signed with. */
+		cookieSecret: string;
+		/** Whether the session cookie should be marked `Secure`. */
+		secure: boolean;
+		/** Cookie domain, so one sign-in covers every subdomain in production. */
+		cookieDomain?: string;
 	}
 }
 
+/** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
 export default function application(options: application.Options) {
-	let router = createRouter({
-		middleware: [
-			asyncContext(),
-			formData(),
-			methodOverride(),
-			database(options.database),
-			renderWith(createHtmlRenderer),
-		],
-		defaultHandler,
-	});
+	// A non-tuple `Middleware[]`: the values these middleware publish are declared with
+	// `declare module "remix/fetch-router"` in their own modules rather than carried
+	// through the chain's transform types.
+	let middleware: Middleware[] = [
+		asyncContext(),
+		logger,
+		formData() as Middleware,
+		methodOverride(),
+		createSessionMiddleware(
+			options.kv,
+			options.cookieSecret,
+			options.secure,
+			options.cookieDomain,
+		) as Middleware,
+		// After the session middleware, whose session a stored language preference would
+		// be read from, and before rendering, which is what translates.
+		i18n,
+		cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
+		renderWith(createHtmlRenderer) as Middleware,
+	];
 
-	router.map(routes, {
-		middleware: [],
-		actions: {},
-	});
+	let router = createRouter({ middleware, defaultHandler });
+
+	router.map(routes.home, home);
+	router.map(routes.healthcheck, healthcheck);
+	router.map(routes.userinfo, userinfo);
+	router.map(routes.authorize, authorizeController);
+
+	router.map(routes.oauth.token, token);
+	router.map(routes.oauth.revoke, revoke);
+	router.map(routes.oauth.introspect, introspect);
 
 	return router;
 }

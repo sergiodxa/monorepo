@@ -8,12 +8,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getServiceContainer } from "@pkg/service-container";
-import { Database } from "remix/data-table";
+import { env } from "cloudflare:workers";
 
 import { container } from "~/app/lib/container";
 
 import application from "./app";
+
+/**
+ * Domain the session cookie is scoped to in production, so one sign-in at this server
+ * is visible to every app under it. Left unset elsewhere: a `Domain` naming a host the
+ * browser is not on makes the cookie be dropped silently.
+ */
+const PRODUCTION_COOKIE_DOMAIN = ".sergiodxa.com";
+
+/**
+ * Whether the request arrived on the production host, which is the only place the
+ * session cookie may carry `Secure` and a domain.
+ *
+ * Decided per request rather than from a build flag, because the same build serves
+ * `localhost` during development and a `workers.dev` host during the verification
+ * window, and a `Secure` cookie on plain HTTP is a cookie the browser discards.
+ */
+function isProductionHost(request: Request): boolean {
+	let hostname = new URL(request.url).hostname;
+	return hostname === "auth.sergiodxa.com";
+}
 
 export default {
 	/**
@@ -23,7 +42,15 @@ export default {
 	 */
 	async fetch(request: Request) {
 		return await container.scope(async () => {
-			let app = application({ database: getServiceContainer().get(Database) });
+			let production = isProductionHost(request);
+
+			let app = application({
+				kv: env.KV,
+				cookieSecret: env.COOKIE_SESSION_SECRET,
+				secure: production,
+				cookieDomain: production ? PRODUCTION_COOKIE_DOMAIN : undefined,
+			});
+
 			return await app.fetch(request);
 		});
 	},

@@ -1,0 +1,353 @@
+/**
+ * The authorization endpoint. `GET` validates an authorization request, enforces the
+ * `prompt` values, issues a code straight away for somebody already signed in (SSO),
+ * and otherwise parks the request in the session and renders the sign-in page. `POST`
+ * completes a credential sign-in and answers the parked request.
+ *
+ * It is also where PKCE is bound: the challenge arrives here, is carried through the
+ * session for the login round trip, and is stored with the code, which is what makes
+ * the token endpoint's verifier check run at all.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { RequestContext } from "remix/fetch-router";
+
+import { getClientIP } from "@pkg/get-client-ip";
+import { redirect } from "@pkg/http/response";
+import { badRequest, notFound } from "@pkg/http/response/json";
+import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
+import { generateUUID } from "@pkg/uuid";
+import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
+
+import type { OIDC } from "~/app/auth/oidc-provider";
+import type { AuthzState, ResponseMode } from "~/app/http/middleware/session";
+import type { AuthorizeQuery } from "~/app/http/validators/authorize";
+import type { SelectClient } from "~/database/schema";
+
+import { createOidcProvider } from "~/app/auth/repository";
+import { ISSUER } from "~/app/config";
+import Client from "~/app/data/client";
+import {
+	getAccessToken,
+	getAuthz,
+	setAuthz,
+	unsetAuthz,
+	unsetTokens,
+} from "~/app/http/middleware/session";
+import { authorizationResponse } from "~/app/http/responses/authorization-response";
+import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators/authorize";
+import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
+import { spendRateLimit } from "~/app/services/rate-limit";
+import RateLimiters from "~/app/services/rate-limiters";
+import DocumentLayout from "~/resources/layouts/document";
+import AuthorizeView from "~/resources/views/authorize";
+import routes from "~/routes/web";
+
+/** PKCE challenge methods this server implements, as discovery advertises them. */
+const CODE_CHALLENGE_METHODS: readonly string[] = ["S256", "plain"];
+
+/**
+ * The subject signed in to this server itself, read from the session's own access
+ * token. A token that cannot be read clears both tokens, so a session left over from
+ * an older format becomes "signed out" rather than a request that keeps failing.
+ */
+function currentSubjectId(): string | null {
+	let accessToken = getAccessToken();
+	if (!accessToken) return null;
+
+	let subjectId = getSubjectFromAccessToken(accessToken);
+	if (!subjectId) unsetTokens();
+
+	return subjectId;
+}
+
+/**
+ * The PKCE challenge an authorization request commits to.
+ *
+ * Per RFC 7636 §4.3 the method defaults to `plain` when omitted; this server defaults
+ * to `S256` instead, which is the stronger of the two and what every client library
+ * sending a challenge here actually uses. Returns `undefined` for a request carrying
+ * no challenge at all, whose code then redeems without a verifier.
+ *
+ * @returns The challenge, `null` when the method is not one this server implements.
+ */
+function readPkce(query: AuthorizeQuery): OIDC.Pkce | null | undefined {
+	if (!query.code_challenge) return undefined;
+
+	let method = query.code_challenge_method ?? "S256";
+	if (!CODE_CHALLENGE_METHODS.includes(method)) return null;
+
+	return { challenge: query.code_challenge, method: method as OIDC.Pkce["method"] };
+}
+
+/**
+ * Sends an OAuth error back to the client's redirect URI, in the response mode it
+ * asked for.
+ *
+ * The redirect URI has always been validated against the registration before this
+ * runs — an error may never be delivered to an address the client did not register.
+ */
+async function errorRedirect(
+	ctx: RequestContext,
+	query: { redirect_uri: string; state: string; response_mode: ResponseMode },
+	error: string,
+	description: string,
+): Promise<Response> {
+	return await authorizationResponse(
+		ctx,
+		query.redirect_uri,
+		{ state: query.state, iss: ISSUER, error, error_description: description },
+		query.response_mode,
+	);
+}
+
+/**
+ * Renders the sign-in page for a parked authorization request.
+ *
+ * @param error - Why the previous attempt was refused, when this is a re-render.
+ */
+function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
+	let renderDocument = DocumentLayout();
+
+	return ctx.render(
+		renderDocument({
+			title: ctx.i18next.t("authorize.header.title", { client: client.name }),
+			children: (
+				<AuthorizeView
+					clientName={client.name}
+					clientDescription={client.description}
+					title={ctx.i18next.t("authorize.header.titleShort")}
+					description={ctx.i18next.t("authorize.header.description")}
+					showRegistration={authz.prompt?.includes("create") ?? false}
+					error={error ?? null}
+					labels={{
+						name: ctx.i18next.t("authorize.forms.credentials.fields.name.label"),
+						username: ctx.i18next.t("authorize.forms.credentials.fields.username.label"),
+						email: ctx.i18next.t("authorize.forms.credentials.fields.email.label"),
+						password: ctx.i18next.t("authorize.forms.credentials.fields.password.label"),
+						submit: ctx.i18next.t("authorize.forms.credentials.cta"),
+						github: ctx.i18next.t("authorize.forms.github.cta"),
+						separator: ctx.i18next.t("authorize.forms.separator"),
+					}}
+				/>
+			),
+		}),
+	);
+}
+
+/**
+ * Starts this server's own sign-in: ensures its client registration exists, parks an
+ * authorization request for it, and redirects to itself carrying that request.
+ *
+ * This is how a visit to a bare `/authorize` becomes a real OAuth flow, so the account
+ * area is reached through the same code path relying parties use rather than a
+ * privileged shortcut.
+ */
+async function selfRedirect(ctx: RequestContext, db: Database): Promise<Response> {
+	let client = await Client.ensureAuthServerClient(db, ctx.url);
+	let state = generateUUID();
+
+	setAuthz({ clientId: client.id, state, redirectUri: client.redirect_uri });
+
+	let url = new URL(routes.authorize.index.href(), ctx.url.origin);
+	url.searchParams.set("response_type", "code");
+	url.searchParams.set("client_id", client.id);
+	url.searchParams.set("redirect_uri", client.redirect_uri);
+	url.searchParams.set("state", state);
+
+	ctx.logger.info("authz_self_redirect", { clientId: client.id });
+
+	return redirect(url.toString(), { status: redirect.Status.SeeOther });
+}
+
+export default createController(routes.authorize, {
+	actions: {
+		/**
+		 * GET /authorize — validates an authorization request and either answers it with
+		 * a code (SSO) or renders the sign-in page.
+		 */
+		index: inject([Database, RateLimiters] as const, async (db, limiters) => {
+			let ctx = getContext();
+
+			// By IP, before anything reads the database: this endpoint is the enumeration
+			// surface for client ids and redirect URIs.
+			let limited = await spendRateLimit(limiters.authorize, getClientIP(ctx.request) ?? "unknown");
+			if (limited) return limited;
+
+			let subjectId = currentSubjectId();
+			let result = await validate(ctx.url.searchParams, AuthorizeQuerySchema);
+
+			if (isFailure(result)) {
+				if (subjectId) {
+					ctx.logger.info("authz_already_logged_in", { subjectId });
+					return redirect(routes.account.sessions.index.href(), {
+						status: redirect.Status.SeeOther,
+					});
+				}
+
+				return await selfRedirect(ctx, db);
+			}
+
+			let query = result.data;
+
+			let client = await Client.findById(db, query.client_id);
+			if (!client) {
+				ctx.logger.info("authz_invalid_client", { clientId: query.client_id });
+				return notFound({ message: "Client not found" });
+			}
+
+			// Exact match, never a prefix or an origin comparison: an attacker who can
+			// register a redirect URI that merely starts with a registered one would
+			// receive codes issued for the real client.
+			if (client.redirect_uri !== query.redirect_uri) {
+				ctx.logger.info("authz_redirect_uri_mismatch", { clientId: query.client_id });
+				return notFound({ message: "Invalid redirect URI" });
+			}
+
+			let pkce = readPkce(query);
+			if (pkce === null) {
+				ctx.logger.info("authz_unsupported_code_challenge_method", { clientId: client.id });
+				return await errorRedirect(
+					ctx,
+					query,
+					"invalid_request",
+					"Unsupported code_challenge_method",
+				);
+			}
+
+			// `prompt=none` means "answer without showing anything": no session, no answer.
+			if (query.prompt?.includes("none") && !subjectId) {
+				ctx.logger.info("authz_prompt_none_login_required", { clientId: client.id });
+				return await errorRedirect(ctx, query, "login_required", "User is not authenticated");
+			}
+
+			// `prompt=login` forces re-authentication, which means skipping SSO. `consent`
+			// and `select_account` are accepted and change nothing: this server records a
+			// grant on first authorization and has one account per session, so there is
+			// nothing to ask about.
+			let forceLogin = query.prompt?.includes("login") ?? false;
+
+			if (subjectId && !forceLogin) {
+				let code = await createOidcProvider(db).generateAuthzCode({
+					subjectId,
+					clientId: client.id,
+					ip: getClientIP(ctx.request),
+					ua: ctx.request.headers.get("user-agent"),
+					redirectUri: query.redirect_uri,
+					state: query.state,
+					nonce: query.nonce,
+					scope: query.scope,
+					responseMode: query.response_mode,
+					pkce,
+				});
+
+				if (code.status === "failure") {
+					ctx.logger.error("authz_sso_code_failed", { subjectId, error: code.error.code });
+					return await errorRedirect(ctx, query, code.error.code, code.error.description);
+				}
+
+				ctx.logger.info("authz_sso_code_generated", { subjectId, clientId: client.id });
+
+				return await authorizationResponse(
+					ctx,
+					code.data.redirectUri,
+					code.data.params,
+					code.data.responseMode,
+				);
+			}
+
+			let authz: AuthzState = {
+				clientId: query.client_id,
+				state: query.state,
+				redirectUri: query.redirect_uri,
+				nonce: query.nonce,
+				scope: query.scope,
+				responseMode: query.response_mode,
+				prompt: query.prompt,
+				codeChallenge: pkce?.challenge,
+				codeChallengeMethod: pkce?.method,
+			};
+
+			ctx.logger.info("authz_session_started", { clientId: query.client_id });
+			setAuthz(authz);
+
+			if (query.provider) {
+				return redirect(routes.auth.provider.href({ provider: query.provider }), {
+					status: redirect.Status.SeeOther,
+				});
+			}
+
+			return signInPage(ctx, client, authz);
+		}),
+
+		/**
+		 * POST /authorize — signs a person in with email and password, then answers the
+		 * authorization request parked in their session.
+		 */
+		action: inject([Database, RateLimiters] as const, async (db, limiters) => {
+			let ctx = getContext();
+
+			// The strictest of the five budgets: this is where password attempts land.
+			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+			if (limited) return limited;
+
+			let authz = getAuthz();
+			if (!authz) {
+				ctx.logger.info("authz_action_missing_session");
+				return badRequest({ message: "Invalid request" });
+			}
+
+			let result = await validate(ctx.formData, AuthorizeFormSchema);
+			if (isFailure(result)) {
+				ctx.logger.info("authz_action_validation_failed");
+				return badRequest({ message: "Invalid request" });
+			}
+
+			let login = await createOidcProvider(db).loginWithCredential({
+				email: result.data.email,
+				password: result.data.password,
+				name: result.data.name,
+				username: result.data.username,
+				clientId: authz.clientId,
+				ip: getClientIP(ctx.request),
+				ua: ctx.request.headers.get("user-agent"),
+				redirectUri: authz.redirectUri,
+				state: authz.state,
+				nonce: authz.nonce,
+				scope: authz.scope,
+				responseMode: authz.responseMode,
+				pkce: authz.codeChallenge
+					? { challenge: authz.codeChallenge, method: authz.codeChallengeMethod ?? "S256" }
+					: null,
+			});
+
+			if (login.status === "failure") {
+				// The email is logged, the reason is not: `access_denied` versus
+				// `missing_validation` is exactly the difference between a wrong password and
+				// an unverified address, and the page must not tell them apart either.
+				ctx.logger.info("authz_credential_login_failed", { error: login.error.code });
+
+				let client = await Client.findById(db, authz.clientId);
+				if (!client) return badRequest({ message: "Invalid request" });
+
+				return signInPage(ctx, client, authz, login.error.description);
+			}
+
+			ctx.logger.info("authz_credential_login_success", { subjectId: login.data.subjectId });
+			unsetAuthz();
+
+			return await authorizationResponse(
+				ctx,
+				login.data.redirectUri,
+				login.data.params,
+				login.data.responseMode,
+			);
+		}),
+	},
+});

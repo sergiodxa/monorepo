@@ -309,6 +309,12 @@ export namespace OIDC {
 		): Promise<SessionWithClient[]>;
 	}
 
+	/** A PKCE challenge (RFC 7636), bound to a code so only its issuer can redeem it. */
+	export interface Pkce {
+		challenge: string;
+		method: "S256" | "plain";
+	}
+
 	/** The authorization request an issued code has to carry back to the relying party. */
 	export interface GenerateAuthzCodeInput {
 		subjectId: string;
@@ -321,6 +327,13 @@ export namespace OIDC {
 		scope?: string[];
 		opBrowserState?: string;
 		responseMode?: "query" | "fragment" | "form_post";
+		/**
+		 * The challenge the client committed to on the authorization request, stored
+		 * with the code so redeeming it requires the matching verifier. Absent or
+		 * `null` for a client that does not use PKCE, whose code then redeems without
+		 * a verifier exactly as before.
+		 */
+		pkce?: Pkce | null;
 	}
 
 	/** A password sign-in attempt, plus the authorization request it resumes on success. */
@@ -338,6 +351,8 @@ export namespace OIDC {
 		scope?: string[];
 		opBrowserState?: string;
 		responseMode?: "query" | "fragment" | "form_post";
+		/** The PKCE challenge to bind to the code this sign-in issues, when the client sent one. */
+		pkce?: Pkce | null;
 	}
 
 	/** Where to send the browser next, and with which parameters, after issuing a code. */
@@ -688,7 +703,7 @@ export class OIDC {
 				clientId: input.clientId,
 				subjectId: input.subjectId,
 				sessionId: session.id,
-				pkce: null,
+				pkce: input.pkce ?? null,
 				nonce: input.nonce ?? null,
 				scope: input.scope ?? ["openid"],
 				authTime,
@@ -787,6 +802,7 @@ export class OIDC {
 			scope: input.scope,
 			opBrowserState: input.opBrowserState,
 			responseMode: input.responseMode,
+			pkce: input.pkce,
 		});
 	}
 

@@ -1,0 +1,72 @@
+/**
+ * The OAuth 2.0 Form Post Response Mode page: a self-submitting form that POSTs the
+ * authorization response parameters to the relying party's redirect URI, with a
+ * no-script fallback button for browsers that will not run the submit.
+ *
+ * Every value is rendered as a text node or an attribute, so JSX escaping is what
+ * keeps a hostile `state` from breaking out of the markup.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Handle } from "remix/ui";
+
+/**
+ * The one line of script this page carries: submitting the form as soon as it renders.
+ *
+ * It contains no character HTML escaping touches, so it survives being rendered as a
+ * text node — which is what keeps this page inside the "no HTML strings" rule while
+ * still doing what the Form Post Response Mode specification describes.
+ */
+const SUBMIT_SCRIPT = "document.forms[0].submit()";
+
+namespace FormPostView {
+	export interface Setup {
+		/** The relying party's registered redirect URI, already validated by the caller. */
+		action: string;
+		/** The authorization response parameters, posted as hidden fields. */
+		params: Record<string, string>;
+		/** Label of the fallback button, translated by the caller. */
+		submitLabel: string;
+		/** Sentence explaining the fallback, shown only when the submit did not run. */
+		noscriptMessage: string;
+		/** Document title, translated by the caller. */
+		title: string;
+	}
+}
+
+/**
+ * Renders the auto-submitting authorization response form.
+ *
+ * The submit is wired through the `onload` attribute rather than a `<script>` element
+ * so the page ships no script body at all, which keeps it working under a strict
+ * content policy and leaves nothing to escape.
+ */
+export default function FormPostView(handle: Handle<FormPostView.Setup>) {
+	return () => {
+		let { action, params, submitLabel, noscriptMessage, title } = handle.props;
+		let fields = Object.entries(params);
+
+		return (
+			<html lang="en">
+				<head>
+					<meta charSet="utf-8" />
+					<title>{title}</title>
+				</head>
+				<body>
+					<form method="post" action={action}>
+						{fields.map(([name, value]) => (
+							<input key={name} type="hidden" name={name} value={value} />
+						))}
+						<noscript>
+							<p>{noscriptMessage}</p>
+							<button type="submit">{submitLabel}</button>
+						</noscript>
+					</form>
+					<script>{SUBMIT_SCRIPT}</script>
+				</body>
+			</html>
+		);
+	};
+}

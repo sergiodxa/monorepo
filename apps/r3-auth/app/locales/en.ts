@@ -58,6 +58,14 @@ export default {
 				cta: "Login with GitHub",
 				reminder: "Last time you logged in with GitHub",
 			},
+
+			error: "Sign in failed",
+		},
+
+		formPost: {
+			title: "Submitting authorization response",
+			submit: "Continue",
+			noscript: "JavaScript is required to complete this authorization request.",
 		},
 	},
 

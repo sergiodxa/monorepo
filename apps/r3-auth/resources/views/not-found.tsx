@@ -13,8 +13,12 @@ namespace NotFoundView {
 	export interface Setup extends NotFoundViewModel.DefaultOutput {}
 }
 
+/** Renders the 404 heading and explanation. */
 export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
-	return () => {
-		return <h1>{handle.props.title}</h1>;
-	};
+	return () => (
+		<main>
+			<h1>{handle.props.title}</h1>
+			<p>{handle.props.description}</p>
+		</main>
+	);
 }
