@@ -198,7 +198,7 @@ Every surface here rides one of three native mechanisms: `<dialog>` plus Invoker
 | `Modal` (+ `Dialog`'s parts)                                                                                                                                     | A pre-animated `Dialog` preset with its panel's pop-in/pop-out motion already wired on the host.                                                                                                                                                                      |
 | `Drawer` (+ `Dialog`'s parts)                                                                                                                                    | A `Dialog` preset docked flush against one physical viewport edge, sliding into place on open.                                                                                                                                                                        |
 | `Sheet` (+ `Dialog`'s parts)                                                                                                                                     | A `Dialog` preset repositioned to a fixed inline-side column with a fluid `min(90vw, …)` measure.                                                                                                                                                                     |
-| `Confirm`                                                                                                                                                        | A convenience wrapper composing a two-control `AlertDialog` confirmation prompt — heading, optional description, cancel/confirm pair — in one call.                                                                                                                   |
+| `Confirm`                                                                                                                                                        | A convenience wrapper composing a two-control `AlertDialog` confirmation prompt — heading, optional description, cancel/confirm pair — in one call; pass `form` and the confirming control submits a real form instead of just closing the panel.                     |
 | `Popover`                                                                                                                                                        | A floating surface anchored to whatever invoker opened it, built entirely on the native Popover API and CSS anchor positioning.                                                                                                                                       |
 | `Tooltip`                                                                                                                                                        | A small floating label revealed by plain `:hover`/`:focus-visible` selectors on the preceding sibling, riding `Popover`'s `"hint"` mode.                                                                                                                              |
 | `HoverCard` (+ `.Trigger`, `.Content`)                                                                                                                           | A supplementary detail panel revealed by `:hover`/`:focus-within` on a shared root, stacked via `z-index` rather than the Popover API.                                                                                                                                |
@@ -617,7 +617,7 @@ A convenience wrapper that renders more than one host element accepts a `parts` 
 />
 ```
 
-`ColorField` extends that same base shape with two more named parts (`control`, the row wrapping the input and swatch; `swatch`, the preview itself) rather than repeating the four it inherits. `Confirm` — composing `AlertDialog` internally — exposes six parts matching its six composed pieces (`header`, `title`, `description`, `footer`, `cancel`, `action`):
+`ColorField` extends that same base shape with two more named parts (`control`, the row wrapping the input and swatch; `swatch`, the preview itself) rather than repeating the four it inherits. `Confirm` — composing `AlertDialog` internally — exposes parts matching each of its composed pieces (`header`, `title`, `description`, `footer`, `cancel`, `action`, plus `form` in submit mode):
 
 ```tsx
 <Button commandfor="confirm-delete" command="show-modal" color="danger">
@@ -634,6 +634,34 @@ A convenience wrapper that renders more than one host element accepts a `parts` 
 ```
 
 When `parts` isn't enough, the ultimate escape hatch is always composing the underlying compound components directly — `Label` + `Input` + `Description` + `FieldError`, or `AlertDialog` and its own parts — instead of the convenience wrapper.
+
+### Pattern: a confirmed destructive action
+
+Without a `form` prop, `Confirm`'s confirming control only closes the panel — the client-side shape, where the page decides what a confirmed decision means. Passing `form` switches it into the server-side shape: the panel's content is wrapped in a real `<form>` and the confirming control becomes that form's submit button, so a destructive action runs as an ordinary form post with no client JavaScript. `fields` renders the hidden inputs the submission needs — a CSRF token, an intent, the id of the record being acted on:
+
+```tsx
+<Button commandfor="revoke-session" command="show-modal" color="danger">
+	{t("session.revoke")}
+</Button>
+<Confirm
+	id="revoke-session"
+	title={t("session.revokeTitle")}
+	description={t("session.revokeDescription")}
+	confirmLabel={t("actions.revoke")}
+	cancelLabel={t("actions.cancel")}
+	form={{
+		action: revokeUrl,
+		fields: (
+			<>
+				<input type="hidden" name="csrf" value={token} />
+				<input type="hidden" name="intent" value="revoke" />
+			</>
+		),
+	}}
+/>
+```
+
+The cancel control stays a close-command button in both modes, so cancelling never submits. Because submit mode renders a `<form>`, a submitting panel must not sit inside another form's markup — the platform's own nesting rule. For a confirmation whose layout or wiring this doesn't cover, compose `AlertDialog` directly and give `AlertDialog.Action` a `type="submit"`: it then drops the `command` it could not run and submits the enclosing form instead.
 
 ### Pattern: a validated form
 
@@ -676,6 +704,8 @@ function ContactPage(handle: Handle<{ issues?: ReadonlyArray<Form.Issue> }>) {
 ```
 
 The native constraint attributes (`required`, `type="email"`) still block submission with no JavaScript at all; `ctx.formData` is already parsed into a plain object by the time an action reads it, so `parseSafe` runs against it directly with no manual `FormData` extraction, and a failed parse re-renders the exact same page with its issues carried through a plain prop rather than any client-side state.
+
+`issues` is the only thing the page passes: `TextField`, `DateField`, `TimeField`, and `ColorField` each look their own message up by `name` through form context, so none of them needs an `errorMessage` prop of its own and there is no per-field error map to build. The field found in `issues` renders its `FieldError`, marks `aria-invalid`, and wires `aria-describedby` at the message; the first invalid field of the render also picks up `autofocus`, so keyboard focus lands on the first problem after the round-trip. An explicit `errorMessage` still wins over whatever context holds, for a message the schema doesn't produce (an address already taken, say), and an explicit `autoFocus` still decides focus for that field.
 
 ### Pattern: a chart with a legend
 
@@ -908,3 +938,5 @@ export default BrandColorPicker;
 1. **Unlayered CSS beats every layer, including `rmx`** - `remix/ui` emits component styles under the `rmx` cascade layer, so `reset.css` → `theme.css` → component styles naturally stack in the right order. But an app's own _unlayered_ global rule (a bare `button { ... }` outside any `@layer` block) still outranks all of it. Keep app-level element globals inside a layer ordered before `rmx`, and reserve unlayered rules for overrides you actually intend to win.
 2. **Non-color design tokens are overridable too** - see [Overridable component tokens](#overridable-component-tokens): the shared radius scale plus well over a hundred per-component size/spacing/timing tokens all follow the same `var(--ui-x, default)` pattern, so denser tables or a slower hover-card delay is a handful of variable overrides, not per-component style overrides.
 3. **Reach for `parts` before reaching into internals** - Convenience wrappers like `TextField` and `Confirm` accept a `parts` prop for per-part styling; if that isn't enough, compose the underlying compound components directly rather than fighting the wrapper.
+4. **`mix` does not override by array position** - Each `css()`/`@pkg/u` mixin compiles to one hashed class emitted in its own cascade sublayer (`@layer rmx.rmxc-…`), byte-identical style objects dedupe to a single shared class, and a class's layer position is fixed the first time that exact declaration set appears anywhere on the page. So when a mixin passed through `mix` collides with one of the component's own declarations, the winner is whichever class was registered _earlier in the document_ — not whichever came later in the array. That is why `Card.Title mix={[text("sm")]}` keeps the component's 24px (dozens of components already emit `text("sm")`, so its layer is registered early), while `rounded("md")` over `NavLink`'s `rounded("sm")` happened to win: same rule, different page contents. Every generated class carries the same specificity and sits in its own sublayer, so specificity tricks cannot fix it. To _guarantee_ an override, use the `style` prop, override the component's own `--ui-*` token inline (`style={{ "--ui-text-2xl": "0.875rem" }}`), mark the declaration `!important` through `raw()`, or put the rule in an app cascade layer declared after `rmx`. Use `mix` for declarations the component doesn't already set.
+5. **A command invoker is never a submit button** - `Button` renders `type="button"` on its own whenever it carries `command`/`commandfor`, and `Dialog.Close`, `AlertDialog.Cancel`, and the other invoker parts do the same, because a button inside a `<form>` otherwise defaults to `"submit"` and the platform then refuses to run the command at all — it calls the pairing ambiguous and takes no action, so the control looks wired up and does nothing. A hand-rolled `<button commandfor …>` inside a form still needs the attribute spelled out.

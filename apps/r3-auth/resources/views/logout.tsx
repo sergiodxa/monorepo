@@ -4,18 +4,18 @@
  * request. It is a single form posting back to the same URL, so signing out is a
  * deliberate `POST` rather than something a link on another site can trigger.
  *
- * The page is a whole document rather than a fragment, so it carries no client runtime:
- * nothing on it needs script.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
+import { Button, Card, Form } from "@pkg/r3-ui";
+import { flex, flexCol, items, justify } from "@pkg/u/layout";
+import { is, maxIs, minBs, p } from "@pkg/u/size";
+import { textAlign } from "@pkg/u/typography";
 
-import { DOCUMENT, THEME } from "~/resources/styles";
+import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 namespace LogoutView {
@@ -29,58 +29,35 @@ namespace LogoutView {
 	}
 }
 
-/** Renders the sign-out confirmation form. */
+/**
+ * Renders the sign-out confirmation form.
+ *
+ * The page carries no island, so it opts out of the client runtime and ships no
+ * JavaScript — while still getting the palette, reset and token layer from the document
+ * layout, which is what a standalone `<html>` here used to give up.
+ */
 export default function LogoutView(handle: Handle<LogoutView.Setup>) {
 	return () => {
 		let { documentTitle, title, cta } = handle.props;
 
 		return (
-			<html lang="en" mix={[THEME, DOCUMENT]}>
-				<head>
-					<meta charSet="utf-8" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					<title>{documentTitle}</title>
-				</head>
-				<body>
-					<main
-						mix={css({
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							gap: "2.5rem",
-							margin: "0 auto",
-							maxWidth: "40rem",
-							padding: "2.5rem 1rem",
-							color: "var(--ui-color-neutral-900)",
-							"@media (prefers-color-scheme: dark)": {
-								color: "var(--ui-color-neutral-50)",
-							},
-						})}
-					>
-						<h1 mix={css({ fontSize: "1.875rem", fontWeight: "700", textAlign: "center" })}>
-							{title}
-						</h1>
+			<DocumentLayout title={documentTitle} clientRuntime={false}>
+				<main mix={[flex(), flexCol(), items("center"), justify("center"), minBs("100dvh"), p(6)]}>
+					<Card mix={[is("100%"), maxIs("22.5rem")]}>
+						<Card.Header mix={[textAlign("center")]}>
+							<Card.Title>{title}</Card.Title>
+						</Card.Header>
 
-						<form method="post" action={routes.oidc.logout.action.href()}>
-							<button
-								type="submit"
-								mix={css({
-									backgroundColor: "var(--ui-color-danger-600)",
-									border: "none",
-									borderRadius: "0.375rem",
-									color: "#fff",
-									cursor: "pointer",
-									fontSize: "1rem",
-									fontWeight: "600",
-									padding: "0.625rem 1.25rem",
-								})}
-							>
-								{cta}
-							</button>
-						</form>
-					</main>
-				</body>
-			</html>
+						<Card.Content>
+							<Form method="post" action={routes.oidc.logout.action.href()}>
+								<Button type="submit" color="danger" mix={[is("100%")]}>
+									{cta}
+								</Button>
+							</Form>
+						</Card.Content>
+					</Card>
+				</main>
+			</DocumentLayout>
 		);
 	};
 }

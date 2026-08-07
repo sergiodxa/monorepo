@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
 import { flex, flexCol, gap } from "@pkg/u/layout";
 
@@ -159,5 +159,66 @@ export function Form(handle: Handle<Form.Props, Form.Context>) {
 		});
 
 		return <form {...rest} mix={[flex(), flexCol(), gap(4), mix]} />;
+	};
+}
+
+/**
+ * What a field resolved for its own validation state this render, from its
+ * own props and from whatever the enclosing {@link Form} knows about it.
+ */
+export interface FieldIssueState {
+	/** Message the field renders through its `FieldError`, or `undefined` for a field with nothing to report. */
+	errorMessage: RemixNode | undefined;
+	/** Whether this is the field that should carry `autofocus`, so focus lands on the first problem after a server round-trip. */
+	isFirstInvalid: boolean;
+}
+
+/**
+ * Reads the {@link Form.Context} provided by the nearest ancestor
+ * {@link Form}, guarded so a field rendered outside any Form at all resolves
+ * to `undefined` rather than surfacing the failed lookup as a thrown error,
+ * whichever way that absence happens to surface.
+ *
+ * @param handle Runtime handle of the field performing the lookup.
+ * @returns The enclosing form's context, or `undefined` where no Form wraps the caller.
+ */
+export function readFormContext(handle: Handle<unknown, any>): Form.Context | undefined {
+	try {
+		return handle.context.get(Form) as Form.Context | undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Resolves the validation state a field renders: an explicit `errorMessage`
+ * always wins, so a consumer holding its own message keeps full control;
+ * otherwise the first issue the enclosing {@link Form} holds for `name`
+ * supplies one, which is what makes `Form`'s `issues` reach a field with no
+ * per-field prop threaded down by hand. A field with no `name`, or one
+ * outside any Form, resolves to its own props alone.
+ *
+ * @param handle Runtime handle of the field resolving its state.
+ * @param name The field's `name` attribute, used to look its issues up.
+ * @param errorMessage An `errorMessage` passed directly to the field, if any.
+ * @returns The message to render and whether this field carries `autofocus`.
+ * @example
+ * let { errorMessage, isFirstInvalid } = resolveFieldIssue(handle, "email", handle.props.errorMessage);
+ */
+export function resolveFieldIssue(
+	handle: Handle<unknown, any>,
+	name: string | undefined,
+	errorMessage?: RemixNode,
+): FieldIssueState {
+	if (name === undefined) return { errorMessage, isFirstInvalid: false };
+
+	let context = readFormContext(handle);
+	if (!context) return { errorMessage, isFirstInvalid: false };
+
+	let resolved = errorMessage ?? context.getIssues(name)[0]?.message;
+
+	return {
+		errorMessage: resolved,
+		isFirstInvalid: Boolean(resolved) && context.isFirstInvalid(name),
 	};
 }

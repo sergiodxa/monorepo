@@ -14,7 +14,6 @@ import type { TestApp } from "~/app/lib/test/http";
 import Client from "~/app/data/client";
 import Credential from "~/app/data/credential";
 import Subject from "~/app/data/subject";
-import { credentials } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Origin every test request is sent to. */
@@ -39,9 +38,9 @@ export interface Fixtures {
 /**
  * Registers a relying party and a subject with a verified password credential.
  *
- * The credential is marked verified directly, because email verification is not part
- * of this server's flow — the column is set by whatever provisions a subject — and a
- * subject without it can never sign in.
+ * The credential is created verified, the same way registration creates one: email
+ * verification is not part of this server's flow, nothing sets the column afterwards,
+ * and a subject without it can never sign in.
  */
 export async function seed(app: TestApp): Promise<Fixtures> {
 	let client = await Client.create(app.db, {
@@ -61,12 +60,7 @@ export async function seed(app: TestApp): Promise<Fixtures> {
 	let hash = await password.hash(PASSWORD);
 	if (hash.status === "failure") throw new Error("Could not hash the fixture password");
 
-	await Credential.create(app.db, subject.id, hash.data);
-	await app.db.updateMany(
-		credentials,
-		{ verified_at: Date.now() },
-		{ where: { subject_id: subject.id } },
-	);
+	await Credential.create(app.db, subject.id, hash.data, Date.now());
 
 	return { clientId: client.id, clientSecret: client.secret, subjectId: subject.id };
 }

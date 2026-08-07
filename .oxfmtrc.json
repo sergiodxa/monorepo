@@ -21,6 +21,12 @@
 	},
 	"overrides": [
 		{
+			"files": ["apps/r3-auth/**/*.{js,jsx,ts,tsx}"],
+			"options": {
+				"useTabs": true
+			}
+		},
+		{
 			"files": ["apps/auth/**/*.{js,jsx,ts,tsx}"],
 			"options": {
 				"experimentalTailwindcss": {

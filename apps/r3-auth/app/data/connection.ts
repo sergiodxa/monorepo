@@ -46,6 +46,19 @@ export default class Connection {
 	}
 
 	/**
+	 * Lists every provider identity linked to a subject, oldest link first.
+	 *
+	 * Exists so administration can see which providers an account can sign in with —
+	 * a subject with no connection and no credential can no longer authenticate at all.
+	 */
+	static async findBySubjectId(db: Database, subjectId: string): Promise<SelectConnection[]> {
+		return await db.findMany(connections, {
+			where: { subject_id: subjectId },
+			orderBy: ["created_at", "asc"],
+		});
+	}
+
+	/**
 	 * Unlinks a provider identity.
 	 *
 	 * Exists so provisioning can undo itself: this database has no transactions, so a

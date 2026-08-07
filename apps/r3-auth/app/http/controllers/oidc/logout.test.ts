@@ -291,6 +291,37 @@ describe("GET /oidc/logout", () => {
 		expect(html).toContain("Click here to continue");
 	});
 
+	test("the front-channel page composes the styled document and still ships no script", async () => {
+		let tokens = await signIn(app, fixtures);
+		await registerOtherClient();
+
+		let response = await app.fetch(
+			new Request(
+				logoutUrl({
+					id_token_hint: tokens.id_token,
+					post_logout_redirect_uri: "https://client.example.com/logout",
+				}),
+				{ redirect: "manual" },
+			),
+		);
+
+		let html = await response.text();
+
+		// The page runs inside a relying party's logout flow, so nothing on it may
+		// execute: neither the module script the document layout normally emits nor the
+		// preload hint that would fetch it. This is the whole reason the layout has an
+		// opt-out, and it is asserted rather than trusted.
+		expect(html).not.toContain("<script");
+		expect(html).not.toContain("modulepreload");
+
+		// It is nonetheless the shared document: the palette is declared on the root
+		// element and the component library's reset and token layers are linked, which a
+		// standalone page rendering its own `<html>` used to do without.
+		expect(html).toContain("--ui-color-brand-600");
+		expect(html).toContain('class="system ');
+		expect(html).toContain('rel="stylesheet"');
+	});
+
 	test("does not collect a front-channel URL for the initiating client", async () => {
 		let tokens = await signIn(app, fixtures);
 

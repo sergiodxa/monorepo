@@ -247,7 +247,19 @@ export namespace OIDC {
 		}): Promise<Subject>;
 
 		findCredential(subjectId: string): Promise<Nullable<Credential>>;
-		createCredential(subjectId: string, passwordHash: string): Promise<void>;
+		/**
+		 * Stores a password credential for a subject.
+		 *
+		 * @param verifiedAt - When the credential became usable, or `null` to store it
+		 *   refused: a `null` here is what {@link MissingValidationError} reports at the
+		 *   next sign-in, so it must only be passed for a credential whose owner has not
+		 *   been established.
+		 */
+		createCredential(
+			subjectId: string,
+			passwordHash: string,
+			verifiedAt: Nullable<Date>,
+		): Promise<void>;
 		/**
 		 * Replaces the stored hash for a subject that already has a credential.
 		 *
@@ -740,10 +752,18 @@ export class OIDC {
 	 * Signs a subject in with an email and password, issuing an authorization code
 	 * on success.
 	 *
-	 * An unknown email creates the subject and a credential and still fails with
-	 * `MissingValidationError`, so the response cannot be used to tell registered
-	 * addresses from unregistered ones. A correct password against a hash written
-	 * under an older scheme is upgraded in place before the code is issued.
+	 * An unknown email registers the subject, stores the password as a verified
+	 * credential and issues a code, so signing up ends signed in: nothing else in this
+	 * server can ever set `verified_at`, and a credential stored `null` is refused
+	 * forever. Verification here means "this password belongs to whoever holds this
+	 * account", which for an address nobody had registered is whoever chose it; the
+	 * address itself stays unverified in `subjects.email_verified_at`.
+	 *
+	 * A known address with no credential is the one case that still stores the hash
+	 * unverified and fails with `MissingValidationError`: the account belongs to
+	 * somebody who signs in another way, and a stranger who knows their address must
+	 * not be able to attach a working password to it. A correct password against a hash
+	 * written under an older scheme is upgraded in place before the code is issued.
 	 *
 	 * @param input - Credentials plus the authorization request to resume.
 	 * @returns The authorization code result, or why the sign-in was refused.
@@ -758,7 +778,7 @@ export class OIDC {
 				let passwordHash = await password.hash(input.password);
 				if (isFailure(passwordHash)) return failure(new InternalServerError());
 
-				await this.repository.createCredential(subject.id, passwordHash.data);
+				await this.repository.createCredential(subject.id, passwordHash.data, null);
 				return failure(new MissingValidationError("Verify your email address."));
 			}
 
@@ -785,9 +805,10 @@ export class OIDC {
 			let passwordHash = await password.hash(input.password);
 			if (isFailure(passwordHash)) return failure(new InternalServerError());
 
-			await this.repository.createCredential(subject.id, passwordHash.data);
-
-			return failure(new MissingValidationError("Verify your email address."));
+			// Verified at creation: the person chose this password for an address nobody
+			// had registered, so there is no other owner to protect it from, and this
+			// server has no channel with which to ask them to confirm anything later.
+			await this.repository.createCredential(subject.id, passwordHash.data, new Date());
 		}
 
 		return await this.generateAuthzCode({

@@ -15,10 +15,34 @@ export interface ClientCredentials {
 }
 
 /**
- * Reads credentials from an `Authorization: Basic` header.
+ * Decodes the credentials of a `Basic` challenge, accepting either base64 alphabet.
  *
- * Decoded as standard base64 (RFC 4648 §4), which is what RFC 7617 specifies —
- * base64url would mangle any secret whose encoding contains `+` or `/`.
+ * RFC 7617 specifies standard base64 (RFC 4648 §4), and that is what a browser or `curl`
+ * sends. Clients built on a JOSE library encode the pair with a **base64url** helper
+ * instead, which substitutes `-` and `_` and drops the padding — `atob` refuses both, and
+ * the failure would surface as a client that can never authenticate with no error saying
+ * why. Standard base64 contains neither `-` nor `_`, so accepting both alphabets is
+ * unambiguous rather than lenient.
+ *
+ * @returns The decoded `id:secret` string, or `null` when the value is not base64 at all.
+ */
+function decodeBasicCredentials(token: string): string | null {
+	let normalized = token.replace(/-/g, "+").replace(/_/g, "/");
+
+	let remainder = normalized.length % 4;
+	// A length of 1 mod 4 encodes no whole byte and cannot be padded into validity.
+	if (remainder === 1) return null;
+	if (remainder > 0) normalized += "=".repeat(4 - remainder);
+
+	try {
+		return atob(normalized);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Reads credentials from an `Authorization: Basic` header.
  *
  * @returns The credentials, or `null` when the header is absent or unreadable.
  */
@@ -29,12 +53,8 @@ export function credentialsFromHeader(headers: Headers): ClientCredentials | nul
 	let [scheme, token] = authorization.split(" ");
 	if (scheme !== "Basic" || !token) return null;
 
-	let decoded: string;
-	try {
-		decoded = atob(token);
-	} catch {
-		return null;
-	}
+	let decoded = decodeBasicCredentials(token);
+	if (decoded === null) return null;
 
 	// Split on the first colon only: a secret may legitimately contain one, a client
 	// id never does.

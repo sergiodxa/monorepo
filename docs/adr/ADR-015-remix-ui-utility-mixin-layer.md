@@ -107,6 +107,15 @@ The last example emits styles equivalent to:
 }
 ```
 
+> **Superseded, 2026-08-07.** The `var(--ui-container-md, 36rem)` condition shown here
+> and in the `at()` section below is **inert**: a container query's condition is evaluated
+> before custom properties are substituted, so the rule is emitted and never matches at
+> any width. Commit `c8e49b20` fixed `@pkg/u` — query conditions now resolve a named step
+> to a literal length through a new `containerLength()`, so `at("md", …)` emits
+> `@container (min-width: 36rem)`. `container()` is unchanged and still returns the custom
+> property, which is what a property value wants for theming. The CSS in this document is
+> kept as written for the record; read the emitted condition as the literal length.
+
 Wrapper utilities accept either a single utility or an array of utilities. Nested arrays are flattened recursively.
 
 ```tsx
@@ -170,6 +179,12 @@ It emits a container query using `--ui-container-*` variables with fallbacks:
 	/* nested utilities */
 }
 ```
+
+> **Superseded, 2026-08-07.** See the note above: this condition never matched, because a
+> container query resolves its condition before custom properties. Since commit
+> `c8e49b20`, `at("md", …)` emits `@container (min-width: 36rem)` — the named step is
+> resolved to its literal length by `containerLength()` while `container()` keeps
+> returning the custom property for property values.
 
 The initial container breakpoint tokens are:
 

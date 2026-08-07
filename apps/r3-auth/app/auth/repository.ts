@@ -232,9 +232,12 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 			};
 		},
 
-		/** Stores a password credential. The hash arrives already computed. */
-		async createCredential(subjectId, passwordHash) {
-			await Credential.create(db, subjectId, passwordHash);
+		/**
+		 * Stores a password credential. The hash arrives already computed, and the
+		 * verification instant the engine decided on is written as epoch milliseconds.
+		 */
+		async createCredential(subjectId, passwordHash, verifiedAt) {
+			await Credential.create(db, subjectId, passwordHash, verifiedAt?.getTime() ?? null);
 		},
 
 		/** Rewrites an existing credential's hash, never creating one. */

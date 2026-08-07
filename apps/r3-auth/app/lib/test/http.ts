@@ -88,7 +88,16 @@ const TEST_ENV = {
 let kv = createKVNamespace();
 let r2 = createR2Bucket();
 
-mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 } }));
+/**
+ * Stand-in for the platform's `waitUntil`: the work is already running by the time it is
+ * handed over, so this only has to keep a rejection from becoming an unhandled one. A
+ * test asserting on a background write yields once (`await Bun.sleep(0)`) before reading.
+ */
+function waitUntil(promise: Promise<unknown>): void {
+	void promise.catch(() => {});
+}
+
+mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 }, waitUntil }));
 
 /**
  * The application modules, imported on first use rather than at module load.
@@ -168,7 +177,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	kv = createKVNamespace();
 	r2 = createR2Bucket();
-	mock.module("cloudflare:workers", () => ({ env: { ...TEST_ENV, KV: kv, R2: r2 } }));
+	mock.module("cloudflare:workers", () => ({ env: { ...TEST_ENV, KV: kv, R2: r2 }, waitUntil }));
 
 	// Captured after the reset so this instance keeps its own bindings even once a
 	// later `createTestApp()` has replaced the module-level ones.

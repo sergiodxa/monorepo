@@ -23,11 +23,24 @@ let env = new Proxy({} as Record<string, unknown>, {
 	},
 });
 
+/**
+ * Stand-in for the Workers `waitUntil`. The work handed to it has already started, so
+ * this only keeps a rejection from becoming an unhandled one; a test that needs to
+ * observe the work provides its own `mock.module` stub that collects the promises.
+ *
+ * It has to exist here even though nothing asserts on it: the export set of an ES module
+ * is fixed at link time, so a source file that statically imports `waitUntil` fails to
+ * load against a stub that does not name it, before any `mock.module` can replace it.
+ */
+function waitUntil(promise: Promise<unknown>): void {
+	void Promise.resolve(promise).catch(() => {});
+}
+
 plugin({
 	name: "cloudflare-workers-stub",
 	setup(build) {
 		build.module("cloudflare:workers", () => ({
-			exports: { env },
+			exports: { env, waitUntil },
 			loader: "object",
 		}));
 	},

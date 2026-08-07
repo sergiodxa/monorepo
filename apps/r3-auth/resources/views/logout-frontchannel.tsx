@@ -13,9 +13,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
+import { Card, Link, Text } from "@pkg/r3-ui";
+import { fg } from "@pkg/u/color";
+import { flex, flexCol, gap, hidden, items, justify } from "@pkg/u/layout";
+import { is, maxIs, minBs, p } from "@pkg/u/size";
+import { textAlign } from "@pkg/u/typography";
 
-import { DOCUMENT, THEME } from "~/resources/styles";
+import DocumentLayout from "~/resources/layouts/document";
 
 /**
  * Seconds the iframes are given to reach their relying parties before the browser
@@ -43,62 +47,54 @@ namespace LogoutFrontchannelView {
 	}
 }
 
-/** Renders the hidden logout iframes and the meta-refresh that follows them. */
+/**
+ * Renders the hidden logout iframes and the meta-refresh that follows them.
+ *
+ * `clientRuntime={false}` is what keeps this page's zero-JavaScript contract while it
+ * still composes the shared document: the layout emits neither the module script nor the
+ * `modulepreload` hint, so nothing here can start executing in a relying party's flow.
+ */
 export default function LogoutFrontchannelView(handle: Handle<LogoutFrontchannelView.Setup>) {
 	return () => {
 		let { documentTitle, title, signingOut, redirecting, continueLabel, urls, redirectUri } =
 			handle.props;
 
 		return (
-			<html lang="en" mix={[THEME, DOCUMENT]}>
-				<head>
-					<meta charSet="utf-8" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					<meta httpEquiv="refresh" content={`${REDIRECT_DELAY_SECONDS};url=${redirectUri}`} />
-					<title>{documentTitle}</title>
-				</head>
-				<body>
-					<main
-						mix={css({
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							gap: "1.5rem",
-							margin: "0 auto",
-							maxWidth: "40rem",
-							padding: "2.5rem 1rem",
-							color: "var(--ui-color-neutral-900)",
-							textAlign: "center",
-							"@media (prefers-color-scheme: dark)": {
-								color: "var(--ui-color-neutral-50)",
-							},
-						})}
-					>
-						<h1 mix={css({ fontSize: "1.875rem", fontWeight: "700" })}>{title}</h1>
-						<p mix={css({ color: "var(--ui-color-neutral-600)" })}>{signingOut}</p>
-						<p mix={css({ color: "var(--ui-color-neutral-600)" })}>{redirecting}</p>
+			<DocumentLayout
+				title={documentTitle}
+				clientRuntime={false}
+				head={<meta httpEquiv="refresh" content={`${REDIRECT_DELAY_SECONDS};url=${redirectUri}`} />}
+			>
+				<main mix={[flex(), flexCol(), items("center"), justify("center"), minBs("100dvh"), p(6)]}>
+					<Card mix={[is("100%"), maxIs("22.5rem")]}>
+						<Card.Header mix={[textAlign("center")]}>
+							<Card.Title>{title}</Card.Title>
+							<Card.Description>{signingOut}</Card.Description>
+						</Card.Header>
 
-						<noscript>
-							<a href={redirectUri} mix={css({ color: "var(--ui-color-brand-600)" })}>
-								{continueLabel}
-							</a>
-						</noscript>
-					</main>
+						<Card.Content mix={[flex(), flexCol(), gap(2), textAlign("center")]}>
+							<Text mix={[fg("neutral.muted")]}>{redirecting}</Text>
 
-					{/* Loaded, not displayed: each relying party clears its own session when
-					    its logout URI is fetched, and nothing here reads the result. */}
-					<div mix={css({ display: "none" })}>
-						{urls.map((entry) => (
-							<iframe
-								key={entry.clientId}
-								src={entry.url}
-								title={entry.clientId}
-								sandbox="allow-scripts allow-same-origin"
-							/>
-						))}
-					</div>
-				</body>
-			</html>
+							<noscript>
+								<Link href={redirectUri}>{continueLabel}</Link>
+							</noscript>
+						</Card.Content>
+					</Card>
+				</main>
+
+				{/* Loaded, not displayed: each relying party clears its own session when
+				    its logout URI is fetched, and nothing here reads the result. */}
+				<div mix={[hidden()]}>
+					{urls.map((entry) => (
+						<iframe
+							key={entry.clientId}
+							src={entry.url}
+							title={entry.clientId}
+							sandbox="allow-scripts allow-same-origin"
+						/>
+					))}
+				</div>
+			</DocumentLayout>
 		);
 	};
 }

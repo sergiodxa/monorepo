@@ -28,6 +28,15 @@ import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope";
  */
 const DEFAULT_COMMAND = "close";
 
+/**
+ * Native `button` `type` {@link AlertDialog.Action} and
+ * {@link AlertDialog.Cancel} fall back to when `type` is omitted. It has to
+ * be spelled out: a `<button>` inside a `<form>` defaults to `"submit"`, and
+ * the platform refuses to run an Invoker Command on a submit button, so a
+ * cancel or close control left untyped inside a form silently does nothing.
+ */
+const DEFAULT_TYPE: NonNullable<Button.Props["type"]> = "button";
+
 /** Semantic color role {@link AlertDialog.Action} falls back to when `color` is omitted. */
 const DEFAULT_ACTION_COLOR: Button.Color = "danger";
 
@@ -77,21 +86,39 @@ export namespace AlertDialog {
 	 * field except `commandfor`/`command`, which this type narrows.
 	 */
 	export interface ActionProps extends Omit<Button.Props, "commandfor" | "command"> {
-		/** `id` of the ancestor {@link AlertDialog} this action dismisses. */
-		commandfor: string;
-		/** Invoker Commands verb dispatched to the target AlertDialog. Defaults to `"close"`. */
+		/**
+		 * `id` of the ancestor {@link AlertDialog} this action dismisses.
+		 * Needed for the default `type="button"` action, which closes the panel
+		 * through an Invoker Command; a `type="submit"` action leaves it off,
+		 * since submitting its enclosing form is what ends the interruption.
+		 */
+		commandfor?: string;
+		/**
+		 * Invoker Commands verb dispatched to the target AlertDialog. Defaults
+		 * to `"close"`, and is dropped entirely for an action whose `type` is
+		 * `"submit"` or `"reset"` — the platform refuses to run a command on
+		 * such a button, so rendering one would be a promise this control
+		 * cannot keep.
+		 */
 		command?: "close";
 	}
 
 	/**
 	 * Props accepted by {@link AlertDialog.Cancel}: every {@link Button.Props}
-	 * field except `commandfor`/`command`, which this type narrows.
+	 * field except `commandfor`/`command`/`type`, which this type narrows.
 	 */
-	export interface CancelProps extends Omit<Button.Props, "commandfor" | "command"> {
+	export interface CancelProps extends Omit<Button.Props, "commandfor" | "command" | "type"> {
 		/** `id` of the ancestor {@link AlertDialog} this cancel control dismisses. */
 		commandfor: string;
 		/** Invoker Commands verb dispatched to the target AlertDialog. Defaults to `"close"`. */
 		command?: "close";
+		/**
+		 * Narrowed to the only value a cancel control can carry, and rendered
+		 * whether or not it's passed: a cancel control is never a submit
+		 * button, and an untyped button inside a `<form>` would default to
+		 * `"submit"`, which the platform then refuses to run a command on.
+		 */
+		type?: "button";
 	}
 }
 
@@ -242,20 +269,50 @@ AlertDialog.Footer = function AlertDialogFooter(handle: Handle<AlertDialog.Foote
  * button's label is enough to wire it up; pass `color` to override the
  * default tone for a non-destructive confirmation.
  *
+ * `type` defaults to `"button"`, so the control stays a command invoker even
+ * inside a `<form>`, where an untyped button would default to `"submit"` and
+ * the platform would then refuse to run its command at all. Passing
+ * `type="submit"` deliberately swaps that around: the control submits its
+ * enclosing form and renders no `command`/`commandfor` of its own, which is
+ * how a server-rendered destructive action confirms — the form's response
+ * ends the interruption instead of a command closing the panel.
+ *
+ * In dev mode, an action that is neither a submit button nor pointed at a
+ * panel through `commandfor` logs a `console.warn`, since pressing it would
+ * do nothing at all.
+ *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the action's markup.
  * @example
  * <AlertDialog.Action commandfor="delete-project">{t("actions.delete")}</AlertDialog.Action>
  * @example
  * <AlertDialog.Action commandfor="publish-post" color="brand">{t("actions.publish")}</AlertDialog.Action>
+ * @example
+ * <AlertDialog.Action type="submit" name="intent" value="delete">{t("actions.delete")}</AlertDialog.Action>
  */
 AlertDialog.Action = function AlertDialogAction(handle: Handle<AlertDialog.ActionProps>) {
 	return () => {
-		let { color, command, ...rest } = handle.props;
+		let { type, color, command, commandfor, ...rest } = handle.props;
+		let resolvedType = type ?? DEFAULT_TYPE;
+		let isInvoker = resolvedType === "button";
 		let resolvedColor = color ?? DEFAULT_ACTION_COLOR;
-		let resolvedCommand = command ?? DEFAULT_COMMAND;
 
-		return <Button {...rest} color={resolvedColor} command={resolvedCommand} data-slot="action" />;
+		if (import.meta.env.DEV && isInvoker && !commandfor) {
+			console.warn(
+				'AlertDialog.Action: needs "commandfor" naming the panel it dismisses, or type="submit" to submit its enclosing form instead — as rendered, pressing it does nothing.',
+			);
+		}
+
+		return (
+			<Button
+				{...rest}
+				type={resolvedType}
+				color={resolvedColor}
+				commandfor={isInvoker ? commandfor : undefined}
+				command={isInvoker ? (command ?? DEFAULT_COMMAND) : undefined}
+				data-slot="action"
+			/>
+		);
 	};
 };
 
@@ -265,6 +322,12 @@ AlertDialog.Action = function AlertDialogAction(handle: Handle<AlertDialog.Actio
  * that backs out of the interruption without taking
  * {@link AlertDialog.Action}'s action. `command` defaults to `"close"`, so
  * passing `commandfor` and the button's label is enough to wire it up.
+ *
+ * `type` is fixed to `"button"`: a cancel control is never a submit button,
+ * and leaving it untyped inside a `<form>` would let it default to `"submit"`,
+ * which the platform then refuses to run a command on — cancelling would
+ * silently submit the form instead of closing the panel, leaving Escape as
+ * the only way out.
  *
  * @param handle Runtime handle carrying the host button's props.
  * @returns The render function producing the cancel control's markup.
@@ -281,6 +344,7 @@ AlertDialog.Cancel = function AlertDialogCancel(handle: Handle<AlertDialog.Cance
 		return (
 			<Button
 				{...rest}
+				type={DEFAULT_TYPE}
 				variant={resolvedVariant}
 				color={resolvedColor}
 				command={resolvedCommand}

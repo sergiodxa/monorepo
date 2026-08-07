@@ -1,8 +1,8 @@
 /**
  * Tests for reading client credentials off a token request. The base64 cases are the
- * point: HTTP Basic is standard base64, and decoding it as base64url silently mangles
- * any secret whose encoding contains `+` or `/`, which is a client that can never
- * authenticate and no error message that says why.
+ * point: HTTP Basic is standard base64, while some clients encode the pair with a
+ * base64url helper, and refusing either alphabet is a client that can never authenticate
+ * with no error message that says why.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,6 +33,20 @@ describe("credentialsFromHeader", () => {
 		// "??>?" and "???" encode with `+` and `/`, which base64url decoding would reject.
 		expect(credentialsFromHeader(basic("client", "??>?"))?.clientSecret).toBe("??>?");
 		expect(credentialsFromHeader(basic("client", "???"))?.clientSecret).toBe("???");
+	});
+
+	test("reads credentials a client encoded with base64url", () => {
+		// What a JOSE `base64url.encode` produces: `+` and `/` substituted, padding
+		// dropped. `atob` refuses both outright, so a client encoding its Basic header
+		// this way could never authenticate — and one of this server's own clients does.
+		let secret = "??>?";
+		let token = btoa(`client:${secret}`).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+		expect(token).toMatch(/[-_]/);
+		expect(credentialsFromHeader(new Headers({ Authorization: `Basic ${token}` }))).toEqual({
+			clientId: "client",
+			clientSecret: secret,
+		});
 	});
 
 	test("splits on the first colon, so a secret may contain one", () => {

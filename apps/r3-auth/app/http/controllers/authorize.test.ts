@@ -15,13 +15,14 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { Base64Url, sha256 } from "@pkg/crypto";
+import { Base64Url, password, sha256 } from "@pkg/crypto";
 import { isFailure } from "@pkg/result";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import Credential from "~/app/data/credential";
 import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import {
@@ -46,6 +47,29 @@ async function challengeFor(verifier: string): Promise<string> {
 	let digest = await sha256(verifier);
 	if (isFailure(digest)) throw new Error("Could not derive the challenge");
 	return Base64Url.encode(digest.data);
+}
+
+/** The address the registration tests sign up with, which no fixture holds. */
+const NEW_EMAIL = "newcomer@example.com";
+
+/** The password those tests register and then sign in with. */
+const NEW_PASSWORD = "a-brand-new-password";
+
+/** Posts the registration form for whichever authorization request is parked. */
+async function register(): Promise<Response> {
+	return await app.fetch(
+		new Request(`${ORIGIN}${routes.authorize.action.href()}`, {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			redirect: "manual",
+			body: new URLSearchParams({
+				email: NEW_EMAIL,
+				password: NEW_PASSWORD,
+				name: "New Comer",
+				username: "newcomer",
+			}),
+		}),
+	);
 }
 
 /** Runs an authorization request and returns the `code` it redirected back with. */
@@ -280,7 +304,47 @@ describe("POST /authorize", () => {
 		expect(location.searchParams.get("code")).toBeTruthy();
 	});
 
-	test("an unknown email registers the subject and still refuses the sign-in", async () => {
+	test("an unknown email registers the subject and is answered with a code", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register();
+
+		expect(response.status).toBe(303);
+		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).not.toBeNull();
+
+		let location = new URL(response.headers.get("location")!);
+		expect(`${location.origin}${location.pathname}`).toBe(REDIRECT_URI);
+		expect(location.searchParams.get("code")).toBeTruthy();
+	});
+
+	test("a freshly registered account signs in again with the same password", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+		await register();
+
+		// Regression: registration used to store the credential with no `verified_at`,
+		// which the sign-in path refuses outright, so the account it had just created
+		// could never authenticate.
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "login" })));
+		let response = await register();
+
+		expect(response.status).toBe(303);
+
+		let location = new URL(response.headers.get("location")!);
+		expect(location.searchParams.get("code")).toBeTruthy();
+	});
+
+	test("refuses a registered subject whose credential was never verified", async () => {
+		let subject = await Subject.create(app.db, {
+			email_address: "github@example.com",
+			display_name: "Git Hub",
+			username: "githubber",
+			avatar: "https://example.com/gh.png",
+		});
+
+		let hash = await password.hash("a-password-somebody-else-chose");
+		if (isFailure(hash)) throw new Error("Could not hash the password");
+		await Credential.create(app.db, subject.id, hash.data, null);
+
 		await app.fetch(new Request(authorizeUrl(fixtures)));
 
 		let response = await app.fetch(
@@ -288,19 +352,16 @@ describe("POST /authorize", () => {
 				method: "POST",
 				headers: { "content-type": "application/x-www-form-urlencoded" },
 				body: new URLSearchParams({
-					email: "newcomer@example.com",
-					password: "a-brand-new-password",
-					name: "New Comer",
-					username: "newcomer",
+					email: "github@example.com",
+					password: "a-password-somebody-else-chose",
+					name: "Git Hub",
+					username: "githubber",
 				}),
 			}),
 		);
 
-		// The registration is recorded, but the credential is unverified, so the answer
-		// is the same refusal a wrong password gets: the page must not reveal which
-		// addresses are registered.
 		expect(response.status).toBe(200);
-		expect(await Subject.findByEmail(app.db, "newcomer@example.com")).not.toBeNull();
+		expect(await response.text()).toContain("Verify your email address.");
 	});
 });
 

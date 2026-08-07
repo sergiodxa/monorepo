@@ -777,6 +777,8 @@ interface LoginRepositoryState {
 	verifiedAt: Date | null;
 	/** Hashes handed to `createCredential`, in call order. */
 	created: string[];
+	/** Verification instants handed to `createCredential`, in call order. */
+	createdVerifiedAt: (Date | null)[];
 	/** Hashes handed to `updateCredentialPasswordHash`, in call order. */
 	upgraded: string[];
 	/** Avatar URLs handed to `createSubject`, in call order. */
@@ -793,6 +795,7 @@ function loginState(overrides: Partial<LoginRepositoryState> = {}): LoginReposit
 		storedHash: null,
 		verifiedAt: new Date(),
 		created: [],
+		createdVerifiedAt: [],
 		upgraded: [],
 		avatars: [],
 		upgradeError: null,
@@ -825,9 +828,12 @@ function createLoginRepository(state: LoginRepositoryState): OIDC.Repository {
 			};
 		}),
 
-		createCredential: mock(async (_subjectId: string, passwordHash: string) => {
-			state.created.push(passwordHash);
-		}),
+		createCredential: mock(
+			async (_subjectId: string, passwordHash: string, verifiedAt: Date | null) => {
+				state.created.push(passwordHash);
+				state.createdVerifiedAt.push(verifiedAt);
+			},
+		),
 
 		updateCredentialPasswordHash: mock(async (_subjectId: string, passwordHash: string) => {
 			if (state.upgradeError) throw state.upgradeError;
@@ -961,15 +967,26 @@ describe("loginWithCredential()", () => {
 		expect(state.upgraded).toHaveLength(0);
 	});
 
-	test("writes a PBKDF2 hash when the subject has no credential yet", async () => {
+	test("writes a PBKDF2 hash when the subject has no credential yet, and refuses the sign-in", async () => {
 		let state = loginState();
 		let provider = new OIDC(ISSUER, createLoginRepository(state));
 
 		let result = await provider.loginWithCredential(loginInput());
 
 		expect(result.status).toBe("failure");
+		if (result.status === "failure")
+			expect(result.error).toBeInstanceOf(OIDC.MissingValidationError);
 		expect(state.created).toHaveLength(1);
 		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
+	});
+
+	test("stores that hash unverified, so a stranger cannot password-protect somebody else's account", async () => {
+		let state = loginState();
+		let provider = new OIDC(ISSUER, createLoginRepository(state));
+
+		await provider.loginWithCredential(loginInput());
+
+		expect(state.createdVerifiedAt).toEqual([null]);
 	});
 
 	test("gives a brand-new subject a hex-digest gravatar and a PBKDF2 credential", async () => {
@@ -981,5 +998,35 @@ describe("loginWithCredential()", () => {
 		let expectedDigest = Hex.encode(unwrap(await sha256(testSubject.emailAddress)));
 		expect(state.avatars).toEqual([`https://gravatar.com/avatar/${expectedDigest}`]);
 		expect((state.created[0] ?? "").startsWith(PBKDF2_PREFIX)).toBe(true);
+	});
+
+	test("registers an unknown email and answers with a code instead of refusing it", async () => {
+		let state = loginState({ subjectMissing: true });
+		let provider = new OIDC(ISSUER, createLoginRepository(state));
+
+		let result = await provider.loginWithCredential(loginInput());
+
+		expect(result.status).toBe("success");
+		if (result.status === "success") expect(result.data.params.code).toBeTruthy();
+	});
+
+	test("registers the credential verified, so the account it just created can sign in", async () => {
+		let state = loginState({ subjectMissing: true });
+		let provider = new OIDC(ISSUER, createLoginRepository(state));
+
+		await provider.loginWithCredential(loginInput());
+
+		expect(state.createdVerifiedAt).toHaveLength(1);
+		expect(state.createdVerifiedAt[0]).toBeInstanceOf(Date);
+
+		// The registration's own hash is now what is stored, and signing in again with
+		// the same password has to succeed: this is the loop the null column broke.
+		state.storedHash = state.created[0] ?? null;
+		state.verifiedAt = state.createdVerifiedAt[0] ?? null;
+		state.subjectMissing = false;
+
+		let signIn = await provider.loginWithCredential(loginInput());
+
+		expect(signIn.status).toBe("success");
 	});
 });

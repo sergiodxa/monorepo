@@ -35,6 +35,17 @@ const DEFAULT_VARIANT: Button.Variant = "solid";
 const DEFAULT_SIZE: Button.Size = "md";
 
 /**
+ * Native `type` {@link Button} falls back to when it carries a `command` or
+ * `commandfor` and no `type` of its own. A button inside a `<form>` otherwise
+ * defaults to `"submit"`, and the platform refuses to run an Invoker Command
+ * on a button that could also submit — it calls the pairing ambiguous and
+ * takes no action at all — so an invoker left untyped inside a form silently
+ * does nothing. A button carrying no command keeps no `type` of its own, so a
+ * plain submit button still submits.
+ */
+const INVOKER_TYPE = "button";
+
+/**
  * Prop types for {@link Button}.
  */
 export namespace Button {
@@ -110,6 +121,13 @@ export namespace Button {
  * pair the `spin()` mixin from the animation layer through `parts.spinner`
  * for the rotating loop.
  *
+ * A button carrying `command` or `commandfor` renders `type="button"` unless
+ * it's given a `type` of its own: inside a `<form>` an untyped button would
+ * default to `"submit"`, and the platform then refuses to run its command at
+ * all, calling the pairing ambiguous — the button would look wired up and do
+ * nothing. A button with no command is left untyped, so a plain submit button
+ * inside a form still submits.
+ *
  * In dev mode, a button whose content carries no plain text and no
  * `aria-label`/`aria-labelledby` logs a `console.warn`, since assistive
  * technology otherwise has no accessible name to announce for it.
@@ -125,7 +143,10 @@ export namespace Button {
  */
 export function Button(handle: Handle<Button.Props>) {
 	return () => {
-		let { color, variant, size, isPending, disabled, parts, children, mix, ...rest } = handle.props;
+		let { color, variant, size, isPending, disabled, type, parts, children, mix, ...rest } =
+			handle.props;
+		let isInvoker = rest.command !== undefined || rest.commandfor !== undefined;
+		let resolvedType = type ?? (isInvoker ? INVOKER_TYPE : undefined);
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
@@ -140,6 +161,7 @@ export function Button(handle: Handle<Button.Props>) {
 		return (
 			<button
 				{...rest}
+				type={resolvedType}
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}

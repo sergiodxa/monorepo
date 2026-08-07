@@ -20,6 +20,7 @@ import { resolveFieldWiring } from "../utils/resolve-field-wiring";
 
 import { Description } from "./description";
 import { FieldError } from "./field-error";
+import { resolveFieldIssue } from "./form";
 import { Input } from "./input";
 import { Label } from "./label";
 
@@ -75,8 +76,19 @@ export namespace TextField {
 		 * referenced by the control's `aria-describedby`. Its presence alone
 		 * marks the control's `aria-invalid`, unless `aria-invalid` is set
 		 * explicitly.
+		 *
+		 * Optional inside a {@link Form} carrying `issues`: the field then
+		 * finds its own message by `name` through form context, and an
+		 * explicit value here still wins over whatever context holds.
 		 */
 		errorMessage?: RemixNode;
+		/**
+		 * Native `autofocus`. Defaults to `true` for the first invalid field
+		 * of an enclosing {@link Form}'s `issues`, so a server round-trip
+		 * lands keyboard focus on the first problem with no client
+		 * JavaScript; pass it explicitly to decide for this field yourself.
+		 */
+		autoFocus?: boolean;
 		/** Native `<input>` `type`. Defaults to {@link DEFAULT_TYPE}. */
 		type?: Type;
 		/** Native `name` submitted with an enclosing form. */
@@ -124,6 +136,12 @@ export namespace TextField {
  * {@link FieldError} directly instead remains available for a field whose
  * wiring or layout this wrapper doesn't cover.
  *
+ * Inside a {@link Form} carrying `issues`, the field needs no `errorMessage`
+ * of its own: it looks its message up by `name` through form context, and the
+ * first invalid field of that render also picks up `autofocus`, so a parse
+ * failure re-rendered from the server both shows every message and lands
+ * keyboard focus on the first one. An explicit `errorMessage` still wins.
+ *
  * @param handle Runtime handle carrying the root element's props and this instance's stable identifier.
  * @returns The render function producing the field's markup.
  * @example
@@ -149,7 +167,8 @@ export function TextField(handle: Handle<TextField.Props>) {
 			color,
 			label,
 			description,
-			errorMessage,
+			errorMessage: errorMessageProp,
+			autoFocus,
 			type,
 			name,
 			value,
@@ -168,6 +187,8 @@ export function TextField(handle: Handle<TextField.Props>) {
 			...rest
 		} = handle.props;
 		let resolvedType = type ?? DEFAULT_TYPE;
+		let { errorMessage, isFirstInvalid } = resolveFieldIssue(handle, name, errorMessageProp);
+		let resolvedAutoFocus = autoFocus ?? (isFirstInvalid || undefined);
 		let { resolvedColor, resolvedInvalid, descriptionId, errorId, describedBy } =
 			resolveFieldWiring(handle.id, {
 				color,
@@ -200,6 +221,8 @@ export function TextField(handle: Handle<TextField.Props>) {
 					pattern={pattern}
 					minLength={minLength}
 					maxLength={maxLength}
+					// oxlint-disable-next-line jsx-a11y/no-autofocus -- Not a focus grab on page load: this only ever resolves true for the first field an enclosing Form reports as invalid, so a failed submit lands the user on the problem instead of leaving them to hunt for it.
+					autoFocus={resolvedAutoFocus}
 					aria-invalid={resolvedInvalid}
 					aria-describedby={describedBy}
 					color={resolvedColor}

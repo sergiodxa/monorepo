@@ -31,26 +31,32 @@ beforeEach(async () => {
 
 describe("Credential.create", () => {
 	test("persists the credential and returns the stored row", async () => {
-		let credential = await Credential.create(db, subjectId, "$2a$10$hash");
+		let credential = await Credential.create(db, subjectId, "$2a$10$hash", 1_750_000_000_000);
 
 		expect(credential.subject_id).toBe(subjectId);
 		expect(credential.password_hash).toBe("$2a$10$hash");
-		expect(credential.verified_at).toBeNull();
+		expect(credential.verified_at).toBe(1_750_000_000_000);
 
 		// Regression: the row has to exist after `create` resolves. An insert that is
 		// built but never awaited returns a truthy value and stores nothing.
 		expect(await Credential.find(db, subjectId)).not.toBeNull();
 	});
 
+	test("stores no verification instant when the caller has not established the owner", async () => {
+		let credential = await Credential.create(db, subjectId, "$2a$10$hash", null);
+
+		expect(credential.verified_at).toBeNull();
+	});
+
 	test("refuses a second credential for the same subject", async () => {
-		await Credential.create(db, subjectId, "$2a$10$first");
-		expect(Credential.create(db, subjectId, "$2a$10$second")).rejects.toThrow();
+		await Credential.create(db, subjectId, "$2a$10$first", Date.now());
+		expect(Credential.create(db, subjectId, "$2a$10$second", Date.now())).rejects.toThrow();
 	});
 });
 
 describe("Credential.find", () => {
 	test("returns the subject's credential", async () => {
-		await Credential.create(db, subjectId, "$2a$10$hash");
+		await Credential.create(db, subjectId, "$2a$10$hash", Date.now());
 		let found = await Credential.find(db, subjectId);
 		expect(found?.password_hash).toBe("$2a$10$hash");
 	});
@@ -62,7 +68,7 @@ describe("Credential.find", () => {
 
 describe("Credential.updatePasswordHash", () => {
 	test("replaces the stored hash for the subject", async () => {
-		await Credential.create(db, subjectId, "$2a$10$legacy");
+		await Credential.create(db, subjectId, "$2a$10$legacy", Date.now());
 
 		let rewritten = await Credential.updatePasswordHash(db, subjectId, "$pbkdf2-sha256$upgraded");
 

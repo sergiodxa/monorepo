@@ -107,6 +107,16 @@ export default {
 			tablet: "Tablet",
 			unknown: "Unknown device",
 		},
+		tableLabel: "Active sessions",
+		columns: {
+			device: "Device",
+			ip: "IP address",
+			client: "App",
+			status: "Status",
+			lastAccessed: "Last accessed",
+			expires: "Expires",
+			actions: "Actions",
+		},
 	},
 
 	logout: {
@@ -136,7 +146,16 @@ export default {
 				logout: "Logout",
 			},
 		},
+		breadcrumbs: {
+			label: "Breadcrumb",
+		},
+		pagination: {
+			label: "Pagination",
+			previous: "Previous",
+			next: "Next",
+		},
 		dashboard: {
+			documentTitle: "Admin Dashboard | Auth",
 			title: "Dashboard",
 			stats: {
 				clients: {
@@ -154,6 +173,7 @@ export default {
 			},
 		},
 		clients: {
+			documentTitle: "Clients | Auth",
 			title: "Clients",
 			description: "Manage OAuth client applications",
 			empty: "No clients found. Create your first client to get started.",
@@ -169,6 +189,8 @@ export default {
 				edit: "Edit",
 				delete: "Delete",
 				regenerateSecret: "Regenerate Secret",
+				copy: "Copy",
+				copied: "Copied",
 			},
 			detail: {
 				title: "Client Details",
@@ -180,16 +202,22 @@ export default {
 				secretHidden: "Hidden for security",
 				redirectUri: "Redirect URI",
 				logoutUri: "Logout URI",
+				backchannelLogoutUri: "Back-Channel Logout URI",
+				frontchannelLogoutUri: "Front-Channel Logout URI",
+				sessionRequired: "Session required",
+				notSet: "Not set",
 				authorizedUsers: "Authorized Users",
 				createdAt: "Created",
 			},
 			create: {
+				documentTitle: "New Client | Auth",
 				title: "New Client",
 				description: "Register a new OAuth client application",
 				success: "Client created successfully. Save the secret - it won't be shown again!",
 				secretWarning: "Copy this secret now. You won't be able to see it again.",
 			},
 			edit: {
+				documentTitle: "Edit {{name}} | Auth",
 				title: "Edit Client",
 				description: "Update client configuration",
 				success: "Client updated successfully",
@@ -198,6 +226,7 @@ export default {
 			delete: {
 				title: "Delete Client",
 				confirm: "Are you sure you want to delete this client? This action cannot be undone.",
+				cancel: "Cancel",
 				success: "Client deleted successfully",
 			},
 			form: {
@@ -209,11 +238,27 @@ export default {
 				logoUrl: { label: "Logo URL", placeholder: "https://example.com/logo.png" },
 				redirectUri: { label: "Redirect URI", placeholder: "https://example.com/callback" },
 				logoutUri: { label: "Logout URI", placeholder: "https://example.com/logout" },
+				backchannelLogoutUri: {
+					label: "Back-Channel Logout URI",
+					placeholder: "https://example.com/backchannel-logout",
+				},
+				backchannelLogoutSessionRequired: {
+					label: "Send the session id with back-channel logout tokens",
+				},
+				frontchannelLogoutUri: {
+					label: "Front-Channel Logout URI",
+					placeholder: "https://example.com/frontchannel-logout",
+				},
+				frontchannelLogoutSessionRequired: {
+					label: "Send the session id with front-channel logout requests",
+				},
 				submit: "Save",
 				cancel: "Cancel",
+				invalid: "Some fields need attention. Check the highlighted ones and try again.",
 			},
 		},
 		subjects: {
+			documentTitle: "Users | Auth",
 			title: "Users",
 			description: "Manage user accounts",
 			empty: "No users found.",
@@ -243,6 +288,7 @@ export default {
 				notVerified: "Not verified",
 			},
 			edit: {
+				documentTitle: "Edit {{name}} | Auth",
 				title: "Edit User",
 				description: "Update user information",
 				success: "User updated successfully",
@@ -262,6 +308,7 @@ export default {
 				emailVerified: { label: "Email Verified" },
 				submit: "Save",
 				cancel: "Cancel",
+				invalid: "Some fields need attention. Check the highlighted ones and try again.",
 			},
 			roles: {
 				user: "User",
@@ -272,6 +319,9 @@ export default {
 				description: "Manage this user's active sessions. Revoking a session will log them out.",
 				empty: "No active sessions.",
 				lastAccessed: "Last accessed on {{date}}",
+				lastAccessedLabel: "Last accessed",
+				expiresLabel: "Expires",
+				unknownDevice: "Unknown",
 				status: {
 					active: "active",
 					stale: "stale",
@@ -295,10 +345,19 @@ export default {
 					},
 				},
 			},
+			connections: {
+				title: "Connected Accounts",
+				description: "External identities this user can sign in with.",
+				empty: "No connected accounts.",
+				externalId: "Provider ID",
+				linkedAt: "Linked on",
+			},
 		},
 	},
 
 	account: {
+		title: "Account",
+		breadcrumbsLabel: "Breadcrumb",
 		nav: {
 			label: "Account navigation",
 			items: {
@@ -336,6 +395,10 @@ export default {
 				submit: "Save Changes",
 				cancel: "Cancel",
 			},
+			errors: {
+				invalid: "Please check the highlighted fields and try again.",
+				usernameTaken: "That username is already taken.",
+			},
 		},
 	},
 
@@ -345,6 +408,12 @@ export default {
 			"Apps you have authorized to access your account. You can revoke access at any time.",
 		empty: "No authorized apps found.",
 		authorizedOn: "Authorized on {{date}}",
+		tableLabel: "Authorized apps",
+		columns: {
+			app: "App",
+			authorizedOn: "Authorized",
+			actions: "Actions",
+		},
 		cannotRevoke: "Required",
 		actions: {
 			revoke: "Revoke Access",

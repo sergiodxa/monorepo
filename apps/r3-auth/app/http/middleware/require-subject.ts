@@ -40,9 +40,11 @@ declare module "remix/fetch-router" {
 /**
  * Requires a signed-in subject, refreshing the access token when needed.
  *
- * The refresh is silent and rotates both tokens, because the refresh token is the
- * session row's id and the grant hands back a new one; storing only the access token
- * would leave the session unable to refresh again.
+ * The refresh is silent, and both tokens are written back rather than only the access
+ * token. The refresh token is the session row's id, so the grant hands back the *same*
+ * value and only touches the row — but writing the pair is what keeps this correct if
+ * the grant ever does issue a new id, since a session holding a stale refresh token
+ * could never refresh again.
  */
 export const requireSubject: Middleware = async (ctx, next) => {
 	let accessToken = getAccessToken();
@@ -60,8 +62,8 @@ export const requireSubject: Middleware = async (ctx, next) => {
 			ctx.logger.info("auth_refreshing_token");
 			let tokens = await createOidcProvider(db).token({ type: "refresh_token", refreshToken });
 
-			// The refresh grant always returns a rotated pair; anything else is a bug in
-			// the engine and must sign the session out rather than half-write it.
+			// The grant must answer with both tokens; anything else is a bug in the engine
+			// and must sign the session out rather than half-write it.
 			if (typeof tokens.access_token !== "string") throw new Error("No access token returned");
 			if (!("refresh_token" in tokens)) throw new Error("No refresh token returned");
 			if (typeof tokens.refresh_token !== "string") throw new Error("No refresh token returned");

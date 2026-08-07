@@ -20,6 +20,19 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import grants from "~/app/http/controllers/account/grants";
+import profile from "~/app/http/controllers/account/profile";
+import profileEdit from "~/app/http/controllers/account/profile-edit";
+import sessions from "~/app/http/controllers/account/sessions";
+import adminClient from "~/app/http/controllers/admin/client";
+import adminClientEdit from "~/app/http/controllers/admin/client-edit";
+import adminClientNew from "~/app/http/controllers/admin/client-new";
+import adminClients from "~/app/http/controllers/admin/clients";
+import adminDashboard from "~/app/http/controllers/admin/dashboard";
+import adminSubject from "~/app/http/controllers/admin/subject";
+import adminSubjectEdit from "~/app/http/controllers/admin/subject-edit";
+import adminSubjects from "~/app/http/controllers/admin/subjects";
+import apiSubject from "~/app/http/controllers/api/subject";
 import selfCallback from "~/app/http/controllers/auth/callback";
 import providerLogin from "~/app/http/controllers/auth/provider";
 import providerCallback from "~/app/http/controllers/auth/provider-callback";
@@ -106,9 +119,27 @@ export default function application(options: application.Options) {
 	router.map(routes.oidc.logout, logout);
 	router.map(routes.oidc.checkSession, checkSession);
 
+	router.map(routes.account.profile, profile);
+	router.map(routes.account.profileEdit, profileEdit);
+	router.map(routes.account.sessions, sessions);
+	router.map(routes.account.grants, grants);
+
 	router.map(routes.wellKnown.openidConfiguration, openidConfiguration);
 	router.map(routes.wellKnown.oauthAuthorizationServer, oauthAuthorizationServer);
 	router.map(routes.wellKnown.jwks, jwks);
+
+	// One call per route map: middleware does not cascade between them, so each admin
+	// controller carries `requireAdmin` in its own chain rather than relying on a parent.
+	router.map(routes.admin.dashboard, adminDashboard);
+	router.map(routes.admin.clients, adminClients);
+	router.map(routes.admin.clientNew, adminClientNew);
+	router.map(routes.admin.client, adminClient);
+	router.map(routes.admin.clientEdit, adminClientEdit);
+	router.map(routes.admin.subjects, adminSubjects);
+	router.map(routes.admin.subject, adminSubject);
+	router.map(routes.admin.subjectEdit, adminSubjectEdit);
+
+	router.map(routes.api.subject, apiSubject);
 
 	return router;
 }

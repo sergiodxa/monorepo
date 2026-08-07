@@ -13,12 +13,25 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
+import { flex, flexCol, gap } from "@pkg/u/layout";
+
 import type { Button } from "./button";
 
 import { AlertDialog } from "./alert-dialog";
 
 /** Semantic color role {@link Confirm} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Button.Color = "danger";
+
+/** HTTP method a submitting {@link Confirm} falls back to when `form.method` is omitted. */
+const DEFAULT_METHOD: NonNullable<Confirm.FormProps["method"]> = "post";
+
+/**
+ * Column gap the wrapping `<form>` re-declares in submit mode, matching the
+ * gap the panel itself lays its own children out with — the form becomes the
+ * panel's single child, so without this the header and footer would lose the
+ * spacing the panel's own layout gives them.
+ */
+const PANEL_GAP = 6;
 
 /**
  * Prop types for {@link Confirm}.
@@ -41,6 +54,29 @@ export namespace Confirm {
 		cancel?: TagProps<"button">["mix"];
 		/** Styling for the confirming control, rendered through {@link AlertDialog.Action}. */
 		action?: TagProps<"button">["mix"];
+		/** Styling for the `<form>` wrapping the panel's content, rendered only in submit mode. */
+		form?: TagProps<"form">["mix"];
+	}
+
+	/**
+	 * The submission a confirming control performs instead of merely closing
+	 * the panel. Passing this at all switches {@link Confirm} into submit
+	 * mode: the panel's content is wrapped in a real `<form>` and the
+	 * confirming control becomes that form's submit button, which is the shape
+	 * a server-rendered destructive action needs — the response to the
+	 * submission is what ends the interruption, not a `close` command.
+	 */
+	export interface FormProps {
+		/** URL the confirmation submits to. Omit to submit to the current URL, as a native `<form>` with no `action` does. */
+		action?: string;
+		/** HTTP method the confirmation submits with. Defaults to {@link DEFAULT_METHOD}, since a confirmed action changes state. */
+		method?: "get" | "post";
+		/**
+		 * Hidden inputs submitted along with the confirmation — a CSRF token,
+		 * an intent discriminator, the id of the record being acted on. They
+		 * render first inside the form, before the panel's own content.
+		 */
+		fields?: RemixNode;
 	}
 
 	/**
@@ -69,6 +105,13 @@ export namespace Confirm {
 		cancelLabel: RemixNode;
 		/** Semantic color for the confirming control. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Button.Color;
+		/**
+		 * Submission the confirming control performs. Omit for a client-side
+		 * confirmation, where confirming only closes the panel and whatever
+		 * else should happen is left to the page. Set it for a server-side
+		 * action, where confirming submits a real form.
+		 */
+		form?: FormProps;
 		/** Per-part styling for this wrapper's internally composed elements. */
 		parts?: PartsProps;
 	}
@@ -96,6 +139,16 @@ export namespace Confirm {
  * available for a confirmation prompt whose layout or wiring this wrapper
  * doesn't cover.
  *
+ * Without {@link Confirm.Props.form}, confirming only closes the panel — the
+ * client-side shape, where the page decides what a confirmed decision means.
+ * Passing `form` switches to the server-side shape instead: the panel's
+ * content is wrapped in a real `<form>` carrying that `action`/`method` plus
+ * any hidden `fields`, and the confirming control becomes its submit button,
+ * so the action runs as an ordinary form submission with no client JavaScript
+ * involved. Since that mode renders a `<form>`, a submitting panel must not
+ * sit inside another form's markup, the same nesting rule the platform
+ * already imposes.
+ *
  * @param handle Runtime handle carrying the panel's props and this instance's stable identifier.
  * @returns The render function producing the confirmation prompt's markup.
  * @example
@@ -115,6 +168,14 @@ export namespace Confirm {
  * 	cancelLabel={t("actions.cancel")}
  * 	color="brand"
  * />
+ * @example
+ * <Confirm
+ * 	id="revoke-session"
+ * 	title={t("session.revokeTitle")}
+ * 	confirmLabel={t("actions.revoke")}
+ * 	cancelLabel={t("actions.cancel")}
+ * 	form={{ action: revokeUrl, fields: <input type="hidden" name="csrf" value={token} /> }}
+ * />
  */
 export function Confirm(handle: Handle<Confirm.Props>) {
 	return () => {
@@ -125,6 +186,7 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 			confirmLabel,
 			cancelLabel,
 			color,
+			form,
 			"aria-labelledby": ariaLabelledByProp,
 			"aria-describedby": ariaDescribedByProp,
 			parts,
@@ -134,15 +196,8 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let titleId = `${handle.id}-title`;
 		let descriptionId = description ? `${handle.id}-description` : undefined;
-
-		return (
-			<AlertDialog
-				{...rest}
-				id={id}
-				aria-labelledby={ariaLabelledByProp ?? titleId}
-				aria-describedby={ariaDescribedByProp ?? descriptionId}
-				mix={mix}
-			>
+		let content = (
+			<>
 				<AlertDialog.Header mix={parts?.header}>
 					<AlertDialog.Title id={titleId} mix={parts?.title}>
 						{title}
@@ -157,10 +212,38 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 					<AlertDialog.Cancel commandfor={id} mix={parts?.cancel}>
 						{cancelLabel}
 					</AlertDialog.Cancel>
-					<AlertDialog.Action commandfor={id} color={resolvedColor} mix={parts?.action}>
+					<AlertDialog.Action
+						type={form ? "submit" : undefined}
+						commandfor={form ? undefined : id}
+						color={resolvedColor}
+						mix={parts?.action}
+					>
 						{confirmLabel}
 					</AlertDialog.Action>
 				</AlertDialog.Footer>
+			</>
+		);
+
+		return (
+			<AlertDialog
+				{...rest}
+				id={id}
+				aria-labelledby={ariaLabelledByProp ?? titleId}
+				aria-describedby={ariaDescribedByProp ?? descriptionId}
+				mix={mix}
+			>
+				{form ? (
+					<form
+						action={form.action}
+						method={form.method ?? DEFAULT_METHOD}
+						mix={[flex(), flexCol(), gap(PANEL_GAP), parts?.form]}
+					>
+						{form.fields}
+						{content}
+					</form>
+				) : (
+					content
+				)}
 			</AlertDialog>
 		);
 	};

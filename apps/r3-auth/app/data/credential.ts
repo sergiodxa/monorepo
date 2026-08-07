@@ -24,15 +24,26 @@ export default class Credential {
 	/**
 	 * Stores a password credential for a subject. `password_hash` must already be a
 	 * PBKDF2 hash: this never sees a plaintext password.
+	 *
+	 * @param verifiedAt - Epoch milliseconds at which the credential became usable, or
+	 *   `null` to store it unusable — sign-in refuses a credential with no `verified_at`,
+	 *   and nothing in this server sets the column afterwards, so `null` means "this
+	 *   password can never be used" rather than "not yet".
 	 */
 	static async create(
 		db: Database,
 		subjectId: string,
 		passwordHash: string,
+		verifiedAt: number | null,
 	): Promise<SelectCredential> {
 		return await db.create(
 			credentials,
-			{ id: generateUUID(), subject_id: subjectId, password_hash: passwordHash },
+			{
+				id: generateUUID(),
+				subject_id: subjectId,
+				password_hash: passwordHash,
+				verified_at: verifiedAt,
+			},
 			{ touch: true, returnRow: true },
 		);
 	}
