@@ -5,6 +5,10 @@
  * command at all — while a button carrying no command is left untyped, so a
  * plain submit button inside a form still submits.
  *
+ * The attribute's position is part of the contract, not only its presence: the
+ * platform decides whether the pairing is ambiguous while it parses `command`
+ * and `commandfor`, so a `type` written after them is refused all the same.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -42,6 +46,30 @@ describe(Button.name, () => {
 		let html = await renderToString(<Button type="submit">Save</Button>);
 
 		expect(html).toContain('type="submit"');
+	});
+
+	test("writes type before the command attributes, which is where the platform reads it", async () => {
+		let html = await renderToString(
+			<Button commandfor="confirm-delete" command="show-modal">
+				Delete
+			</Button>,
+		);
+
+		// Presence is not enough: the ambiguity check runs while `command`/`commandfor`
+		// are parsed, so a `type` serialized after them is not seen and the command is
+		// refused. Both attributes have to come after it.
+		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
+		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
+	});
+
+	test("writes an explicit type before the command attributes too", async () => {
+		let html = await renderToString(
+			<Button type="button" commandfor="confirm-delete" command="close">
+				Cancel
+			</Button>,
+		);
+
+		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
 	});
 
 	test("respects an explicit type even on a command invoker", async () => {

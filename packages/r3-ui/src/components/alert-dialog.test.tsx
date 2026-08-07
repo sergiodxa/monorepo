@@ -1,9 +1,11 @@
 /**
  * Tests for {@link AlertDialog}'s two footer controls: that both render an
- * explicit `type="button"`, without which the platform refuses to run their
- * Invoker Command inside a `<form>` (a button there defaults to `"submit"`,
- * and a submit button can't invoke), and that an action asked to submit
- * instead drops the command it could no longer run.
+ * explicit `type="button"` — and render it before their command attributes,
+ * without which the platform refuses to run their Invoker Command inside a
+ * `<form>` (a button there defaults to `"submit"`, a submit button can't
+ * invoke, and the check runs while the command attributes are parsed) — and
+ * that an action asked to submit instead drops the command it could no longer
+ * run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +26,17 @@ describe("AlertDialog.Cancel", () => {
 		expect(html).toContain('type="button"');
 		expect(html).toContain('command="close"');
 		expect(html).toContain('commandfor="delete-project"');
+	});
+
+	test("writes that type before the command attributes, where the platform reads it", async () => {
+		let html = await renderToString(
+			<AlertDialog.Cancel commandfor="delete-project">Cancel</AlertDialog.Cancel>,
+		);
+
+		// This control is the one the admin screens render inside a `<form>`, so it is
+		// the one whose attribute order the platform actually judges.
+		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
+		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
 	});
 
 	test('keeps type="button" even when a consumer passes it explicitly', async () => {

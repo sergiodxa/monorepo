@@ -159,9 +159,14 @@ export function Button(handle: Handle<Button.Props>) {
 		);
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type={resolvedType}
+				{...rest}
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
