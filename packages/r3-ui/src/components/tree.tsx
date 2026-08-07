@@ -370,6 +370,12 @@ Tree.LoadMoreItem = SentinelRow;
  * later, reading the button's `data-slot` marker to bind its own handling
  * to just this control.
  *
+ * `type="button"` is written before the consumer's own attributes, so a chevron
+ * carrying `command`/`commandfor` can still run its command inside a `<form>`:
+ * the platform judges whether an invoker is ambiguous while it parses the
+ * command attributes and never revisits that decision for a later `type`. A
+ * consumer passing an explicit `type` still overrides the default.
+ *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the chevron's markup.
  * @example
@@ -383,9 +389,14 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 		let { children, mix, ...rest } = handle.props;
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type="button"
+				{...rest}
 				mix={[
 					attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT }),
 					center(),

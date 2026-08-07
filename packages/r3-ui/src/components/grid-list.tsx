@@ -389,6 +389,12 @@ GridList.LoadMoreItem = SentinelRow;
  * behavior reads the button's `data-drag-handle` marker to know where a drag
  * gesture may originate within the row.
  *
+ * `type="button"` is written before the consumer's own attributes, so a handle
+ * carrying `command`/`commandfor` can still run its command inside a `<form>`:
+ * the platform judges whether an invoker is ambiguous while it parses the
+ * command attributes and never revisits that decision for a later `type`. A
+ * consumer passing an explicit `type` still overrides the default.
+ *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the handle's markup.
  * @example
@@ -402,9 +408,14 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 		let { mix, ...rest } = handle.props;
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type="button"
+				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_DRAG_HANDLE_ROLE, "data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER }),
 					fg("neutral.muted"),

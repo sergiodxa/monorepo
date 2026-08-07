@@ -497,7 +497,11 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
  * entirely from the toast's own current text color so it reads correctly
  * against every semantic tone without needing its own color prop. `type`
  * defaults to `"button"`; a consumer wiring the action to a real form sets
- * `type="submit"` instead.
+ * `type="submit"` instead. The resolved `type` is written before the consumer's
+ * own attributes, so an action carrying `command`/`commandfor` can still run its
+ * command inside a `<form>`: the platform judges whether an invoker is ambiguous
+ * while it parses the command attributes and never revisits that decision for a
+ * later `type`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action control's markup.
@@ -510,9 +514,14 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 		let resolvedType = type ?? DEFAULT_BUTTON_TYPE;
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type={resolvedType}
+				{...rest}
 				data-slot="action"
 				mix={[
 					inlineFlex(),
@@ -547,7 +556,11 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
  * from the neutral semantic tone regardless of the toast's own `color`, so
  * it always reads as the lower-emphasis choice next to {@link Toast.Action}.
  * `type` defaults to `"button"`; a consumer wiring it to a real form sets
- * `type="submit"` instead.
+ * `type="submit"` instead. The resolved `type` is written before the consumer's
+ * own attributes, so a cancel control carrying `command`/`commandfor` can still
+ * run its command inside a `<form>`: the platform judges whether an invoker is
+ * ambiguous while it parses the command attributes and never revisits that
+ * decision for a later `type`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the cancel control's markup.
@@ -560,9 +573,14 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 		let resolvedType = type ?? DEFAULT_BUTTON_TYPE;
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type={resolvedType}
+				{...rest}
 				data-slot="cancel"
 				mix={[
 					inlineFlex(),
@@ -598,6 +616,12 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
  * Invoker API through `commandfor`/`command` passed as ordinary button
  * attributes) is what actually removes the toast.
  *
+ * `type="button"` is written before the consumer's own attributes, so a dismiss
+ * control carrying `command`/`commandfor` can still run its command inside a
+ * `<form>`: the platform judges whether an invoker is ambiguous while it parses
+ * the command attributes and never revisits that decision for a later `type`. A
+ * consumer passing an explicit `type` still overrides the default.
+ *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the dismiss control's markup.
  * @example
@@ -608,9 +632,14 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 		let { mix, ...rest } = handle.props;
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
-				{...rest}
 				type="button"
+				{...rest}
 				data-slot="close"
 				mix={[
 					absolute(),
