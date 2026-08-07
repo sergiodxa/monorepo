@@ -45,6 +45,101 @@ export default {
 			unexpected:
 				"If it was not you, review your devices, sign the session out, and change your password.",
 		},
+
+		verifyEmail: {
+			subject: "Confirm your email address",
+			preview: "Confirm your email address to finish setting up your Auth account.",
+			heading: "Confirm your email address",
+			body: "Confirm that this address belongs to you, so the apps you sign in to are told your email is yours.",
+			action: "Confirm email address",
+			// The number comes from the one constant that also sets the resend window, so
+			// the copy cannot promise a lifetime the token does not have.
+			expiry:
+				"This link works for {{minutes}} minutes and can be used once. If it has expired, ask for a new one from your profile.",
+			ignore:
+				"If you did not create an Auth account and did not sign in, you can ignore this message.",
+		},
+
+		resetPassword: {
+			subject: "Reset your password",
+			preview: "Use this link to choose a new password for your Auth account.",
+			heading: "Reset your password",
+			body: "Somebody asked to reset the password on your Auth account. Choose a new one here.",
+			action: "Choose a new password",
+			// The number comes from the constant that sets the token's own lifetime, so the
+			// copy cannot promise a window the link does not have.
+			expiry: "This link works for {{minutes}} minutes and can be used once.",
+			unexpected:
+				"If you did not ask for this, you can ignore this message. Your password stays as it is until this link is used.",
+		},
+
+		passwordChanged: {
+			subject: "Your password was changed",
+			preview: "The password on your Auth account was changed.",
+			heading: "Your password was changed",
+			body: "The password on your Auth account has just been changed through a reset link.",
+			sessions:
+				"Everything that was signed in to your account has been signed out, so you will be asked to sign in again on your other devices.",
+			action: "Sign in",
+			unexpected:
+				"If this was not you, reply to this message straight away — somebody else may have access to this mailbox.",
+		},
+	},
+
+	// Copy for the password-recovery pages. Every outcome of the request form reads the
+	// same, because whether an address is registered is not something the page may reveal.
+	password: {
+		forgot: {
+			documentTitle: "Reset your password",
+			title: "Reset your password",
+			description: "We will email you a link to choose a new password.",
+			// Label of the link on the sign-in card. Phrased as the reader's problem rather than
+			// as the page's title, because that is the sentence they are scanning the card for.
+			link: "Forgot your password?",
+			email: { label: "Email", placeholder: "Email" },
+			submit: "Send reset link",
+			errors: {
+				invalid: "Enter a valid email address.",
+			},
+		},
+
+		sent: {
+			documentTitle: "Check your inbox",
+			title: "Check your inbox",
+			description:
+				"If that address belongs to an account, a link to choose a new password is on its way. It works for 30 minutes.",
+		},
+
+		reset: {
+			documentTitle: "Choose a new password",
+			title: "Choose a new password",
+			description: "Enter the password you want to use from now on.",
+			password: { label: "New password", placeholder: "New password" },
+			confirmation: { label: "Repeat new password", placeholder: "Repeat new password" },
+			submit: "Change password",
+			errors: {
+				invalid: "Use at least 8 characters.",
+				mismatch: "The two passwords do not match.",
+				failedTitle: "Something went wrong",
+				failed: "Your password was not changed. Ask for a new link and try again.",
+			},
+		},
+
+		invalid: {
+			documentTitle: "This link no longer works",
+			title: "This link no longer works",
+			description:
+				"Reset links expire and can only be used once. Ask for a new one to choose a password.",
+			action: "Ask for a new link",
+		},
+
+		done: {
+			documentTitle: "Password changed",
+			title: "Password changed",
+			description:
+				"Your new password is ready, and everything that was signed in to your account has been signed out.",
+			action: "Sign in",
+		},
 	},
 
 	scopes: {
@@ -153,6 +248,29 @@ export default {
 		signing_out: "Signing you out from all applications...",
 		redirecting: "Redirecting...",
 		continue: "Click here to continue",
+	},
+
+	// The page a verification link lands on. Every outcome a token can have gets its own
+	// heading and sentence, so nobody is left guessing whether their address is confirmed.
+	verifyEmail: {
+		documentTitle: "Email verification",
+		verified: {
+			title: "Email address confirmed",
+			description: "Thank you. This address is confirmed, and nothing else is needed here.",
+			action: "Go to your account",
+		},
+		// One message for expired, already used, and malformed alike: distinguishing them
+		// tells whoever is holding the link something they should not learn from it.
+		invalid: {
+			title: "This link no longer works",
+			description:
+				"Verification links last a few minutes and can only be used once. Sign in and ask for a new one from your profile.",
+			action: "Sign in",
+		},
+		unavailable: {
+			title: "Something went wrong",
+			description: "We could not check that link just now. Please try again in a moment.",
+		},
 	},
 
 	splat: {
@@ -409,6 +527,22 @@ export default {
 			actions: {
 				edit: "Edit Profile",
 				sessions: "Manage Sessions",
+			},
+			// The signal an unverified subject needs: the badge beside their address says what
+			// the state is, and the panel says what it costs them and how to fix it.
+			emailVerification: {
+				verified: "Verified",
+				unverified: "Unverified",
+				title: "Confirm your email address",
+				description:
+					"This address has not been confirmed yet, so every app you sign in to is told it is unverified.",
+				action: "Send a verification email",
+				sent: "Verification email sent. The link in it works for {{minutes}} minutes.",
+				// Said as "already sent" rather than as a refusal: the outstanding link is still
+				// valid for exactly as long as this window lasts, so there is nothing to wait for.
+				cooldown:
+					"A verification email was sent to you in the last few minutes. The link in it still works — check your inbox.",
+				failed: "The verification email could not be sent. Please try again in a moment.",
 			},
 		},
 		edit: {

@@ -70,4 +70,39 @@ export default class Credential {
 
 		return result.affectedRows ?? 0;
 	}
+
+	/**
+	 * Sets a subject's password to a new hash and marks the credential usable, creating it
+	 * when the subject had none.
+	 *
+	 * `verified_at` is stamped because the only caller has already established that whoever
+	 * is doing this reads the account's inbox: the column records that this password is
+	 * known to belong to this account, and inbox control is the strongest proof of that
+	 * this server can obtain. Leaving it null would store a hash sign-in refuses forever,
+	 * which is the failure the recovery flow exists to end rather than to reproduce.
+	 *
+	 * Two statements rather than one because the database has no interactive transactions:
+	 * the update is attempted first and an insert only follows when it matched nothing, so
+	 * a failure between them leaves either the old credential or none — never a half-written
+	 * one.
+	 *
+	 * @param passwordHash - An already-derived PBKDF2 hash; this never sees a plaintext password.
+	 * @param verifiedAt - Epoch milliseconds the credential became usable at.
+	 */
+	static async setVerifiedPassword(
+		db: Database,
+		subjectId: string,
+		passwordHash: string,
+		verifiedAt: number,
+	): Promise<void> {
+		let result = await db.updateMany(
+			credentials,
+			{ password_hash: passwordHash, verified_at: verifiedAt, updated_at: Date.now() },
+			{ where: { subject_id: subjectId } },
+		);
+
+		if ((result.affectedRows ?? 0) > 0) return;
+
+		await Credential.create(db, subjectId, passwordHash, verifiedAt);
+	}
 }

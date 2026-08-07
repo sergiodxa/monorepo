@@ -56,7 +56,8 @@ describe("GET /userinfo", () => {
 		expect(await response.json()).toEqual({
 			sub: fixtures.subjectId,
 			email: "jane@example.com",
-			email_verified: false,
+			// The fixture's address is confirmed, and the claim reports the column as it is.
+			email_verified: true,
 			name: "Jane Doe",
 			preferred_username: "jane",
 			picture: "https://example.com/jane.png",

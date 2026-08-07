@@ -3,6 +3,11 @@
  * identity it returns into one of this server's subjects — provisioning the subject,
  * its connection and its billing customer on a first sign-in.
  *
+ * The provider's address list is read here as well, because the per-address `verified`
+ * flag is published only there and nowhere on a profile, and `subjects.email_verified_at`
+ * is served to relying parties as `email_verified`. Assuming it would record a
+ * verification this server never observed.
+ *
  * The database has no transactions, so provisioning writes sequentially and undoes
  * what it created when a later step fails; a half-provisioned person would be able to
  * sign in with no way to bill them, or be locked out by a row they cannot see.
@@ -17,10 +22,12 @@ import type { GitHubAuthProfile } from "remix/auth";
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/fetch-router";
 
-import { failure, success } from "@pkg/result";
+import { failure, isFailure, success } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
+import * as s from "remix/data-schema";
 
 import Connection from "~/app/data/connection";
 import Subject from "~/app/data/subject";
@@ -29,6 +36,20 @@ import routes from "~/routes/web";
 
 /** Value stored in `connections.provider` for a GitHub identity. */
 const PROVIDER = "github";
+
+/** GitHub's address list, the only place the per-address verification flag is published. */
+const GITHUB_USER_EMAILS_ENDPOINT = "https://api.github.com/user/emails";
+
+/**
+ * The address list as this server reads it: the address and whether GitHub has verified it,
+ * with every other field the endpoint returns dropped.
+ *
+ * Wrapped in an object because the validator takes a keyed input, and the list itself is a
+ * bare JSON array; the wrapper never leaves this module.
+ */
+const GITHUB_EMAILS_SCHEMA = s.object({
+	emails: s.array(s.object({ email: s.string(), verified: s.boolean() })),
+});
 
 /**
  * Reason reported when provisioning was rolled back. Deliberately says nothing about
@@ -44,6 +65,28 @@ const PROVISIONING_FAILED = "Could not complete the sign-up. Please try again.";
  * this database, so it is read here rather than being lost to the narrower type.
  */
 type GitHubProfile = GitHubAuthProfile & { node_id?: unknown };
+
+/**
+ * A completed GitHub sign-in: the profile, and whether GitHub itself reports the address
+ * on it as verified.
+ *
+ * The flag is carried separately because the profile has no field for it — the address
+ * list is a second request, and the provider that fetches it keeps only the address it
+ * chose. Without this, "verified" could only ever be an assumption about GitHub's
+ * behaviour, and this server would record a verification it never observed.
+ */
+export interface GitHubIdentity {
+	/** The profile GitHub authenticated. */
+	profile: GitHubProfile;
+	/**
+	 * Whether GitHub reports {@link GitHubIdentity.profile}'s own address as verified.
+	 *
+	 * `false` whenever that cannot be established — no address, an unreadable list, a
+	 * list the address is absent from — so an unproven address is never recorded as
+	 * proven because a request failed.
+	 */
+	emailVerified: boolean;
+}
 
 /**
  * Why a GitHub sign-in could not be completed, in the shape an authorization error
@@ -94,7 +137,63 @@ export async function startGitHubLogin(ctx: RequestContext): Promise<Response> {
 }
 
 /**
- * Completes the GitHub callback and returns the profile it authenticated.
+ * Asks GitHub whether it has verified one specific address on the account that just
+ * authorized this server.
+ *
+ * The address list is read here rather than trusted from the profile because the profile
+ * carries no verification flag at all: the `verified` boolean lives only on this
+ * endpoint's entries, and it is dropped before a profile is assembled. `user:email` is
+ * among the scopes the flow requests, so the token this runs with can read it.
+ *
+ * Fails closed in every direction — a refused or unreadable response, and an address the
+ * list does not contain, all report `false`. The comparison is case-insensitive because
+ * the mailbox part is the only case-sensitive piece of an address in theory and never in
+ * practice, and treating `A@x` and `a@x` as different addresses here would report a
+ * verified address as unverified.
+ *
+ * @param accessToken - The provider token the callback exchanged; never logged.
+ * @param email - The address to look up, as the profile reported it.
+ */
+async function isGitHubEmailVerified(accessToken: string, email: string | null): Promise<boolean> {
+	if (!email) return false;
+
+	let logger = getContext().logger;
+
+	try {
+		let response = await fetch(GITHUB_USER_EMAILS_ENDPOINT, {
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${accessToken}`,
+				"User-Agent": "auth.sergiodxa.com",
+			},
+		});
+
+		if (!response.ok) {
+			// The status only; the body can quote the address the request was about.
+			logger.info("github_emails_unreadable", { status: response.status });
+			return false;
+		}
+
+		let parsed = await validate({ emails: await response.json() }, GITHUB_EMAILS_SCHEMA);
+		if (isFailure(parsed)) {
+			logger.info("github_emails_unreadable", { status: response.status });
+			return false;
+		}
+
+		let wanted = email.toLowerCase();
+
+		return parsed.data.emails.some(
+			(entry) => entry.verified && entry.email.toLowerCase() === wanted,
+		);
+	} catch {
+		logger.info("github_emails_request_failed");
+		return false;
+	}
+}
+
+/**
+ * Completes the GitHub callback and returns the identity it authenticated, together with
+ * GitHub's own verdict on the address.
  *
  * A callback carrying the provider's own `error` is reported as `access_denied`, which
  * is what a person declining the authorization looks like; anything else becomes
@@ -103,7 +202,7 @@ export async function startGitHubLogin(ctx: RequestContext): Promise<Response> {
  */
 export async function finishGitHubLogin(
 	ctx: RequestContext,
-): Promise<Result<GitHubProfile, ProviderLoginError>> {
+): Promise<Result<GitHubIdentity, ProviderLoginError>> {
 	let providerError = ctx.url.searchParams.get("error");
 
 	if (providerError) {
@@ -113,7 +212,12 @@ export async function finishGitHubLogin(
 
 	try {
 		let { result } = await finishExternalAuth(createProvider(ctx.url.origin), ctx);
-		return success(result.profile as GitHubProfile);
+		let profile = result.profile as GitHubProfile;
+
+		return success({
+			profile,
+			emailVerified: await isGitHubEmailVerified(result.tokens.accessToken, profile.email ?? null),
+		});
 	} catch {
 		return failure(new ProviderLoginError("server_error", "GitHub sign-in could not be completed"));
 	}
@@ -140,17 +244,23 @@ function externalIdOf(profile: GitHubProfile): string {
  * only thing tying them together, and silently adopting an existing account on that
  * basis is an account takeover if the address was never proven.
  *
+ * A subject provisioned here starts verified only when GitHub said the address is
+ * verified. When it did not, `email_verified_at` stays null, which is what makes
+ * `email_verified` in UserInfo the truth rather than an assumption, and what puts the
+ * account into the flow that asks the person to prove the address.
+ *
  * @param db - Database the subject and connection are written to.
  * @param polar - Billing client the subject is mirrored into.
- * @param profile - The profile GitHub authenticated.
+ * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
 export async function resolveGitHubSubject(
 	db: Database,
 	polar: PolarClient,
-	profile: GitHubProfile,
+	identity: GitHubIdentity,
 ): Promise<Result<string, ProviderLoginError>> {
 	let logger = getContext().logger;
+	let { profile, emailVerified } = identity;
 	let externalId = externalIdOf(profile);
 
 	let connection =
@@ -185,9 +295,11 @@ export async function resolveGitHubSubject(
 		display_name: profile.name ?? profile.login,
 		username: profile.login,
 		avatar: profile.avatar_url ?? "",
-		// GitHub only hands out an address it has verified for the account, so the
-		// subject starts verified and never has to prove it again here.
-		email_verified_at: Date.now(),
+		// Stamped only when GitHub's address list actually said `verified`. Anything else —
+		// an unverified entry, an unreadable list, an address the list does not hold —
+		// leaves this null, because a verification nobody observed is worse than none: it
+		// is published to every relying party as `email_verified: true`.
+		email_verified_at: emailVerified ? Date.now() : null,
 	});
 
 	try {
@@ -210,7 +322,7 @@ export async function resolveGitHubSubject(
 		return failure(new ProviderLoginError("server_error", PROVISIONING_FAILED));
 	}
 
-	logger.info("github_subject_created", { subjectId: subject.id });
+	logger.info("github_subject_created", { subjectId: subject.id, emailVerified });
 
 	return success(subject.id);
 }

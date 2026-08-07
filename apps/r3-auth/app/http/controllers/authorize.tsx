@@ -43,6 +43,7 @@ import {
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
 import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators/authorize";
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
+import { sendVerificationEmail } from "~/app/services/email-verification";
 import { startGitHubLogin } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
@@ -172,6 +173,7 @@ function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState
 					submit: ctx.i18next.t("authorize.forms.credentials.cta"),
 					github: ctx.i18next.t("authorize.forms.github.cta"),
 					separator: ctx.i18next.t("authorize.forms.separator"),
+					forgotPassword: ctx.i18next.t("password.forgot.link"),
 				}}
 			/>
 		</DocumentLayout>,
@@ -391,6 +393,15 @@ export default createController(routes.authorize, {
 			// Queued, never awaited: the notice is flushed after the response, so a refused
 			// delivery cannot turn a completed sign-in into an error the person sees.
 			await notifyNewSignIn(ctx, db, login.data.subjectId);
+
+			// Only ever after a *successful* sign-in, and only from here: the refusal branch
+			// above returns without reaching this line, so an address somebody merely typed at
+			// the form is never mailed. It decides for itself whether a message is needed, from
+			// the one condition — `email_verified_at` is null — so this path does not have to
+			// know how they signed in. A registration lands here too, which is what gives a
+			// brand-new password account its first verification message.
+			await sendVerificationEmail(ctx, db, login.data.subjectId);
+
 			// Cleared once answered, except for this server's own client: its callback is
 			// the next request in the same flow and still has to check the `state` and the
 			// redirect URI this request parked.

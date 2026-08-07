@@ -43,15 +43,37 @@ const GITHUB_PROFILE = {
 
 let server = setupServer();
 
-/** Answers the token exchange and the profile fetch with {@link GITHUB_PROFILE}. */
-function respondWithProfile(profile: Record<string, unknown> = GITHUB_PROFILE) {
+/** One entry of GitHub's address list, as the endpoint returns it. */
+interface GitHubEmailEntry {
+	email: string;
+	primary: boolean;
+	verified: boolean;
+}
+
+/** The address list a test answers with unless it asks for another. */
+const VERIFIED_EMAILS: GitHubEmailEntry[] = [
+	{ email: GITHUB_PROFILE.email, primary: true, verified: true },
+];
+
+/**
+ * Answers the token exchange, the profile fetch and the address list.
+ *
+ * The address list is a parameter because it is the only place GitHub publishes whether it
+ * has verified an address, and what this server records for a new subject follows from it.
+ *
+ * @param emails - The list, or `null` to answer the endpoint with a server error.
+ */
+function respondWithProfile(
+	profile: Record<string, unknown> = GITHUB_PROFILE,
+	emails: GitHubEmailEntry[] | null = VERIFIED_EMAILS,
+) {
 	server.use(
 		http.post(TOKEN_ENDPOINT, () =>
 			HttpResponse.json({ access_token: "gho_test", token_type: "bearer" }),
 		),
 		http.get(USER_ENDPOINT, () => HttpResponse.json(profile)),
 		http.get(EMAILS_ENDPOINT, () =>
-			HttpResponse.json([{ email: GITHUB_PROFILE.email, primary: true, verified: true }]),
+			emails === null ? new HttpResponse(null, { status: 500 }) : HttpResponse.json(emails),
 		),
 	);
 }
@@ -179,7 +201,8 @@ describe("GET /auth/:provider/callback", () => {
 		expect(subject?.username).toBe(GITHUB_PROFILE.login);
 		expect(subject?.display_name).toBe(GITHUB_PROFILE.name);
 		expect(subject?.avatar).toBe(GITHUB_PROFILE.avatar_url);
-		// GitHub only releases an address it has verified, so the subject starts verified.
+		// GitHub's address list reported this address `verified`, which is the only thing
+		// that stamps the column.
 		expect(subject?.email_verified_at).not.toBeNull();
 
 		// The node id, not the numeric one: it is the identifier every connection this
@@ -188,6 +211,65 @@ describe("GET /auth/:provider/callback", () => {
 			where: { provider: "github", external_id: GITHUB_PROFILE.node_id },
 		});
 		expect(connection?.subject_id).toBe(subject!.id);
+	});
+
+	test("leaves the address unverified when GitHub reports it unverified", async () => {
+		// The regression this guards: the address used to be stamped verified unconditionally,
+		// on the assumption that GitHub only releases verified addresses. It does not, and the
+		// column is published to every relying party as `email_verified`.
+		respondWithProfile(GITHUB_PROFILE, [
+			{ email: GITHUB_PROFILE.email, primary: true, verified: false },
+		]);
+
+		let response = await finishFlow({ code: "gh-code", state: await startFlow() });
+
+		// Still signed in: an unproven address is not a refusal, it is an unproven address.
+		expect(response.status).toBe(303);
+		expect(new URL(response.headers.get("location")!).searchParams.get("code")).toBeTruthy();
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+		expect(subject).not.toBeNull();
+		expect(subject?.email_verified_at).toBeNull();
+	});
+
+	test("leaves the address unverified when GitHub's address list does not contain it", async () => {
+		respondWithProfile(GITHUB_PROFILE, [
+			{ email: "someone-else@example.com", primary: true, verified: true },
+		]);
+
+		await finishFlow({ code: "gh-code", state: await startFlow() });
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+		expect(subject?.email_verified_at).toBeNull();
+	});
+
+	test("leaves the address unverified when the address list cannot be read", async () => {
+		respondWithProfile(GITHUB_PROFILE, null);
+
+		await finishFlow({ code: "gh-code", state: await startFlow() });
+
+		// Fails closed: a request that did not answer is not evidence the address is proven.
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+		expect(subject?.email_verified_at).toBeNull();
+	});
+
+	test("verifies an address GitHub reports under a different case", async () => {
+		respondWithProfile(GITHUB_PROFILE, [
+			{ email: GITHUB_PROFILE.email.toUpperCase(), primary: true, verified: true },
+		]);
+
+		await finishFlow({ code: "gh-code", state: await startFlow() });
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+		expect(subject?.email_verified_at).not.toBeNull();
 	});
 
 	test("sets the browser-state cookie with the attributes session management needs", async () => {

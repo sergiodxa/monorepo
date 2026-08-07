@@ -113,7 +113,8 @@ describe("GET /api/subjects/:subjectId", () => {
 		expect(body.subject.emailAddress).toBe("jane@example.com");
 		expect(body.subject.avatar).toBe("https://example.com/jane.png");
 		expect(body.subject.role).toBe("user");
-		expect(body.subject.emailVerifiedAt).toBeNull();
+		// ISO-8601, not the epoch milliseconds the column holds: the envelope's own contract.
+		expect(body.subject.emailVerifiedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 		expect(new Date(body.subject.createdAt).getTime()).toBeGreaterThan(0);
 		expect(body.subject.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
 		expect(body.subject.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);

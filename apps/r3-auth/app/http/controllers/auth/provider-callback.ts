@@ -29,6 +29,7 @@ import { createOidcProvider } from "~/app/auth/repository";
 import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
 import { getAuthz, unsetAuthz } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
+import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
@@ -105,13 +106,13 @@ export default createAction(
 			return badRequest({ message: "Invalid request" });
 		}
 
-		let profile = await finishGitHubLogin(ctx);
-		if (isFailure(profile)) {
-			ctx.logger.info("oauth_provider_callback_failed", { error: profile.error.code });
-			return await errorResponse(ctx, authz, profile.error);
+		let identity = await finishGitHubLogin(ctx);
+		if (isFailure(identity)) {
+			ctx.logger.info("oauth_provider_callback_failed", { error: identity.error.code });
+			return await errorResponse(ctx, authz, identity.error);
 		}
 
-		let subject = await resolveGitHubSubject(db, polar, profile.data);
+		let subject = await resolveGitHubSubject(db, polar, identity.data);
 		if (isFailure(subject)) {
 			ctx.logger.info("oauth_subject_resolution_failed", { error: subject.error.code });
 			return await errorResponse(ctx, authz, subject.error);
@@ -152,6 +153,12 @@ export default createAction(
 		// Queued, never awaited: the notice is flushed after the response, so a refused
 		// delivery cannot turn a completed sign-in into an error the person sees.
 		await notifyNewSignIn(ctx, db, subject.data);
+
+		// The same single condition the credential path applies, on the same successful-only
+		// branch: null `email_verified_at` means nothing has proven this address, which for a
+		// provider sign-in means the provider did not report it verified. A provider that did
+		// leaves the column set, so this sends nothing and no method check is needed here.
+		await sendVerificationEmail(ctx, db, subject.data);
 
 		// Cleared once answered, except for this server's own client: its callback is the
 		// next request in the same flow and still has to check the `state` and the redirect

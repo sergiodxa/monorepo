@@ -27,6 +27,7 @@ import grants from "~/app/http/controllers/account/grants";
 import profile from "~/app/http/controllers/account/profile";
 import profileEdit from "~/app/http/controllers/account/profile-edit";
 import sessions from "~/app/http/controllers/account/sessions";
+import verifyEmailResend from "~/app/http/controllers/account/verify-email-resend";
 import adminClient from "~/app/http/controllers/admin/client";
 import adminClientEdit from "~/app/http/controllers/admin/client-edit";
 import adminClientNew from "~/app/http/controllers/admin/client-new";
@@ -48,7 +49,10 @@ import revoke from "~/app/http/controllers/oauth/revoke";
 import token from "~/app/http/controllers/oauth/token";
 import checkSession from "~/app/http/controllers/oidc/check-session";
 import logout from "~/app/http/controllers/oidc/logout";
+import passwordForgot from "~/app/http/controllers/password/forgot";
+import passwordReset from "~/app/http/controllers/password/reset";
 import userinfo from "~/app/http/controllers/userinfo";
+import verifyEmail from "~/app/http/controllers/verify-email";
 import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
@@ -122,6 +126,14 @@ export default function application(options: application.Options) {
 	router.map(routes.healthcheck, healthcheck);
 	router.map(routes.userinfo, userinfo);
 	router.map(routes.authorize, authorizeController);
+	// Outside `/account`: the link is followed from an inbox, so the token is what authorizes
+	// the write and a session guard here would refuse a valid one.
+	router.map(routes.verifyEmail, verifyEmail);
+
+	// Unauthenticated by definition — a person who cannot sign in is the only caller — so
+	// both stay inside cross-origin protection and carry their own rate limiting.
+	router.map(routes.password.forgot, passwordForgot);
+	router.map(routes.password.reset, passwordReset);
 
 	router.map(routes.auth.provider, providerLogin);
 	router.map(routes.auth.providerCallback, providerCallback);
@@ -138,6 +150,7 @@ export default function application(options: application.Options) {
 	router.map(routes.account.profileEdit, profileEdit);
 	router.map(routes.account.sessions, sessions);
 	router.map(routes.account.grants, grants);
+	router.map(routes.account.verifyEmailResend, verifyEmailResend);
 
 	router.map(routes.wellKnown.openidConfiguration, openidConfiguration);
 	router.map(routes.wellKnown.oauthAuthorizationServer, oauthAuthorizationServer);

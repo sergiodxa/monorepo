@@ -14,7 +14,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { Button, Card, Form, Heading, Logo, Separator, Text, TextField } from "@pkg/r3-ui";
+import { Button, Card, Form, Heading, Link, Logo, Separator, Text, TextField } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import {
 	block,
@@ -69,6 +69,8 @@ namespace AuthorizeView {
 			submit: string;
 			github: string;
 			separator: string;
+			/** Label of the link to the password-recovery form. */
+			forgotPassword: string;
 		};
 		/**
 		 * Whether the credential form is offered at all, which `prompt=create` asks for.
@@ -303,6 +305,17 @@ export default function AuthorizeView(handle: Handle<AuthorizeView.Setup>) {
 									<span>{labels.github}</span>
 								</Button>
 							</Form>
+
+							{/* Always offered, not only alongside the credential form: somebody who cannot
+							remember their password is not registering, and the form is shown for
+							`prompt=create` alone — so gating the link the same way would hide it from
+							exactly the person who needs it. Last in the card, under both ways in, which
+							is where a reader looks once neither has worked. */}
+							<Text mix={[m(0), text("sm"), textAlign("center")]}>
+								<Link href={routes.password.forgot.index.href()} color="brand">
+									{labels.forgotPassword}
+								</Link>
+							</Text>
 						</Card.Content>
 					</Card>
 				</section>

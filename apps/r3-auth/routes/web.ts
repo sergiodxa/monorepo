@@ -27,6 +27,19 @@ export default route({
 	userinfo: get("/userinfo"),
 	/** GET renders the sign-in UI (or performs SSO); POST logs in with credentials. */
 	authorize: form("/authorize"),
+	/**
+	 * Consumes an email-verification token. Deliberately outside `/account`: the link is
+	 * followed from an inbox, which is often a browser holding no session at all, and a
+	 * guard there would answer a valid token with a sign-in page.
+	 */
+	verifyEmail: get("/verify-email"),
+
+	password: {
+		/** GET asks for an address; POST mails a reset link when one belongs to a subject. */
+		forgot: form("/password/forgot"),
+		/** GET renders the new-password form for a token; POST consumes it and sets the hash. */
+		reset: form("/password/reset"),
+	},
 
 	auth: {
 		provider: post("/auth/:provider"),
@@ -57,6 +70,8 @@ export default route({
 		profileEdit: form("/account/profile/edit"),
 		sessions: form("/account/sessions"),
 		grants: form("/account/grants"),
+		/** Mails a fresh verification link to the signed-in subject's own address. */
+		verifyEmailResend: post("/account/verify-email/resend"),
 	},
 
 	admin: {
