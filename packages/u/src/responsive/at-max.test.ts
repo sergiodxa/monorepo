@@ -20,10 +20,14 @@ function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
 describe("atMax", () => {
 	test("nests the wrapped utility's styles under a max-width container query for a known name", () => {
 		expect(styles(atMax("md", p(4)))).toEqual({
-			"@container (max-width: var(--ui-container-md, 36rem))": {
+			"@container (max-width: 36rem)": {
 				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
 			},
 		});
+	});
+
+	test("resolves a named step to a literal length, never a var() reference", () => {
+		expect(Object.keys(styles(atMax("lg", p(4))))[0]).not.toInclude("var(");
 	});
 
 	test("a literal CSS length is used as-is, not wrapped in a var() token reference", () => {
@@ -36,7 +40,7 @@ describe("atMax", () => {
 
 	test("a third argument targets a specific named container instead of the nearest one", () => {
 		expect(styles(atMax("md", "sidebar", p(4)))).toEqual({
-			"@container sidebar (max-width: var(--ui-container-md, 36rem))": {
+			"@container sidebar (max-width: 36rem)": {
 				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
 			},
 		});

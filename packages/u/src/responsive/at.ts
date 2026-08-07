@@ -6,7 +6,7 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import type { ContainerName } from "../types";
 
 import { compose, nest } from "../internal/descriptor";
-import { container } from "../internal/tokens";
+import { containerLength } from "../internal/tokens";
 
 /**
  * A container query, never a viewport media query — the nearest ancestor
@@ -19,10 +19,16 @@ import { container } from "../internal/tokens";
  * nearest; useful once more than one ancestor establishes a container and
  * a query needs to skip past the closest one.
  *
+ * A named step resolves to its literal length here, not to the
+ * `var(--ui-container-*)` reference the same step gets in a property value:
+ * an at-rule condition is evaluated before custom properties are
+ * substituted, so a `var()` in the condition would emit a rule that never
+ * matches at any width.
+ *
  * @example u.at("md", [u.p(6), u.hstack({ gap: 4 })])
- * @example css({ "@container (min-width: var(--ui-container-md, 36rem))": { padding: "...", display: "flex" } })
+ * @example css({ "@container (min-width: 36rem)": { padding: "...", display: "flex" } })
  * @example u.at("md", "sidebar", u.p(6))
- * @example css({ "@container sidebar (min-width: var(--ui-container-md, 36rem))": { padding: "..." } })
+ * @example css({ "@container sidebar (min-width: 36rem)": { padding: "..." } })
  */
 export function at<Node extends Element = Element>(
 	size: ContainerName | (string & {}),
@@ -40,7 +46,7 @@ export function at<Node extends Element = Element>(
 ): UtilityMixin<Node> {
 	let name = typeof nameOrInput === "string" ? nameOrInput : undefined;
 	let input = typeof nameOrInput === "string" ? maybeInput : nameOrInput;
-	let condition = `(min-width: ${container(size)})`;
+	let condition = `(min-width: ${containerLength(size)})`;
 	let query = name ? `${name} ${condition}` : condition;
 	return compose(input, (styles) => nest(`@container ${query}`, styles));
 }
@@ -52,7 +58,7 @@ export function at<Node extends Element = Element>(
  * container-name targeting as {@link at}.
  *
  * @example u.atMax("md", [u.p(2), u.flexCol()])
- * @example css({ "@container (max-width: var(--ui-container-md, 36rem))": { padding: "...", flexDirection: "column" } })
+ * @example css({ "@container (max-width: 36rem)": { padding: "...", flexDirection: "column" } })
  * @example u.atMax("40rem", "ui-dialog", u.flexCol())
  * @example css({ "@container ui-dialog (max-width: 40rem)": { flexDirection: "column" } })
  */
@@ -72,7 +78,7 @@ export function atMax<Node extends Element = Element>(
 ): UtilityMixin<Node> {
 	let name = typeof nameOrInput === "string" ? nameOrInput : undefined;
 	let input = typeof nameOrInput === "string" ? maybeInput : nameOrInput;
-	let condition = `(max-width: ${container(size)})`;
+	let condition = `(max-width: ${containerLength(size)})`;
 	let query = name ? `${name} ${condition}` : condition;
 	return compose(input, (styles) => nest(`@container ${query}`, styles));
 }

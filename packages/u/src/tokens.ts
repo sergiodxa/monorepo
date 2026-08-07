@@ -1,7 +1,8 @@
 /**
  * Public entrypoint for this package's pure token resolvers — `spacing()`,
- * `color()`, `radius()`, `font()`, `text()`, `container()`, `shadow()`,
- * `blur()` — for component packages that need to build a larger CSS object
+ * `color()`, `radius()`, `font()`, `text()`, `container()`,
+ * `containerLength()`, `shadow()`, `blur()` — for component packages that
+ * need to build a larger CSS object
  * without duplicating this package's token-resolution logic. These resolvers
  * are plain string functions: they don't call `css()`, build a mixin, or
  * register anything at runtime.

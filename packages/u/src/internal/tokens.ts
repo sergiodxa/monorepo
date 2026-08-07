@@ -193,12 +193,14 @@ const CONTAINER_FALLBACKS: Record<ContainerName, string> = {
 
 /**
  * Resolves a {@link ContainerName} to `var(--ui-container-{name}, fallback)`,
- * the length `u.at()` compares the nearest container's inline size against.
- * A literal length that isn't a recognized scale step (a one-off breakpoint
- * like `"40rem"`) passes through unchanged instead of being treated as an
- * app-extensible token name — see {@link radius} for the same rule. This is
- * what lets `u.at("40rem", input)` express a one-off `@container` breakpoint
- * exactly, rather than silently becoming `var(--ui-container-40rem, 36rem)`.
+ * the container scale as a *property value*, where the indirection is what
+ * makes the scale themable. A literal length that isn't a recognized scale
+ * step (a one-off breakpoint like `"40rem"`) passes through unchanged
+ * instead of being treated as an app-extensible token name — see
+ * {@link radius} for the same rule.
+ *
+ * At-rule conditions can't read custom properties at all, so query builders
+ * resolve the same names through {@link containerLength} instead.
  *
  * @example container("md") // "var(--ui-container-md, 36rem)"
  * @example container("40rem") // "40rem"
@@ -207,6 +209,26 @@ export function container(name: ContainerName | (string & {})): string {
 	if (isLength(name)) return name;
 	let fallback = CONTAINER_FALLBACKS[name as ContainerName] ?? "36rem";
 	return varUtility(`ui-container-${name}`, fallback);
+}
+
+/**
+ * The at-rule counterpart to {@link container}: resolves a
+ * {@link ContainerName} to its literal length, never a `var()` reference. A
+ * literal length passes through unchanged, exactly as in {@link container}.
+ *
+ * `@container`/`@media` *conditions* are evaluated before custom properties
+ * are substituted, so a `var()` inside one makes the whole at-rule inert —
+ * it parses, it is emitted, and it never matches at any size. Only the
+ * declarations *inside* an at-rule can read custom properties, which is why
+ * {@link container} still resolves to `var(--ui-container-*, fallback)` for
+ * property values, where the indirection is what makes the scale themable.
+ *
+ * @example containerLength("md") // "36rem"
+ * @example containerLength("40rem") // "40rem"
+ */
+export function containerLength(name: ContainerName | (string & {})): string {
+	if (isLength(name)) return name;
+	return CONTAINER_FALLBACKS[name as ContainerName] ?? "36rem";
 }
 
 const SHADOW_FALLBACKS: Record<ShadowName, string> = {

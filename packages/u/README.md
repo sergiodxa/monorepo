@@ -13517,13 +13517,13 @@ Nothing resolves at all without an ancestor declaring a container — use `u.con
 
 **Parameters:**
 
-- `size`: The inline size to compare the container against. A named scale step resolves through `var(--ui-container-{name}, fallback)`; a raw CSS length passes through literally, so a one-off breakpoint stays exact instead of becoming `var(--ui-container-40rem, ...)`.
-  - `"xs"` — `var(--ui-container-xs, 20rem)`
-  - `"sm"` — `var(--ui-container-sm, 24rem)`
-  - `"md"` — `var(--ui-container-md, 36rem)`
-  - `"lg"` — `var(--ui-container-lg, 48rem)`
-  - `"xl"` — `var(--ui-container-xl, 64rem)`
-  - `"2xl"` — `var(--ui-container-2xl, 80rem)`
+- `size`: The inline size to compare the container against. A named scale step resolves to its literal length, and a raw CSS length passes through literally. Nothing here is ever wrapped in `var(--ui-container-{name}, fallback)`: an at-rule condition is evaluated before custom properties are substituted, so a `var()` in the condition would emit a rule that never matches at any width. The `var()` form is for property values only.
+  - `"xs"` — `20rem`
+  - `"sm"` — `24rem`
+  - `"md"` — `36rem`
+  - `"lg"` — `48rem`
+  - `"xl"` — `64rem`
+  - `"2xl"` — `80rem`
   - a raw CSS length (`"40rem"`, `"640px"`) — used verbatim. Only an atomic number-plus-unit is detected as a length, so a `calc(...)` or `clamp(...)` expression is _not_ passed through and would be treated as a token name — reach for `u.atQuery()` there.
   - an app-extended name declared through module augmentation of `Containers`
 - `name`: The named container to query, matching a `container-name` on an ancestor. Omit it to match the nearest container regardless of name, same as the two-argument form. Useful once more than one ancestor establishes a container and the query needs to skip past the closest.
@@ -13538,14 +13538,14 @@ Nothing resolves at all without an ancestor declaring a container — use `u.con
 ```css
 /* u.at("md", u.p(6)) */
 .host {
-	@container (min-width: var(--ui-container-md, 36rem)) {
+	@container (min-width: 36rem) {
 		padding: calc(var(--ui-spacing, 0.25rem) * 6);
 	}
 }
 
 /* u.at("md", "sidebar", u.p(6)) */
 .host {
-	@container sidebar (min-width: var(--ui-container-md, 36rem)) {
+	@container sidebar (min-width: 36rem) {
 		padding: calc(var(--ui-spacing, 0.25rem) * 6);
 	}
 }
@@ -13576,14 +13576,14 @@ The `max-width` counterpart to `at()`: a container query that applies while the 
 **Parameters:**
 
 - `size`: The container inline size the query compares against.
-  - `xs`: `var(--ui-container-xs, 20rem)`
-  - `sm`: `var(--ui-container-sm, 24rem)`
-  - `md`: `var(--ui-container-md, 36rem)`
-  - `lg`: `var(--ui-container-lg, 48rem)`
-  - `xl`: `var(--ui-container-xl, 64rem)`
-  - `2xl`: `var(--ui-container-2xl, 80rem)`
-  - An app-extended name declared through module augmentation: resolves to `var(--ui-container-{name}, 36rem)`, the `36rem` fallback standing in until the app defines the variable
-  - A raw CSS length (`"40rem"`, `"640px"`): used verbatim, never wrapped in a `var(...)` reference, so a one-off breakpoint stays exactly what it was written as. Only a plain number-plus-unit length is recognized as literal — anything else is treated as a token name; reach for `atQuery()` for a condition that isn't a simple length.
+  - `xs`: `20rem`
+  - `sm`: `24rem`
+  - `md`: `36rem`
+  - `lg`: `48rem`
+  - `xl`: `64rem`
+  - `2xl`: `80rem`
+  - An app-extended name declared through module augmentation: resolves to `36rem`, the default length standing in until the name is added to the scale. A condition can't read a custom property, so an app-extended step can't be themed at runtime the way a property value can
+  - A raw CSS length (`"40rem"`, `"640px"`): used verbatim, so a one-off breakpoint stays exactly what it was written as. Only a plain number-plus-unit length is recognized as literal — anything else is treated as a token name; reach for `atQuery()` for a condition that isn't a simple length.
 - `name`: The named container to query, established on an ancestor by `container()` (or `container-name`). Omit to match the nearest container regardless of name, same as the two-argument call form. Passing a name no ancestor declares means the query never matches — it does not fall back to the nearest container.
 - `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
 
@@ -13595,7 +13595,7 @@ The `max-width` counterpart to `at()`: a container query that applies while the 
 
 ```css
 /* u.atMax("md", [u.p(2), u.flexCol()]) */
-@container (max-width: var(--ui-container-md, 36rem)) {
+@container (max-width: 36rem) {
 	.host {
 		padding: calc(var(--ui-spacing, 0.25rem) * 2);
 		flex-direction: column;
@@ -13610,7 +13610,7 @@ The `max-width` counterpart to `at()`: a container query that applies while the 
 }
 
 /* u.atMax("md", "sidebar", u.p(4)) — targeting a named container */
-@container sidebar (max-width: var(--ui-container-md, 36rem)) {
+@container sidebar (max-width: 36rem) {
 	.host {
 		padding: calc(var(--ui-spacing, 0.25rem) * 4);
 	}
@@ -13640,7 +13640,7 @@ let namedResult = u.atMax("md", "sidebar", u.p(4));
 
 #### `atQuery(query: string, input: UtilityInput): UtilityMixin`
 
-The raw `@container` primitive that `at()` and `atMax()` are both sugar over, and the escape hatch for the container query neither of them can express — the same role `when()` plays behind the state wrappers and `media()` plays for viewport rules. `query` is used verbatim as the entire condition, so it never passes through the `var(--ui-container-*, fallback)` token indirection and a named-container segment can be written straight into the string. Reach for it for conditions outside the single min/max inline-size shape the two wrappers cover: a block-size query, a compound `and`/`or` condition, a range syntax comparison, or a `style()` query. Still a container query, so it needs a container-establishing ancestor exactly like `at()` does — and note nothing validates the string, so a malformed condition simply produces an at-rule the browser drops.
+The raw `@container` primitive that `at()` and `atMax()` are both sugar over, and the escape hatch for the container query neither of them can express — the same role `when()` plays behind the state wrappers and `media()` plays for viewport rules. `query` is used verbatim as the entire condition, so a named-container segment can be written straight into the string. Reach for it for conditions outside the single min/max inline-size shape the two wrappers cover: a block-size query, a compound `and`/`or` condition, a range syntax comparison, or a `style()` query. Still a container query, so it needs a container-establishing ancestor exactly like `at()` does — and note nothing validates the string, so a malformed condition simply produces an at-rule the browser drops.
 
 **Parameters:**
 
@@ -16093,20 +16093,20 @@ let literalResult = text("0.9375rem");
 
 #### `container(name: ContainerName | (string & {})): string`
 
-Resolves a named container breakpoint to `var(--ui-container-{name}, fallback)` — the length `u.at()` and `u.atMax()` compare the nearest container's inline size against.
+Resolves a named container breakpoint to `var(--ui-container-{name}, fallback)`, for use as a **property value** — a `max-inline-size`, a grid track, anywhere the themable indirection is what you want. Query conditions need `containerLength()` instead.
 
 Note this shares its name with the `u.container()` _mixin_ in the Layout family, which declares a container rather than resolving a breakpoint. Importing from the `tokens` subpath always gets this resolver; importing from the package root always gets the mixin.
 
 **Parameters:**
 
 - `name`: A named container-breakpoint value, a raw CSS length, or an app-extended name.
-  - `"xs"` — `var(--ui-container-xs, 20rem)`
-  - `"sm"` — `var(--ui-container-sm, 24rem)`
-  - `"md"` — `var(--ui-container-md, 36rem)`
-  - `"lg"` — `var(--ui-container-lg, 48rem)`
-  - `"xl"` — `var(--ui-container-xl, 64rem)`
-  - `"2xl"` — `var(--ui-container-2xl, 80rem)`
-  - a raw CSS length — passed through literally, which is what lets `u.at("40rem", ...)` express a one-off breakpoint exactly rather than becoming `var(--ui-container-40rem, 36rem)`
+  - `"xs"` — `20rem`
+  - `"sm"` — `24rem`
+  - `"md"` — `36rem`
+  - `"lg"` — `48rem`
+  - `"xl"` — `64rem`
+  - `"2xl"` — `80rem`
+  - a raw CSS length — passed through literally rather than becoming `var(--ui-container-40rem, 36rem)`
   - any other name — treated as app-extended and resolved as `var(--ui-container-{name}, 36rem)`
 
 **Returns:**
@@ -16120,6 +16120,38 @@ let result = container("md");
 // "var(--ui-container-md, 36rem)"
 
 let literalResult = container("40rem");
+// "40rem"
+```
+
+#### `containerLength(name: ContainerName | (string & {})): string`
+
+Resolves a named container breakpoint to its **literal** length — the form `u.at()` and `u.atMax()` write into an `@container` condition.
+
+`@container` and `@media` conditions are evaluated before custom properties are substituted, so a `var()` inside a condition makes the whole at-rule inert: it parses, it is emitted into the stylesheet, and it never matches at any size. Only the declarations _inside_ an at-rule can read custom properties. That is why the container scale has two resolvers — `container()` for property values, where the indirection makes the scale themable, and this one for conditions, where it cannot work at all.
+
+**Parameters:**
+
+- `name`: A named container-breakpoint value, a raw CSS length, or an app-extended name.
+  - `"xs"` — `20rem`
+  - `"sm"` — `24rem`
+  - `"md"` — `36rem`
+  - `"lg"` — `48rem`
+  - `"xl"` — `64rem`
+  - `"2xl"` — `80rem`
+  - a raw CSS length — passed through literally, exactly as in `container()`
+  - any other name — resolves to `36rem`, the default step
+
+**Returns:**
+
+- A literal CSS length, never a `var(...)` reference
+
+**Example:**
+
+```typescript
+let result = containerLength("md");
+// "36rem"
+
+let literalResult = containerLength("40rem");
 // "40rem"
 ```
 

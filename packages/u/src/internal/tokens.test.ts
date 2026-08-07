@@ -13,6 +13,7 @@ import {
 	boxLength,
 	color,
 	container,
+	containerLength,
 	font,
 	isLength,
 	radius,
@@ -177,6 +178,27 @@ describe("container", () => {
 
 	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
 		expect(container("40rem")).toBe("40rem");
+	});
+});
+
+describe("containerLength", () => {
+	test("resolves a named container breakpoint to its literal length", () => {
+		expect(containerLength("md")).toBe("36rem");
+		expect(containerLength("2xl")).toBe("80rem");
+	});
+
+	test("never emits a var() reference, which an at-rule condition cannot read", () => {
+		for (let name of ["xs", "sm", "md", "lg", "xl", "2xl"] as const) {
+			expect(containerLength(name)).not.toInclude("var(");
+		}
+	});
+
+	test("falls back to 36rem for an unrecognized name", () => {
+		expect(containerLength("made-up")).toBe("36rem");
+	});
+
+	test("passes a raw CSS length through unchanged instead of treating it as a token name", () => {
+		expect(containerLength("40rem")).toBe("40rem");
 	});
 });
 

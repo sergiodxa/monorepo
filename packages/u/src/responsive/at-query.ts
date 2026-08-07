@@ -7,13 +7,13 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { compose, nest } from "../internal/descriptor";
 
 /**
- * The literal escape hatch for `u.at()`'s token-resolved container query —
- * for the rare one-off `@container` breakpoint that was never part of the
- * named scale (`"40rem"`, not `"md"`) and must never be wrapped in
- * `var(--ui-container-*, fallback)`. `query` is used verbatim as the full
- * `@container` condition, named-ancestor segment and all when one is needed
+ * The raw escape hatch for `u.at()`'s token-resolved container query — for a
+ * condition `u.at()` can't express at all, such as one querying `height`,
+ * `orientation` or a style feature, or one combining several features with
+ * `and`/`or`. `query` is used verbatim as the full `@container` condition,
+ * named-ancestor segment and all when one is needed
  * (`"sidebar (min-width: 40rem)"`) — `u.at()` covers the ordinary
- * named-token case instead.
+ * inline-size case, named step or one-off length alike.
  *
  * @example u.atQuery("(min-width: 40rem)", u.p(6))
  * @example css({ "@container (min-width: 40rem)": { padding: "..." } })

@@ -50,7 +50,7 @@ describe("rendering a real <div mix={...}>", () => {
 	test("nested wrappers compose: a container query around a plain declaration and a merged &:hover block", async () => {
 		let html = await renderToString(<div mix={at("md", [p(4), hover(p(6))])} />);
 
-		expect(html).toContain("@container (min-width: var(--ui-container-md, 36rem))");
+		expect(html).toContain("@container (min-width: 36rem)");
 		expect(html).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 4);");
 		expect(html).toContain("&:hover");
 		expect(html).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");

@@ -36,14 +36,8 @@ import { css } from "remix/ui";
 
 import routes from "~/routes/web";
 
-/**
- * Width at which the page splits into two columns.
- *
- * A literal length rather than a scale step on purpose: a step resolves to a `var()`,
- * and a container query's condition is evaluated before custom properties are, so a
- * `var()` there makes the whole rule inert and the layout silently never switches.
- */
-const TWO_COLUMN_WIDTH = "64rem";
+/** Container scale step at which the page splits into two columns. */
+const TWO_COLUMN_WIDTH = "xl";
 
 /** Radii of the decorative rings, largest first, drawn from the panel's bottom-left. */
 const RING_RADII = [560, 490, 420, 350, 280, 210, 140, 70];

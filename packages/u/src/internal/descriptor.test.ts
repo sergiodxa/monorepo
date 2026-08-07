@@ -45,7 +45,7 @@ describe("nested wrappers", () => {
 		let mixin = at("md", [p(4), hover(p(6))]);
 
 		expect(styles(mixin)).toEqual({
-			"@container (min-width: var(--ui-container-md, 36rem))": {
+			"@container (min-width: 36rem)": {
 				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
 				"&:hover": { padding: "calc(var(--ui-spacing, 0.25rem) * 6)" },
 			},
