@@ -756,7 +756,21 @@ Would inherit the domain, queue, and crons automatically.
 
 ## Current Progress
 
-- [ ] Phase 0: Scaffold and data layer
+- [x] Phase 0: Scaffold and data layer
+
+  **Verified.** `apps/r3-auth` scaffolded from `templates/app` (package `@apps/r3-auth`, port 3002, `jsxImportSource: "remix/ui"`); `wrangler.jsonc` filled per §13 with the same D1/KV/R2/queue-producer/rate-limiter resources and **no** consumer, cron, or route, confirmed by `bunx wrangler deploy --dry-run` listing all nine bindings; `bun cf:typegen` run. The template's `infrastructure/` adapter, `app/contracts/kv-store.ts`, and `resources/components/timer.tsx` are deleted — production uses `@pkg/data-table-d1` through `app/lib/container.ts`. The 8 migrations are copied byte-for-byte and `bun db:local:migrate` applies all 8 and creates the six tables. All six models live in `app/data/` with the same method names, `Customer` moved to `app/services/customer.ts` on `PolarClient`, and defect #6 is fixed (the insert is awaited, the impossible check gone, with a regression test asserting the row exists after `create` resolves). 54 tests across the six models and the customer service pass against the real schema. `bun typecheck`, `bun lint`, `bun run test` (9395 tests, 0 fail), `bun format:fix`, `bun run build`, and `bunx wrangler deploy --dry-run` all pass.
+
+  **Not verified.** Nothing is deployed and no HTTP surface exists yet: `routes/web.ts` is still empty and the router only serves the 404 default handler, so the middleware chain of §2, the `cop()` bypass list, and every endpoint remain Phase 2 work. The container is registered but never resolved by running code, and the rate-limiter adapters have never spent a budget against a real binding. `database/schema.ts` is only proven against the migrations, not against production rows.
+
+  **Deviations from this ADR, all recorded here rather than guessed at:**
+
+  1. §14 asks for `createSqliteDatabaseAdapter` from `remix/data-table/sqlite`; the export path is `remix/data-table-sqlite`. The shipped adapter was tried first and works for everything this app does (relations, counts, scoped deletes, `returning`), so `app/lib/test/db.ts` uses it and no adapter is hand-rolled.
+  2. §6 says `Customer` moves onto `@pkg/polar`'s `createCustomer`/`findCustomerByEmail`/`updateCustomer`. `createCustomer` accepts no external id, so `Customer.create` creates and then links with `updateCustomer`. A failure between the two leaves an unlinked customer, which `findOrCreateByEmail` links on the next sign-in — so the two-step write needs no compensation.
+  3. `AUTH_SERVER_NAME` and `AUTH_SERVER_CLIENT_ID` are needed by `Client.ensureAuthServerClient`, so `app/config.ts` exists already holding just those two. Phase 1 fills in the rest of the file rather than creating it.
+  4. §13's `.oxfmtrc.json` entry is not added: the only override there is a Tailwind stylesheet path, and this app has no Tailwind, so an entry would be a no-op. `.claude/launch.json` is left to Phase 7 with the rest of the developer-facing config.
+  5. `Session.deleteExpiredSessions` and the `deleteBy*` methods return the number of rows removed and delete in a single statement, rather than issuing one delete per row. Same effect, and it is the D1-safe shape.
+  6. Relations are declared in `database/schema.ts` (`sessionClient`, `grantClient`) so `Session.findBySubjectId` and `Grant.findBySubjectId` keep loading the client alongside the row, as their callers expect.
+
 - [ ] Phase 1: The OIDC engine
 - [ ] Phase 2: Authorization and token endpoints
 - [ ] Phase 3: Login flows

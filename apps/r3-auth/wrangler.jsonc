@@ -1,0 +1,87 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "r3-auth",
+	"main": "./bootstrap/worker.ts",
+	"compatibility_date": "2026-04-10",
+	// Required: the OIDC engine imports `timingSafeEqual` from `node:crypto`.
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3002 },
+	"placement": { "mode": "off" },
+	"observability": { "enabled": true },
+	"assets": { "directory": "./build/client" },
+
+	// No `routes` entry yet: `auth.sergiodxa.com` keeps resolving to the worker that
+	// serves it today, and the custom domain moves here only once this worker has been
+	// verified end to end against every relying party.
+
+	// Plain secrets (COOKIE_SESSION_SECRET, GITHUB_CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
+	// UPTIME_CRON_API_KEY) are set through `.dev.vars` locally and `wrangler secret put`
+	// in production. Not Secrets Store: a store binding has no local value, and the
+	// session cookie has to be signable in development too.
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "auth",
+			"database_id": "1549b30f-b4ba-48b0-b08a-76b8003a37db",
+			"preview_database_id": "1549b30f-b4ba-48b0-b08a-76b8003a37db",
+			"migrations_dir": "./database/migrations",
+		},
+	],
+
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "848d0b8592b64956999bc9769bee6c8e",
+			"preview_id": "848d0b8592b64956999bc9769bee6c8e",
+		},
+	],
+
+	// Holds the ES256 signing key pair. Every worker issuing tokens for this issuer must
+	// read the same file, or tokens stop verifying against the published JWKS.
+	"r2_buckets": [{ "binding": "R2", "bucket_name": "auth", "preview_bucket_name": "auth" }],
+
+	// Producer only. A Cloudflare queue has exactly one consumer worker, and the worker
+	// serving production still holds that role along with the daily cron that feeds it,
+	// so neither `queues.consumers` nor `triggers.crons` is declared here yet.
+	"queues": {
+		"producers": [{ "binding": "QUEUE", "queue": "auth" }],
+	},
+
+	// The bindings answer only `{ success }`: the limits and periods below are also
+	// declared to the rate-limit adapters, which is what makes the `RateLimit` response
+	// headers truthful. Keep the two in step.
+	"ratelimits": [
+		{
+			// Token endpoint: 20 requests per minute per client
+			"name": "TOKEN_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 20, "period": 60 },
+		},
+		{
+			// Introspection endpoint: 100 requests per minute per client
+			"name": "INTROSPECT_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 100, "period": 60 },
+		},
+		{
+			// Revocation endpoint: 50 requests per minute per client
+			"name": "REVOKE_RATE_LIMITER",
+			"namespace_id": "1003",
+			"simple": { "limit": 50, "period": 60 },
+		},
+		{
+			// Authorization endpoint: 30 requests per minute per IP
+			"name": "AUTHORIZE_RATE_LIMITER",
+			"namespace_id": "1004",
+			"simple": { "limit": 30, "period": 60 },
+		},
+		{
+			// Login routes: 10 requests per minute per IP (strict)
+			"name": "LOGIN_RATE_LIMITER",
+			"namespace_id": "1005",
+			"simple": { "limit": 10, "period": 60 },
+		},
+	],
+}

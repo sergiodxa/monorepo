@@ -1,0 +1,34 @@
+{
+	"name": "@apps/r3-auth",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pkg/data-table-d1": "workspace:*",
+		"@pkg/duration": "workspace:*",
+		"@pkg/logger": "workspace:*",
+		"@pkg/polar": "workspace:*",
+		"@pkg/rate-limit": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/service-container": "workspace:*",
+		"@pkg/uuid": "workspace:*",
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.46.0",
+		"@total-typescript/ts-reset": "^0.6.1",
+		"@types/node": "^26.1.1",
+		"typescript": "^6.0.3",
+		"vite": "^8.1.5",
+		"wrangler": "^4.113.0"
+	}
+}

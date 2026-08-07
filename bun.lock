@@ -219,6 +219,28 @@
         "typescript": "^6.0.3",
       },
     },
+    "apps/r3-auth": {
+      "name": "@apps/r3-auth",
+      "dependencies": {
+        "@pkg/data-table-d1": "workspace:*",
+        "@pkg/duration": "workspace:*",
+        "@pkg/logger": "workspace:*",
+        "@pkg/polar": "workspace:*",
+        "@pkg/rate-limit": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/service-container": "workspace:*",
+        "@pkg/uuid": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.46.0",
+        "@total-typescript/ts-reset": "^0.6.1",
+        "@types/node": "^26.1.1",
+        "typescript": "^6.0.3",
+        "vite": "^8.1.5",
+        "wrangler": "^4.113.0",
+      },
+    },
     "apps/r3-gallery": {
       "name": "@apps/r3-gallery",
       "dependencies": {
@@ -933,6 +955,8 @@
     "@apps/books": ["@apps/books@workspace:apps/books"],
 
     "@apps/pkmn": ["@apps/pkmn@workspace:apps/pkmn"],
+
+    "@apps/r3-auth": ["@apps/r3-auth@workspace:apps/r3-auth"],
 
     "@apps/r3-gallery": ["@apps/r3-gallery@workspace:apps/r3-gallery"],
 
