@@ -28,6 +28,12 @@ import {
 } from "../utils/warn-if-no-accessible-name";
 
 /**
+ * `type` given to a {@link Pagination.Button} carrying an Invoker Command, for
+ * which the platform accepts no other value.
+ */
+const INVOKER_TYPE = "button";
+
+/**
  * Prop types for {@link Pagination} and its compound parts.
  */
 export namespace Pagination {
@@ -63,7 +69,9 @@ export namespace Pagination {
 	 * A previous/next control rendering only a directional icon needs an
 	 * `aria-label` (e.g. `"Previous"`, `"Next"`) — the component ships no
 	 * built-in copy, so a consumer's own localized string always drives what's
-	 * announced.
+	 * announced. `type` is defaulted only for a control carrying an Invoker
+	 * Command, which cannot be a submit button; left off otherwise, so a control
+	 * inside a `<form>` keeps the native submit default.
 	 */
 	export interface ButtonProps extends TagProps<"button"> {}
 }
@@ -215,6 +223,16 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
  * primary color, and the native `disabled` attribute mutes the control and
  * blocks pointer and keyboard activation alike.
  *
+ * A control carrying `command` or `commandfor` renders `type="button"` unless
+ * it's given a `type` of its own, and renders it before the consumer's own
+ * attributes: inside a `<form>` an untyped button would default to `"submit"`,
+ * and the platform then refuses to run its command at all, calling the pairing
+ * ambiguous — the control would look wired up and do nothing. It judges that
+ * while it parses the command attributes, so a `type` written after them is
+ * refused the same way. A control with no command is left untyped, which keeps a
+ * previous/next control that a consumer wired to a real form submitting it, the
+ * way it always has.
+ *
  * In dev mode, a control whose content carries no plain text and no
  * `aria-label`/`aria-labelledby` logs a `console.warn`, since a directional
  * icon alone gives assistive technology no accessible name to announce.
@@ -232,7 +250,9 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
  */
 Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonProps>) {
 	return () => {
-		let { children, mix, ...rest } = handle.props;
+		let { type, children, mix, ...rest } = handle.props;
+		let isInvoker = rest.command !== undefined || rest.commandfor !== undefined;
+		let resolvedType = type ?? (isInvoker ? INVOKER_TYPE : undefined);
 
 		warnIfNoAccessibleName(
 			handle.props,
@@ -241,7 +261,13 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 		);
 
 		return (
+			// `type` is written before the spread on purpose. The rendered attribute order
+			// is the JSX order, and the platform decides whether an invoker is ambiguous
+			// while parsing `command`/`commandfor` — a `type` that arrives after them has
+			// not been seen yet, so the button still counts as a submit button and the
+			// command is refused even though the attribute is right there in the markup.
 			<button
+				type={resolvedType}
 				{...rest}
 				data-slot="button"
 				mix={[
