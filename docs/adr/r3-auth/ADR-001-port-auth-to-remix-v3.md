@@ -612,6 +612,143 @@ Also update: `.oxfmtrc.json` (add an `apps/r3-auth` entry; note the OLD APP's Ta
 | 8   | **Fixed in Phase 4**, alongside the endpoint itself. No `X-Frame-Options` is sent at all instead of `ALLOWALL`, and no `frame-ancestors` CSP is added — cross-origin framing is the endpoint's purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 9   | **Fixed: registration stores the credential verified; the refusal stays for every other way a credential can appear.** What `credentials.verified_at` can mean here was settled by what writes it and what reads it: nothing writes it (no verification email, no token table, no route — in either app), and one place reads it, refusing sign-in when it is `null`. A column no code can ever set is not a "not yet"; it is a permanent refusal, which is why password sign-up in the app being ported was dead code and why the production table holds 0 rows. It is therefore read as **"this password is known to belong to whoever holds this account"**, not as email ownership — `subjects.email_verified_at` is the email question, is untouched by this decision, and stays `null` for a credential registration, so `email_verified` in userinfo keeps telling relying parties the truth. Registration (an address nobody had registered) passes `new Date()`: the person chose the password for an account that did not exist a moment earlier, so there is no other owner to protect it from, and refusing them only reproduces the defect. The other branch — a **known** address with no credential, i.e. somebody who signs in with GitHub — still stores the hash with `null` and still fails with `MissingValidationError`, because there the account belongs to someone else and a stranger who knows their address must not be able to attach a working password to it; marking that credential verified would turn this endpoint into account takeover. That is the reason the gate exists and it is not weakened. Accepted cost: a registration that succeeds is distinguishable from a wrong password, so the endpoint reveals whether an address is registered — inherent to any working sign-up, and the GitHub callback already says so out loud ("An account already exists for this email address"). Alternative rejected: inventing a verification-email flow, which is a product feature with a mail dependency, a token store and a route, not a port decision |
 
+### 17. Email
+
+Neither this app nor the one it replaces sent any email, so this is new capability rather than
+port work. It is written down here because three messages are planned on top of it and they
+have to inherit one set of decisions.
+
+**The binding.** `send_email` is declared in the bare `name` form:
+`[{ "name": "EMAIL", "remote": true }]`. That is the only form that fits — every message goes
+to a subject's own address, so the recipient set is the `subjects` table and cannot be
+enumerated in configuration. `destination_address`, `allowed_destination_addresses` and
+`allowed_sender_addresses` would each turn an ordinary send into a refusal, and the refusal
+arrives at send time rather than at deploy time, i.e. as mail that silently stops. `remote:
+true` because the local implementation only logs the message it would have sent, exercising
+none of the three things that decide whether mail arrives (sender verification, destination
+limits, the identifier the send returns) — which also means a local send is a real send, and
+is the reason not to put one behind a loop while iterating. Adding this binding changes
+nothing about §13's other rules: still no `queues.consumers`, no `triggers.crons`, no
+`routes` until Phase 8.
+
+**Two mailers over one transport.** `MailTransport` (`app/services/mail-transport.ts`) is an
+abstract class used purely as a container key, because `@pkg/service-container` keys services
+by a runtime class. `app/lib/container.ts` registers it with `CloudflareTransport(env.EMAIL)`,
+so the provider is chosen in exactly one place, and registers a background `Mailer` built on
+it for a queue message or a scheduled sweep. `bootstrap/app.tsx` installs `@pkg/mail`'s own
+middleware — checked before hand-rolling, per §2 — resolving the same key, which publishes
+`ctx.email` for controllers and flushes its `later()` queue after the response. The
+augmentation of `RequestContext` with `email` is the package's, declared in its middleware
+module. HTTP handlers must not resolve the container's `Mailer`: only the request one's queue
+is flushed, so a message deferred on the other would never be sent.
+
+**Sender identity.** `app/emails/sender.ts` holds `Auth <no-reply@auth.sergiodxa.com>` with
+`hello@sergiodxa.com` as reply-to. On the issuer's own hostname, which is the name the reader
+just typed a password into and the one they can be asked to recognize, and which keeps this
+server's sending reputation separate from every other app's. Deliberately **not** an
+environment variable: it is a product decision, not a deployment one, and a `From` that can
+differ per environment is a `From` that can be wrong in production without anything failing.
+So mail adds **no new var and no new secret**. The domain has to be a verified sender with
+SPF, DKIM and DMARC before the first real delivery.
+
+**Shared layout.** `app/emails/layout.tsx` wraps every message in `@pkg/mail`'s card with the
+app's type stack, the brand fill resolved to an sRGB literal (mail clients drop the OKLCH
+custom properties `resources/styles.ts` defines), and one appended footer line. It exists so
+the three messages are consistent rather than each inventing a frame — for mail about
+somebody's account that is the difference between a notice they act on and one they report as
+phishing. `app/emails/locale.ts` is the translator for send paths with no request behind them;
+subjects carry no stored language preference (the frozen table has no column for one) and this
+app ships only `en`, so every message is produced in English today.
+
+**The new-sign-in notice** (`app/emails/new-sign-in.tsx`) is the one message built here: the
+cheapest of the three and purely additive, so it is what proves the plumbing. It reports the
+browser, the OS and device class, and the address, reusing `parseUserAgent` from
+`app/http/view-models/account-session.ts` so the notice and the device list it links to
+describe a session in the same words. It carries **no token of any kind** — `sessions.id` is
+the refresh token, so it appears in no link, no template variable and no log line — and links
+to `/account/sessions`, which authenticates the reader before it lists anything.
+
+`notifyNewSignIn` (`app/services/sign-in-alert.ts`) queues it with `ctx.email.later()` from
+the two places a subject actually authenticates: the credential branch of `POST /authorize`
+and the GitHub callback. Signing in to this server's own account area goes through one of
+those two, so all three named sign-in paths are covered by them. Deferred rather than awaited,
+and the whole function is inside a `try`, so a refused delivery, an exhausted quota or an
+unreadable subject is logged and swallowed instead of turning a completed sign-in into an
+error page.
+
+Two paths deliberately send nothing. **SSO** — the `subjectId && !forceLogin` branch of `GET
+/authorize` — opens a session row, but nobody authenticated there: the browser already held a
+session this server issued and its owner was told about that one. Mailing there would put a
+message in an inbox every time any relying party is authorized, including each `prompt=none`
+renewal a client runs in a hidden iframe. A **refused** sign-in sends nothing either.
+
+**Copy is pinned to the app's own language, not the request's.** This is the one message whose
+reader may not be the person who made the request — that is the entire reason it is sent — so
+honouring the signing-in browser's `Accept-Language` would let a stranger choose the language
+a warning about them is written in.
+
+**Logging.** `@pkg/logger` with event names plus the subject id: `sign_in_alert_queued`,
+`sign_in_alert_subject_missing`, `sign_in_alert_failed`. No address, ever. `@pkg/mail`'s
+middleware reports a failed deferred send as `mail.send_failed` with the error message only,
+so the recipient is not logged there either.
+
+#### Left for the verification-email flow
+
+Not built here. The hooks it inherits: `ctx.email`, the sender identity, the shared layout, the
+`emails` section of the catalog, `MemoryTransport` wired into `app/lib/test/http.ts` through
+`TestAppOptions.mailTransport` and `TestApp.mail`, and `emailTranslator` for a background send.
+What it still owns — and it owns `credentials.verified_at` and `subjects.email_verified_at`
+outright; nothing in the email foundation reads or writes either:
+
+1. **One condition, on the column.** Send the verification email when a subject attempts to
+   sign in and `subjects.email_verified_at` is null, **regardless of which method they signed
+   in with**. This is deliberately a single condition rather than two rules to reconcile: a
+   verification email is only needed when the subject signed in with a password credential, or
+   when the provider did not report the address as verified — and if a provider _did_ report it
+   verified, the column would not be null. So the null check subsumes the method check. (The
+   user's phrasing was "password/passkey"; this app has no passkey support, which belongs to a
+   separate unexecuted product ADR, so for this app it means password credentials only.)
+2. **A per-address cooldown, which is not optional.** "Send whenever the column is null" on an
+   unauthenticated sign-in endpoint is a mail-bombing amplifier: anyone who can drive the form
+   for an unverified address can make this server send mail on demand, against the sending
+   domain's reputation and the account's daily send quota. The window is **5 minutes**, and it
+   is the same 5 minutes the verification token is valid for. That equality is the point, not a
+   coincidence: **because the cooldown equals the token TTL, any token a suppressed resend
+   would have replaced is still valid** — someone who asks again inside the window already holds
+   a working link, and someone who waits past it gets a fresh email with a fresh token. So
+   suppression can never strand a person with no usable way to verify. If either number is ever
+   changed, both must change together. A KV key with a 5-minute TTL is the obvious mechanism —
+   it expires itself and needs no schema change on a frozen database — but the choice is the
+   implementing agent's; no schema change should be needed either way.
+3. **Do not send on a failed sign-in**, or the endpoint becomes an address oracle with a mailer
+   attached.
+4. **The existing rate limiters do not substitute for the cooldown.** `GET /authorize` spends
+   the authorize limiter (30/60s) and `POST /authorize` — which handles credential sign-in and
+   registration both — spends the login limiter (10/60s), each keyed by client IP through
+   `getClientIP`. So the form is already rate limited and needs no new work there. But both are
+   IP-keyed, so a distributed caller still gets one email per address per attempt. The limiters
+   bound request volume; only the per-address cooldown bounds mail volume.
+
+**A provider-verification gap found while wiring the alert, left unfixed on purpose.**
+`resolveGitHubSubject` already writes `email_verified_at: Date.now()` on a GitHub first
+sign-in, with a comment asserting that GitHub only hands out an address it has verified. That
+assertion is not guaranteed by the code path it rests on. `remix/auth`'s GitHub provider reads
+`/user/emails` **only when the profile's own `email` is null**, and its `pickGitHubEmail` falls
+back to `emails[0]` when no entry is verified; either way the per-address `verified` boolean is
+dropped before the profile reaches this app, so `GitHubAuthProfile` carries `email` and no
+verification signal at all. The risk is therefore the inverse of "we discard a signal the
+provider gave us": we record a verification we did not observe. Nothing was changed for it —
+the write is security-gate-adjacent and belongs to the verification agent, with its own tests
+and reasoning. If that agent wants the real signal it has to read `/user/emails` itself in
+`app/services/github-login.ts` and thread `verified` through to `Subject.create`.
+
+#### Left for the password-reset flow
+
+Same hooks. It owns its token store, its own cooldown (the same amplifier argument applies, and
+its endpoint is unauthenticated by definition), and the decision about whether a reset for an
+unknown address answers identically to one for a known address — §"Error handling and logging"
+in the app's `AGENTS.md` says it must.
+
 ## Consequences
 
 ### Positive
@@ -1040,6 +1177,18 @@ Would inherit the domain, queue, and crons automatically.
   5. `app/lib/test/http.ts` gained the same `waitUntil` in its two `cloudflare:workers` mocks, so a test can assert on a cache entry written in the background after one `await Bun.sleep(0)`.
   6. **`@pkg/auth-sdk`'s `authenticate()` cannot be driven through MSW, and the reason is worth writing down.** It posts a `FormData` body, and with MSW's interception active, `remix/form-data-middleware` yields an **empty** `FormData` for a multipart body — reduced to a minimal case: the same request parses correctly through `parseFormData` directly and through a route added to the same router, but the token endpoint sees nothing, and removing `server.listen()` makes it pass. The failure is silent (an empty body, not an error), which is what makes it worth a note rather than a shrug. Multipart parsing is proven without MSW instead, by a test posting the library's exact bytes — multipart body plus base64url Basic header — so the wire format is covered even though the library's own call is not. This is a test-environment interaction, not an app defect; nothing was changed in the app for it, and it was not established which of MSW's patches causes it.
   7. `app/http/validators/queue.ts` holds the message schema rather than `bootstrap/worker.ts`, matching where every other validator lives.
+
+- [x] Email foundation and the new-sign-in notice (§17, outside the numbered phases)
+
+  **Verified.** `send_email` is declared as `[{ "name": "EMAIL", "remote": true }]` and `bun cf:typegen` regenerated `worker-configuration.d.ts` (`EMAIL: SendEmail`). `bunx wrangler deploy --dry-run` lists **ten** bindings — the same nine plus `env.EMAIL (unrestricted)` — and still no queue consumer, no cron and no route. `@pkg/mail` was added to the app's dependencies. `app/services/mail-transport.ts` holds the `MailTransport` container key; `app/lib/container.ts` registers it with `CloudflareTransport(env.EMAIL)` and registers a background `Mailer` built from it; `bootstrap/app.tsx` installs `@pkg/mail/middleware` resolving the same key, between `i18n` and `cop()`. Sender identity is `app/emails/sender.ts` (`Auth <no-reply@auth.sergiodxa.com>`, reply-to `hello@sergiodxa.com`) — no new var, no new secret. `app/emails/layout.tsx` is the shared card, `app/emails/locale.ts` the background translator, `app/emails/new-sign-in.tsx` the notice, `app/services/sign-in-alert.ts` the dispatch. `ISSUER_HOST` is now exported from `app/config.ts` so the notice's link is absolute. Copy is under `emails` in `app/locales/en.ts`, subject line included. `app/lib/test/http.ts` gained `TestAppOptions.mailTransport` and `TestApp.mail`, a `MemoryTransport`. 14 new tests: 9 router-level in `app/services/sign-in-alert.test.ts` (credential, GitHub and self-login each mail the right recipient with the right subject and a `NewSignInEmail`; the browser, OS, device class and address are reported; the message carries no session id in html, text or subject; it links to `/account/sessions` on the issuer host; a refusing transport still returns a 303 with a code and leaves the session row intact; SSO sends nothing; a refused sign-in sends nothing), 3 in `app/emails/new-sign-in.test.tsx` (every device label, the missing-address row, no unresolved locale key), and 2 in `app/lib/container.test.ts` (the background mailer resolves and carries the app's sender identity). `bun typecheck`, `bun lint`, `bun run test` (9806 tests, 0 fail), `bun format:fix`, `bun run build` and the dry-run all pass.
+
+  **Verified by hand, in a browser, on the local worker (port 3002).** Registered `mailly.tester@example.com` through `/authorize?…&prompt=create`, landed in the account area with an active session, and the request log shows `authz_credential_login_success` followed by `sign_in_alert_queued` for that subject id and nothing else — no address in any log line, and the 303 to `/auth/callback` carried the code as normal, so mail did not delay or affect the sign-in.
+
+  **Not verified — and this is the honest limit of the local check.** With `remote: true` there is no local sink: `.wrangler/tmp/email/` stayed empty and the platform-native send went remote, so **no rendered message was read out of a local mail directory.** Nothing failed either — the deferred flush logged no `mail.send_failed` — but the absence of an error is weak evidence, and it does not distinguish "the platform accepted it" from "it was never attempted". The recipient was on the IANA-reserved `example.com` domain, so nothing could have reached a real inbox in any case, and `auth.sergiodxa.com` has not been set up as a verified sender. **The rendered body, both parts, the recipient, the subject and the absence of a session id are all proven by `MemoryTransport` instead.** So still open for Phase 8: verify the sending domain (SPF, DKIM, DMARC), send one real message to a real inbox, and read what arrives — headers, both body parts and spam placement are only observable end to end. The `EMAIL` binding has never delivered anything, and the account's daily send quota has never been exercised.
+
+  **Decisions worth knowing about, all argued in §17:** the alert is dispatched from the two places a subject actually authenticates (the credential branch of `POST /authorize` and the GitHub callback), which is what covers all three named sign-in paths, and **deliberately not** from the SSO branch of `GET /authorize`, which opens a session with nobody authenticating and would mail on every relying-party authorization including each hidden-iframe `prompt=none` renewal. Copy is pinned to the app's own language rather than the request's, because the reader may not be the person who made the request. `@pkg/mail`'s middleware logs a failed deferred send as `mail.send_failed` with the error message only, so no recipient address is logged anywhere.
+
+  **Left for the follow-up agents:** §17 records the verification-email rules the user supplied — one condition on `subjects.email_verified_at` being null, a 5-minute per-address cooldown that equals the token TTL and why that equality is what keeps suppression from stranding anybody, no send on a failed sign-in, and why the existing IP-keyed limiters do not substitute for it — plus a provider-verification gap found while wiring the alert and left unfixed: `remix/auth`'s GitHub provider drops the per-address `verified` boolean before the profile reaches this app, so `resolveGitHubSubject` writes `email_verified_at` on a verification it never observed.
 
 - [ ] Phase 8: Verification and cutover
 

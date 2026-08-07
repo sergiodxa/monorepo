@@ -30,6 +30,7 @@ app only.
 | KV           | `KV`                      | Browser sessions, authorization codes, and the API's client/subject caches |
 | R2           | `R2`                      | The ES256 signing key pair behind every issued token and the JWKS          |
 | Queue        | `QUEUE`                   | Producer only — enqueues the daily expired-session sweep                   |
+| Email        | `EMAIL`                   | Every transactional message, including the new-sign-in notice              |
 | Rate limiter | `TOKEN_RATE_LIMITER`      | `/oauth/token`, 20 requests / 60s                                          |
 | Rate limiter | `INTROSPECT_RATE_LIMITER` | `/oauth/introspect`, 100 requests / 60s                                    |
 | Rate limiter | `REVOKE_RATE_LIMITER`     | `/oauth/revoke`, 50 requests / 60s                                         |
@@ -45,6 +46,34 @@ consumer worker, and the worker serving production still holds that slot along w
 daily cron that feeds it. The `scheduled` and `queue` handlers in `bootstrap/worker.ts` are
 therefore written but **unreachable** until cutover: nothing sweeps expired sessions from
 this worker, and enqueuing from here is consumed by the other one.
+
+### Email
+
+`send_email` is declared in the bare `name` form — `[{ "name": "EMAIL", "remote": true }]` —
+because every message goes to a subject's own address, so the recipient set is the
+`subjects` table and cannot be enumerated in configuration. The narrower forms
+(`destination_address`, `allowed_destination_addresses`, `allowed_sender_addresses`) would
+each turn an ordinary send into a refusal at send time. `remote: true` means a `wrangler dev`
+send is a **real** send, which bills and delivers like production.
+
+Mail is sent through two mailers over the same transport, registered once as
+`MailTransport` in `app/lib/container.ts`:
+
+- **request-scoped** — `ctx.email`, published by `@pkg/mail`'s middleware in
+  `bootstrap/app.tsx`. Its `later()` queue is flushed after the response, so a failed send
+  is logged and cannot change what the person sees.
+- **background** — the `Mailer` registered in `app/lib/container.ts`, for a queue message or
+  a scheduled sweep, where there is no request and therefore no `ctx.email`.
+
+The sender identity lives in `app/emails/sender.ts`:
+`Auth <no-reply@auth.sergiodxa.com>`, replies to `hello@sergiodxa.com`. It is **not** an
+environment variable — a `From` that can differ per environment is a `From` that can be
+wrong in production without anything failing — so there is no new var or secret to set. The
+domain has to stay a verified sender, with SPF, DKIM and DMARC in place, before the first
+real delivery.
+
+Copy is in `app/locales/en.ts` under `emails`, subject lines included, and every message is
+written inside the shared card in `app/emails/layout.tsx`.
 
 ### Cron Triggers
 
@@ -77,6 +106,11 @@ this worker, and enqueuing from here is consumed by the other one.
 - **Admin area** for clients and subjects, with a one-time reveal of a newly generated
   client secret.
 - **Machine-to-machine API**: `client_credentials` token plus `GET /api/subjects/:id`.
+- **New-sign-in notice**: every authentication that opens a session mails the subject the
+  browser, system, device class and address it came from, with a link to the device list.
+  It is queued rather than awaited, so a failed send cannot fail a sign-in, and it carries
+  no token of any kind. Authorizing another client from a browser that is already signed in
+  sends nothing: nobody authenticated on that path.
 - **Rate limiting** on every token, authorization and login endpoint (see below).
 - **Server-rendered HTML.** The only first-party JavaScript is the copy-to-clipboard button
   on the client-create page; dialogs are native `<dialog>` elements driven by command
@@ -244,4 +278,6 @@ Secrets are set with `bunx wrangler secret put <NAME>`.
 
 ## Environment Variables
 
-See `.env.example` for required environment variables.
+See `.env.example` for required environment variables. Mail adds none: the sender identity
+is a constant in `app/emails/sender.ts` and delivery is the `EMAIL` binding, so there is no
+API key, host or `From` to configure per environment.

@@ -46,6 +46,7 @@ import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
 import { startGitHubLogin } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
+import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
 import routes from "~/routes/web";
@@ -290,6 +291,13 @@ export default createController(routes.authorize, {
 
 				ctx.logger.info("authz_sso_code_generated", { subjectId, clientId: client.id });
 
+				// No new-sign-in notice here, even though a session row is opened. Nobody
+				// authenticated on this path: the browser already held a session this server
+				// issued, and whoever owns it was told about that one. Mailing here would put a
+				// message in an inbox every time any relying party is authorized — including
+				// each `prompt=none` renewal a client runs in a hidden iframe — which is a
+				// notice nobody reads and a send quota spent on it.
+
 				return await authorizationResponse(
 					ctx,
 					code.data.redirectUri,
@@ -379,6 +387,10 @@ export default createController(routes.authorize, {
 			}
 
 			ctx.logger.info("authz_credential_login_success", { subjectId: login.data.subjectId });
+
+			// Queued, never awaited: the notice is flushed after the response, so a refused
+			// delivery cannot turn a completed sign-in into an error the person sees.
+			await notifyNewSignIn(ctx, db, login.data.subjectId);
 			// Cleared once answered, except for this server's own client: its callback is
 			// the next request in the same flow and still has to check the `state` and the
 			// redirect URI this request parked.

@@ -25,6 +25,7 @@
 		"@pkg/i18n": "workspace:*",
 		"@pkg/jobs": "workspace:*",
 		"@pkg/logger": "workspace:*",
+		"@pkg/mail": "workspace:*",
 		"@pkg/polar": "workspace:*",
 		"@pkg/r3-ui": "workspace:*",
 		"@pkg/rate-limit": "workspace:*",

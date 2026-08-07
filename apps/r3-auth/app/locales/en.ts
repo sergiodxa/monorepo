@@ -1,8 +1,9 @@
 /**
  * English translation catalog for the auth app. Holds all user-facing UI
- * strings — layout metadata, OAuth scope descriptions, the authorize and logout
- * flows, account/admin navigation, and the profile, sessions, grants, clients,
- * and subjects screens — as the single source of copy consumed by i18next.
+ * strings — layout metadata, transactional email copy, OAuth scope descriptions,
+ * the authorize and logout flows, account/admin navigation, and the profile,
+ * sessions, grants, clients, and subjects screens — as the single source of copy
+ * consumed by i18next.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +14,36 @@ export default {
 		meta: {
 			title: "Auth by Sergio Xalambrí",
 			description: "Simple & reliable authentication for developers",
+		},
+	},
+
+	// Copy for the messages this server sends. `footer` is outside the per-message
+	// sections because the shared email layout appends it to every one of them.
+	emails: {
+		footer:
+			"This is an automated message about your Auth account. Nobody reads replies to the sender address.",
+
+		newSignIn: {
+			subject: "New sign-in to your account",
+			preview: "Your account was signed in to from a new session.",
+			heading: "New sign-in to your account",
+			body: "Somebody signed in to your Auth account. Here is what we recorded about it.",
+			facts: {
+				browser: "Browser",
+				device: "Device",
+				ip: "IP address",
+				ipUnknown: "Not recorded",
+			},
+			devices: {
+				desktop: "Desktop",
+				mobile: "Phone",
+				tablet: "Tablet",
+				unknown: "Unknown device",
+			},
+			expected: "If this was you, there is nothing to do.",
+			action: "Review your devices",
+			unexpected:
+				"If it was not you, review your devices, sign the session out, and change your password.",
 		},
 	},
 

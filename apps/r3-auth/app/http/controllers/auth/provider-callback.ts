@@ -32,6 +32,7 @@ import { authorizationResponse } from "~/app/http/responses/authorization-respon
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import RateLimiters from "~/app/services/rate-limiters";
+import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import routes from "~/routes/web";
 
 /**
@@ -147,6 +148,10 @@ export default createAction(
 		}
 
 		ctx.logger.info("oauth_login_success", { provider: "github", subjectId: subject.data });
+
+		// Queued, never awaited: the notice is flushed after the response, so a refused
+		// delivery cannot turn a completed sign-in into an error the person sees.
+		await notifyNewSignIn(ctx, db, subject.data);
 
 		// Cleared once answered, except for this server's own client: its callback is the
 		// next request in the same flow and still has to check the `state` and the redirect

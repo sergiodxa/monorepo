@@ -18,10 +18,15 @@ import type { Customer } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace, createR2Bucket, createRateLimit } from "@pkg/cloudflare-mocks";
+import { Mailer } from "@pkg/mail";
+import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
+
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
+import { MailTransport } from "~/app/services/mail-transport";
 
 /** Requests a limiter allows per window when a test does not ask for a smaller budget. */
 const DEFAULT_RATE_LIMIT = 1000;
@@ -53,6 +58,12 @@ export interface TestAppOptions {
 	 * network; pass a failing one to exercise the provisioning rollback.
 	 */
 	polar?: PolarClient;
+	/**
+	 * Transport every mailer in this instance delivers through. Defaults to a recording
+	 * one, so a test reads what was sent instead of mocking a provider; pass a transport
+	 * that fails to exercise a send path's behaviour when delivery is refused.
+	 */
+	mailTransport?: MailTransport;
 }
 
 /**
@@ -150,6 +161,12 @@ export interface TestApp {
 	/** The bucket the signing keys are generated into on first use. */
 	r2: ReturnType<typeof createR2Bucket>;
 	/**
+	 * The recording transport both mailers deliver through, so a test asserts on the
+	 * messages the app actually produced rather than on a mocked provider. It records
+	 * nothing when the test supplied a transport of its own.
+	 */
+	mail: MemoryTransport;
+	/**
 	 * Sends a request through the router inside a container scope, carrying cookies
 	 * from previous responses so a session survives across calls.
 	 */
@@ -189,6 +206,17 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 	let container = new ServiceContainer();
 	container.singleton(DatabaseKey, () => db);
 	container.singleton(PolarClient, () => options.polar ?? createStubPolarClient());
+
+	// A recording transport unless the test brought its own, registered under the same key
+	// production registers the platform one under — so what a test drives is the real
+	// middleware, the real mailer and the real email classes, with only delivery replaced.
+	let recorder = new MemoryTransport();
+	let transport: MailTransport = options.mailTransport ?? recorder;
+	container.singleton(MailTransport, () => transport);
+	container.singleton(
+		Mailer,
+		() => new Mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO }),
+	);
 	container.singleton(
 		RateLimiters,
 		() =>
@@ -209,6 +237,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 		db,
 		kv: appKv,
 		r2: appR2,
+		mail: recorder,
 		resetCookies() {
 			cookies.clear();
 		},

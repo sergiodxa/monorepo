@@ -34,8 +34,12 @@ export const ISSUER = "auth.sergiodxa.com";
 /**
  * Origin every published endpoint URL is built against. Separate from {@link ISSUER}
  * because the issuer string carries no scheme and a URL needs one.
+ *
+ * Exported because mail needs it too: a relative href in an inbox resolves against
+ * nothing, and a link in a security notice has to name the production server rather than
+ * whichever host the request that triggered the send happened to arrive on.
  */
-const ISSUER_HOST = "https://auth.sergiodxa.com";
+export const ISSUER_HOST = "https://auth.sergiodxa.com";
 
 /** Lifetime of an issued ID token, in milliseconds for `Date` arithmetic. */
 export const ID_TOKEN_TTL = toMs("1 hour");

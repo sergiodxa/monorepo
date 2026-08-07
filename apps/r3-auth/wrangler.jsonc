@@ -50,6 +50,35 @@
 		"producers": [{ "binding": "QUEUE", "queue": "auth" }],
 	},
 
+	// Platform-native email sending, and the only way this worker puts anything in an
+	// inbox: `CloudflareTransport` is the transport both mailers are built with — the
+	// request-scoped one the mail middleware publishes in `bootstrap/app.tsx`, and the
+	// background one registered in `app/lib/container.ts` — so the binding has to resolve
+	// for the worker to mail at all.
+	//
+	// The bare `name` form allows any verified sender and any destination, and it is the
+	// only form that fits: every message goes to a subject's own address, so the recipient
+	// set is the `subjects` table and cannot be written down here. The narrower forms
+	// (`destination_address`, `allowed_destination_addresses`, `allowed_sender_addresses`)
+	// would each turn an ordinary send into a refusal, and the refusal arrives at send time
+	// rather than at deploy time — a sign-in alert that silently stops being delivered.
+	//
+	// The account's daily send quota starts conservative and is raised over time from
+	// observed sending behaviour and deliverability, so it is worth watching while it is
+	// still being earned. A refused send is reported as a failure rather than retried.
+	// Per-message limits every send path here stays far inside: 50 recipients across
+	// to/cc/bcc, 16 KB of custom headers combined, a 998-character subject, 5 MiB total.
+	// Nothing sent from this app carries a custom header or addresses more than one
+	// recipient.
+	//
+	// `remote: true` because the local implementation only logs the message it would have
+	// sent, which exercises neither the sender verification, nor the destination limits, nor
+	// the identifier the send returns — the three things that actually decide whether a
+	// message arrives. Remote means a local send is a real send, which bills and delivers
+	// like production; that is the point, and it is also the reason not to put a send behind
+	// a loop while iterating.
+	"send_email": [{ "name": "EMAIL", "remote": true }],
+
 	// The bindings answer only `{ success }`: the limits and periods below are also
 	// declared to the rate-limit adapters, which is what makes the `RateLimit` response
 	// headers truthful. Keep the two in step.

@@ -12,6 +12,8 @@ import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import mail from "@pkg/mail/middleware";
+import { getServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -20,6 +22,7 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import grants from "~/app/http/controllers/account/grants";
 import profile from "~/app/http/controllers/account/profile";
 import profileEdit from "~/app/http/controllers/account/profile-edit";
@@ -52,6 +55,7 @@ import openidConfiguration from "~/app/http/controllers/well-known/openid-config
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import { MailTransport } from "~/app/services/mail-transport";
 import routes from "~/routes/web";
 
 /**
@@ -97,6 +101,17 @@ export default function application(options: application.Options) {
 		// After the session middleware, whose session a stored language preference would
 		// be read from, and before rendering, which is what translates.
 		i18n,
+		// Publishes `ctx.email` on every surface, the machine endpoints included: the notice
+		// a new session produces is queued by the login paths, and a login path is answered
+		// under `/authorize` as well as under `/auth/*`. The transport is resolved from the
+		// container so the provider is chosen in exactly one place, and the mailer is built
+		// per request so its `later()` queue belongs to that request alone and is flushed
+		// once the response has already been produced.
+		mail({
+			transport: () => getServiceContainer().get(MailTransport),
+			from: MAIL_FROM,
+			replyTo: MAIL_REPLY_TO,
+		}),
 		cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
