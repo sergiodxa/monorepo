@@ -12,7 +12,8 @@
 		"./response/json": "./src/response/json.ts",
 		"./response/html": "./src/response/html.ts",
 		"./negotiate": "./src/negotiate.ts",
-		"./cache": "./src/cache/index.ts"
+		"./cache": "./src/cache/index.ts",
+		"./middleware/head-requests": "./src/middleware/head-requests.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
