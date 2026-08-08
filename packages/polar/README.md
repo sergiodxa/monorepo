@@ -507,6 +507,23 @@ import { env } from "cloudflare:workers";
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 ```
 
+### When the token is only readable asynchronously
+
+A token held in a secret store is read with an `await`, and a container factory is
+synchronous — while awaiting at module scope is not an option either, since a Worker
+rejects that at upload. Pass a function instead: it is called once, on the first call
+that actually reaches the API, and its result is memoized with the loaded SDK.
+
+```ts
+container.singleton(
+	PolarClient,
+	() => new PolarClient({ accessToken: () => env.POLAR_ACCESS_TOKEN.get() }),
+);
+```
+
+A provider that fails is not memoized, so the next call retries rather than leaving a
+long-lived client permanently unable to bill after one blip.
+
 ```ts
 // a controller or job
 import { PolarClient } from "@pkg/polar";

@@ -146,11 +146,33 @@ export function subscriptionFromEvent(event: PolarWebhookEvent): Subscription | 
 }
 
 /**
+ * Supplies the access token the first time the client actually talks to Polar.
+ *
+ * Exists for deployments whose token is not a plain string at construction time — one
+ * held in a secret store read through an async `get()`, for instance. Reading it eagerly
+ * would mean awaiting at module scope, which a Worker rejects at upload; handing over a
+ * function defers the read to the first API call and keeps construction free of work.
+ */
+export interface AccessTokenProvider {
+	/**
+	 * Resolves the Polar API access token.
+	 *
+	 * @returns The token, or a promise for it.
+	 */
+	(): string | Promise<string>;
+}
+
+/**
  * Options accepted by the {@link PolarClient} constructor.
  */
 export interface PolarClientOptions {
-	/** Polar API access token (personal or organization). Sent as a Bearer token. */
-	accessToken: string;
+	/**
+	 * Polar API access token (personal or organization). Sent as a Bearer token.
+	 *
+	 * A function is called once, on the first request that needs the SDK, and its result
+	 * is memoized with the loaded client — see {@link AccessTokenProvider}.
+	 */
+	accessToken: string | AccessTokenProvider;
 }
 
 /**
@@ -390,14 +412,20 @@ function toIngestPayload(event: IngestEvent): EventCreateCustomer | EventCreateE
  * ```
  */
 export class PolarClient {
-	/** The access token, held until the SDK is actually loaded and configured. */
-	private readonly accessToken: string;
+	/** The access token, or the provider for it, held until the SDK is configured. */
+	private readonly accessToken: string | AccessTokenProvider;
 
 	/**
 	 * The in-flight or settled SDK load, so concurrent first calls share one import
-	 * and one client rather than racing to build the schemas twice. A rejection is
-	 * memoized too: in a bundled Worker the module is already there, so a failed
-	 * import means a broken deployment and retrying it per call would only hide that.
+	 * and one client rather than racing to build the schemas twice.
+	 *
+	 * Only a fulfilled load is kept. A rejection is discarded so the next call starts
+	 * over, because the step that can fail transiently is resolving a lazily supplied
+	 * access token — reading one from a secret store is a network call, and memoizing
+	 * its failure would leave a long-lived client permanently unable to bill from a
+	 * blip that has since passed. The import itself does not fail transiently: in a
+	 * bundled Worker the module is already there, so it either resolves or the
+	 * deployment is broken, and retrying that costs nothing.
 	 */
 	private loading: Promise<PolarSdk> | undefined;
 
@@ -407,11 +435,13 @@ export class PolarClient {
 	 * service-container token) without paying the SDK's startup cost.
 	 *
 	 * @param options - Client configuration.
-	 * @param options.accessToken - The Polar API access token.
+	 * @param options.accessToken - The Polar API access token, or a function resolving it
+	 * on first use for a token that is only readable asynchronously.
 	 *
 	 * @example
 	 * ```ts
 	 * let polar = new PolarClient({ accessToken: "polar_at_..." });
+	 * let lazy = new PolarClient({ accessToken: () => secret.get() });
 	 * ```
 	 */
 	constructor(options: PolarClientOptions) {
@@ -423,7 +453,9 @@ export class PolarClient {
 	 *
 	 * Every method that talks to Polar goes through here, which is what keeps the
 	 * import out of module scope: the bundler splits it into a chunk that an isolate
-	 * only ever evaluates if it actually reaches a billing code path.
+	 * only ever evaluates if it actually reaches a billing code path. A lazily supplied
+	 * access token is resolved here for the same reason, and alongside the import rather
+	 * than before it, so a store read and the chunk load overlap instead of queueing.
 	 *
 	 * @returns The configured client and the webhook event parser.
 	 */
@@ -431,10 +463,16 @@ export class PolarClient {
 		return (this.loading ??= Promise.all([
 			import("@polar-sh/sdk"),
 			import("@polar-sh/sdk/webhooks.js"),
-		]).then(([{ Polar }, { validateEvent }]) => ({
-			client: new Polar({ accessToken: this.accessToken }),
-			validateEvent,
-		})));
+			typeof this.accessToken === "function" ? this.accessToken() : this.accessToken,
+		])
+			.then(([{ Polar }, { validateEvent }, accessToken]) => ({
+				client: new Polar({ accessToken }),
+				validateEvent,
+			}))
+			.catch((error: unknown) => {
+				this.loading = undefined;
+				throw error;
+			}));
 	}
 
 	/**

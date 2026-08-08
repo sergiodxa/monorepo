@@ -76,7 +76,7 @@ Secrets / vars (from `.dev.vars` / `.env.example`; all are needed by the NEW APP
 | ------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
 | `COOKIE_SESSION_SECRET`                                                        | Signing the IdP session cookie (plain secret, read via `env`)         |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`                                     | GitHub social login                                                   |
-| `POLAR_ACCESS_TOKEN`                                                           | Mirroring subjects into Polar customers                               |
+| `POLAR_ACCESS_TOKEN`                                                           | Mirroring subjects into Polar customers (Secrets Store binding — §13) |
 | `UPTIME_CRON_API_KEY`                                                          | Self-monitoring ping from the queue job                               |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AUTH_DATABASE_ID`, `CLOUDFLARE_API_TOKEN` | Drizzle Kit migration generation only — **not needed** in the NEW APP |
 
@@ -577,7 +577,12 @@ Final shape of `apps/r3-auth/wrangler.jsonc`:
 6. `queues.producers`: `[{ binding: "QUEUE", queue: "auth" }]`. **No `queues.consumers` and no `triggers.crons` until Phase 8.**
 7. `ratelimits`: all five bindings with the same namespace ids, limits, and periods.
 8. **No `routes` entry until Phase 8.**
-9. Secrets: `.dev.vars` locally, `bunx wrangler secret put` in production. Do not use Secrets Store — the OLD APP reads `env.COOKIE_SESSION_SECRET` as a plain var, and a Secrets Store binding has no local value.
+9. Secrets: `.dev.vars` locally, `bunx wrangler secret put` in production, for `COOKIE_SESSION_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and `UPTIME_CRON_API_KEY`. Not Secrets Store for those — the OLD APP reads `env.COOKIE_SESSION_SECRET` as a plain var, they are read on ordinary requests, and a store binding has no local value, so the session cookie would stop being signable in development.
+
+   **Amended:** `POLAR_ACCESS_TOKEN` **is** a `secrets_store_secrets` binding (store `e8d9e39c4db6485bbd65a9658e8f9a71`, secret name `POLAR_ACCESS_TOKEN`). The rule above was decided about the session secret and does not transfer to this one, for three reasons. It was never set as a worker secret on the deployed worker, so the plain-var reading the rule implies returns `undefined` — and the provisioning path treats a Polar failure as fatal, which would make **every** first-time sign-in fail and roll itself back. The token already exists in the account's store, so binding it is the only step; there is nothing to `wrangler secret put`. And it is read only while provisioning a brand-new subject against a third-party API, never on an ordinary request, so unlike the session secret an unreadable value costs one code path rather than the whole app.
+
+   Consequences of the amendment: the binding types as `SecretsStoreSecret`, so the read is `await env.POLAR_ACCESS_TOKEN.get()`. That is asynchronous and a container factory is not, and awaiting at module scope fails a Worker's upload validation (which `deploy --dry-run` does not catch), so `PolarClient` is constructed with a token _provider_ — `@pkg/polar` accepts `accessToken: string | (() => string | Promise<string>)` and resolves it alongside the SDK import on the first call that bills. Local development has no store value, so the provider falls back to a plain `POLAR_ACCESS_TOKEN_LOCAL` from `.dev.vars`; that name is deliberately different from the binding's, because a `.dev.vars` entry sharing the binding's name is shadowed by the binding and silently unreadable. Tests register their own client in the container and need no token at all.
+
 10. After every change: `bun cf:typegen`, then `bun run build` followed by `bunx wrangler deploy --dry-run`.
 
 Also update: `.oxfmtrc.json` (add an `apps/r3-auth` entry; note the OLD APP's Tailwind override is not needed for the NEW APP, and remove the `apps/auth` override at cutover), `.claude/launch.json` (add an `r3-auth` entry on port 3002), and the root `README.md` app list at cutover.

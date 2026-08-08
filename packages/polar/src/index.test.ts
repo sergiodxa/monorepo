@@ -304,6 +304,41 @@ describe("PolarClient", () => {
 		expect(calls["new"]).toHaveLength(1);
 	});
 
+	test("resolves a token provider on first use and configures the SDK with its value", async () => {
+		let resolutions = 0;
+		let polar = new PolarClient({
+			accessToken: async () => {
+				resolutions++;
+				return "polar_at_from_store";
+			},
+		});
+
+		expect(resolutions).toBe(0);
+
+		await polar.getCustomer("cus_1");
+		expect(calls["new"]).toEqual([{ accessToken: "polar_at_from_store" }]);
+
+		await polar.getCustomer("cus_2");
+		expect(resolutions).toBe(1);
+	});
+
+	test("retries a token provider that failed rather than staying broken", async () => {
+		let attempts = 0;
+		let polar = new PolarClient({
+			accessToken: async () => {
+				attempts++;
+				if (attempts === 1) throw new Error("Secret not found");
+				return "polar_at_second_try";
+			},
+		});
+
+		await expect(polar.getCustomer("cus_1")).rejects.toThrow("Secret not found");
+
+		await polar.getCustomer("cus_1");
+		expect(attempts).toBe(2);
+		expect(calls["new"]).toEqual([{ accessToken: "polar_at_second_try" }]);
+	});
+
 	describe("createCustomer", () => {
 		test("passes email/name/metadata through", async () => {
 			let polar = new PolarClient({ accessToken: "t" });

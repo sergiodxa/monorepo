@@ -41,7 +41,41 @@ container.singleton(Database, () =>
 	createDatabase(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
 );
 
-container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
+/**
+ * The billing client, holding {@link readPolarAccessToken} rather than a token: the
+ * token is a Secrets Store binding, so reading it is asynchronous and a container
+ * factory is not. Passing the function defers the read to the first call that actually
+ * bills — which is only ever the provisioning of a brand-new subject — so the vast
+ * majority of isolates never read the secret at all, and none of them read it at module
+ * scope, where an await would fail the Worker's upload validation.
+ */
+container.singleton(PolarClient, () => new PolarClient({ accessToken: readPolarAccessToken }));
+
+/**
+ * Reads the Polar access token from the Secrets Store binding, falling back to the
+ * plain `POLAR_ACCESS_TOKEN_LOCAL` variable.
+ *
+ * The fallback is what makes local development work: a Secrets Store binding resolves
+ * against Cloudflare's network, and the local simulation of it is an empty store, so
+ * `get()` there throws for a secret nobody put in it. Production has no such variable,
+ * so a failure there stays a failure and is reported by the caller instead of being
+ * quietly swallowed.
+ *
+ * Exported so the three outcomes can be asserted apart from a live billing call; the
+ * client above is the only caller.
+ *
+ * @returns The Polar API access token.
+ * @throws {Error} When the binding cannot be read and no local value is configured.
+ */
+export async function readPolarAccessToken(): Promise<string> {
+	try {
+		return await env.POLAR_ACCESS_TOKEN.get();
+	} catch (error) {
+		let local = env.POLAR_ACCESS_TOKEN_LOCAL;
+		if (local) return local;
+		throw error;
+	}
+}
 
 /**
  * How mail leaves this worker, registered once so both mailers agree on it: the

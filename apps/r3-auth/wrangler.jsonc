@@ -22,10 +22,23 @@
 	// so this line and that release are the same step.
 	"routes": [{ "pattern": "auth.sergiodxa.com", "custom_domain": true }],
 
-	// Plain secrets (COOKIE_SESSION_SECRET, GITHUB_CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
-	// UPTIME_CRON_API_KEY) are set through `.dev.vars` locally and `wrangler secret put`
-	// in production. Not Secrets Store: a store binding has no local value, and the
-	// session cookie has to be signable in development too.
+	// Plain secrets (COOKIE_SESSION_SECRET, GITHUB_CLIENT_ID/SECRET, UPTIME_CRON_API_KEY)
+	// are set through `.dev.vars` locally and `wrangler secret put` in production. Those
+	// stay plain because every one of them is read on an ordinary request — the session
+	// cookie has to be signable in development too — and a store binding has no local
+	// value.
+	//
+	// POLAR_ACCESS_TOKEN is the exception below: it is read only while provisioning a
+	// brand-new subject, it already lives in the account's store, and it was never set as
+	// a worker secret here, so reading it as a plain var yields `undefined` and turns
+	// every first sign-in into a rolled-back failure.
+	"secrets_store_secrets": [
+		{
+			"binding": "POLAR_ACCESS_TOKEN",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "POLAR_ACCESS_TOKEN",
+		},
+	],
 
 	"d1_databases": [
 		{

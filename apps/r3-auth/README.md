@@ -281,3 +281,20 @@ Secrets are set with `bunx wrangler secret put <NAME>`.
 See `.env.example` for required environment variables. Mail adds none: the sender identity
 is a constant in `app/emails/sender.ts` and delivery is the `EMAIL` binding, so there is no
 API key, host or `From` to configure per environment.
+
+`COOKIE_SESSION_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and
+`UPTIME_CRON_API_KEY` are plain worker secrets: `.dev.vars` locally,
+`bunx wrangler secret put <NAME>` in production.
+
+The Polar access token is not. It is the `POLAR_ACCESS_TOKEN` Secrets Store binding
+declared in `wrangler.jsonc`, read as `await env.POLAR_ACCESS_TOKEN.get()`, and there is
+nothing to set with `wrangler secret put` — rotating it is a Secrets Store operation and
+takes effect without redeploying.
+
+A store binding has no value outside Cloudflare's network, and the local simulation of it
+is an empty store, so `get()` throws during `bun dev`. Set `POLAR_ACCESS_TOKEN_LOCAL` in
+`.dev.vars` and the container falls back to it; production has no such variable, so a
+failed read there stays a failure. The fallback only matters for the one path that bills —
+provisioning a subject that has never signed in before — so leaving it unset is fine until
+you exercise a first-time sign-in locally. Tests never need it: they register their own
+client in the container.
