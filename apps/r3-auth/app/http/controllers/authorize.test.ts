@@ -121,6 +121,46 @@ describe("GET /authorize", () => {
 		expect(body).not.toContain('name="password"');
 	});
 
+	test("spends no budget on a probe carrying no authorization request", async () => {
+		// The bare domain redirects here, so a monitor, a crawler or a bodyless probe on `/`
+		// arrives at this handler with no query at all and is answered with the parameterless
+		// self-redirect. That request enumerates nothing, and the budget is keyed by IP, so
+		// letting it spend would let a prober lock out whoever shares its egress.
+		app = await createTestApp({ limits: { authorize: 1 } });
+		fixtures = await seed(app);
+
+		let bare = `${ORIGIN}${routes.authorize.index.href()}`;
+
+		expect((await app.fetch(new Request(bare, { redirect: "manual" }))).status).toBe(303);
+		expect((await app.fetch(new Request(bare, { redirect: "manual" }))).status).toBe(303);
+		expect(
+			(await app.fetch(new Request(bare, { method: "HEAD", redirect: "manual" }))).status,
+		).toBe(303);
+
+		// The one slot in the budget is still there for the request it exists to protect.
+		let response = await app.fetch(new Request(authorizeUrl(fixtures), { redirect: "manual" }));
+
+		expect(response.status).toBe(200);
+	});
+
+	test("still limits a caller enumerating client ids", async () => {
+		app = await createTestApp({ limits: { authorize: 1 } });
+		fixtures = await seed(app);
+
+		// Naming a client is what an enumeration does, and it costs the budget from the very
+		// first attempt — before the lookup that would answer it.
+		let first = await app.fetch(new Request(authorizeUrl(fixtures), { redirect: "manual" }));
+		expect(first.status).toBe(200);
+
+		let second = await app.fetch(
+			new Request(authorizeUrl(fixtures, { client_id: "11111111-1111-4111-8111-111111111111" }), {
+				redirect: "manual",
+			}),
+		);
+
+		expect(second.status).toBe(429);
+	});
+
 	test("refuses a redirect_uri that is not the registered one, character for character", async () => {
 		let response = await app.fetch(
 			new Request(authorizeUrl(fixtures, { redirect_uri: `${REDIRECT_URI}?x=1` })),

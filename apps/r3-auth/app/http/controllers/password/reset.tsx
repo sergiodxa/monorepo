@@ -169,14 +169,22 @@ export default createController(routes.password.reset, {
 		index: inject([RateLimiters] as const, async (limiters) => {
 			let ctx = getContext();
 
-			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
-			if (limited) return limited;
-
 			let query = await validate(ctx.url.searchParams, ResetTokenQuerySchema);
 			if (isFailure(query)) {
 				ctx.logger.info("password_reset_link_malformed");
 				return invalidPage(ctx);
 			}
+
+			// Spent only once the request presents something that could be a token, and so
+			// only by a request that is about to cost a store read. A page fetched with no
+			// token — a crawler, a monitor, a bodyless probe on the bare path — is answered
+			// out of the shape check above and takes nothing from the budget, which matters
+			// because this is the same budget a person's sign-in attempts come out of and it
+			// is keyed by IP: whoever shares an egress with a prober must not be locked out
+			// of signing in by it. Somebody walking the token space still presents a
+			// well-formed token every time and is still stopped at ten a minute.
+			let limited = await spendRateLimit(limiters.login, getClientIP(ctx.request) ?? "unknown");
+			if (limited) return limited;
 
 			let subjectId = await peekPasswordResetToken(query.data.token);
 			if (!subjectId) {

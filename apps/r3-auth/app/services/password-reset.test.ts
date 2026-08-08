@@ -326,6 +326,42 @@ describe("opening a reset link", () => {
 		expect(await response.text()).toContain("This link no longer works");
 	});
 
+	test("spends no sign-in budget on a request carrying no token", async () => {
+		// The budget this page spends from is the one a person's sign-in attempts come out of,
+		// and it is keyed by IP. A crawler, a monitor or a bodyless probe on the bare path is
+		// answered out of the shape check and must therefore cost nothing, or whoever shares an
+		// egress with it cannot sign in.
+		// Two: one for the request that asks for the link, one for opening it. Every probe in
+		// between has to be free, or the last call here is a 429.
+		app = await createTestApp({ limits: { login: 2 } });
+		fixtures = await seed(app);
+
+		await requestReset(EMAIL);
+		let token = tokenFromMail();
+
+		let bare = new URL(routes.password.reset.index.href(), ORIGIN);
+
+		expect((await app.fetch(new Request(bare, { redirect: "manual" }))).status).toBe(400);
+		expect((await app.fetch(new Request(bare, { redirect: "manual" }))).status).toBe(400);
+		expect(
+			(await app.fetch(new Request(bare, { method: "HEAD", redirect: "manual" }))).status,
+		).toBe(400);
+
+		expect((await openResetLink(token)).status).toBe(200);
+	});
+
+	test("still limits a caller walking the token space", async () => {
+		app = await createTestApp({ limits: { login: 1 } });
+		fixtures = await seed(app);
+
+		// Well-formed and worthless, which is exactly what a guessing loop sends. The first
+		// costs a store read and the budget; the second is refused before it costs anything.
+		let guess = "a".repeat(43);
+
+		expect((await openResetLink(guess)).status).toBe(400);
+		expect((await openResetLink(guess)).status).toBe(429);
+	});
+
 	test("answers a token whose record is gone the same way, which is what expiry produces", async () => {
 		await requestReset(EMAIL);
 		let token = tokenFromMail();

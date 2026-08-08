@@ -214,11 +214,6 @@ export default createController(routes.authorize, {
 		index: inject([Database, RateLimiters] as const, async (db, limiters) => {
 			let ctx = getContext();
 
-			// By IP, before anything reads the database: this endpoint is the enumeration
-			// surface for client ids and redirect URIs.
-			let limited = await spendRateLimit(limiters.authorize, getClientIP(ctx.request) ?? "unknown");
-			if (limited) return limited;
-
 			let subjectId = currentSubjectId();
 			let result = await validate(ctx.url.searchParams, AuthorizeQuerySchema);
 
@@ -234,6 +229,21 @@ export default createController(routes.authorize, {
 			}
 
 			let query = result.data;
+
+			// By IP, and here rather than at the top of the handler: this endpoint is the
+			// enumeration surface for client ids and redirect URIs, and enumerating means
+			// naming one — so the budget is spent by the first request that is a real
+			// authorization request, immediately before the lookup that would answer it.
+			//
+			// The branch above costs nothing, which is what keeps a probe out of a person's
+			// budget: `/` redirects here, so a monitor, a crawler or a bodyless `HEAD` on the
+			// bare domain arrives with no query at all and gets the parameterless
+			// self-redirect. It reads and writes only this server's own client registration,
+			// which is one fixed row and tells a caller nothing they did not already know.
+			// An attacker probing client ids or redirect URIs has to send the parameters, so
+			// they are limited from their very first attempt exactly as before.
+			let limited = await spendRateLimit(limiters.authorize, getClientIP(ctx.request) ?? "unknown");
+			if (limited) return limited;
 
 			let client = await Client.findById(db, query.client_id);
 			if (!client) {

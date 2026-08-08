@@ -19,7 +19,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
 /** The body a rate-limited request is refused with, frozen because clients parse it. */
@@ -134,8 +134,10 @@ describe("rate limiting", () => {
 		app = await createTestApp({ limits: { authorize: 1 } });
 		fixtures = await seed(app);
 
-		await app.fetch(new Request(`${ORIGIN}${routes.authorize.index.href()}`));
-		let response = await app.fetch(new Request(`${ORIGIN}${routes.authorize.index.href()}`));
+		// A real authorization request, because that is what the budget is spent by: a probe
+		// carrying no request at all never reaches the lookup this limiter protects.
+		await app.fetch(new Request(authorizeUrl(fixtures)));
+		let response = await app.fetch(new Request(authorizeUrl(fixtures)));
 
 		expect(response.status).toBe(429);
 		expect(response.headers.get("retry-after")).toBe("60");
