@@ -5,13 +5,26 @@
  * `readAttribution` rather than through a request. Every case passes a fixed instant, so
  * nothing here depends on the clock.
  *
+ * The middleware itself is exercised through a router carrying the same head-of-chain
+ * `HEAD` handling and session the app installs, because the one thing it must never do is
+ * write on a probe.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { describe, expect, test } from "bun:test";
 
-import { readAttribution } from "~/app/http/middleware/attribution";
+import type { Middleware } from "remix/fetch-router";
+
+import { headRequests } from "@pkg/http/middleware/head-requests";
+import { createRouter } from "remix/fetch-router";
+import { Session } from "remix/session";
+
+import type { TrialAttribution } from "~/app/http/middleware/attribution";
+
+import { attribution, readAttribution, TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
+import { createSessionMiddleware } from "~/app/http/middleware/session";
 
 const NOW = new Date("2026-08-04T12:00:00Z").getTime();
 
@@ -86,3 +99,80 @@ describe("readAttribution", () => {
 		expect(read("https://uptime.test/?ref=%20").source).toBeNull();
 	});
 });
+
+describe("attribution middleware", () => {
+	/**
+	 * Runs one request through the middleware chain the app installs around this: `HEAD`
+	 * handling first, then the real cookie + KV session, then the middleware under test.
+	 *
+	 * @param request - The request to send.
+	 * @returns Whatever the session held for the first-touch key by the time the handler ran.
+	 */
+	async function run(request: Request): Promise<TrialAttribution | undefined> {
+		let captured: TrialAttribution | undefined;
+
+		let router = createRouter({
+			middleware: [
+				headRequests(),
+				createSessionMiddleware(createFakeKV(), "s3cr3t", false) as Middleware,
+				attribution,
+			],
+		});
+
+		router.get("/for/agencies", (ctx) => {
+			captured = ctx.get(Session)?.get(TRIAL_ATTRIBUTION) as TrialAttribution | undefined;
+			return new Response("ok", { headers: { "Content-Type": "text/html" } });
+		});
+
+		await router.fetch(request);
+
+		return captured;
+	}
+
+	test("records first-touch attribution on a GET page view", async () => {
+		let record = await run(new Request("https://uptime.test/for/agencies?ref=outreach"));
+
+		expect(record?.landingPath).toBe("/for/agencies");
+		expect(record?.source).toBe("outreach");
+	});
+
+	/**
+	 * The guard reads the *original* request method on purpose. The head-of-chain `HEAD`
+	 * middleware rewrites `context.method` to `GET` and runs the whole handler, so reading
+	 * `context.method` here would make every monitoring probe look like a first arrival:
+	 * it would claim the visitor's first touch for whichever path a machine happened to
+	 * probe, and it would write a session — and therefore a `Set-Cookie` — for a caller
+	 * that has no session and no campaign behind it. A probe must never be attributed.
+	 */
+	test("records nothing for a HEAD probe of the same page", async () => {
+		let record = await run(
+			new Request("https://uptime.test/for/agencies?ref=outreach", { method: "HEAD" }),
+		);
+
+		expect(record).toBeUndefined();
+	});
+});
+
+/** Builds an in-memory `KVNamespace` fake, so the session round-trips without a real binding. */
+function createFakeKV(): KVNamespace {
+	let values = new Map<string, string>();
+
+	return {
+		async get(key: string) {
+			return values.get(key) ?? null;
+		},
+		async getWithMetadata(key: string) {
+			return { value: values.get(key) ?? null, metadata: null, cacheStatus: null };
+		},
+		async put(key: string, value: string | ArrayBuffer | ReadableStream | ArrayBufferView) {
+			if (typeof value !== "string") return;
+			values.set(key, value);
+		},
+		async delete(key: string) {
+			values.delete(key);
+		},
+		async list() {
+			return { keys: [], list_complete: true, cursor: "" };
+		},
+	} as unknown as KVNamespace;
+}
