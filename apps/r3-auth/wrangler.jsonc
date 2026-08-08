@@ -30,8 +30,10 @@
 	//
 	// POLAR_ACCESS_TOKEN is the exception below: it is read only while provisioning a
 	// brand-new subject, it already lives in the account's store, and it was never set as
-	// a worker secret here, so reading it as a plain var yields `undefined` and turns
-	// every first sign-in into a rolled-back failure.
+	// a worker secret here, so reading it as a plain var yields `undefined`. A first
+	// sign-in still completes without it — the billing mirror is best effort — which is
+	// exactly why the binding has to be declared rather than noticed: the failure is a
+	// log line, not an error anybody sees.
 	"secrets_store_secrets": [
 		{
 			"binding": "POLAR_ACCESS_TOKEN",

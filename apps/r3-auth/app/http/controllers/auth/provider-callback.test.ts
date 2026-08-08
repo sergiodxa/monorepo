@@ -1,8 +1,9 @@
 /**
  * Router-level tests of GitHub sign-in: the redirect that starts it, the first sign-in
  * that provisions a subject, connection and billing customer, the returning sign-in
- * that reuses them, the rollback when provisioning fails part way, and the errors that
- * are reported back to the relying party rather than rendered here.
+ * that reuses them, the sign-in that completes anyway when the billing mirror fails,
+ * the rollback when the connection cannot be written, and the errors that are reported
+ * back to the relying party rather than rendered here.
  *
  * GitHub is intercepted with MSW, so what is under test is the real request the
  * provider makes — token exchange, profile fetch — and not a stand-in for it.
@@ -17,6 +18,7 @@ import type { Customer as PolarCustomer, PolarClient } from "@pkg/polar";
 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { rawSql } from "remix/data-table";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -78,7 +80,7 @@ function respondWithProfile(
 	);
 }
 
-/** A billing client whose customer creation always fails, for the rollback test. */
+/** A billing client that is down, for the tests about a sign-in outliving a billing outage. */
 function failingPolarClient(): PolarClient {
 	let fake: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
 		async createCustomer(): Promise<PolarCustomer> {
@@ -93,6 +95,50 @@ function failingPolarClient(): PolarClient {
 	};
 
 	return fake as unknown as PolarClient;
+}
+
+/** What {@link recordingPolarClient} saw, so a test can assert on the customer provisioned. */
+interface PolarCalls {
+	/** `[email, name]` of every customer created. */
+	created: [string, string | null | undefined][];
+	/** `[customerId, externalId]` of every link written. */
+	linked: [string, string | null | undefined][];
+}
+
+/** A billing client that succeeds and records what provisioning asked it to do. */
+function recordingPolarClient(calls: PolarCalls): PolarClient {
+	let customer = { id: "cus_recorded", email: "", externalId: null } as unknown as PolarCustomer;
+
+	let fake: Pick<PolarClient, "createCustomer" | "findCustomerByEmail" | "updateCustomer"> = {
+		async createCustomer(email, name) {
+			calls.created.push([email, name]);
+			return { ...customer, email } as PolarCustomer;
+		},
+		async findCustomerByEmail() {
+			return null;
+		},
+		async updateCustomer(customerId, updates) {
+			calls.linked.push([customerId, updates.externalId]);
+			return { ...customer, externalId: updates.externalId ?? null } as PolarCustomer;
+		},
+	};
+
+	return fake as unknown as PolarClient;
+}
+
+/**
+ * Makes every insert into `connections` fail, so the compensation that removes the
+ * subject behind an unwritable connection runs against the real database.
+ *
+ * A trigger rather than a stubbed model: reads still work, so the flow reaches the
+ * insert exactly the way a request does and fails only where a failure is being tested.
+ */
+async function refuseConnectionWrites(db: TestApp["db"]): Promise<void> {
+	await db.exec(
+		rawSql(
+			"CREATE TRIGGER refuse_connection_insert BEFORE INSERT ON connections BEGIN SELECT RAISE(ABORT, 'connections is unavailable'); END",
+		),
+	);
 }
 
 let app: TestApp;
@@ -359,9 +405,81 @@ describe("GET /auth/:provider/callback", () => {
 		expect(await app.db.count(connections)).toBe(0);
 	});
 
-	test("rolls back the subject and the connection when billing provisioning fails", async () => {
+	test("creates the billing customer and links it to the subject on a first sign-in", async () => {
+		let calls: PolarCalls = { created: [], linked: [] };
+		app = await createTestApp({ polar: recordingPolarClient(calls) });
+		fixtures = await seed(app);
+
+		respondWithProfile();
+		await finishFlow({ code: "gh-code", state: await startFlow() });
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+
+		expect(calls.created).toEqual([[GITHUB_PROFILE.email, GITHUB_PROFILE.name]]);
+		expect(calls.linked).toEqual([["cus_recorded", subject!.id]]);
+	});
+
+	test("signs the person in when the billing mirror fails, keeping the subject and the connection", async () => {
 		app = await createTestApp({ polar: failingPolarClient() });
 		fixtures = await seed(app);
+
+		respondWithProfile();
+		let state = await startFlow();
+
+		let response = await finishFlow({ code: "gh-code", state });
+
+		// Nothing is charged at sign-up, so a billing outage is not a reason to refuse an
+		// authentication — and refusing it used to erase the account it refused, leaving a
+		// retry to run the whole provisioning again against the same outage.
+		let location = new URL(response.headers.get("location")!);
+		expect(location.searchParams.get("error")).toBeNull();
+		expect(location.searchParams.get("code")).toBeTruthy();
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+		expect(subject).not.toBeNull();
+
+		let connection = await app.db.findOne(connections, {
+			where: { provider: "github", external_id: GITHUB_PROFILE.node_id },
+		});
+		expect(connection?.subject_id).toBe(subject!.id);
+	});
+
+	test("logs the failed billing mirror by subject id and never by address", async () => {
+		app = await createTestApp({ polar: failingPolarClient() });
+		fixtures = await seed(app);
+
+		// Swapped rather than spied: the request logger writes the flushed log with
+		// `console.error`, and a spy on `console` records nothing under this runner.
+		let calls: unknown[][] = [];
+		let original = console.error;
+		console.error = (...args: unknown[]) => void calls.push(args);
+
+		try {
+			respondWithProfile();
+			await finishFlow({ code: "gh-code", state: await startFlow() });
+		} finally {
+			console.error = original;
+		}
+
+		let subject = await app.db.findOne(subjects, {
+			where: { email_address: GITHUB_PROFILE.email },
+		});
+
+		// The whole flushed request log, because the event is one entry inside it.
+		let logged = JSON.stringify(calls);
+
+		expect(logged).toContain("github_customer_create_failed");
+		expect(logged).toContain(subject!.id);
+		// A log line is the one place an address could leak without touching the database.
+		expect(logged).not.toContain(GITHUB_PROFILE.email);
+	});
+
+	test("deletes the subject when the connection cannot be written", async () => {
+		await refuseConnectionWrites(app.db);
 
 		respondWithProfile();
 		let state = await startFlow();
@@ -371,9 +489,8 @@ describe("GET /auth/:provider/callback", () => {
 		let location = new URL(response.headers.get("location")!);
 		expect(location.searchParams.get("error")).toBe("server_error");
 
-		// Nothing survives a failed sign-up: a subject with no billing customer would be
-		// able to sign in with no way to bill them, and there are no transactions here to
-		// undo the writes automatically.
+		// A subject with no connection can never sign in and still holds the address on the
+		// unique column, so the next attempt would collide with a row nobody can reach.
 		expect(await app.db.count(subjects, { where: { email_address: GITHUB_PROFILE.email } })).toBe(
 			0,
 		);

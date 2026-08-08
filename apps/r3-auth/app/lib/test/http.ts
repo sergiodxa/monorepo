@@ -55,7 +55,8 @@ export interface TestAppOptions {
 	/**
 	 * The billing client provisioning resolves. Defaults to one that answers every call
 	 * with a canned customer, so a test that is not about billing never reaches the
-	 * network; pass a failing one to exercise the provisioning rollback.
+	 * network; pass a failing one to exercise a sign-in that outlives a billing outage,
+	 * or a recording one to assert on the customer provisioning produced.
 	 */
 	polar?: PolarClient;
 	/**

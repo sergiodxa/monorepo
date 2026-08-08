@@ -8,9 +8,15 @@
  * is served to relying parties as `email_verified`. Assuming it would record a
  * verification this server never observed.
  *
- * The database has no transactions, so provisioning writes sequentially and undoes
- * what it created when a later step fails; a half-provisioned person would be able to
- * sign in with no way to bill them, or be locked out by a row they cannot see.
+ * The database has no transactions, so provisioning writes sequentially and undoes the
+ * subject when the connection it depends on cannot be written: a subject with no
+ * connection is unreachable, and it holds the address on the unique column that the
+ * next attempt needs.
+ *
+ * The billing mirror is deliberately not part of that: nobody is charged at sign-up, so
+ * making the mirror fatal would put the identity server's availability behind a billing
+ * vendor's for an operation with no money in it, and the refusal would also erase the
+ * account it just refused. A failed mirror is logged and the person signs in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,7 +59,7 @@ const GITHUB_EMAILS_SCHEMA = s.object({
 
 /**
  * Reason reported when provisioning was rolled back. Deliberately says nothing about
- * which step failed: the relying party can only retry either way.
+ * what failed: the relying party can only retry either way.
  */
 const PROVISIONING_FAILED = "Could not complete the sign-up. Please try again.";
 
@@ -249,8 +255,13 @@ function externalIdOf(profile: GitHubProfile): string {
  * `email_verified` in UserInfo the truth rather than an assumption, and what puts the
  * account into the flow that asks the person to prove the address.
  *
+ * The billing mirror is best effort: a refused or unreachable billing API is logged and
+ * the sign-in still completes, because nothing is charged here and an identity server
+ * that stops issuing sign-ins when a billing vendor is down is worse than a subject
+ * whose customer record arrives late.
+ *
  * @param db - Database the subject and connection are written to.
- * @param polar - Billing client the subject is mirrored into.
+ * @param polar - Billing client the subject is mirrored into, best effort.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
@@ -313,13 +324,13 @@ export async function resolveGitHubSubject(
 	try {
 		await Customer.findOrCreateByEmail(polar, email, subject);
 	} catch {
-		// Undone in reverse order, so the subject — the row everything else points at —
-		// is the last thing to go and never outlives what depends on it.
-		let created = await Connection.find(db, PROVIDER, externalId);
-		if (created) await Connection.delete(db, created.id);
-		await Subject.delete(db, subject.id);
+		// Logged and carried on with: the sign-in is complete without it, and there is
+		// nothing the person could do about a billing outage anyway. Nothing is rolled
+		// back — undoing it would refuse a sign-in that succeeded and erase the account,
+		// and the retry would meet the same outage with nothing left to reconcile from.
+		// `findOrCreateByEmail` looks up by address before creating, so the mirror is
+		// picked up by any later run against the same subject.
 		logger.error("github_customer_create_failed", { subjectId: subject.id });
-		return failure(new ProviderLoginError("server_error", PROVISIONING_FAILED));
 	}
 
 	logger.info("github_subject_created", { subjectId: subject.id, emailVerified });
