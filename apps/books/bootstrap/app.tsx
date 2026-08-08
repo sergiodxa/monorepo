@@ -12,6 +12,7 @@
 import type { Middleware, RequestContext } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -39,6 +40,9 @@ import routes from "~/routes/web";
  */
 export default function application() {
 	let globalMiddleware: Middleware[] = [
+		// First, so everything after it — cross-origin protection included — sees a plain
+		// `GET` and treats a `HEAD` probe exactly as it would the page request behind it.
+		headRequests(),
 		asyncContext(),
 		logger,
 		formData() as Middleware,

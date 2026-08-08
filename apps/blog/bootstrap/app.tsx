@@ -10,6 +10,7 @@
 import type { Middleware, RequestContext } from "remix/fetch-router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import { redirect } from "@pkg/http/response";
 import { asyncContext } from "remix/async-context-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -68,6 +69,10 @@ let requireCMSAuth: Middleware = (_ctx, next) => {
  */
 export default function createApplication(env: App.Env) {
 	let globalMiddleware: Array<Middleware<any>> = [
+		// First, so every middleware after it — the canonical-host redirects, the auth
+		// guard, cross-origin protection — sees a plain `GET` and treats a `HEAD` probe
+		// exactly as it would the page request behind it.
+		headRequests(),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),

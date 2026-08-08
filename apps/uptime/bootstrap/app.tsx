@@ -15,6 +15,7 @@ import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import mail from "@pkg/mail/middleware";
 import { env } from "cloudflare:workers";
@@ -241,6 +242,10 @@ export default function application(options: application.Options) {
 	// via `declare module "remix/fetch-router"` augmentations in their own files,
 	// not through the transform-typed middleware chain (see AGENTS.md).
 	let globalMiddleware: Middleware[] = [
+		// First, so everything after it — the session, the auth guard, cross-origin
+		// protection, the per-route API guards — sees a plain `GET` and treats a `HEAD`
+		// probe exactly as it would the request behind it.
+		headRequests(),
 		asyncContext(),
 		logger,
 		// Publishes `ctx.email` on every surface, machine ones included: the cron-job ping

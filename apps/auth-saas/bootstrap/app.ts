@@ -10,6 +10,7 @@
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -54,6 +55,10 @@ import routes from "~/routes/web";
 // the value it provides is surfaced via the global `formData` context augmentation
 // (see config/router-context.d.ts), not the transform.
 let globalMiddleware: Middleware[] = [
+	// First, so everything after it — the session, the dashboard and tenant guards —
+	// sees a plain `GET` and treats a `HEAD` probe exactly as it would the request
+	// behind it.
+	headRequests(),
 	trailingSlash,
 	logger,
 	asyncContext(),

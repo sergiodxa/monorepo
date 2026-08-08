@@ -263,3 +263,35 @@ describe("the remaining routes", () => {
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
 	});
 });
+
+describe("HEAD requests", () => {
+	test("answers a HEAD with the GET's status and headers and no body", async () => {
+		let path = `${ORIGIN}${routes.healthcheck.href()}`;
+
+		let get = await app.fetch(new Request(path));
+		let head = await app.fetch(new Request(path, { method: "HEAD" }));
+
+		expect(head.status).toBe(get.status);
+		expect(head.headers.get("content-type")).toBe(get.headers.get("content-type"));
+		expect(await head.text()).toBe("");
+	});
+
+	test("still 404s a HEAD to a path whose route has no GET", async () => {
+		let response = await app.fetch(
+			new Request(`${ORIGIN}${routes.account.verifyEmailResend.href()}`, { method: "HEAD" }),
+		);
+
+		expect(response.status).toBe(404);
+	});
+
+	test("does not let a HEAD past the session guard", async () => {
+		let path = `${ORIGIN}${routes.account.profile.href()}`;
+
+		let get = await app.fetch(new Request(path, { redirect: "manual" }));
+		let head = await app.fetch(new Request(path, { method: "HEAD", redirect: "manual" }));
+
+		expect(get.status).not.toBe(200);
+		expect(head.status).toBe(get.status);
+		expect(head.headers.get("location")).toBe(get.headers.get("location"));
+	});
+});

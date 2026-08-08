@@ -8,6 +8,7 @@
  */
 import type { Middleware } from "remix/fetch-router";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import { notFound } from "@pkg/http/response/html";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/async-context-middleware";
@@ -37,6 +38,10 @@ import routes from "~/routes/web";
  */
 export function createDashboardRouter() {
 	let middleware: Middleware[] = [
+		// First, so everything after it — the session, cross-origin protection, the
+		// dashboard guards — sees a plain `GET` and treats a `HEAD` probe exactly as it
+		// would the request behind it.
+		headRequests(),
 		asyncContext(),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),

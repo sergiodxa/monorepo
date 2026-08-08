@@ -12,6 +12,7 @@ import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { headRequests } from "@pkg/http/middleware/head-requests";
 import mail from "@pkg/mail/middleware";
 import { getServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
@@ -92,6 +93,12 @@ export default function application(options: application.Options) {
 	// `declare module "remix/fetch-router"` in their own modules rather than carried
 	// through the chain's transform types.
 	let middleware: Middleware[] = [
+		// First, so everything after it — the session, cross-origin protection with its
+		// bypass list, and each controller's own guard — sees a plain `GET` and treats a
+		// `HEAD` probe exactly as it would the request behind it. The bypass list is
+		// unaffected: it matches on path, and the machine endpoints it names are `POST`
+		// routes a rewritten `HEAD` cannot reach.
+		headRequests(),
 		asyncContext(),
 		logger,
 		formData() as Middleware,
