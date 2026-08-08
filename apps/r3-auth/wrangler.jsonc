@@ -12,9 +12,11 @@
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
 
-	// No `routes` entry yet: `auth.sergiodxa.com` keeps resolving to the worker that
-	// serves it today, and the custom domain moves here only once this worker has been
-	// verified end to end against every relying party.
+	// No `routes` entry, deliberately, even at cutover: `auth.sergiodxa.com` is bound to a
+	// worker as a dashboard custom domain rather than through this file, so the hostname
+	// moves by reassigning it there. Declaring it here while another worker still holds it
+	// is refused, and declaring it after the move would only restate what the dashboard
+	// already owns.
 
 	// Plain secrets (COOKIE_SESSION_SECRET, GITHUB_CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
 	// UPTIME_CRON_API_KEY) are set through `.dev.vars` locally and `wrangler secret put`
@@ -43,12 +45,19 @@
 	// read the same file, or tokens stop verifying against the published JWKS.
 	"r2_buckets": [{ "binding": "R2", "bucket_name": "auth", "preview_bucket_name": "auth" }],
 
-	// Producer only. A Cloudflare queue has exactly one consumer worker, and the worker
-	// serving production still holds that role along with the daily cron that feeds it,
-	// so neither `queues.consumers` nor `triggers.crons` is declared here yet.
+	// Producer and consumer of the same queue: the cron below publishes one message a day
+	// and this worker answers it. A Cloudflare queue has exactly one consumer, so the
+	// worker that held this role must release it before a deploy declaring it here is
+	// accepted — deploying that one first is what makes this deploy possible, not a
+	// courtesy.
 	"queues": {
+		"consumers": [{ "queue": "auth" }],
 		"producers": [{ "binding": "QUEUE", "queue": "auth" }],
 	},
+
+	// Enqueues the expired-session sweep at midnight UTC. Paired with the consumer above:
+	// declaring the cron without it publishes a message nothing reads.
+	"triggers": { "crons": ["0 0 * * *"] },
 
 	// Platform-native email sending, and the only way this worker puts anything in an
 	// inbox: `CloudflareTransport` is the transport both mailers are built with — the
