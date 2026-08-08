@@ -18,7 +18,9 @@ breaks something you cannot see from here:
   A 404 or a failed signature check silently stops tagging paying customers.
 - **`GET /api/checkout/:type`** for `essentials` and `complete` is linked from the
   pricing page and from the upgrade flow, and is shareable. It stays a GET that
-  redirects to Polar.
+  redirects to Polar. Those two names are the whole accepted set: anything else 404s
+  before any billing call, so a crawler or a `HEAD` probe cannot leave a real checkout
+  object behind at the provider.
 - **The Polar product and discount ids** in `app/data/product.ts` identify live products
   and campaigns. The webhook branches on the product ids.
 - **`/`, `/release`, `/sample`, `/upgrade`, and `/og.jpg`** are published in newsletters

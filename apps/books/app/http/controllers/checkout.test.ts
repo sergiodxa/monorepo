@@ -1,8 +1,8 @@
 /**
  * Tests for `GET /api/checkout/:type` — the published, shareable link that turns a
  * pricing-page click into a Polar checkout. Covers both packages, the `?email=`
- * pass-through, the discount application, and the deliberate fall-through for an
- * unrecognized package name.
+ * pass-through, the discount application, and the refusal to bill for an unrecognized
+ * package name.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,14 +83,25 @@ describe("GET /api/checkout/:type", () => {
 		expect(polar.checkouts[0]?.discountId).toBeUndefined();
 	});
 
-	test("falls through to the Complete checkout for an unrecognized package name", async () => {
+	test("404s an unrecognized package name without creating a checkout", async () => {
 		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL, discounts: [activeCampaign()] });
 
 		let response = await start(polar, "/api/checkout/everything");
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(CHECKOUT_URL);
-		expect(polar.checkouts[0]?.productId).toBe(Product.Complete);
+		expect(response.status).toBe(404);
+		expect(polar.checkouts).toEqual([]);
+	});
+
+	test("creates no checkout for a HEAD probe of an unrecognized package name", async () => {
+		let polar = new FakePolarClient({ checkoutUrl: CHECKOUT_URL, discounts: [activeCampaign()] });
+
+		let response = await fetchApp("/api/checkout/everything", {
+			method: "HEAD",
+			services: [[PolarClient, polar]],
+		});
+
+		expect(response.status).toBe(404);
+		expect(polar.checkouts).toEqual([]);
 	});
 
 	test("drops a malformed ?email= rather than forwarding it to the provider", async () => {

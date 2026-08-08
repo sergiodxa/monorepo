@@ -51,7 +51,7 @@ state the app has lives in Buttondown and Polar.
 | `/upgrade`            | GET     | The upgrade email form                                      |
 | `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout |
 | `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`            |
-| `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it                 |
+| `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it; 404s otherwise |
 | `/webhooks/polar`     | POST    | Verifies and handles `order.paid`                           |
 | `/healthcheck`        | GET     | Plain-text `OK`                                             |
 
