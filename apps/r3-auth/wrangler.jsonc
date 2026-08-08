@@ -1,6 +1,10 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-	"name": "r3-auth",
+	// The worker this replaces, deployed over rather than beside it: one worker keeps the
+	// hostname, the queue role and the secrets already set on it, and a bad release is
+	// undone by rolling the worker back to its previous version rather than by moving a
+	// domain between two.
+	"name": "auth",
 	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2026-04-10",
 	// Node built-ins must resolve: the billing and JWT dependencies reach for them, and
@@ -12,11 +16,11 @@
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
 
-	// No `routes` entry, deliberately, even at cutover: `auth.sergiodxa.com` is bound to a
-	// worker as a dashboard custom domain rather than through this file, so the hostname
-	// moves by reassigning it there. Declaring it here while another worker still holds it
-	// is refused, and declaring it after the move would only restate what the dashboard
-	// already owns.
+	// The hostname every relying party has hardcoded, and the one the issuer claims. It is
+	// declared here rather than left to the dashboard so the binding lives with the worker
+	// that answers it. A deploy claiming a hostname another worker still holds is refused,
+	// so this line and that release are the same step.
+	"routes": [{ "pattern": "auth.sergiodxa.com", "custom_domain": true }],
 
 	// Plain secrets (COOKIE_SESSION_SECRET, GITHUB_CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
 	// UPTIME_CRON_API_KEY) are set through `.dev.vars` locally and `wrangler secret put`
