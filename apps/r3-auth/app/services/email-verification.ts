@@ -140,7 +140,7 @@ function cooldownSubject(emailAddress: string): string {
  * against nothing, and from the typed route so the path cannot drift from the route table.
  */
 function verificationUrl(token: string): string {
-	let url = new URL(routes.verifyEmail.href(), ISSUER_HOST);
+	let url = new URL(routes.verifyEmail.index.href(), ISSUER_HOST);
 	url.searchParams.set("token", token);
 
 	return url.toString();
@@ -237,29 +237,33 @@ export async function sendVerificationEmail(
 }
 
 /**
- * Consumes a verification token and records that the address it was issued for is
- * confirmed.
+ * Resolves a presented token to the subject it was issued for, and — only when asked —
+ * spends it and records that the address is confirmed.
  *
- * The token is single-use: its record is deleted before anything is written, the same way
- * an authorization code is consumed by being read. An expired token has no record at all,
- * because KV drops it on its own, so expiry and replay are indistinguishable here — which
- * is what the caller should be telling the reader anyway.
+ * The two callers differ in exactly one thing, which is why they are one function: what a
+ * token is good for must not be decided by two sets of checks that can drift apart. Every
+ * refusal is the same refusal whichever caller asked.
+ *
+ * When it spends, the record is deleted before anything is written, the same way an
+ * authorization code is consumed by being read, so two submissions of one link cannot both
+ * reach the write. An expired token has no record at all, because KV drops it on its own,
+ * so expiry and replay are indistinguishable here — which is what the reader should be
+ * told anyway.
  *
  * The record names both the subject and the address, and both are checked. A token
  * therefore cannot confirm an address it was not mailed to: if the row's address changed
  * after the message went out, the token proves nothing about what it would now be
  * stamping, and it is refused rather than applied to the new address.
  *
- * A subject already verified is answered as a success without rewriting the column, so a
- * link followed twice in one session reads as done rather than as broken.
- *
  * @param db - Database the subject is read from and the column written to.
  * @param token - The token exactly as the link carried it.
- * @returns The confirmed subject, or why nothing was confirmed.
+ * @param spend - Whether to delete the record and stamp the column.
+ * @returns The subject the token names, or why the token is good for nothing.
  */
-export async function consumeVerificationToken(
+async function resolveToken(
 	db: Database,
 	token: string,
+	spend: boolean,
 ): Promise<Result<SelectSubject, VerificationError>> {
 	let key: string;
 
@@ -272,7 +276,7 @@ export async function consumeVerificationToken(
 	let stored = await env.KV.get(key);
 	if (stored === null) return failure(new VerificationError("invalid"));
 
-	await env.KV.delete(key);
+	if (spend) await env.KV.delete(key);
 
 	let record: unknown;
 	try {
@@ -291,7 +295,48 @@ export async function consumeVerificationToken(
 	if (subject.email_address !== parsed.data.emailAddress)
 		return failure(new VerificationError("invalid"));
 
+	if (!spend) return success(subject);
+
 	if (subject.email_verified_at !== null) return success(subject);
 
 	return success(await Subject.update(db, subject.id, { email_verified_at: Date.now() }));
+}
+
+/**
+ * Reports whether a presented token would confirm an address, without spending it.
+ *
+ * The page a link opens reads it, so following a link writes nothing at all: a mail
+ * scanner, a link checker or a bodyless probe that fetches the URL out of an inbox leaves
+ * the token exactly as it found it, and the person's own click still works. Reading is
+ * therefore safe to repeat, and only the submission consumes.
+ *
+ * @param db - Database the subject is read from.
+ * @param token - The token exactly as the link carried it.
+ * @returns The subject the token names, or why it is good for nothing.
+ */
+export async function peekVerificationToken(
+	db: Database,
+	token: string,
+): Promise<Result<SelectSubject, VerificationError>> {
+	return await resolveToken(db, token, false);
+}
+
+/**
+ * Consumes a verification token and records that the address it was issued for is
+ * confirmed.
+ *
+ * The token is single-use, short-lived, and bound to both the subject and the address; see
+ * {@link resolveToken} for what each of those refuses. A subject already verified is
+ * answered as a success without rewriting the column, so a link submitted twice in one
+ * session reads as done rather than as broken.
+ *
+ * @param db - Database the subject is read from and the column written to.
+ * @param token - The token exactly as the link carried it.
+ * @returns The confirmed subject, or why nothing was confirmed.
+ */
+export async function consumeVerificationToken(
+	db: Database,
+	token: string,
+): Promise<Result<SelectSubject, VerificationError>> {
+	return await resolveToken(db, token, true);
 }

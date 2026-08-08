@@ -254,6 +254,14 @@ export default {
 	// heading and sentence, so nobody is left guessing whether their address is confirmed.
 	verifyEmail: {
 		documentTitle: "Email verification",
+		// The page the link itself opens. It asks rather than announces, because opening the
+		// link is not the confirmation: pressing the button is.
+		confirm: {
+			title: "Confirm your email address",
+			description:
+				"Press the button to confirm that this address belongs to you. The link can only be used once.",
+			submit: "Confirm email address",
+		},
 		verified: {
 			title: "Email address confirmed",
 			description: "Thank you. This address is confirmed, and nothing else is needed here.",

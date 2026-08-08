@@ -28,11 +28,16 @@ export default route({
 	/** GET renders the sign-in UI (or performs SSO); POST logs in with credentials. */
 	authorize: form("/authorize"),
 	/**
-	 * Consumes an email-verification token. Deliberately outside `/account`: the link is
-	 * followed from an inbox, which is often a browser holding no session at all, and a
-	 * guard there would answer a valid token with a sign-in page.
+	 * GET renders the confirmation for an email-verification token; POST spends it.
+	 *
+	 * Split across the two methods because the link is followed from an inbox, and an
+	 * inbox is read by scanners as well as by people: a `GET` that consumed the token
+	 * would let a mail scanner confirm the address and burn the link before the person
+	 * ever clicked it. Deliberately outside `/account`: the browser that opens the mail
+	 * often holds no session at all, and a guard there would answer a valid token with a
+	 * sign-in page.
 	 */
-	verifyEmail: get("/verify-email"),
+	verifyEmail: form("/verify-email"),
 
 	password: {
 		/** GET asks for an address; POST mails a reset link when one belongs to a subject. */

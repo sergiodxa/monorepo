@@ -701,11 +701,36 @@ so the recipient is not logged there either.
 
 #### The verification-email flow
 
-Built on the hooks above. One `get()` route (`/verify-email`), one `post()` route
+Built on the hooks above. One `form()` route (`/verify-email`), one `post()` route
 (`/account/verify-email/resend`), `app/services/email-verification.ts` (the token store, the
 send window and the consumption), `app/emails/verify-email.tsx`, and a signal on
 `/account/profile`. There is no schema change: the frozen database has nowhere to put a
 pending token, so the whole store is KV.
+
+**Following the link confirms nothing; pressing the button does.** `/verify-email` was
+originally one `get()` that consumed the token, and that was wrong: a mailbox is read by
+scanners, link checkers and preview fetchers as well as by its owner, and every one of them
+fetches every URL in a message — some with a bodyless `HEAD`, which the global chain answers
+by running the `GET` in full. So the address was confirmed by machinery nobody asked, and,
+because the token is single-use, the person's own click then landed on "this link no longer
+works". The fix is the shape every destructive mail link needs: `GET` reads the token and
+renders a card with one button, `POST` spends it. A scanner does not submit forms, so nothing
+it does writes anything, and the link stays good until somebody presses the button.
+
+`peekVerificationToken` and `consumeVerificationToken` are one function with one flag, so the
+two methods cannot come to disagree about what a token is good for: same shape check, same
+store lookup, same subject lookup, same address binding, same single refusal. The only
+difference is that the spending path deletes the record before it writes — so the token is
+still single-use, an expired one still has no record to find, one issued for an address the
+account no longer holds is still refused, and every refusal is still the same page on either
+method. Both methods are served with `Referrer-Policy: no-referrer` and `Cache-Control:
+no-store`, because the link carries a token in its URL.
+
+None of this touches the send window or the token's life: the same `VERIFICATION_TTL_MS`
+still sets both, so `cooldown ≤ token TTL` holds exactly as before, and a suppressed resend
+still leaves somebody holding a link that works. What changed is only _when_ that link stops
+working — at a press rather than at a fetch, which is what makes the invariant mean anything
+to the person holding it.
 
 **One condition, on the column.** `sendVerificationEmail` sends when
 `subjects.email_verified_at` is null, and the two sign-in paths — the credential branch of
@@ -750,12 +775,26 @@ satisfies the same inequality with a 30-minute token and a 5-minute window. Chan
 number in either flow means re-checking the inequality, not copying a number.
 
 **The existing rate limiters do not substitute for it.** `GET /authorize` spends the authorize
-limiter (30/60s) and `POST /authorize` the login limiter (10/60s), each keyed by client IP, so
-the form is already rate limited and needs no new work. But IP-keyed limits still let a
+limiter (30/60s) — from the first request that actually carries an authorization request, see
+below — and `POST /authorize` the login limiter (10/60s), each keyed by client IP, so the form
+is already rate limited and needs no new work. But IP-keyed limits still let a
 distributed caller produce one email per address per attempt: the limiters bound request
 volume, the window bounds mail volume. The resend endpoint needs no limiter of its own for the
 same reason — it is behind `requireSubject` and takes no address, so it is one address per
 session and already inside the window.
+
+**Where those two limiters spend, and why not at the top of the handler.** Both budgets are
+keyed by client IP, which means a request that cannot reach the expensive path must not spend
+from them: whoever shares an egress with a monitor, a crawler or a link checker would
+otherwise be locked out by it. `GET /authorize` spends immediately before the client lookup,
+i.e. once the query has parsed into a real authorization request — that is the enumeration
+surface, and enumerating means naming a client id and a redirect URI, so an attacker is
+limited from their first attempt. The branch that costs nothing is the parameterless one,
+which `/` redirects into and which only touches this server's own fixed client registration.
+`GET /password/reset` spends immediately after the token's shape check, so a request carrying
+no token is answered out of the shape check for free while somebody walking the token space
+still presents a well-formed token every time and is still stopped at ten a minute. Nothing is
+removed and no budget is raised; only the point at which a request becomes chargeable moved.
 
 **The verification endpoint is outside `/account`, on purpose.** The link is followed from an
 inbox, in whatever browser opened the mail, which very often holds no session; a guard there

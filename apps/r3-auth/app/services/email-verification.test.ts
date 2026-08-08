@@ -5,7 +5,11 @@
  *
  * Mail is recorded rather than mocked, so what a test reads is the message a provider would
  * have received, including the link it carries. The link is followed the way a reader would:
- * pulled out of the message and requested.
+ * pulled out of the message, requested, and then confirmed with the button the page carries.
+ *
+ * The split across the two methods is what several of these are about. Anything that merely
+ * fetches the URL — a mail scanner, a link checker, a bodyless probe — must leave the token
+ * exactly as it found it, so the person's own click still works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -132,12 +136,28 @@ function lastToken(): string {
 	return match[1];
 }
 
-/** Follows a verification link with a given token. */
-async function follow(token: string): Promise<Response> {
-	let url = new URL(routes.verifyEmail.href(), ORIGIN);
+/**
+ * Follows a verification link with a given token, the way opening the mail does.
+ *
+ * @param method - How the URL is fetched, so a test can probe it the way a scanner would.
+ */
+async function follow(token: string, method = "GET"): Promise<Response> {
+	let url = new URL(routes.verifyEmail.index.href(), ORIGIN);
 	url.searchParams.set("token", token);
 
-	return await app.fetch(new Request(url, { redirect: "manual" }));
+	return await app.fetch(new Request(url, { method, redirect: "manual" }));
+}
+
+/** Presses the button the page carries, which is the request that spends the token. */
+async function confirm(token: string): Promise<Response> {
+	return await app.fetch(
+		new Request(`${ORIGIN}${routes.verifyEmail.action.href()}`, {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			redirect: "manual",
+			body: new URLSearchParams({ token }),
+		}),
+	);
 }
 
 /** The seeded subject's row, re-read so a test sees what the request wrote. */
@@ -282,7 +302,7 @@ describe("the resend window", () => {
 		await credentialSignIn();
 		expect(lastVerification()).toBeUndefined();
 
-		expect((await follow(token)).status).toBe(200);
+		expect((await confirm(token)).status).toBe(200);
 		expect((await storedSubject())?.email_verified_at).not.toBeNull();
 	});
 
@@ -345,10 +365,59 @@ describe("the resend endpoint", () => {
 });
 
 describe("following a verification link", () => {
-	test("confirms the address and says so", async () => {
+	test("asks rather than confirms, and spends nothing", async () => {
 		await credentialSignIn();
 
-		let response = await follow(lastToken());
+		let token = lastToken();
+		let response = await follow(token);
+
+		expect(response.status).toBe(200);
+
+		let body = await response.text();
+
+		expect(body).toContain("Confirm your email address");
+		// The button is a real form: it posts back here, carrying the token in the body.
+		expect(body).toContain(`method="post"`);
+		expect(body).toContain(`action="${routes.verifyEmail.action.href()}"`);
+		expect(body).toContain(token);
+
+		// The whole point of the split: opening the link is not the confirmation.
+		expect((await storedSubject())?.email_verified_at).toBeNull();
+	});
+
+	test("leaves the token usable after a scanner has fetched the link", async () => {
+		// What a mail scanner or a link checker does to every URL in a message. Neither of
+		// them presses anything, so neither of them may verify an address or burn a link.
+		await credentialSignIn();
+		let token = lastToken();
+
+		expect((await follow(token)).status).toBe(200);
+		expect((await follow(token, "HEAD")).status).toBe(200);
+		expect((await follow(token)).status).toBe(200);
+
+		expect((await storedSubject())?.email_verified_at).toBeNull();
+
+		// And the person's own click still works, which is the failure this prevents.
+		expect((await confirm(token)).status).toBe(200);
+		expect((await storedSubject())?.email_verified_at).not.toBeNull();
+	});
+
+	test("answers a bodyless probe with no body and no verification", async () => {
+		await credentialSignIn();
+
+		let response = await follow(lastToken(), "HEAD");
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("");
+		expect((await storedSubject())?.email_verified_at).toBeNull();
+	});
+
+	test("confirms the address and says so", async () => {
+		await credentialSignIn();
+		let token = lastToken();
+
+		await follow(token);
+		let response = await confirm(token);
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("Email address confirmed");
@@ -361,6 +430,7 @@ describe("following a verification link", () => {
 		app.resetCookies();
 
 		expect((await follow(token)).status).toBe(200);
+		expect((await confirm(token)).status).toBe(200);
 		expect((await storedSubject())?.email_verified_at).not.toBeNull();
 	});
 
@@ -368,12 +438,24 @@ describe("following a verification link", () => {
 		await credentialSignIn();
 		let token = lastToken();
 
-		expect((await follow(token)).status).toBe(200);
+		expect((await confirm(token)).status).toBe(200);
 
-		let replay = await follow(token);
+		let replay = await confirm(token);
 
 		expect(replay.status).toBe(400);
 		expect(await replay.text()).toContain("This link no longer works");
+	});
+
+	test("offers no button for a token that has already been spent", async () => {
+		await credentialSignIn();
+		let token = lastToken();
+
+		await confirm(token);
+
+		let response = await follow(token);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("This link no longer works");
 	});
 
 	test("refuses a token KV has dropped", async () => {
@@ -385,7 +467,9 @@ describe("following a verification link", () => {
 			await app.kv.delete(key.name);
 		}
 
-		let response = await follow(token);
+		expect((await follow(token)).status).toBe(400);
+
+		let response = await confirm(token);
 
 		expect(response.status).toBe(400);
 		expect((await storedSubject())?.email_verified_at).toBeNull();
@@ -399,7 +483,9 @@ describe("following a verification link", () => {
 		// about what stamping the column would now be asserting.
 		await app.db.update(subjects, fixtures.subjectId, { email_address: "moved@example.com" });
 
-		let response = await follow(token);
+		expect((await follow(token)).status).toBe(400);
+
+		let response = await confirm(token);
 
 		expect(response.status).toBe(400);
 		expect((await storedSubject())?.email_verified_at).toBeNull();
@@ -418,7 +504,7 @@ describe("following a verification link", () => {
 
 		expect(newcomerToken).not.toBe(janeToken);
 
-		await follow(newcomerToken);
+		await confirm(newcomerToken);
 
 		let newcomer = await app.db.findOne(subjects, { where: { email_address: NEW_EMAIL } });
 		expect(newcomer?.email_verified_at).not.toBeNull();
@@ -427,7 +513,9 @@ describe("following a verification link", () => {
 	});
 
 	test("answers a malformed token with the page, not a 500", async () => {
-		let response = await follow("not-a-real-token");
+		expect((await follow("not-a-real-token")).status).toBe(400);
+
+		let response = await confirm("not-a-real-token");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("This link no longer works");
@@ -435,11 +523,20 @@ describe("following a verification link", () => {
 
 	test("answers a missing token with the page, not a 500", async () => {
 		let response = await app.fetch(
-			new Request(`${ORIGIN}${routes.verifyEmail.href()}`, { redirect: "manual" }),
+			new Request(`${ORIGIN}${routes.verifyEmail.index.href()}`, { redirect: "manual" }),
 		);
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("This link no longer works");
+	});
+
+	test("keeps the token out of the referrer and out of shared caches", async () => {
+		await credentialSignIn();
+
+		let response = await follow(lastToken());
+
+		expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+		expect(response.headers.get("cache-control")).toBe("no-store");
 	});
 });
 
