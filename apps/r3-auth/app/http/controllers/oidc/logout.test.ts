@@ -228,7 +228,50 @@ describe("GET /oidc/logout", () => {
 		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
 	});
 
-	test("refuses a post_logout_redirect_uri the client never registered", async () => {
+	test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		// A relying party whose stored session no longer holds an ID token has no hint to
+		// send, and the address it asks for is its own registered logout URI. That is
+		// enough: the destination is verified by the registration, not by the hint.
+		let response = await app.fetch(
+			new Request(
+				logoutUrl({
+					post_logout_redirect_uri: "https://client.example.com/logout",
+					state: "correlation-3",
+				}),
+				{ redirect: "manual" },
+			),
+		);
+
+		expect(response.status).toBe(303);
+
+		let location = new URL(response.headers.get("location") ?? "");
+		expect(location.origin + location.pathname).toBe("https://client.example.com/logout");
+		expect(location.searchParams.get("state")).toBe("correlation-3");
+		expect(response.headers.get("clear-site-data")).toBe('"*"');
+		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+	});
+
+	test("signs out and stays on this server when the post_logout_redirect_uri is unregistered", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		// Nobody registered this address, so the browser is never sent to it — but the
+		// sign-out is what was asked for and still happens.
+		let response = await app.fetch(
+			new Request(logoutUrl({ post_logout_redirect_uri: "https://malicious.example.com/steal" }), {
+				redirect: "manual",
+			}),
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(`${ORIGIN}${routes.authorize.index.href()}`);
+		expect(response.headers.get("location")).not.toContain("malicious.example.com");
+		expect(response.headers.get("clear-site-data")).toBe('"*"');
+		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+	});
+
+	test("ignores an unregistered post_logout_redirect_uri sent alongside a hint", async () => {
 		let tokens = await signIn(app, fixtures);
 
 		let response = await app.fetch(
@@ -241,25 +284,10 @@ describe("GET /oidc/logout", () => {
 			),
 		);
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toMatchObject({ error: "invalid_request" });
-
-		// Refused before anything was destroyed: the session is still usable.
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
-	});
-
-	test("refuses a post_logout_redirect_uri when no client identifies the request", async () => {
-		await signIn(app, fixtures);
-
-		// No id_token_hint and no client_id, so nothing says this address was registered.
-		let response = await app.fetch(
-			new Request(logoutUrl({ post_logout_redirect_uri: "https://malicious.example.com/steal" }), {
-				redirect: "manual",
-			}),
-		);
-
-		expect(response.status).toBe(400);
-		expect(await response.json()).toMatchObject({ error: "invalid_request" });
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(`${ORIGIN}${routes.authorize.index.href()}`);
+		expect(response.headers.get("location")).not.toContain("malicious.example.com");
+		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
 	});
 
 	test("refuses a client_id that contradicts the id_token_hint", async () => {

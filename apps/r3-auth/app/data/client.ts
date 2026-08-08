@@ -49,6 +49,24 @@ export default class Client {
 		return await db.findOne(clients, { where: { id } });
 	}
 
+	/**
+	 * Finds a client by the exact logout URI it registered, or `null` when no client
+	 * registered that address.
+	 *
+	 * The comparison is a plain equality on the stored column: no prefix, origin or
+	 * trailing-slash leniency, since this is what decides whether an address is a
+	 * destination the server may send a browser to.
+	 *
+	 * Nothing stops two clients registering the same address, so the oldest registration
+	 * is taken to keep the answer stable.
+	 */
+	static async findByLogoutUri(db: Database, logoutUri: string): Promise<SelectClient | null> {
+		return await db.findOne(clients, {
+			where: { logout_uri: logoutUri },
+			orderBy: ["created_at", "asc"],
+		});
+	}
+
 	/** Lists clients newest first, which is the order the admin list shows them in. */
 	static async findAll(
 		db: Database,

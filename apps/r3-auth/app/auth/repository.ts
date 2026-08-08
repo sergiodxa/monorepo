@@ -157,6 +157,15 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 		},
 
 		/**
+		 * Resolves an exactly matching registered logout URI to its client, which is how
+		 * a post-logout address is verified when nothing else identified a client.
+		 */
+		async findClientByLogoutUri(logoutUri) {
+			let client = await Client.findByLogoutUri(db, logoutUri);
+			return client ? toEngineClient(client) : null;
+		},
+
+		/**
 		 * Consumes an authorization code: the entry is deleted before its data is
 		 * returned, which is what makes a code single-use (RFC 6749).
 		 *

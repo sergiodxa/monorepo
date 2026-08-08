@@ -65,9 +65,10 @@ function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
  * The address the browser continues to once logout has happened, with `state` echoed
  * back when the relying party sent one so it can correlate the round trip.
  *
- * Falls back to this server's own authorization endpoint: `target` has already been
- * checked against a client's registered logout URI, so an absent one means nobody
- * nominated a destination, not that one was refused.
+ * Falls back to this server's own authorization endpoint: `target` is only ever set to
+ * an address a registered client nominated, so an absent one means the browser has
+ * nowhere verified to go and is kept here — which is also what an address that could
+ * not be verified lands on, since the sign-out itself still went through.
  */
 function postLogoutUrl(ctx: RequestContext, target: string | undefined, state?: string): string {
 	let url = new URL(target ?? new URL(routes.authorize.index.href(), ctx.url.origin).toString());
@@ -115,8 +116,10 @@ export default createController(routes.oidc.logout, {
 				});
 			} catch (error) {
 				// A refused logout request is the client's mistake — a hint this server did
-				// not sign, a redirect address nobody registered — and it is answered as
-				// one rather than as a page that pretends the sign-out happened.
+				// not sign, a client_id contradicting one it did — and it is answered as one
+				// rather than as a page that pretends the sign-out happened. An address the
+				// server cannot verify is not among these: that logout goes ahead and simply
+				// ends up back here.
 				if (error instanceof OIDC.InvalidRequestError) {
 					ctx.logger.info("logout_rejected", { reason: error.message });
 					return badRequest({ error: "invalid_request", error_description: error.message });

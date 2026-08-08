@@ -166,6 +166,52 @@ describe("sessions", () => {
 	});
 });
 
+describe("clients", () => {
+	test("resolves a registered logout URI to the client that registered it", async () => {
+		let client = await repository.findClientByLogoutUri("https://blog.example.com/logout");
+
+		expect(client?.id).toBe(clientId);
+		expect(client?.logoutUri).toBe("https://blog.example.com/logout");
+	});
+
+	test("matches a logout URI exactly, never by prefix, origin or trailing slash", async () => {
+		expect(await repository.findClientByLogoutUri("https://blog.example.com/logout/")).toBeNull();
+		expect(await repository.findClientByLogoutUri("https://blog.example.com")).toBeNull();
+		expect(
+			await repository.findClientByLogoutUri("https://blog.example.com/logout/../evil"),
+		).toBeNull();
+		expect(
+			await repository.findClientByLogoutUri("https://blog.example.com.evil.test/logout"),
+		).toBeNull();
+	});
+
+	test("returns null for an address no client registered", async () => {
+		expect(
+			await repository.findClientByLogoutUri("https://malicious.example.com/steal"),
+		).toBeNull();
+	});
+
+	test("answers with one stable registration when two clients share a logout URI", async () => {
+		let twin = await Client.create(db, {
+			name: "Blog Mirror",
+			redirect_uri: "https://mirror.example.com/auth/callback",
+			logout_uri: "https://blog.example.com/logout",
+		});
+
+		let first = await repository.findClientByLogoutUri("https://blog.example.com/logout");
+		let second = await repository.findClientByLogoutUri("https://blog.example.com/logout");
+
+		// Either registration proves the address is registered, which is the only question
+		// asked of this lookup, so a duplicate is answered rather than refused — and the
+		// same one every time, so the behavior never depends on row order.
+		let firstId = first?.id ?? "";
+		let secondId = second?.id ?? "";
+
+		expect([clientId, twin.id]).toContain(firstId);
+		expect(secondId).toBe(firstId);
+	});
+});
+
 describe("grants", () => {
 	test("records consent the first time a subject authorizes a client", async () => {
 		let grant = await repository.findOrCreateGrant(subjectId, clientId);

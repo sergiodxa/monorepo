@@ -72,6 +72,9 @@ function createMockRepository(): OIDC.Repository {
 	return {
 		getSigningKey: mock(async () => testKeyPair),
 		findClientById: mock(async (id: string) => (id === testClient.id ? testClient : null)),
+		findClientByLogoutUri: mock(async (uri: string) =>
+			uri === testClient.logoutUri ? testClient : null,
+		),
 		findSessionById: mock(async (id: string) => (id === testSession.id ? testSession : null)),
 		findAuthorizationCodeData: mock(async () => testAuthzCode),
 		findSubjectById: mock(async (id: string) => (id === testSubject.id ? testSubject : null)),
@@ -642,7 +645,7 @@ describe("OIDC", () => {
 			).rejects.toThrow(OIDC.InvalidRequestError);
 		});
 
-		test("rejects invalid post_logout_redirect_uri", async () => {
+		test("drops an unregistered post_logout_redirect_uri but still logs out", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
@@ -659,12 +662,15 @@ describe("OIDC", () => {
 			);
 			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
 
-			await expect(
-				provider.logout({
-					idTokenHint: signedIdToken,
-					postLogoutRedirectUri: "https://malicious.com/logout",
-				}),
-			).rejects.toThrow(OIDC.InvalidRequestError);
+			let result = await provider.logout({
+				idTokenHint: signedIdToken,
+				postLogoutRedirectUri: "https://malicious.com/logout",
+			});
+
+			// The address never becomes a destination, which is what keeps the endpoint
+			// from being an open redirect; the sign-out that was asked for still happens.
+			expect(result.redirectUri).toBeUndefined();
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
 
 		test("requires id_token_hint or session subject", async () => {
@@ -674,20 +680,56 @@ describe("OIDC", () => {
 			await expect(provider.logout({})).rejects.toThrow(OIDC.InvalidRequestError);
 		});
 
-		test("rejects post_logout_redirect_uri when no client is identified", async () => {
+		test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			// Neither an id_token_hint nor a client_id, so nothing says this address was
-			// ever registered. Honoring it would make the endpoint an open redirect.
-			await expect(
-				provider.logout({
-					sessionSubject: testSubject.id,
-					postLogoutRedirectUri: "https://malicious.com/logout",
-				}),
-			).rejects.toThrow(OIDC.InvalidRequestError);
+			// Nothing identifies a client, so the address is checked against the registered
+			// logout URIs directly. Exactly one client registered it, so it is a destination
+			// this server nominated and the redirect is legitimate.
+			let result = await provider.logout({
+				sessionSubject: testSubject.id,
+				postLogoutRedirectUri: testClient.logoutUri,
+			});
 
-			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+			expect(result.redirectUri).toBe(testClient.logoutUri);
+			expect(repo.findClientByLogoutUri).toHaveBeenCalledWith(testClient.logoutUri);
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
+		});
+
+		test("drops an unregistered post_logout_redirect_uri when no client is identified", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			// Neither an id_token_hint nor a client_id, and no client registered this
+			// address: honoring it would make the endpoint an open redirect, so it is
+			// dropped — but the session still ends.
+			let result = await provider.logout({
+				sessionSubject: testSubject.id,
+				postLogoutRedirectUri: "https://malicious.com/logout",
+			});
+
+			expect(result.redirectUri).toBeUndefined();
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
+		});
+
+		test("does not exclude the client that merely registered the redirect from the fan-out", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			// The address was matched against a registration, which says nothing about who
+			// started the logout — so no relying party is dropped from the notification.
+			let result = await provider.logout({
+				sessionSubject: testSubject.id,
+				postLogoutRedirectUri: testClient.logoutUri,
+			});
+
+			expect(result.clientId).toBeUndefined();
+			expect(repo.findSessionsForBackchannelLogout).toHaveBeenCalledWith(testSubject.id, undefined);
+			expect(repo.findSessionsForFrontchannelLogout).toHaveBeenCalledWith(
+				testSubject.id,
+				undefined,
+			);
 		});
 
 		test("collects the logout fan-out before the sessions are deleted", async () => {

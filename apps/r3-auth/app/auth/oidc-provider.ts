@@ -226,6 +226,25 @@ export namespace OIDC {
 			}>
 		>;
 
+		/**
+		 * Resolves a registered post-logout address to the client that registered it, by
+		 * exact equality on the stored logout URI, or `null` when nobody registered it.
+		 *
+		 * It answers one question — is this address registered — so an address more than
+		 * one client registered is answered with any one of them, as long as the same one
+		 * is returned every time. The answer is never treated as the client that started
+		 * the logout, so an ambiguous match cannot drop a relying party from the fan-out.
+		 */
+		findClientByLogoutUri(logoutUri: string): Promise<
+			Nullable<{
+				id: string;
+				name: string;
+				secret: string;
+				logoutUri: string;
+				redirectUri: string;
+			}>
+		>;
+
 		findSessionById(sessionId: string): Promise<
 			Nullable<{
 				id: string;
@@ -618,8 +637,10 @@ export class OIDC {
 	 * signed-in session's subject.
 	 *
 	 * Deletes every session the subject holds — logout here is global, not per client —
-	 * and validates `post_logout_redirect_uri` against the client's registered logout
-	 * URI so the browser can never be sent somewhere unregistered.
+	 * and honors `post_logout_redirect_uri` only when a registered client nominated
+	 * exactly that address, so the browser can never be sent somewhere unregistered.
+	 * An address that cannot be shown to be registered is dropped, not refused: the
+	 * returned `redirectUri` is then absent and the sign-out has still happened.
 	 *
 	 * The relying parties to notify are collected **before** the sessions are deleted
 	 * and returned alongside the result. They are derived from those very session rows,
@@ -631,7 +652,7 @@ export class OIDC {
 	 * do apply is refused rather than raised: an unusable hint is a bad request, not a
 	 * fault, and it is refused before a single session is deleted.
 	 *
-	 * @returns The subject logged out, the initiating client, the redirect to honor, and whom to notify.
+	 * @returns The subject logged out, the initiating client, the verified redirect to honor if any, and whom to notify.
 	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
 	 */
 	async logout(args: {
@@ -689,15 +710,24 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidRequestError("Invalid subject");
 
-		// A redirect target is honored only when it is the registered logout URI of a
-		// client this request actually identified. Without the client half of that check
-		// the parameter is an open redirect: anybody could hand a signed-in browser a
+		// A redirect target is honored only when some registered client nominated exactly
+		// that address as its logout URI. Being registered is a property of the address
+		// itself, so when nothing identified a client the same question is answered by
+		// looking the address up among the registrations. The comparison stays an exact
+		// equality either way: that is what stops anybody handing a signed-in browser a
 		// logout link that lands on their own page wearing this server's flow.
+		let redirectUri: string | undefined;
+
 		if (args.postLogoutRedirectUri) {
-			if (!client) throw new InvalidRequestError("Invalid redirect uri");
-			if (client.logoutUri !== args.postLogoutRedirectUri) {
-				throw new InvalidRequestError("Invalid redirect uri");
-			}
+			let registrant =
+				client?.logoutUri === args.postLogoutRedirectUri
+					? client
+					: await this.repository.findClientByLogoutUri(args.postLogoutRedirectUri);
+
+			// An address nobody registered is dropped rather than refused. Ending the
+			// session is what was asked for and only the redirect is unsafe, so the logout
+			// goes ahead and the caller is left on a page this server controls.
+			if (registrant) redirectUri = args.postLogoutRedirectUri;
 		}
 
 		if (args.sessionSubject && args.sessionSubject !== subject.id) {
@@ -714,7 +744,7 @@ export class OIDC {
 		return {
 			subjectId: subject.id,
 			clientId,
-			redirectUri: args.postLogoutRedirectUri,
+			redirectUri,
 			backchannelSessions,
 			frontchannelUrls: this.buildFrontchannelLogoutUrls(frontchannelSessions),
 		};
