@@ -30,6 +30,23 @@ const SESSION_STATE_SALT_BYTES = 16;
  */
 const OP_BROWSER_STATE_BYTES = 32;
 
+/**
+ * Clock tolerance applied when checking an `id_token_hint`, wide enough that no
+ * time-based claim in it can ever fail.
+ *
+ * Expiry is deliberately not checked there. OpenID Connect RP-Initiated Logout 1.0
+ * defines `id_token_hint` as a hint about which session is ending, not as a credential
+ * that authenticates the request, and says the OP SHOULD accept an ID token whose `exp`
+ * has passed. Somebody signing out long after their token aged out is the ordinary case,
+ * and refusing it makes the end-session endpoint unusable for exactly the relying parties
+ * that behave correctly.
+ *
+ * What makes the hint trustworthy is the signature, the issuer and the algorithm, all of
+ * which stay checked. This tolerance is for the logout hint alone: every other ID token
+ * this server verifies is authenticating somebody, and its expiry is enforced.
+ */
+const ID_TOKEN_HINT_CLOCK_TOLERANCE = Number.MAX_SAFE_INTEGER;
+
 // =============================================================================
 // Errors
 // =============================================================================
@@ -609,8 +626,13 @@ export class OIDC {
 	 * so reading them afterwards would find nothing and the logout fan-out would
 	 * silently reach nobody.
 	 *
+	 * An `id_token_hint` is accepted even once it has expired, per
+	 * {@link ID_TOKEN_HINT_CLOCK_TOLERANCE}, and a hint that fails any of the checks that
+	 * do apply is refused rather than raised: an unusable hint is a bad request, not a
+	 * fault, and it is refused before a single session is deleted.
+	 *
 	 * @returns The subject logged out, the initiating client, the redirect to honor, and whom to notify.
-	 * @throws {InvalidRequestError} When neither hint nor session is given, or a parameter contradicts the hint.
+	 * @throws {InvalidRequestError} When the hint is unusable, neither hint nor session is given, or a parameter contradicts the hint.
 	 */
 	async logout(args: {
 		idTokenHint?: string;
@@ -624,10 +646,22 @@ export class OIDC {
 		let client: Awaited<ReturnType<typeof this.repository.findClientById>> | null = null;
 
 		if (args.idTokenHint) {
-			let idToken = await IdToken.verify(args.idTokenHint, await this.repository.getSigningKey(), {
-				issuer: this.issuer,
-				algorithms: [JWK.Algoritm.ES256],
-			});
+			let signingKeys = await this.repository.getSigningKey();
+			let idToken: IdToken;
+
+			try {
+				idToken = await IdToken.verify(args.idTokenHint, signingKeys, {
+					issuer: this.issuer,
+					algorithms: [JWK.Algoritm.ES256],
+					clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
+				});
+			} catch {
+				// Every way a hint can be unusable — unparseable, signed by somebody else,
+				// naming another issuer — is the request's mistake and is answered as one.
+				// The reason is not carried out: it would describe a token, and a token is
+				// not something this server writes down. Nothing has been deleted yet.
+				throw new InvalidRequestError("Invalid id_token_hint");
+			}
 
 			if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
 			if (!idToken.audience) throw new InvalidRequestError("Invalid audience");
@@ -878,29 +912,38 @@ export class OIDC {
 			return;
 		}
 
-		let signingKeys = await this.repository.getSigningKey();
+		// Reading the keys is outside the per-recipient work that `allSettled` contains, so
+		// it is the one step whose failure would otherwise reach the caller — and by the
+		// time this runs the sessions are already gone, which makes the sign-out a fact
+		// rather than something an unreachable key store may still take back.
+		try {
+			let signingKeys = await this.repository.getSigningKey();
 
-		await Promise.allSettled(
-			clientsToNotify.map(async (client) => {
-				let sessionId =
-					client.backchannelLogoutSessionRequired === "true" ? client.sessionId : undefined;
+			await Promise.allSettled(
+				clientsToNotify.map(async (client) => {
+					let sessionId =
+						client.backchannelLogoutSessionRequired === "true" ? client.sessionId : undefined;
 
-				let logoutToken = LogoutToken.generate(subjectId, client.clientId, sessionId);
-				let signedToken = await logoutToken.sign(JWK.Algoritm.ES256, signingKeys);
+					let logoutToken = LogoutToken.generate(subjectId, client.clientId, sessionId);
+					let signedToken = await logoutToken.sign(JWK.Algoritm.ES256, signingKeys);
 
-				let response = await fetch(client.backchannelLogoutUri!, {
-					method: "POST",
-					headers: { "Content-Type": "application/x-www-form-urlencoded" },
-					body: new URLSearchParams({ logout_token: signedToken }),
-				});
+					let response = await fetch(client.backchannelLogoutUri!, {
+						method: "POST",
+						headers: { "Content-Type": "application/x-www-form-urlencoded" },
+						body: new URLSearchParams({ logout_token: signedToken }),
+					});
 
-				if (!response.ok) {
-					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-				}
+					if (!response.ok) {
+						throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+					}
 
-				return { clientId: client.clientId, status: "success" };
-			}),
-		);
+					return { clientId: client.clientId, status: "success" };
+				}),
+			);
+		} catch {
+			// Swallowed for the same reason the settled results are: this is a notification,
+			// and no relying party's problem may become the person's.
+		}
 	}
 
 	/**

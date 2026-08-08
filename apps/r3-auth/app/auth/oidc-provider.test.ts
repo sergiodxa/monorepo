@@ -520,6 +520,91 @@ describe("OIDC", () => {
 			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
 		});
 
+		test("accepts an expired id_token_hint", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			// The ordinary case: somebody comes back after their ID token aged out and asks
+			// to be signed out. The hint identifies the session, so an expired one still
+			// answers the only question being asked of it.
+			let expiredAt = Math.floor(Date.now() / 1000) - 60 * 60;
+			let idToken = new IdToken({
+				sub: testSubject.id,
+				iss: ISSUER,
+				aud: testClient.id,
+				jti: crypto.randomUUID(),
+				iat: expiredAt - 60,
+				exp: expiredAt,
+			});
+			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+
+			let result = await provider.logout({
+				idTokenHint: signedIdToken,
+				postLogoutRedirectUri: testClient.logoutUri,
+			});
+
+			expect(result.subjectId).toBe(testSubject.id);
+			expect(result.clientId).toBe(testClient.id);
+			expect(repo.deleteSessionBySubjectId).toHaveBeenCalledWith(testSubject.id);
+		});
+
+		test("rejects an id_token_hint this server did not sign", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
+			let idToken = IdToken.generate(
+				{
+					id: testSubject.id,
+					email: testSubject.emailAddress,
+					avatar: testSubject.avatar,
+					username: testSubject.username,
+					displayName: testSubject.displayName,
+					emailVerified: true,
+				},
+				{ id: testClient.id },
+			);
+			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, otherKeyPair);
+
+			await expect(provider.logout({ idTokenHint: signedIdToken })).rejects.toThrow(
+				OIDC.InvalidRequestError,
+			);
+
+			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+		});
+
+		test("rejects an id_token_hint issued by somebody else", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			let idToken = new IdToken({
+				sub: testSubject.id,
+				iss: "https://elsewhere.example.com",
+				aud: testClient.id,
+				jti: crypto.randomUUID(),
+				iat: Math.floor(Date.now() / 1000),
+				exp: Math.floor(Date.now() / 1000) + 600,
+			});
+			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+
+			await expect(provider.logout({ idTokenHint: signedIdToken })).rejects.toThrow(
+				OIDC.InvalidRequestError,
+			);
+
+			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+		});
+
+		test("rejects a malformed id_token_hint", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo);
+
+			await expect(provider.logout({ idTokenHint: "not-a-jwt" })).rejects.toThrow(
+				OIDC.InvalidRequestError,
+			);
+
+			expect(repo.deleteSessionBySubjectId).not.toHaveBeenCalled();
+		});
+
 		test("logs out user with session subject (no id_token_hint)", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
@@ -637,6 +722,31 @@ describe("OIDC", () => {
 				},
 			]);
 			expect(deleted).toBe(true);
+		});
+
+		test("does not fail the logout when the back channel cannot be delivered", async () => {
+			let repo = createMockRepository();
+			let target: OIDC.SessionWithClient = {
+				sessionId: "session-1",
+				clientId: "other-client",
+				backchannelLogoutUri: "https://other.example.com/backchannel",
+				backchannelLogoutSessionRequired: "true",
+				frontchannelLogoutUri: null,
+				frontchannelLogoutSessionRequired: "false",
+			};
+
+			// The sign-out already happened by the time delivery is attempted, so nothing
+			// that goes wrong here — down to not being able to sign the tokens at all — may
+			// turn it into a failure the person sees.
+			repo.getSigningKey = mock(async () => {
+				throw new Error("key store unavailable");
+			});
+
+			let provider = new OIDC(ISSUER, repo);
+
+			expect(
+				await provider.deliverBackchannelLogoutTokens(testSubject.id, [target]),
+			).toBeUndefined();
 		});
 	});
 

@@ -14,6 +14,7 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
+import { JWK, JWT } from "@edgefirst-dev/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
@@ -69,6 +70,31 @@ function logoutUrl(params: Record<string, string> = {}): string {
 	let url = new URL(routes.oidc.logout.index.href(), ORIGIN);
 	for (let [key, value] of Object.entries(params)) url.searchParams.set(key, value);
 	return url.toString();
+}
+
+/**
+ * Re-issues an ID token with some of its claims replaced, so a test can hand the
+ * end-session endpoint a hint that differs from a real one in exactly one way.
+ *
+ * @param token - A signed token to take the claims from.
+ * @param claims - Claims to overwrite, such as an `exp` already in the past.
+ * @param keys - Keys to sign with. Defaults to this server's own, so only the claims differ.
+ * @returns The re-signed compact token.
+ */
+async function resign(
+	token: string,
+	claims: Record<string, unknown>,
+	keys?: JWK.KeyPair[],
+): Promise<string> {
+	// Imported here rather than at module load: the harness swaps the `cloudflare:workers`
+	// bindings per instance, and this has to read the bucket the current app is using.
+	let { getSigningKey } = await import("~/app/services/signing-keys");
+	let { payload } = JWT.decode(token);
+
+	return await new JWT({ ...payload, ...claims }).sign(
+		JWK.Algoritm.ES256,
+		keys ?? (await getSigningKey()),
+	);
 }
 
 /** Which logout channels a second relying party registers, and whether it wants `sid`. */
@@ -154,6 +180,52 @@ describe("GET /oidc/logout", () => {
 		expect(location.origin + location.pathname).toBe("https://client.example.com/logout");
 		expect(location.searchParams.get("state")).toBe("correlation-1");
 		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+	});
+
+	test("logs out with an expired id_token_hint instead of failing", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		// The hint identifies the session being ended, so one that aged out is still a
+		// usable answer to "who is signing out?". The symptom this guards against is a
+		// 500 rather than a wrong redirect, so the status is what is asserted.
+		let expiredAt = Math.floor(Date.now() / 1000) - 60 * 60;
+		let expired = await resign(tokens.id_token, { iat: expiredAt - 60, exp: expiredAt });
+
+		let response = await app.fetch(
+			new Request(logoutUrl({ id_token_hint: expired }), { redirect: "manual" }),
+		);
+
+		expect(response.status).toBe(303);
+		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+	});
+
+	test("refuses an id_token_hint this server did not sign with a 400", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		// The same claims signed by somebody else: it must be a refusal, not a crash.
+		let foreign = await resign(tokens.id_token, {}, [
+			await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256)),
+		]);
+
+		let response = await app.fetch(
+			new Request(logoutUrl({ id_token_hint: foreign }), { redirect: "manual" }),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ error: "invalid_request" });
+		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+	});
+
+	test("refuses a malformed id_token_hint with a 400", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		let response = await app.fetch(
+			new Request(logoutUrl({ id_token_hint: "not-a-jwt" }), { redirect: "manual" }),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ error: "invalid_request" });
+		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("refuses a post_logout_redirect_uri the client never registered", async () => {
