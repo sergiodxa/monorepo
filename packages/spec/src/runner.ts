@@ -1,0 +1,101 @@
+/**
+ * Suite orchestration: load a `spec/` directory, then give every test a
+ * fresh isolated workspace, execute it, and collect structured results. The
+ * runner owns the lifecycle glue; language semantics live in the executor
+ * and rendering lives in the reporter.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Result } from "@pkg/result";
+
+import { isFailure, success } from "@pkg/result";
+
+import type { DefinitionNode } from "./ast";
+import type { SuiteResult, TestResult } from "./diagnostics";
+import type { SpecError } from "./errors";
+import type { Grants } from "./permissions";
+import type { Plugin } from "./plugin";
+
+import { executeTest } from "./executor";
+import { loadSuite } from "./loader";
+import { createPermissionSet } from "./permissions";
+import { createCliPlugin } from "./plugins/cli";
+import { createFsPlugin } from "./plugins/fs";
+import { createHttpPlugin } from "./plugins/http";
+import { createRegistry } from "./registry";
+import { createWorkspace } from "./workspace";
+
+/** What a `spec run` needs: the suite directory and the caller's grants. */
+export interface RunOptions {
+	/** Directory scanned recursively for `.spec` files. */
+	root: string;
+	/** The caller's permission grants, parsed from `--allow-*` flags. */
+	grants: Grants;
+	/** Extra plugins beyond the built-in `fs`, `cli`, and `http`. */
+	plugins?: Plugin[];
+}
+
+/**
+ * Load and execute a suite. Load failures (unreadable directory, parse
+ * errors, duplicate definitions) fail the whole run before any test starts;
+ * test failures do not — they are outcomes inside the returned result.
+ *
+ * @param options - Suite directory, grants, and optional extra plugins.
+ * @returns Per-test outcomes, or the error that prevented the run entirely.
+ */
+export async function runSuite(options: RunOptions): Promise<Result<SuiteResult, SpecError>> {
+	let loaded = await loadSuite(options.root);
+	if (isFailure(loaded)) return loaded;
+	let suite = loaded.data;
+
+	let plugins = [
+		createFsPlugin(),
+		createCliPlugin(),
+		createHttpPlugin(),
+		...(options.plugins ?? []),
+	];
+	let registry = createRegistry(plugins, suite);
+	let permissions = createPermissionSet(options.grants);
+
+	// `use` is file-scoped: a definition's body resolves bare names against
+	// the imports of the file that defined it, not the caller's file.
+	let usesByDefinition = new Map<DefinitionNode, readonly string[]>();
+	for (let file of suite.files) {
+		let imported = file.uses.map((use) => use.namespace);
+		for (let definition of file.definitions) {
+			usesByDefinition.set(definition, imported);
+		}
+	}
+
+	let results: TestResult[] = [];
+	for (let file of suite.files) {
+		let imported = file.uses.map((use) => use.namespace);
+		for (let test of file.tests) {
+			let workspace = await createWorkspace(permissions);
+			if (isFailure(workspace)) return workspace;
+			let startedAt = performance.now();
+			let outcome = await executeTest(test, {
+				registry,
+				workspace: workspace.data,
+				permissions,
+				uses: imported,
+				usesFor: (definition) => usesByDefinition.get(definition) ?? imported,
+				grants: options.grants,
+			});
+			let durationMs = performance.now() - startedAt;
+			await workspace.data.cleanup();
+			if (isFailure(outcome)) {
+				let error = outcome.error;
+				if (error.file === undefined) error.file = file.path;
+				results.push({ title: test.title, file: file.path, status: "failed", error, durationMs });
+			} else {
+				results.push({ title: test.title, file: file.path, status: "passed", durationMs });
+			}
+		}
+	}
+
+	let passed = results.filter((result) => result.status === "passed").length;
+	return success({ results, passed, failed: results.length - passed });
+}

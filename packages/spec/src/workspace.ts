@@ -1,0 +1,145 @@
+/**
+ * The isolated per-test workspace: a runtime primitive every capability
+ * shares, not a filesystem-plugin detail. Each test gets a fresh ephemeral
+ * directory that `fs` tools write into, `cli` processes start in, and
+ * assertions inspect; the runtime cleans it up when the test ends.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { lstatSync, realpathSync } from "node:fs";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
+
+import type { Result } from "@pkg/result";
+
+import { failure, isFailure, success } from "@pkg/result";
+
+import type { PermissionSet } from "./permissions";
+
+import { SpecError, WorkspaceEscapeError } from "./errors";
+
+/**
+ * One test's isolated workspace. Path resolution is the safety boundary:
+ * workspace-relative paths are safe by default, while absolute paths and
+ * paths that traverse out of the root require a host-filesystem grant.
+ */
+export interface Workspace {
+	/** Absolute host path of the workspace root (a fresh temp directory). */
+	root: string;
+	/**
+	 * Resolve a spec-written path to an absolute host path. Relative paths
+	 * resolve against the root and must stay inside it (symlinks re-resolved);
+	 * escaping paths fail with `WorkspaceEscapeError`, and absolute paths fail
+	 * with `PermissionDeniedError` unless covered by a host-fs grant.
+	 */
+	resolve(path: string): Result<string, SpecError>;
+	/** Remove the workspace directory and everything in it. */
+	cleanup(): Promise<undefined>;
+}
+
+/**
+ * Create a fresh isolated workspace: a temp directory whose real path (temp
+ * dirs are often behind symlinks) is the containment boundary for every
+ * relative path a spec writes. Absolute paths delegate to the host-fs
+ * permission; relative paths must stay inside the root even after following
+ * any symlink among their existing ancestors.
+ *
+ * @param permissions - The run's permission set, consulted for absolute paths.
+ * @returns The workspace, or the error that prevented creating its directory.
+ */
+export async function createWorkspace(
+	permissions: PermissionSet,
+): Promise<Result<Workspace, SpecError>> {
+	let root: string;
+	try {
+		let created = await mkdtemp(join(tmpdir(), "spec-workspace-"));
+		root = await realpath(created);
+	} catch (error) {
+		let reason = error instanceof Error ? error.message : String(error);
+		return failure(new SpecError("tool-error", `Failed to create a test workspace: ${reason}`));
+	}
+	let workspace: Workspace = {
+		root,
+		resolve(path) {
+			if (isAbsolute(path)) {
+				let resolved = resolvePath(path);
+				let checked = permissions.checkHostFs(resolved);
+				if (isFailure(checked)) return checked;
+				return success(resolved);
+			}
+			let resolved = resolvePath(root, path);
+			if (!isInside(root, resolved)) return failure(new WorkspaceEscapeError(path));
+			let ancestor = deepestExistingAncestor(resolved);
+			let realAncestor: string;
+			try {
+				realAncestor = realpathSync(ancestor);
+			} catch {
+				// An existing ancestor whose target cannot be resolved (e.g. a
+				// dangling symlink) points somewhere we cannot verify: refuse.
+				return failure(new WorkspaceEscapeError(path));
+			}
+			let followed = realAncestor + resolved.slice(ancestor.length);
+			if (!isInside(root, followed)) return failure(new WorkspaceEscapeError(path));
+			return success(resolved);
+		},
+		async cleanup() {
+			try {
+				await rm(root, { recursive: true, force: true });
+			} catch {
+				// Cleanup is best-effort and must never fail the run.
+			}
+			return undefined;
+		},
+	};
+	return success(workspace);
+}
+
+/**
+ * Walk up from a resolved path to the deepest component that exists on disk
+ * (symlinks count as existing without being followed), so symlinked ancestors
+ * can be re-resolved before the containment check.
+ *
+ * @param path - An absolute, syntactically resolved path.
+ * @returns The deepest existing ancestor, at worst the filesystem root.
+ */
+function deepestExistingAncestor(path: string): string {
+	let current = path;
+	while (!entryExists(current)) {
+		let parent = dirname(current);
+		if (parent === current) break;
+		current = parent;
+	}
+	return current;
+}
+
+/**
+ * Does a filesystem entry exist at this path, without following symlinks?
+ *
+ * @param path - The absolute path to probe.
+ * @returns Whether lstat finds an entry there.
+ */
+function entryExists(path: string): boolean {
+	try {
+		lstatSync(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Path-segment-aware containment test: the root contains itself and its
+ * descendants, never a sibling that merely shares a name prefix.
+ *
+ * @param root - The workspace root, already an absolute real path.
+ * @param path - The absolute path being checked.
+ * @returns Whether the path stays inside the root.
+ */
+function isInside(root: string, path: string): boolean {
+	if (path === root) return true;
+	let prefix = root.endsWith(sep) ? root : root + sep;
+	return path.startsWith(prefix);
+}

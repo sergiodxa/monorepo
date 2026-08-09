@@ -834,6 +834,21 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/spec": {
+      "name": "@pkg/spec",
+      "version": "0.0.1",
+      "bin": {
+        "spec": "./src/cli.ts",
+      },
+      "dependencies": {
+        "@pkg/duration": "workspace:*",
+        "@pkg/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+        "msw": "^2.15.0",
+      },
+    },
     "packages/strings": {
       "name": "@pkg/strings",
       "version": "0.0.1",
@@ -1604,6 +1619,8 @@
     "@pkg/session-storage-kv": ["@pkg/session-storage-kv@workspace:packages/session-storage-kv"],
 
     "@pkg/sitemap": ["@pkg/sitemap@workspace:packages/sitemap"],
+
+    "@pkg/spec": ["@pkg/spec@workspace:packages/spec"],
 
     "@pkg/strings": ["@pkg/strings@workspace:packages/strings"],
 
