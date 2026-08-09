@@ -602,6 +602,30 @@ describe(executeTest, () => {
 		expect(error.file).toBe("spec/a.spec");
 	});
 
+	test("errors in a command body anchor to the defining file, not the caller's", async () => {
+		let missing = ref("missing_binding");
+		missing.span = { start: 60, end: 75 };
+		let broken = commandNode("broken", [], [letStmt("x", missing)]);
+		let registry = makeRegistry({ commands: [broken] });
+		let node = makeTest({ when: [callStmt("broken")] });
+		let error = expectFailure(
+			await executeTest(
+				node,
+				makeContext({
+					registry,
+					file: "spec/main.spec",
+					fileFor: (definition) =>
+						definition === broken ? "spec/commands/helper.spec" : undefined,
+				}),
+			),
+		);
+		expect(error.code).toBe("unknown-name");
+		// The span is an offset into the defining file's text; stamping the
+		// calling test's path would map it onto the wrong source.
+		expect(error.file).toBe("spec/commands/helper.spec");
+		expect(error.span).toEqual({ start: 60, end: 75 });
+	});
+
 	test("an unknown call target propagates the resolution error with its span", async () => {
 		let statement = callStmt("nope");
 		statement.span = { start: 3, end: 7 };

@@ -79,11 +79,17 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 
 	let sources = new Map<string, SourceFile>();
 	for (let result of run.data.results) {
-		if (!sources.has(result.file)) {
-			let text = await Bun.file(result.file)
-				.text()
-				.catch(() => "");
-			sources.set(result.file, { path: result.file, text });
+		// A failure inside a cross-file command or fixture is anchored to the
+		// defining file, so that file's text is needed alongside the test's own.
+		let paths = [result.file];
+		if (result.error?.file !== undefined) paths.push(result.error.file);
+		for (let path of paths) {
+			if (!sources.has(path)) {
+				let text = await Bun.file(path)
+					.text()
+					.catch(() => "");
+				sources.set(path, { path, text });
+			}
 		}
 	}
 	reportSuite(run.data, sources, sink);

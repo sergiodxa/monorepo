@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
 
 import type { Result } from "@pkg/result";
@@ -175,8 +176,17 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 			let resolved = resolve(path);
 			if (grants.hostFs.mode === "all") return success(undefined);
 			if (grants.hostFs.mode === "scoped") {
-				for (let scope of grants.hostFs.scopes) {
-					if (directoryContains(resolve(scope), resolved)) return success(undefined);
+				// A lexical prefix test alone would let a pre-existing symlink
+				// inside a granted directory reach outside it: compare real
+				// paths on both sides, refusing what cannot be resolved.
+				let followed = followExistingAncestors(resolved);
+				if (followed !== undefined) {
+					for (let scope of grants.hostFs.scopes) {
+						let granted = followExistingAncestors(resolve(scope));
+						if (granted !== undefined && directoryContains(granted, followed)) {
+							return success(undefined);
+						}
+					}
 				}
 			}
 			return failure(
@@ -226,6 +236,45 @@ function netScopeAdmits(scope: string, host: string, port: number | undefined): 
 	let scopePort = scope.slice(separator + 1);
 	if (!/^\d+$/.test(scopePort)) return scope === host;
 	return scope.slice(0, separator) === host && port !== undefined && Number(scopePort) === port;
+}
+
+/**
+ * Re-resolve the symlinks among a path's existing ancestors: the deepest
+ * component that exists on disk is realpathed and the not-yet-existing
+ * remainder is appended back untouched — so a symlink planted inside a
+ * granted directory cannot smuggle the containment check outside it.
+ *
+ * @param path - An absolute, syntactically resolved path.
+ * @returns The symlink-free spelling, or undefined when the existing ancestor
+ * cannot be resolved (e.g. a dangling symlink) — refuse what you cannot verify.
+ */
+function followExistingAncestors(path: string): string | undefined {
+	let ancestor = path;
+	while (!entryExists(ancestor)) {
+		let parent = dirname(ancestor);
+		if (parent === ancestor) break;
+		ancestor = parent;
+	}
+	try {
+		return realpathSync(ancestor) + path.slice(ancestor.length);
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Does a filesystem entry exist at this path, without following symlinks?
+ *
+ * @param path - The absolute path to probe.
+ * @returns Whether lstat finds an entry there.
+ */
+function entryExists(path: string): boolean {
+	try {
+		lstatSync(path);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**

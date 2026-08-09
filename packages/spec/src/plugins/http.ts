@@ -13,6 +13,7 @@ import type { Result } from "@pkg/result";
 import { failure, isFailure, success } from "@pkg/result";
 
 import type { SpecError } from "../errors";
+import type { PermissionSet } from "../permissions";
 import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
 import type { ToolArg, Value, ValueObject } from "../values";
 
@@ -20,6 +21,9 @@ import { ToolError } from "../errors";
 
 /** The request tools the plugin exposes; each issues its uppercased method. */
 const HTTP_VERBS = ["get", "post", "put", "patch", "delete"] as const;
+
+/** How many redirect hops one request may follow before it is refused. */
+const MAX_REDIRECTS = 10;
 
 /** One of the plugin's request tool names. */
 type HttpVerb = (typeof HTTP_VERBS)[number];
@@ -96,7 +100,7 @@ async function request(
 	if (isFailure(target)) return target;
 	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
 	if (isFailure(allowed)) return allowed;
-	return await perform(verb, target.data, parsedArgs.data.body);
+	return await perform(verb, target.data, parsedArgs.data.body, context.permissions);
 }
 
 /** The validated positional arguments of one request tool call. */
@@ -167,16 +171,58 @@ function portOf(url: URL): number {
  * Perform the fetch and shape the response into the tool's result value:
  * `{ status, ok, headers, text, json }`, where `headers` maps lowercased
  * names to values and `json` is the parsed body when parseable, else null.
+ * Redirects are followed by hand, never by fetch: every redirect target is a
+ * new network destination and must pass the same `net` check as the
+ * spec-written URL — otherwise a granted host could bounce the request to a
+ * host the caller never granted.
  */
 async function perform(
 	verb: HttpVerb,
 	url: URL,
 	body: Value | undefined,
+	permissions: PermissionSet,
 ): Promise<Result<Value, SpecError>> {
-	let response: Response;
+	let init = buildInit(verb, body);
+	let current = url;
+	for (let redirects = 0; ; redirects++) {
+		let response: Response;
+		try {
+			response = await fetch(current, { ...init, redirect: "manual" });
+		} catch (error) {
+			return failure(
+				new ToolError(`http.${verb} request to ${current.href} failed: ${describeFailure(error)}`),
+			);
+		}
+		let location = response.headers.get("location");
+		if (!isRedirectStatus(response.status) || location === null) {
+			return await shapeResponse(verb, current, response);
+		}
+		if (redirects >= MAX_REDIRECTS) {
+			return failure(
+				new ToolError(
+					`http.${verb} request to ${url.href} followed more than ${MAX_REDIRECTS} redirects`,
+				),
+			);
+		}
+		let next = parseLocation(verb, location, current);
+		if (isFailure(next)) return next;
+		let allowed = permissions.checkNet(next.data.hostname, portOf(next.data));
+		if (isFailure(allowed)) return allowed;
+		init = redirectInit(init, response.status);
+		current = next.data;
+	}
+}
+
+/**
+ * Shape one final (non-redirect) response into the tool's result value.
+ */
+async function shapeResponse(
+	verb: HttpVerb,
+	url: URL,
+	response: Response,
+): Promise<Result<Value, SpecError>> {
 	let text: string;
 	try {
-		response = await fetch(url, buildInit(verb, body));
 		text = await response.text();
 	} catch (error) {
 		return failure(
@@ -192,6 +238,46 @@ async function perform(
 		text,
 		json: parseJson(text),
 	});
+}
+
+/** The redirect statuses a default fetch would transparently follow. */
+function isRedirectStatus(status: number): boolean {
+	return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+/**
+ * Resolve a `Location` header against the URL that sent it, requiring the
+ * result to stay an http(s) URL.
+ */
+function parseLocation(verb: HttpVerb, location: string, base: URL): Result<URL, SpecError> {
+	let url: URL;
+	try {
+		url = new URL(location, base);
+	} catch {
+		return failure(
+			new ToolError(`http.${verb} received an unparsable redirect Location: "${location}"`),
+		);
+	}
+	if (url.protocol !== "http:" && url.protocol !== "https:") {
+		return failure(
+			new ToolError(
+				`http.${verb} supports absolute http(s) URLs only; a redirect pointed to "${url.href}"`,
+			),
+		);
+	}
+	return success(url);
+}
+
+/**
+ * The init for the next hop, per the fetch standard's method rewrite: a 303 —
+ * and a 301/302 answering a non-GET — switches to GET and drops the body;
+ * 307/308 keep both.
+ */
+function redirectInit(init: RequestInit, status: number): RequestInit {
+	if (status === 303 || ((status === 301 || status === 302) && init.method !== "GET")) {
+		return { method: "GET" };
+	}
+	return init;
 }
 
 /**

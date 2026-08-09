@@ -64,6 +64,17 @@ function denyNet(calls: { host: string; port: number | undefined }[]): Permissio
 	};
 }
 
+/** A permission set granting net access to a single host only. */
+function allowOnlyHost(granted: string): PermissionSet {
+	return {
+		...allowAll(),
+		checkNet: (host) => {
+			if (host === granted) return success(undefined);
+			return failure(new PermissionDeniedError("net", host, `spec run --allow-net=${host}`));
+		},
+	};
+}
+
 /** A permission set granting net access to a single port only. */
 function allowOnlyPort(granted: number): PermissionSet {
 	return {
@@ -279,6 +290,53 @@ describe(createHttpPlugin.name, () => {
 		let error = unwrapError(denied);
 		expect(error.code).toBe("permission-denied");
 		expect(error.remedy).toBe("spec run --allow-net=api.example.com:9090");
+	});
+
+	test("a redirect to an ungranted host is denied, never followed", async () => {
+		let leaked = 0;
+		SERVER.use(
+			http.get(
+				"http://allowed.test/go",
+				() =>
+					new HttpResponse(null, {
+						status: 302,
+						headers: { location: "http://evil.test/latest/meta-data" },
+					}),
+			),
+			http.get("http://evil.test/latest/meta-data", () => {
+				leaked += 1;
+				return HttpResponse.text("top secret");
+			}),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[value("http://allowed.test/go")],
+			buildContext(allowOnlyHost("allowed.test")),
+		);
+		let error = unwrapError(result);
+		expect(error).toBeInstanceOf(PermissionDeniedError);
+		expect(error.code).toBe("permission-denied");
+		expect(error.message).toContain("evil.test");
+		// The denial must land before any request reaches the redirect target.
+		expect(leaked).toBe(0);
+	});
+
+	test("a redirect within the grant is followed to its target", async () => {
+		SERVER.use(
+			http.get(
+				"http://allowed.test/old",
+				() => new HttpResponse(null, { status: 301, headers: { location: "/new" } }),
+			),
+			http.get("http://allowed.test/new", () => HttpResponse.json({ moved: true })),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[value("http://allowed.test/old")],
+			buildContext(allowOnlyHost("allowed.test")),
+		);
+		let data = asObject(unwrap(result));
+		expect(data.status).toBe(200);
+		expect(data.json).toEqual({ moved: true });
 	});
 
 	test("a relative URL is a tool error naming the environments gap", async () => {

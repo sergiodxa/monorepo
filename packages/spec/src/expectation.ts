@@ -89,7 +89,11 @@ export async function executeExpect(
  * Execute one `eventually` block: validate that it contains only `expect`
  * statements and calls to observable tools (a retried mutation is not a
  * retried assertion), then retry the whole block until every statement passes
- * or the deadline expires, reporting the last failure on expiry.
+ * or the deadline expires, reporting the last failure on expiry. Name
+ * resolution is deterministic inside the block — `let` is banned, so the
+ * scope is frozen — which is why every statement resolves once, before the
+ * first attempt: a name that cannot resolve now never will, and retrying it
+ * would only burn the deadline before reporting.
  *
  * @param node - The `eventually` statement to execute.
  * @param host - The executor-provided scope, registry, and dispatch seam.
@@ -103,7 +107,25 @@ export async function executeEventually(
 	for (let statement of node.block.statements) {
 		if (statement.kind === "expect") {
 			let expectNode = statement;
-			attempts.push(() => executeExpect(expectNode, host));
+			let head = expectNode.args[0];
+			if (head === undefined) {
+				return failure(
+					anchor(
+						new SpecError("usage-error", "expect needs at least one argument"),
+						expectNode.span,
+					),
+				);
+			}
+			let headArgument = head;
+			let resolved = resolveExpectMode(headArgument, host);
+			if (isFailure(resolved)) return resolved;
+			let mode = resolved.data;
+			if (mode.mode === "observable") {
+				let tool = mode.tool;
+				attempts.push(() => executeObservableExpect(expectNode, tool, host));
+			} else {
+				attempts.push(async () => executeValueExpect(expectNode, headArgument, host));
+			}
 			continue;
 		}
 		if (statement.kind === "call") {
@@ -125,6 +147,20 @@ export async function executeEventually(
 			attempts.push(async () => {
 				let result = await host.callTool(tool, callNode.args, callNode.span);
 				if (isFailure(result)) return failure(anchor(result.error, callNode.span));
+				// A bare observable is still an assertion: `false` fails the
+				// attempt exactly as it fails the expect form of the same call.
+				if (result.data === false) {
+					return failure(
+						anchor(
+							new ExpectationError(
+								`Expected ${qualifiedName(tool)} to hold, observed false`,
+								true,
+								false,
+							),
+							callNode.span,
+						),
+					);
+				}
 				return success(undefined);
 			});
 			continue;

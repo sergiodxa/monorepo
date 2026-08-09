@@ -475,4 +475,67 @@ describe(executeEventually, () => {
 		expectSuccess(await executeEventually(node, host));
 		expect(attempts).toBe(2);
 	});
+
+	test("a bare observable returning false retries until it holds", async () => {
+		let attempts = 0;
+		let registry = makeRegistry({
+			tools: [{ namespace: "fs", name: "exists", kind: "observable" }],
+		});
+		let { host } = makeHost({
+			registry,
+			uses: ["fs"],
+			onTool: () => {
+				attempts += 1;
+				return success(attempts >= 2);
+			},
+		});
+		let node = eventuallyStmt(3000, [callStmt("exists", str("later.txt"))]);
+		expectSuccess(await executeEventually(node, host));
+		expect(attempts).toBe(2);
+	});
+
+	test("a bare observable still false at the deadline is an expectation failure", async () => {
+		let attempts = 0;
+		let registry = makeRegistry({
+			tools: [{ namespace: "fs", name: "exists", kind: "observable" }],
+		});
+		let { host } = makeHost({
+			registry,
+			uses: ["fs"],
+			onTool: () => {
+				attempts += 1;
+				return success(false);
+			},
+		});
+		let node = eventuallyStmt(0, [callStmt("exists", str("never.txt"))]);
+		let error = expectFailure(await executeEventually(node, host));
+		expect(error).toBeInstanceOf(ExpectationError);
+		expect(error.code).toBe("expectation-failed");
+		expect(error.message).toContain("fs.exists");
+		expect(attempts).toBe(1);
+	});
+
+	test("an unknown expect head fails before the first attempt", async () => {
+		let { host, toolCalls } = makeHost();
+		let started = performance.now();
+		let node = eventuallyStmt(3000, [expectStmt(word("nope"))]);
+		let error = expectFailure(await executeEventually(node, host));
+		expect(error.code).toBe("unknown-name");
+		expect(toolCalls).toHaveLength(0);
+		// The head can never resolve (let is banned inside eventually, so the
+		// scope is frozen); the failure must not burn the deadline retrying.
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
+	test("an action tool heading an expect fails before the first attempt", async () => {
+		let registry = makeRegistry({ tools: [{ namespace: "fs", name: "write", kind: "action" }] });
+		let { host, toolCalls } = makeHost({ registry, uses: ["fs"] });
+		let started = performance.now();
+		let node = eventuallyStmt(3000, [expectStmt(word("write"), str("f"), str("x"))]);
+		let error = expectFailure(await executeEventually(node, host));
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("not an observable");
+		expect(toolCalls).toHaveLength(0);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
 });

@@ -156,6 +156,31 @@ test "a helper defined without use fs cannot use the caller's import" {
 		expect(result?.error?.message).toContain('"write"');
 	});
 
+	test("a failure inside a cross-file command carries the defining file", async () => {
+		let root = await makeSuiteDir({
+			"commands/helper.spec": `command broken {
+	let x = missing_binding
+}
+`,
+			"main.spec": `test "calls broken" {
+	when {
+		broken
+	}
+}
+`,
+		});
+
+		let suite = await runOk(root);
+
+		expect(suite.failed).toBe(1);
+		let result = suite.results[0];
+		expect(result?.file).toBe(join(root, "main.spec"));
+		expect(result?.error?.code).toBe("unknown-name");
+		// The failing statement lives in the helper file; its span only makes
+		// sense against that file's text.
+		expect(result?.error?.file).toBe(join(root, "commands/helper.spec"));
+	});
+
 	test("a denied run permission is refused before any process spawns", async () => {
 		let root = await makeSuiteDir({
 			"denied.spec": `use cli

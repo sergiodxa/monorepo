@@ -65,6 +65,14 @@ export interface ExecutionContext {
 	 */
 	usesFor: (definition: DefinitionNode) => readonly string[];
 	/**
+	 * The path of the file that DEFINED a command or fixture. Errors raised
+	 * inside a definition's body carry the body's spans, so they must be
+	 * anchored to the defining file — stamping the calling test's file would
+	 * map those spans onto the wrong source text. When absent (or returning
+	 * undefined), errors keep the calling file.
+	 */
+	fileFor?: (definition: DefinitionNode) => string | undefined;
+	/**
 	 * The parsed grant modes. The executor refuses calls to tools whose
 	 * required permission family is denied outright, before the plugin runs;
 	 * scoped refinement then happens inside the plugin through the
@@ -383,7 +391,9 @@ async function runFixture(
  * Run a command or fixture body under the recursion cap; the body's `return`
  * value is the result, and a body that never returns produces `null`. Because
  * `use` is file-scoped, the body resolves bare names against the imports of
- * the file that defined it, not the caller's file.
+ * the file that defined it, not the caller's file — and errors raised inside
+ * the body anchor to the defining file, so their spans map onto the source
+ * text they came from.
  */
 async function runBody(
 	definition: DefinitionNode,
@@ -407,6 +417,8 @@ async function runBody(
 		depth: environment.depth + 1,
 		uses: environment.usesFor(definition),
 	};
+	let definitionFile = environment.fileFor?.(definition);
+	if (definitionFile !== undefined) nested.file = definitionFile;
 	let outcome = await executeStatements(definition.body.statements, scope, nested, true);
 	if (isFailure(outcome)) return outcome;
 	if (outcome.data.kind === "returned") return success(outcome.data.value);

@@ -139,6 +139,30 @@ command touch_marker {
 		expect(output()).toContain("1 passed, 0 failed");
 	});
 
+	test("a failure inside a cross-file command reports the defining file and line", async () => {
+		let root = await makeSuiteDir({
+			"commands/helper.spec": `# A helper whose body fails; its error must point here, not at the caller.
+command broken {
+	let x = missing_binding
+}
+`,
+			"main.spec": `test "calls broken" {
+	when {
+		broken
+	}
+}
+`,
+		});
+		let { sink, output } = makeSink();
+
+		let code = await main(["run", root], sink);
+
+		expect(code).toBe(1);
+		// The failing statement is line 3 of the helper file; main.spec does
+		// not even have a statement at that line.
+		expect(output()).toContain("commands/helper.spec:3");
+	});
+
 	test("--help exits 0 and prints usage", async () => {
 		let { sink, output } = makeSink();
 

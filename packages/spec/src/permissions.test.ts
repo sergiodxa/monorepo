@@ -8,6 +8,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import type { Result } from "@pkg/result";
 
@@ -263,6 +266,41 @@ describe("createPermissionSet", () => {
 			let set = createPermissionSet(grants({ hostFs: { mode: "scoped", scopes: ["/opt/data/"] } }));
 			expect(isSuccess(set.checkHostFs("/opt/data/file.txt"))).toBe(true);
 			expect(isSuccess(set.checkHostFs("/opt/database"))).toBe(false);
+		});
+
+		test("a symlink inside a granted directory cannot reach outside it", () => {
+			let granted = realpathSync(mkdtempSync(join(tmpdir(), "spec-grant-")));
+			let outside = realpathSync(mkdtempSync(join(tmpdir(), "spec-outside-")));
+			try {
+				mkdirSync(join(granted, "real"));
+				symlinkSync(outside, join(granted, "out"));
+				let set = createPermissionSet(grants({ hostFs: { mode: "scoped", scopes: [granted] } }));
+				// A genuine subdirectory stays granted…
+				expect(isSuccess(set.checkHostFs(join(granted, "real", "file.txt")))).toBe(true);
+				// …but a path that only lexically sits under the grant, while its
+				// symlinked ancestor points elsewhere, is refused.
+				let error = expectFailure(set.checkHostFs(join(granted, "out", "escape.txt")));
+				expect(error).toBeInstanceOf(PermissionDeniedError);
+				expect(error.permission).toBe("host-fs");
+			} finally {
+				rmSync(granted, { recursive: true, force: true });
+				rmSync(outside, { recursive: true, force: true });
+			}
+		});
+
+		test("a grant spelled through a symlinked ancestor admits its real paths", () => {
+			// os.tmpdir() is itself a symlink on macOS (/var -> /private/var):
+			// the grant and the checked path must match through real paths, not
+			// through their spellings.
+			let spelled = mkdtempSync(join(tmpdir(), "spec-spelled-"));
+			let real = realpathSync(spelled);
+			try {
+				let set = createPermissionSet(grants({ hostFs: { mode: "scoped", scopes: [spelled] } }));
+				expect(isSuccess(set.checkHostFs(join(real, "file.txt")))).toBe(true);
+				expect(isSuccess(set.checkHostFs(join(spelled, "file.txt")))).toBe(true);
+			} finally {
+				rmSync(real, { recursive: true, force: true });
+			}
 		});
 	});
 });

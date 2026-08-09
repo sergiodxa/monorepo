@@ -60,12 +60,16 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 	let permissions = createPermissionSet(options.grants);
 
 	// `use` is file-scoped: a definition's body resolves bare names against
-	// the imports of the file that defined it, not the caller's file.
+	// the imports of the file that defined it, not the caller's file. The
+	// defining file also anchors errors raised inside the body, so a failure
+	// in a shared command reports its own file:line, not the calling test's.
 	let usesByDefinition = new Map<DefinitionNode, readonly string[]>();
+	let fileByDefinition = new Map<DefinitionNode, string>();
 	for (let file of suite.files) {
 		let imported = file.uses.map((use) => use.namespace);
 		for (let definition of file.definitions) {
 			usesByDefinition.set(definition, imported);
+			fileByDefinition.set(definition, file.path);
 		}
 	}
 
@@ -82,6 +86,7 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 				permissions,
 				uses: imported,
 				usesFor: (definition) => usesByDefinition.get(definition) ?? imported,
+				fileFor: (definition) => fileByDefinition.get(definition),
 				grants: options.grants,
 			});
 			let durationMs = performance.now() - startedAt;
