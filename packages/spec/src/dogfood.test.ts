@@ -48,7 +48,7 @@ test(
 				join(PACKAGE_DIR, "src", "cli.ts"),
 				"run",
 				"spec",
-				"--allow-run=spec",
+				"--allow-run=spec,echo",
 			],
 			cwd: PACKAGE_DIR,
 			env: { ...process.env, PATH: `${BIN_DIR}:${process.env.PATH ?? ""}` },
