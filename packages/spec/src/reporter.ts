@@ -36,10 +36,47 @@ interface ComparisonFields {
 	observed?: Value;
 }
 
+/** The fields that identify and group a permission denial. */
+interface DenialGrouping {
+	/** Which permission family the denial required. */
+	permission: string;
+	/** The resource the spec attempted to reach. */
+	resource: string;
+	/** The exact `spec run --allow-*` flag that would grant it. */
+	remedy: string;
+}
+
 /**
- * Render a finished suite: one status line per test in execution order, an
- * indented detail block after every failure, and a final summary line with
- * the pass/fail counts and the total duration.
+ * One affected test in a denial group: its title and the `file[:line]` it
+ * failed at, resolved through the loaded sources for cross-file anchoring.
+ */
+interface AffectedTest {
+	title: string;
+	location: string;
+}
+
+/**
+ * A run of denials that share a remedy — the same missing grant. Distinct
+ * remedies (e.g. `--allow-net=a.com` vs `--allow-net=localhost`) stay in
+ * separate groups even when their permission family matches.
+ */
+interface DenialGroup {
+	/** The permission family every denial in the group required. */
+	permission: string;
+	/** Distinct resources attempted, in first-seen order. */
+	resources: string[];
+	/** The remedy shared by every denial in the group. */
+	remedy: string;
+	/** The tests that failed for this grant, in execution order. */
+	tests: AffectedTest[];
+}
+
+/**
+ * Render a finished suite: a status line per passing test and per ungrouped
+ * failure (with its indented detail block), then one accumulated block per
+ * missing grant — permission denials sharing a remedy are collapsed into a
+ * single block that names the grant and lists every affected test — and
+ * finally a summary line with the pass/fail counts and the total duration.
  *
  * @param suite - The suite roll-up the runner produced.
  * @param sources - Loaded file texts by path, for turning spans into lines.
@@ -51,10 +88,20 @@ export function reportSuite(
 	sink: Sink,
 ): void {
 	let separated = true;
+	let groups: DenialGroup[] = [];
+	let byRemedy = new Map<string, DenialGroup>();
 	for (let result of suite.results) {
 		if (result.status === "passed") {
 			sink.write(`✓ ${result.title}\n`);
 			separated = false;
+			continue;
+		}
+		let grouping = result.error === undefined ? undefined : groupableDenial(result.error);
+		if (grouping !== undefined) {
+			accumulateDenial(groups, byRemedy, grouping, {
+				title: result.title,
+				location: failureLocation(result, sources),
+			});
 			continue;
 		}
 		sink.write(`✗ ${result.title} (${failureLocation(result, sources)})\n`);
@@ -66,6 +113,15 @@ export function reportSuite(
 			sink.write("\n");
 			separated = true;
 		}
+	}
+	for (let group of groups) {
+		if (!separated) sink.write("\n");
+		sink.write(`✗ ${groupHeader(group)}\n`);
+		for (let line of groupDetailLines(group)) {
+			sink.write(line === "" ? "\n" : `${DETAIL_INDENT}${line}\n`);
+		}
+		sink.write("\n");
+		separated = true;
 	}
 	if (!separated) sink.write("\n");
 	let total = 0;
@@ -119,6 +175,67 @@ function detailLines(error: SpecError): string[] {
 	if (comparison.expected !== undefined) pushLabeledValue(lines, "expected", comparison.expected);
 	if (comparison.observed !== undefined) pushLabeledValue(lines, "observed", comparison.observed);
 	if (error.remedy !== undefined) lines.push(`remedy: ${error.remedy}`);
+	return lines;
+}
+
+/**
+ * The grouping fields of a permission denial the reporter accumulates, or
+ * undefined when the error is not a groupable denial. A denial is groupable
+ * exactly when {@link denialBlock} would render it — code `permission-denied`
+ * with structured `permission`, `resource`, and `remedy` — so a degraded
+ * denial missing any field falls back to the inline per-test detail path.
+ */
+function groupableDenial(error: SpecError): DenialGrouping | undefined {
+	if (denialBlock(error) === undefined) return undefined;
+	let denial = error as SpecError & DenialFields;
+	let permission = denial.permission;
+	let resource = denial.resource;
+	let remedy = error.remedy;
+	if (permission === undefined || resource === undefined || remedy === undefined) return undefined;
+	return { permission, resource, remedy };
+}
+
+/**
+ * Fold one denial into the group its remedy keys — creating the group in
+ * first-seen order when new — recording the resource (deduplicated, first-seen
+ * order) and the affected test in execution order.
+ */
+function accumulateDenial(
+	groups: DenialGroup[],
+	byRemedy: Map<string, DenialGroup>,
+	grouping: DenialGrouping,
+	test: AffectedTest,
+): void {
+	let group = byRemedy.get(grouping.remedy);
+	if (group === undefined) {
+		group = { permission: grouping.permission, resources: [], remedy: grouping.remedy, tests: [] };
+		byRemedy.set(grouping.remedy, group);
+		groups.push(group);
+	}
+	if (!group.resources.includes(grouping.resource)) group.resources.push(grouping.resource);
+	group.tests.push(test);
+}
+
+/**
+ * The header of a denial group's block: the permission and how many tests it
+ * accounts for, with `test`/`tests` agreeing in number.
+ */
+function groupHeader(group: DenialGroup): string {
+	let count = group.tests.length;
+	return `Permission denied: ${group.permission} (${count} ${count === 1 ? "test" : "tests"})`;
+}
+
+/**
+ * The unindented body lines of a denial group's block: the attempted
+ * resources, the shared remedy, and the affected tests. The two label lines
+ * stay verbatim so the design suite's substring assertions keep matching.
+ */
+function groupDetailLines(group: DenialGroup): string[] {
+	let lines = ["", "The spec attempted to reach:"];
+	for (let resource of group.resources) lines.push(`> ${resource}`);
+	lines.push("", "Re-run with an appropriate permission, for example:", `> ${group.remedy}`);
+	lines.push("", "Affected tests:");
+	for (let test of group.tests) lines.push(`- ${test.title} (${test.location})`);
 	return lines;
 }
 

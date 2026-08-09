@@ -118,7 +118,7 @@ describe(reportSuite, () => {
 		);
 	});
 
-	test("reports a permission denial with the exact denial block", () => {
+	test("groups a lone permission denial into a one-test block", () => {
 		let error = new PermissionDeniedError("run", "node", "spec run --allow-run=node");
 		let sink = new BufferSink();
 		let suite: SuiteResult = {
@@ -131,8 +131,7 @@ describe(reportSuite, () => {
 
 		expect(sink.text).toBe(
 			[
-				"✗ runs node (spec/cli.spec)",
-				"  Permission denied: run",
+				"✗ Permission denied: run (1 test)",
 				"",
 				"  The spec attempted to reach:",
 				"  > node",
@@ -140,7 +139,199 @@ describe(reportSuite, () => {
 				"  Re-run with an appropriate permission, for example:",
 				"  > spec run --allow-run=node",
 				"",
+				"  Affected tests:",
+				"  - runs node (spec/cli.spec)",
+				"",
 				"0 passed, 1 failed (5ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("collapses denials sharing a remedy into one block listing every test", () => {
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			results: [
+				failed(
+					"runs echo",
+					"spec/a.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					2,
+				),
+				failed(
+					"runs ls",
+					"spec/b.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					3,
+				),
+				failed(
+					"runs cat",
+					"spec/c.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					4,
+				),
+			],
+			passed: 0,
+			failed: 3,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ Permission denied: run (3 tests)",
+				"",
+				"  The spec attempted to reach:",
+				"  > cli.run",
+				"",
+				"  Re-run with an appropriate permission, for example:",
+				"  > spec run --allow-run",
+				"",
+				"  Affected tests:",
+				"  - runs echo (spec/a.spec)",
+				"  - runs ls (spec/b.spec)",
+				"  - runs cat (spec/c.spec)",
+				"",
+				"0 passed, 3 failed (9ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("separates denials with distinct remedies into their own blocks", () => {
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			results: [
+				failed(
+					"spawns a tool",
+					"spec/a.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					2,
+				),
+				failed(
+					"calls the api",
+					"spec/b.spec",
+					new PermissionDeniedError(
+						"net",
+						"api.example.com",
+						"spec run --allow-net=api.example.com",
+					),
+					3,
+				),
+			],
+			passed: 0,
+			failed: 2,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ Permission denied: run (1 test)",
+				"",
+				"  The spec attempted to reach:",
+				"  > cli.run",
+				"",
+				"  Re-run with an appropriate permission, for example:",
+				"  > spec run --allow-run",
+				"",
+				"  Affected tests:",
+				"  - spawns a tool (spec/a.spec)",
+				"",
+				"✗ Permission denied: net (1 test)",
+				"",
+				"  The spec attempted to reach:",
+				"  > api.example.com",
+				"",
+				"  Re-run with an appropriate permission, for example:",
+				"  > spec run --allow-net=api.example.com",
+				"",
+				"  Affected tests:",
+				"  - calls the api (spec/b.spec)",
+				"",
+				"0 passed, 2 failed (5ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("prints inline failures and passes before the accumulated denial block", () => {
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			results: [
+				failed(
+					"the ledger balances",
+					"spec/ledger.spec",
+					new ExpectationError("values are not equal", 1, 2),
+					4,
+				),
+				failed(
+					"runs echo",
+					"spec/a.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					2,
+				),
+				passed("adds up", 1),
+				failed(
+					"runs ls",
+					"spec/b.spec",
+					new PermissionDeniedError("run", "cli.run", "spec run --allow-run"),
+					3,
+				),
+			],
+			passed: 1,
+			failed: 3,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ the ledger balances (spec/ledger.spec)",
+				"  expectation-failed: values are not equal",
+				"  expected: 1",
+				"  observed: 2",
+				"",
+				"✓ adds up",
+				"",
+				"✗ Permission denied: run (2 tests)",
+				"",
+				"  The spec attempted to reach:",
+				"  > cli.run",
+				"",
+				"  Re-run with an appropriate permission, for example:",
+				"  > spec run --allow-run",
+				"",
+				"  Affected tests:",
+				"  - runs echo (spec/a.spec)",
+				"  - runs ls (spec/b.spec)",
+				"",
+				"1 passed, 3 failed (10ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("does not group a permission denial that lost its remedy", () => {
+		let error = new SpecError("permission-denied", "Permission denied: net");
+		let denial = error as SpecError & { permission?: string; resource?: string };
+		denial.permission = "net";
+		denial.resource = "api.example.com";
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			results: [failed("fetches", "spec/http.spec", error, 2)],
+			passed: 0,
+			failed: 1,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ fetches (spec/http.spec)",
+				"  permission-denied: Permission denied: net",
+				"",
+				"0 passed, 1 failed (2ms)",
 				"",
 			].join("\n"),
 		);

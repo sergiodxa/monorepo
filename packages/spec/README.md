@@ -90,12 +90,14 @@ Expected output (exit code 0):
 2 passed, 0 failed (16ms)
 ```
 
-Without the grant, the first test fails before `bun` is ever spawned, and the
-denial names the flag to add (exit code 1):
+Without the grant, that test fails before `bun` is ever spawned. Every test
+denied for the same missing grant is collected into one block that names the
+flag to add and lists the tests it affected (exit code 1):
 
 ```
-✗ the script prints its greeting (spec/build.spec:9)
-  Permission denied: run
+✓ the generated config is on disk
+
+✗ Permission denied: run (1 test)
 
   The spec attempted to reach:
   > cli.run
@@ -103,7 +105,8 @@ denial names the flag to add (exit code 1):
   Re-run with an appropriate permission, for example:
   > spec run --allow-run
 
-✓ the generated config is on disk
+  Affected tests:
+  - the script prints its greeting (spec/build.spec:9)
 
 1 passed, 1 failed (2ms)
 ```
