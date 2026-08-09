@@ -1,0 +1,21 @@
+{
+	// spec.plugins.jsonc — the per-project plugin manifest.
+	//
+	// It maps a namespace to the command that launches its plugin. This file is
+	// environment configuration, not specification: .spec files name `greet.hello`
+	// and never a path, so they stay portable across machines and installs while
+	// the manifest records where each plugin actually lives here.
+	//
+	// Declaring a plugin is not permission to run it. `spec run` launches manifest
+	// plugins only when the caller passes --allow-plugins (all) or
+	// --allow-plugins=greet (this one), because starting the command executes code
+	// the project declares.
+	"plugins": {
+		"greet": {
+			// A command argument starting with "." is a manifest-relative path,
+			// resolved against this file's directory, so the suite runs the same
+			// from any working directory.
+			"command": ["bun", "./greeter.ts"],
+		},
+	},
+}
