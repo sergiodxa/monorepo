@@ -111,6 +111,67 @@ one of the suite's process launches. The win grows with the number of launches;
 a single interactive `spec run` sees a smaller absolute difference but the same
 faster first-test start.
 
+### 2. Bounded, opt-in concurrency
+
+Add a `--concurrency=N` flag (alias `--jobs=N`) to `spec run`, and a matching
+`concurrency` option to the runner's `RunOptions`. N is the maximum number of
+tests the runner executes at once; it must be a positive integer, and anything
+else — `0`, a negative, a decimal, a non-number, or the bare flag with no value —
+is a usage error (exit 2). **Absent, `concurrency` defaults to 1: strictly
+sequential, source-ordered — today's exact behavior.**
+
+With `N > 1`, up to N workers pull from one source-ordered work list and run
+their tests at the same time. This is safe at the runner level because every
+test already receives its own isolated workspace, created and torn down per
+test, so two tests running at once cannot see each other's files. Plugin
+`dispose()` teardown is unchanged: it still runs once per plugin after the whole
+suite completes, not per test.
+
+**Output is source-ordered, so results stay deterministic.** Each worker writes
+its outcome back into the test's _source position_ in the results array, never
+appending in completion order. So however the schedule interleaves — and under
+concurrency a short test genuinely does finish before a longer one that precedes
+it in the source — the reported list, the pass/fail counts, and the exit code
+are identical to a sequential run. Concurrency changes _when_ a test runs, never
+_whether_ it passes or _where_ it appears in the report. This is verified two
+ways: a runner test asserts the result shape is identical at `concurrency: 1`
+and `concurrency: 8` for a suite whose tests finish in the reverse of source
+order, and the dogfood suite is run end-to-end at `--concurrency=8` and must
+still report `0 failed`.
+
+**Isolation is of the workspace, not the app under test.** The runner guarantees
+each test a private filesystem workspace; it does _not_ isolate a shared,
+mutable application — the same database rows, one stateful server, a global
+counter. A suite that mutates shared external state can race under concurrency in
+ways that are a property of the app, not the runner. Such a suite should stay at
+`--concurrency=1` (the default) or be written to isolate its own state. This is
+precisely why parallelism is opt-in: the safe default surprises no one, and the
+speed-up is one flag away for the suites that can take it.
+
+**This refines, not reopens, ADR-009.**
+[ADR-009](./ADR-009-v1-typescript-implementation.md)'s §4 table recorded, under
+"Workspace size limits, parallelism": _"tests execute sequentially in v1.
+Parallelism is a runner concern that isolation already permits later."_ This ADR
+delivers that "later": sequential remains the **default**, but it is no longer a
+hard rule — parallelism is now a shipped, opt-in scheduling flag built on the
+per-test isolation ADR-009 already required. No design-suite **Open** item is
+touched; this is a **v1-provisional** scheduling choice, cheap to revisit.
+
+**Measured effect.** The 37-test dogfood suite, end-to-end through the compiled
+binary (outer runner and every nested `spec` alike), on this machine with a warm
+cache (median of 3):
+
+| Scheduling        | Dogfood wall-time |
+| ----------------- | ----------------- |
+| `--concurrency=1` | ~0.88s            |
+| `--concurrency=8` | ~0.24s            |
+
+A ~3.7× wall-time reduction, because the dogfood tests are I/O-bound: most spawn
+a child `spec` process and block on it, so overlapping them lets the machine
+make progress while any one test waits. A CPU-bound or single-test suite would
+see less. The win is a property of the suite's shape — which is exactly why it
+is a per-run flag rather than a fixed policy.
+
 ## Consequences
 
 - An operator (or CI job) that runs a suite repeatedly can build once with
@@ -126,6 +187,21 @@ faster first-test start.
 - A ~60MB artifact lands under `packages/spec/bin/` after a build; it is
   gitignored, so it never enters version control, but a `bun run build` is now
   part of producing the shippable CLI.
+- A suite whose tests are independent — the common case, thanks to per-test
+  workspace isolation — can pass `--concurrency=N` for a wall-time reduction
+  that tracks the app under test, not the runner, with no code change and no
+  loss of determinism in the report or exit code.
+- The default is unchanged for anyone who does not pass the flag: sequential,
+  source-ordered, exactly as v1 shipped. A suite that shares mutable app state
+  keeps working by doing nothing.
+- The summary line sums each test's measured duration; under concurrency those
+  per-test measurements overlap in wall-clock time, so the printed total reads
+  _higher_ than the real elapsed time (e.g. `1212ms` for a run that finished in
+  ~240ms). This is a display artifact of a shared event loop, not a correctness
+  issue — pass/fail, ordering, and exit code are unaffected, and the true
+  wall-time is what an external `time` reports. A wall-clock total in the summary
+  is left as future work, since it would mean threading a run-level duration
+  through the result type.
 
 ## Open Questions
 
@@ -138,3 +214,11 @@ These are v1-provisional pressure points, not reopenings of the design suite.
 - **Bytecode caching.** Bun offers `--bytecode` for a further startup reduction
   at the cost of a larger artifact and a tighter Bun-version coupling. It was
   left off pending a measured need beyond what the plain compile already buys.
+- **A `concurrency` key in `spec/config.jsonc`.** The flag is per-run; a project
+  that always wants a given degree of parallelism must pass it on every
+  invocation. A `concurrency` key in the project config — the same file
+  [ADR-013](./ADR-013-project-config-permissions.md) introduced for plugins and
+  permissions — would let a suite declare its own safe default, with the flag
+  overriding it. It was left out of v1 to keep the config surface small, and
+  because the safe global default (1) needs no configuration; it is recorded
+  here as the obvious next step.

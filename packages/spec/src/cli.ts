@@ -50,6 +50,9 @@ const USAGE = `spec — executable specifications
 Usage:
   spec run [directory] [--allow-*]     Run the suite (directory defaults to ./spec)
 
+Scheduling:
+  --concurrency=N (alias --jobs=N)   Run up to N tests at once (default 1, sequential)
+
 Permissions (denied unless granted):
   --allow-run[=name,...]      Execute processes (scoped to executable names)
   --allow-net[=host[:port]]   Reach the network (scoped to hosts)
@@ -88,10 +91,20 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let { allowConfig, remaining: afterConfigOptIn } = configOptIn.data;
 
+	// `--concurrency=N` (alias `--jobs=N`) is a scheduling flag, not a permission
+	// family, so it is peeled off before the plugin and permission parsers, which
+	// would otherwise flag it as an unknown flag. Absent, it defaults to 1.
+	let concurrencyParsed = parseConcurrency(afterConfigOptIn);
+	if (isFailure(concurrencyParsed)) {
+		reportFatal(concurrencyParsed.error, sink);
+		return 2;
+	}
+	let { concurrency, remaining: afterConcurrency } = concurrencyParsed.data;
+
 	// `--allow-plugins` authorizes launching declared plugins; it is not one of
 	// the four capability families, so it is peeled off before the permission
 	// parser (which would reject it as an unknown `--allow-*` flag) sees it.
-	let pluginParsed = parsePluginGrant(afterConfigOptIn);
+	let pluginParsed = parsePluginGrant(afterConcurrency);
 	if (isFailure(pluginParsed)) {
 		reportFatal(pluginParsed.error, sink);
 		return 2;
@@ -170,7 +183,7 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		externalPlugins = connected.data;
 	}
 
-	let run = await runSuite({ root, grants, plugins: externalPlugins });
+	let run = await runSuite({ root, grants, plugins: externalPlugins, concurrency });
 	if (isFailure(run)) {
 		// The runner disposes plugins only once it starts executing; a load
 		// failure returns before that, so release the launched plugins here.
@@ -256,6 +269,74 @@ function parseConfigOptIn(
 		remaining.push(argument);
 	}
 	return success({ allowConfig, remaining });
+}
+
+/**
+ * Peel `--concurrency=N` (and its `--jobs=N` alias) out of an argument list. N
+ * is how many tests the runner may execute at once; it must be a positive
+ * integer. Absent, concurrency defaults to 1 (sequential). A malformed or
+ * non-positive value — including the bare flag with no `=value` — is a usage
+ * error; a repeated flag takes the last value. Every other argument passes
+ * through untouched for the plugin and permission parsers.
+ *
+ * @param args - The raw CLI arguments after the config opt-in was removed.
+ * @returns The chosen concurrency and the remaining arguments.
+ */
+function parseConcurrency(
+	args: string[],
+): Result<{ concurrency: number; remaining: string[] }, SpecError> {
+	let concurrency = 1;
+	let remaining: string[] = [];
+	for (let argument of args) {
+		let flag = matchConcurrencyFlag(argument);
+		if (flag === undefined) {
+			remaining.push(argument);
+			continue;
+		}
+		let value = parsePositiveInteger(flag.value);
+		if (value === undefined) {
+			return failure(
+				new SpecError(
+					"usage-error",
+					`${flag.name} expects a positive integer, e.g. ${flag.name}=8; got ${JSON.stringify(flag.value)}.`,
+				),
+			);
+		}
+		concurrency = value;
+	}
+	return success({ concurrency, remaining });
+}
+
+/**
+ * Match a concurrency flag and split off its value. Recognizes both spellings,
+ * `--concurrency` and its `--jobs` alias, in the `--flag=value` form; the bare
+ * `--flag` form matches with an empty value so the caller reports it as the
+ * usage error it is (the flag needs a value).
+ *
+ * @param argument - One raw CLI argument.
+ * @returns The matched flag name and its value, or undefined for a non-match.
+ */
+function matchConcurrencyFlag(argument: string): { name: string; value: string } | undefined {
+	for (let name of ["--concurrency", "--jobs"]) {
+		if (argument === name) return { name, value: "" };
+		if (argument.startsWith(`${name}=`)) return { name, value: argument.slice(name.length + 1) };
+	}
+	return undefined;
+}
+
+/**
+ * Parse a strictly positive integer written in decimal, rejecting everything
+ * else — empty strings, signs, decimals, whitespace, and non-numeric text — so
+ * the caller can turn a bad `--concurrency` value into a usage error.
+ *
+ * @param text - The flag's raw value.
+ * @returns The integer, or undefined when the text is not a positive integer.
+ */
+function parsePositiveInteger(text: string): number | undefined {
+	if (!/^\d+$/.test(text)) return undefined;
+	let value = Number(text);
+	if (!Number.isInteger(value) || value < 1) return undefined;
+	return value;
 }
 
 if (import.meta.main) {

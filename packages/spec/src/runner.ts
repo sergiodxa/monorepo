@@ -12,7 +12,7 @@ import type { Result } from "@pkg/result";
 
 import { isFailure, success } from "@pkg/result";
 
-import type { DefinitionNode } from "./ast";
+import type { DefinitionNode, TestNode } from "./ast";
 import type { SuiteResult, TestResult } from "./diagnostics";
 import type { SpecError } from "./errors";
 import type { Grants } from "./permissions";
@@ -37,6 +37,18 @@ export interface RunOptions {
 	grants: Grants;
 	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, `browser`, and `db`. */
 	plugins?: Plugin[];
+	/**
+	 * How many tests may execute at once. `1` (the default) runs the suite
+	 * strictly sequentially in source order — today's behavior. A value `N > 1`
+	 * lets up to N independent tests overlap; because each test already gets its
+	 * own isolated workspace they do not interfere at the runner level. Results
+	 * are always collected in SOURCE order regardless of completion order, so the
+	 * report and exit code stay byte-for-byte deterministic. A shared, mutable app
+	 * under test (the same database rows, one stateful server) is not isolated by
+	 * the workspace and may still require `concurrency: 1`. Values below 1 are
+	 * clamped to 1; the CLI rejects non-positive integers as a usage error.
+	 */
+	concurrency?: number;
 }
 
 /**
@@ -77,34 +89,84 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		}
 	}
 
-	let results: TestResult[] = [];
-	try {
-		for (let file of suite.files) {
-			let imported = file.uses.map((use) => use.namespace);
-			for (let test of file.tests) {
-				let workspace = await createWorkspace(permissions);
-				if (isFailure(workspace)) return workspace;
-				let startedAt = performance.now();
-				let outcome = await executeTest(test, {
-					registry,
-					workspace: workspace.data,
-					permissions,
-					uses: imported,
-					usesFor: (definition) => usesByDefinition.get(definition) ?? imported,
-					fileFor: (definition) => fileByDefinition.get(definition),
-					grants: options.grants,
-				});
-				let durationMs = performance.now() - startedAt;
-				await workspace.data.cleanup();
-				if (isFailure(outcome)) {
-					let error = outcome.error;
-					if (error.file === undefined) error.file = file.path;
-					results.push({ title: test.title, file: file.path, status: "failed", error, durationMs });
-				} else {
-					results.push({ title: test.title, file: file.path, status: "passed", durationMs });
-				}
+	// Flatten every test into one source-ordered work list. Each unit carries
+	// its file path and that file's `use` imports, so a worker needs nothing but
+	// the shared registry and permissions to run it. This order — files sorted by
+	// the loader, tests in file order — is the order results are reported and the
+	// exit code is computed in, independent of the order workers finish below.
+	let pending: { test: TestNode; filePath: string; imported: readonly string[] }[] = [];
+	for (let file of suite.files) {
+		let imported = file.uses.map((use) => use.namespace);
+		for (let test of file.tests) pending.push({ test, filePath: file.path, imported });
+	}
+
+	// Bounded concurrency: up to `concurrency` workers pull from the shared work
+	// list and write each outcome back into its SOURCE slot, so `results` is
+	// source-ordered no matter which worker finishes first. `1` (the default)
+	// means a single worker, i.e. strictly sequential — today's exact behavior.
+	let concurrency = Math.max(1, Math.trunc(options.concurrency ?? 1));
+	let results: (TestResult | undefined)[] = Array.from({ length: pending.length });
+	let nextIndex = 0;
+	// The first fatal workspace-creation failure, if any: it aborts the whole run
+	// exactly as the sequential path's early `return` did. In-flight tests finish;
+	// no new work is pulled once it is set; the run then returns this failure.
+	let fatal: Result<SuiteResult, SpecError> | undefined;
+
+	// One worker: claim the next source index, run that test in its own fresh
+	// workspace, record the outcome, repeat until the list is drained or a fatal
+	// failure is seen. Claiming `nextIndex` is race-free — there is no `await`
+	// between reading and incrementing it, so no two workers claim the same slot.
+	async function runWorker(): Promise<void> {
+		while (fatal === undefined) {
+			let index = nextIndex;
+			nextIndex += 1;
+			if (index >= pending.length) return;
+			let unit = pending[index];
+			if (unit === undefined) return;
+			let workspace = await createWorkspace(permissions);
+			if (isFailure(workspace)) {
+				fatal ??= workspace;
+				return;
+			}
+			let startedAt = performance.now();
+			let outcome = await executeTest(unit.test, {
+				registry,
+				workspace: workspace.data,
+				permissions,
+				uses: unit.imported,
+				usesFor: (definition) => usesByDefinition.get(definition) ?? unit.imported,
+				fileFor: (definition) => fileByDefinition.get(definition),
+				grants: options.grants,
+			});
+			let durationMs = performance.now() - startedAt;
+			await workspace.data.cleanup();
+			if (isFailure(outcome)) {
+				let error = outcome.error;
+				if (error.file === undefined) error.file = unit.filePath;
+				results[index] = {
+					title: unit.test.title,
+					file: unit.filePath,
+					status: "failed",
+					error,
+					durationMs,
+				};
+			} else {
+				results[index] = {
+					title: unit.test.title,
+					file: unit.filePath,
+					status: "passed",
+					durationMs,
+				};
 			}
 		}
+	}
+
+	try {
+		let workerCount = Math.min(concurrency, pending.length);
+		let workers: Promise<void>[] = [];
+		for (let slot = 0; slot < workerCount; slot += 1) workers.push(runWorker());
+		await Promise.all(workers);
+		if (fatal !== undefined) return fatal;
 	} finally {
 		// Plugins with process-external state (a browser session, a connection)
 		// release it once here, after every test. Teardown is best-effort: a
@@ -119,6 +181,10 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		}
 	}
 
-	let passed = results.filter((result) => result.status === "passed").length;
-	return success({ results, passed, failed: results.length - passed });
+	// Every slot is filled once the run completes without a fatal failure (each
+	// claimed index writes exactly one result), so this both drops the sparse
+	// `undefined` type and preserves source order.
+	let ordered = results.filter((result): result is TestResult => result !== undefined);
+	let passed = ordered.filter((result) => result.status === "passed").length;
+	return success({ results: ordered, passed, failed: ordered.length - passed });
 }
