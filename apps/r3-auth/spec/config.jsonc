@@ -1,0 +1,14 @@
+{
+	// The whole suite talks to one dev server, hardcoded because v1 has no
+	// environments mechanism to bind a base URL against (see the README, and
+	// docs/adr/spec/ADR-008-environments-and-compatibility.md). Grant `net`
+	// scoped to that one host+port; it covers both the `http.*` calls and the
+	// real-browser `browser.*` navigation, which reach the same origin.
+	//
+	// Declare-and-opt-in: this grants nothing until a run adds `--allow-config`.
+	// No `env` (no test reads an environment variable) and no `plugins` (only the
+	// built-in `http` and `browser` capabilities are used).
+	"permissions": {
+		"allow": [["net", "localhost:3002"]],
+	},
+}
