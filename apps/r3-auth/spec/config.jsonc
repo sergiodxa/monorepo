@@ -5,10 +5,18 @@
 	// scoped to that one host+port; it covers both the `http.*` calls and the
 	// real-browser `browser.*` navigation, which reach the same origin.
 	//
+	// `env` is scoped to `DATABASE_URL`, the one variable the `db` capability
+	// reads: the authenticated specs seed two things the app's own surface cannot
+	// create — an `admin` role and a relying-party client — with SQL against the
+	// local Miniflare D1 file. Granting the variable is the whole authorization;
+	// the connection string still has to be present in the environment at run time.
+	//
 	// Declare-and-opt-in: this grants nothing until a run adds `--allow-config`.
-	// No `env` (no test reads an environment variable) and no `plugins` (only the
-	// built-in `http` and `browser` capabilities are used).
+	// No `plugins` (only the built-in `http`, `browser` and `db` capabilities).
 	"permissions": {
-		"allow": [["net", "localhost:3002"]],
+		"allow": [
+			["net", "localhost:3002"],
+			["env", "DATABASE_URL"],
+		],
 	},
 }

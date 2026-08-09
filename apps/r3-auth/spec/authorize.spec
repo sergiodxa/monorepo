@@ -9,9 +9,11 @@
 # up — and answers a 404 rather than leaking, in an error page, whether that id
 # exists. A different-shaped observable from the anonymous self-redirect a
 # parameterless `/authorize` produces (that path is covered by home.spec's `/`).
+# The client_id is a synthetic v4 UUID chosen to be unregistered; a repeating-digit
+# placeholder collides with the demo clients dev databases tend to carry.
 test "GET /authorize refuses an unregistered client with a 404" {
 	when {
-		let result = http.get "http://localhost:3002/authorize?response_type=code&client_id=11111111-1111-4111-8111-111111111111&redirect_uri=https://client.example.com/callback&state=spec"
+		let result = http.get "http://localhost:3002/authorize?response_type=code&client_id=9e6f5a4b-3c2d-4e1f-8a9b-7c6d5e4f3a2b&redirect_uri=https://client.example.com/callback&state=spec"
 	}
 	then {
 		expect result.status 404
