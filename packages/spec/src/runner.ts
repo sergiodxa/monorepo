@@ -23,6 +23,7 @@ import { loadSuite } from "./loader";
 import { createPermissionSet } from "./permissions";
 import { createBrowserPlugin } from "./plugins/browser";
 import { createCliPlugin } from "./plugins/cli";
+import { createDbPlugin } from "./plugins/db";
 import { createFsPlugin } from "./plugins/fs";
 import { createHttpPlugin } from "./plugins/http";
 import { createRegistry } from "./registry";
@@ -34,7 +35,7 @@ export interface RunOptions {
 	root: string;
 	/** The caller's permission grants, parsed from `--allow-*` flags. */
 	grants: Grants;
-	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, and `browser`. */
+	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, `browser`, and `db`. */
 	plugins?: Plugin[];
 }
 
@@ -56,6 +57,7 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		createCliPlugin(),
 		createHttpPlugin(),
 		createBrowserPlugin(),
+		createDbPlugin(),
 		...(options.plugins ?? []),
 	];
 	let registry = createRegistry(plugins, suite);
