@@ -90,8 +90,9 @@ reference for the lexer and parser. Summary of the shape:
   `fixture NAME { … }`; `test "title" { given { } when { } then { } }` with
   phases optional but strictly ordered.
 - `use NAMESPACE` imports a namespace's tools as unqualified names; ambiguity
-  is a load-time error, never a guess. **`use` is file-scoped** (the design
-  suite's Direction, adopted for v1).
+  is an error reported where the name is used, never a guess (per GRAMMAR.md's
+  static rules — the qualified `ns.tool` form is always available). **`use` is
+  file-scoped** (the design suite's Direction, adopted for v1).
 - `eventually [within DURATION] { … }` is valid only inside `then`.
 - No `if`, no loops, no `switch`, no `match` — the parser rejects them by
   having no productions for them.

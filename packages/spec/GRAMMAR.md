@@ -37,7 +37,8 @@ content is processed as follows, in order:
 2. If the closing delimiter is preceded on its own line only by whitespace,
    drop that trailing whitespace (the final newline of the content is kept).
 3. Strip the _common indentation_: the minimum leading whitespace across all
-   non-empty content lines is removed from every line.
+   non-blank content lines (lines that are empty or whitespace-only are
+   ignored when computing it) is removed from every line.
 
 No escape sequences are processed inside multiline strings; they are raw.
 
