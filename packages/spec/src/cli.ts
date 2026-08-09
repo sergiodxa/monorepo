@@ -12,10 +12,21 @@
 import { isFailure } from "@pkg/result";
 
 import type { Sink } from "./diagnostics";
+import type { Plugin } from "./plugin";
 import type { SourceFile } from "./source";
 
 import { SpecError } from "./errors";
+import { loadSuite } from "./loader";
 import { parseGrants } from "./permissions";
+import {
+	connectManifestPlugins,
+	deniedReferences,
+	disposeAll,
+	launchDeniedError,
+	loadPluginManifest,
+	parsePluginGrant,
+	planPluginLaunch,
+} from "./project-plugins";
 import { reportFatal, reportSuite } from "./reporter";
 import { runSuite } from "./runner";
 
@@ -30,6 +41,7 @@ Permissions (denied unless granted):
   --allow-net[=host[:port]]   Reach the network (scoped to hosts)
   --allow-env[=VAR,...]       Read environment variables (scoped to names)
   --allow-host-fs[=dir,...]   Touch the host filesystem outside the workspace
+  --allow-plugins[=ns,...]    Launch project-declared plugins (from the manifest)
 `;
 
 /**
@@ -51,7 +63,17 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		return 2;
 	}
 
-	let parsed = parseGrants(argv.slice(1));
+	// `--allow-plugins` authorizes launching manifest plugins; it is not one of
+	// the four capability families, so it is peeled off before the permission
+	// parser (which would reject it as an unknown `--allow-*` flag) sees it.
+	let pluginParsed = parsePluginGrant(argv.slice(1));
+	if (isFailure(pluginParsed)) {
+		reportFatal(pluginParsed.error, sink);
+		return 2;
+	}
+	let { grant: pluginGrant, remaining: afterPluginGrant } = pluginParsed.data;
+
+	let parsed = parseGrants(afterPluginGrant);
 	if (isFailure(parsed)) {
 		reportFatal(parsed.error, sink);
 		return 2;
@@ -71,8 +93,43 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let root = remaining[0] ?? "spec";
 
-	let run = await runSuite({ root, grants });
+	// Load the per-project plugin manifest and decide which declared plugins the
+	// caller authorized to launch. Deny-by-default: a suite that imports a
+	// declared-but-unauthorized plugin is refused before any process starts.
+	let manifest = await loadPluginManifest(root);
+	if (isFailure(manifest)) {
+		reportFatal(manifest.error, sink);
+		return 2;
+	}
+	let { launch, deniedNamespaces } = planPluginLaunch(manifest.data, pluginGrant);
+	if (deniedNamespaces.length > 0) {
+		let loaded = await loadSuite(root);
+		if (isFailure(loaded)) {
+			reportFatal(loaded.error, sink);
+			return 2;
+		}
+		let referenced = deniedReferences(loaded.data, deniedNamespaces);
+		if (referenced.length > 0) {
+			reportFatal(launchDeniedError(referenced), sink);
+			return 2;
+		}
+	}
+
+	let externalPlugins: Plugin[] = [];
+	if (launch.length > 0) {
+		let connected = await connectManifestPlugins(launch);
+		if (isFailure(connected)) {
+			reportFatal(connected.error, sink);
+			return 2;
+		}
+		externalPlugins = connected.data;
+	}
+
+	let run = await runSuite({ root, grants, plugins: externalPlugins });
 	if (isFailure(run)) {
+		// The runner disposes plugins only once it starts executing; a load
+		// failure returns before that, so release the launched plugins here.
+		await disposeAll(externalPlugins);
 		reportFatal(run.error, sink);
 		return 2;
 	}

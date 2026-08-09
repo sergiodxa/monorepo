@@ -15,6 +15,10 @@
  * question tracked in the design suite; the runtime's coarse `requires` gate
  * still applies host-side before any call crosses the wire.
  *
+ * A connected plugin exposes `dispose()`, which the runner calls after a run:
+ * it kills the child process and fails anything still in flight, so a launched
+ * plugin never outlives the suite that launched it.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -168,6 +172,11 @@ export async function connectStdioPlugin(
 			});
 			if (isFailure(reply)) return reply;
 			return success(reply.data as Value);
+		},
+		async dispose() {
+			// Kill the child and fail any in-flight request; the runner calls this
+			// once after the whole suite, so the launched process never lingers.
+			connection.kill();
 		},
 	});
 }
