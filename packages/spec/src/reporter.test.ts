@@ -40,6 +40,7 @@ describe(reportSuite, () => {
 			results: [passed("writes a file", 12), passed("reads it back", 8)],
 			passed: 2,
 			failed: 0,
+			wallMs: 20,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -47,9 +48,26 @@ describe(reportSuite, () => {
 		expect(sink.text).toBe("✓ writes a file\n✓ reads it back\n\n2 passed, 0 failed (20ms)\n");
 	});
 
+	test("reports the run's wall-clock, not the summed per-test durations", () => {
+		let sink = new BufferSink();
+		// Two 500ms tests that overlapped under concurrency: their durations sum to
+		// 1000ms, but the run's wall-clock was 520ms. Summing would print the
+		// larger, misleading figure; the summary must report the wall-clock.
+		let suite: SuiteResult = {
+			results: [passed("first waiter", 500), passed("second waiter", 500)],
+			passed: 2,
+			failed: 0,
+			wallMs: 520,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe("✓ first waiter\n✓ second waiter\n\n2 passed, 0 failed (520ms)\n");
+	});
+
 	test("reports an empty suite as a lone summary line", () => {
 		let sink = new BufferSink();
-		let suite: SuiteResult = { results: [], passed: 0, failed: 0 };
+		let suite: SuiteResult = { results: [], passed: 0, failed: 0, wallMs: 0 };
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
 
@@ -70,6 +88,7 @@ describe(reportSuite, () => {
 			results: [failed("posts json", source.path, error, 57)],
 			passed: 0,
 			failed: 1,
+			wallMs: 57,
 		};
 
 		reportSuite(suite, new Map([[source.path, source]]), sink);
@@ -98,6 +117,7 @@ describe(reportSuite, () => {
 			results: [failed("compares objects", "spec/values.spec", error, 3)],
 			passed: 0,
 			failed: 1,
+			wallMs: 3,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -125,6 +145,7 @@ describe(reportSuite, () => {
 			results: [failed("runs node", "spec/cli.spec", error, 5)],
 			passed: 0,
 			failed: 1,
+			wallMs: 5,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -156,6 +177,7 @@ describe(reportSuite, () => {
 			results: [failed("runs echo", "spec/cli.spec", error, 3)],
 			passed: 0,
 			failed: 1,
+			wallMs: 3,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -206,6 +228,7 @@ describe(reportSuite, () => {
 			],
 			passed: 0,
 			failed: 3,
+			wallMs: 9,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -254,6 +277,7 @@ describe(reportSuite, () => {
 			],
 			passed: 0,
 			failed: 2,
+			wallMs: 5,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -314,6 +338,7 @@ describe(reportSuite, () => {
 			],
 			passed: 1,
 			failed: 3,
+			wallMs: 10,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -355,6 +380,7 @@ describe(reportSuite, () => {
 			results: [failed("fetches", "spec/http.spec", error, 2)],
 			passed: 0,
 			failed: 1,
+			wallMs: 2,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -377,6 +403,7 @@ describe(reportSuite, () => {
 			results: [failed("fetches", "spec/http.spec", error, 2)],
 			passed: 0,
 			failed: 1,
+			wallMs: 2,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -399,6 +426,7 @@ describe(reportSuite, () => {
 			results: [failed("escapes", "spec/fs.spec", error, 1)],
 			passed: 0,
 			failed: 1,
+			wallMs: 1,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);
@@ -422,6 +450,7 @@ describe(reportSuite, () => {
 			results: [failed("first", "spec/a.spec", error, 2), passed("second", 1)],
 			passed: 1,
 			failed: 1,
+			wallMs: 3,
 		};
 
 		reportSuite(suite, new Map<string, SourceFile>(), sink);

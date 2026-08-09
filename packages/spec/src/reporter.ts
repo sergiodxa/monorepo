@@ -80,7 +80,8 @@ interface DenialGroup {
  * failure (with its indented detail block), then one accumulated block per
  * missing grant — permission denials sharing a remedy are collapsed into a
  * single block that names the grant and lists every affected test — and
- * finally a summary line with the pass/fail counts and the total duration.
+ * finally a summary line with the pass/fail counts and the run's wall-clock
+ * duration (never the sum of per-test durations, which overcounts overlap).
  *
  * @param suite - The suite roll-up the runner produced.
  * @param sources - Loaded file texts by path, for turning spans into lines.
@@ -128,9 +129,10 @@ export function reportSuite(
 		separated = true;
 	}
 	if (!separated) sink.write("\n");
-	let total = 0;
-	for (let result of suite.results) total += result.durationMs;
-	sink.write(`${suite.passed} passed, ${suite.failed} failed (${Math.round(total)}ms)\n`);
+	// The run's wall-clock, not the sum of per-test durations: under concurrency
+	// those overlap, so their sum overcounts elapsed time and would climb as the
+	// real run got faster. `wallMs` tracks true elapsed time at every concurrency.
+	sink.write(`${suite.passed} passed, ${suite.failed} failed (${Math.round(suite.wallMs)}ms)\n`);
 }
 
 /**

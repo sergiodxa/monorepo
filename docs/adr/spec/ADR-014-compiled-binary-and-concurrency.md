@@ -194,14 +194,17 @@ is a per-run flag rather than a fixed policy.
 - The default is unchanged for anyone who does not pass the flag: sequential,
   source-ordered, exactly as v1 shipped. A suite that shares mutable app state
   keeps working by doing nothing.
-- The summary line sums each test's measured duration; under concurrency those
-  per-test measurements overlap in wall-clock time, so the printed total reads
-  _higher_ than the real elapsed time (e.g. `1212ms` for a run that finished in
-  ~240ms). This is a display artifact of a shared event loop, not a correctness
-  issue — pass/fail, ordering, and exit code are unaffected, and the true
-  wall-time is what an external `time` reports. A wall-clock total in the summary
-  is left as future work, since it would mean threading a run-level duration
-  through the result type.
+- The summary line reports the run's **wall-clock** duration: the runner captures
+  `performance.now()` immediately before the test-execution phase and immediately
+  after it ends, exposes it as `SuiteResult.wallMs`, and the reporter prints that
+  figure. This is now correct at every concurrency — at `--concurrency=1` the
+  wall-clock and the sum of per-test durations coincide, and above it the
+  wall-clock tracks real elapsed time as it drops, instead of climbing.
+  (Previously the summary _summed_ each test's measured duration; under
+  concurrency those per-test measurements overlap, so the printed total read
+  _higher_ than the real elapsed time — e.g. `1212ms` for a run that finished in
+  ~240ms. That was a display-only artifact — pass/fail, ordering, and exit code
+  were never affected — and it is now fixed.)
 
 ## Open Questions
 

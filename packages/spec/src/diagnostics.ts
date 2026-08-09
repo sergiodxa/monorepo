@@ -34,6 +34,15 @@ export interface SuiteResult {
 	passed: number;
 	/** Count of failed tests. */
 	failed: number;
+	/**
+	 * Wall-clock duration of the whole run in milliseconds: the elapsed time
+	 * from just before the first test starts to just after the last one finishes,
+	 * spanning sequential and concurrent runs alike. This is deliberately not the
+	 * sum of the per-test {@link TestResult.durationMs}: under concurrency those
+	 * overlap in time, so their sum overcounts elapsed time. The summary reports
+	 * this figure so it tracks real elapsed time at every concurrency.
+	 */
+	wallMs: number;
 }
 
 /**

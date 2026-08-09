@@ -344,6 +344,70 @@ test "second waiter" {
 		expect(spans[0]?.end).toBeLessThanOrEqual(spans[1]?.start ?? 0);
 	});
 
+	test("the reported wall-clock stays below the summed per-test durations under overlap", async () => {
+		let root = await makeSuiteDir({
+			"waits.spec": `use probe
+
+test "first waiter" {
+	when { wait 120 }
+	then { expect 1 1 }
+}
+
+test "second waiter" {
+	when { wait 120 }
+	then { expect 1 1 }
+}
+
+test "third waiter" {
+	when { wait 120 }
+	then { expect 1 1 }
+}
+`,
+		});
+		let probe = createProbePlugin();
+
+		let run = await runSuite({ root, grants: noGrants(), plugins: [probe.plugin], concurrency: 3 });
+		if (isFailure(run)) throw new Error(run.error.message);
+
+		expect(run.data.passed).toBe(3);
+		// Three 120ms waits overlap across three slots, so the run finishes in about
+		// one wait, yet each test still measures ~120ms of its own. The summary must
+		// report the run's wall-clock, which is strictly below the sum of durations —
+		// exactly the figure that would balloon if the summary summed them instead.
+		let summed = run.data.results.reduce((total, result) => total + result.durationMs, 0);
+		expect(run.data.wallMs).toBeLessThan(summed);
+	});
+
+	test("the reported wall-clock spans the whole sequential run at concurrency one", async () => {
+		let root = await makeSuiteDir({
+			"waits.spec": `use probe
+
+test "first waiter" {
+	when { wait 40 }
+	then { expect 1 1 }
+}
+
+test "second waiter" {
+	when { wait 40 }
+	then { expect 1 1 }
+}
+`,
+		});
+		let probe = createProbePlugin();
+
+		let run = await runSuite({ root, grants: noGrants(), plugins: [probe.plugin], concurrency: 1 });
+		if (isFailure(run)) throw new Error(run.error.message);
+
+		expect(run.data.passed).toBe(2);
+		// No overlap: the wall-clock spans both waits end to end, so it is at least
+		// their summed durations (plus each test's workspace setup and teardown) —
+		// never the deflated figure a single-test measurement would give. Wall-clock
+		// and the sum coincide here, which is why reporting wall-clock stays correct
+		// at the default concurrency too.
+		let summed = run.data.results.reduce((total, result) => total + result.durationMs, 0);
+		expect(run.data.wallMs).toBeGreaterThanOrEqual(summed);
+	});
+
 	test("output is byte-for-byte source-ordered at concurrency 1 and 8", async () => {
 		// Descending waits across two files: under concurrency the tests complete
 		// in the reverse of source order (shortest wait finishes first, and the

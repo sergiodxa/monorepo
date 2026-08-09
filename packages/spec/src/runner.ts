@@ -161,11 +161,20 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		}
 	}
 
+	// Wall-clock spans the whole test-execution phase: captured immediately
+	// before the workers start and immediately after the last one finishes, so it
+	// measures real elapsed time whether the run was sequential or concurrent.
+	// This is what the summary reports — never the sum of per-test durations,
+	// which overcounts because concurrent tests overlap. Teardown below is
+	// excluded; it is cleanup, not test execution.
+	let wallStart = performance.now();
+	let wallMs = 0;
 	try {
 		let workerCount = Math.min(concurrency, pending.length);
 		let workers: Promise<void>[] = [];
 		for (let slot = 0; slot < workerCount; slot += 1) workers.push(runWorker());
 		await Promise.all(workers);
+		wallMs = performance.now() - wallStart;
 		if (fatal !== undefined) return fatal;
 	} finally {
 		// Plugins with process-external state (a browser session, a connection)
@@ -186,5 +195,5 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 	// `undefined` type and preserves source order.
 	let ordered = results.filter((result): result is TestResult => result !== undefined);
 	let passed = ordered.filter((result) => result.status === "passed").length;
-	return success({ results: ordered, passed, failed: ordered.length - passed });
+	return success({ results: ordered, passed, failed: ordered.length - passed, wallMs });
 }
