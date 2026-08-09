@@ -23,9 +23,10 @@ scoped for v1 by
 
 Two architectural decisions shape everything here. First, capability comes
 from exactly one seam: the typed-tool `Plugin` interface. The built-in `fs`,
-`cli`, and `http` capabilities, external processes speaking the
-NDJSON-over-stdio transport, and in-process test fakes all implement it, and
-the executor never knows which kind it is talking to. Second, permissions are
+`cli`, `http`, `browser`, and `db` capabilities, external processes speaking
+the NDJSON-over-stdio transport (loaded per project or installed as a
+third-party package), and in-process test fakes all implement it, and the
+executor never knows which kind it is talking to. Second, permissions are
 denied by default and enforced centrally: a spec that spawns a process,
 touches the network, reads an environment variable, or leaves its workspace
 needs an explicit `--allow-*` grant, and every denial names the exact flag
@@ -166,7 +167,8 @@ when the test ends.
 - `options.root`: Directory scanned recursively for `.spec` files.
 - `options.grants`: The caller's permission grants (see `parseGrants`).
 - `options.plugins`: Optional extra plugins beyond the built-in `fs`, `cli`,
-  and `http`.
+  `http`, `browser`, and `db` — the seam the CLI uses to inject project and
+  third-party plugins it launched over the stdio transport.
 
 **Returns:**
 
@@ -327,6 +329,89 @@ let response = http.post "http://localhost:3000/api/posts" { title: "Hello" }
 expect response.status 201
 ```
 
+### `createBrowserPlugin(): Plugin`
+
+The built-in `browser` capability (namespace `browser`): drive a real browser
+through its accessibility tree rather than DOM internals, backed by the
+globally installed `agent-browser` CLI. Reaching web content is the privileged
+act, so every tool requires the `net` grant for the target host; the fixed
+`agent-browser` binary is trusted plugin machinery, not spec-requested process
+execution, so it needs no `run` grant. `describe()` is static and launches
+nothing, so a suite that never touches `browser.*` needs neither the grant nor
+the binary installed. Elements are addressed by accessibility role (a bare
+word) and accessible name (a string); `click_selector` is a marked CSS escape
+hatch.
+
+| Tool                     | Kind       | Shape                                            |
+| ------------------------ | ---------- | ------------------------------------------------ |
+| `browser.open`           | action     | `open "https://example.com"`                     |
+| `browser.navigate`       | action     | `navigate "https://example.com/next"`            |
+| `browser.click`          | action     | `click button "Sign in"`                         |
+| `browser.fill`           | action     | `fill textbox "Email" with "user@example.com"`   |
+| `browser.check`          | action     | `check checkbox "Remember me"`                   |
+| `browser.press`          | action     | `press "Enter"`                                  |
+| `browser.click_selector` | action     | `click_selector ".pager > a"` — CSS escape hatch |
+| `browser.heading`        | observable | `expect browser.heading "Welcome"`               |
+| `browser.link`           | observable | `expect browser.link "Docs"`                     |
+| `browser.button`         | observable | `expect browser.button "Sign in"`                |
+| `browser.text`           | observable | `expect browser.text "signed in"`                |
+| `browser.checkbox`       | observable | `expect browser.checkbox "Remember me" checked`  |
+| `browser.url`            | observable | `expect browser.url "https://example.com/home"`  |
+
+```
+use browser
+
+test "the sign-in form authenticates" {
+	when {
+		browser.open "http://localhost:3000/login"
+		browser.fill textbox "Email" with "user@example.com"
+		browser.fill textbox "Password" with "correct horse"
+		browser.click button "Sign in"
+	}
+	then {
+		expect browser.heading "Welcome back"
+		expect browser.url "http://localhost:3000/home"
+	}
+}
+```
+
+### `createDbPlugin(): Plugin`
+
+The built-in `db` capability (namespace `db`): one action tool, `db.query`,
+that runs a raw SQL statement (typically a `"""multiline"""` string) on Bun's
+SQL client. It reads the connection string from the `DATABASE_URL` environment
+variable, so it requires the `env` grant — `--allow-env=DATABASE_URL` — and no
+`net` or `run`: the destination is operator-supplied through `DATABASE_URL`,
+never chosen by the spec, so the grant that reveals the variable is the
+complete authorization and a spec can never redirect the connection. The var
+is honored whether exported system-wide or set per call
+(`DATABASE_URL=… spec run … --allow-env=DATABASE_URL`). The connection opens
+lazily on first query, is reused across the run, and is closed when the run
+ends; a SQL or connection error surfaces as a tool failure carrying the
+database's own message. `describe()` opens no connection, so a suite that never
+uses `db.*` needs no `DATABASE_URL`.
+
+`db.query` returns `{ rows, affected_rows, count }`: `rows` is the records a
+`SELECT` returned (each coerced to a JSON-shaped value; empty for DML/DDL),
+`affected_rows` is the driver's count (rows changed by a mutation, or rows
+returned by a `SELECT`), and `count` is `rows.length`. So an `INSERT` of one
+row reads `affected_rows == 1`, `count == 0`, while a `SELECT` of N rows reads
+`affected_rows == count == N`.
+
+```
+use db
+
+test "an INSERT reports exactly one affected row" {
+	when {
+		let result = db.query "INSERT INTO ledger (entry) VALUES ('opening balance')"
+	}
+	then {
+		expect result.affected_rows 1
+		expect result.count 0
+	}
+}
+```
+
 ### `connectStdioPlugin(command: string[], namespace: string): Promise<Result<Plugin, SpecError>>`
 
 Spawn an external executable and connect it as a `Plugin` over the
@@ -483,7 +568,10 @@ failure category reporters branch on.
 
 Any executable that speaks the NDJSON wire protocol is a plugin; in a Bun
 script, `servePlugin` handles the wire so you only implement the `Plugin`
-interface. The reference implementation is `src/plugins/demo.ts`.
+interface. The reference implementation is `src/plugins/demo.ts`, and
+[docs/writing-plugins.md](./docs/writing-plugins.md) is the full authoring
+guide — in-process plugins, external processes, per-project placement, and the
+trust model.
 
 ```typescript
 #!/usr/bin/env bun
@@ -540,6 +628,41 @@ if (isFailure(greet)) {
 let run = await runSuite({ root: "spec", grants, plugins: [greet.data] });
 ```
 
+### Pattern: Loading project plugins from the CLI
+
+A suite can declare its own plugins without any programmatic glue. Put a
+`spec.plugins.jsonc` manifest in the suite directory mapping each namespace to
+the command that launches its plugin (JSONC — comments and trailing commas are
+allowed; `.` paths resolve against the manifest's directory, so the suite runs
+the same from any working directory):
+
+```jsonc
+// spec/spec.plugins.jsonc
+{
+	"plugins": {
+		// A relative "." path is resolved against this file's directory.
+		"greet": { "command": ["bun", "./greeter.ts"] },
+	},
+}
+```
+
+Specs then name `greet.hello` and never a path, so they stay portable across
+machines and installs. A third-party plugin is the same, pointing `command` at
+its installed binary or entry file.
+
+Declaring a plugin is **not** permission to run it: launching a manifest plugin
+executes code the project ships, so it is deny-by-default. `spec run` starts a
+manifest plugin only when the caller passes `--allow-plugins` (all declared) or
+`--allow-plugins=greet` (named). Without the grant, a suite that imports a
+declared namespace is refused before any test runs, with a permission-style
+diagnostic naming `--allow-plugins`; a declared plugin the suite never imports
+stays dormant. Built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`) are
+unaffected — they need no `--allow-plugins`. Unlike the four `--allow-*`
+capability families, `--allow-plugins` gates _process launch_, not what a
+running tool may reach, so it is parsed by the CLI, not the permission engine.
+See [docs/writing-plugins.md](./docs/writing-plugins.md) for the full model and
+`examples/plugin-loading/` for a runnable showcase.
+
 ### Pattern: Least-privilege flag recipes
 
 Grant exactly what the suite exercises; everything else stays denied, and any
@@ -558,16 +681,27 @@ spec run spec --allow-net=localhost:3000
 # Read exactly the variables the spec names (children inherit only these):
 spec run spec --allow-env=CI,NODE_ENV
 
+# Database suites: db.query reads DATABASE_URL, so grant exactly that variable:
+DATABASE_URL=postgres://localhost/test spec run spec --allow-env=DATABASE_URL
+
+# Browser suites: browser.* reaches the page, so grant the host it drives:
+spec run spec --allow-net=localhost:3000
+
 # Read shared fixture data outside the workspace (path-prefix grant):
 spec run spec --allow-host-fs=/opt/fixtures
+
+# Launch project plugins declared in spec.plugins.jsonc (not a capability grant,
+# but the launch gate — see the project-plugins pattern above):
+spec run spec --allow-plugins=greet
 
 # Combine grants; scoped flags union when repeated:
 spec run spec --allow-run=bun,git --allow-net=localhost
 ```
 
 This package's own behavioral suite (`spec/`) runs the spec CLI on miniature
-projects with only `--allow-run=spec` — a live demonstration that a
-process-spawning suite needs exactly one scoped grant.
+projects with only `--allow-run=spec,echo` — a live demonstration that a
+process-spawning suite needs exactly the scoped grants it exercises and nothing
+more.
 
 ## Related Packages
 
