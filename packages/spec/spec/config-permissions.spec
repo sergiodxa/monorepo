@@ -41,6 +41,40 @@ test "a config-declared permission is inert without --allow-config" {
 	}
 }
 
+test "a scoped config tuple is inert without --allow-config yet still hints at it" {
+	given {
+		write "spec/config.jsonc" """
+			{
+				"permissions": { "allow": [["run", "echo"]] }
+			}
+		"""
+		write "spec/needs-run.spec" """
+			use cli
+
+			test "runs echo" {
+				when {
+					let result = run "echo" "hi"
+				}
+				then {
+					expect result.exit_code 0
+				}
+			}
+		"""
+	}
+	when {
+		let result = run "spec" "run" "spec"
+	}
+	then {
+		# A scoped tuple is a declaration like any other: inert without the flag,
+		# but the denial must still point at the one-flag path. The coarse family
+		# gate refuses before the executable is known, so the hint keys off the
+		# family being declared, not the (not-yet-known) scope.
+		expect result.exit_code 1
+		output_contains result.stdout "Permission denied: run"
+		output_contains result.stdout "--allow-config"
+	}
+}
+
 test "--allow-config applies the config's declared permission" {
 	given {
 		write "spec/config.jsonc" """

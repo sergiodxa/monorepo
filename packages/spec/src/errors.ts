@@ -138,13 +138,23 @@ export class PermissionDeniedError extends SpecError {
 	permission: PermissionKind;
 	/** What the spec attempted to reach: an executable, host, variable, path. */
 	resource: string;
+	/**
+	 * Whether the coarse family gate raised this denial — the whole family was
+	 * refused before the specific resource was known, so {@link resource} holds
+	 * the qualified tool name, not a real executable/host/variable/path. The
+	 * `--allow-config` hint reads this: a family-gate denial is admitted by the
+	 * config declaring that family at all, a scope-level one only when the
+	 * config's declared scope itself covers the resource.
+	 */
+	familyGate: boolean;
 
 	/**
 	 * @param permission - The required permission family.
 	 * @param resource - The attempted resource.
 	 * @param remedy - The exact `spec run` flag that would grant it.
+	 * @param familyGate - Whether the coarse family gate raised this denial.
 	 */
-	constructor(permission: PermissionKind, resource: string, remedy: string) {
+	constructor(permission: PermissionKind, resource: string, remedy: string, familyGate = false) {
 		super(
 			"permission-denied",
 			`Permission denied: ${permission}. The spec attempted to reach: ${resource}`,
@@ -153,6 +163,7 @@ export class PermissionDeniedError extends SpecError {
 		this.permission = permission;
 		this.resource = resource;
 		this.remedy = remedy;
+		this.familyGate = familyGate;
 	}
 }
 

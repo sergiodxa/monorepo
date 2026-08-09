@@ -20,7 +20,7 @@ import type { SourceFile } from "./source";
 
 import { SpecError } from "./errors";
 import { loadSuite } from "./loader";
-import { grantsAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions";
+import { configWouldAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions";
 import {
 	connectDeclaredPlugins,
 	deniedReferences,
@@ -186,9 +186,24 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		for (let result of run.data.results) {
 			let error = result.error;
 			if (error === undefined || error.code !== "permission-denied") continue;
-			let denial = error as SpecError & { permission?: PermissionKind; resource?: string };
+			let denial = error as SpecError & {
+				permission?: PermissionKind;
+				resource?: string;
+				familyGate?: boolean;
+			};
 			if (denial.permission === undefined || denial.resource === undefined) continue;
-			if (grantsAdmit(configGrants, denial.permission, denial.resource)) error.hint = CONFIG_HINT;
+			// A coarse family-gate denial hides the real resource behind a tool
+			// name, so the hint keys off the family being declared; a scope-level
+			// denial carries a real resource the config's scope must itself cover.
+			if (
+				configWouldAdmit(
+					configGrants,
+					denial.permission,
+					denial.resource,
+					denial.familyGate ?? false,
+				)
+			)
+				error.hint = CONFIG_HINT;
 		}
 	}
 

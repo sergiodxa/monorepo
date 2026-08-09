@@ -215,13 +215,13 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 	};
 }
 
-/** Maps each config permission family that feeds a capability grant to its key. */
-const CONFIG_GRANT_KEYS = new Map<string, keyof Grants>([
-	["run", "run"],
-	["net", "net"],
-	["env", "env"],
-	["host-fs", "hostFs"],
-]);
+/** Maps a permission family to its key in the {@link Grants} record. */
+const GRANT_KEYS = {
+	run: "run",
+	net: "net",
+	env: "env",
+	"host-fs": "hostFs",
+} as const satisfies Record<PermissionKind, keyof Grants>;
 
 /**
  * Fold a validated `permissions.allow` list into a {@link Grants} set. A bare
@@ -241,12 +241,38 @@ export function grantsFromConfig(entries: readonly ConfigPermissionEntry[]): Gra
 		hostFs: { mode: "denied" },
 	};
 	for (let entry of entries) {
-		let key = CONFIG_GRANT_KEYS.get(entry.family);
-		if (key === undefined) continue;
+		if (entry.family === "plugins") continue;
+		let key = GRANT_KEYS[entry.family];
 		grants[key] =
 			entry.scopes.length === 0 ? { mode: "all" } : widenGrant(grants[key], entry.scopes);
 	}
 	return grants;
+}
+
+/**
+ * Whether opting into the config's declared grants would lift a denial — the
+ * test behind the `--allow-config` DX hint. A denial arrives in one of two
+ * shapes. A coarse family-gate denial refused the whole family before the
+ * resource was known, so its resource is a placeholder tool name: the hint
+ * applies whenever the config declares that family at all, mirroring a
+ * whole-family grant whose `all` mode already admits that placeholder. A
+ * scope-level denial carries a real resource the family granted but did not
+ * cover: the hint applies only when the config's own declared scope covers it.
+ *
+ * @param config - The grants the config declares.
+ * @param permission - The denied family.
+ * @param resource - The denial's resource string, as the denial reported it.
+ * @param familyGate - Whether the coarse family gate raised the denial.
+ * @returns Whether `--allow-config` would have granted past this denial.
+ */
+export function configWouldAdmit(
+	config: Grants,
+	permission: PermissionKind,
+	resource: string,
+	familyGate: boolean,
+): boolean {
+	if (familyGate) return config[GRANT_KEYS[permission]].mode !== "denied";
+	return grantsAdmit(config, permission, resource);
 }
 
 /**

@@ -333,7 +333,9 @@ function gateToolCall(
 	let grant = environment.grants[GRANT_KEYS[required]];
 	if (grant.mode !== "denied") return success(undefined);
 	let qualified = `${tool.namespace}.${tool.descriptor.name}`;
-	return failure(new PermissionDeniedError(required, qualified, `spec run --allow-${required}`));
+	return failure(
+		new PermissionDeniedError(required, qualified, `spec run --allow-${required}`, true),
+	);
 }
 
 /**

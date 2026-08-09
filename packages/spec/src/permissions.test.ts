@@ -20,6 +20,7 @@ import type { ConfigPermissionEntry, Grants } from "./permissions";
 
 import { PermissionDeniedError } from "./errors";
 import {
+	configWouldAdmit,
 	createPermissionSet,
 	grantsAdmit,
 	grantsFromConfig,
@@ -393,5 +394,29 @@ describe("grantsAdmit", () => {
 		let g = grants({ env: { mode: "scoped", scopes: ["DATABASE_URL"] } });
 		expect(grantsAdmit(g, "env", "DATABASE_URL")).toBe(true);
 		expect(grantsAdmit(g, "env", "OTHER")).toBe(false);
+	});
+});
+
+describe("configWouldAdmit", () => {
+	test("a family-gate denial keys off the family being declared, scope or not", () => {
+		// The coarse gate's resource is a placeholder tool name, so a scoped
+		// config admits it exactly as a whole-family one does — the regression:
+		// the DX hint must fire for a scoped tuple, not only a bare family.
+		let scoped = grants({ run: { mode: "scoped", scopes: ["echo"] } });
+		expect(configWouldAdmit(scoped, "run", "cli.run", true)).toBe(true);
+		expect(configWouldAdmit(grants({ run: { mode: "all" } }), "run", "cli.run", true)).toBe(true);
+		expect(configWouldAdmit(grants(), "run", "cli.run", true)).toBe(false);
+	});
+
+	test("a scope-level denial still demands the config's own scope cover it", () => {
+		let scoped = grants({ run: { mode: "scoped", scopes: ["echo"] } });
+		expect(configWouldAdmit(scoped, "run", "echo", false)).toBe(true);
+		expect(configWouldAdmit(scoped, "run", "node", false)).toBe(false);
+	});
+
+	test("host-fs is never family-gated, so its scope is honored precisely", () => {
+		let scoped = grants({ hostFs: { mode: "scoped", scopes: ["/srv/data"] } });
+		expect(configWouldAdmit(scoped, "host-fs", "/srv/data/file", false)).toBe(true);
+		expect(configWouldAdmit(scoped, "host-fs", "/etc/passwd", false)).toBe(false);
 	});
 });
