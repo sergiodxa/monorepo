@@ -1,9 +1,10 @@
 /**
- * Specifies per-project and third-party plugin loading. The unit tests pin the
- * manifest parser, the `--allow-plugins` grant, the launch plan, and the stdio
- * transport's `dispose`; the acceptance tests drive the real `spec` CLI against
- * the committed `examples/plugin-loading` showcase, proving deny-by-default —
- * the run is refused without `--allow-plugins` and passes with it.
+ * Specifies the suite's `spec/config.jsonc` loading and its plugin section. The
+ * unit tests pin the config parser, the `--allow-plugins` grant, the launch
+ * plan, and the stdio transport's `dispose`; the acceptance tests drive the
+ * real `spec` CLI against the committed `examples/plugin-loading` showcase,
+ * proving deny-by-default — the run is refused without `--allow-plugins` and
+ * passes with it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,13 +24,13 @@ import type { Workspace } from "./workspace";
 
 import { loadSuite } from "./loader";
 import {
-	connectManifestPlugins,
+	connectDeclaredPlugins,
 	deniedReferences,
 	launchDeniedError,
-	loadPluginManifest,
+	loadProjectConfig,
 	parsePluginGrant,
 	planPluginLaunch,
-} from "./project-plugins";
+} from "./project-config";
 import { connectStdioPlugin } from "./transport-stdio";
 
 /** Absolute path of this package, the acceptance runs' working directory. */
@@ -41,7 +42,7 @@ const DEMO_PLUGIN = join(import.meta.dir, "plugins", "demo.ts");
 /** How long a CLI acceptance run may take: it spawns a CLI and a plugin. */
 const CLI_TIMEOUT_MS = 60_000;
 
-/** Make a temp directory for a manifest or suite fixture; caller removes it. */
+/** Make a temp directory for a config or suite fixture; caller removes it. */
 function makeTempDir(): string {
 	return mkdtempSync(join(tmpdir(), "spec-plugin-loading-"));
 }
@@ -113,21 +114,21 @@ test("parsePluginGrant rejects an empty scope list", () => {
 	expect(isFailure(empty) && empty.error.code).toBe("usage-error");
 });
 
-test("loadPluginManifest returns no plugins when no manifest exists", async () => {
+test("loadProjectConfig returns no plugins when no config exists", async () => {
 	let dir = makeTempDir();
 	try {
-		let manifest = await loadPluginManifest(dir);
-		expect(isSuccess(manifest) && manifest.data.plugins).toEqual([]);
+		let config = await loadProjectConfig(dir);
+		expect(isSuccess(config) && config.data.plugins).toEqual([]);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-test("loadPluginManifest parses JSONC and resolves relative command paths", async () => {
+test("loadProjectConfig parses JSONC and resolves relative command paths", async () => {
 	let dir = makeTempDir();
 	try {
 		writeFileSync(
-			join(dir, "spec.plugins.jsonc"),
+			join(dir, "config.jsonc"),
 			`{
 				// a comment, and a trailing comma below
 				"plugins": {
@@ -136,81 +137,81 @@ test("loadPluginManifest parses JSONC and resolves relative command paths", asyn
 			}`,
 			"utf8",
 		);
-		let manifest = await loadPluginManifest(dir);
-		expect(isSuccess(manifest)).toBe(true);
-		if (!isSuccess(manifest)) throw new Error("manifest did not load");
-		expect(manifest.data.plugins).toHaveLength(1);
-		let declaration = manifest.data.plugins[0];
+		let config = await loadProjectConfig(dir);
+		expect(isSuccess(config)).toBe(true);
+		if (!isSuccess(config)) throw new Error("config did not load");
+		expect(config.data.plugins).toHaveLength(1);
+		let declaration = config.data.plugins[0];
 		expect(declaration?.namespace).toBe("demo");
 		// The executable stays as written; the relative path is made absolute
-		// against the manifest directory so the command is cwd-independent.
+		// against the config directory so the command is cwd-independent.
 		expect(declaration?.command).toEqual(["bun", join(dir, "plugins", "demo.ts")]);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-test("loadPluginManifest rejects shadowing a built-in namespace", async () => {
+test("loadProjectConfig rejects shadowing a built-in namespace", async () => {
 	let dir = makeTempDir();
 	try {
 		writeFileSync(
-			join(dir, "spec.plugins.json"),
+			join(dir, "config.json"),
 			JSON.stringify({ plugins: { fs: { command: ["bun", "./fs.ts"] } } }),
 			"utf8",
 		);
-		let manifest = await loadPluginManifest(dir);
-		expect(isFailure(manifest)).toBe(true);
-		expect(isFailure(manifest) && manifest.error.code).toBe("load-error");
-		expect(isFailure(manifest) && manifest.error.message).toContain("fs");
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config)).toBe(true);
+		expect(isFailure(config) && config.error.code).toBe("load-error");
+		expect(isFailure(config) && config.error.message).toContain("fs");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-test("loadPluginManifest rejects malformed declarations", async () => {
+test("loadProjectConfig rejects malformed declarations", async () => {
 	let dir = makeTempDir();
 	try {
 		writeFileSync(
-			join(dir, "spec.plugins.json"),
+			join(dir, "config.json"),
 			JSON.stringify({ plugins: { demo: { command: [] } } }),
 			"utf8",
 		);
-		let manifest = await loadPluginManifest(dir);
-		expect(isFailure(manifest) && manifest.error.code).toBe("load-error");
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.code).toBe("load-error");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-test("loadPluginManifest reports invalid JSONC", async () => {
+test("loadProjectConfig reports invalid JSONC", async () => {
 	let dir = makeTempDir();
 	try {
-		writeFileSync(join(dir, "spec.plugins.jsonc"), "{ not json", "utf8");
-		let manifest = await loadPluginManifest(dir);
-		expect(isFailure(manifest) && manifest.error.code).toBe("load-error");
-		expect(isFailure(manifest) && manifest.error.message).toContain("JSONC");
+		writeFileSync(join(dir, "config.jsonc"), "{ not json", "utf8");
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.code).toBe("load-error");
+		expect(isFailure(config) && config.error.message).toContain("JSONC");
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
 test("planPluginLaunch partitions declarations by the grant", () => {
-	let manifest = {
+	let config = {
 		plugins: [
 			{ namespace: "a", command: ["bun", "a.ts"] },
 			{ namespace: "b", command: ["bun", "b.ts"] },
 		],
 	};
 
-	let all = planPluginLaunch(manifest, { mode: "all" });
+	let all = planPluginLaunch(config, { mode: "all" });
 	expect(all.launch.map((declaration) => declaration.namespace)).toEqual(["a", "b"]);
 	expect(all.deniedNamespaces).toEqual([]);
 
-	let scoped = planPluginLaunch(manifest, { mode: "scoped", namespaces: ["a"] });
+	let scoped = planPluginLaunch(config, { mode: "scoped", namespaces: ["a"] });
 	expect(scoped.launch.map((declaration) => declaration.namespace)).toEqual(["a"]);
 	expect(scoped.deniedNamespaces).toEqual(["b"]);
 
-	let denied = planPluginLaunch(manifest, { mode: "denied" });
+	let denied = planPluginLaunch(config, { mode: "denied" });
 	expect(denied.launch).toEqual([]);
 	expect(denied.deniedNamespaces).toEqual(["a", "b"]);
 });
@@ -266,9 +267,9 @@ test(
 );
 
 test(
-	"connectManifestPlugins launches a declaration and fails cleanly on a bad command",
+	"connectDeclaredPlugins launches a declaration and fails cleanly on a bad command",
 	async () => {
-		let ok = await connectManifestPlugins([
+		let ok = await connectDeclaredPlugins([
 			{ namespace: "demo", command: [process.execPath, DEMO_PLUGIN] },
 		]);
 		expect(isSuccess(ok)).toBe(true);
@@ -284,7 +285,7 @@ test(
 
 		// A command that cannot serve the handshake fails the launch, and the
 		// error names the offending namespace.
-		let bad = await connectManifestPlugins([
+		let bad = await connectDeclaredPlugins([
 			{
 				namespace: "nope",
 				command: [process.execPath, join(import.meta.dir, "no-such-plugin.ts")],
@@ -297,7 +298,7 @@ test(
 );
 
 test(
-	"a suite importing a manifest plugin is refused without --allow-plugins",
+	"a suite importing a declared plugin is refused without --allow-plugins",
 	async () => {
 		let { stdout, exitCode } = await runCli(["run", "examples/plugin-loading"]);
 		expect(exitCode, stdout).not.toBe(0);

@@ -54,17 +54,25 @@ has to sit on the guarded side of that line.
 
 ## Decision
 
-Add CLI-internal plugin loading in `packages/spec/src/project-plugins.ts`,
-wired through `src/cli.ts`. A project declares its plugins in a manifest; the
+> **Amendment ([ADR-013](./ADR-013-project-config-permissions.md)).** The
+> manifest this ADR describes first shipped as a dedicated per-project plugin
+> file; it has since been folded into the suite's general configuration file,
+> `spec/config.jsonc`, as its `plugins` key, and the loader module renamed to
+> `src/project-config.ts`. Wherever this ADR says "manifest," read "the `plugins`
+> key of `spec/config.jsonc`." The launch semantics below are unchanged. ADR-013
+> adds that file's `permissions` key.
+
+Add CLI-internal plugin loading in `packages/spec/src/project-config.ts`,
+wired through `src/cli.ts`. A project declares its plugins in `config.jsonc`; the
 CLI launches a declared plugin only when the caller grants `--allow-plugins`,
 connects the authorized ones over the existing stdio transport, and passes them
 to `runSuite` through the `RunOptions.plugins` seam that already existed. No
 change to the runner, the executor, the permission engine, or the language.
 
-### 1. A per-project manifest maps a namespace to a launch command
+### 1. The `plugins` key maps a namespace to a launch command
 
-The suite directory — the one `spec run` is pointed at — may contain a manifest
-named `spec.plugins.jsonc` (tried first) or `spec.plugins.json`:
+The suite directory — the one `spec run` is pointed at — may contain a
+`config.jsonc` (tried first) or `config.json` whose `plugins` key declares them:
 
 ```jsonc
 {
@@ -134,7 +142,7 @@ with a permission-style diagnostic that names the missing grant:
 
 ```
 ✗ permission-denied: Plugin launch denied: the suite imports the plugin
-  namespace greet, declared in the plugin manifest but not authorized to launch…
+  namespace greet, declared in spec/config.jsonc but not authorized to launch…
   remedy: spec run --allow-plugins=greet
 ```
 
@@ -157,11 +165,11 @@ open question below.
 
 1. `parsePluginGrant` peels `--allow-plugins` out of the argument vector,
    leaving the rest for the unchanged permission parser.
-2. `loadPluginManifest` reads the manifest from the suite directory.
+2. `loadProjectConfig` reads `config.jsonc` from the suite directory.
 3. `planPluginLaunch` splits the declarations into those the grant authorizes
    and the namespaces it refuses. If any refused namespace is imported
    (`deniedReferences` over the loaded suite), the run is refused (§2).
-4. `connectManifestPlugins` connects each authorized declaration over
+4. `connectDeclaredPlugins` connects each authorized declaration over
    `connectStdioPlugin`, in declaration order. A connection that fails the
    handshake disposes the ones already connected and fails the launch, so a
    partial launch never leaks a child process.

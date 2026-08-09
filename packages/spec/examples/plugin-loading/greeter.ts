@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
- * A self-contained example plugin, shown end-to-end with the manifest that
- * loads it (`spec.plugins.jsonc`) and the spec that uses it (`greet.spec`).
+ * A self-contained example plugin, shown end-to-end with the config file that
+ * loads it (`config.jsonc`) and the spec that uses it (`greet.spec`).
  * It is what a third-party plugin looks like: a Bun script that calls
  * `servePlugin` from `@pkg/spec` to speak the NDJSON-over-stdio line protocol,
  * exposing namespace "greet" with two permissionless observable tools.

@@ -150,31 +150,33 @@ and a result is any JSON-shaped [`Value`](../src/values.ts).
 
 ## 3. Loading a plugin into a project
 
-A project declares the plugins its suite uses in a **manifest** in the suite
-directory (the one you pass to `spec run`), named `spec.plugins.jsonc` or
-`spec.plugins.json`:
+A project declares the plugins its suite uses in its **`config.jsonc`** — the
+suite's general configuration file, in the directory you pass to `spec run`
+(`config.jsonc` is tried first, then `config.json`). Plugins live under its
+`plugins` key:
 
 ```jsonc
+// spec/config.jsonc
 {
 	"plugins": {
 		"greet": {
 			// A command argument starting with "." is a path resolved against
-			// this manifest's directory, so the suite runs from any working dir.
+			// this file's directory, so the suite runs from any working dir.
 			"command": ["bun", "./greeter.ts"],
 		},
 	},
 }
 ```
 
-The manifest maps a **namespace** to the **command** that launches its plugin.
-This is the one place a path appears: specs name `greet.hello`, never
-`./greeter.ts`, so a `.spec` file stays portable while the manifest records
-where the plugin actually lives on this machine. The manifest is environment
+The `plugins` key maps a **namespace** to the **command** that launches its
+plugin. This is the one place a path appears: specs name `greet.hello`, never
+`./greeter.ts`, so a `.spec` file stays portable while `config.jsonc` records
+where the plugin actually lives on this machine. It is environment
 configuration, not specification — the same specs run against a different
-machine's manifest unchanged.
+machine's `config.jsonc` unchanged.
 
-A manifest namespace may not shadow a built-in (`fs`, `cli`, `http`, `browser`,
-`db`); built-ins are always available and need no manifest entry.
+A declared namespace may not shadow a built-in (`fs`, `cli`, `http`, `browser`,
+`db`); built-ins are always available and need no config entry.
 
 ## Third-party plugins
 
@@ -182,7 +184,7 @@ A plugin someone else publishes is loaded the same way — there is no separate
 "third-party" mechanism:
 
 1. Install it (`bun add some-spec-plugin`, or clone it into the repo).
-2. Point a manifest entry at the command that launches it — an installed
+2. Point a `plugins` entry at the command that launches it — an installed
    binary on `PATH`, or a script path:
 
    ```jsonc
@@ -196,35 +198,36 @@ A plugin someone else publishes is loaded the same way — there is no separate
 
 3. `use redis` in a spec and call its tools.
 
-Because the manifest names a launch command rather than an import, the plugin
+Because `config.jsonc` names a launch command rather than an import, the plugin
 can be written in any language and distributed however its author chooses.
 
 ## The `--allow-plugins` trust model
 
-**Declaring a plugin is not permission to run it.** A manifest is a file in the
-repository; auto-launching whatever it names would be running project-declared
-code the moment you type `spec run`. So plugin launch is **deny-by-default**,
-the same stance the runtime takes toward every capability
+**Declaring a plugin is not permission to run it.** `config.jsonc` is a file in
+the repository; auto-launching whatever it names would be running
+project-declared code the moment you type `spec run`. So plugin launch is
+**deny-by-default**, the same stance the runtime takes toward every capability
 ([ADR-007](../../../docs/adr/spec/ADR-007-deny-by-default-permissions.md),
 [ADR-011](../../../docs/adr/spec/ADR-011-project-and-third-party-plugins.md)):
 
-| Invocation                         | Effect                                        |
-| ---------------------------------- | --------------------------------------------- |
-| `spec run dir`                     | No manifest plugin launches                   |
-| `spec run dir --allow-plugins`     | Every plugin the manifest declares may launch |
-| `spec run dir --allow-plugins=a,b` | Only namespaces `a` and `b` may launch        |
+| Invocation                         | Effect                                          |
+| ---------------------------------- | ----------------------------------------------- |
+| `spec run dir`                     | No declared plugin launches                     |
+| `spec run dir --allow-plugins`     | Every plugin `config.jsonc` declares may launch |
+| `spec run dir --allow-plugins=a,b` | Only namespaces `a` and `b` may launch          |
 
-If a suite imports a plugin (`use greet`) that the manifest declares but you did
-not authorize, the run is refused before any process starts, naming the flag:
+If a suite imports a plugin (`use greet`) that `config.jsonc` declares but you
+did not authorize, the run is refused before any process starts, naming the
+flag:
 
 ```
 ✗ permission-denied: Plugin launch denied: the suite imports the plugin
-  namespace greet, declared in the plugin manifest but not authorized to launch…
+  namespace greet, declared in spec/config.jsonc but not authorized to launch…
   remedy: spec run --allow-plugins=greet
 ```
 
 Built-in plugins never need `--allow-plugins` — they are part of the runtime,
-not project-declared code. The grant governs only whether a manifest command is
+not project-declared code. The grant governs only whether a declared command is
 launched; once launched, the plugin's _tools_ are still gated by their own
 `requires` permissions, exactly like a built-in's.
 

@@ -1,6 +1,6 @@
 # A suite that uses a project-declared plugin. The `greet` namespace is not a
-# built-in; it comes from the manifest (spec.plugins.jsonc) in this directory,
-# which launches ./greeter.ts. Because launching a manifest plugin runs
+# built-in; it comes from spec/config.jsonc in this directory, whose `plugins`
+# key launches ./greeter.ts. Because launching a declared plugin runs
 # project-declared code, this suite runs only when the caller allows it:
 #
 #   spec run examples/plugin-loading --allow-plugins

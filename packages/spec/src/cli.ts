@@ -19,14 +19,14 @@ import { SpecError } from "./errors";
 import { loadSuite } from "./loader";
 import { parseGrants } from "./permissions";
 import {
-	connectManifestPlugins,
+	connectDeclaredPlugins,
 	deniedReferences,
 	disposeAll,
 	launchDeniedError,
-	loadPluginManifest,
+	loadProjectConfig,
 	parsePluginGrant,
 	planPluginLaunch,
-} from "./project-plugins";
+} from "./project-config";
 import { reportFatal, reportSuite } from "./reporter";
 import { runSuite } from "./runner";
 
@@ -41,7 +41,7 @@ Permissions (denied unless granted):
   --allow-net[=host[:port]]   Reach the network (scoped to hosts)
   --allow-env[=VAR,...]       Read environment variables (scoped to names)
   --allow-host-fs[=dir,...]   Touch the host filesystem outside the workspace
-  --allow-plugins[=ns,...]    Launch project-declared plugins (from the manifest)
+  --allow-plugins[=ns,...]    Launch project-declared plugins (from spec/config.jsonc)
 `;
 
 /**
@@ -93,15 +93,15 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	let root = remaining[0] ?? "spec";
 
-	// Load the per-project plugin manifest and decide which declared plugins the
-	// caller authorized to launch. Deny-by-default: a suite that imports a
+	// Load the per-project spec/config.jsonc and decide which declared plugins
+	// the caller authorized to launch. Deny-by-default: a suite that imports a
 	// declared-but-unauthorized plugin is refused before any process starts.
-	let manifest = await loadPluginManifest(root);
-	if (isFailure(manifest)) {
-		reportFatal(manifest.error, sink);
+	let config = await loadProjectConfig(root);
+	if (isFailure(config)) {
+		reportFatal(config.error, sink);
 		return 2;
 	}
-	let { launch, deniedNamespaces } = planPluginLaunch(manifest.data, pluginGrant);
+	let { launch, deniedNamespaces } = planPluginLaunch(config.data, pluginGrant);
 	if (deniedNamespaces.length > 0) {
 		let loaded = await loadSuite(root);
 		if (isFailure(loaded)) {
@@ -117,7 +117,7 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 
 	let externalPlugins: Plugin[] = [];
 	if (launch.length > 0) {
-		let connected = await connectManifestPlugins(launch);
+		let connected = await connectDeclaredPlugins(launch);
 		if (isFailure(connected)) {
 			reportFatal(connected.error, sink);
 			return 2;

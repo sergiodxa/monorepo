@@ -1,9 +1,11 @@
 /**
- * Per-project and third-party plugin loading: the CLI-internal machinery that
- * reads a suite's `spec.plugins.jsonc` manifest, decides which declared plugins
- * the caller authorized to launch, and connects the authorized ones over the
- * stdio transport. Launching a manifest plugin runs project-declared code, so
- * it is deny-by-default: a plugin starts only when `--allow-plugins` grants it.
+ * The suite's project configuration file, `spec/config.jsonc`: the CLI-internal
+ * machinery that reads it, decides which declared plugins the caller authorized
+ * to launch, and connects the authorized ones over the stdio transport. The
+ * file's `plugins` key maps a namespace to its launch command; launching one
+ * runs project-declared code, so it is deny-by-default — a plugin starts only
+ * when `--allow-plugins` grants it. `config.jsonc` is the suite's general
+ * configuration home; its `permissions` key is parsed here too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,21 +23,21 @@ import type { Plugin } from "./plugin";
 import { LoadError, SpecError, ToolError } from "./errors";
 import { connectStdioPlugin } from "./transport-stdio";
 
-/** Conventional manifest file names, tried in this order under the suite dir. */
-const MANIFEST_NAMES = ["spec.plugins.jsonc", "spec.plugins.json"] as const;
+/** Conventional config file names, tried in this order under the suite dir. */
+const CONFIG_NAMES = ["config.jsonc", "config.json"] as const;
 
 /** The `--allow-plugins` flag and its scoped form, parsed CLI-side. */
 const ALLOW_PLUGINS_FLAG = "--allow-plugins";
 
 /**
- * Namespaces the runtime provides itself; a manifest may not claim one of
- * them, because a declared plugin sharing the name would silently shadow the
- * built-in in the registry.
+ * Namespaces the runtime provides itself; the config's `plugins` key may not
+ * claim one of them, because a declared plugin sharing the name would silently
+ * shadow the built-in in the registry.
  */
 const BUILT_IN_NAMESPACES: ReadonlySet<string> = new Set(["fs", "cli", "http", "browser", "db"]);
 
 /**
- * Whether, and how far, the caller authorized launching manifest plugins.
+ * Whether, and how far, the caller authorized launching declared plugins.
  * Absent `--allow-plugins` leaves it `denied`; a bare flag is `all`; a scoped
  * `--allow-plugins=a,b` names the namespaces allowed to launch.
  */
@@ -50,19 +52,22 @@ export interface PluginDeclaration {
 	namespace: string;
 	/**
 	 * The argv that launches the plugin. Relative path arguments (those starting
-	 * with `.`) are already resolved absolute against the manifest's directory,
-	 * so the command runs the same from any working directory.
+	 * with `.`) are already resolved absolute against the config file's
+	 * directory, so the command runs the same from any working directory.
 	 */
 	command: string[];
 }
 
-/** A parsed plugin manifest: the plugins a project declares, in file order. */
-export interface PluginManifest {
-	/** The declared plugins; empty when no manifest exists or it declares none. */
+/**
+ * A parsed `spec/config.jsonc`: the suite's project configuration. The
+ * `plugins` key lists the plugins a project declares, in file order.
+ */
+export interface ProjectConfig {
+	/** The declared plugins; empty when no config exists or it declares none. */
 	plugins: PluginDeclaration[];
 }
 
-/** Splitting the manifest's plugins into those to launch and those refused. */
+/** Splitting the config's declared plugins into those to launch and those refused. */
 export interface LaunchPlan {
 	/** Declarations the grant authorized, to be connected. */
 	launch: PluginDeclaration[];
@@ -114,20 +119,20 @@ export function parsePluginGrant(
 }
 
 /**
- * Read the plugin manifest that governs a suite directory. The manifest lives
- * in the directory passed to `spec run` (the suite dir); `spec.plugins.jsonc`
- * is tried before `spec.plugins.json`. A missing manifest is not an error — it
- * simply declares no plugins. The manifest is JSONC (comments and trailing
- * commas tolerated), and relative command paths resolve against its directory.
+ * Read the `spec/config.jsonc` that governs a suite directory. The config file
+ * lives in the directory passed to `spec run` (the suite dir); `config.jsonc`
+ * is tried before `config.json`. A missing config file is not an error — it
+ * simply declares no plugins. The file is JSONC (comments and trailing commas
+ * tolerated), and relative command paths resolve against its directory.
  *
  * @param suiteRoot - The suite directory `spec run` was pointed at.
- * @returns The parsed manifest, or the failure that made it unreadable.
+ * @returns The parsed config, or the failure that made it unreadable.
  */
-export async function loadPluginManifest(
+export async function loadProjectConfig(
 	suiteRoot: string,
-): Promise<Result<PluginManifest, SpecError>> {
+): Promise<Result<ProjectConfig, SpecError>> {
 	let directory = resolve(suiteRoot);
-	for (let name of MANIFEST_NAMES) {
+	for (let name of CONFIG_NAMES) {
 		let path = resolve(directory, name);
 		let file = Bun.file(path);
 		if (!(await file.exists())) continue;
@@ -136,30 +141,33 @@ export async function loadPluginManifest(
 			text = await file.text();
 		} catch (error) {
 			return failure(
-				new LoadError("load-error", `Cannot read plugin manifest ${path}: ${errorMessage(error)}`),
+				new LoadError(
+					"load-error",
+					`Cannot read spec/config.jsonc ${path}: ${errorMessage(error)}`,
+				),
 			);
 		}
 		let parsed = parseJsonc(text, path);
 		if (isFailure(parsed)) return parsed;
-		return validateManifest(parsed.data, directory, path);
+		return validateConfig(parsed.data, directory, path);
 	}
 	return success({ plugins: [] });
 }
 
 /**
- * Split a manifest's declarations into the ones the grant authorizes and the
+ * Split the config's declarations into the ones the grant authorizes and the
  * namespaces it refuses. Refusal is not yet a failure — a declared plugin the
  * suite never imports may stay unlaunched with no consequence — so this only
  * partitions; {@link deniedReferences} decides whether a refusal actually bites.
  *
- * @param manifest - The parsed manifest.
+ * @param config - The parsed project config.
  * @param grant - The caller's `--allow-plugins` grant.
  * @returns The plugins to launch and the namespaces refused.
  */
-export function planPluginLaunch(manifest: PluginManifest, grant: PluginLaunchGrant): LaunchPlan {
+export function planPluginLaunch(config: ProjectConfig, grant: PluginLaunchGrant): LaunchPlan {
 	let launch: PluginDeclaration[] = [];
 	let deniedNamespaces: string[] = [];
-	for (let declaration of manifest.plugins) {
+	for (let declaration of config.plugins) {
 		if (grantAdmits(grant, declaration.namespace)) launch.push(declaration);
 		else deniedNamespaces.push(declaration.namespace);
 	}
@@ -206,7 +214,7 @@ export function launchDeniedError(namespaces: string[]): SpecError {
 	let plural = namespaces.length === 1 ? "namespace" : "namespaces";
 	let error = new SpecError(
 		"permission-denied",
-		`Plugin launch denied: the suite imports the plugin ${plural} ${list}, declared in the plugin manifest but not authorized to launch. Launching a manifest plugin executes the command the project declares for it, so it is denied unless you allow it.`,
+		`Plugin launch denied: the suite imports the plugin ${plural} ${list}, declared in spec/config.jsonc but not authorized to launch. Launching a declared plugin executes the command the project declares for it, so it is denied unless you allow it.`,
 	);
 	error.remedy = `spec run ${ALLOW_PLUGINS_FLAG}=${namespaces.join(",")}`;
 	return error;
@@ -221,7 +229,7 @@ export function launchDeniedError(namespaces: string[]): SpecError {
  * @param launch - The declarations {@link planPluginLaunch} authorized.
  * @returns The connected plugins, ready to pass to `runSuite`, or the failure.
  */
-export async function connectManifestPlugins(
+export async function connectDeclaredPlugins(
 	launch: PluginDeclaration[],
 ): Promise<Result<Plugin[], SpecError>> {
 	let connected: Plugin[] = [];
@@ -231,7 +239,7 @@ export async function connectManifestPlugins(
 			await disposeAll(connected);
 			return failure(
 				new ToolError(
-					`Failed to load plugin "${declaration.namespace}" from the manifest command "${declaration.command.join(" ")}": ${result.error.message}`,
+					`Failed to load plugin "${declaration.namespace}" from its spec/config.jsonc command "${declaration.command.join(" ")}": ${result.error.message}`,
 				),
 			);
 		}
@@ -276,7 +284,7 @@ function grantAdmits(grant: PluginLaunchGrant, namespace: string): boolean {
 	return false;
 }
 
-/** Parse manifest text as JSONC, tolerating comments and trailing commas. */
+/** Parse config text as JSONC, tolerating comments and trailing commas. */
 function parseJsonc(text: string, path: string): Result<unknown, SpecError> {
 	try {
 		return success(JSON.parse(stripTrailingCommas(stripComments(text))));
@@ -284,24 +292,24 @@ function parseJsonc(text: string, path: string): Result<unknown, SpecError> {
 		return failure(
 			new LoadError(
 				"load-error",
-				`Plugin manifest ${path} is not valid JSONC: ${errorMessage(error)}`,
+				`spec/config.jsonc ${path} is not valid JSONC: ${errorMessage(error)}`,
 			),
 		);
 	}
 }
 
 /**
- * Shape a parsed manifest object into a {@link PluginManifest}, rejecting every
+ * Shape a parsed config object into a {@link ProjectConfig}, rejecting every
  * malformed declaration with a `load-error` that names the offending plugin.
- * Relative command paths are resolved absolute against the manifest directory.
+ * Relative command paths are resolved absolute against the config directory.
  */
-function validateManifest(
+function validateConfig(
 	parsed: unknown,
 	directory: string,
 	path: string,
-): Result<PluginManifest, SpecError> {
+): Result<ProjectConfig, SpecError> {
 	if (!isRecord(parsed)) {
-		return failure(new LoadError("load-error", `Plugin manifest ${path} must be a JSON object.`));
+		return failure(new LoadError("load-error", `spec/config.jsonc ${path} must be a JSON object.`));
 	}
 	let pluginsField = parsed.plugins;
 	if (pluginsField === undefined) return success({ plugins: [] });
@@ -309,7 +317,7 @@ function validateManifest(
 		return failure(
 			new LoadError(
 				"load-error",
-				`Plugin manifest ${path} must map "plugins" to an object of namespace → { command }.`,
+				`spec/config.jsonc ${path} must map "plugins" to an object of namespace → { command }.`,
 			),
 		);
 	}
@@ -322,7 +330,7 @@ function validateManifest(
 	return success({ plugins });
 }
 
-/** Validate one namespace → declaration entry from the manifest. */
+/** Validate one namespace → declaration entry from the config's `plugins` key. */
 function validateDeclaration(
 	namespace: string,
 	declaration: unknown,
@@ -333,7 +341,7 @@ function validateDeclaration(
 		return failure(
 			new LoadError(
 				"load-error",
-				`Plugin manifest ${path} declares an invalid namespace "${namespace}": a namespace is non-empty and contains no dot.`,
+				`spec/config.jsonc ${path} declares an invalid namespace "${namespace}": a namespace is non-empty and contains no dot.`,
 			),
 		);
 	}
@@ -341,7 +349,7 @@ function validateDeclaration(
 		return failure(
 			new LoadError(
 				"load-error",
-				`Plugin manifest ${path} declares the namespace "${namespace}", which is a built-in capability and cannot be overridden.`,
+				`spec/config.jsonc ${path} declares the namespace "${namespace}", which is a built-in capability and cannot be overridden.`,
 			),
 		);
 	}
@@ -367,8 +375,8 @@ function validateDeclaration(
 }
 
 /**
- * Resolve one command argument. An argument starting with `.` is a manifest-
- * relative path, made absolute against the manifest directory so the command
+ * Resolve one command argument. An argument starting with `.` is a config-
+ * relative path, made absolute against the config directory so the command
  * runs identically from any working directory; every other argument (an
  * executable found on `PATH`, an absolute path, a plain flag) is left verbatim.
  */

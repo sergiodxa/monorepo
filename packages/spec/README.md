@@ -631,13 +631,14 @@ let run = await runSuite({ root: "spec", grants, plugins: [greet.data] });
 ### Pattern: Loading project plugins from the CLI
 
 A suite can declare its own plugins without any programmatic glue. Put a
-`spec.plugins.jsonc` manifest in the suite directory mapping each namespace to
-the command that launches its plugin (JSONC — comments and trailing commas are
-allowed; `.` paths resolve against the manifest's directory, so the suite runs
-the same from any working directory):
+`config.jsonc` file in the suite directory — the suite's general configuration
+home — and map each namespace to the command that launches its plugin under its
+`plugins` key (JSONC — comments and trailing commas are allowed; `.` paths
+resolve against the file's directory, so the suite runs the same from any
+working directory):
 
 ```jsonc
-// spec/spec.plugins.jsonc
+// spec/config.jsonc
 {
 	"plugins": {
 		// A relative "." path is resolved against this file's directory.
@@ -690,8 +691,8 @@ spec run spec --allow-net=localhost:3000
 # Read shared fixture data outside the workspace (path-prefix grant):
 spec run spec --allow-host-fs=/opt/fixtures
 
-# Launch project plugins declared in spec.plugins.jsonc (not a capability grant,
-# but the launch gate — see the project-plugins pattern above):
+# Launch project plugins declared in spec/config.jsonc (not a capability grant,
+# but the launch gate — see the project-config pattern above):
 spec run spec --allow-plugins=greet
 
 # Combine grants; scoped flags union when repeated:
