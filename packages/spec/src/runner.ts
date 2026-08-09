@@ -21,6 +21,7 @@ import type { Plugin } from "./plugin";
 import { executeTest } from "./executor";
 import { loadSuite } from "./loader";
 import { createPermissionSet } from "./permissions";
+import { createBrowserPlugin } from "./plugins/browser";
 import { createCliPlugin } from "./plugins/cli";
 import { createFsPlugin } from "./plugins/fs";
 import { createHttpPlugin } from "./plugins/http";
@@ -33,7 +34,7 @@ export interface RunOptions {
 	root: string;
 	/** The caller's permission grants, parsed from `--allow-*` flags. */
 	grants: Grants;
-	/** Extra plugins beyond the built-in `fs`, `cli`, and `http`. */
+	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, and `browser`. */
 	plugins?: Plugin[];
 }
 
@@ -54,6 +55,7 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		createFsPlugin(),
 		createCliPlugin(),
 		createHttpPlugin(),
+		createBrowserPlugin(),
 		...(options.plugins ?? []),
 	];
 	let registry = createRegistry(plugins, suite);
@@ -74,29 +76,43 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 	}
 
 	let results: TestResult[] = [];
-	for (let file of suite.files) {
-		let imported = file.uses.map((use) => use.namespace);
-		for (let test of file.tests) {
-			let workspace = await createWorkspace(permissions);
-			if (isFailure(workspace)) return workspace;
-			let startedAt = performance.now();
-			let outcome = await executeTest(test, {
-				registry,
-				workspace: workspace.data,
-				permissions,
-				uses: imported,
-				usesFor: (definition) => usesByDefinition.get(definition) ?? imported,
-				fileFor: (definition) => fileByDefinition.get(definition),
-				grants: options.grants,
-			});
-			let durationMs = performance.now() - startedAt;
-			await workspace.data.cleanup();
-			if (isFailure(outcome)) {
-				let error = outcome.error;
-				if (error.file === undefined) error.file = file.path;
-				results.push({ title: test.title, file: file.path, status: "failed", error, durationMs });
-			} else {
-				results.push({ title: test.title, file: file.path, status: "passed", durationMs });
+	try {
+		for (let file of suite.files) {
+			let imported = file.uses.map((use) => use.namespace);
+			for (let test of file.tests) {
+				let workspace = await createWorkspace(permissions);
+				if (isFailure(workspace)) return workspace;
+				let startedAt = performance.now();
+				let outcome = await executeTest(test, {
+					registry,
+					workspace: workspace.data,
+					permissions,
+					uses: imported,
+					usesFor: (definition) => usesByDefinition.get(definition) ?? imported,
+					fileFor: (definition) => fileByDefinition.get(definition),
+					grants: options.grants,
+				});
+				let durationMs = performance.now() - startedAt;
+				await workspace.data.cleanup();
+				if (isFailure(outcome)) {
+					let error = outcome.error;
+					if (error.file === undefined) error.file = file.path;
+					results.push({ title: test.title, file: file.path, status: "failed", error, durationMs });
+				} else {
+					results.push({ title: test.title, file: file.path, status: "passed", durationMs });
+				}
+			}
+		}
+	} finally {
+		// Plugins with process-external state (a browser session, a connection)
+		// release it once here, after every test. Teardown is best-effort: a
+		// throwing dispose must never turn a completed run into a thrown error.
+		for (let plugin of plugins) {
+			if (plugin.dispose === undefined) continue;
+			try {
+				await plugin.dispose();
+			} catch {
+				// Ignored: cleanup failures are not run failures.
 			}
 		}
 	}

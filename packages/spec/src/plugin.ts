@@ -78,4 +78,12 @@ export interface Plugin {
 	 * @returns The tool's result value, or a structured failure.
 	 */
 	call(tool: string, args: ToolArg[], context: ToolContext): Promise<Result<Value, SpecError>>;
+	/**
+	 * Release any process-external resources the plugin accumulated during a
+	 * run — browser sessions, connections, spawned daemons. Optional, because
+	 * the built-in `fs`, `cli`, and `http` plugins hold nothing to release; the
+	 * runner calls it once per plugin after the whole suite has run, and
+	 * implementations must make it best-effort so teardown never fails a run.
+	 */
+	dispose?(): Promise<void>;
 }

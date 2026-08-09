@@ -1,0 +1,736 @@
+/**
+ * The built-in `browser` capability: drive a real web browser through the
+ * accessibility tree, not through DOM implementation details. Every tool maps
+ * onto the globally-installed `agent-browser` CLI — `open` navigates, element
+ * interactions read the accessibility snapshot and act on the node found by
+ * role and accessible name, and CSS selectors survive only as a marked escape
+ * hatch. Reaching web content is the privileged act, so the whole family is
+ * gated by the `net` permission; the fixed `agent-browser` binary is trusted
+ * plugin machinery, not spec-requested process execution, so it needs no
+ * `run` grant (ADR-007 §4).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { basename } from "node:path";
+
+import type { Result } from "@pkg/result";
+
+import { failure, isFailure, success } from "@pkg/result";
+
+import type { SpecError } from "../errors";
+import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
+import type { ToolArg, Value } from "../values";
+import type { Workspace } from "../workspace";
+
+import { ExpectationError, ToolError } from "../errors";
+import { formatValue } from "../values";
+
+/** The trusted CLI binary every browser tool shells out to. */
+const BROWSER_BINARY = "agent-browser";
+
+/** The word `browser.fill` requires between the target and the value. */
+const FILL_WORDS = ["with"];
+
+/** The word `browser.checkbox` requires as its state assertion. */
+const CHECKBOX_WORDS = ["checked"];
+
+/** Descriptors of every tool the `browser` namespace exposes. */
+const BROWSER_TOOLS: ToolDescriptor[] = [
+	{
+		name: "open",
+		summary: "Navigate the browser session to an absolute URL.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "url",
+				kind: "value",
+				required: true,
+				summary: "Absolute URL to open; v1 has no environments to bind a base URL against.",
+			},
+		],
+	},
+	{
+		name: "navigate",
+		summary: "Navigate the current browser session to another absolute URL.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "url",
+				kind: "value",
+				required: true,
+				summary: "Absolute URL to navigate to; must be absolute, like `open`.",
+			},
+		],
+	},
+	{
+		name: "click",
+		summary: "Click the element with the given role and accessible name.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "role",
+				kind: "word",
+				required: true,
+				summary: "Accessibility role of the element, e.g. `button` or `link`.",
+			},
+			{
+				name: "name",
+				kind: "value",
+				required: true,
+				summary: 'Accessible name the user perceives, e.g. "Sign in".',
+			},
+		],
+	},
+	{
+		name: "fill",
+		summary: 'Fill a field addressed by role and name: `fill textbox "Email" with "x"`.',
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "role",
+				kind: "word",
+				required: true,
+				summary: "Accessibility role of the field, typically `textbox`.",
+			},
+			{
+				name: "name",
+				kind: "value",
+				required: true,
+				summary: "Accessible name (label) of the field.",
+			},
+			{
+				name: "with",
+				kind: "word",
+				required: true,
+				summary: "The literal word `with`, separating the field from its value.",
+			},
+			{
+				name: "value",
+				kind: "value",
+				required: true,
+				summary: "The text to type into the field.",
+			},
+		],
+	},
+	{
+		name: "check",
+		summary: "Check a checkbox addressed by role and accessible name.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "role",
+				kind: "word",
+				required: true,
+				summary: "Accessibility role, typically `checkbox`.",
+			},
+			{
+				name: "name",
+				kind: "value",
+				required: true,
+				summary: "Accessible name of the checkbox.",
+			},
+		],
+	},
+	{
+		name: "press",
+		summary: 'Press a key at the current focus, e.g. `press "Enter"`.',
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "key",
+				kind: "value",
+				required: true,
+				summary: 'Key or combination to press, e.g. "Enter" or "Control+a".',
+			},
+		],
+	},
+	{
+		name: "click_selector",
+		summary: "Escape hatch: click by raw CSS selector when no accessible name exists.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "selector",
+				kind: "value",
+				required: true,
+				summary: "A raw CSS selector; a marked pocket of implementation coupling (ADR-005 §3).",
+			},
+		],
+	},
+	{
+		name: "heading",
+		summary: "Observe that a heading with the given accessible name is present.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{ name: "name", kind: "value", required: true, summary: "Accessible name of the heading." },
+		],
+	},
+	{
+		name: "link",
+		summary: "Observe that a link with the given accessible name is present.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{ name: "name", kind: "value", required: true, summary: "Accessible name of the link." },
+		],
+	},
+	{
+		name: "button",
+		summary: "Observe that a button with the given accessible name is present.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{ name: "name", kind: "value", required: true, summary: "Accessible name of the button." },
+		],
+	},
+	{
+		name: "text",
+		summary: "Observe that the given text is visible anywhere on the page.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{
+				name: "substring",
+				kind: "value",
+				required: true,
+				summary: "Substring to look for in the page's visible text.",
+			},
+		],
+	},
+	{
+		name: "checkbox",
+		summary: 'Assert a checkbox\'s state: `expect browser.checkbox "Remember me" checked`.',
+		kind: "observable",
+		requires: "net",
+		params: [
+			{ name: "name", kind: "value", required: true, summary: "Accessible name of the checkbox." },
+			{
+				name: "state",
+				kind: "word",
+				required: true,
+				summary: "The word `checked`, the state being asserted.",
+			},
+		],
+	},
+	{
+		name: "url",
+		summary: "Observe the session's current URL, or assert it equals an expected URL.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{
+				name: "expected",
+				kind: "value",
+				required: false,
+				summary: "When given, the absolute URL the current location must equal.",
+			},
+		],
+	},
+];
+
+/**
+ * Create the built-in `browser` plugin: the `browser` namespace of
+ * accessibility-first web-interaction tools backed by `agent-browser`.
+ *
+ * `describe()` is static — it never launches a browser — so a suite that never
+ * touches `browser.*` costs nothing and never needs `agent-browser` installed.
+ * Each tool call is a stateless `agent-browser` invocation keyed to a session
+ * derived from the test's workspace, which gives every test its own isolated
+ * browser (own cookies, storage, tabs) while letting `given`/`when`/`then`
+ * share one session. The plugin tracks the sessions it opened and closes them
+ * in {@link Plugin.dispose}, called once by the runner after the whole run —
+ * so browsers do not leak, and unrelated `agent-browser` sessions are left
+ * untouched.
+ */
+export function createBrowserPlugin(): Plugin {
+	// Sessions this plugin has driven, closed on dispose. A Set because the
+	// same test's workspace yields the same session across its many calls.
+	let sessions = new Set<string>();
+	return {
+		namespace: "browser",
+		describe() {
+			return BROWSER_TOOLS;
+		},
+		async call(tool, args, context) {
+			let session = sessionFor(context.workspace);
+			sessions.add(session);
+			switch (tool) {
+				case "open":
+				case "navigate":
+					return await navigate(tool, args, context, session);
+				case "click":
+					return await click(args, session);
+				case "fill":
+					return await fill(args, session);
+				case "check":
+					return await check(args, session);
+				case "press":
+					return await press(args, session);
+				case "click_selector":
+					return await clickSelector(args, session);
+				case "heading":
+				case "link":
+				case "button":
+					return await roleObservable(tool, args, session);
+				case "text":
+					return await text(args, session);
+				case "checkbox":
+					return await checkbox(args, session);
+				case "url":
+					return await url(args, session);
+				default: {
+					let names = BROWSER_TOOLS.map((descriptor) => descriptor.name).join(", ");
+					return failure(new ToolError(`browser has no tool named "${tool}"; tools: ${names}`));
+				}
+			}
+		},
+		async dispose() {
+			for (let session of sessions) {
+				// Best-effort teardown: a failed close must never fail a run, and a
+				// missing binary at dispose time is simply nothing left to close.
+				await runBrowser(["close"], session);
+			}
+			sessions.clear();
+		},
+	};
+}
+
+/**
+ * `browser.open`/`browser.navigate url` — require an absolute http(s) URL,
+ * pass the scoped `net` check for its host and port, then navigate. Relative
+ * URLs are refused with the v1 rationale (no environments mechanism yet),
+ * mirroring the `http` plugin.
+ */
+async function navigate(
+	tool: string,
+	args: ToolArg[],
+	context: ToolContext,
+	session: string,
+): Promise<Result<Value, SpecError>> {
+	let target = readUrl(tool, args);
+	if (isFailure(target)) return target;
+	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
+	if (isFailure(allowed)) return allowed;
+	let response = await runBrowser(["open", target.data.href], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/** `browser.click role name` — act on the node found by role and name. */
+async function click(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let target = readTarget("click", args, 0);
+	if (isFailure(target)) return target;
+	let ref = await resolveElement(target.data.role, target.data.name, session);
+	if (isFailure(ref)) return ref;
+	if (ref.data === null) return failure(notFound("click", target.data));
+	let response = await runBrowser(["click", `@${ref.data}`], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/** `browser.fill role name with value` — type into the field found by role and name. */
+async function fill(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let target = readTarget("fill", args, 0);
+	if (isFailure(target)) return target;
+	let separator = wordArg(args, 2, "fill", FILL_WORDS);
+	if (isFailure(separator)) return separator;
+	let value = stringArg(args, 3, "fill", "value");
+	if (isFailure(value)) return value;
+	let ref = await resolveElement(target.data.role, target.data.name, session);
+	if (isFailure(ref)) return ref;
+	if (ref.data === null) return failure(notFound("fill", target.data));
+	let response = await runBrowser(["fill", `@${ref.data}`, value.data], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/** `browser.check role name` — check the checkbox found by role and name. */
+async function check(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let target = readTarget("check", args, 0);
+	if (isFailure(target)) return target;
+	let ref = await resolveElement(target.data.role, target.data.name, session);
+	if (isFailure(ref)) return ref;
+	if (ref.data === null) return failure(notFound("check", target.data));
+	let response = await runBrowser(["check", `@${ref.data}`], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/** `browser.press key` — press a key at the current focus, no element needed. */
+async function press(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let key = stringArg(args, 0, "press", "key");
+	if (isFailure(key)) return key;
+	let response = await runBrowser(["press", key.data], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/** `browser.click_selector selector` — the CSS escape hatch (ADR-005 §3). */
+async function clickSelector(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let selector = stringArg(args, 0, "click_selector", "selector");
+	if (isFailure(selector)) return selector;
+	let response = await runBrowser(["click", selector.data], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/**
+ * `browser.heading|link|button name` — assert a node of that role and
+ * accessible name is present. Present yields `true`; absent yields an
+ * `ExpectationError` carrying the demanded role/name, so `expect` renders
+ * expected/observed the same way `fs.file` does.
+ */
+async function roleObservable(
+	tool: string,
+	args: ToolArg[],
+	session: string,
+): Promise<Result<Value, SpecError>> {
+	let name = stringArg(args, 0, tool, "name");
+	if (isFailure(name)) return name;
+	let ref = await resolveElement(tool, name.data, session);
+	if (isFailure(ref)) return ref;
+	if (ref.data === null) {
+		return failure(
+			new ExpectationError(
+				`no ${tool} named ${formatValue(name.data)} is present`,
+				`${tool} ${formatValue(name.data)}`,
+				null,
+			),
+		);
+	}
+	return success(true);
+}
+
+/** `browser.text substring` — assert the substring is in the page's visible text. */
+async function text(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let substring = stringArg(args, 0, "text", "substring");
+	if (isFailure(substring)) return substring;
+	let response = await runBrowser(["get", "text", "body"], session);
+	if (isFailure(response)) return response;
+	let visible = typeof response.data.text === "string" ? response.data.text : "";
+	if (visible.includes(substring.data)) return success(true);
+	return failure(
+		new ExpectationError(
+			`the text ${formatValue(substring.data)} is not visible on the page`,
+			substring.data,
+			visible,
+		),
+	);
+}
+
+/**
+ * `browser.checkbox name checked` — assert the named checkbox is checked. An
+ * absent checkbox and an unchecked checkbox both fail with an
+ * `ExpectationError`, one for the missing element and one for the wrong state.
+ */
+async function checkbox(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let name = stringArg(args, 0, "checkbox", "name");
+	if (isFailure(name)) return name;
+	let state = wordArg(args, 1, "checkbox", CHECKBOX_WORDS);
+	if (isFailure(state)) return state;
+	let ref = await resolveElement("checkbox", name.data, session);
+	if (isFailure(ref)) return ref;
+	if (ref.data === null) {
+		return failure(
+			new ExpectationError(
+				`no checkbox named ${formatValue(name.data)} is present`,
+				`checkbox ${formatValue(name.data)}`,
+				null,
+			),
+		);
+	}
+	let response = await runBrowser(["is", "checked", `@${ref.data}`], session);
+	if (isFailure(response)) return response;
+	if (response.data.checked === true) return success(true);
+	return failure(
+		new ExpectationError(`checkbox ${formatValue(name.data)} is not checked`, true, false),
+	);
+}
+
+/**
+ * `browser.url [expected]` — with no argument, observe the current URL; with
+ * an argument, assert the current URL equals it exactly. v1 compares full
+ * absolute URLs: there is no environments mechanism to resolve a path like
+ * "/" against a base (ADR-008), consistent with `open` requiring absolute URLs.
+ */
+async function url(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	if (args.length > 1) {
+		return failure(new ToolError("browser.url takes at most one argument: an expected URL"));
+	}
+	let response = await runBrowser(["get", "url"], session);
+	if (isFailure(response)) return response;
+	let current = typeof response.data.url === "string" ? response.data.url : "";
+	if (args.length === 0) return success(current);
+	let expected = stringArg(args, 0, "url", "expected");
+	if (isFailure(expected)) return expected;
+	if (current === expected.data) return success(true);
+	return failure(
+		new ExpectationError(
+			`the current URL is not ${formatValue(expected.data)}`,
+			expected.data,
+			current,
+		),
+	);
+}
+
+/** A role and accessible name naming one element to act on or observe. */
+interface ElementTarget {
+	/** Accessibility role, e.g. `button` or `textbox`. */
+	role: string;
+	/** Accessible name the user perceives. */
+	name: string;
+}
+
+/**
+ * Read a `role name` pair starting at `index`: a bare-word role (roles are an
+ * open set, so any identifier is accepted) followed by a string name.
+ */
+function readTarget(
+	tool: string,
+	args: ToolArg[],
+	index: number,
+): Result<ElementTarget, SpecError> {
+	let role = args[index];
+	if (role === undefined || role.kind !== "word") {
+		return failure(
+			new ToolError(
+				`browser.${tool} expects an accessibility role as a bare word for argument ${index + 1} (e.g. button, textbox)`,
+			),
+		);
+	}
+	let name = stringArg(args, index + 1, tool, "name");
+	if (isFailure(name)) return name;
+	return success({ role: role.word, name: name.data });
+}
+
+/**
+ * Resolve one element to its snapshot ref by reading the accessibility tree
+ * and matching on role and normalized accessible name. Returns the ref key
+ * (e.g. `"e4"`) when a node matches, `null` when none does, or a failure when
+ * `agent-browser` itself could not produce a snapshot.
+ */
+async function resolveElement(
+	role: string,
+	name: string,
+	session: string,
+): Promise<Result<string | null, SpecError>> {
+	let response = await runBrowser(["snapshot", "-i"], session);
+	if (isFailure(response)) return response;
+	let refs = response.data.refs;
+	if (typeof refs !== "object" || refs === null || Array.isArray(refs)) return success(null);
+	let wanted = normalizeName(name);
+	for (let [key, node] of Object.entries(refs as Record<string, unknown>)) {
+		if (typeof node !== "object" || node === null) continue;
+		let entry = node as { role?: unknown; name?: unknown };
+		if (entry.role !== role) continue;
+		if (typeof entry.name !== "string") continue;
+		if (normalizeName(entry.name) === wanted) return success(key);
+	}
+	return success(null);
+}
+
+/** An element the accessibility tree does not expose is a tool failure. */
+function notFound(tool: string, target: ElementTarget): ToolError {
+	return new ToolError(
+		`browser.${tool} found no ${target.role} named ${formatValue(target.name)} in the accessibility tree`,
+	);
+}
+
+/**
+ * Normalize an accessible name for comparison: trim surrounding whitespace and
+ * collapse internal runs to a single space, so a label rendered as
+ * " Remember me" matches the spec's "Remember me".
+ */
+function normalizeName(name: string): string {
+	return name.trim().replace(/\s+/g, " ");
+}
+
+/** The parsed `--json` envelope every `agent-browser` command prints. */
+interface BrowserEnvelope {
+	/** Whether the command succeeded on its own terms. */
+	success: boolean;
+	/** The command's payload on success; shape varies per command. */
+	data: Record<string, unknown> | null;
+	/** The command's own account of a failure, when `success` is false. */
+	error: string | null;
+}
+
+/**
+ * Run one `agent-browser` command for a session and return its `data` payload.
+ * The binary is trusted plugin machinery (ADR-007 §4), so this spawns it
+ * directly without a `run` grant; a missing binary is a `ToolError` telling
+ * the caller to install it. Because `agent-browser` exits 0 even on failure,
+ * success is read from the JSON envelope's `success` field, never the exit code.
+ */
+async function runBrowser(
+	args: string[],
+	session: string,
+): Promise<Result<Record<string, unknown>, SpecError>> {
+	if (Bun.which(BROWSER_BINARY) === null) {
+		return failure(
+			new ToolError(
+				`the browser capability requires the "${BROWSER_BINARY}" CLI, which is not on PATH; install it globally with \`npm install -g agent-browser && agent-browser install\``,
+			),
+		);
+	}
+	let command = [BROWSER_BINARY, "--session", session, ...args, "--json"];
+	let stdout: string;
+	let stderr: string;
+	try {
+		let child = Bun.spawn({ cmd: command, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+		[stdout, stderr] = await Promise.all([
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
+			child.exited,
+		]);
+	} catch (error) {
+		return failure(
+			new ToolError(
+				`browser failed to run "${BROWSER_BINARY} ${args[0]}": ${describeError(error)}`,
+			),
+		);
+	}
+	let envelope = parseEnvelope(stdout);
+	if (envelope === null) {
+		let detail = stderr.trim().length > 0 ? stderr.trim() : stdout.trim();
+		return failure(
+			new ToolError(
+				`browser could not parse the "${args[0]}" response from ${BROWSER_BINARY}: ${detail}`,
+			),
+		);
+	}
+	if (!envelope.success) {
+		return failure(
+			new ToolError(
+				`browser ${args[0]} failed: ${envelope.error ?? "unknown agent-browser error"}`,
+			),
+		);
+	}
+	return success(envelope.data ?? {});
+}
+
+/** Parse one `agent-browser --json` line, returning null when it is not the envelope. */
+function parseEnvelope(stdout: string): BrowserEnvelope | null {
+	let trimmed = stdout.trim();
+	if (trimmed.length === 0) return null;
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(trimmed);
+	} catch {
+		return null;
+	}
+	if (typeof parsed !== "object" || parsed === null) return null;
+	let candidate = parsed as { success?: unknown; data?: unknown; error?: unknown };
+	if (typeof candidate.success !== "boolean") return null;
+	let data =
+		typeof candidate.data === "object" && candidate.data !== null && !Array.isArray(candidate.data)
+			? (candidate.data as Record<string, unknown>)
+			: null;
+	let error = typeof candidate.error === "string" ? candidate.error : null;
+	return { success: candidate.success, data, error };
+}
+
+/**
+ * The `agent-browser` session name for a test: the basename of its isolated
+ * workspace directory, which is unique per test and stable across the test's
+ * phases. This is the v1-provisional answer to ADR-005's browser-isolation
+ * open question — session lifetime follows the workspace.
+ */
+function sessionFor(workspace: Workspace): string {
+	return basename(workspace.root);
+}
+
+/** The absolute http(s) URL of an `open`/`navigate` call, or a tool error. */
+function readUrl(tool: string, args: ToolArg[]): Result<URL, SpecError> {
+	let raw = stringArg(args, 0, tool, "url");
+	if (isFailure(raw)) return raw;
+	let parsed: URL;
+	try {
+		parsed = new URL(raw.data);
+	} catch {
+		return failure(
+			new ToolError(
+				`browser.${tool} received the relative URL ${formatValue(raw.data)}; v1 has no environments mechanism to bind a base URL against, so URLs must be absolute (see docs/adr/spec/ADR-008-environments-and-compatibility.md)`,
+			),
+		);
+	}
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		return failure(
+			new ToolError(
+				`browser.${tool} supports absolute http(s) URLs only; got ${formatValue(raw.data)}`,
+			),
+		);
+	}
+	return success(parsed);
+}
+
+/** The port a URL reaches: its own, or the scheme default (80/443). */
+function portOf(target: URL): number {
+	if (target.port !== "") return Number(target.port);
+	return target.protocol === "https:" ? 443 : 80;
+}
+
+/**
+ * Extract a required string argument, failing with the tool's usage when the
+ * argument is missing, a bare word, or not a string.
+ */
+function stringArg(
+	args: ToolArg[],
+	index: number,
+	tool: string,
+	name: string,
+): Result<string, ToolError> {
+	let arg = args[index];
+	if (arg === undefined || arg.kind !== "value" || typeof arg.value !== "string") {
+		return failure(
+			new ToolError(
+				`browser.${tool} expects a string for its ${name} argument (position ${index + 1})`,
+			),
+		);
+	}
+	return success(arg.value);
+}
+
+/**
+ * Extract a bare-word argument and validate it against the tool's accepted
+ * words, naming them all on any mismatch — exactly as `fs` validates `exists`.
+ */
+function wordArg(
+	args: ToolArg[],
+	index: number,
+	tool: string,
+	accepted: string[],
+): Result<string, ToolError> {
+	let arg = args[index];
+	if (arg === undefined || arg.kind !== "word") {
+		return failure(
+			new ToolError(
+				`browser.${tool} expects a bare word as argument ${index + 1}; accepted words: ${accepted.join(", ")}`,
+			),
+		);
+	}
+	if (!accepted.includes(arg.word)) {
+		return failure(
+			new ToolError(
+				`browser.${tool} does not understand the word "${arg.word}"; accepted words: ${accepted.join(", ")}`,
+			),
+		);
+	}
+	return success(arg.word);
+}
+
+/** Render an unknown thrown value as a one-line message. */
+function describeError(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	return String(error);
+}
