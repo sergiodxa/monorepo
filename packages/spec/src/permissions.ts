@@ -13,7 +13,7 @@ import { basename, dirname, resolve, sep } from "node:path";
 
 import type { Result } from "@pkg/result";
 
-import { failure, success } from "@pkg/result";
+import { failure, isSuccess, success } from "@pkg/result";
 
 import { PermissionDeniedError, SpecError } from "./errors";
 
@@ -37,6 +37,20 @@ export interface Grants {
 	env: Grant;
 	/** Host filesystem outside the workspace: scopes are directory prefixes. */
 	hostFs: Grant;
+}
+
+/**
+ * One already-validated entry of a `spec/config.jsonc` `permissions.allow`
+ * list: the family it grants and its scopes. An empty `scopes` is a
+ * whole-family grant (the bare-string form, e.g. `"run"`); a non-empty one is
+ * the scoped-tuple form (e.g. `["run", "echo"]`). The `"plugins"` family rides
+ * along here but maps to the plugin launch grant, not a capability family.
+ */
+export interface ConfigPermissionEntry {
+	/** The family this entry grants: a {@link PermissionKind} or `"plugins"`. */
+	family: PermissionKind | "plugins";
+	/** The scopes; empty means the whole family. */
+	scopes: string[];
 }
 
 /**
@@ -199,6 +213,95 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 			return [];
 		},
 	};
+}
+
+/** Maps each config permission family that feeds a capability grant to its key. */
+const CONFIG_GRANT_KEYS = new Map<string, keyof Grants>([
+	["run", "run"],
+	["net", "net"],
+	["env", "env"],
+	["host-fs", "hostFs"],
+]);
+
+/**
+ * Fold a validated `permissions.allow` list into a {@link Grants} set. A bare
+ * family entry grants the whole family; a scoped entry widens with the same
+ * logic repeated CLI flags use, so a config tuple and an `--allow-*` flag merge
+ * identically. `"plugins"` entries are skipped — plugin launch is not a
+ * capability family and is threaded through the project-config loader instead.
+ *
+ * @param entries - The validated allow-list entries.
+ * @returns The grants the config declares, families it never names left denied.
+ */
+export function grantsFromConfig(entries: readonly ConfigPermissionEntry[]): Grants {
+	let grants: Grants = {
+		run: { mode: "denied" },
+		net: { mode: "denied" },
+		env: { mode: "denied" },
+		hostFs: { mode: "denied" },
+	};
+	for (let entry of entries) {
+		let key = CONFIG_GRANT_KEYS.get(entry.family);
+		if (key === undefined) continue;
+		grants[key] =
+			entry.scopes.length === 0 ? { mode: "all" } : widenGrant(grants[key], entry.scopes);
+	}
+	return grants;
+}
+
+/**
+ * Union two grant sets family by family: the wider mode wins and two scoped
+ * grants merge their scope lists. Used to combine the caller's CLI grants with
+ * the config's declared grants when `--allow-config` opts in — CLI flags only
+ * ever add to the config set, never subtract from it.
+ *
+ * @param base - The caller's CLI grants.
+ * @param extra - The config's declared grants to fold in.
+ * @returns The unioned grant set.
+ */
+export function mergeGrants(base: Grants, extra: Grants): Grants {
+	return {
+		run: mergeGrant(base.run, extra.run),
+		net: mergeGrant(base.net, extra.net),
+		env: mergeGrant(base.env, extra.env),
+		hostFs: mergeGrant(base.hostFs, extra.hostFs),
+	};
+}
+
+/** Union one family's two grants, widening `base` by whatever `extra` adds. */
+function mergeGrant(base: Grant, extra: Grant): Grant {
+	if (extra.mode === "denied") return base;
+	if (extra.mode === "all") return { mode: "all" };
+	return widenGrant(base, extra.scopes);
+}
+
+/**
+ * Whether a grant set would admit a denied resource. Used only to decide the
+ * `--allow-config` DX hint: the CLI asks whether the project's declared grants
+ * would have covered a denial, dispatching on the family and reusing the exact
+ * checks enforcement runs, so the hint matches what `--allow-config` would do.
+ *
+ * @param grants - The grant set to test against (the config's declared grants).
+ * @param permission - The denied family.
+ * @param resource - The denial's resource string, as the denial reported it.
+ * @returns Whether the grants would have admitted that resource.
+ */
+export function grantsAdmit(grants: Grants, permission: PermissionKind, resource: string): boolean {
+	let set = createPermissionSet(grants);
+	if (permission === "run") return isSuccess(set.checkRun(resource));
+	if (permission === "env") return isSuccess(set.checkEnv(resource));
+	if (permission === "host-fs") return isSuccess(set.checkHostFs(resource));
+	let parsed = splitNetResource(resource);
+	return isSuccess(set.checkNet(parsed.host, parsed.port));
+}
+
+/** Split a `host[:port]` denial resource back into host and optional port. */
+function splitNetResource(resource: string): { host: string; port: number | undefined } {
+	let separator = resource.lastIndexOf(":");
+	if (separator === -1) return { host: resource, port: undefined };
+	let suffix = resource.slice(separator + 1);
+	if (!/^\d+$/.test(suffix)) return { host: resource, port: undefined };
+	return { host: resource.slice(0, separator), port: Number(suffix) };
 }
 
 /**

@@ -18,10 +18,20 @@ import type { Result } from "@pkg/result";
 import { failure, isFailure, success } from "@pkg/result";
 
 import type { LoadedSuite } from "./loader";
+import type { ConfigPermissionEntry } from "./permissions";
 import type { Plugin } from "./plugin";
 
 import { LoadError, SpecError, ToolError } from "./errors";
 import { connectStdioPlugin } from "./transport-stdio";
+
+/** The permission families a `spec/config.jsonc` `permissions.allow` may name. */
+const PERMISSION_FAMILIES: ReadonlySet<string> = new Set([
+	"run",
+	"net",
+	"env",
+	"host-fs",
+	"plugins",
+]);
 
 /** Conventional config file names, tried in this order under the suite dir. */
 const CONFIG_NAMES = ["config.jsonc", "config.json"] as const;
@@ -60,11 +70,25 @@ export interface PluginDeclaration {
 
 /**
  * A parsed `spec/config.jsonc`: the suite's project configuration. The
- * `plugins` key lists the plugins a project declares, in file order.
+ * `plugins` key lists the plugins a project declares, in file order; the
+ * `permissions` key declares the grants the suite requires, which stay inert
+ * until the caller opts in with `--allow-config`.
  */
 export interface ProjectConfig {
 	/** The declared plugins; empty when no config exists or it declares none. */
 	plugins: PluginDeclaration[];
+	/** The suite's declared permission requirements; inert without `--allow-config`. */
+	permissions: PermissionsConfig;
+}
+
+/**
+ * The `permissions` key of `spec/config.jsonc`: a suite's declared grant
+ * requirements. Deny-by-default is preserved — these are inert until the caller
+ * passes `--allow-config`, so a cloned repo cannot self-grant.
+ */
+export interface PermissionsConfig {
+	/** The declared grants, in file order; empty when none are declared. */
+	allow: ConfigPermissionEntry[];
 }
 
 /** Splitting the config's declared plugins into those to launch and those refused. */
@@ -151,7 +175,7 @@ export async function loadProjectConfig(
 		if (isFailure(parsed)) return parsed;
 		return validateConfig(parsed.data, directory, path);
 	}
-	return success({ plugins: [] });
+	return success({ plugins: [], permissions: { allow: [] } });
 }
 
 /**
@@ -311,8 +335,10 @@ function validateConfig(
 	if (!isRecord(parsed)) {
 		return failure(new LoadError("load-error", `spec/config.jsonc ${path} must be a JSON object.`));
 	}
+	let permissions = validatePermissions(parsed.permissions, path);
+	if (isFailure(permissions)) return permissions;
 	let pluginsField = parsed.plugins;
-	if (pluginsField === undefined) return success({ plugins: [] });
+	if (pluginsField === undefined) return success({ plugins: [], permissions: permissions.data });
 	if (!isRecord(pluginsField)) {
 		return failure(
 			new LoadError(
@@ -327,7 +353,159 @@ function validateConfig(
 		if (isFailure(validated)) return validated;
 		plugins.push(validated.data);
 	}
-	return success({ plugins });
+	return success({ plugins, permissions: permissions.data });
+}
+
+/**
+ * Validate the `permissions` key into a {@link PermissionsConfig}. An absent
+ * key declares nothing; every malformed entry is a `usage-error` naming the
+ * offending entry, so a broken declaration is never silently ignored. This
+ * runs whenever the config is read, before any opt-in — a bad config is a bad
+ * config regardless of whether `--allow-config` is in play.
+ *
+ * @param field - The raw `permissions` value from the parsed config.
+ * @param path - The config file path, for diagnostics.
+ * @returns The validated permission entries, or the first malformed one.
+ */
+function validatePermissions(field: unknown, path: string): Result<PermissionsConfig, SpecError> {
+	if (field === undefined) return success({ allow: [] });
+	if (!isRecord(field)) {
+		return failure(
+			new SpecError(
+				"usage-error",
+				`spec/config.jsonc ${path} must map "permissions" to an object with an "allow" list.`,
+			),
+		);
+	}
+	let allowField = field.allow;
+	if (allowField === undefined) return success({ allow: [] });
+	if (!Array.isArray(allowField)) {
+		return failure(
+			new SpecError(
+				"usage-error",
+				`spec/config.jsonc ${path} must map "permissions.allow" to a list of grants.`,
+			),
+		);
+	}
+	let allow: ConfigPermissionEntry[] = [];
+	for (let entry of allowField) {
+		let validated = validatePermissionEntry(entry, path);
+		if (isFailure(validated)) return validated;
+		allow.push(validated.data);
+	}
+	return success({ allow });
+}
+
+/**
+ * Validate one `permissions.allow` entry: a bare family string (a whole-family
+ * grant) or a `[family, ...scopes]` tuple (a scoped grant). The family must be
+ * one the runtime knows; a tuple needs at least one non-empty string scope.
+ * Anything else is a `usage-error` naming the offending entry.
+ */
+function validatePermissionEntry(
+	entry: unknown,
+	path: string,
+): Result<ConfigPermissionEntry, SpecError> {
+	if (typeof entry === "string") {
+		if (!PERMISSION_FAMILIES.has(entry)) return failure(unknownFamily(entry, path));
+		return success({ family: entry as ConfigPermissionEntry["family"], scopes: [] });
+	}
+	if (Array.isArray(entry)) {
+		let family = entry[0];
+		if (typeof family !== "string" || !PERMISSION_FAMILIES.has(family)) {
+			return failure(unknownFamily(describeEntry(entry), path));
+		}
+		let scopes = entry.slice(1);
+		if (
+			scopes.length === 0 ||
+			!scopes.every((scope) => typeof scope === "string" && scope.length > 0)
+		) {
+			return failure(
+				new SpecError(
+					"usage-error",
+					`spec/config.jsonc ${path} declares a malformed grant ${describeEntry(entry)}: a tuple is [family, ...non-empty string scopes].`,
+				),
+			);
+		}
+		return success({
+			family: family as ConfigPermissionEntry["family"],
+			scopes: scopes as string[],
+		});
+	}
+	return failure(
+		new SpecError(
+			"usage-error",
+			`spec/config.jsonc ${path} declares a malformed grant ${describeEntry(entry)}: each allow entry is a family string or a [family, ...scopes] tuple.`,
+		),
+	);
+}
+
+/** A `usage-error` for an allow entry that names an unrecognized family. */
+function unknownFamily(entry: string, path: string): SpecError {
+	return new SpecError(
+		"usage-error",
+		`spec/config.jsonc ${path} declares an unknown permission family ${entry}: known families are run, net, env, host-fs, plugins.`,
+	);
+}
+
+/** Render an allow entry for a diagnostic, quoting strings and JSON-ing the rest. */
+function describeEntry(entry: unknown): string {
+	if (typeof entry === "string") return `"${entry}"`;
+	try {
+		return JSON.stringify(entry);
+	} catch {
+		return String(entry);
+	}
+}
+
+/**
+ * The plugin launch grant a config's `permissions.allow` declares. A bare
+ * `"plugins"` entry authorizes every declared plugin; a `["plugins", ...]`
+ * tuple names the namespaces. Applied only when `--allow-config` opts in, and
+ * unioned with any `--allow-plugins` flag exactly as two flags would union.
+ *
+ * @param entries - The validated allow-list entries.
+ * @returns The launch grant the config declares.
+ */
+export function pluginGrantFromConfig(
+	entries: readonly ConfigPermissionEntry[],
+): PluginLaunchGrant {
+	let grant: PluginLaunchGrant = { mode: "denied" };
+	for (let entry of entries) {
+		if (entry.family !== "plugins") continue;
+		grant = entry.scopes.length === 0 ? { mode: "all" } : widenLaunchGrant(grant, entry.scopes);
+	}
+	return grant;
+}
+
+/**
+ * Union two plugin launch grants, widening `base` by whatever `extra` adds —
+ * the launch-grant analogue of the capability-grant union, used to fold a
+ * config's declared `plugins` grant into the caller's `--allow-plugins` grant.
+ *
+ * @param base - The caller's `--allow-plugins` grant.
+ * @param extra - The config's declared plugin launch grant.
+ * @returns The unioned launch grant.
+ */
+export function mergePluginGrants(
+	base: PluginLaunchGrant,
+	extra: PluginLaunchGrant,
+): PluginLaunchGrant {
+	if (extra.mode === "denied") return base;
+	if (extra.mode === "all") return { mode: "all" };
+	return widenLaunchGrant(base, extra.namespaces);
+}
+
+/**
+ * Whether a plugin launch grant authorizes launching a namespace — exposed so
+ * the CLI can decide the `--allow-config` hint for a plugin-launch denial.
+ *
+ * @param grant - The launch grant to test.
+ * @param namespace - The namespace being launched.
+ * @returns Whether the grant admits it.
+ */
+export function pluginGrantAdmits(grant: PluginLaunchGrant, namespace: string): boolean {
+	return grantAdmits(grant, namespace);
 }
 
 /** Validate one namespace → declaration entry from the config's `plugins` key. */

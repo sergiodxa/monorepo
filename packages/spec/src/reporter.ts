@@ -44,6 +44,8 @@ interface DenialGrouping {
 	resource: string;
 	/** The exact `spec run --allow-*` flag that would grant it. */
 	remedy: string;
+	/** An extra line after the remedy, e.g. the `--allow-config` hint. */
+	hint?: string;
 }
 
 /**
@@ -67,6 +69,8 @@ interface DenialGroup {
 	resources: string[];
 	/** The remedy shared by every denial in the group. */
 	remedy: string;
+	/** An extra line after the remedy, shared by the group when present. */
+	hint?: string;
 	/** The tests that failed for this grant, in execution order. */
 	tests: AffectedTest[];
 }
@@ -145,6 +149,9 @@ export function reportFatal(error: SpecError, sink: Sink): void {
 	if (error.remedy !== undefined) {
 		sink.write(`${DETAIL_INDENT}remedy: ${error.remedy}\n`);
 	}
+	if (error.hint !== undefined) {
+		sink.write(`${DETAIL_INDENT}${error.hint}\n`);
+	}
 }
 
 /**
@@ -169,12 +176,16 @@ function failureLocation(result: TestResult, sources: Map<string, SourceFile>): 
  */
 function detailLines(error: SpecError): string[] {
 	let denial = denialBlock(error);
-	if (denial !== undefined) return denial;
+	if (denial !== undefined) {
+		if (error.hint !== undefined) return [...denial, "", error.hint];
+		return denial;
+	}
 	let lines = [`${error.code}: ${error.message}`];
 	let comparison = error as SpecError & ComparisonFields;
 	if (comparison.expected !== undefined) pushLabeledValue(lines, "expected", comparison.expected);
 	if (comparison.observed !== undefined) pushLabeledValue(lines, "observed", comparison.observed);
 	if (error.remedy !== undefined) lines.push(`remedy: ${error.remedy}`);
+	if (error.hint !== undefined) lines.push(error.hint);
 	return lines;
 }
 
@@ -192,7 +203,7 @@ function groupableDenial(error: SpecError): DenialGrouping | undefined {
 	let resource = denial.resource;
 	let remedy = error.remedy;
 	if (permission === undefined || resource === undefined || remedy === undefined) return undefined;
-	return { permission, resource, remedy };
+	return { permission, resource, remedy, hint: error.hint };
 }
 
 /**
@@ -208,7 +219,13 @@ function accumulateDenial(
 ): void {
 	let group = byRemedy.get(grouping.remedy);
 	if (group === undefined) {
-		group = { permission: grouping.permission, resources: [], remedy: grouping.remedy, tests: [] };
+		group = {
+			permission: grouping.permission,
+			resources: [],
+			remedy: grouping.remedy,
+			hint: grouping.hint,
+			tests: [],
+		};
 		byRemedy.set(grouping.remedy, group);
 		groups.push(group);
 	}
@@ -234,6 +251,7 @@ function groupDetailLines(group: DenialGroup): string[] {
 	let lines = ["", "The spec attempted to reach:"];
 	for (let resource of group.resources) lines.push(`> ${resource}`);
 	lines.push("", "Re-run with an appropriate permission, for example:", `> ${group.remedy}`);
+	if (group.hint !== undefined) lines.push("", group.hint);
 	lines.push("", "Affected tests:");
 	for (let test of group.tests) lines.push(`- ${test.title} (${test.location})`);
 	return lines;

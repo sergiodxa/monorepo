@@ -148,6 +148,39 @@ describe(reportSuite, () => {
 		);
 	});
 
+	test("renders an error hint after the remedy line in a denial block", () => {
+		let error = new PermissionDeniedError("run", "cli.run", "spec run --allow-run");
+		error.hint = "re-run with --allow-config to apply the project's declared permissions.";
+		let sink = new BufferSink();
+		let suite: SuiteResult = {
+			results: [failed("runs echo", "spec/cli.spec", error, 3)],
+			passed: 0,
+			failed: 1,
+		};
+
+		reportSuite(suite, new Map<string, SourceFile>(), sink);
+
+		expect(sink.text).toBe(
+			[
+				"✗ Permission denied: run (1 test)",
+				"",
+				"  The spec attempted to reach:",
+				"  > cli.run",
+				"",
+				"  Re-run with an appropriate permission, for example:",
+				"  > spec run --allow-run",
+				"",
+				"  re-run with --allow-config to apply the project's declared permissions.",
+				"",
+				"  Affected tests:",
+				"  - runs echo (spec/cli.spec)",
+				"",
+				"0 passed, 1 failed (3ms)",
+				"",
+			].join("\n"),
+		);
+	});
+
 	test("collapses denials sharing a remedy into one block listing every test", () => {
 		let sink = new BufferSink();
 		let suite: SuiteResult = {

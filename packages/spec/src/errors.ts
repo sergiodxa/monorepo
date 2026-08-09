@@ -38,6 +38,13 @@ export class SpecError extends Error {
 	span?: Span;
 	/** An actionable suggestion, e.g. the exact `--allow-*` flag to add. */
 	remedy?: string;
+	/**
+	 * An extra, situational line appended after the remedy — set by the CLI when
+	 * it has context the failing code lacked, such as that the project's
+	 * `spec/config.jsonc` would have granted a denied permission under
+	 * `--allow-config`. Never weakens the primary {@link remedy}.
+	 */
+	hint?: string;
 
 	/**
 	 * @param code - Stable failure category.

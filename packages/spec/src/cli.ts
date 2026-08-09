@@ -9,26 +9,40 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
+import type { Result } from "@pkg/result";
+
+import { failure, isFailure, success } from "@pkg/result";
 
 import type { Sink } from "./diagnostics";
+import type { PermissionKind } from "./permissions";
 import type { Plugin } from "./plugin";
 import type { SourceFile } from "./source";
 
 import { SpecError } from "./errors";
 import { loadSuite } from "./loader";
-import { parseGrants } from "./permissions";
+import { grantsAdmit, grantsFromConfig, mergeGrants, parseGrants } from "./permissions";
 import {
 	connectDeclaredPlugins,
 	deniedReferences,
 	disposeAll,
 	launchDeniedError,
 	loadProjectConfig,
+	mergePluginGrants,
 	parsePluginGrant,
 	planPluginLaunch,
+	pluginGrantAdmits,
+	pluginGrantFromConfig,
 } from "./project-config";
 import { reportFatal, reportSuite } from "./reporter";
 import { runSuite } from "./runner";
+
+/**
+ * The line appended to a permission denial when the project's
+ * `spec/config.jsonc` would have granted it under `--allow-config`. Points at
+ * the one-flag path without ever weakening the primary `--allow-*` remedy.
+ */
+const CONFIG_HINT =
+	"This project's spec/config.jsonc declares this permission; re-run with --allow-config to apply the project's declared permissions.";
 
 /** What `spec --help` prints. */
 const USAGE = `spec — executable specifications
@@ -42,6 +56,7 @@ Permissions (denied unless granted):
   --allow-env[=VAR,...]       Read environment variables (scoped to names)
   --allow-host-fs[=dir,...]   Touch the host filesystem outside the workspace
   --allow-plugins[=ns,...]    Launch project-declared plugins (from spec/config.jsonc)
+  --allow-config              Apply the permissions spec/config.jsonc declares
 `;
 
 /**
@@ -63,22 +78,32 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		return 2;
 	}
 
-	// `--allow-plugins` authorizes launching manifest plugins; it is not one of
+	// `--allow-config` opts into the permissions the project's spec/config.jsonc
+	// declares. It is a bare flag, not a capability family, so it is peeled off
+	// first — before the plugin and permission parsers, which would not know it.
+	let configOptIn = parseConfigOptIn(argv.slice(1));
+	if (isFailure(configOptIn)) {
+		reportFatal(configOptIn.error, sink);
+		return 2;
+	}
+	let { allowConfig, remaining: afterConfigOptIn } = configOptIn.data;
+
+	// `--allow-plugins` authorizes launching declared plugins; it is not one of
 	// the four capability families, so it is peeled off before the permission
 	// parser (which would reject it as an unknown `--allow-*` flag) sees it.
-	let pluginParsed = parsePluginGrant(argv.slice(1));
+	let pluginParsed = parsePluginGrant(afterConfigOptIn);
 	if (isFailure(pluginParsed)) {
 		reportFatal(pluginParsed.error, sink);
 		return 2;
 	}
-	let { grant: pluginGrant, remaining: afterPluginGrant } = pluginParsed.data;
+	let { grant: cliPluginGrant, remaining: afterPluginGrant } = pluginParsed.data;
 
 	let parsed = parseGrants(afterPluginGrant);
 	if (isFailure(parsed)) {
 		reportFatal(parsed.error, sink);
 		return 2;
 	}
-	let { grants, remaining } = parsed.data;
+	let { grants: cliGrants, remaining } = parsed.data;
 	let unknown = remaining.filter((argument) => argument.startsWith("-"));
 	if (unknown.length > 0) {
 		reportFatal(new SpecError("usage-error", `Unknown flag: ${unknown[0]}`), sink);
@@ -101,6 +126,20 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		reportFatal(config.error, sink);
 		return 2;
 	}
+
+	// Deny-by-default with declare + opt-in: the config's declared grants apply
+	// only when `--allow-config` is passed, and then they *union* with the CLI's
+	// own flags (flags always add to, never subtract from, the config set).
+	// Without the flag the declaration is inert, so a cloned repo cannot
+	// self-grant. The declared plugin launch grant is folded in the same way.
+	let configEntries = config.data.permissions.allow;
+	let configGrants = grantsFromConfig(configEntries);
+	let grants = allowConfig ? mergeGrants(cliGrants, configGrants) : cliGrants;
+	let configPluginGrant = pluginGrantFromConfig(configEntries);
+	let pluginGrant = allowConfig
+		? mergePluginGrants(cliPluginGrant, configPluginGrant)
+		: cliPluginGrant;
+
 	let { launch, deniedNamespaces } = planPluginLaunch(config.data, pluginGrant);
 	if (deniedNamespaces.length > 0) {
 		let loaded = await loadSuite(root);
@@ -110,7 +149,13 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		}
 		let referenced = deniedReferences(loaded.data, deniedNamespaces);
 		if (referenced.length > 0) {
-			reportFatal(launchDeniedError(referenced), sink);
+			let error = launchDeniedError(referenced);
+			// If the caller has not opted in but the config *would* authorize
+			// launching every refused plugin, point at the one-flag path too.
+			if (!allowConfig && referenced.every((ns) => pluginGrantAdmits(configPluginGrant, ns))) {
+				error.hint = CONFIG_HINT;
+			}
+			reportFatal(error, sink);
 			return 2;
 		}
 	}
@@ -134,6 +179,19 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		return 2;
 	}
 
+	// When the caller has not opted in, annotate any denial the config *would*
+	// have granted with the one-flag hint — computed here because the CLI is the
+	// only layer that holds both the run's denials and the loaded config.
+	if (!allowConfig) {
+		for (let result of run.data.results) {
+			let error = result.error;
+			if (error === undefined || error.code !== "permission-denied") continue;
+			let denial = error as SpecError & { permission?: PermissionKind; resource?: string };
+			if (denial.permission === undefined || denial.resource === undefined) continue;
+			if (grantsAdmit(configGrants, denial.permission, denial.resource)) error.hint = CONFIG_HINT;
+		}
+	}
+
 	let sources = new Map<string, SourceFile>();
 	for (let result of run.data.results) {
 		// A failure inside a cross-file command or fixture is anchored to the
@@ -151,6 +209,38 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 	}
 	reportSuite(run.data, sources, sink);
 	return run.data.failed > 0 ? 1 : 0;
+}
+
+/**
+ * Peel the bare `--allow-config` flag out of an argument list. It opts into the
+ * permissions the project's `spec/config.jsonc` declares; it takes no value, so
+ * a `--allow-config=…` form is a usage error. Every other argument passes
+ * through untouched for the plugin and permission parsers.
+ *
+ * @param args - The raw CLI arguments after `run`.
+ * @returns Whether the opt-in was given, plus the remaining arguments.
+ */
+function parseConfigOptIn(
+	args: string[],
+): Result<{ allowConfig: boolean; remaining: string[] }, SpecError> {
+	let allowConfig = false;
+	let remaining: string[] = [];
+	for (let argument of args) {
+		if (argument === "--allow-config") {
+			allowConfig = true;
+			continue;
+		}
+		if (argument.startsWith("--allow-config=")) {
+			return failure(
+				new SpecError(
+					"usage-error",
+					"--allow-config takes no value; it is a bare flag that applies the permissions spec/config.jsonc declares.",
+				),
+			);
+		}
+		remaining.push(argument);
+	}
+	return success({ allowConfig, remaining });
 }
 
 if (import.meta.main) {

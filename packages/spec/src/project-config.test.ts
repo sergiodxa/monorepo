@@ -28,8 +28,10 @@ import {
 	deniedReferences,
 	launchDeniedError,
 	loadProjectConfig,
+	mergePluginGrants,
 	parsePluginGrant,
 	planPluginLaunch,
+	pluginGrantFromConfig,
 } from "./project-config";
 import { connectStdioPlugin } from "./transport-stdio";
 
@@ -201,6 +203,7 @@ test("planPluginLaunch partitions declarations by the grant", () => {
 			{ namespace: "a", command: ["bun", "a.ts"] },
 			{ namespace: "b", command: ["bun", "b.ts"] },
 		],
+		permissions: { allow: [] },
 	};
 
 	let all = planPluginLaunch(config, { mode: "all" });
@@ -349,3 +352,102 @@ test(
 	},
 	CLI_TIMEOUT_MS,
 );
+
+test("loadProjectConfig parses permissions.allow into validated entries", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(
+			join(dir, "config.jsonc"),
+			`{
+				"permissions": {
+					"allow": ["run", ["env", "DATABASE_URL"], ["net", "localhost:3000", "api.example.com"]],
+				},
+			}`,
+			"utf8",
+		);
+		let config = await loadProjectConfig(dir);
+		expect(isSuccess(config)).toBe(true);
+		if (!isSuccess(config)) throw new Error("config did not load");
+		expect(config.data.permissions.allow).toEqual([
+			{ family: "run", scopes: [] },
+			{ family: "env", scopes: ["DATABASE_URL"] },
+			{ family: "net", scopes: ["localhost:3000", "api.example.com"] },
+		]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("loadProjectConfig defaults permissions to an empty allow list", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(join(dir, "config.json"), JSON.stringify({ plugins: {} }), "utf8");
+		let config = await loadProjectConfig(dir);
+		expect(isSuccess(config) && config.data.permissions.allow).toEqual([]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("loadProjectConfig rejects an unknown permission family, naming it", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(join(dir, "config.json"), JSON.stringify({ permissions: { allow: ["bogus"] } }));
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.code).toBe("usage-error");
+		expect(isFailure(config) && config.error.message).toContain("bogus");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("loadProjectConfig rejects a malformed grant tuple", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(
+			join(dir, "config.json"),
+			JSON.stringify({ permissions: { allow: [["run"]] } }),
+			"utf8",
+		);
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.code).toBe("usage-error");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("loadProjectConfig rejects a non-array allow", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(
+			join(dir, "config.json"),
+			JSON.stringify({ permissions: { allow: "run" } }),
+			"utf8",
+		);
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.code).toBe("usage-error");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("pluginGrantFromConfig reads the plugins family, bare and scoped", () => {
+	expect(pluginGrantFromConfig([{ family: "plugins", scopes: [] }])).toEqual({ mode: "all" });
+	expect(pluginGrantFromConfig([{ family: "plugins", scopes: ["greet"] }])).toEqual({
+		mode: "scoped",
+		namespaces: ["greet"],
+	});
+	// A non-plugins family contributes nothing to the launch grant.
+	expect(pluginGrantFromConfig([{ family: "run", scopes: [] }])).toEqual({ mode: "denied" });
+});
+
+test("mergePluginGrants unions a CLI launch grant with the config's", () => {
+	expect(
+		mergePluginGrants({ mode: "scoped", namespaces: ["a"] }, { mode: "scoped", namespaces: ["b"] }),
+	).toEqual({ mode: "scoped", namespaces: ["a", "b"] });
+	expect(mergePluginGrants({ mode: "denied" }, { mode: "all" })).toEqual({ mode: "all" });
+	expect(mergePluginGrants({ mode: "scoped", namespaces: ["a"] }, { mode: "denied" })).toEqual({
+		mode: "scoped",
+		namespaces: ["a"],
+	});
+});

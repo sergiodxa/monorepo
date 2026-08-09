@@ -16,10 +16,16 @@ import type { Result } from "@pkg/result";
 
 import { isSuccess, unwrap } from "@pkg/result";
 
-import type { Grants } from "./permissions";
+import type { ConfigPermissionEntry, Grants } from "./permissions";
 
 import { PermissionDeniedError } from "./errors";
-import { createPermissionSet, parseGrants } from "./permissions";
+import {
+	createPermissionSet,
+	grantsAdmit,
+	grantsFromConfig,
+	mergeGrants,
+	parseGrants,
+} from "./permissions";
 
 /**
  * Narrow a result to its error, failing the test when it succeeded.
@@ -302,5 +308,90 @@ describe("createPermissionSet", () => {
 				rmSync(real, { recursive: true, force: true });
 			}
 		});
+	});
+});
+
+/** Build validated config allow entries tersely. */
+function entry(
+	family: ConfigPermissionEntry["family"],
+	...scopes: string[]
+): ConfigPermissionEntry {
+	return { family, scopes };
+}
+
+describe("grantsFromConfig", () => {
+	test("a bare family entry grants the whole family", () => {
+		expect(grantsFromConfig([entry("run")])).toEqual(grants({ run: { mode: "all" } }));
+	});
+
+	test("a scoped entry grants exactly its scopes", () => {
+		expect(grantsFromConfig([entry("env", "DATABASE_URL")])).toEqual(
+			grants({ env: { mode: "scoped", scopes: ["DATABASE_URL"] } }),
+		);
+	});
+
+	test("host-fs maps onto the hostFs key", () => {
+		expect(grantsFromConfig([entry("host-fs", "/opt")])).toEqual(
+			grants({ hostFs: { mode: "scoped", scopes: ["/opt"] } }),
+		);
+	});
+
+	test("repeated scoped entries for a family union their scopes", () => {
+		expect(grantsFromConfig([entry("run", "echo"), entry("run", "pwd", "echo")])).toEqual(
+			grants({ run: { mode: "scoped", scopes: ["echo", "pwd"] } }),
+		);
+	});
+
+	test("a plugins entry contributes no capability grant", () => {
+		expect(grantsFromConfig([entry("plugins", "greet")])).toEqual(grants());
+	});
+});
+
+describe("mergeGrants", () => {
+	test("a config grant fills a family the CLI left denied", () => {
+		let merged = mergeGrants(grants(), grants({ run: { mode: "all" } }));
+		expect(merged).toEqual(grants({ run: { mode: "all" } }));
+	});
+
+	test("scoped CLI and scoped config grants union their scopes", () => {
+		let merged = mergeGrants(
+			grants({ run: { mode: "scoped", scopes: ["pwd"] } }),
+			grants({ run: { mode: "scoped", scopes: ["echo"] } }),
+		);
+		expect(merged.run).toEqual({ mode: "scoped", scopes: ["pwd", "echo"] });
+	});
+
+	test("a grant-all on either side wins, and neither side ever subtracts", () => {
+		expect(mergeGrants(grants({ net: { mode: "all" } }), grants()).net).toEqual({ mode: "all" });
+		expect(
+			mergeGrants(
+				grants({ net: { mode: "scoped", scopes: ["a"] } }),
+				grants({ net: { mode: "all" } }),
+			).net,
+		).toEqual({ mode: "all" });
+	});
+});
+
+describe("grantsAdmit", () => {
+	test("run matches by basename against the config's scopes", () => {
+		let g = grants({ run: { mode: "scoped", scopes: ["echo"] } });
+		expect(grantsAdmit(g, "run", "echo")).toBe(true);
+		expect(grantsAdmit(g, "run", "node")).toBe(false);
+	});
+
+	test("a grant-all admits the coarse-gate tool resource", () => {
+		expect(grantsAdmit(grants({ run: { mode: "all" } }), "run", "cli.run")).toBe(true);
+	});
+
+	test("net splits a host:port resource and honors a pinned port", () => {
+		let g = grants({ net: { mode: "scoped", scopes: ["api.example.com:443"] } });
+		expect(grantsAdmit(g, "net", "api.example.com:443")).toBe(true);
+		expect(grantsAdmit(g, "net", "api.example.com:80")).toBe(false);
+	});
+
+	test("env admits the exact name only", () => {
+		let g = grants({ env: { mode: "scoped", scopes: ["DATABASE_URL"] } });
+		expect(grantsAdmit(g, "env", "DATABASE_URL")).toBe(true);
+		expect(grantsAdmit(g, "env", "OTHER")).toBe(false);
 	});
 });
