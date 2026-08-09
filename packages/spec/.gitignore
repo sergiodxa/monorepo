@@ -1,0 +1,3 @@
+# Compiled standalone CLI produced by `bun run build` — a ~60MB self-contained
+# binary that is regenerated from source, never committed.
+bin/
