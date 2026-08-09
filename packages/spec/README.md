@@ -651,9 +651,9 @@ Specs then name `greet.hello` and never a path, so they stay portable across
 machines and installs. A third-party plugin is the same, pointing `command` at
 its installed binary or entry file.
 
-Declaring a plugin is **not** permission to run it: launching a manifest plugin
+Declaring a plugin is **not** permission to run it: launching a declared plugin
 executes code the project ships, so it is deny-by-default. `spec run` starts a
-manifest plugin only when the caller passes `--allow-plugins` (all declared) or
+declared plugin only when the caller passes `--allow-plugins` (all declared) or
 `--allow-plugins=greet` (named). Without the grant, a suite that imports a
 declared namespace is refused before any test runs, with a permission-style
 diagnostic naming `--allow-plugins`; a declared plugin the suite never imports
@@ -663,6 +663,45 @@ capability families, `--allow-plugins` gates _process launch_, not what a
 running tool may reach, so it is parsed by the CLI, not the permission engine.
 See [docs/writing-plugins.md](./docs/writing-plugins.md) for the full model and
 `examples/plugin-loading/` for a runnable showcase.
+
+### Pattern: Declaring a suite's permissions in spec/config.jsonc
+
+A suite can declare the grants it needs in `spec/config.jsonc`'s `permissions`
+key, so the operator does not have to remember the exact `--allow-*` line:
+
+```jsonc
+// spec/config.jsonc
+{
+	"permissions": {
+		// A bare string is a whole-family grant (like a bare --allow-<family>);
+		// a [family, ...scopes] tuple is a scoped grant (like --allow-<family>=…).
+		"allow": ["run", ["env", "DATABASE_URL"], ["net", "localhost:3000"]],
+	},
+	"plugins": {
+		/* … as above … */
+	},
+}
+```
+
+The families are the same four capabilities plus `plugins`: `"run"` ≡
+`--allow-run`, `["env","DATABASE_URL"]` ≡ `--allow-env=DATABASE_URL`,
+`["net","localhost:3000","api.example.com"]` ≡
+`--allow-net=localhost:3000,api.example.com`, and `"plugins"` (or
+`["plugins","greet"]`) ≡ `--allow-plugins`. An unknown family or a malformed
+entry is a load error naming it — a broken declaration is never silently
+ignored.
+
+The declaration is **declare + opt-in**, not ambient authority. `spec run` with
+no opt-in applies **nothing** from `permissions.allow`; the suite still fails
+closed with the normal permission-denied diagnostic. The caller opts in with a
+single bare flag, `--allow-config`, and then the effective grants are the
+config's declared set **unioned** with any explicit `--allow-*` flags — CLI
+flags always still work and only ever add to the config set, never subtract. So
+a cloned or untrusted repo cannot self-grant: nothing in the file takes effect
+until an operator who has read it adds `--allow-config`. As a convenience, when
+a permission is denied and the project's `spec/config.jsonc` **would** have
+granted it, the denial adds one line pointing at `--allow-config`; when the
+config would not grant it, the usual `--allow-<family>=…` remedy stands.
 
 ### Pattern: Least-privilege flag recipes
 
@@ -694,6 +733,10 @@ spec run spec --allow-host-fs=/opt/fixtures
 # Launch project plugins declared in spec/config.jsonc (not a capability grant,
 # but the launch gate — see the project-config pattern above):
 spec run spec --allow-plugins=greet
+
+# Apply the permissions the project's spec/config.jsonc declares (opt-in; unions
+# with any explicit --allow-* flags you also pass):
+spec run spec --allow-config
 
 # Combine grants; scoped flags union when repeated:
 spec run spec --allow-run=bun,git --allow-net=localhost
