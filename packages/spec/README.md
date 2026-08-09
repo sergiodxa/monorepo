@@ -1,48 +1,60 @@
 # @pkg/spec
 
-The executable specification runtime: a small Given/When/Then language for
-behavioral suites, run under deny-by-default permissions in isolated per-test
-workspaces.
+Write down how your app should behave, then run it. `spec` is an **executable
+specification runner**: you describe behavior in `.spec` files — setup, action,
+expectation — and it runs each one against your real app, in an isolated
+workspace, under permissions you grant explicitly. The specs don't care _how_
+the app is built (a CLI, an HTTP server, a database, a web page); they only
+describe what it should do, so they stay true as the implementation changes.
 
 ## Overview
 
-Specifications written as prose drift away from the behavior they describe.
-This package makes them executable: a suite is a directory of `.spec` files
-written in a deliberately tiny language — no `if`, no loops, no operators —
-whose tests declare setup (`given`), action (`when`), and verification
-(`then`) as linear, diffable statements. The `spec` CLI loads the suite, runs
-every test in its own freshly created temporary workspace, and reports
-structured results with exact file-and-line attribution. The language is
-defined normatively in [GRAMMAR.md](./GRAMMAR.md); the system it implements
-was designed by
-[ADR-001](../../docs/adr/spec/ADR-001-executable-specification-language.md)
-through
-[ADR-008](../../docs/adr/spec/ADR-008-environments-and-compatibility.md) and
-scoped for v1 by
-[ADR-009](../../docs/adr/spec/ADR-009-v1-typescript-implementation.md).
+A suite is a directory of `.spec` files (conventionally `spec/`). Each file is
+written in a deliberately tiny language — no `if`, no loops, no operators — so a
+spec reads as a linear, diffable list of steps. A `test` declares its setup in
+`given`, its action in `when`, and its checks in `then`. The `spec` CLI loads
+the suite, runs every test in its **own fresh temporary directory**, and prints
+one line per test plus a summary.
 
-Two architectural decisions shape everything here. First, capability comes
-from exactly one seam: the typed-tool `Plugin` interface. The built-in `fs`,
-`cli`, `http`, `browser`, and `db` capabilities, external processes speaking
-the NDJSON-over-stdio transport (loaded per project or installed as a
-third-party package), and in-process test fakes all implement it, and the
-executor never knows which kind it is talking to. Second, permissions are
-denied by default and enforced centrally: a spec that spawns a process,
-touches the network, reads an environment variable, or leaves its workspace
-needs an explicit `--allow-*` grant, and every denial names the exact flag
-that would grant it. Plugin self-restraint is never load-bearing.
+Two rules shape everything:
 
-Every fallible function returns a [`Result`](/packages/result) — parse
-errors, permission denials, and tool failures are values, never throws. Test
-failures are outcomes, not errors: the CLI exits 0 when everything passed, 1
-when a test failed, and 2 for usage or load errors.
+- **Deny by default.** A test that spawns a process, reaches the network, reads
+  an environment variable, or touches files outside its workspace needs an
+  explicit `--allow-*` grant. Every denial tells you the exact flag that would
+  allow it.
+- **Isolated per test.** Each test gets its own workspace, created before it
+  runs and removed after. Tests never see each other's files, so order never
+  matters.
 
-## Usage
+Exit codes are the contract to script against: **0** everything passed, **1** a
+test failed, **2** a usage or load error (a bad flag, an unreadable suite, a
+parse error).
 
-### Running a suite from the CLI
+## Quickstart
 
-A suite is a directory (conventionally `spec/`) scanned recursively for
-`.spec` files. Given `spec/build.spec`:
+### Get the CLI
+
+Inside this repo you can run the CLI straight from source — the dev entry point:
+
+```sh
+bun packages/spec/src/cli.ts run spec
+```
+
+For everyday use, compile a single self-contained executable that starts fast
+and runs anywhere (no repo, no `node_modules` beside it):
+
+```sh
+cd packages/spec
+bun run build          # → packages/spec/bin/spec
+./bin/spec run spec
+```
+
+Put `bin/spec` on your `PATH` and it's just `spec`. The rest of this guide
+writes `spec`; use whichever launcher you have.
+
+### Write a suite
+
+Create `spec/greeting.spec`:
 
 ```
 use fs
@@ -66,34 +78,31 @@ test "the generated config is on disk" {
 		write "package.json" { name: "demo", type: "module" }
 	}
 	then {
+		expect file "package.json" exists
 		expect file "package.json" contains "\"type\": \"module\""
 	}
 }
 ```
 
-Each test runs in its own temporary directory: `write` creates files there,
-`run` starts child processes there, and the two tests never see each other's
-files. Spawning `bun` needs a process grant, so run the suite with exactly
-that:
+### Run it
+
+`write` creates files in the test's workspace and `run` starts processes there.
+Spawning `bun` is a privileged act, so grant exactly that one executable:
 
 ```sh
 spec run spec --allow-run=bun
 ```
 
-The package declares `spec` as its binary; inside this repository you can
-equivalently invoke `bun packages/spec/src/cli.ts run spec --allow-run=bun`.
-Expected output (exit code 0):
-
 ```
 ✓ the script prints its greeting
 ✓ the generated config is on disk
 
-2 passed, 0 failed (16ms)
+2 passed, 0 failed (21ms)
 ```
 
-Without the grant, that test fails before `bun` is ever spawned. Every test
-denied for the same missing grant is collected into one block that names the
-flag to add and lists the tests it affected (exit code 1):
+Drop the grant and the process-spawning test fails **before** `bun` is ever
+launched. Every test denied for the same missing grant collapses into one block
+that names the flag to add and lists the tests it affected:
 
 ```
 ✓ the generated config is on disk
@@ -107,256 +116,232 @@ flag to add and lists the tests it affected (exit code 1):
   > spec run --allow-run
 
   Affected tests:
-  - the script prints its greeting (spec/build.spec:9)
+  - the script prints its greeting (spec/greeting.spec:9)
 
-1 passed, 1 failed (2ms)
+1 passed, 1 failed (1ms)
 ```
 
-### Running a suite programmatically
+`spec run` takes a **directory** (default `./spec`); it scans it recursively for
+`.spec` files.
 
-`runSuite` is the same pipeline the CLI drives: load, resolve, execute each
-test in a fresh workspace, and return structured results.
+## The language by example
 
-```typescript
-import { isFailure } from "@pkg/result";
-import { parseGrants, reportFatal, reportSuite, runSuite } from "@pkg/spec";
-import type { Sink, SourceFile } from "@pkg/spec";
+### Tests and phases
 
-let sink: Sink = { write: (text) => void process.stdout.write(text) };
+A `test` has up to three phase blocks, always in this order: `given` (arrange),
+`when` (act), `then` (assert). Each is optional, but you can't reorder them.
+Lines end statements — there are no semicolons. `#` starts a comment to
+end of line (a `#` inside a string is just text).
 
-let parsed = parseGrants(["--allow-run=bun"]);
-if (isFailure(parsed)) {
-	reportFatal(parsed.error, sink);
-	process.exit(2);
+```
+test "a write is read back verbatim" {
+	given {
+		write "notes.txt" "remember the milk"   # arrange
+	}
+	when {
+		let content = read "notes.txt"           # act, capture a value
+	}
+	then {
+		expect content "remember the milk"       # assert
+	}
 }
+```
 
-let run = await runSuite({ root: "spec", grants: parsed.data.grants });
-if (isFailure(run)) {
-	// The suite never started: unreadable directory, a parse error, or a
-	// duplicate definition.
-	reportFatal(run.error, sink);
-	process.exit(2);
+### `expect`
+
+`expect` has three forms:
+
+```
+expect content "remember the milk"   # two values: deep structural equality
+expect true                          # one value: it must be true
+expect file "notes.txt" exists       # observable: assert straight from a capability
+```
+
+The observable form reads the world through a capability (`file … exists`,
+`file … contains`, `directory … exists`, `browser.heading …`) and passes when
+that observation holds.
+
+### `let` and references
+
+`let` binds the result of a step. Reach into a returned object with a dotted
+reference:
+
+```
+when {
+	let result = run "bun" "build.js"
 }
-
-for (let result of run.data.results) {
-	// result.title, result.file, result.status, result.durationMs, and
-	// result.error (a structured SpecError) when the test failed.
+then {
+	expect result.exit_code 0
+	expect result.stdout "built\n"
 }
-
-let sources = new Map<string, SourceFile>();
-reportSuite(run.data, sources, sink);
-process.exit(run.data.failed > 0 ? 1 : 0);
 ```
 
-`reportSuite` renders human output through the `Sink`; the `sources` map
-(file path to `SourceFile`) lets it turn error spans into `file:line`
-locations, and failures degrade to the bare file path for files it does not
-contain.
+One thing to know: a **bare word** in tool-argument position is a symbol, not a
+variable. `write "f" content` hands the tool the literal word `content`. To pass
+a bound value to a tool, use a dotted reference (`result.stdout`), boxing it in
+an object if needed (`let x = { path: p }` then `write x.path …`).
 
-## API
+### `eventually`
 
-### `runSuite(options: RunOptions): Promise<Result<SuiteResult, SpecError>>`
-
-Load and execute a whole suite. Load failures fail the run before any test
-starts; test failures do not — they are outcomes inside the returned
-`SuiteResult`. Every test gets a fresh isolated workspace that is cleaned up
-when the test ends.
-
-**Parameters:**
-
-- `options.root`: Directory scanned recursively for `.spec` files.
-- `options.grants`: The caller's permission grants (see `parseGrants`).
-- `options.plugins`: Optional extra plugins beyond the built-in `fs`, `cli`,
-  `http`, `browser`, and `db` — the seam the CLI uses to inject project and
-  third-party plugins it launched over the stdio transport.
-
-**Returns:**
-
-- A `SuiteResult` with per-test outcomes and pass/fail counts, or the
-  `SpecError` that prevented the run entirely.
-
-**Example:**
-
-```typescript
-let run = await runSuite({ root: "spec", grants });
-```
-
-### `parseGrants(args: string[]): Result<{ grants: Grants; remaining: string[] }, SpecError>`
-
-Parse the `--allow-*` flags out of an argument list. A bare flag
-(`--allow-net`) grants its whole family, `--allow-run=a,b` grants an explicit
-scope list, an absent flag leaves the family denied, and repeated scoped
-flags union their scopes. Non-permission arguments pass through in
-`remaining` with their order preserved. Unknown `--allow-*` flags and empty
-scope lists are usage errors.
-
-**Example:**
-
-```typescript
-let parsed = parseGrants(["--allow-run=bun", "spec"]);
-// parsed.data.grants.run → { mode: "scoped", scopes: ["bun"] }
-// parsed.data.remaining → ["spec"]
-```
-
-### `createPermissionSet(grants: Grants): PermissionSet`
-
-Build the runtime's single enforcement authority from a parsed grant set.
-Every check denies by default, and every denial names the permission, the
-attempted resource, and the exact `spec run --allow-*` flag that would grant
-it. The checks: `checkRun` matches an executable's basename against the run
-scopes; `checkNet` matches host (and optional port — a scope without a port
-admits any port of that host); `checkEnv` matches exact variable names;
-`checkHostFs` is a path-segment-aware directory-prefix test.
-`grantedEnvNames()` lists the granted variables, used to build the filtered
-environment of child processes.
-
-### `createWorkspace(permissions: PermissionSet): Promise<Result<Workspace, SpecError>>`
-
-Create one test's isolated workspace: a fresh temporary directory whose real
-path is the containment boundary. `workspace.resolve(path)` is the safety
-gate every path flows through: relative paths must stay inside the root even
-after re-resolving symlinked ancestors (escapes fail with
-`WorkspaceEscapeError`), and absolute paths require a host-fs grant.
-`workspace.cleanup()` removes the directory; it is best-effort and never
-fails the run.
-
-### `loadSuite(root: string): Promise<Result<LoadedSuite, SpecError>>`
-
-Discover every `.spec` file under a directory (recursively, in lexicographic
-relative-path order), parse each one, then register commands and fixtures
-suite-globally in a second pass — so name resolution never depends on file
-order. The first parse failure aborts the load with its message prefixed by
-the file path; two definitions sharing a name is a `duplicate-definition`
-error naming both files; a missing or empty root is a load error.
-
-### `createRegistry(plugins: Plugin[], suite: LoadedSuite): Registry`
-
-Build the suite's name-resolution table. A dotted target (`fs.write`)
-resolves inside that namespace only; a bare target resolves among suite
-commands (which never need `use`) plus the tools of the namespaces the
-calling file imported; more than one candidate is an `ambiguous-name` error
-listing every fully qualified candidate — the runtime never guesses. The
-registry also resolves `fixture NAME` references and answers `isCallable`,
-which `expect` uses to pick its form.
-
-### `executeTest(test: TestNode, context: ExecutionContext): Promise<Result<undefined, SpecError>>`
-
-Execute one parsed test. Its phases share a single scope and run in order;
-the first failing statement ends the test, and every error is stamped with
-the failing statement's span and file. The executor owns scopes,
-`let`/`return`, command and fixture invocation (32-deep recursion cap), and
-the central permission gate that refuses calls to tools whose required
-permission family is denied before the plugin ever runs. `runSuite` drives
-this for you; call it directly only when embedding the executor with your own
-lifecycle.
-
-### `lex(source: SourceFile): Result<Token[], ParseError>`
-
-Tokenize `.spec` text per GRAMMAR.md: `#` comments are discarded, dotted
-identifiers with adjacent dots lex as one token, durations are validated with
-[`@pkg/duration`](/packages/duration) and converted to milliseconds at lex
-time, and newlines are significant. The stream always ends with an `eof`
-token.
-
-### `parse(source: SourceFile): Result<SpecFileNode, ParseError>`
-
-Parse a `.spec` file into its AST (lexing internally). Enforces the
-structural rules the grammar states in prose — strict `given`/`when`/`then`
-order, `eventually` only inside `then`, call expressions only as a full
-`let`/`return` right-hand side, unique object keys — and every error names
-what was expected and what was found, with a span.
-
-### `positionAt(source: SourceFile, offset: number): Position`
-
-Translate a text offset (for example a `Span`'s `start`) into a 1-indexed
-line/column position for rendering diagnostics.
-
-### `reportSuite(suite: SuiteResult, sources: Map<string, SourceFile>, sink: Sink): void`
-
-Render a finished suite as human output: one status line per test, an
-indented detail block after each failure (permission denials render as the
-denial block with the remedy flag), and a summary line with counts and total
-duration.
-
-### `reportFatal(error: SpecError, sink: Sink): void`
-
-Render a failure that prevented any test from running — an unreadable suite
-directory, a duplicate definition, a parse error — with its diagnostic code,
-location when known, and remedy when the error carries one.
-
-### `createFsPlugin(): Plugin`
-
-The built-in `fs` capability (namespace `fs`). Every path flows through the
-workspace's safe resolver first, so these tools need no permission grant.
-
-| Tool           | Kind       | Shape                                                                                |
-| -------------- | ---------- | ------------------------------------------------------------------------------------ |
-| `fs.write`     | action     | `write "path" "content"` — strings verbatim, objects/arrays as JSON; creates parents |
-| `fs.read`      | action     | `read "path"` — returns the file text                                                |
-| `fs.mkdir`     | action     | `mkdir "path"` — creates missing parents                                             |
-| `fs.remove`    | action     | `remove "path" [recursive]`                                                          |
-| `fs.copy`      | action     | `copy "from" "to"`                                                                   |
-| `fs.exists`    | observable | `exists "path"` — returns a boolean                                                  |
-| `fs.file`      | observable | `file "path" exists` / `file "path" contains "substring"`                            |
-| `fs.directory` | observable | `directory "path" exists`                                                            |
-
-### `createCliPlugin(): Plugin`
-
-The built-in `cli` capability (namespace `cli`). Its single tool, `cli.run`,
-requires the `run` grant, checked against the executable's basename. The
-child starts in the workspace root and receives a minimal environment —
-`PATH`/`HOME`/`TMPDIR` plus exactly the variables granted with
-`--allow-env` — so the host environment never leaks into a spec's
-subprocesses. Returns `{ stdout, stderr, exit_code }`.
+Wrap an observable assertion in `eventually` to retry it until it holds or the
+window ends — for anything that becomes true a moment later (a server coming up,
+an async write landing). A plain assertion checks exactly once.
 
 ```
-let result = run "bun" "index.js"
-expect result.exit_code 0
+then {
+	eventually within 2s {
+		expect file "ready.txt" exists
+	}
+}
 ```
 
-### `createHttpPlugin(): Plugin`
+Only assertions may be retried — an action (a mutation) inside `eventually` is
+an error, since a retried mutation is not a retried check.
 
-The built-in `http` capability (namespace `http`): `get`, `post`, `put`,
-`patch`, and `delete`, each requiring the `net` grant for the URL's host and
-port. URLs must be absolute — v1 ships no environments mechanism to bind a
-base URL against. Each tool takes an optional body (strings travel as
-`text/plain`, other values as JSON) and returns
-`{ status, ok, headers, text, json }`; HTTP error statuses are values, only
-network-level failures are errors.
+### `command` and `fixture`
+
+A **command** is a reusable step; a **fixture** is reusable data (its value is
+whatever it `return`s). Define them in the same file, or share them suite-wide
+by putting them under `spec/commands/` and `spec/fixtures/`. Either way they
+resolve **by name** from anywhere — no import, no path — because every
+definition is registered before any test runs.
 
 ```
-let response = http.post "http://localhost:3000/api/posts" { title: "Hello" }
-expect response.status 201
+# spec/fixtures/book.spec
+fixture book {
+	return { title: "Dune", author: "Herbert", year: 1965 }
+}
 ```
 
-### `createBrowserPlugin(): Plugin`
+```
+# spec/commands/seed.spec
+use fs
 
-The built-in `browser` capability (namespace `browser`): drive a real browser
-through its accessibility tree rather than DOM internals, backed by the
-globally installed `agent-browser` CLI. Reaching web content is the privileged
-act, so every tool requires the `net` grant for the target host; the fixed
-`agent-browser` binary is trusted plugin machinery, not spec-requested process
-execution, so it needs no `run` grant. `describe()` is static and launches
-nothing, so a suite that never touches `browser.*` needs neither the grant nor
-the binary installed. Elements are addressed by accessibility role (a bare
-word) and accessible name (a string); `click_selector` is a marked CSS escape
-hatch.
+command seed_file(path) {
+	let target = { path: path }
+	write target.path "seeded"
+}
+```
 
-| Tool                     | Kind       | Shape                                            |
-| ------------------------ | ---------- | ------------------------------------------------ |
-| `browser.open`           | action     | `open "https://example.com"`                     |
-| `browser.navigate`       | action     | `navigate "https://example.com/next"`            |
-| `browser.click`          | action     | `click button "Sign in"`                         |
-| `browser.fill`           | action     | `fill textbox "Email" with "user@example.com"`   |
-| `browser.check`          | action     | `check checkbox "Remember me"`                   |
-| `browser.press`          | action     | `press "Enter"`                                  |
-| `browser.click_selector` | action     | `click_selector ".pager > a"` — CSS escape hatch |
-| `browser.heading`        | observable | `expect browser.heading "Welcome"`               |
-| `browser.link`           | observable | `expect browser.link "Docs"`                     |
-| `browser.button`         | observable | `expect browser.button "Sign in"`                |
-| `browser.text`           | observable | `expect browser.text "signed in"`                |
-| `browser.checkbox`       | observable | `expect browser.checkbox "Remember me" checked`  |
-| `browser.url`            | observable | `expect browser.url "https://example.com/home"`  |
+```
+# spec/tour.spec
+test "commands and fixtures compose by name" {
+	given {
+		seed_file "out.txt"          # run a command for its effect
+	}
+	when {
+		let record = fixture book    # run a fixture for its value
+	}
+	then {
+		expect record.title "Dune"
+		expect file "out.txt" contains "seeded"
+	}
+}
+```
+
+### `use` and namespaces
+
+Capabilities live in namespaces (`fs`, `cli`, `http`, …). Use a fully qualified
+name anywhere (`fs.write`, `cli.run`), or `use` a namespace at the top of a file
+to call its tools by their bare names (`write`, `run`). `use` is **per file**;
+suite commands and fixtures need no `use` at all. If a bare name could mean two
+things, that's an error naming both candidates — the runtime never guesses.
+
+```
+use fs      # now `write`, `read`, `file`, … are available unqualified
+use cli     # now `run` is too
+```
+
+## Capabilities
+
+Capabilities are the built-in namespaces. `fs` needs no grant (it's confined to
+the workspace); the rest are privileged and denied until you grant them.
+
+### `fs` — the workspace filesystem
+
+Every path is resolved inside the test's workspace, so `fs` needs no permission.
+Tools: `write`, `read`, `mkdir`, `copy`, `remove`, and the observables `exists`,
+`file`, `directory`. Strings are written verbatim; objects/arrays are written as
+JSON.
+
+```
+use fs
+
+test "mkdir, copy, and remove move files around the workspace" {
+	given {
+		mkdir "src"
+		write "src/index.ts" "export const answer = 42"
+	}
+	when {
+		copy "src/index.ts" "dist/index.ts"
+		remove "src/index.ts"
+	}
+	then {
+		expect directory "src" exists
+		expect file "dist/index.ts" contains "answer = 42"
+	}
+}
+```
+
+### `cli` — run processes · `--allow-run`
+
+`run` spawns a program in the workspace and returns `{ stdout, stderr,
+exit_code }`. It needs `--allow-run`, scoped by executable basename. The child
+gets a minimal environment (`PATH`/`HOME`/`TMPDIR` plus only the vars you granted
+with `--allow-env`), so your host environment never leaks in.
+
+```
+use cli
+
+test "run captures stdout and the exit code" {
+	when {
+		let result = run "echo" "hello"
+	}
+	then {
+		expect result.exit_code 0
+		expect result.stdout "hello\n"
+	}
+}
+```
+
+```sh
+spec run spec --allow-run=echo
+```
+
+### `http` — call an HTTP API · `--allow-net`
+
+`get`, `post`, `put`, `patch`, `delete`, each needing `--allow-net` for the
+URL's host (and port, if you scope one). URLs must be **absolute**. An optional
+body travels as `text/plain` when it's a string, JSON otherwise. Each returns
+`{ status, ok, headers, text, json }`; an HTTP error status is a normal value —
+only a network-level failure is an error.
+
+```
+use http
+
+test "creating a post returns 201" {
+	when {
+		let response = http.post "http://localhost:3000/api/posts" { title: "Hello" }
+	}
+	then {
+		expect response.status 201
+	}
+}
+```
+
+```sh
+spec run spec --allow-net=localhost:3000
+```
+
+### `browser` — drive a real browser · `--allow-net`
+
+Drive a browser through its **accessibility tree**, not DOM internals: address
+elements by role (a bare word) and accessible name (a string). Actions include
+`open`, `navigate`, `click`, `fill … with …`, `check`, `press`; observables
+include `heading`, `link`, `button`, `text`, `checkbox`, `url`. Reaching the
+page is the privileged act, so each tool needs `--allow-net` for the target
+host. It's backed by a globally installed `agent-browser` CLI, loaded lazily —
+a suite that never touches `browser.*` needs neither the grant nor the binary.
 
 ```
 use browser
@@ -375,28 +360,17 @@ test "the sign-in form authenticates" {
 }
 ```
 
-### `createDbPlugin(): Plugin`
+```sh
+spec run spec --allow-net=localhost:3000
+```
 
-The built-in `db` capability (namespace `db`): one action tool, `db.query`,
-that runs a raw SQL statement (typically a `"""multiline"""` string) on Bun's
-SQL client. It reads the connection string from the `DATABASE_URL` environment
-variable, so it requires the `env` grant — `--allow-env=DATABASE_URL` — and no
-`net` or `run`: the destination is operator-supplied through `DATABASE_URL`,
-never chosen by the spec, so the grant that reveals the variable is the
-complete authorization and a spec can never redirect the connection. The var
-is honored whether exported system-wide or set per call
-(`DATABASE_URL=… spec run … --allow-env=DATABASE_URL`). The connection opens
-lazily on first query, is reused across the run, and is closed when the run
-ends; a SQL or connection error surfaces as a tool failure carrying the
-database's own message. `describe()` opens no connection, so a suite that never
-uses `db.*` needs no `DATABASE_URL`.
+### `db` — query a database · `--allow-env=DATABASE_URL`
 
-`db.query` returns `{ rows, affected_rows, count }`: `rows` is the records a
-`SELECT` returned (each coerced to a JSON-shaped value; empty for DML/DDL),
-`affected_rows` is the driver's count (rows changed by a mutation, or rows
-returned by a `SELECT`), and `count` is `rows.length`. So an `INSERT` of one
-row reads `affected_rows == 1`, `count == 0`, while a `SELECT` of N rows reads
-`affected_rows == count == N`.
+`db.query` runs raw SQL on Bun's SQL client and returns `{ rows, affected_rows,
+count }`. It reads the connection string from the `DATABASE_URL` environment
+variable, so granting that one variable is the whole authorization — a spec can
+never redirect the connection elsewhere. The connection opens lazily on the
+first query and closes at the end of the run.
 
 ```
 use db
@@ -412,262 +386,63 @@ test "an INSERT reports exactly one affected row" {
 }
 ```
 
-### `connectStdioPlugin(command: string[], namespace: string): Promise<Result<Plugin, SpecError>>`
-
-Spawn an external executable and connect it as a `Plugin` over the
-NDJSON-over-stdio wire protocol (one JSON document per line; `describe` and
-`call` requests, ordered replies). Sends the describe handshake with a 5s
-timeout, caches the returned descriptors, and kills the child on any
-handshake failure. The child inherits no environment beyond `PATH`.
-
-**Parameters:**
-
-- `command`: The argv to spawn, e.g. `["bun", "my-plugin.ts"]`.
-- `namespace`: The namespace the connected plugin's tools live under.
-
-### `servePlugin(plugin: Plugin): Promise<undefined>`
-
-The plugin side of the same wire: read requests from stdin, dispatch each to
-the given local plugin, write replies to stdout in order, and resolve when
-the host closes stdin. Any Bun script becomes an external plugin by calling
-this with its plugin implementation — see the Patterns section and the
-reference implementation in `src/plugins/demo.ts`.
-
-### `valueEquals(left: Value, right: Value): boolean`
-
-Deep structural equality over runtime values — the semantics of the
-two-argument `expect A B` form. Arrays compare by index, objects by key set,
-primitives by `===`.
-
-### `formatValue(value: Value): string`
-
-Render a value for diagnostics: JSON with stable key order, indented only
-when the rendering would exceed one short line.
-
-### `KEYWORDS`
-
-The reserved words of the language (`use`, `test`, `given`, `when`, `then`,
-`command`, `fixture`, `let`, `return`, `expect`, `eventually`, `within`,
-`true`, `false`), never valid as identifiers.
-
-### Error classes
-
-All extend `SpecError`, which carries a stable `code: DiagnosticCode` (what
-reporters branch on — never message text), plus optional `file`, `span`, and
-`remedy` fields.
-
-- `ParseError` — a lexical or syntactic failure, with file and span.
-- `LoadError` — a suite-level failure before any test runs
-  (`load-error` or `duplicate-definition`).
-- `ResolutionError` — a name that resolved to nothing (`unknown-name`) or to
-  more than one candidate (`ambiguous-name`, with a `candidates` list).
-- `ExpectationError` — a failed `expect`, carrying `expected` and `observed`.
-- `PermissionDeniedError` — an ungranted capability use, carrying the
-  `permission` family, the attempted `resource`, and the exact flag as its
-  `remedy`.
-- `WorkspaceEscapeError` — a path that would leave the workspace without a
-  host-fs grant, carrying `attemptedPath`.
-- `ToolError` — a tool that was reached and ran, but failed on its own terms.
-
-### Types
-
-#### `Value`, `ValueObject`, `ToolArg`
-
-The runtime value model — deliberately JSON-shaped so values cross the plugin
-wire without a serialization layer. Duration literals evaluate to
-milliseconds; a `word` argument is a symbol the tool's descriptor interprets,
-distinct from the string of the same spelling.
-
-```typescript
-type Value = string | number | boolean | null | Value[] | ValueObject;
-type ToolArg = { kind: "value"; value: Value } | { kind: "word"; word: string };
+```sh
+DATABASE_URL=postgres://localhost/test spec run spec --allow-env=DATABASE_URL
 ```
 
-#### `Plugin`, `ToolDescriptor`, `ToolParam`, `ToolContext`
+## Permissions
 
-The single extension seam. A plugin owns one namespace and exposes typed tool
-descriptors; `descriptor.kind` separates mutations (`action`) from
-observations (`observable` — the only kind allowed inside `eventually` and at
-the head of an observable `expect`), and `descriptor.requires` names the
-permission family the runtime gates centrally before the plugin ever runs.
-`ToolContext` hands each call the test's `Workspace` and the runtime-owned
-`PermissionSet`.
+Nothing privileged runs without a grant, and any attempt beyond your grants
+fails with the exact flag it needs — so start with no flags and let the denials
+tell you the suite's true footprint.
 
-```typescript
-interface Plugin {
-	namespace: string;
-	describe(): ToolDescriptor[];
-	call(tool: string, args: ToolArg[], context: ToolContext): Promise<Result<Value, SpecError>>;
-}
+| Flag                          | Grants                                                        |
+| ----------------------------- | ------------------------------------------------------------- |
+| `--allow-run[=name,…]`        | Spawn processes (scoped by executable basename)               |
+| `--allow-net[=host[:port],…]` | Reach the network (scoped by host, optionally port)           |
+| `--allow-env[=VAR,…]`         | Read environment variables (scoped by name)                   |
+| `--allow-host-fs[=dir,…]`     | Touch files outside the workspace (path-prefix scoped)        |
+| `--allow-plugins[=ns,…]`      | Launch project-declared plugins (see below)                   |
+| `--allow-config`              | Apply the permissions the suite's config declares (see below) |
+
+A bare flag grants the whole family (`--allow-net`); a scoped flag grants only
+what it lists (`--allow-run=bun,git`); repeated scoped flags union. Some recipes:
+
+```sh
+# Pure filesystem suite — the workspace is always writable, so no flags at all:
+spec run spec
+
+# One known tool, one local server, and two named env vars:
+spec run spec --allow-run=bun --allow-net=localhost:3000 --allow-env=CI,NODE_ENV
+
+# Read shared fixture data from outside the workspace (path prefix):
+spec run spec --allow-host-fs=/opt/fixtures
 ```
 
-#### `Grants`, `Grant`, `PermissionKind`, `PermissionSet`
+When several tests fail for the same missing grant, they collapse into one
+grouped block — the `(N tests)` count and `Affected tests:` list make it obvious
+what a single flag would unblock:
 
-The permission model: one `Grant` per family (`run`, `net`, `env`,
-`host-fs`), each `denied`, `all`, or `scoped` with an explicit scope list.
+```
+✗ Permission denied: run (3 tests)
 
-```typescript
-type Grant = { mode: "denied" } | { mode: "all" } | { mode: "scoped"; scopes: string[] };
-interface Grants {
-	run: Grant;
-	net: Grant;
-	env: Grant;
-	hostFs: Grant;
-}
+  The spec attempted to reach:
+  > cli.run
+
+  Re-run with an appropriate permission, for example:
+  > spec run --allow-run
+
+  Affected tests:
+  - first needs run (spec/denials.spec:3)
+  - second needs run (spec/denials.spec:9)
+  - third needs run (spec/denials.spec:15)
 ```
 
-#### `RunOptions`, `SuiteResult`, `TestResult`, `TestStatus`, `Sink`
+## The `spec/config.jsonc` file
 
-The runner's contract: `RunOptions` in (`root`, `grants`, optional
-`plugins`), `SuiteResult` out (`results`, `passed`, `failed`), one
-`TestResult` per test (`title`, `file`, `status`, `durationMs`, and the
-structured `error` when it failed). `Sink` is the one-method output interface
-(`write(text: string): void`) all human output flows through — the CLI passes
-stdout, tests pass a buffer.
-
-#### `LoadedSuite`, `Registry`, `ResolvedCallable`, `ExecutionContext`, `Workspace`
-
-The intermediate shapes of the pipeline: `loadSuite` produces a
-`LoadedSuite` (parsed files plus suite-global command/fixture maps),
-`createRegistry` turns it into a `Registry` (whose lookups yield a
-`ResolvedCallable`: a plugin tool or a suite command), and `executeTest`
-consumes an `ExecutionContext` — registry, workspace, permissions, the
-calling file's `uses`, a `usesFor(definition)` lookup (because `use` is
-file-scoped, a definition's body resolves bare names against the imports of
-the file that defined it), and the parsed `grants` for the coarse gate.
-
-#### `SourceFile`, `Span`, `Position`, `Token`, `TokenKind`, `DiagnosticCode`
-
-Source bookkeeping and diagnostics vocabulary: a `SourceFile` is a path plus
-its full text; a `Span` is a half-open offset range every AST node and error
-carries; `positionAt` turns offsets into 1-indexed `Position`s; `Token` and
-`TokenKind` are the lexer's output vocabulary; `DiagnosticCode` is the stable
-failure category reporters branch on.
-
-#### AST node types
-
-`parse` produces one node type per GRAMMAR.md production, all exported:
-
-| Type                         | Production                                                                               |
-| ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `SpecFileNode`               | one parsed file: `uses`, `definitions`, `tests`                                          |
-| `UseNode`                    | `use fs`                                                                                 |
-| `DefinitionNode`             | `CommandNode \| FixtureNode`                                                             |
-| `CommandNode`, `FixtureNode` | `command name(params) { … }`, `fixture name { … }`                                       |
-| `TestNode`                   | `test "title" { … }` with optional phase blocks                                          |
-| `BlockNode`                  | `{ … }` statement sequence                                                               |
-| `StatementNode`              | `LetNode \| ReturnNode \| ExpectNode \| EventuallyNode \| CallNode`                      |
-| `RhsNode`                    | `ExpressionNode \| FixtureCallNode \| CallExprNode`                                      |
-| `ArgumentNode`               | `ExpressionNode \| WordNode`                                                             |
-| `ExpressionNode`             | `StringNode \| NumberNode \| BooleanNode \| DurationNode \| ObjectNode \| ReferenceNode` |
-| `ObjectEntryNode`            | one `key: value` entry of an object literal                                              |
-
-## Patterns
-
-### Pattern: Writing an external plugin
-
-Any executable that speaks the NDJSON wire protocol is a plugin; in a Bun
-script, `servePlugin` handles the wire so you only implement the `Plugin`
-interface. The reference implementation is `src/plugins/demo.ts`, and
-[docs/writing-plugins.md](./docs/writing-plugins.md) is the full authoring
-guide — in-process plugins, external processes, per-project placement, and the
-trust model.
-
-```typescript
-#!/usr/bin/env bun
-import type { Plugin } from "@pkg/spec";
-
-import { failure, success } from "@pkg/result";
-import { servePlugin, ToolError } from "@pkg/spec";
-
-let plugin: Plugin = {
-	namespace: "greet",
-	describe() {
-		return [
-			{
-				name: "hello",
-				summary: "Greet a name.",
-				kind: "observable",
-				params: [{ name: "name", kind: "value", required: true, summary: "Who to greet." }],
-			},
-		];
-	},
-	async call(tool, args) {
-		let first = args[0];
-		if (tool !== "hello" || first?.kind !== "value" || typeof first.value !== "string") {
-			return failure(new ToolError('greet.hello expects one string, e.g. hello "world"'));
-		}
-		return success(`hello, ${first.value}`);
-	},
-};
-
-await servePlugin(plugin);
-```
-
-Declare tools honestly: mark mutations as `kind: "action"` and set
-`requires` for anything privileged — the runtime's central gate enforces the
-declaration before your code runs.
-
-### Pattern: Connecting extra plugins to a run
-
-Extra plugins are a programmatic feature: connect them (or construct them
-in-process) and pass them through `RunOptions.plugins`. Specs then address
-them like any namespace — `use greet` for bare names, or fully qualified
-`greet.hello`.
-
-```typescript
-import { isFailure } from "@pkg/result";
-import { connectStdioPlugin, runSuite } from "@pkg/spec";
-
-let greet = await connectStdioPlugin(["bun", "tools/greet-plugin.ts"], "greet");
-if (isFailure(greet)) {
-	// The handshake failed; greet.error says why and the child is already dead.
-	process.exit(2);
-}
-
-let run = await runSuite({ root: "spec", grants, plugins: [greet.data] });
-```
-
-### Pattern: Loading project plugins from the CLI
-
-A suite can declare its own plugins without any programmatic glue. Put a
-`config.jsonc` file in the suite directory — the suite's general configuration
-home — and map each namespace to the command that launches its plugin under its
-`plugins` key (JSONC — comments and trailing commas are allowed; `.` paths
-resolve against the file's directory, so the suite runs the same from any
-working directory):
-
-```jsonc
-// spec/config.jsonc
-{
-	"plugins": {
-		// A relative "." path is resolved against this file's directory.
-		"greet": { "command": ["bun", "./greeter.ts"] },
-	},
-}
-```
-
-Specs then name `greet.hello` and never a path, so they stay portable across
-machines and installs. A third-party plugin is the same, pointing `command` at
-its installed binary or entry file.
-
-Declaring a plugin is **not** permission to run it: launching a declared plugin
-executes code the project ships, so it is deny-by-default. `spec run` starts a
-declared plugin only when the caller passes `--allow-plugins` (all declared) or
-`--allow-plugins=greet` (named). Without the grant, a suite that imports a
-declared namespace is refused before any test runs, with a permission-style
-diagnostic naming `--allow-plugins`; a declared plugin the suite never imports
-stays dormant. Built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`) are
-unaffected — they need no `--allow-plugins`. Unlike the four `--allow-*`
-capability families, `--allow-plugins` gates _process launch_, not what a
-running tool may reach, so it is parsed by the CLI, not the permission engine.
-See [docs/writing-plugins.md](./docs/writing-plugins.md) for the full model and
-`examples/plugin-loading/` for a runnable showcase.
-
-### Pattern: Declaring a suite's permissions in spec/config.jsonc
-
-A suite can declare the grants it needs in `spec/config.jsonc`'s `permissions`
-key, so the operator does not have to remember the exact `--allow-*` line:
+Rather than reciting the same `--allow-*` line every run, a suite can carry its
+own configuration in `spec/config.jsonc` (JSONC: comments and trailing commas
+allowed). It has two keys, both optional: `permissions` and `plugins`.
 
 ```jsonc
 // spec/config.jsonc
@@ -675,110 +450,98 @@ key, so the operator does not have to remember the exact `--allow-*` line:
 	"permissions": {
 		// A bare string is a whole-family grant (like a bare --allow-<family>);
 		// a [family, ...scopes] tuple is a scoped grant (like --allow-<family>=…).
-		"allow": ["run", ["env", "DATABASE_URL"], ["net", "localhost:3000"]],
-	},
-	"plugins": {
-		/* … as above … */
+		"allow": ["run", "plugins", ["env", "DATABASE_URL"]],
 	},
 }
 ```
 
-The families are the same four capabilities plus `plugins`: `"run"` ≡
-`--allow-run`, `["env","DATABASE_URL"]` ≡ `--allow-env=DATABASE_URL`,
-`["net","localhost:3000","api.example.com"]` ≡
-`--allow-net=localhost:3000,api.example.com`, and `"plugins"` (or
-`["plugins","greet"]`) ≡ `--allow-plugins`. An unknown family or a malformed
-entry is a load error naming it — a broken declaration is never silently
-ignored.
+The families match the flags: `"run"` ≡ `--allow-run`, `["env","DATABASE_URL"]`
+≡ `--allow-env=DATABASE_URL`, `["net","localhost:3000"]` ≡
+`--allow-net=localhost:3000`, and `"plugins"` (or `["plugins","greet"]`) ≡
+`--allow-plugins`. A malformed or unknown entry is a load error naming it — a
+broken declaration is never silently ignored.
 
-The declaration is **declare + opt-in**, not ambient authority. `spec run` with
-no opt-in applies **nothing** from `permissions.allow`; the suite still fails
-closed with the normal permission-denied diagnostic. The caller opts in with a
-single bare flag, `--allow-config`, and then the effective grants are the
-config's declared set **unioned** with any explicit `--allow-*` flags — CLI
-flags always still work and only ever add to the config set, never subtract. So
-a cloned or untrusted repo cannot self-grant: nothing in the file takes effect
-until an operator who has read it adds `--allow-config`. As a convenience, when
-a permission is denied and the project's `spec/config.jsonc` **would** have
-granted it, the denial adds one line pointing at `--allow-config`; when the
-config would not grant it, the usual `--allow-<family>=…` remedy stands.
-
-### Pattern: Least-privilege flag recipes
-
-Grant exactly what the suite exercises; everything else stays denied, and any
-attempt beyond the grant fails with the flag it would need.
+Crucially, the declaration is **declare + opt-in**, never ambient authority.
+With no opt-in the file grants **nothing**: the suite still fails closed with
+the normal denials. The operator opts in with one flag:
 
 ```sh
-# Pure filesystem suites: the workspace is always writable, so no flags.
-spec run spec
-
-# Spawn one known tool (matched by executable basename):
-spec run spec --allow-run=bun
-
-# Talk to one local server, on one port:
-spec run spec --allow-net=localhost:3000
-
-# Read exactly the variables the spec names (children inherit only these):
-spec run spec --allow-env=CI,NODE_ENV
-
-# Database suites: db.query reads DATABASE_URL, so grant exactly that variable:
-DATABASE_URL=postgres://localhost/test spec run spec --allow-env=DATABASE_URL
-
-# Browser suites: browser.* reaches the page, so grant the host it drives:
-spec run spec --allow-net=localhost:3000
-
-# Read shared fixture data outside the workspace (path-prefix grant):
-spec run spec --allow-host-fs=/opt/fixtures
-
-# Launch project plugins declared in spec/config.jsonc (not a capability grant,
-# but the launch gate — see the project-config pattern above):
-spec run spec --allow-plugins=greet
-
-# Apply the permissions the project's spec/config.jsonc declares (opt-in; unions
-# with any explicit --allow-* flags you also pass):
 spec run spec --allow-config
-
-# Combine grants; scoped flags union when repeated:
-spec run spec --allow-run=bun,git --allow-net=localhost
 ```
 
-This package's own behavioral suite (`spec/`) runs the spec CLI on miniature
-projects with only `--allow-run=spec,echo` — a live demonstration that a
-process-spawning suite needs exactly the scoped grants it exercises and nothing
-more.
+Then the effective grants are the config's declared set **unioned** with any
+explicit `--allow-*` flags you also pass — flags only ever add. Because nothing
+in the file takes effect until someone who read it adds `--allow-config`, a
+cloned or untrusted repo can't self-grant. As a convenience, when a denial
+_would_ be covered by the config, the denial adds one line pointing at
+`--allow-config`.
 
-## Related Packages
+### Loading project plugins
 
-- [`@pkg/result`](/packages/result) - Result type every fallible export
-  returns; errors are values, never throws
-- [`@pkg/duration`](/packages/duration) - Parses and validates the duration
-  literals (`10s`, `500ms`) at lex time
+The `plugins` key maps a namespace to the command that launches its plugin, so
+specs name `greet.hello` and never a path:
 
-## Tips
+```jsonc
+// spec/config.jsonc
+{
+	"plugins": {
+		// A relative "." path resolves against this file's directory.
+		"greet": { "command": ["bun", "./greeter.ts"] },
+	},
+}
+```
 
-1. **Reach for `spec run` before the programmatic API** - `runSuite` exists
-   for embedders; the CLI is the product surface and its exit codes (0 pass,
-   1 test failure, 2 usage/load error) are the contract to script against.
-2. **Stay workspace-relative** - relative paths need no grants and are
-   escape-checked; the first `--allow-host-fs` in a suite is a smell worth a
-   second look.
-3. **Grant the narrowest scope and let denials teach** - start with no flags;
-   every denial prints the exact `--allow-*` flag it needs, so the final
-   invocation documents the suite's true footprint.
-4. **Bare identifiers in tool-argument position are words, not variables** -
-   `write "f" content` hands the tool the symbol `content`; pass bound values
-   to tools via dotted references like `result.stdout` (suite commands, by
-   contrast, do receive the binding).
-5. **Keep mutations out of `eventually`** - only `expect` and observable
-   calls may appear inside; a retried mutation is not a retried assertion,
-   and the runtime rejects it.
-6. **`use` is per-file, definitions are suite-global** - every file declares
-   its own imports (and a definition's body uses its defining file's), while
-   commands and fixtures resolve everywhere without any import; qualified
-   names like `fs.write` always work.
-7. **Multiline strings are raw** - no escape processing and no way to contain
-   `"""`, so generated files that themselves need multiline strings must be
-   assembled from single-line `write` calls.
-8. **Check results, don't catch** - every fallible export returns a
-   `Result`; branch with `isFailure` and read the structured error
-   (`code`, `span`, `remedy`) instead of parsing messages.
+Declaring a plugin is **not** permission to run it — launching one executes code
+the project ships, so it's deny-by-default too. `spec run` starts a declared
+plugin only with `--allow-plugins` (all) or `--allow-plugins=greet` (named); a
+suite that imports an unauthorized plugin is refused before any test runs. The
+built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`) are never affected.
+
+## Custom and third-party plugins
+
+Every capability is just a plugin — one namespace exposing typed tools behind a
+single interface — so your own is a first-class citizen. You can build one
+in-process (for embedders), as an external executable speaking a small
+NDJSON-over-stdio protocol (any language), or install a third party's. The full
+authoring guide — the `Plugin` interface, all three shapes, project loading, and
+the trust model — is [docs/writing-plugins.md](./docs/writing-plugins.md), with
+a runnable showcase under `examples/plugin-loading/`.
+
+## Performance
+
+The runner itself is cheap — roughly a millisecond per test on top of whatever
+the app under test costs — so wall-time is dominated by your app, not the
+harness. Two levers keep it that way. Use the **compiled binary** (`bun run
+build` → `./bin/spec`) instead of `bun src/cli.ts` to skip the per-launch
+transpile cost, which matters most for suites that shell out to `spec` many
+times. And for suites whose tests spend their time waiting — a browser, an HTTP
+round-trip, a slow process — run them with **`--concurrency=N`** (alias
+`--jobs=N`) to overlap that waiting:
+
+```sh
+spec run spec --concurrency=8
+```
+
+Concurrency defaults to `1` (strictly sequential — today's behavior). At `N` the
+runner executes up to `N` tests at once but still reports results in **source
+order**, so the output, counts, and exit code are byte-for-byte identical
+regardless of how the schedule shook out; only the wall-time changes. The runner
+isolates each test's **workspace**, not the app under test — so a suite that
+shares one mutable backend (the same database rows, one stateful server) may
+still need `--concurrency=1`.
+
+## Beyond the CLI
+
+The CLI is the product surface, and its exit codes (0 pass, 1 test failure, 2
+usage/load error) are what you script against. For embedding the runner in
+another program, the package also exports a programmatic `runSuite` and the
+supporting types from `@pkg/spec`; every fallible export returns a
+[`@pkg/result`](/packages/result) `Result`, so parse errors, permission denials,
+and tool failures are values you branch on, never thrown exceptions.
+
+## Related packages
+
+- [`@pkg/result`](/packages/result) — the `Result` type every fallible export
+  returns; errors are values, never throws.
+- [`@pkg/duration`](/packages/duration) — parses and validates the duration
+  literals (`10s`, `500ms`) the language accepts.
