@@ -118,17 +118,22 @@ Notes:
   production, and no operators: no arithmetic, no boolean logic, no
   comparison syntax. Verification happens through `expect`.
 
-## Static rules (load-time errors)
+## Static rules
 
 - `use NS` imports every tool of namespace `NS` as an unqualified name, for
-  the containing file only (**file-scoped**).
-- If two imported namespaces expose the same unqualified name, using that
-  name is an error naming both candidates; the fully qualified `ns.tool` form
-  is always available. The runtime never guesses.
+  the containing file only (**file-scoped**). A command or fixture body
+  resolves bare names against the imports of the file that defined it, never
+  against the calling file's.
+- If a bare name matches more than one candidate — two imported namespaces
+  exposing the same tool name, or a suite command colliding with an imported
+  tool — using that name is an `ambiguous-name` error naming every candidate,
+  reported where the name is used; the fully qualified `ns.tool` form is
+  always available. The runtime never guesses.
 - Definitions (`command`, `fixture`) may appear in any `.spec` file and are
   suite-global. The loader parses every file, registers all definitions, then
   runs tests — so resolution never depends on file order. Two definitions
-  with the same name (across the whole suite) are a load error.
+  with the same name (across the whole suite) are a `duplicate-definition`
+  load error.
 - Keywords are reserved everywhere: a command named `test` is a parse error.
 
 ## Evaluation
@@ -145,7 +150,12 @@ Notes:
   runs the body on every invocation (no caching, no lifecycle hooks).
 - A _word_ argument is passed to the tool as a symbol, distinct from the
   string of the same spelling; the tool's descriptor decides what words it
-  accepts (`expect file "x" exists`, `fill textbox "Email" with y`).
+  accepts (`expect file "x" exists`, `fill textbox "Email" with y`). Only
+  tool calls keep words symbolic: when an argument of a suite command (or of
+  the value form of `expect`) is a bare identifier, it reads the binding of
+  that name instead. To hand a tool a bound value, use a dotted reference
+  (`result.stdout`) — a bare identifier in tool-argument position is always
+  a word.
 - Duration literals evaluate to a number of milliseconds.
 
 ### `expect`
