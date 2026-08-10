@@ -12,7 +12,6 @@
 import type { Handle } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
-import { RouterProvider } from "@pkg/r3-ui-router";
 import { bg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
@@ -33,6 +32,7 @@ import {
 import { bs, is, mbe, p, width } from "@pkg/u/size";
 import { translateY } from "@pkg/u/transform";
 import { Button, LinkButton, Text } from "@pkg/ui";
+import { RouterProvider } from "@pkg/ui-router";
 import { Frame, addEventListeners, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";

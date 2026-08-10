@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createController, createRouter } from "@pkg/r3-ui-router";
+import { createController, createRouter } from "@pkg/ui-router";
 
 import { renderAlbum } from "./controllers/album";
 import { renderHome } from "./controllers/home";

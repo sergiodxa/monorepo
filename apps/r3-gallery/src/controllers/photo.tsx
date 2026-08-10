@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "@pkg/r3-ui-router";
 import { isFailure } from "@pkg/result";
+import { createAction } from "@pkg/ui-router";
 
 import { getPhoto } from "../data/jsonplaceholder";
 import { routes } from "../routes";

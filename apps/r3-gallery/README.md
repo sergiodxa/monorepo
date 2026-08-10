@@ -1,6 +1,6 @@
 # R3 Gallery
 
-Client-only photo gallery SPA built with Vite, Remix UI, and `@pkg/r3-ui-router`.
+Client-only photo gallery SPA built with Vite, Remix UI, and `@pkg/ui-router`.
 
 Production URL: https://r3-gallery.sergiodxa-cloudflare.workers.dev/
 

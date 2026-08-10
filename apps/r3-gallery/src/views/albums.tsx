@@ -10,7 +10,6 @@
 
 import type { Handle } from "remix/ui";
 
-import { RouterProvider } from "@pkg/r3-ui-router";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, fg, outline } from "@pkg/u/color";
 import { rounded, transition, transitionDuration } from "@pkg/u/effects";
@@ -35,6 +34,7 @@ import { hover, when } from "@pkg/u/state";
 import { translateY } from "@pkg/u/transform";
 import { fontSize, leading, lineClamp, textDecoration, tracking, weight } from "@pkg/u/typography";
 import { Button, Form, Header, Heading, Label, NumberField, Toolbar } from "@pkg/ui";
+import { RouterProvider } from "@pkg/ui-router";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,

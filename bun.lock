@@ -63,13 +63,13 @@
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
-        "@pkg/ui": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/rss": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/sitemap": "workspace:*",
         "@pkg/strings": "workspace:*",
         "@pkg/u": "workspace:*",
+        "@pkg/ui": "workspace:*",
         "@pkg/validate": "workspace:*",
         "remix": "3.0.0-beta.5",
       },
@@ -120,12 +120,12 @@
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/polar": "workspace:*",
-        "@pkg/ui": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/seo": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/u": "workspace:*",
+        "@pkg/ui": "workspace:*",
         "@pkg/validate": "workspace:*",
         "remix": "3.0.0-beta.5",
       },
@@ -168,12 +168,12 @@
         "@pkg/logger": "workspace:*",
         "@pkg/mail": "workspace:*",
         "@pkg/polar": "workspace:*",
-        "@pkg/ui": "workspace:*",
         "@pkg/rate-limit": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/session-storage-kv": "workspace:*",
         "@pkg/u": "workspace:*",
+        "@pkg/ui": "workspace:*",
         "@pkg/uuid": "workspace:*",
         "@pkg/validate": "workspace:*",
         "remix": "3.0.0-beta.5",
@@ -194,10 +194,10 @@
       "name": "@apps/r3-gallery",
       "dependencies": {
         "@pkg/lucide-remix": "workspace:*",
-        "@pkg/ui": "workspace:*",
-        "@pkg/r3-ui-router": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/u": "workspace:*",
+        "@pkg/ui": "workspace:*",
+        "@pkg/ui-router": "workspace:*",
         "remix": "3.0.0-beta.5",
       },
       "devDependencies": {
@@ -225,7 +225,6 @@
         "@pkg/mail": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/polar": "workspace:*",
-        "@pkg/ui": "workspace:*",
         "@pkg/rate-limit": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/seo": "workspace:*",
@@ -234,6 +233,7 @@
         "@pkg/sitemap": "workspace:*",
         "@pkg/strings": "workspace:*",
         "@pkg/u": "workspace:*",
+        "@pkg/ui": "workspace:*",
         "@pkg/uuid": "workspace:*",
         "@pkg/validate": "workspace:*",
         "remix": "3.0.0-beta.5",
@@ -562,28 +562,6 @@
         "@types/bun": "^1.3.14",
       },
     },
-    "packages/ui": {
-      "name": "@pkg/ui",
-      "version": "0.0.1",
-      "dependencies": {
-        "@pkg/lucide-remix": "workspace:*",
-        "@pkg/u": "workspace:*",
-        "remix": "3.0.0-beta.5",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.3.14",
-      },
-    },
-    "packages/r3-ui-router": {
-      "name": "@pkg/r3-ui-router",
-      "version": "0.0.0",
-      "dependencies": {
-        "remix": "3.0.0-beta.5",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.3.11",
-      },
-    },
     "packages/rate-limit": {
       "name": "@pkg/rate-limit",
       "version": "0.0.1",
@@ -720,6 +698,28 @@
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/ui": {
+      "name": "@pkg/ui",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pkg/lucide-remix": "workspace:*",
+        "@pkg/u": "workspace:*",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/ui-router": {
+      "name": "@pkg/ui-router",
+      "version": "0.0.0",
+      "dependencies": {
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.11",
       },
     },
     "packages/uuid": {
@@ -1295,10 +1295,6 @@
 
     "@pkg/polar": ["@pkg/polar@workspace:packages/polar"],
 
-    "@pkg/ui": ["@pkg/ui@workspace:packages/ui"],
-
-    "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
-
     "@pkg/rate-limit": ["@pkg/rate-limit@workspace:packages/rate-limit"],
 
     "@pkg/response": ["@pkg/response@workspace:packages/response"],
@@ -1324,6 +1320,10 @@
     "@pkg/types": ["@pkg/types@workspace:packages/types"],
 
     "@pkg/u": ["@pkg/u@workspace:packages/u"],
+
+    "@pkg/ui": ["@pkg/ui@workspace:packages/ui"],
+
+    "@pkg/ui-router": ["@pkg/ui-router@workspace:packages/ui-router"],
 
     "@pkg/uuid": ["@pkg/uuid@workspace:packages/uuid"],
 
@@ -1711,7 +1711,7 @@
 
     "react-dom": ["react-dom@19.2.8", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
 
-    "react-router": ["react-router@8.3.0", "", { "dependencies": { "cookie-es": "^3.1.1" }, "peerDependencies": { "react": ">=19.2.7", "react-dom": ">=19.2.7" }, "optionalPeers": ["react-dom"] }, "sha512-qyPMvW83jGIct3yiieisxdk9M745anqhpIMKN5m1t6yBMfgVPpt77aHOqs5fUlEJRMCGffg9BaQLH9oPVOL7xQ=="],
+    "react-router": ["react-router@7.17.0", "", { "dependencies": { "cookie": "^1.0.1", "set-cookie-parser": "^2.6.0" }, "peerDependencies": { "react": ">=18", "react-dom": ">=18" }, "optionalPeers": ["react-dom"] }, "sha512-FDELK7rTMlCHO5+reyXsPlmfr7N1F91lPHsWYfMEGQm/KQ+F4JFM8jGoeQDmDvdTs93Fw9aSilH+uKRb4/jXvQ=="],
 
     "readdirp": ["readdirp@5.0.0", "", {}, "sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ=="],
 
@@ -1839,7 +1839,7 @@
 
     "@oxc-transform/binding-wasm32-wasi/@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.3", "", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-xK9sGVbJWYb08+mTJt3/YV24WxvxpXcXtP6B172paPZ+Ts69Re9dAr7lKwJoeIx8OoeuimEiRZ7umkiUVClmmQ=="],
 
-    "@pkg/logger/react-router": ["react-router@7.17.0", "", { "dependencies": { "cookie": "^1.0.1", "set-cookie-parser": "^2.6.0" }, "peerDependencies": { "react": ">=18", "react-dom": ">=18" }, "optionalPeers": ["react-dom"] }, "sha512-FDELK7rTMlCHO5+reyXsPlmfr7N1F91lPHsWYfMEGQm/KQ+F4JFM8jGoeQDmDvdTs93Fw9aSilH+uKRb4/jXvQ=="],
+    "@pkg/response/react-router": ["react-router@8.3.0", "", { "dependencies": { "cookie-es": "^3.1.1" }, "peerDependencies": { "react": ">=19.2.7", "react-dom": ">=19.2.7" }, "optionalPeers": ["react-dom"] }, "sha512-qyPMvW83jGIct3yiieisxdk9M745anqhpIMKN5m1t6yBMfgVPpt77aHOqs5fUlEJRMCGffg9BaQLH9oPVOL7xQ=="],
 
     "@poppinss/dumper/supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
