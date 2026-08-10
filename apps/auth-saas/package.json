@@ -16,10 +16,8 @@
 	},
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",
-		"@pkg/cn": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/data-table-sqlstorage": "workspace:*",
-		"@pkg/db-helpers": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/hostname": "workspace:*",
 		"@pkg/http": "workspace:*",
@@ -32,7 +30,6 @@
 		"@pkg/result": "workspace:*",
 		"@pkg/service-container": "workspace:*",
 		"@pkg/types": "workspace:*",
-		"@pkg/ui": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1",
 		"@simplewebauthn/server": "^13.3.2",
