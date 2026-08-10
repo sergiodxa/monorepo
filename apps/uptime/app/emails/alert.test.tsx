@@ -47,6 +47,17 @@ async function makeEmail(overrides: Partial<AlertEmail.Data> = {}) {
 	});
 }
 
+/**
+ * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
+ * The runner's ICU differs between a developer machine and CI, so the separator is
+ * normalised here rather than asserted. What these tests are about is the email's
+ * content — the host's Unicode data is not the subject, and production renders on
+ * the Workers runtime's own ICU regardless of what built it.
+ */
+function instants(text: string): string {
+	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
+}
+
 describe("AlertEmail", () => {
 	test("addresses the mailbox the alert is configured with", async () => {
 		let email = await makeEmail();
@@ -82,7 +93,7 @@ describe("AlertEmail", () => {
 		expect(text).toContain("URL https://example.com");
 		expect(text).toContain("Response status 500 (expected 200)");
 		expect(text).toContain("Response time 1200ms");
-		expect(text).toContain("Time Aug 1, 2026 at 10:00 AM UTC");
+		expect(instants(text)).toContain("Time Aug 1, 2026 at 10:00 AM UTC");
 		expect(text).toContain("https://uptime.test/app/team-1/monitors/monitor-1");
 	});
 
@@ -187,8 +198,8 @@ describe("AlertEmail", () => {
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Last ping Aug 1, 2026 at 9:45 AM UTC");
-		expect(text).toContain("Next expected Aug 1, 2026 at 9:50 AM UTC");
+		expect(instants(text)).toContain("Last ping Aug 1, 2026 at 9:45 AM UTC");
+		expect(instants(text)).toContain("Next expected Aug 1, 2026 at 9:50 AM UTC");
 	});
 
 	test("reports a certificate's own detail", async () => {
@@ -207,7 +218,7 @@ describe("AlertEmail", () => {
 		let { text } = await render(email.body());
 
 		expect(text).toContain("Hostname example.com");
-		expect(text).toContain("Expires at Aug 20, 2026 at 12:00 AM UTC");
+		expect(instants(text)).toContain("Expires at Aug 20, 2026 at 12:00 AM UTC");
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {

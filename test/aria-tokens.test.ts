@@ -153,7 +153,11 @@ describe("ARIA token attributes, repo-wide", () => {
 		// A scan that silently matched nothing would pass this test forever.
 		expect(scanned).toBeGreaterThan(500);
 		expect(violations).toEqual([]);
-	});
+		// This walks every first-party `.ts`/`.tsx` in the repo and reads each one, so it
+		// is bound by disk rather than by the assertions. On CI that has come in just over
+		// the 5s default and failed the run on timing alone; the budget is generous
+		// because the number worth failing on is a violation, never a slow disk.
+	}, 60_000);
 
 	/**
 	 * The exemption has to stay a statement about reality. Whether the exempted path

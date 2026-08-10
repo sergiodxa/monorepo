@@ -70,6 +70,17 @@ function makeEmail(overrides: Partial<FunnelReportEmail.Data> = {}) {
 	});
 }
 
+/**
+ * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
+ * The runner's ICU differs between a developer machine and CI, so the separator is
+ * normalised here rather than asserted. What these tests are about is the email's
+ * content — the host's Unicode data is not the subject, and production renders on
+ * the Workers runtime's own ICU regardless of what built it.
+ */
+function instants(text: string): string {
+	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
+}
+
 describe("FunnelReportEmail", () => {
 	test("goes to the one internal address it was given", () => {
 		expect(makeEmail().to).toEqual({ email: "ops@example.com" });
@@ -103,7 +114,7 @@ describe("FunnelReportEmail", () => {
 		expect(text).toContain("Days to paying 6");
 		expect(text).toContain("Emails received 8");
 		expect(text).toContain("URLs tried 2 (3 tries)");
-		expect(text).toContain("First payment Aug 1, 2026 at 9:00 AM UTC");
+		expect(instants(text)).toContain("First payment Aug 1, 2026 at 9:00 AM UTC");
 	});
 
 	test("itemises a free signup more lightly, with no payment dates to give", async () => {

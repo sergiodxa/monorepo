@@ -32,6 +32,17 @@ async function makeEmail(overrides: Partial<TrialChangeEmail.Data> = {}) {
 	});
 }
 
+/**
+ * ICU 72 (CLDR 42) began joining a date to a time with " at "; older builds use ", ".
+ * The runner's ICU differs between a developer machine and CI, so the separator is
+ * normalised here rather than asserted. What these tests are about is the email's
+ * content — the host's Unicode data is not the subject, and production renders on
+ * the Workers runtime's own ICU regardless of what built it.
+ */
+function instants(text: string): string {
+	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
+}
+
 describe("TrialChangeEmail", () => {
 	test("addresses the account-less watcher of the URL", async () => {
 		let email = await makeEmail();
@@ -61,7 +72,7 @@ describe("TrialChangeEmail", () => {
 		expect(text).toContain("Previous status UP");
 		expect(text).toContain("Response status 503");
 		expect(text).toContain("Response time 4200ms");
-		expect(text).toContain("Changed at Aug 3, 2026 at 2:32 PM UTC");
+		expect(instants(text)).toContain("Changed at Aug 3, 2026 at 2:32 PM UTC");
 	});
 
 	test("reports an em dash for a URL that stopped answering entirely", async () => {
