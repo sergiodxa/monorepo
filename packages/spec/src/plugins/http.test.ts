@@ -126,8 +126,30 @@ describe(createHttpPlugin.name, () => {
 		for (let tool of tools) {
 			expect(tool.kind).toBe("action");
 			expect(tool.requires).toBe("net");
-			expect(tool.params.map((param) => param.name)).toEqual(["url", "body"]);
-			expect(tool.params.map((param) => param.required)).toEqual([true, false]);
+			expect(tool.params.map((param) => param.name)).toEqual([
+				"url",
+				"body",
+				"headers",
+				"form",
+				"json",
+				"text",
+			]);
+			expect(tool.params.map((param) => param.required)).toEqual([
+				true,
+				false,
+				false,
+				false,
+				false,
+				false,
+			]);
+			expect(tool.params.map((param) => param.kind)).toEqual([
+				"value",
+				"value",
+				"word",
+				"word",
+				"word",
+				"word",
+			]);
 		}
 	});
 
@@ -363,13 +385,6 @@ describe(createHttpPlugin.name, () => {
 		expect(error.message).toContain("https://down.example.com/x");
 	});
 
-	test("rejects word arguments", async () => {
-		let result = await PLUGIN.call("get", [word("exists")], buildContext());
-		let error = unwrapError(result);
-		expect(error.code).toBe("tool-error");
-		expect(error.message).toContain('"exists"');
-	});
-
 	test("rejects a non-string URL argument", async () => {
 		let result = await PLUGIN.call("get", [value(42)], buildContext());
 		let error = unwrapError(result);
@@ -377,19 +392,10 @@ describe(createHttpPlugin.name, () => {
 		expect(error.message).toContain("URL string");
 	});
 
-	test("rejects missing and extra arguments", async () => {
+	test("rejects a call with no arguments", async () => {
 		let missing = unwrapError(await PLUGIN.call("get", [], buildContext()));
 		expect(missing.code).toBe("tool-error");
-		expect(missing.message).toContain("got 0 arguments");
-		let extra = unwrapError(
-			await PLUGIN.call(
-				"get",
-				[value("https://api.example.com/a"), value("x"), value("y")],
-				buildContext(),
-			),
-		);
-		expect(extra.code).toBe("tool-error");
-		expect(extra.message).toContain("got 3 arguments");
+		expect(missing.message).toContain("no arguments");
 	});
 
 	test("an unknown tool is a tool error listing the available tools", async () => {
@@ -397,5 +403,325 @@ describe(createHttpPlugin.name, () => {
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain("get, post, put, patch, delete");
+	});
+
+	test("headers set on the request reach the server", async () => {
+		let captured: { auth: string | null } | undefined;
+		SERVER.use(
+			http.get("https://api.example.com/userinfo", ({ request }) => {
+				captured = { auth: request.headers.get("authorization") };
+				return HttpResponse.json({ sub: "user-1" });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[
+				value("https://api.example.com/userinfo"),
+				word("headers"),
+				value({ authorization: "Bearer abc" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe("Bearer abc");
+	});
+
+	test("a form body is sent as application/x-www-form-urlencoded", async () => {
+		let captured: { contentType: string | null; body: string } | undefined;
+		SERVER.use(
+			http.post("https://api.example.com/token", async ({ request }) => {
+				captured = {
+					contentType: request.headers.get("content-type"),
+					body: await request.text(),
+				};
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/token"),
+				word("form"),
+				value({ grant_type: "authorization_code", code: "bogus" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(String(captured?.contentType)).toContain("application/x-www-form-urlencoded");
+		let params = new URLSearchParams(captured?.body ?? "");
+		expect(params.get("grant_type")).toBe("authorization_code");
+		expect(params.get("code")).toBe("bogus");
+	});
+
+	test("the json tag sends any value as application/json", async () => {
+		SERVER.use(
+			http.post("https://api.example.com/j", async ({ request }) =>
+				HttpResponse.json({
+					contentType: request.headers.get("content-type"),
+					received: await request.text(),
+				}),
+			),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/j"), word("json"), value("a plain string")],
+			buildContext(),
+		);
+		let json = asObject(asObject(unwrap(result)).json);
+		expect(String(json.contentType)).toContain("application/json");
+		expect(json.received).toBe(JSON.stringify("a plain string"));
+	});
+
+	test("the text tag sends a string as text/plain", async () => {
+		SERVER.use(
+			http.post("https://api.example.com/t", async ({ request }) =>
+				HttpResponse.json({
+					contentType: request.headers.get("content-type"),
+					received: await request.text(),
+				}),
+			),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/t"), word("text"), value("hi there")],
+			buildContext(),
+		);
+		let json = asObject(asObject(unwrap(result)).json);
+		expect(String(json.contentType)).toContain("text/plain");
+		expect(json.received).toBe("hi there");
+	});
+
+	test("an explicit headers content-type overrides the body's auto type", async () => {
+		let captured: { contentType: string | null } | undefined;
+		SERVER.use(
+			http.post("https://api.example.com/doc", async ({ request }) => {
+				captured = { contentType: request.headers.get("content-type") };
+				return HttpResponse.json({ received: await request.json() });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/doc"),
+				value({ name: "Ada" }),
+				word("headers"),
+				value({ "Content-Type": "application/vnd.api+json" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.contentType).toBe("application/vnd.api+json");
+	});
+
+	test("multiple headers arrive and number/boolean values coerce to strings", async () => {
+		let seen: Record<string, string | null> = {};
+		SERVER.use(
+			http.get("https://api.example.com/multi", ({ request }) => {
+				seen = {
+					accept: request.headers.get("accept"),
+					"x-count": request.headers.get("x-count"),
+					"x-debug": request.headers.get("x-debug"),
+				};
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[
+				value("https://api.example.com/multi"),
+				word("headers"),
+				value({ accept: "application/json", "x-count": 3, "x-debug": true }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(seen.accept).toBe("application/json");
+		expect(seen["x-count"]).toBe("3");
+		expect(seen["x-debug"]).toBe("true");
+	});
+
+	test("a form field value coerces a number to a string", async () => {
+		let body = "";
+		SERVER.use(
+			http.post("https://api.example.com/f", async ({ request }) => {
+				body = await request.text();
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/f"), word("form"), value({ page: 2, active: true })],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		let params = new URLSearchParams(body);
+		expect(params.get("page")).toBe("2");
+		expect(params.get("active")).toBe("true");
+	});
+
+	test("form and headers combine on one request", async () => {
+		let captured: { auth: string | null; contentType: string | null; body: string } | undefined;
+		SERVER.use(
+			http.post("https://api.example.com/introspect", async ({ request }) => {
+				captured = {
+					auth: request.headers.get("authorization"),
+					contentType: request.headers.get("content-type"),
+					body: await request.text(),
+				};
+				return HttpResponse.json({ active: false });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/introspect"),
+				word("form"),
+				value({ token: "abc", token_type_hint: "access_token" }),
+				word("headers"),
+				value({ authorization: "Basic dXNlcjpwYXNz" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe("Basic dXNlcjpwYXNz");
+		expect(String(captured?.contentType)).toContain("application/x-www-form-urlencoded");
+		let params = new URLSearchParams(captured?.body ?? "");
+		expect(params.get("token")).toBe("abc");
+		expect(params.get("token_type_hint")).toBe("access_token");
+	});
+
+	test("two bodies is a tool error naming the conflict", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), value({ a: 1 }), word("json"), value({ b: 2 })],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("one request body");
+	});
+
+	test("a form body and a text body together is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/x"),
+				word("form"),
+				value({ a: "1" }),
+				word("text"),
+				value("hi"),
+			],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("one request body");
+	});
+
+	test("a tagged body on GET is a tool error naming the method", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("json"), value({ a: 1 })],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("GET");
+	});
+
+	test("a bare body on GET is a tool error naming the method", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), value({ a: 1 })],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("GET");
+	});
+
+	test("an unknown option word is a tool error listing the option words", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("query")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain('"query"');
+		expect(error.message).toContain("headers, form, json, text");
+	});
+
+	test("an option word missing its value is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), word("headers")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("headers");
+		expect(error.message).toContain("value");
+	});
+
+	test("an option word followed by another word is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), word("headers"), word("form"), value({ a: "1" })],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("value");
+	});
+
+	test("two headers blocks is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[
+				value("https://api.example.com/x"),
+				word("headers"),
+				value({ a: "1" }),
+				word("headers"),
+				value({ b: "2" }),
+			],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("at most one headers");
+	});
+
+	test("a non-object headers value is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("headers"), value("nope")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("object");
+	});
+
+	test("a non-scalar header value is a tool error naming the field", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("headers"), value({ "x-bad": ["a"] })],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain('"x-bad"');
+	});
+
+	test("a non-string text body is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), word("text"), value(42)],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("string");
 	});
 });

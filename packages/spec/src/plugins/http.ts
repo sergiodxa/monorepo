@@ -2,7 +2,9 @@
  * The built-in `http` plugin: `get`/`post`/`put`/`patch`/`delete` tools that
  * issue real requests through the global fetch. Every tool requires the `net`
  * grant, checked against the URL's host and port, and URLs must be absolute
- * because v1 ships no environments mechanism to bind a base URL against.
+ * because v1 ships no environments mechanism to bind a base URL against. Beyond
+ * the URL, calls may carry word-tagged options — `headers { … }`, `form { … }`,
+ * `json …`, `text "…"` — in any order, alongside the back-compatible bare body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,11 +24,31 @@ import { ToolError } from "../errors";
 /** The request tools the plugin exposes; each issues its uppercased method. */
 const HTTP_VERBS = ["get", "post", "put", "patch", "delete"] as const;
 
+/**
+ * The words that tag an optional request argument. Each consumes the argument
+ * that follows it: `headers`/`form` an object, `json` any value, `text` a
+ * string.
+ */
+const OPTION_WORDS = ["headers", "form", "json", "text"] as const;
+
 /** How many redirect hops one request may follow before it is refused. */
 const MAX_REDIRECTS = 10;
 
 /** One of the plugin's request tool names. */
 type HttpVerb = (typeof HTTP_VERBS)[number];
+
+/** One of the option-tag words a call may use. */
+type OptionWord = (typeof OPTION_WORDS)[number];
+
+/** How a request body was supplied, carrying the raw value to encode. */
+interface BodySpec {
+	/** The encoding the body will use. */
+	kind: "json" | "form" | "text";
+	/** The raw value as the spec wrote it, encoded per {@link kind}. */
+	value: Value;
+	/** How the body was written, for a conflict message. */
+	source: "bare" | OptionWord;
+}
 
 /**
  * Create the built-in `http` plugin (namespace `"http"`). Its tools take an
@@ -54,7 +76,8 @@ export function createHttpPlugin(): Plugin {
 
 /**
  * Build the descriptor of one request tool: an action requiring the `net`
- * grant, taking an absolute URL and an optional body value.
+ * grant, taking an absolute URL, an optional bare body, and the word-tagged
+ * `headers`/`form`/`json`/`text` options that may follow in any order.
  */
 function describeVerb(verb: HttpVerb): ToolDescriptor {
 	return {
@@ -73,7 +96,32 @@ function describeVerb(verb: HttpVerb): ToolDescriptor {
 				name: "body",
 				kind: "value",
 				required: false,
-				summary: "Optional request body: a string is sent as text/plain, any other value as JSON.",
+				summary: "Optional bare body: a string is sent as text/plain, any other value as JSON.",
+			},
+			{
+				name: "headers",
+				kind: "word",
+				required: false,
+				summary:
+					"Tag before an object of header name/value pairs; an explicit content-type overrides the body's.",
+			},
+			{
+				name: "form",
+				kind: "word",
+				required: false,
+				summary: "Tag before an object sent as an application/x-www-form-urlencoded body.",
+			},
+			{
+				name: "json",
+				kind: "word",
+				required: false,
+				summary: "Tag before any value sent as an application/json body.",
+			},
+			{
+				name: "text",
+				kind: "word",
+				required: false,
+				summary: "Tag before a string sent as a text/plain body.",
 			},
 		],
 	};
@@ -85,9 +133,12 @@ function isVerb(tool: string): tool is HttpVerb {
 }
 
 /**
- * Run one request tool end to end: validate the arguments, require an
- * absolute http(s) URL, pass the permission gate for the URL's host and
- * port, then fetch and shape the response.
+ * Run one request tool end to end: parse the URL and its optional
+ * word-tagged arguments, reject a body on GET, encode the body and headers,
+ * require an absolute http(s) URL, pass the permission gate for the URL's
+ * host and port, then fetch and shape the response. The permission check is
+ * the last guard before the fetch, so no malformed call ever reaches the
+ * network.
  */
 async function request(
 	verb: HttpVerb,
@@ -96,47 +147,107 @@ async function request(
 ): Promise<Result<Value, SpecError>> {
 	let parsedArgs = readArgs(verb, args);
 	if (isFailure(parsedArgs)) return parsedArgs;
+	if (parsedArgs.data.body !== undefined && verb === "get") {
+		return failure(
+			new ToolError(`http.get cannot send a request body; a GET request carries no body`),
+		);
+	}
 	let target = parseTarget(verb, parsedArgs.data.url);
 	if (isFailure(target)) return target;
+	let init = buildInit(verb, parsedArgs.data.body, parsedArgs.data.headers);
+	if (isFailure(init)) return init;
 	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
 	if (isFailure(allowed)) return allowed;
-	return await perform(verb, target.data, parsedArgs.data.body, context.permissions);
+	return await perform(verb, target.data, init.data, context.permissions);
 }
 
-/** The validated positional arguments of one request tool call. */
+/** The validated arguments of one request tool call. */
 interface RequestArguments {
 	/** The URL exactly as the spec wrote it. */
 	url: string;
-	/** The optional body value; undefined when the call sent none. */
-	body: Value | undefined;
+	/** The optional request body; undefined when the call sent none. */
+	body: BodySpec | undefined;
+	/** The optional raw `headers` object; validated when the init is built. */
+	headers: Value | undefined;
 }
 
 /**
- * Validate the raw tool arguments: a required URL string, an optional body
- * value, nothing else — words are meaningless to HTTP tools and rejected.
+ * Validate the raw tool arguments: a required URL string, then any mix of
+ * word-tagged options (`headers`/`form`/`json`/`text`, each consuming the
+ * next argument) and a single back-compatible bare body (a string is text,
+ * any other value is JSON). At most one body and one `headers` block; a
+ * second body, a second `headers`, an unknown word, or a word missing its
+ * value is a tool error.
  */
 function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, SpecError> {
-	for (let arg of args) {
-		if (arg.kind === "word") {
-			return failure(
-				new ToolError(
-					`http.${verb} accepts value arguments only; the word "${arg.word}" is not one`,
-				),
-			);
-		}
-	}
-	if (args.length === 0 || args.length > 2) {
-		return failure(
-			new ToolError(`http.${verb} takes a URL and an optional body; got ${args.length} arguments`),
-		);
-	}
 	let first = args[0];
-	if (first?.kind !== "value" || typeof first.value !== "string") {
+	if (first === undefined) {
+		return failure(new ToolError(`http.${verb} requires a URL; got no arguments`));
+	}
+	if (first.kind !== "value" || typeof first.value !== "string") {
 		return failure(new ToolError(`http.${verb} requires its first argument to be a URL string`));
 	}
-	let second = args[1];
-	let body = second !== undefined && second.kind === "value" ? second.value : undefined;
-	return success({ url: first.value, body });
+	let url = first.value;
+	let body: BodySpec | undefined;
+	let headers: Value | undefined;
+	let index = 1;
+	while (index < args.length) {
+		let arg = args[index];
+		if (arg === undefined) break;
+		if (arg.kind === "word") {
+			let word = arg.word;
+			if (!isOptionWord(word)) {
+				return failure(
+					new ToolError(
+						`http.${verb} got the unknown option word "${word}"; expected one of ${OPTION_WORDS.join(", ")}`,
+					),
+				);
+			}
+			let next = args[index + 1];
+			if (next === undefined || next.kind !== "value") {
+				return failure(
+					new ToolError(`http.${verb} option "${word}" needs a value argument after it`),
+				);
+			}
+			if (word === "headers") {
+				if (headers !== undefined) {
+					return failure(new ToolError(`http.${verb} accepts at most one headers block`));
+				}
+				headers = next.value;
+			} else {
+				let incoming: BodySpec = { kind: word, value: next.value, source: word };
+				if (body !== undefined) return failure(twoBodies(verb, body, incoming));
+				body = incoming;
+			}
+			index += 2;
+			continue;
+		}
+		let incoming: BodySpec =
+			typeof arg.value === "string"
+				? { kind: "text", value: arg.value, source: "bare" }
+				: { kind: "json", value: arg.value, source: "bare" };
+		if (body !== undefined) return failure(twoBodies(verb, body, incoming));
+		body = incoming;
+		index += 1;
+	}
+	return success({ url, body, headers });
+}
+
+/** Narrow a bare-word argument to one of the option tags. */
+function isOptionWord(word: string): word is OptionWord {
+	return (OPTION_WORDS as readonly string[]).includes(word);
+}
+
+/** The tool error raised when a call supplies more than one request body. */
+function twoBodies(verb: HttpVerb, existing: BodySpec, incoming: BodySpec): ToolError {
+	return new ToolError(
+		`http.${verb} accepts one request body, but got ${bodyLabel(existing.source)} and ${bodyLabel(incoming.source)}`,
+	);
+}
+
+/** How a body reads in a conflict message: the bare body, or a tagged one. */
+function bodyLabel(source: "bare" | OptionWord): string {
+	return source === "bare" ? "a bare body" : `a \`${source}\` body`;
 }
 
 /**
@@ -174,15 +285,16 @@ function portOf(url: URL): number {
  * Redirects are followed by hand, never by fetch: every redirect target is a
  * new network destination and must pass the same `net` check as the
  * spec-written URL — otherwise a granted host could bounce the request to a
- * host the caller never granted.
+ * host the caller never granted. The prebuilt `init` (method, body, and any
+ * author headers) carries forward on a body-preserving redirect; a redirect
+ * that rewrites the method to GET drops the body and its headers with it.
  */
 async function perform(
 	verb: HttpVerb,
 	url: URL,
-	body: Value | undefined,
+	init: RequestInit,
 	permissions: PermissionSet,
 ): Promise<Result<Value, SpecError>> {
-	let init = buildInit(verb, body);
 	let current = url;
 	for (let redirects = 0; ; redirects++) {
 		let response: Response;
@@ -270,8 +382,9 @@ function parseLocation(verb: HttpVerb, location: string, base: URL): Result<URL,
 
 /**
  * The init for the next hop, per the fetch standard's method rewrite: a 303 —
- * and a 301/302 answering a non-GET — switches to GET and drops the body;
- * 307/308 keep both.
+ * and a 301/302 answering a non-GET — switches to GET and drops the body (and
+ * the author headers that rode with it); a body-preserving redirect (307/308,
+ * or 301/302 on a GET) keeps the whole init, headers included.
  */
 function redirectInit(init: RequestInit, status: number): RequestInit {
 	if (status === 303 || ((status === 301 || status === 302) && init.method !== "GET")) {
@@ -281,17 +394,95 @@ function redirectInit(init: RequestInit, status: number): RequestInit {
 }
 
 /**
- * Build the fetch init for a verb and optional body: strings travel as
- * text/plain, every other value is serialized as JSON with the matching
- * content type; an absent body sets neither.
+ * Build the fetch init for a verb, its optional body, and its optional
+ * `headers` object. The body picks a default content type (text/plain,
+ * application/json, or application/x-www-form-urlencoded); the author's
+ * headers are then layered on top with lowercased names, so an explicit
+ * `content-type` overrides the body's default. An absent body sets no body
+ * and no default content type.
  */
-function buildInit(verb: HttpVerb, body: Value | undefined): RequestInit {
-	let method = verb.toUpperCase();
-	if (body === undefined) return { method };
-	if (typeof body === "string") {
-		return { method, body, headers: { "content-type": "text/plain" } };
+function buildInit(
+	verb: HttpVerb,
+	body: BodySpec | undefined,
+	headers: Value | undefined,
+): Result<RequestInit, SpecError> {
+	let encoded = encodeBody(verb, body);
+	if (isFailure(encoded)) return encoded;
+	let finalHeaders: Record<string, string> = {};
+	if (encoded.data.contentType !== undefined) {
+		finalHeaders["content-type"] = encoded.data.contentType;
 	}
-	return { method, body: JSON.stringify(body), headers: { "content-type": "application/json" } };
+	if (headers !== undefined) {
+		let coerced = coerceFields(verb, "headers", headers);
+		if (isFailure(coerced)) return coerced;
+		for (let [name, value] of Object.entries(coerced.data)) {
+			finalHeaders[name.toLowerCase()] = value;
+		}
+	}
+	let init: RequestInit = { method: verb.toUpperCase() };
+	if (encoded.data.body !== undefined) init.body = encoded.data.body;
+	if (Object.keys(finalHeaders).length > 0) init.headers = finalHeaders;
+	return success(init);
+}
+
+/** A serialized request body and the content type it implies, if any. */
+interface EncodedBody {
+	/** The serialized body string, or undefined when the call sent none. */
+	body: string | undefined;
+	/** The default content type for this body, before author headers apply. */
+	contentType: string | undefined;
+}
+
+/**
+ * Serialize a body spec into its wire string and default content type:
+ * `text` verbatim as text/plain (a non-string value is a tool error), `form`
+ * urlencoded via URLSearchParams as application/x-www-form-urlencoded, and
+ * `json` as JSON of any value as application/json. An absent body yields
+ * neither.
+ */
+function encodeBody(verb: HttpVerb, body: BodySpec | undefined): Result<EncodedBody, SpecError> {
+	if (body === undefined) return success({ body: undefined, contentType: undefined });
+	if (body.kind === "text") {
+		if (typeof body.value !== "string") {
+			return failure(new ToolError(`http.${verb} text body must be a string`));
+		}
+		return success({ body: body.value, contentType: "text/plain" });
+	}
+	if (body.kind === "form") {
+		let coerced = coerceFields(verb, "form", body.value);
+		if (isFailure(coerced)) return coerced;
+		return success({
+			body: new URLSearchParams(coerced.data).toString(),
+			contentType: "application/x-www-form-urlencoded",
+		});
+	}
+	return success({ body: JSON.stringify(body.value), contentType: "application/json" });
+}
+
+/**
+ * Coerce a `headers` or `form` object into a string map: string values pass
+ * through, numbers and booleans stringify, and a non-object container or a
+ * null/array/object field value is a tool error naming the offending field.
+ */
+function coerceFields(
+	verb: HttpVerb,
+	label: string,
+	value: Value,
+): Result<Record<string, string>, SpecError> {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return failure(new ToolError(`http.${verb} ${label} must be an object of string values`));
+	}
+	let fields: Record<string, string> = {};
+	for (let [key, raw] of Object.entries(value)) {
+		if (typeof raw === "string") fields[key] = raw;
+		else if (typeof raw === "number" || typeof raw === "boolean") fields[key] = String(raw);
+		else {
+			return failure(
+				new ToolError(`http.${verb} ${label} field "${key}" must be a string, number, or boolean`),
+			);
+		}
+	}
+	return success(fields);
 }
 
 /** Parse a response body as JSON, yielding null when it is not valid JSON. */

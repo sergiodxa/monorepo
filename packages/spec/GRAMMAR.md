@@ -159,6 +159,37 @@ Notes:
   a word.
 - Duration literals evaluate to a number of milliseconds.
 
+### Word-tagged tool options
+
+A tool may accept **optional options** introduced by a word that consumes the
+argument after it, in any order after the required arguments. This is the plain
+word mechanism above — no new grammar — and how the built-in `http` verbs take
+request headers and non-JSON bodies:
+
+```
+http.post "https://id.example.com/oauth/token" form {
+	grant_type: "authorization_code"
+	code: "abc123"
+} headers { authorization: "Basic dXNlcjpwYXNz" }
+
+http.get "https://id.example.com/userinfo" headers { authorization: "Bearer t" }
+```
+
+- `headers { Name: "value", … }` — request headers (string→string; a number or
+  boolean coerces to its string form); header names are case-insensitive, and an
+  explicit `content-type` overrides the body's default.
+- `form { field: "value", … }` — an `application/x-www-form-urlencoded` body.
+- `json <value>` — an `application/json` body (any value); the explicit form of a
+  bare non-string body.
+- `text "<string>"` — a `text/plain` body; the explicit form of a bare string
+  body.
+
+A call carries at most one body (the bare body, or one of `json`/`form`/`text`)
+and at most one `headers` block; a second body, a body on `GET`, an unknown
+option word, or a tag with no value is a tool error. The two original forms —
+`http.get url` and `http.<verb> url <body>` (bare string → text, any other value
+→ JSON) — are unchanged.
+
 ### `expect`
 
 Two forms, distinguished by resolving the first argument (never by guessing:

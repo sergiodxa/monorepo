@@ -40,3 +40,44 @@ test "a POST sends a JSON body the server echoes back" {
 		expect response.json.year 1965
 	}
 }
+
+test "a POST form body arrives urlencoded alongside an auth header" {
+	when {
+		# `form` encodes the object as application/x-www-form-urlencoded and
+		# `headers` rides along on the same request; the server reflects both.
+		let response = http.post "http://127.0.0.1:50617/reflect" form {
+			grant_type: "client_credentials"
+			scope: "read"
+		} headers { authorization: "Basic dXNlcjpwYXNz" }
+	}
+	then {
+		expect response.status 200
+		expect response.json.content_type "application/x-www-form-urlencoded"
+		expect response.json.authorization "Basic dXNlcjpwYXNz"
+		expect response.json.body "grant_type=client_credentials&scope=read"
+	}
+}
+
+test "a GET carries a bearer authorization header" {
+	when {
+		# Headers combine freely with a GET, which sends no body.
+		let response = http.get "http://127.0.0.1:50617/reflect" headers {
+			authorization: "Bearer token-123"
+		}
+	}
+	then {
+		expect response.status 200
+		expect response.json.authorization "Bearer token-123"
+	}
+}
+
+test "an explicit json tag sets application/json" {
+	when {
+		# `json` is the explicit form of the bare-object body.
+		let response = http.post "http://127.0.0.1:50617/reflect" json { title: "Dune" }
+	}
+	then {
+		expect response.json.content_type "application/json"
+		expect response.json.body "{\"title\":\"Dune\"}"
+	}
+}

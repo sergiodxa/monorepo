@@ -28,8 +28,11 @@ const HTTP_EXAMPLE_PORT = 50617;
 const EXAMPLE_TIMEOUT_MS = 60_000;
 
 /**
- * The example server: a tiny router covering the three routes the specs hit —
- * a text GET, a JSON GET, and a POST that echoes its JSON body back with a 201.
+ * The example server: a tiny router covering the routes the specs hit — a text
+ * GET, a JSON GET, a POST that echoes its JSON body back with a 201, and a
+ * method-agnostic `/reflect` that mirrors the request's authorization header,
+ * content type, and raw body so a spec can prove exactly what the request-option
+ * tags (`headers`/`form`/`json`/`text`) put on the wire.
  */
 async function handle(request: Request): Promise<Response> {
 	let url = new URL(request.url);
@@ -42,6 +45,14 @@ async function handle(request: Request): Promise<Response> {
 	if (request.method === "POST" && url.pathname === "/echo") {
 		let body = (await request.json()) as unknown;
 		return Response.json(body, { status: 201 });
+	}
+	if (url.pathname === "/reflect") {
+		return Response.json({
+			method: request.method,
+			authorization: request.headers.get("authorization"),
+			content_type: request.headers.get("content-type"),
+			body: await request.text(),
+		});
 	}
 	return new Response("not found", { status: 404 });
 }

@@ -312,7 +312,7 @@ spec run spec --allow-run=echo
 
 `get`, `post`, `put`, `patch`, `delete`, each needing `--allow-net` for the
 URL's host (and port, if you scope one). URLs must be **absolute**. An optional
-body travels as `text/plain` when it's a string, JSON otherwise. Each returns
+bare body travels as `text/plain` when it's a string, JSON otherwise. Each returns
 `{ status, ok, headers, text, json }`; an HTTP error status is a normal value —
 only a network-level failure is an error.
 
@@ -332,6 +332,57 @@ test "creating a post returns 201" {
 ```sh
 spec run spec --allow-net=localhost:3000
 ```
+
+#### Request options: headers and non-JSON bodies
+
+After the URL, a request takes optional **word-tagged options**, in any order:
+
+- `headers { Name: "value", … }` — request headers (an `Authorization`, an
+  `Accept`, a cookie). Numbers and booleans stringify; header names are
+  case-insensitive, and an explicit `content-type` here overrides the body's.
+- `form { field: "value", … }` — a body sent as
+  `application/x-www-form-urlencoded` (the shape OAuth token endpoints and
+  classic form posts expect).
+- `json <value>` — a body sent as `application/json`; the explicit form of a
+  bare non-string body.
+- `text "<string>"` — a body sent as `text/plain`; the explicit form of a bare
+  string body.
+
+They combine, so an authenticated form post is one call:
+
+```
+use http
+
+test "the token endpoint rejects a bad code" {
+	when {
+		let response = http.post "http://localhost:3000/oauth/token" form {
+			grant_type: "authorization_code"
+			code: "bogus"
+		} headers { authorization: "Basic dXNlcjpwYXNz" }
+	}
+	then {
+		expect response.status 400
+		expect response.json.error "invalid_grant"
+	}
+}
+
+test "a bearer header rides on a GET" {
+	when {
+		let who = http.get "http://localhost:3000/userinfo" headers {
+			authorization: "Bearer bogus"
+		}
+	}
+	then {
+		expect who.status 401
+	}
+}
+```
+
+A request carries **at most one body** (the bare body, or one of
+`json`/`form`/`text`) and **at most one** `headers` block; a second body, a body
+on a `GET`, or an unknown tag is an error. The two original forms —
+`http.get url` and `http.<verb> url <body>` — are unchanged, so existing specs
+keep working exactly as before.
 
 ### `browser` — drive a real browser · `--allow-net`
 
