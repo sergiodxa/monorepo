@@ -83,9 +83,9 @@ test "POST /oauth/introspect reports an unknown token as inactive" {
 		seed_code_client
 	}
 	when {
-		let result = http.post "http://localhost:3002/oauth/introspect" basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret" form {
+		let result = http.post "http://localhost:3002/oauth/introspect" form {
 			token: "not-a-real-token"
-		}
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 	}
 	then {
 		expect result.status 200
@@ -115,12 +115,12 @@ test "POST /oauth/revoke invalidates a refresh token, which then introspects ina
 		seed_refresh_session
 	}
 	when {
-		let revoked = http.post "http://localhost:3002/oauth/revoke" basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret" form {
+		let revoked = http.post "http://localhost:3002/oauth/revoke" form {
 			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-		}
-		let after = http.post "http://localhost:3002/oauth/introspect" basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret" form {
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
+		let after = http.post "http://localhost:3002/oauth/introspect" form {
 			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-		}
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 	}
 	then {
 		expect revoked.status 200
