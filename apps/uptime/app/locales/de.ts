@@ -624,7 +624,7 @@ export default {
 				},
 				dailyStats: {
 					label: "Tagesstatistiken:",
-					body: "jede Nacht werden die Prüfungen des Vortags zu einer Zeile pro Monitor zusammengefasst. Diese Zusammenfassung ist der Langzeitverlauf hinter der Jahres-Heatmap und wird 365 Tage lang aufbewahrt.",
+					body: "jede Nacht werden die Prüfungen des Vortags zu einer Zeile pro Monitor zusammengefasst. Diese Zusammenfassung ist der Langzeitverlauf hinter jeder Uptime-Grafik in der App und wird 365 Tage lang aufbewahrt.",
 				},
 				otherResults: {
 					label: "DNS- und TCP-Prüfdatensätze:",
@@ -988,6 +988,10 @@ export default {
 					teams: "Ihre Teams",
 				},
 			},
+			toasts: {
+				region: "Benachrichtigungen",
+				dismiss: "Schließen",
+			},
 		},
 
 		errors: {
@@ -1082,6 +1086,8 @@ export default {
 		addButton: "Inhaltsprüfung hinzufügen",
 
 		form: {
+			title: "Prüfung hinzufügen",
+			description: "Jede Prüfung wird bei jedem Ping auf den Antworttext angewendet.",
 			checkType: {
 				label: "Prüfungstyp",
 				description: "Wählen Sie, wie der Antwortinhalt abgeglichen werden soll",
@@ -1501,15 +1507,6 @@ export default {
 	},
 
 	components: {
-		heatmap: {
-			tooltip: "{{date}}\n{{successRate}} Erfolgsrate\n{{checks}} Prüfungen",
-			legend: {
-				success: "Erfolg",
-				failure: "Fehler",
-				mixed: "Gemischt",
-				noData: "Keine Daten",
-			},
-		},
 		copyButton: {
 			label: "Kopieren",
 			copied: "Kopiert!",
@@ -2010,19 +2007,33 @@ export default {
 
 				httpMonitors: {
 					label: "HTTP-Monitore",
-					description: "{{up}} aktiv / {{down}} ausgefallen",
+					breakdown: {
+						up: "{{up}} aktiv",
+						down: "{{down}} ausgefallen",
+					},
 				},
 				dnsMonitors: {
 					label: "DNS-Monitore",
-					description: "{{ok}} ok / {{changed}} geändert / {{error}} Fehler",
+					breakdown: {
+						ok: "{{ok}} ok",
+						changed: "{{changed}} geändert",
+						error: "{{error}} Fehler",
+					},
 				},
 				tcpMonitors: {
 					label: "TCP-Monitore",
-					description: "{{up}} aktiv / {{down}} ausgefallen",
+					breakdown: {
+						up: "{{up}} aktiv",
+						down: "{{down}} ausgefallen",
+					},
 				},
 				cronJobs: {
 					label: "Cron-Jobs",
-					description: "{{healthy}} gesund / {{late}} verspätet / {{missed}} verpasst",
+					breakdown: {
+						healthy: "{{healthy}} gesund",
+						late: "{{late}} verspätet",
+						missed: "{{missed}} verpasst",
+					},
 				},
 
 				slowestEndpoint: {
@@ -2036,7 +2047,11 @@ export default {
 
 				sslMonitors: {
 					label: "SSL-Monitore",
-					description: "{{valid}} gültig, {{expiring}} bald ablaufend, {{expired}} abgelaufen",
+					breakdown: {
+						valid: "{{valid}} gültig",
+						expiring: "{{expiring}} bald ablaufend",
+						expired: "{{expired}} abgelaufen",
+					},
 				},
 			},
 
@@ -2180,6 +2195,18 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Was dieser Monitor überwacht.",
+					},
+					checks: {
+						title: "Prüfeinstellungen",
+						description:
+							"Wie oft der Monitor läuft, welche Antwort er erwartet und von wo aus er läuft.",
+					},
+				},
+
 				cta: "Monitor erstellen",
 			},
 		},
@@ -2272,12 +2299,34 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Was dieser Monitor überwacht.",
+					},
+					checks: {
+						title: "Prüfeinstellungen",
+						description:
+							"Wie oft der Monitor läuft, welche Antwort er erwartet und von wo aus er läuft.",
+					},
+				},
+
 				cancel: "Abbrechen",
 				cta: "Änderungen speichern",
 			},
 
+			ssl: {
+				title: "SSL-Zertifikatsüberwachung",
+				description:
+					"Behalten Sie den Ablauf Ihres Zertifikats im Blick, damit Sie ihn vor Ihren Besuchern bemerken.",
+				cta: "SSL-Einstellungen speichern",
+			},
+
 			dangerZone: {
 				title: "Gefahrenzone",
+				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+				warning:
+					"Beim Löschen dieses Monitors gehen seine Prüfungen, sein Verlauf und seine Benachrichtigungen endgültig verloren.",
 				delete: "Monitor löschen",
 			},
 		},
@@ -2313,7 +2362,7 @@ export default {
 
 				uptime: {
 					label: "Uptime-Prozentsatz",
-					description: "Gesamte Monitor-Uptime",
+					description: "Letzte 90 Tage",
 				},
 
 				slowestResult: {
@@ -2325,16 +2374,6 @@ export default {
 					label: "P99 Antwortzeit",
 					value: "{{value}} ms",
 					description: "p99, letzte 24 Std.",
-				},
-			},
-
-			heatmap: {
-				tooltip: "{{date}}\n{{successRate}} Erfolgsrate\n{{checks}} Prüfungen",
-				legend: {
-					success: "Erfolg",
-					failure: "Fehler",
-					mixed: "Gemischt",
-					noData: "Keine Daten",
 				},
 			},
 
@@ -2353,6 +2392,18 @@ export default {
 				lastChecked: "Zuletzt geprüft",
 				notConfigured: "SSL-Überwachung ist für diesen Monitor nicht aktiviert.",
 				configure: "SSL-Überwachung konfigurieren",
+			},
+			run: {
+				toast: {
+					up: "{{name}} ist aktiv",
+					down: "{{name}} ist ausgefallen",
+					degraded: "{{name}} ist beeinträchtigt",
+					changed: "Die soeben ausgeführte Prüfung hat den Status dieses Monitors geändert.",
+					notQueued: {
+						title: "Prüfung nicht ausgeführt",
+						description: "Zum Ausführen einer Prüfung ist ein aktives Abonnement erforderlich.",
+					},
+				},
 			},
 		},
 
@@ -2869,6 +2920,11 @@ export default {
 						description:
 							"Wählen Sie, welche Monitore auf dieser Statusseite angezeigt werden sollen.",
 					},
+					cronJobs: {
+						label: "Einzuschließende Cron Jobs",
+						description:
+							"Wählen Sie, welche Cron Jobs auf dieser Statusseite angezeigt werden sollen.",
+					},
 				},
 
 				cta: "Statusseite erstellen",
@@ -2880,11 +2936,52 @@ export default {
 			header: {
 				title: "Statusseite erstellen",
 			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description: "Wie sich die Seite ausweist – intern und gegenüber den Besuchern.",
+					},
+					visibility: {
+						title: "Sichtbarkeit",
+						description: "Wer diese Seite erreichen kann und wie viel sie auf einen Blick verrät.",
+					},
+					services: {
+						title: "Dienste",
+						description: "Wählen Sie die Monitore und Cron Jobs, über die diese Seite berichtet.",
+						empty:
+							"Sie haben noch keine Monitore oder Cron Jobs. Legen Sie einen an, dann können Sie ihn später zu dieser Seite hinzufügen.",
+					},
+				},
+			},
 		},
 
 		editStatusPage: {
 			header: {
 				title: "Statusseite bearbeiten",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description: "Wie sich die Seite ausweist – Ihnen und Ihren Besuchern gegenüber.",
+					},
+					visibility: {
+						title: "Sichtbarkeit",
+						description: "Wer diese Seite erreichen kann und was oben angezeigt wird.",
+					},
+					services: {
+						title: "Dienste",
+						description: "Wählen Sie die Monitore und Cron Jobs, über die diese Seite berichtet.",
+						empty: "Sie haben noch keine Monitore oder Cron Jobs zum Hinzufügen.",
+					},
+				},
+			},
+			dangerZone: {
+				title: "Gefahrenzone",
+				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+				warning: "Wenn Sie diese Statusseite löschen, ist ihre öffentliche URL endgültig offline.",
+				deleteDescription: "Dies kann nicht rückgängig gemacht werden.",
 			},
 		},
 
@@ -3027,6 +3124,18 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Was dieser Monitor überwacht.",
+					},
+					checks: {
+						title: "Prüfeinstellungen",
+						description:
+							"Welcher Eintrag aufgelöst wird, was er zurückgeben soll und wie oft die Prüfung läuft.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor-Name",
@@ -3047,9 +3156,9 @@ export default {
 
 					expectedValue: {
 						label: "Erwarteter Wert",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optional. Benachrichtigen Sie, wenn der aufgelöste Wert nicht übereinstimmt. Leer lassen, um Änderungen zu verfolgen.",
+							"Optional. Meldet, wenn einer dieser Werte in den aufgelösten Einträgen fehlt. Mehrere Werte mit Kommas trennen. Zusätzliche Einträge sind erlaubt. Leer lassen, um jede Änderung zu verfolgen.",
 					},
 
 					interval: {
@@ -3082,6 +3191,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Was dieser Monitor überwacht und wie oft er prüft.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor-Name",
@@ -3102,9 +3218,9 @@ export default {
 
 					expectedValue: {
 						label: "Erwarteter Wert",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optional. Benachrichtigen Sie, wenn der aufgelöste Wert nicht übereinstimmt. Leer lassen, um Änderungen zu verfolgen.",
+							"Optional. Meldet, wenn einer dieser Werte in den aufgelösten Einträgen fehlt. Mehrere Werte mit Kommas trennen. Zusätzliche Einträge sind erlaubt. Leer lassen, um jede Änderung zu verfolgen.",
 					},
 
 					interval: {
@@ -3136,6 +3252,9 @@ export default {
 				deleteMonitor: "Monitor löschen",
 				deleteDescription:
 					"Dies löscht auch den zugehörigen Prüfergebnisverlauf. Dies kann nicht rückgängig gemacht werden.",
+				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+				warning:
+					"Wenn Sie diesen Monitor löschen, werden seine DNS-Prüfungen, sein Verlauf und seine Benachrichtigungen endgültig entfernt.",
 			},
 		},
 
@@ -3264,6 +3383,21 @@ export default {
 			},
 
 			form: {
+				sections: {
+					coverage: {
+						title: "Geltungsbereich",
+						description: "Benennen Sie dieses Fenster und wählen Sie, für welche Monitore es gilt.",
+					},
+					schedule: {
+						title: "Zeitplan",
+						description: "Wann das Wartungsfenster beginnt und endet.",
+					},
+					behavior: {
+						title: "Verhalten",
+						description: "Was geschieht, während das Fenster aktiv ist, und ob es sich wiederholt.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -3335,15 +3469,41 @@ export default {
 			form: {
 				cta: "Änderungen speichern",
 				cancel: "Abbrechen",
+				sections: {
+					coverage: {
+						title: "Was es abdeckt",
+						description: "Benennen Sie dieses Fenster und wählen Sie, für welche Monitore es gilt.",
+					},
+					schedule: {
+						title: "Zeitplan",
+						description: "Wann das Wartungsfenster beginnt und endet.",
+					},
+					behavior: {
+						title: "Während der Wartung",
+						description:
+							"Wie sich Benachrichtigungen und Ihre Statusseite verhalten, während das Fenster läuft.",
+					},
+					recurrence: {
+						title: "Wiederholung",
+						description:
+							"Wiederholen Sie dieses Fenster nach einem Zeitplan, statt es einmalig laufen zu lassen.",
+					},
+				},
 			},
 
 			endNow: {
 				cta: "Wartung jetzt beenden",
+				title: "Dieses Fenster beenden",
+				description: "Dieses Fenster läuft gerade.",
+				warning:
+					"Wenn Sie es jetzt beenden, werden Benachrichtigungen wieder zugestellt und der Wartungshinweis verschwindet von Ihrer Statusseite. Das Fenster selbst bleibt erhalten.",
 			},
 
 			danger: {
 				title: "Gefahrenzone",
 
+				description: "Unwiderrufliche Aktionen für dieses Wartungsfenster.",
+				warning: "Das Löschen dieses Wartungsfensters kann nicht rückgängig gemacht werden.",
 				delete: {
 					trigger: "Wartungsfenster löschen",
 					confirmTitle: "Dieses Wartungsfenster löschen?",
@@ -3456,6 +3616,23 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Wie diese Benachrichtigung heißt und welche Monitore sie überwacht.",
+					},
+					channel: {
+						title: "Benachrichtigungskanal",
+						description:
+							"Wohin die Meldung gesendet wird. Nur die Felder des gewählten Kanals sind erforderlich.",
+					},
+					delivery: {
+						title: "Zustellregeln",
+						description:
+							"Ob Wiederherstellungen gemeldet werden und wie oft eine Wiederholung gesendet wird, solange ein Monitor noch ausgefallen ist.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -3565,11 +3742,31 @@ export default {
 			form: {
 				cta: "Änderungen speichern",
 				cancel: "Abbrechen",
+				sections: {
+					basics: {
+						title: "Was überwacht wird",
+						description:
+							"Benennen Sie diese Benachrichtigung und wählen Sie, ob sie alle Monitore oder nur einen abdeckt.",
+					},
+					channel: {
+						title: "Wie benachrichtigt wird",
+						description:
+							"Wählen Sie einen Kanal und tragen Sie das Ziel ein, an das gesendet werden soll.",
+					},
+					delivery: {
+						title: "Zustellregeln",
+						description:
+							"Steuern Sie Wiederherstellungsmeldungen und wie oft eine Benachrichtigung während eines Ausfalls wiederholt werden darf.",
+					},
+				},
 			},
 
 			danger: {
 				title: "Gefahrenzone",
 
+				description: "Unwiderrufliche Aktionen für diese Benachrichtigung.",
+				warning:
+					"Wenn Sie diese Benachrichtigung löschen, werden alle Meldungen gestoppt, die sie sendet. Dies kann nicht rückgängig gemacht werden.",
 				delete: {
 					trigger: "Benachrichtigung löschen",
 					confirmTitle: "Diese Benachrichtigung löschen?",
@@ -4346,6 +4543,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Was dieser Monitor überwacht und wie oft er es prüft.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor-Name",
@@ -4400,6 +4604,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					settings: {
+						title: "Monitor-Einstellungen",
+						description: "Womit sich dieser Monitor verbindet und wie oft er prüft.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor-Name",
@@ -4444,6 +4655,9 @@ export default {
 				cta: "Monitor löschen",
 				description:
 					"Dadurch wird auch der Prüfergebnisverlauf gelöscht. Dies kann nicht rückgängig gemacht werden.",
+				sectionDescription: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+				warning:
+					"Wenn Sie diesen Monitor löschen, werden seine Prüfungen, sein Verlauf und seine Benachrichtigungen endgültig entfernt.",
 			},
 		},
 
@@ -4731,6 +4945,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Wie dieser Job heißt und was er tut.",
+					},
+					schedule: {
+						title: "Zeitplan",
+						description:
+							"Wann der Job laufen soll und wie viel Verspätung erlaubt ist, bevor er als versäumt gilt.",
+					},
+					alerting: {
+						title: "Benachrichtigungen",
+						description: "Was passiert, wenn ein erwarteter Lauf ausbleibt.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -4795,6 +5025,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Grundlagen",
+						description: "Wie dieser Job heißt und was er tut.",
+					},
+					schedule: {
+						title: "Zeitplan",
+						description:
+							"Wann der Job laufen soll und wie viel Verspätung erlaubt ist, bevor er als versäumt gilt.",
+					},
+					alerting: {
+						title: "Benachrichtigungen",
+						description: "Was passiert, wenn ein erwarteter Lauf ausbleibt.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -4844,6 +5090,9 @@ export default {
 			danger: {
 				title: "Gefahrenzone",
 
+				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+				warning:
+					"Wenn Sie diesen Cron Job löschen, werden sein Ping-Verlauf und seine Benachrichtigungen endgültig entfernt.",
 				delete: {
 					trigger: "Monitor löschen",
 					confirmTitle: "Diesen Cron-Job-Monitor löschen?",

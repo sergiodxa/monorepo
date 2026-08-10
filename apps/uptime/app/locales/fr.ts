@@ -624,7 +624,7 @@ export default {
 				},
 				dailyStats: {
 					label: "Statistiques quotidiennes :",
-					body: "chaque nuit, les vérifications de la veille sont agrégées en une ligne par moniteur. Cette agrégation est l'historique de long terme derrière la carte de chaleur annuelle, et elle est conservée 365 jours.",
+					body: "chaque nuit, les vérifications de la veille sont agrégées en une ligne par moniteur. Cette agrégation est l'historique de long terme derrière chaque graphique de disponibilité de l'application, et elle est conservée 365 jours.",
 				},
 				otherResults: {
 					label: "Enregistrements des vérifications DNS et TCP :",
@@ -997,6 +997,10 @@ export default {
 					teams: "Vos équipes",
 				},
 			},
+			toasts: {
+				region: "Notifications",
+				dismiss: "Fermer",
+			},
 		},
 
 		errors: {
@@ -1091,6 +1095,8 @@ export default {
 		addButton: "Ajouter une vérification de contenu",
 
 		form: {
+			title: "Ajouter une vérification",
+			description: "Chaque vérification s'applique au corps de la réponse à chaque ping.",
 			checkType: {
 				label: "Type de vérification",
 				description: "Choisissez comment faire correspondre le contenu de la réponse",
@@ -1510,15 +1516,6 @@ export default {
 	},
 
 	components: {
-		heatmap: {
-			tooltip: "{{date}}\n{{successRate}} taux de réussite\n{{checks}} vérifications",
-			legend: {
-				success: "Succès",
-				failure: "Échec",
-				mixed: "Mixte",
-				noData: "Pas de données",
-			},
-		},
 		copyButton: {
 			label: "Copier",
 			copied: "Copié !",
@@ -2011,19 +2008,33 @@ export default {
 
 				httpMonitors: {
 					label: "Moniteurs HTTP",
-					description: "{{up}} actifs / {{down}} hors service",
+					breakdown: {
+						up: "{{up}} actifs",
+						down: "{{down}} hors service",
+					},
 				},
 				dnsMonitors: {
 					label: "Moniteurs DNS",
-					description: "{{ok}} ok / {{changed}} modifiés / {{error}} erreur",
+					breakdown: {
+						ok: "{{ok}} ok",
+						changed: "{{changed}} modifiés",
+						error: "{{error}} erreur",
+					},
 				},
 				tcpMonitors: {
 					label: "Moniteurs TCP",
-					description: "{{up}} actifs / {{down}} hors service",
+					breakdown: {
+						up: "{{up}} actifs",
+						down: "{{down}} hors service",
+					},
 				},
 				cronJobs: {
 					label: "Tâches Cron",
-					description: "{{healthy}} sains / {{late}} en retard / {{missed}} manqués",
+					breakdown: {
+						healthy: "{{healthy}} saines",
+						late: "{{late}} en retard",
+						missed: "{{missed}} manquées",
+					},
 				},
 
 				slowestEndpoint: {
@@ -2037,7 +2048,11 @@ export default {
 
 				sslMonitors: {
 					label: "Moniteurs SSL",
-					description: "{{valid}} valides, {{expiring}} bientôt expirés, {{expired}} expirés",
+					breakdown: {
+						valid: "{{valid}} valides",
+						expiring: "{{expiring}} bientôt expirés",
+						expired: "{{expired}} expirés",
+					},
 				},
 			},
 
@@ -2186,6 +2201,18 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Ce que ce moniteur surveille.",
+					},
+					checks: {
+						title: "Paramètres de vérification",
+						description:
+							"À quelle fréquence le moniteur s'exécute, ce qu'il attend en retour et d'où il s'exécute.",
+					},
+				},
+
 				cta: "Créer le moniteur",
 			},
 		},
@@ -2277,12 +2304,34 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Ce que ce moniteur surveille.",
+					},
+					checks: {
+						title: "Paramètres de vérification",
+						description:
+							"À quelle fréquence le moniteur s'exécute, ce qu'il attend en retour et d'où il s'exécute.",
+					},
+				},
+
 				cancel: "Annuler",
 				cta: "Enregistrer les modifications",
 			},
 
+			ssl: {
+				title: "Surveillance du certificat SSL",
+				description:
+					"Suivez l'expiration de votre certificat pour en être informé avant vos visiteurs.",
+				cta: "Enregistrer les paramètres SSL",
+			},
+
 			dangerZone: {
 				title: "Zone de danger",
+				description: "Les actions de cette section sont irréversibles.",
+				warning:
+					"Supprimer ce moniteur efface définitivement ses vérifications, son historique et ses alertes.",
 				delete: "Supprimer le moniteur",
 			},
 		},
@@ -2317,7 +2366,7 @@ export default {
 
 				uptime: {
 					label: "Pourcentage de disponibilité",
-					description: "Disponibilité globale du moniteur",
+					description: "90 derniers jours",
 				},
 
 				slowestResult: {
@@ -2329,16 +2378,6 @@ export default {
 					label: "Temps de réponse P99",
 					value: "{{value}} ms",
 					description: "p99, dernières 24 h",
-				},
-			},
-
-			heatmap: {
-				tooltip: "{{date}}\n{{successRate}} taux de réussite\n{{checks}} vérifications",
-				legend: {
-					success: "Succès",
-					failure: "Échec",
-					mixed: "Mixte",
-					noData: "Pas de données",
 				},
 			},
 
@@ -2357,6 +2396,18 @@ export default {
 				lastChecked: "Dernière vérification",
 				notConfigured: "La surveillance SSL n'est pas activée pour ce moniteur.",
 				configure: "Configurer la surveillance SSL",
+			},
+			run: {
+				toast: {
+					up: "{{name}} est en ligne",
+					down: "{{name}} est hors ligne",
+					degraded: "{{name}} est dégradé",
+					changed: "La vérification que vous venez de lancer a changé le statut de ce moniteur.",
+					notQueued: {
+						title: "Vérification non lancée",
+						description: "Un abonnement actif est nécessaire pour lancer une vérification.",
+					},
+				},
 			},
 		},
 
@@ -2873,6 +2924,10 @@ export default {
 						label: "Moniteurs à inclure",
 						description: "Sélectionnez les moniteurs à afficher sur cette page de statut.",
 					},
+					cronJobs: {
+						label: "Cron jobs à inclure",
+						description: "Sélectionnez les cron jobs à afficher sur cette page de statut.",
+					},
 				},
 
 				cta: "Créer une page de statut",
@@ -2884,11 +2939,53 @@ export default {
 			header: {
 				title: "Créer une page de statut",
 			},
+			form: {
+				sections: {
+					branding: {
+						title: "Identité",
+						description:
+							"Comment la page se présente, en interne et auprès de ceux qui la consultent.",
+					},
+					visibility: {
+						title: "Visibilité",
+						description: "Qui peut accéder à cette page et ce qu'elle révèle en un coup d'œil.",
+					},
+					services: {
+						title: "Services",
+						description: "Choisissez les moniteurs et cron jobs dont cette page rend compte.",
+						empty:
+							"Vous n'avez encore aucun moniteur ni cron job. Créez-en un et vous pourrez l'ajouter à cette page plus tard.",
+					},
+				},
+			},
 		},
 
 		editStatusPage: {
 			header: {
 				title: "Modifier la page de statut",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "Identité",
+						description: "Comment la page se présente, à vous et à vos visiteurs.",
+					},
+					visibility: {
+						title: "Visibilité",
+						description: "Qui peut accéder à cette page et ce qu'elle affiche en haut.",
+					},
+					services: {
+						title: "Services",
+						description: "Choisissez les moniteurs et cron jobs dont cette page rend compte.",
+						empty: "Vous n'avez encore aucun moniteur ni cron job à ajouter.",
+					},
+				},
+			},
+			dangerZone: {
+				title: "Zone de danger",
+				description: "Les actions de cette section sont irréversibles.",
+				warning: "Supprimer cette page de statut met définitivement son URL publique hors ligne.",
+				deleteDescription: "Cette action est irréversible.",
 			},
 		},
 
@@ -3030,6 +3127,18 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Ce que ce moniteur surveille.",
+					},
+					checks: {
+						title: "Paramètres de vérification",
+						description:
+							"Quel enregistrement est résolu, ce qu'il doit renvoyer et à quelle fréquence la vérification s'exécute.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom du moniteur",
@@ -3050,9 +3159,9 @@ export default {
 
 					expectedValue: {
 						label: "Valeur attendue",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optionnel. Alerter si la valeur résolue ne correspond pas. Laissez vide pour suivre les changements.",
+							"Facultatif. Alerte si l'une de ces valeurs est absente des enregistrements résolus. Séparez plusieurs valeurs par des virgules. Les enregistrements supplémentaires sont autorisés. Laissez vide pour suivre tout changement.",
 					},
 
 					interval: {
@@ -3085,6 +3194,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Ce que ce moniteur surveille et à quelle fréquence il vérifie.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom du moniteur",
@@ -3105,9 +3221,9 @@ export default {
 
 					expectedValue: {
 						label: "Valeur attendue",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optionnel. Alerter si la valeur résolue ne correspond pas. Laissez vide pour suivre les changements.",
+							"Facultatif. Alerte si l'une de ces valeurs est absente des enregistrements résolus. Séparez plusieurs valeurs par des virgules. Les enregistrements supplémentaires sont autorisés. Laissez vide pour suivre tout changement.",
 					},
 
 					interval: {
@@ -3139,6 +3255,9 @@ export default {
 				deleteMonitor: "Supprimer le moniteur",
 				deleteDescription:
 					"Cela supprime également son historique de résultats de vérification. Cette action est irréversible.",
+				description: "Les actions de cette section sont irréversibles.",
+				warning:
+					"Supprimer ce moniteur efface définitivement ses vérifications DNS, son historique et ses alertes.",
 			},
 		},
 
@@ -3266,6 +3385,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					coverage: {
+						title: "Couverture",
+						description:
+							"Nommez cette fenêtre et choisissez les moniteurs auxquels elle s'applique.",
+					},
+					schedule: {
+						title: "Planification",
+						description: "Quand la fenêtre de maintenance commence et se termine.",
+					},
+					behavior: {
+						title: "Comportement",
+						description: "Ce qui se passe pendant que la fenêtre est active, et si elle se répète.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom",
@@ -3337,15 +3472,42 @@ export default {
 			form: {
 				cta: "Enregistrer les modifications",
 				cancel: "Annuler",
+				sections: {
+					coverage: {
+						title: "Ce qu'elle couvre",
+						description:
+							"Nommez cette fenêtre et choisissez les moniteurs auxquels elle s'applique.",
+					},
+					schedule: {
+						title: "Planification",
+						description: "Quand la fenêtre de maintenance commence et se termine.",
+					},
+					behavior: {
+						title: "Pendant la maintenance",
+						description:
+							"Le comportement des alertes et de votre page de statut pendant la fenêtre.",
+					},
+					recurrence: {
+						title: "Récurrence",
+						description:
+							"Répétez cette fenêtre selon une planification au lieu de l'exécuter une seule fois.",
+					},
+				},
 			},
 
 			endNow: {
 				cta: "Terminer la maintenance maintenant",
+				title: "Terminer cette fenêtre",
+				description: "Cette fenêtre est active en ce moment.",
+				warning:
+					"La terminer maintenant rétablit les alertes et retire l'avis de maintenance de votre page de statut. La fenêtre elle-même est conservée.",
 			},
 
 			danger: {
 				title: "Zone de danger",
 
+				description: "Actions irréversibles pour cette fenêtre de maintenance.",
+				warning: "La suppression de cette fenêtre de maintenance est irréversible.",
 				delete: {
 					trigger: "Supprimer la fenêtre de maintenance",
 					confirmTitle: "Supprimer cette fenêtre de maintenance ?",
@@ -3457,6 +3619,23 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Le nom de cette alerte et les moniteurs qu'elle surveille.",
+					},
+					channel: {
+						title: "Canal de notification",
+						description:
+							"Où la notification est envoyée. Seuls les champs du canal choisi sont obligatoires.",
+					},
+					delivery: {
+						title: "Règles d'envoi",
+						description:
+							"Si les rétablissements sont annoncés, et à quelle fréquence un rappel est envoyé tant qu'un moniteur reste hors ligne.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom",
@@ -3566,11 +3745,30 @@ export default {
 			form: {
 				cta: "Enregistrer les modifications",
 				cancel: "Annuler",
+				sections: {
+					basics: {
+						title: "Ce qu'elle surveille",
+						description:
+							"Nommez cette alerte et choisissez si elle couvre tous les moniteurs ou un seul.",
+					},
+					channel: {
+						title: "Comment elle notifie",
+						description: "Choisissez un canal et renseignez la destination vers laquelle envoyer.",
+					},
+					delivery: {
+						title: "Règles d'envoi",
+						description:
+							"Contrôlez les avis de rétablissement et la fréquence à laquelle une alerte peut se répéter pendant une panne.",
+					},
+				},
 			},
 
 			danger: {
 				title: "Zone de danger",
 
+				description: "Actions irréversibles pour cette alerte.",
+				warning:
+					"Supprimer cette alerte arrête toutes les notifications qu'elle envoie. Cette action est irréversible.",
 				delete: {
 					trigger: "Supprimer l'alerte",
 					confirmTitle: "Supprimer cette alerte ?",
@@ -4342,6 +4540,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Ce que ce moniteur surveille et à quelle fréquence il le vérifie.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom du moniteur",
@@ -4394,6 +4599,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					settings: {
+						title: "Paramètres du moniteur",
+						description: "Ce à quoi ce moniteur se connecte et à quelle fréquence il vérifie.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom du moniteur",
@@ -4437,6 +4649,9 @@ export default {
 				cta: "Supprimer le moniteur",
 				description:
 					"Cela supprime également l'historique des résultats de vérification. Cette action est irréversible.",
+				sectionDescription: "Les actions de cette section sont irréversibles.",
+				warning:
+					"Supprimer ce moniteur efface définitivement ses vérifications, son historique et ses alertes.",
 			},
 		},
 
@@ -4720,6 +4935,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Le nom de ce job et ce qu'il fait.",
+					},
+					schedule: {
+						title: "Planification",
+						description:
+							"Quand le job est censé s'exécuter, et le retard toléré avant qu'il soit considéré comme manqué.",
+					},
+					alerting: {
+						title: "Alertes",
+						description: "Ce qui se passe lorsqu'une exécution attendue n'arrive pas.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom",
@@ -4782,6 +5013,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Informations de base",
+						description: "Le nom de ce job et ce qu'il fait.",
+					},
+					schedule: {
+						title: "Planification",
+						description:
+							"Quand le job est censé s'exécuter, et le retard toléré avant qu'il soit considéré comme manqué.",
+					},
+					alerting: {
+						title: "Alertes",
+						description: "Ce qui se passe lorsqu'une exécution attendue n'arrive pas.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Nom",
@@ -4830,6 +5077,9 @@ export default {
 			danger: {
 				title: "Zone de danger",
 
+				description: "Les actions de cette section sont irréversibles.",
+				warning:
+					"Supprimer ce cron job efface définitivement son historique de pings et ses alertes.",
 				delete: {
 					trigger: "Supprimer le moniteur",
 					confirmTitle: "Supprimer ce moniteur de cron job ?",

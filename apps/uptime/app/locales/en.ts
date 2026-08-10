@@ -684,7 +684,7 @@ export default {
 				},
 				dailyStats: {
 					label: "Daily statistics:",
-					body: "each night the previous day's checks are rolled up into one row per monitor. That roll-up is the long-term history behind the year-long heatmap, and it is retained for 365 days.",
+					body: "each night the previous day's checks are rolled up into one row per monitor. That roll-up is the long-term history behind every uptime chart in the app, and it is retained for 365 days.",
 				},
 				otherResults: {
 					label: "DNS and TCP check records:",
@@ -1046,6 +1046,10 @@ export default {
 					teams: "Your Teams",
 				},
 			},
+			toasts: {
+				region: "Notifications",
+				dismiss: "Dismiss",
+			},
 		},
 
 		errors: {
@@ -1140,6 +1144,8 @@ export default {
 		addButton: "Add Content Check",
 
 		form: {
+			title: "Add a check",
+			description: "Each check runs against the response body on every ping.",
 			checkType: {
 				label: "Check Type",
 				description: "Choose how to match the response content",
@@ -1553,15 +1559,6 @@ export default {
 	},
 
 	components: {
-		heatmap: {
-			tooltip: "{{date}}\n{{successRate}} success rate\n{{checks}} checks",
-			legend: {
-				success: "Success",
-				failure: "Failure",
-				mixed: "Mixed",
-				noData: "No data",
-			},
-		},
 		copyButton: {
 			label: "Copy",
 			copied: "Copied!",
@@ -2055,27 +2052,45 @@ export default {
 
 				httpMonitors: {
 					label: "HTTP Monitors",
-					description: "{{up}} up / {{down}} down",
+					breakdown: {
+						up: "{{up}} up",
+						down: "{{down}} down",
+					},
 				},
 
 				dnsMonitors: {
 					label: "DNS Monitors",
-					description: "{{ok}} ok / {{changed}} changed / {{error}} error",
+					breakdown: {
+						ok: "{{ok}} ok",
+						changed: "{{changed}} changed",
+						error: "{{error}} error",
+					},
 				},
 
 				tcpMonitors: {
 					label: "TCP Monitors",
-					description: "{{up}} up / {{down}} down",
+					breakdown: {
+						up: "{{up}} up",
+						down: "{{down}} down",
+					},
 				},
 
 				cronJobs: {
 					label: "Cron Jobs",
-					description: "{{healthy}} healthy / {{late}} late / {{missed}} missed",
+					breakdown: {
+						healthy: "{{healthy}} healthy",
+						late: "{{late}} late",
+						missed: "{{missed}} missed",
+					},
 				},
 
 				sslMonitors: {
 					label: "SSL Monitors",
-					description: "{{valid}} valid, {{expiring}} expiring, {{expired}} expired",
+					breakdown: {
+						valid: "{{valid}} valid",
+						expiring: "{{expiring}} expiring",
+						expired: "{{expired}} expired",
+					},
 				},
 			},
 
@@ -2223,6 +2238,18 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description:
+							"How often the monitor runs, what it expects back, and where it runs from.",
+					},
+				},
+
 				cta: "Create Monitor",
 			},
 		},
@@ -2311,17 +2338,33 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description:
+							"How often the monitor runs, what it expects back, and where it runs from.",
+					},
+				},
+
 				cancel: "Cancel",
 				cta: "Save Changes",
 			},
 
 			ssl: {
 				title: "SSL certificate monitoring",
+				description:
+					"Track your certificate's expiry so you hear about it before your visitors do.",
 				cta: "Save SSL settings",
 			},
 
 			dangerZone: {
 				title: "Danger zone",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its checks, history and alerts for good.",
 				delete: "Delete monitor",
 			},
 		},
@@ -2356,7 +2399,7 @@ export default {
 
 				uptime: {
 					label: "Uptime percentage",
-					description: "Overall monitor uptime",
+					description: "Last 90 days",
 				},
 
 				slowestResult: {
@@ -2368,16 +2411,6 @@ export default {
 					label: "P99 Response Time",
 					value: "{{value}} ms",
 					description: "p99, last 24h",
-				},
-			},
-
-			heatmap: {
-				tooltip: "{{date}}\n{{successRate}} success rate\n{{checks}} checks",
-				legend: {
-					success: "Success",
-					failure: "Failure",
-					mixed: "Mixed",
-					noData: "No data",
 				},
 			},
 
@@ -2396,6 +2429,18 @@ export default {
 				lastChecked: "Last Checked",
 				notConfigured: "SSL monitoring is not enabled for this monitor.",
 				configure: "Configure SSL Monitoring",
+			},
+			run: {
+				toast: {
+					up: "{{name}} is up",
+					down: "{{name}} is down",
+					degraded: "{{name}} is degraded",
+					changed: "The check you just ran changed this monitor's status.",
+					notQueued: {
+						title: "Check not run",
+						description: "An active subscription is required to run a check.",
+					},
+				},
 			},
 		},
 
@@ -2918,11 +2963,53 @@ export default {
 			header: {
 				title: "Create Status Page",
 			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description:
+							"How the page identifies itself, internally and to the people who visit it.",
+					},
+					visibility: {
+						title: "Visibility",
+						description: "Who can reach this page, and how much it says at a glance.",
+					},
+					services: {
+						title: "Services",
+						description: "Pick the monitors and cron jobs this page reports on.",
+						empty:
+							"You have no monitors or cron jobs yet. Create one and you can add it to this page later.",
+					},
+				},
+			},
 		},
 
 		editStatusPage: {
 			header: {
 				title: "Edit Status Page",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description: "How the page identifies itself, to you and to your visitors.",
+					},
+					visibility: {
+						title: "Visibility",
+						description: "Who can reach this page, and what it shows at the top.",
+					},
+					services: {
+						title: "Services",
+						description: "Pick the monitors and cron jobs this page reports on.",
+						empty: "You have no monitors or cron jobs to add yet.",
+					},
+				},
+			},
+			dangerZone: {
+				title: "Danger zone",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this status page takes its public URL offline for good.",
+				deleteDescription: "This can't be undone.",
 			},
 		},
 
@@ -3064,6 +3151,18 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description:
+							"Which record is resolved, what it should return, and how often the check runs.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor Name",
@@ -3084,9 +3183,9 @@ export default {
 
 					expectedValue: {
 						label: "Expected Value",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optional. Alert if the resolved value doesn't match. Leave empty to track changes.",
+							"Optional. Alert if any of these values is missing from the resolved records. Separate multiple values with commas. Extra records are allowed. Leave empty to track any change.",
 					},
 
 					interval: {
@@ -3119,6 +3218,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches and how often it checks.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor Name",
@@ -3139,9 +3245,9 @@ export default {
 
 					expectedValue: {
 						label: "Expected Value",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"Optional. Alert if the resolved value doesn't match. Leave empty to track changes.",
+							"Optional. Alert if any of these values is missing from the resolved records. Separate multiple values with commas. Extra records are allowed. Leave empty to track any change.",
 					},
 
 					interval: {
@@ -3172,6 +3278,8 @@ export default {
 				title: "Danger zone",
 				deleteMonitor: "Delete monitor",
 				deleteDescription: "This also deletes its check-result history. This can't be undone.",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its DNS checks, history and alerts for good.",
 			},
 		},
 
@@ -3298,6 +3406,21 @@ export default {
 			},
 
 			form: {
+				sections: {
+					coverage: {
+						title: "Coverage",
+						description: "Name this window and choose which monitors it applies to.",
+					},
+					schedule: {
+						title: "Schedule",
+						description: "When the maintenance window starts and ends.",
+					},
+					behavior: {
+						title: "Behavior",
+						description: "What happens while the window is active, and whether it repeats.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -3368,15 +3491,39 @@ export default {
 			form: {
 				cta: "Save changes",
 				cancel: "Cancel",
+				sections: {
+					coverage: {
+						title: "What it covers",
+						description: "Name this window and choose which monitors it applies to.",
+					},
+					schedule: {
+						title: "Schedule",
+						description: "When the maintenance window starts and ends.",
+					},
+					behavior: {
+						title: "During maintenance",
+						description: "How alerts and your status page behave while the window is running.",
+					},
+					recurrence: {
+						title: "Recurrence",
+						description: "Repeat this window on a schedule instead of running it once.",
+					},
+				},
 			},
 
 			endNow: {
 				cta: "End maintenance now",
+				title: "End this window",
+				description: "This window is running right now.",
+				warning:
+					"Ending it now restores alerting and removes the maintenance notice from your status page. The window itself is kept.",
 			},
 
 			danger: {
 				title: "Danger zone",
 
+				description: "Irreversible actions for this maintenance window.",
+				warning: "Deleting this maintenance window can't be undone.",
 				delete: {
 					trigger: "Delete maintenance window",
 					confirmTitle: "Delete this maintenance window?",
@@ -3489,6 +3636,23 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this alert is called and which monitors it watches.",
+					},
+					channel: {
+						title: "Notification channel",
+						description:
+							"Where the notification is sent. Only the fields of the channel you pick are required.",
+					},
+					delivery: {
+						title: "Delivery rules",
+						description:
+							"Whether recoveries are announced, and how often a repeat is sent while a monitor is still down.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -3598,11 +3762,28 @@ export default {
 			form: {
 				cta: "Save changes",
 				cancel: "Cancel",
+				sections: {
+					basics: {
+						title: "What it watches",
+						description: "Name this alert and choose whether it covers every monitor or just one.",
+					},
+					channel: {
+						title: "How it notifies",
+						description: "Pick a channel and fill in the destination it should send to.",
+					},
+					delivery: {
+						title: "Delivery rules",
+						description:
+							"Control recovery notices and how often an alert may repeat during an outage.",
+					},
+				},
 			},
 
 			danger: {
 				title: "Danger zone",
 
+				description: "Irreversible actions for this alert.",
+				warning: "Deleting this alert stops all notifications it sends. This can't be undone.",
 				delete: {
 					trigger: "Delete alert",
 					confirmTitle: "Delete this alert?",
@@ -4403,6 +4584,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches, and how often it checks it.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor Name",
@@ -4455,6 +4643,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					settings: {
+						title: "Monitor settings",
+						description: "What this monitor connects to, and how often it checks.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Monitor Name",
@@ -4497,6 +4692,8 @@ export default {
 				title: "Danger zone",
 				cta: "Delete monitor",
 				description: "This also deletes its check-result history. This can't be undone.",
+				sectionDescription: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its checks, history and alerts for good.",
 			},
 		},
 
@@ -4776,6 +4973,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this job is called and what it does.",
+					},
+					schedule: {
+						title: "Schedule",
+						description:
+							"When the job is expected to run, and how late it may be before it counts as missed.",
+					},
+					alerting: {
+						title: "Alerting",
+						description: "What happens when an expected run doesn't arrive.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -4837,6 +5050,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this job is called and what it does.",
+					},
+					schedule: {
+						title: "Schedule",
+						description:
+							"When the job is expected to run, and how late it may be before it counts as missed.",
+					},
+					alerting: {
+						title: "Alerting",
+						description: "What happens when an expected run doesn't arrive.",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "Name",
@@ -4884,6 +5113,8 @@ export default {
 			danger: {
 				title: "Danger zone",
 
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this cron job removes its ping history and alerts for good.",
 				delete: {
 					trigger: "Delete monitor",
 					confirmTitle: "Delete this cron job monitor?",

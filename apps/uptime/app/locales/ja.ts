@@ -611,7 +611,7 @@ export default {
 				},
 				dailyStats: {
 					label: "日次統計：",
-					body: "毎晩、前日のチェックがモニターごとに 1 行へ集計されます。この集計が 1 年分のヒートマップの裏にある長期履歴で、365 日間保持されます。",
+					body: "毎晩、前日のチェックがモニターごとに 1 行へ集計されます。この集計がアプリ内のすべての稼働状況グラフの裏にある長期履歴で、365 日間保持されます。",
 				},
 				otherResults: {
 					label: "DNS と TCP のチェック記録：",
@@ -958,6 +958,10 @@ export default {
 					teams: "チーム一覧",
 				},
 			},
+			toasts: {
+				region: "通知",
+				dismiss: "閉じる",
+			},
 		},
 
 		errors: {
@@ -1052,6 +1056,8 @@ export default {
 		addButton: "コンテンツチェックを追加",
 
 		form: {
+			title: "チェックを追加",
+			description: "各チェックはピングごとにレスポンス本文に対して実行されます。",
 			checkType: {
 				label: "チェックタイプ",
 				description: "レスポンスコンテンツのマッチング方法を選択",
@@ -1458,15 +1464,6 @@ export default {
 	},
 
 	components: {
-		heatmap: {
-			tooltip: "{{date}}\n成功率：{{successRate}}\nチェック数：{{checks}}",
-			legend: {
-				success: "成功",
-				failure: "失敗",
-				mixed: "混合",
-				noData: "データなし",
-			},
-		},
 		copyButton: {
 			label: "コピー",
 			copied: "コピーしました！",
@@ -1949,19 +1946,33 @@ export default {
 
 				httpMonitors: {
 					label: "HTTPモニター",
-					description: "{{up}} 稼働中 / {{down}} 停止中",
+					breakdown: {
+						up: "{{up}} 稼働中",
+						down: "{{down}} 停止中",
+					},
 				},
 				dnsMonitors: {
 					label: "DNSモニター",
-					description: "{{ok}} 正常 / {{changed}} 変更 / {{error}} エラー",
+					breakdown: {
+						ok: "{{ok}} 正常",
+						changed: "{{changed}} 変更",
+						error: "{{error}} エラー",
+					},
 				},
 				tcpMonitors: {
 					label: "TCPモニター",
-					description: "{{up}} 稼働中 / {{down}} 停止中",
+					breakdown: {
+						up: "{{up}} 稼働中",
+						down: "{{down}} 停止中",
+					},
 				},
 				cronJobs: {
 					label: "Cronジョブ",
-					description: "{{healthy}} 正常 / {{late}} 遅延 / {{missed}} 未実行",
+					breakdown: {
+						healthy: "{{healthy}} 正常",
+						late: "{{late}} 遅延",
+						missed: "{{missed}} 未実行",
+					},
 				},
 
 				slowestEndpoint: {
@@ -1975,7 +1986,11 @@ export default {
 
 				sslMonitors: {
 					label: "SSLモニター",
-					description: "{{valid}} 有効、{{expiring}} 期限間近、{{expired}} 期限切れ",
+					breakdown: {
+						valid: "{{valid}} 有効",
+						expiring: "{{expiring}} 期限間近",
+						expired: "{{expired}} 期限切れ",
+					},
 				},
 			},
 
@@ -2122,6 +2137,17 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このモニターが監視する対象。",
+					},
+					checks: {
+						title: "チェック設定",
+						description: "モニターの実行間隔、期待するレスポンス、実行リージョン。",
+					},
+				},
+
 				cta: "モニターを作成",
 			},
 		},
@@ -2210,12 +2236,31 @@ export default {
 					},
 				},
 
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このモニターが監視する対象。",
+					},
+					checks: {
+						title: "チェック設定",
+						description: "モニターの実行間隔、期待するレスポンス、実行リージョン。",
+					},
+				},
+
 				cancel: "キャンセル",
 				cta: "変更を保存",
 			},
 
+			ssl: {
+				title: "SSL証明書の監視",
+				description: "証明書の有効期限を追跡し、訪問者より先に把握できます。",
+				cta: "SSL設定を保存",
+			},
+
 			dangerZone: {
 				title: "危険ゾーン",
+				description: "ここでの操作は取り消せません。",
+				warning: "このモニターを削除すると、チェック、履歴、アラートが完全に失われます。",
 				delete: "モニターを削除",
 			},
 		},
@@ -2250,7 +2295,7 @@ export default {
 
 				uptime: {
 					label: "Uptime率",
-					description: "モニター全体のUptime",
+					description: "過去90日間",
 				},
 
 				slowestResult: {
@@ -2262,16 +2307,6 @@ export default {
 					label: "P99応答時間",
 					value: "{{value}} ms",
 					description: "p99、過去24時間",
-				},
-			},
-
-			heatmap: {
-				tooltip: "{{date}}\n成功率：{{successRate}}\nチェック数：{{checks}}",
-				legend: {
-					success: "成功",
-					failure: "失敗",
-					mixed: "混合",
-					noData: "データなし",
 				},
 			},
 
@@ -2290,6 +2325,18 @@ export default {
 				lastChecked: "最終チェック",
 				notConfigured: "このモニターではSSL監視が有効になっていません。",
 				configure: "SSL監視を設定",
+			},
+			run: {
+				toast: {
+					up: "{{name}} は稼働中です",
+					down: "{{name}} はダウンしています",
+					degraded: "{{name}} の状態が低下しています",
+					changed: "実行したチェックにより、このモニターのステータスが変わりました。",
+					notQueued: {
+						title: "チェックは実行されませんでした",
+						description: "チェックを実行するには有効なサブスクリプションが必要です。",
+					},
+				},
 			},
 		},
 
@@ -2798,6 +2845,10 @@ export default {
 						label: "含めるモニター",
 						description: "このステータスページに表示するモニターを選択してください。",
 					},
+					cronJobs: {
+						label: "含める Cron ジョブ",
+						description: "このステータスページに表示する Cron ジョブを選択してください。",
+					},
 				},
 
 				cta: "ステータスページを作成",
@@ -2809,11 +2860,52 @@ export default {
 			header: {
 				title: "ステータスページを作成",
 			},
+			form: {
+				sections: {
+					branding: {
+						title: "ブランディング",
+						description: "このページの名乗り方です。社内向けにも、訪問者向けにも使われます。",
+					},
+					visibility: {
+						title: "公開設定",
+						description: "このページにアクセスできる人と、ひと目でどこまで伝えるかです。",
+					},
+					services: {
+						title: "サービス",
+						description: "このページで状況を公開するモニターと Cron ジョブを選びます。",
+						empty:
+							"モニターや Cron ジョブがまだありません。作成すると、あとでこのページに追加できます。",
+					},
+				},
+			},
 		},
 
 		editStatusPage: {
 			header: {
 				title: "ステータスページを編集",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "ブランディング",
+						description: "このページの名乗り方です。自分にも訪問者にも表示されます。",
+					},
+					visibility: {
+						title: "公開設定",
+						description: "このページにアクセスできる人と、上部に表示する内容です。",
+					},
+					services: {
+						title: "サービス",
+						description: "このページで状況を公開するモニターと Cron ジョブを選びます。",
+						empty: "追加できるモニターや Cron ジョブがまだありません。",
+					},
+				},
+			},
+			dangerZone: {
+				title: "危険な操作",
+				description: "ここでの操作は元に戻せません。",
+				warning: "このステータスページを削除すると、公開 URL は二度と使えなくなります。",
+				deleteDescription: "この操作は元に戻せません。",
 			},
 		},
 
@@ -2951,6 +3043,17 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このモニターの監視対象です。",
+					},
+					checks: {
+						title: "チェック設定",
+						description: "解決するレコード、期待する応答、チェックの実行間隔です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "モニター名",
@@ -2971,9 +3074,9 @@ export default {
 
 					expectedValue: {
 						label: "期待値",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"任意。解決された値が一致しない場合にアラートします。変更を追跡するには空のままにしてください。",
+							"任意。解決されたレコードにこれらの値のいずれかが含まれない場合に通知します。複数の値はカンマで区切ります。余分なレコードは許容されます。空欄にすると、あらゆる変更を追跡します。",
 					},
 
 					interval: {
@@ -3006,6 +3109,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このモニターの監視対象と、チェックの間隔です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "モニター名",
@@ -3026,9 +3136,9 @@ export default {
 
 					expectedValue: {
 						label: "期待値",
-						placeholder: "192.168.1.1",
+						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
 						description:
-							"任意。解決された値が一致しない場合にアラートします。変更を追跡するには空のままにしてください。",
+							"任意。解決されたレコードにこれらの値のいずれかが含まれない場合に通知します。複数の値はカンマで区切ります。余分なレコードは許容されます。空欄にすると、あらゆる変更を追跡します。",
 					},
 
 					interval: {
@@ -3059,6 +3169,8 @@ export default {
 				title: "危険な操作",
 				deleteMonitor: "モニターを削除",
 				deleteDescription: "チェック結果の履歴も削除されます。この操作は元に戻せません。",
+				description: "ここでの操作は元に戻せません。",
+				warning: "このモニターを削除すると、DNS チェック、履歴、アラートが完全に失われます。",
 			},
 		},
 
@@ -3186,6 +3298,21 @@ export default {
 			},
 
 			form: {
+				sections: {
+					coverage: {
+						title: "対象範囲",
+						description: "このメンテナンス期間に名前を付け、適用するモニターを選びます。",
+					},
+					schedule: {
+						title: "スケジュール",
+						description: "メンテナンス期間の開始と終了です。",
+					},
+					behavior: {
+						title: "動作",
+						description: "期間中の動作と、繰り返すかどうかです。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "名前",
@@ -3257,15 +3384,39 @@ export default {
 			form: {
 				cta: "変更を保存",
 				cancel: "キャンセル",
+				sections: {
+					coverage: {
+						title: "対象範囲",
+						description: "このメンテナンス期間に名前を付け、適用するモニターを選びます。",
+					},
+					schedule: {
+						title: "スケジュール",
+						description: "メンテナンス期間の開始と終了です。",
+					},
+					behavior: {
+						title: "メンテナンス中",
+						description: "期間中のアラートとステータスページの挙動です。",
+					},
+					recurrence: {
+						title: "繰り返し",
+						description: "1 回だけでなく、スケジュールに沿ってこの期間を繰り返します。",
+					},
+				},
 			},
 
 			endNow: {
 				cta: "メンテナンスを今すぐ終了",
+				title: "この期間を終了する",
+				description: "この期間は現在進行中です。",
+				warning:
+					"今すぐ終了すると、アラートが再開され、ステータスページからメンテナンスのお知らせが消えます。期間の設定自体は残ります。",
 			},
 
 			danger: {
 				title: "危険な操作",
 
+				description: "このメンテナンス期間に対する取り消せない操作です。",
+				warning: "このメンテナンス期間の削除は元に戻せません。",
 				delete: {
 					trigger: "メンテナンスウィンドウを削除",
 					confirmTitle: "このメンテナンスウィンドウを削除しますか？",
@@ -3377,6 +3528,22 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このアラートの名前と、監視するモニターです。",
+					},
+					channel: {
+						title: "通知チャンネル",
+						description: "通知の送信先です。選んだチャンネルの項目だけが必須です。",
+					},
+					delivery: {
+						title: "配信ルール",
+						description:
+							"復旧を通知するかどうかと、モニターがダウンしている間に通知を繰り返す間隔です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "名前",
@@ -3486,11 +3653,29 @@ export default {
 			form: {
 				cta: "変更を保存",
 				cancel: "キャンセル",
+				sections: {
+					basics: {
+						title: "監視対象",
+						description:
+							"このアラートに名前を付け、すべてのモニターを対象にするか、1 つだけにするかを選びます。",
+					},
+					channel: {
+						title: "通知方法",
+						description: "チャンネルを選び、送信先を入力します。",
+					},
+					delivery: {
+						title: "配信ルール",
+						description: "復旧通知と、障害中にアラートを繰り返す間隔を設定します。",
+					},
+				},
 			},
 
 			danger: {
 				title: "危険な操作",
 
+				description: "このアラートに対する取り消せない操作です。",
+				warning:
+					"このアラートを削除すると、送信されるすべての通知が停止します。この操作は元に戻せません。",
 				delete: {
 					trigger: "アラートを削除",
 					confirmTitle: "このアラートを削除しますか？",
@@ -4243,6 +4428,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このモニターの監視対象と、チェックの間隔です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "モニター名",
@@ -4295,6 +4487,13 @@ export default {
 			},
 
 			form: {
+				sections: {
+					settings: {
+						title: "モニター設定",
+						description: "このモニターの接続先と、チェックの間隔です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "モニター名",
@@ -4337,6 +4536,8 @@ export default {
 				title: "危険ゾーン",
 				cta: "モニターを削除",
 				description: "これによりチェック結果の履歴も削除されます。この操作は取り消せません。",
+				sectionDescription: "ここでの操作は元に戻せません。",
+				warning: "このモニターを削除すると、チェック、履歴、アラートが完全に失われます。",
 			},
 		},
 
@@ -4615,6 +4816,21 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このジョブの名前と、その内容です。",
+					},
+					schedule: {
+						title: "スケジュール",
+						description: "ジョブの実行予定と、未実行と見なすまでに許容する遅れです。",
+					},
+					alerting: {
+						title: "アラート",
+						description: "予定していた実行が届かなかったときの動作です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "名前",
@@ -4676,6 +4892,21 @@ export default {
 			},
 
 			form: {
+				sections: {
+					basics: {
+						title: "基本情報",
+						description: "このジョブの名前と、その内容です。",
+					},
+					schedule: {
+						title: "スケジュール",
+						description: "ジョブの実行予定と、未実行と見なすまでに許容する遅れです。",
+					},
+					alerting: {
+						title: "アラート",
+						description: "予定していた実行が届かなかったときの動作です。",
+					},
+				},
+
 				fields: {
 					name: {
 						label: "名前",
@@ -4723,6 +4954,8 @@ export default {
 			danger: {
 				title: "危険な操作",
 
+				description: "ここでの操作は元に戻せません。",
+				warning: "この Cron ジョブを削除すると、ping の履歴とアラートが完全に失われます。",
 				delete: {
 					trigger: "モニターを削除",
 					confirmTitle: "このCronジョブモニターを削除しますか？",
