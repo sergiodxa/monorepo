@@ -133,9 +133,13 @@ describe(createHttpPlugin.name, () => {
 				"form",
 				"json",
 				"text",
+				"bearer",
+				"basic",
 			]);
 			expect(tool.params.map((param) => param.required)).toEqual([
 				true,
+				false,
+				false,
 				false,
 				false,
 				false,
@@ -145,6 +149,8 @@ describe(createHttpPlugin.name, () => {
 			expect(tool.params.map((param) => param.kind)).toEqual([
 				"value",
 				"value",
+				"word",
+				"word",
 				"word",
 				"word",
 				"word",
@@ -704,7 +710,7 @@ describe(createHttpPlugin.name, () => {
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain('"query"');
-		expect(error.message).toContain("headers, form, json, text");
+		expect(error.message).toContain("headers, form, json, text, bearer, basic");
 	});
 
 	test("an option word missing its value is a tool error", async () => {
@@ -778,5 +784,165 @@ describe(createHttpPlugin.name, () => {
 		let error = unwrapError(result);
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain("string");
+	});
+
+	test("the bearer option sets an Authorization: Bearer header", async () => {
+		let captured: { auth: string | null } | undefined;
+		SERVER.use(
+			http.get("https://api.example.com/userinfo", ({ request }) => {
+				captured = { auth: request.headers.get("authorization") };
+				return HttpResponse.json({ sub: "user-1" });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/userinfo"), word("bearer"), value("tok-123")],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe("Bearer tok-123");
+	});
+
+	test("the basic option sets an Authorization: Basic base64(user:pass) header", async () => {
+		let captured: { auth: string | null } | undefined;
+		SERVER.use(
+			http.post("https://api.example.com/introspect", ({ request }) => {
+				captured = { auth: request.headers.get("authorization") };
+				return HttpResponse.json({ active: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/introspect"),
+				word("basic"),
+				value("client-id"),
+				value("s3cret"),
+				word("form"),
+				value({ token: "abc" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe(`Basic ${btoa("client-id:s3cret")}`);
+	});
+
+	test("basic combines with a form body on the same request", async () => {
+		let captured: { auth: string | null; body: string } | undefined;
+		SERVER.use(
+			http.post("https://api.example.com/token", async ({ request }) => {
+				captured = { auth: request.headers.get("authorization"), body: await request.text() };
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/token"),
+				word("basic"),
+				value("id"),
+				value("secret"),
+				word("form"),
+				value({ grant_type: "client_credentials" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe(`Basic ${btoa("id:secret")}`);
+		expect(new URLSearchParams(captured?.body ?? "").get("grant_type")).toBe("client_credentials");
+	});
+
+	test("an explicit headers authorization overrides bearer", async () => {
+		let captured: { auth: string | null } | undefined;
+		SERVER.use(
+			http.get("https://api.example.com/u", ({ request }) => {
+				captured = { auth: request.headers.get("authorization") };
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"get",
+			[
+				value("https://api.example.com/u"),
+				word("bearer"),
+				value("from-bearer"),
+				word("headers"),
+				value({ authorization: "Bearer from-headers" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		expect(captured?.auth).toBe("Bearer from-headers");
+	});
+
+	test("bearer and basic together is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("https://api.example.com/x"),
+				word("bearer"),
+				value("tok"),
+				word("basic"),
+				value("id"),
+				value("secret"),
+			],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message.toLowerCase()).toContain("auth");
+	});
+
+	test("a repeated bearer option is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("bearer"), value("a"), word("bearer"), value("b")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message.toLowerCase()).toContain("auth");
+	});
+
+	test("bearer with a non-string token is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("bearer"), value(42)],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+	});
+
+	test("bearer missing its token is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"get",
+			[value("https://api.example.com/x"), word("bearer")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("bearer");
+	});
+
+	test("basic missing its password is a tool error", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), word("basic"), value("only-user")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("basic");
+	});
+
+	test("basic with a non-Latin1 credential is a tool error, not a throw", async () => {
+		let result = await PLUGIN.call(
+			"post",
+			[value("https://api.example.com/x"), word("basic"), value("user"), value("pass\u{1F600}")],
+			buildContext(),
+		);
+		let error = unwrapError(result);
+		expect(error.code).toBe("tool-error");
 	});
 });

@@ -4,7 +4,8 @@
  * grant, checked against the URL's host and port, and URLs must be absolute
  * because v1 ships no environments mechanism to bind a base URL against. Beyond
  * the URL, calls may carry word-tagged options — `headers { … }`, `form { … }`,
- * `json …`, `text "…"` — in any order, alongside the back-compatible bare body.
+ * `json …`, `text "…"`, and the auth shortcuts `bearer <token>` and
+ * `basic <user> <pass>` — in any order, alongside the back-compatible bare body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,6 +32,16 @@ const HTTP_VERBS = ["get", "post", "put", "patch", "delete"] as const;
  */
 const OPTION_WORDS = ["headers", "form", "json", "text"] as const;
 
+/**
+ * The words that tag an authentication shortcut, filling the `Authorization`
+ * header from author-provided values: `bearer` consumes one following value (the
+ * token), `basic` consumes two (the username and password).
+ */
+const AUTH_WORDS = ["bearer", "basic"] as const;
+
+/** Every accepted option word, for the unknown-word diagnostic. */
+const ALL_OPTION_WORDS = [...OPTION_WORDS, ...AUTH_WORDS] as const;
+
 /** How many redirect hops one request may follow before it is refused. */
 const MAX_REDIRECTS = 10;
 
@@ -39,6 +50,15 @@ type HttpVerb = (typeof HTTP_VERBS)[number];
 
 /** One of the option-tag words a call may use. */
 type OptionWord = (typeof OPTION_WORDS)[number];
+
+/** One of the authentication-tag words a call may use. */
+type AuthWord = (typeof AUTH_WORDS)[number];
+
+/**
+ * How a call supplied credentials: a `bearer` token, or a `basic` user/password
+ * pair. Both resolve to an `Authorization` header when the init is built.
+ */
+type AuthSpec = { kind: "bearer"; token: string } | { kind: "basic"; user: string; pass: string };
 
 /** How a request body was supplied, carrying the raw value to encode. */
 interface BodySpec {
@@ -77,7 +97,8 @@ export function createHttpPlugin(): Plugin {
 /**
  * Build the descriptor of one request tool: an action requiring the `net`
  * grant, taking an absolute URL, an optional bare body, and the word-tagged
- * `headers`/`form`/`json`/`text` options that may follow in any order.
+ * `headers`/`form`/`json`/`text` options and `bearer`/`basic` auth shortcuts
+ * that may follow in any order.
  */
 function describeVerb(verb: HttpVerb): ToolDescriptor {
 	return {
@@ -123,6 +144,18 @@ function describeVerb(verb: HttpVerb): ToolDescriptor {
 				required: false,
 				summary: "Tag before a string sent as a text/plain body.",
 			},
+			{
+				name: "bearer",
+				kind: "word",
+				required: false,
+				summary: "Tag before a token string, sent as an Authorization: Bearer header.",
+			},
+			{
+				name: "basic",
+				kind: "word",
+				required: false,
+				summary: "Tag before a username and a password, sent as an Authorization: Basic header.",
+			},
 		],
 	};
 }
@@ -154,7 +187,7 @@ async function request(
 	}
 	let target = parseTarget(verb, parsedArgs.data.url);
 	if (isFailure(target)) return target;
-	let init = buildInit(verb, parsedArgs.data.body, parsedArgs.data.headers);
+	let init = buildInit(verb, parsedArgs.data.body, parsedArgs.data.headers, parsedArgs.data.auth);
 	if (isFailure(init)) return init;
 	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
 	if (isFailure(allowed)) return allowed;
@@ -169,15 +202,18 @@ interface RequestArguments {
 	body: BodySpec | undefined;
 	/** The optional raw `headers` object; validated when the init is built. */
 	headers: Value | undefined;
+	/** The optional `bearer`/`basic` credential; undefined when the call sent none. */
+	auth: AuthSpec | undefined;
 }
 
 /**
  * Validate the raw tool arguments: a required URL string, then any mix of
- * word-tagged options (`headers`/`form`/`json`/`text`, each consuming the
- * next argument) and a single back-compatible bare body (a string is text,
- * any other value is JSON). At most one body and one `headers` block; a
- * second body, a second `headers`, an unknown word, or a word missing its
- * value is a tool error.
+ * word-tagged options (`headers`/`form`/`json`/`text`, each consuming the next
+ * argument), the auth shortcuts (`bearer` consuming one value, `basic` two), and
+ * a single back-compatible bare body (a string is text, any other value is
+ * JSON). At most one body, one `headers` block, and one auth option; a second
+ * body, a second `headers`, a second auth option (including `bearer` with
+ * `basic`), an unknown word, or a word missing its value(s) is a tool error.
  */
 function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, SpecError> {
 	let first = args[0];
@@ -190,16 +226,31 @@ function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, Spe
 	let url = first.value;
 	let body: BodySpec | undefined;
 	let headers: Value | undefined;
+	let auth: AuthSpec | undefined;
 	let index = 1;
 	while (index < args.length) {
 		let arg = args[index];
 		if (arg === undefined) break;
 		if (arg.kind === "word") {
 			let word = arg.word;
+			if (isAuthWord(word)) {
+				if (auth !== undefined) {
+					return failure(
+						new ToolError(
+							`http.${verb} accepts at most one auth option (bearer or basic), but got more than one`,
+						),
+					);
+				}
+				let parsed = readAuth(verb, word, args, index);
+				if (isFailure(parsed)) return parsed;
+				auth = parsed.data.auth;
+				index += parsed.data.consumed;
+				continue;
+			}
 			if (!isOptionWord(word)) {
 				return failure(
 					new ToolError(
-						`http.${verb} got the unknown option word "${word}"; expected one of ${OPTION_WORDS.join(", ")}`,
+						`http.${verb} got the unknown option word "${word}"; expected one of ${ALL_OPTION_WORDS.join(", ")}`,
 					),
 				);
 			}
@@ -230,12 +281,56 @@ function readArgs(verb: HttpVerb, args: ToolArg[]): Result<RequestArguments, Spe
 		body = incoming;
 		index += 1;
 	}
-	return success({ url, body, headers });
+	return success({ url, body, headers, auth });
+}
+
+/**
+ * Read a `bearer` or `basic` auth option starting at its tag: `bearer` consumes
+ * one following string (the token), `basic` two (the username and password).
+ * Reports how many arguments (tag included) it consumed so the caller advances
+ * past them. A missing or non-string credential value is a tool error.
+ */
+function readAuth(
+	verb: HttpVerb,
+	word: AuthWord,
+	args: ToolArg[],
+	index: number,
+): Result<{ auth: AuthSpec; consumed: number }, SpecError> {
+	if (word === "bearer") {
+		let token = authString(verb, "bearer", args[index + 1], "token");
+		if (isFailure(token)) return token;
+		return success({ auth: { kind: "bearer", token: token.data }, consumed: 2 });
+	}
+	let user = authString(verb, "basic", args[index + 1], "username");
+	if (isFailure(user)) return user;
+	let pass = authString(verb, "basic", args[index + 2], "password");
+	if (isFailure(pass)) return pass;
+	return success({ auth: { kind: "basic", user: user.data, pass: pass.data }, consumed: 3 });
+}
+
+/** Read one auth credential argument as a required string, or a tool error. */
+function authString(
+	verb: HttpVerb,
+	word: AuthWord,
+	arg: ToolArg | undefined,
+	role: string,
+): Result<string, SpecError> {
+	if (arg === undefined || arg.kind !== "value" || typeof arg.value !== "string") {
+		return failure(
+			new ToolError(`http.${verb} option "${word}" needs a ${role} string argument after it`),
+		);
+	}
+	return success(arg.value);
 }
 
 /** Narrow a bare-word argument to one of the option tags. */
 function isOptionWord(word: string): word is OptionWord {
 	return (OPTION_WORDS as readonly string[]).includes(word);
+}
+
+/** Narrow a bare-word argument to one of the auth tags. */
+function isAuthWord(word: string): word is AuthWord {
+	return (AUTH_WORDS as readonly string[]).includes(word);
 }
 
 /** The tool error raised when a call supplies more than one request body. */
@@ -422,23 +517,30 @@ function stripCredentialHeaders(init: RequestInit): RequestInit {
 }
 
 /**
- * Build the fetch init for a verb, its optional body, and its optional
- * `headers` object. The body picks a default content type (text/plain,
- * application/json, or application/x-www-form-urlencoded); the author's
- * headers are then layered on top with lowercased names, so an explicit
- * `content-type` overrides the body's default. An absent body sets no body
- * and no default content type.
+ * Build the fetch init for a verb, its optional body, its optional `bearer`/
+ * `basic` credential, and its optional `headers` object. The layering fixes
+ * precedence: the body's default content type goes down first, then the
+ * `Authorization` header derived from `bearer`/`basic`, then the author's
+ * `headers` with lowercased names — so an explicit `content-type` overrides the
+ * body's default and an explicit `authorization` header overrides `bearer`/
+ * `basic`. An absent body sets no body and no default content type.
  */
 function buildInit(
 	verb: HttpVerb,
 	body: BodySpec | undefined,
 	headers: Value | undefined,
+	auth: AuthSpec | undefined,
 ): Result<RequestInit, SpecError> {
 	let encoded = encodeBody(verb, body);
 	if (isFailure(encoded)) return encoded;
 	let finalHeaders: Record<string, string> = {};
 	if (encoded.data.contentType !== undefined) {
 		finalHeaders["content-type"] = encoded.data.contentType;
+	}
+	if (auth !== undefined) {
+		let authorization = authorizationHeader(verb, auth);
+		if (isFailure(authorization)) return authorization;
+		finalHeaders["authorization"] = authorization.data;
 	}
 	if (headers !== undefined) {
 		let coerced = coerceFields(verb, "headers", headers);
@@ -451,6 +553,25 @@ function buildInit(
 	if (encoded.data.body !== undefined) init.body = encoded.data.body;
 	if (Object.keys(finalHeaders).length > 0) init.headers = finalHeaders;
 	return success(init);
+}
+
+/**
+ * Render an auth spec into its `Authorization` header value: `bearer` becomes
+ * `Bearer <token>`; `basic` becomes `Basic <base64(user:pass)>` per RFC 7617.
+ * `btoa` rejects a credential outside Latin-1, which surfaces as a tool error
+ * rather than an unhandled throw.
+ */
+function authorizationHeader(verb: HttpVerb, auth: AuthSpec): Result<string, SpecError> {
+	if (auth.kind === "bearer") return success(`Bearer ${auth.token}`);
+	try {
+		return success(`Basic ${btoa(`${auth.user}:${auth.pass}`)}`);
+	} catch {
+		return failure(
+			new ToolError(
+				`http.${verb} basic credentials must be Latin-1 (base64-encodable); got a value outside that range`,
+			),
+		);
+	}
 }
 
 /** A serialized request body and the content type it implies, if any. */

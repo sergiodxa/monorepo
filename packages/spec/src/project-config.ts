@@ -44,7 +44,15 @@ const ALLOW_PLUGINS_FLAG = "--allow-plugins";
  * claim one of them, because a declared plugin sharing the name would silently
  * shadow the built-in in the registry.
  */
-const BUILT_IN_NAMESPACES: ReadonlySet<string> = new Set(["fs", "cli", "http", "browser", "db"]);
+const BUILT_IN_NAMESPACES: ReadonlySet<string> = new Set([
+	"fs",
+	"cli",
+	"http",
+	"browser",
+	"db",
+	"url",
+	"jwt",
+]);
 
 /**
  * Whether, and how far, the caller authorized launching declared plugins.

@@ -333,7 +333,7 @@ test "creating a post returns 201" {
 spec run spec --allow-net=localhost:3000
 ```
 
-#### Request options: headers and non-JSON bodies
+#### Request options: headers, bodies, and credentials
 
 After the URL, a request takes optional **word-tagged options**, in any order:
 
@@ -347,6 +347,11 @@ After the URL, a request takes optional **word-tagged options**, in any order:
   bare non-string body.
 - `text "<string>"` — a body sent as `text/plain`; the explicit form of a bare
   string body.
+- `bearer <token>` — sets `Authorization: Bearer <token>`, so a resource-server
+  call passes the access token, not a hand-built header.
+- `basic <user> <pass>` — sets `Authorization: Basic base64(user:pass)`, the
+  `client_secret_basic` shape OAuth introspection and revocation expect. It is
+  the one option that takes two values.
 
 They combine, so an authenticated form post is one call:
 
@@ -366,11 +371,9 @@ test "the token endpoint rejects a bad code" {
 	}
 }
 
-test "a bearer header rides on a GET" {
+test "a bogus bearer token is rejected" {
 	when {
-		let who = http.get "http://localhost:3000/userinfo" headers {
-			authorization: "Bearer bogus"
-		}
+		let who = http.get "http://localhost:3000/userinfo" bearer "bogus"
 	}
 	then {
 		expect who.status 401
@@ -379,10 +382,12 @@ test "a bearer header rides on a GET" {
 ```
 
 A request carries **at most one body** (the bare body, or one of
-`json`/`form`/`text`) and **at most one** `headers` block; a second body, a body
-on a `GET`, or an unknown tag is an error. The two original forms —
-`http.get url` and `http.<verb> url <body>` — are unchanged, so existing specs
-keep working exactly as before.
+`json`/`form`/`text`), **at most one** `headers` block, and **at most one** auth
+option (`bearer` or `basic`); a second body, a body on a `GET`, both `bearer` and
+`basic`, or an unknown tag is an error. An explicit `headers.authorization`
+overrides `bearer`/`basic`. The two original forms — `http.get url` and
+`http.<verb> url <body>` — are unchanged, so existing specs keep working exactly
+as before.
 
 ### `browser` — drive a real browser · `--allow-net`
 
@@ -439,6 +444,69 @@ test "an INSERT reports exactly one affected row" {
 
 ```sh
 DATABASE_URL=postgres://localhost/test spec run spec --allow-env=DATABASE_URL
+```
+
+### `url` — parse a URL · no grant
+
+Pure, permissionless URL parsing — no network, no filesystem — so a spec can pull
+a value out of a URL it already holds instead of doing string surgery the language
+deliberately omits. Its typical job is reading the authorization `code` out of the
+redirect URL an OAuth authorize step lands on.
+
+- `url.query <url> <name>` — the value of a query-string parameter.
+- `url.fragment <url> <name>` — the value of a parameter after the `#` (the
+  implicit/hybrid OAuth response shape).
+- `url.path <url>` — the URL's pathname; `url.host <url>` — its host and port.
+
+A missing parameter, a non-string argument, or an unparseable URL is an error —
+`query`/`fragment` never bind a silent null.
+
+```
+use url
+
+test "the authorization code is read from the redirect URL" {
+	when {
+		let code = url.query "http://localhost:3000/callback?code=abc123&state=s" "code"
+	}
+	then {
+		expect code "abc123"
+	}
+}
+```
+
+### `jwt` — read and verify tokens · `--allow-net` (verify only)
+
+Read and verify JSON Web Tokens, the heart of specifying an OIDC server.
+
+- `jwt.decode <token>` — split a token into `{ header, payload }` with **no**
+  signature check; permissionless, for asserting on claims (`decoded.payload.sub`,
+  `decoded.header.alg`, …).
+- `jwt.verify <token> <jwks_url>` — fetch the issuer's JWKS, select the key the
+  token names by `kid`, verify its **ES256** signature and expiry, and return the
+  verified payload — so a spec proves an id_token is genuinely issuer-signed, not
+  just well-formed. It reaches the network to read the JWKS, so it needs
+  `--allow-net` for that host; a bad signature, an unknown key, an expired token,
+  or a non-ES256 algorithm is an error.
+
+```
+use jwt
+
+test "the id_token is genuinely signed and names the right subject" {
+	given {
+		let tokens = fixture issued_tokens
+	}
+	when {
+		let claims = jwt.verify tokens.id_token "http://localhost:3000/.well-known/jwks.json"
+	}
+	then {
+		expect claims.iss "https://id.example.com"
+		expect claims.aud "the-client-id"
+	}
+}
+```
+
+```sh
+spec run spec --allow-net=localhost:3000
 ```
 
 ## Permissions
@@ -546,7 +614,8 @@ Declaring a plugin is **not** permission to run it — launching one executes co
 the project ships, so it's deny-by-default too. `spec run` starts a declared
 plugin only with `--allow-plugins` (all) or `--allow-plugins=greet` (named); a
 suite that imports an unauthorized plugin is refused before any test runs. The
-built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`) are never affected.
+built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`, `url`, `jwt`) are
+never affected.
 
 ## Custom and third-party plugins
 

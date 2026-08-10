@@ -26,6 +26,8 @@ import { createCliPlugin } from "./plugins/cli";
 import { createDbPlugin } from "./plugins/db";
 import { createFsPlugin } from "./plugins/fs";
 import { createHttpPlugin } from "./plugins/http";
+import { createJwtPlugin } from "./plugins/jwt";
+import { createUrlPlugin } from "./plugins/url";
 import { createRegistry } from "./registry";
 import { createWorkspace } from "./workspace";
 
@@ -35,7 +37,7 @@ export interface RunOptions {
 	root: string;
 	/** The caller's permission grants, parsed from `--allow-*` flags. */
 	grants: Grants;
-	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, `browser`, and `db`. */
+	/** Extra plugins beyond the built-in `fs`, `cli`, `http`, `browser`, `db`, `url`, and `jwt`. */
 	plugins?: Plugin[];
 	/**
 	 * How many tests may execute at once. `1` (the default) runs the suite
@@ -70,6 +72,8 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		createHttpPlugin(),
 		createBrowserPlugin(),
 		createDbPlugin(),
+		createUrlPlugin(),
+		createJwtPlugin(),
 		...(options.plugins ?? []),
 	];
 	let registry = createRegistry(plugins, suite);

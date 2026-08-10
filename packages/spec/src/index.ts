@@ -34,6 +34,8 @@ export { createCliPlugin } from "./plugins/cli";
 export { createDbPlugin } from "./plugins/db";
 export { createFsPlugin } from "./plugins/fs";
 export { createHttpPlugin } from "./plugins/http";
+export { createJwtPlugin } from "./plugins/jwt";
+export { createUrlPlugin } from "./plugins/url";
 export { createRegistry } from "./registry";
 export type { Registry, ResolvedCallable } from "./registry";
 export { reportFatal, reportSuite } from "./reporter";

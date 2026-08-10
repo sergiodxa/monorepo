@@ -162,9 +162,9 @@ Notes:
 ### Word-tagged tool options
 
 A tool may accept **optional options** introduced by a word that consumes the
-argument after it, in any order after the required arguments. This is the plain
-word mechanism above — no new grammar — and how the built-in `http` verbs take
-request headers and non-JSON bodies:
+argument (or arguments) after it, in any order after the required arguments.
+This is the plain word mechanism above — no new grammar — and how the built-in
+`http` verbs take request headers, non-JSON bodies, and credentials:
 
 ```
 http.post "https://id.example.com/oauth/token" form {
@@ -172,7 +172,11 @@ http.post "https://id.example.com/oauth/token" form {
 	code: "abc123"
 } headers { authorization: "Basic dXNlcjpwYXNz" }
 
-http.get "https://id.example.com/userinfo" headers { authorization: "Bearer t" }
+http.get "https://id.example.com/userinfo" bearer "an-access-token"
+
+http.post "https://id.example.com/oauth/introspect" basic "client-id" "secret" form {
+	token: "an-access-token"
+}
 ```
 
 - `headers { Name: "value", … }` — request headers (string→string; a number or
@@ -183,10 +187,16 @@ http.get "https://id.example.com/userinfo" headers { authorization: "Bearer t" }
   bare non-string body.
 - `text "<string>"` — a `text/plain` body; the explicit form of a bare string
   body.
+- `bearer <token>` — consumes one string and sets `Authorization: Bearer <token>`.
+- `basic <user> <pass>` — consumes two strings and sets `Authorization: Basic
+<base64(user:pass)>` (RFC 7617). It is the one option word that takes two
+  values.
 
-A call carries at most one body (the bare body, or one of `json`/`form`/`text`)
-and at most one `headers` block; a second body, a body on `GET`, an unknown
-option word, or a tag with no value is a tool error. The two original forms —
+A call carries at most one body (the bare body, or one of `json`/`form`/`text`),
+at most one `headers` block, and at most one auth option (`bearer` or `basic`);
+a second body, a second `headers`, both `bearer` and `basic`, a body on `GET`, an
+unknown option word, or a tag with no value is a tool error. An explicit
+`headers.authorization` overrides `bearer`/`basic`. The two original forms —
 `http.get url` and `http.<verb> url <body>` (bare string → text, any other value
 → JSON) — are unchanged.
 
