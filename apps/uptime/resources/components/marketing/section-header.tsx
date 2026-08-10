@@ -2,7 +2,7 @@
  * Centered eyebrow badge + heading + lead paragraph at the top of a marketing page
  * section. Every marketing page/section repeats this same three-part shape, so it's
  * centralized here instead of composing it by hand at each call site. Its heading
- * renders through `@pkg/r3-ui`'s `Heading` (fixed at `level={2}` — every marketing
+ * renders through `@pkg/ui`'s `Heading` (fixed at `level={2}` — every marketing
  * page nests its sections below its own `<h1>` hero) instead of a bare `<h2>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,13 +11,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Heading } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { inlineFlex, items } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { m, maxWidth, mbe, p } from "@pkg/u/size";
 import { fontSize, leading, text, textAlign, tracking, weight } from "@pkg/u/typography";
+import { Heading } from "@pkg/ui";
 
 namespace SectionHeader {
 	export interface Props {

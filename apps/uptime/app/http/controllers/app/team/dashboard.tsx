@@ -27,10 +27,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Empty, LinkButton } from "@pkg/r3-ui";
 import { flex, flexWrap, gap, grid, gridTemplate } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { mbe } from "@pkg/u/size";
+import { Empty, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";

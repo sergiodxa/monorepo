@@ -5,10 +5,10 @@
  *
  * Mirrors `resources/layouts/app-shell.tsx`'s own migration: the mobile drawer's
  * popover-attributed `<aside>` and its hamburger toggle stay a custom composition
- * (like `app-shell.tsx`'s `<nav popover>`, `@pkg/r3-ui`'s own `Sidebar` assumes a
+ * (like `app-shell.tsx`'s `<nav popover>`, `@pkg/ui`'s own `Sidebar` assumes a
  * persistent `<aside>` beside an `Inset` plus a separate `Dialog`-based
  * `MobileNav` tree for narrow viewports, which doesn't fit this single-drawer
- * layout) — but the pieces `@pkg/r3-ui` does have real, Provider-free components
+ * layout) — but the pieces `@pkg/ui` does have real, Provider-free components
  * for are swapped in: `Sidebar.Header`/`Sidebar.Content` for the drawer's own
  * structure, `Breadcrumbs` for the trail, and `Typeset` for the article's
  * typography.
@@ -20,7 +20,6 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { ArrowRightIcon, MenuIcon } from "@pkg/lucide-remix";
-import { Breadcrumbs, Sidebar, Typeset } from "@pkg/r3-ui";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
@@ -45,6 +44,7 @@ import { media } from "@pkg/u/responsive";
 import { bs, height, m, maxHeight, maxIs, minBs, minIs, p, pb, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, weight } from "@pkg/u/typography";
+import { Breadcrumbs, Sidebar, Typeset } from "@pkg/ui";
 
 import type { DocSection } from "~/app/services/docs";
 

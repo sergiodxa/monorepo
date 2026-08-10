@@ -47,7 +47,6 @@ import {
 	TimerIcon,
 	UsersIcon,
 } from "@pkg/lucide-remix";
-import { Button, Heading, LinkButton, TextField } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import {
@@ -83,6 +82,7 @@ import {
 	tracking,
 	weight,
 } from "@pkg/u/typography";
+import { Button, Heading, LinkButton, TextField } from "@pkg/ui";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";

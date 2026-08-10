@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Heading, Link } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
 import { m, mbs, p } from "@pkg/u/size";
 import { text, weight } from "@pkg/u/typography";
+import { Heading, Link } from "@pkg/ui";
 
 /**
  * Groups the data shapes used to render related post cards.

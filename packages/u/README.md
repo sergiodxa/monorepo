@@ -17245,7 +17245,7 @@ Undoing a clamp is one of the few genuine `u.raw()` cases left: `u.lineClamp()` 
 
 ## Related Packages
 
-- [`@pkg/r3-ui`](/packages/r3-ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
+- [`@pkg/ui`](/packages/ui) - A component library built on `remix/ui` that styles its components through `css()` mixins and pairs naturally with these lower-level utilities.
 
 ## Tips
 

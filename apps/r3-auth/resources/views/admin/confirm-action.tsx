@@ -15,7 +15,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { AlertDialog, Button } from "@pkg/r3-ui";
+import { AlertDialog, Button } from "@pkg/ui";
 
 namespace ConfirmAction {
 	/** Trigger button sizes, matching the component library's own scale. */

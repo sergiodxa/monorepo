@@ -3,9 +3,9 @@
  * Reads its copy from `page.<page>.form.fields.*` through `i18next.getFixedT`, the same
  * convention `resources/views/monitors/form.tsx` establishes, so the two pages don't
  * duplicate the field markup or hardcode English strings. Fields are composed from
- * `@pkg/r3-ui`'s `TextField`/`Select` directly, wrapping `Select` in this app's own
+ * `@pkg/ui`'s `TextField`/`Select` directly, wrapping `Select` in this app's own
  * `Field` for its label/description since `Select`, unlike `TextField`, doesn't bundle
- * one; "Enabled" goes through `@pkg/r3-ui`'s `Switch` directly, with an explicit
+ * one; "Enabled" goes through `@pkg/ui`'s `Switch` directly, with an explicit
  * `value="true"` since a native checkbox otherwise submits `"on"`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -15,8 +15,8 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Select, Switch, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
+import { Select, Switch, TextField } from "@pkg/ui";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 

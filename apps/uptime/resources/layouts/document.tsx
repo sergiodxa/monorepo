@@ -1,7 +1,7 @@
 /**
  * Root HTML document layout for the uptime app. It renders the outer html/head/body
  * shell with charset and viewport meta tags, an optional page title, an indexable
- * page's metadata and structured data, the @pkg/r3-ui design-system stylesheets, and
+ * page's metadata and structured data, the @pkg/ui design-system stylesheets, and
  * the client entry script, switching between the dev source and the built asset path.
  * It exists as the shared document wrapper every server-rendered page is composed into.
  *
@@ -11,12 +11,12 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import resetStyles from "@pkg/r3-ui/reset.css?url";
-import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { Seo } from "@pkg/seo";
 import { bg, fg } from "@pkg/u/color";
 import { m } from "@pkg/u/size";
 import { font } from "@pkg/u/typography";
+import resetStyles from "@pkg/ui/reset.css?url";
+import themeStyles from "@pkg/ui/theme.css?url";
 
 import { SEO } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";

@@ -21,8 +21,8 @@
 import type { Handle } from "remix/ui";
 
 import { RefreshCwIcon } from "@pkg/lucide-remix";
-import { LinkButton } from "@pkg/r3-ui";
-import { spin } from "@pkg/r3-ui/animations";
+import { LinkButton } from "@pkg/ui";
+import { spin } from "@pkg/ui/animations";
 import { clientEntry, link, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

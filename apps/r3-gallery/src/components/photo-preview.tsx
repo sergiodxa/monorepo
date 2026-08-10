@@ -12,7 +12,6 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Card, Header, LinkButton } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
@@ -21,6 +20,7 @@ import { overflow } from "@pkg/u/overflow";
 import { at } from "@pkg/u/responsive";
 import { aspect, fit, height, mbs, p, width } from "@pkg/u/size";
 import { leading, tracking, weight } from "@pkg/u/typography";
+import { Card, Header, LinkButton } from "@pkg/ui";
 
 import type { Photo } from "../data/types";
 

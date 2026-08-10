@@ -9,9 +9,9 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import resetStyles from "@pkg/r3-ui/reset.css?url";
-import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { container } from "@pkg/u/layout";
+import resetStyles from "@pkg/ui/reset.css?url";
+import themeStyles from "@pkg/ui/theme.css?url";
 
 import { DOCUMENT, THEME } from "~/resources/styles";
 

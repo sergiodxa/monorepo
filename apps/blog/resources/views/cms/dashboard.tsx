@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { Heading, Link } from "@pkg/r3-ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
 import { m, p } from "@pkg/u/size";
 import { text, weight } from "@pkg/u/typography";
+import { Heading, Link } from "@pkg/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

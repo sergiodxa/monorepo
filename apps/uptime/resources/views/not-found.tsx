@@ -12,12 +12,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { Empty } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol } from "@pkg/u/layout";
 import { m, maxIs, minBs } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { Empty } from "@pkg/ui";
 
 import routes from "~/routes/web";
 

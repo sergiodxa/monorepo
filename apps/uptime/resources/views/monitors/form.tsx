@@ -9,13 +9,13 @@
  * settings are a separate form/action. It exists so the two pages don't duplicate
  * the field markup.
  *
- * Name/URL render through `@pkg/r3-ui`'s `TextField` convenience wrapper directly
+ * Name/URL render through `@pkg/ui`'s `TextField` convenience wrapper directly
  * (its own composed label/description covers them, so the local `Field` wrapper
- * isn't needed for either); status/region render through `@pkg/r3-ui`'s `Select`
+ * isn't needed for either); status/region render through `@pkg/ui`'s `Select`
  * still wrapped in `Field`, since `Select` has no composed label/description part
  * of its own the way `TextField` does. `i18next.getFixedT(...)` — a valid,
  * already-working i18n approach — is unchanged; only the underlying markup moved
- * to r3-ui.
+ * to `@pkg/ui`.
  *
  * The `EXPECTED_STATUS_CODES` option labels ("200 OK", "201 Created", …) stay
  * hardcoded English on purpose: an HTTP status code and its standard reason
@@ -35,8 +35,8 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Select, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
+import { Select, TextField } from "@pkg/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 

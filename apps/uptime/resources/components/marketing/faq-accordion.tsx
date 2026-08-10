@@ -1,7 +1,7 @@
 /**
  * A list of native `<details>` FAQ items, no client JS required for the disclosure
  * behavior. Every marketing page's FAQ section maps the same `{question, answer}`
- * shape over these items, so that loop is centralized here. Composes `@pkg/r3-ui`'s
+ * shape over these items, so that loop is centralized here. Composes `@pkg/ui`'s
  * `Accordion` — itself built entirely on `Disclosure`/native `<details>` — so this
  * stays exactly as zero-JS as the hand-rolled version it replaces.
  *
@@ -12,7 +12,7 @@
 import type { Handle } from "remix/ui";
 
 import { ChevronDownIcon } from "@pkg/lucide-remix";
-import { Accordion } from "@pkg/r3-ui";
+import { Accordion } from "@pkg/ui";
 
 namespace FaqAccordion {
 	export interface Item {

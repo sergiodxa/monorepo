@@ -2,8 +2,8 @@
  * Server-rendered response-time sparkline: a plain inline `<svg>` polyline computed
  * from recent Analytics Engine points, with no client-side charting library involved.
  *
- * `@pkg/r3-ui` ships its own in-house `Chart`/`Chart.Line` primitive
- * (`packages/r3-ui/src/components/chart.tsx`) — not a third-party dependency, and
+ * `@pkg/ui` ships its own in-house `Chart`/`Chart.Line` primitive
+ * (`packages/ui/src/components/chart.tsx`) — not a third-party dependency, and
  * fully server-rendered like this file already is — so ADR-001 §4.4's "no chart
  * library" rule was re-examined here rather than assumed to still forbid it. Read in
  * full, §4.4's own concern is specifically the OLD APP's one `recharts` usage (a
@@ -27,8 +27,8 @@
 
 import type { Handle } from "remix/ui";
 
-import { Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
+import { Text } from "@pkg/ui";
 
 import type { SparklinePoint } from "~/app/services/analytics";
 

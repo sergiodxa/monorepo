@@ -5,11 +5,11 @@
  * of the label/span/helper-text wrapper instead of repeating it per input across
  * every `form.tsx`.
  *
- * Composes `@pkg/r3-ui`'s `Label` and `Description` for the caption and helper
+ * Composes `@pkg/ui`'s `Label` and `Description` for the caption and helper
  * text, and its shared `fieldStackLayout()` style helper for both levels of
  * vertical stacking this wrapper needs: the label text above its control inside
  * `Label` itself, and the whole field (label, control, description) stacked
- * above the next one. `@pkg/r3-ui`'s own `TextField` bundles its own `<input>`
+ * above the next one. `@pkg/ui`'s own `TextField` bundles its own `<input>`
  * and doesn't fit here, since this wrapper's `children` can be a `<select>`, a
  * `<textarea>`, or a custom slider — anything a native `<label>` can wrap by
  * nesting rather than by `for`/`id`, which is why `Label` wraps `children`
@@ -21,9 +21,9 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Description, Label } from "@pkg/r3-ui";
-import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { mbe } from "@pkg/u/size";
+import { Description, Label } from "@pkg/ui";
+import { fieldStackLayout } from "@pkg/ui/styles";
 
 namespace Field {
 	export interface Props {

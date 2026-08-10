@@ -1,11 +1,11 @@
 /**
  * Calendar-year uptime heatmap: one column per week, one cell per day, colored by
  * that day's success rate (`successful_checks / total_checks`) on a graded scale
- * across `@pkg/r3-ui`'s semantic color tokens — `--ui-success-*` (was "up"/green),
+ * across `@pkg/ui`'s semantic color tokens — `--ui-success-*` (was "up"/green),
  * shading through `--ui-warning-*` (was "mixed"/amber) down to `--ui-danger-*` (was
  * "failure"/red), with `--ui-neutral-*` when a day has no data — instead of the
  * app's old ad-hoc `oklch(...)` literals, so the grid reads consistently with every
- * other r3-ui-based surface. Weeks start on Sunday and cover the full current year,
+ * other `@pkg/ui`-based surface. Weeks start on Sunday and cover the full current year,
  * from January 1st through December 31st (days beyond today simply render as "no
  * data"). Row labels for Monday/Wednesday/Friday sit to the left of the grid, a
  * date-range caption above it, and a color-scale legend below it. Cells are a fixed

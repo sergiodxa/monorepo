@@ -23,10 +23,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Table, TextArea } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
+import { Button, Table, TextArea } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";

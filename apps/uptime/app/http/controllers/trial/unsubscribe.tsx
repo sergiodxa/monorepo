@@ -23,11 +23,11 @@
 
 import type { RemixNode } from "remix/ui";
 
-import { Button, Card, Heading, LinkButton, Text } from "@pkg/r3-ui";
 import { getServiceContainer } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
 import { m, maxIs, mi, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Button, Card, Heading, LinkButton, Text } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

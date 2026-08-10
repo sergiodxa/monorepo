@@ -12,9 +12,9 @@
  * say — passes {@link FormPage.Props.maxWidth} rather than opting out of the
  * wrapper, so widening one page can't drag the rest of them along with it.
  *
- * Reviewed as part of the `@pkg/r3-ui` migration and intentionally left as a
+ * Reviewed as part of the `@pkg/ui` migration and intentionally left as a
  * plain composed `<div>`: it carries no color (nothing to route through
- * `--ui-*` custom properties) and `@pkg/r3-ui`'s `Section`/`Group` primitives
+ * `--ui-*` custom properties) and `@pkg/ui`'s `Section`/`Group` primitives
  * are shaped for listbox groups and control clusters, not a centered
  * max-width content column, so reaching for either here would force-fit an
  * ill-suited abstraction rather than simplify anything.

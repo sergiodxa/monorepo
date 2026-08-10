@@ -16,10 +16,10 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Input, Select, Switch, TextField } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { mbe } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
+import { Input, Select, Switch, TextField } from "@pkg/ui";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 

@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flexWrap, gap, grid, hstack } from "@pkg/u/layout";
 import { m, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@pkg/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

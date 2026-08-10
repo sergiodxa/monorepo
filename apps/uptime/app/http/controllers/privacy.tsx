@@ -13,10 +13,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Typeset } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { m, maxIs, pbe, pbs, pi } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
+import { Typeset } from "@pkg/ui";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";

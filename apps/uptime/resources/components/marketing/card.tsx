@@ -2,7 +2,7 @@
  * Title + description card used in marketing feature/use-case/pricing grids. Renders
  * as a link when `href` is given (e.g. a feature card linking to its own page) or a
  * plain panel otherwise (e.g. a pricing tile with no destination). Composes
- * `@pkg/r3-ui`'s `Card`/`Card.Header`/`Card.Title`/`Card.Description` for its panel
+ * `@pkg/ui`'s `Card`/`Card.Header`/`Card.Title`/`Card.Description` for its panel
  * chrome instead of a hand-rolled `css()` block; `Card` itself always renders a
  * `<section>` (no polymorphic `href`/`as` prop), so the link variant wraps that
  * panel in a plain block-level `<a>` instead.
@@ -19,13 +19,13 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { ArrowRightIcon } from "@pkg/lucide-remix";
-import { Card, HeadingScope } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { block, flex, gap, inlineFlex, items, justify, vstack } from "@pkg/u/layout";
 import { dark } from "@pkg/u/responsive";
 import { bs, is } from "@pkg/u/size";
 import { fontSize, textDecoration, weight } from "@pkg/u/typography";
+import { Card, HeadingScope } from "@pkg/ui";
 
 namespace MarketingCard {
 	export interface Props {

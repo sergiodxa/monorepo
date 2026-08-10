@@ -28,8 +28,8 @@
  * where the content happens to end. The reserved answer height is the same sum the real
  * card reserves: a badge pill, the gap under it, and one `sm` line.
  *
- * `@pkg/r3-ui`'s `Skeleton` carries no animation of its own — the `pulse()` mixin
- * from `@pkg/r3-ui/animations` supplies the breathing loop, matching the original
+ * `@pkg/ui`'s `Skeleton` carries no animation of its own — the `pulse()` mixin
+ * from `@pkg/ui/animations` supplies the breathing loop, matching the original
  * hand-rolled `@keyframes` shimmer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -38,11 +38,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, Skeleton } from "@pkg/r3-ui";
-import { pulse } from "@pkg/r3-ui/animations";
 import { basis, flex, flexCol, gap, grow, items, shrink } from "@pkg/u/layout";
 import { bs, mbs, minBs } from "@pkg/u/size";
 import { fontSize, leading, text } from "@pkg/u/typography";
+import { Card, Skeleton } from "@pkg/ui";
+import { pulse } from "@pkg/ui/animations";
 
 namespace SkeletonLine {
 	export interface Props {

@@ -3,11 +3,11 @@
  * any node (not just text) since some stat cards render badges instead of a plain
  * number, e.g. the dashboard's SSL certificate counts.
  *
- * Composed from `@pkg/r3-ui`'s `Card` (the bordered, shadowed panel and its
+ * Composed from `@pkg/ui`'s `Card` (the bordered, shadowed panel and its
  * `Card.Header` slot, which already stacks children in a column with a small gap —
  * exactly the "muted label, then big value" layout this card needs) plus `Text` for
  * both lines, muted-copy defaults for the label and an overridden size/weight/color
- * for the value. `@pkg/r3-ui` has no dedicated stat-card component, so this is a
+ * for the value. `@pkg/ui` has no dedicated stat-card component, so this is a
  * composition rather than a single import.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -16,10 +16,10 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Card, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { basis, grow, shrink } from "@pkg/u/layout";
 import { text, weight } from "@pkg/u/typography";
+import { Card, Text } from "@pkg/ui";
 
 namespace StatCard {
 	export interface Props {

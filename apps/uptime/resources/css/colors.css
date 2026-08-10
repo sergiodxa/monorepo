@@ -1,6 +1,6 @@
 /*
  * Raw --ui-color-{scale}-{step} scales consumed by @pkg/u/theme.css's
- * (transitively imported through @pkg/r3-ui/theme.css)
+ * (transitively imported through @pkg/ui/theme.css)
  * --ui-{brand,neutral,danger,warning,success}-* semantic tokens — see that
  * file's own "Theme Contract" docblock; it declares no defaults, so an app
  * must define these itself.

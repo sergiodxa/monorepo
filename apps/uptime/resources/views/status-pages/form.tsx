@@ -15,18 +15,10 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import {
-	Checkbox,
-	CheckboxGroup,
-	Description,
-	Label,
-	Switch,
-	TextArea,
-	TextField,
-} from "@pkg/r3-ui";
-import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
+import { Checkbox, CheckboxGroup, Description, Label, Switch, TextArea, TextField } from "@pkg/ui";
+import { fieldStackLayout } from "@pkg/ui/styles";
 
 import type {
 	SelectCronJobMonitor,

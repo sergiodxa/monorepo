@@ -10,12 +10,12 @@
 
 import type { Handle } from "remix/ui";
 
-import { Badge, Card, Label, LinkButton, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
 import { flex, flexCol, gap, grid, gridTemplate } from "@pkg/u/layout";
 import { at } from "@pkg/u/responsive";
 import { font, overflowWrap } from "@pkg/u/typography";
+import { Badge, Card, Label, LinkButton, Text } from "@pkg/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

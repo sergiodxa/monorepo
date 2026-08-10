@@ -6,7 +6,7 @@
  * grouped by `frontmatter.section.title`. The link matching `activePath` renders
  * with a solid active background so visitors can tell which page they're on.
  *
- * Composes `@pkg/r3-ui`'s `SearchField`/`SearchField.Input` for the search box, and
+ * Composes `@pkg/ui`'s `SearchField`/`SearchField.Input` for the search box, and
  * `NavLink` (styled with the same `--ui-neutral-bg-tint-hover`/`--ui-radius-lg`
  * tokens `Sidebar.Item` uses for its own rows) for the nav-list links, instead of
  * hand-rolled equivalents of both.
@@ -17,7 +17,6 @@
 
 import type { Handle } from "remix/ui";
 
-import { NavLink, SearchField } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { listStyle, raw } from "@pkg/u/general";
@@ -25,6 +24,7 @@ import { block } from "@pkg/u/layout";
 import { m, p } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, textTransform, tracking, weight } from "@pkg/u/typography";
+import { NavLink, SearchField } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** One doc link, reduced to the fields the sidebar actually renders. */

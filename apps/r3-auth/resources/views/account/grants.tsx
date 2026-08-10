@@ -12,11 +12,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { AlertDialog, Button, Card, Empty, Form, Logo, Table, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { maxIs } from "@pkg/u/size";
 import { nowrap, text, weight } from "@pkg/u/typography";
+import { AlertDialog, Button, Card, Empty, Form, Logo, Table, Text } from "@pkg/ui";
 
 import type { GrantRow } from "~/app/http/view-models/account-grant";
 

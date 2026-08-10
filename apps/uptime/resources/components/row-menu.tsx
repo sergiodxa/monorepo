@@ -1,6 +1,6 @@
 /**
  * A per-row kebab-icon actions menu, generic over its items — built on
- * `@pkg/r3-ui`'s `Menu`/`Popover` compound, anchored to its own kebab trigger
+ * `@pkg/ui`'s `Menu`/`Popover` compound, anchored to its own kebab trigger
  * through the Popover API's implicit-anchor behavior (the `commandfor`
  * invoker relationship doubles as the CSS anchor, so N independently
  * positioned triggers — one per table row — each get a correctly placed
@@ -19,8 +19,6 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { EllipsisVerticalIcon } from "@pkg/lucide-remix";
-import { Menu } from "@pkg/r3-ui";
-import { menuKeys } from "@pkg/r3-ui/mixins";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, raw } from "@pkg/u/general";
@@ -29,6 +27,8 @@ import { media } from "@pkg/u/responsive";
 import { height, is, m, p, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration } from "@pkg/u/typography";
+import { Menu } from "@pkg/ui";
+import { menuKeys } from "@pkg/ui/mixins";
 
 namespace RowMenu {
 	export interface Props {

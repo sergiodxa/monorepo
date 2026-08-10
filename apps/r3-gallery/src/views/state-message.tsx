@@ -10,7 +10,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { Alert, LinkButton } from "@pkg/r3-ui";
+import { Alert, LinkButton } from "@pkg/ui";
 
 import { Shell } from "../components/shell";
 import { routes } from "../routes";

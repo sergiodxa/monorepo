@@ -26,9 +26,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card } from "@pkg/r3-ui";
 import { flex, flexCol, grow } from "@pkg/u/layout";
 import { fontSize } from "@pkg/u/typography";
+import { Card } from "@pkg/ui";
 
 import type {
 	QuickPingErrorCode,

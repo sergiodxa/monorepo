@@ -44,7 +44,6 @@ import type { TFunction } from "@pkg/i18n";
 
 import { formatDate, formatDateTime } from "@pkg/dates";
 import { notFound } from "@pkg/http/response/html";
-import { Card, Heading, HeadingScope, LinkButton, Text } from "@pkg/r3-ui";
 import { getServiceContainer } from "@pkg/service-container";
 import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -53,6 +52,7 @@ import { grid, gridTemplate, hstack, vstack } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { bs, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@pkg/u/size";
 import { fontSize, leading, textAlign, weight, wordBreak } from "@pkg/u/typography";
+import { Card, Heading, HeadingScope, LinkButton, Text } from "@pkg/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

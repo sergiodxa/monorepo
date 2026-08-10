@@ -12,15 +12,15 @@
 
 import type { Handle } from "remix/ui";
 
-import { Button, Command, Keyboard } from "@pkg/r3-ui";
-import { FilterModel } from "@pkg/r3-ui/behaviors";
-import { commandFilter, commandKeys, hotkey } from "@pkg/r3-ui/mixins";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { block } from "@pkg/u/layout";
 import { is, p, pb, pi, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { Button, Command, Keyboard } from "@pkg/ui";
+import { FilterModel } from "@pkg/ui/behaviors";
+import { commandFilter, commandKeys, hotkey } from "@pkg/ui/mixins";
 import { on } from "remix/ui";
 
 import type { Album } from "../data/types";

@@ -10,7 +10,6 @@
 
 import type { Handle } from "remix/ui";
 
-import { AspectRatio, Badge, Button, Card, Form } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
 import { fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -20,6 +19,7 @@ import { overflow } from "@pkg/u/overflow";
 import { fit, height, minHeight, p, width } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { fontSize, leading, lineClamp, textDecoration } from "@pkg/u/typography";
+import { AspectRatio, Badge, Button, Card, Form } from "@pkg/ui";
 import { addEventListeners, on } from "remix/ui";
 
 import type { Photo } from "../data/types";

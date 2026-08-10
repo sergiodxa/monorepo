@@ -13,11 +13,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, Link, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, hidden, items, justify } from "@pkg/u/layout";
 import { is, maxIs, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Card, Link, Text } from "@pkg/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 

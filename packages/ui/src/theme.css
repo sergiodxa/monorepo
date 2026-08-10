@@ -10,13 +10,13 @@
  * scales themselves (see `@pkg/u`'s own theme contract) — there is no
  * default here.
  *
- * This file adds only what's genuinely r3-ui-specific on top of that base:
+ * This file adds only what's genuinely specific to this package on top of that base:
  * - Interaction-state variants (`-bg-tint-hover`, `-bg-tint-pressed`,
  *   `-bg-solid-hover`, `-bg-solid-pressed`) that `@pkg/u`'s own theme
  *   contract doesn't define, since how much a color shifts on hover/press
  *   is a component-library design decision, not a lower-level primitive.
  * - A `--ui-chart-{1..8}` categorical color sequence for multi-series
- *   charts — an r3-ui-component concern, not a theme-contract concept.
+ *   charts — a component-library concern, not a theme-contract concept.
  *
  * Dark Mode:
  * - Add .dark class to <html> for forced dark mode

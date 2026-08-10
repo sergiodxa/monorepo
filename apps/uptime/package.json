@@ -27,7 +27,6 @@
 		"@pkg/mail": "workspace:*",
 		"@pkg/markdown": "workspace:*",
 		"@pkg/polar": "workspace:*",
-		"@pkg/r3-ui": "workspace:*",
 		"@pkg/rate-limit": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/seo": "workspace:*",
@@ -36,6 +35,7 @@
 		"@pkg/sitemap": "workspace:*",
 		"@pkg/strings": "workspace:*",
 		"@pkg/u": "workspace:*",
+		"@pkg/ui": "workspace:*",
 		"@pkg/uuid": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"remix": "3.0.0-beta.5"

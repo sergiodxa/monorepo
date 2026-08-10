@@ -2,7 +2,7 @@
  * Edit alert page controller. Requires `requireUser` + `requireTeam`; 404s when the
  * alert doesn't belong to the current team.
  *
- * The danger-zone delete confirmation is `@pkg/r3-ui`'s `AlertDialog` composed
+ * The danger-zone delete confirmation is `@pkg/ui`'s `AlertDialog` composed
  * directly rather than through the `Confirm` convenience wrapper, since the
  * confirming control is a real `<form method="post">` submit button rather than a
  * `command="close"` action — matching `monitor-edit.tsx`'s own delete dialogs.
@@ -12,11 +12,11 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
-import { AlertDialog, Button } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { AlertDialog, Button } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

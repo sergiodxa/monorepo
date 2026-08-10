@@ -10,10 +10,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { Description, Empty, Link, LinkButton, Table } from "@pkg/r3-ui";
 import { flex, gap, items } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
 import { font, weight } from "@pkg/u/typography";
+import { Description, Empty, Link, LinkButton, Table } from "@pkg/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

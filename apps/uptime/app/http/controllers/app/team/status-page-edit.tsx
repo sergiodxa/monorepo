@@ -7,11 +7,11 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
-import { AlertDialog, Button } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { AlertDialog, Button } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

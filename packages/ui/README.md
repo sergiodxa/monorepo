@@ -1,4 +1,4 @@
-# @pkg/r3-ui
+# @pkg/ui
 
 A styled, accessible component library for `remix/ui`, rendered as server HTML and styled entirely through `css()` mixins.
 
@@ -13,7 +13,7 @@ Theming reads entirely from `--ui-*` semantic variables, which `theme.css` deriv
 ### Install
 
 ```bash
-bun add @pkg/r3-ui
+bun add @pkg/ui
 ```
 
 ### Import order: reset, theme, then your styles
@@ -21,8 +21,8 @@ bun add @pkg/r3-ui
 Two CSS files must be imported in this order, before your app's own styles:
 
 ```css
-@import "@pkg/r3-ui/reset.css";
-@import "@pkg/r3-ui/theme.css";
+@import "@pkg/ui/reset.css";
+@import "@pkg/ui/theme.css";
 
 /* your app's styles */
 ```
@@ -98,7 +98,7 @@ Every component follows the Handle pattern and is rendered as JSX, never called 
 ```tsx
 import type { Handle } from "remix/ui";
 
-import { Badge } from "@pkg/r3-ui";
+import { Badge } from "@pkg/ui";
 
 export function OrderStatus(handle: Handle<{ paid: boolean }>) {
 	return () => (
@@ -116,12 +116,12 @@ This renders as static server HTML — no hydration, no client JavaScript — wi
 Every non-CSS entry point is a plain barrel import:
 
 ```tsx
-import { Button, Dialog } from "@pkg/r3-ui";
-import { fade, spin } from "@pkg/r3-ui/animations";
-import { SelectionModel, Toaster } from "@pkg/r3-ui/behaviors";
-import { menuKeys, validate } from "@pkg/r3-ui/mixins";
-import { floatingSurface, focusRingPrimary } from "@pkg/r3-ui/styles";
-import { parseColor } from "@pkg/r3-ui/utils";
+import { Button, Dialog } from "@pkg/ui";
+import { fade, spin } from "@pkg/ui/animations";
+import { SelectionModel, Toaster } from "@pkg/ui/behaviors";
+import { menuKeys, validate } from "@pkg/ui/mixins";
+import { floatingSurface, focusRingPrimary } from "@pkg/ui/styles";
+import { parseColor } from "@pkg/ui/utils";
 ```
 
 Every example below that requires an accessibility string or visible copy uses a placeholder `t(key)` call standing in for whatever localization function a consuming app already wires up — the library ships no copy of its own, so every user-facing or accessible string is a required prop the consumer supplies.
@@ -132,16 +132,16 @@ Every public export — every component and its props, every mixin, every behavi
 
 ### Entry points
 
-| Export                  | Source                    | Contains                                                                                                                                                                                                                                                                                       |
-| ----------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@pkg/r3-ui`            | `src/index.ts`            | Every component and its compound subcomponents, re-exported from the package root.                                                                                                                                                                                                             |
-| `@pkg/r3-ui/animations` | `src/animations/index.ts` | CSS-only motion factories (`fade`, `zoom`, `slide`, `enterExit`, `spin`, `pulse`, `shimmer`, `textShimmer`, `scrollShadow`, `scrollProgress`, `viewReveal`, `scrollFade`) plus the shared `durations`/`easings` tokens.                                                                        |
-| `@pkg/r3-ui/behaviors`  | `src/behaviors/index.ts`  | Headless, DOM-free `TypedEventTarget` classes (`Announcer`, `CalendarModel`, `DragSession`, `FilterModel`, `ResizeSession`, `ScrollFollowModel`, `SelectionModel`, `Toaster`).                                                                                                                 |
-| `@pkg/r3-ui/mixins`     | `src/mixins/index.ts`     | Opt-in `createMixin`-based DOM adapters (`menuKeys`, `validate`, `dismiss`, `dropZone`, `themeToggle`, and the rest of the 38-module mixin catalog) applied through a component's `mix` prop.                                                                                                  |
-| `@pkg/r3-ui/styles`     | `src/styles/index.ts`     | Shared style-recipe factories (`focusRingPrimary`, `floatingSurface`, `panelChrome`, `semanticColorPanel`, and 10 more) composed directly inside a `mix` array.                                                                                                                                |
-| `@pkg/r3-ui/utils`      | `src/utils/index.ts`      | Framework-free helper logic with no `remix/ui` dependency — color parsing and conversion (`parseColor`, `formatHex`/`formatRgb`/`formatHsl`, RGB/HSL/HSV conversions), scale and geometry math, the shared `SemanticColor` type, and the dev-mode accessible-name checks components call into. |
-| `@pkg/r3-ui/reset.css`  | `src/reset.css`           | The base CSS reset (zeroed margins, border-box sizing, form-control inheritance, …), opened with `@layer base, rmx;`.                                                                                                                                                                          |
-| `@pkg/r3-ui/theme.css`  | `src/theme.css`           | The `--ui-*` semantic variable layer (`:root`, `.dark`, `.system`).                                                                                                                                                                                                                            |
+| Export               | Source                    | Contains                                                                                                                                                                                                                                                                                       |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pkg/ui`            | `src/index.ts`            | Every component and its compound subcomponents, re-exported from the package root.                                                                                                                                                                                                             |
+| `@pkg/ui/animations` | `src/animations/index.ts` | CSS-only motion factories (`fade`, `zoom`, `slide`, `enterExit`, `spin`, `pulse`, `shimmer`, `textShimmer`, `scrollShadow`, `scrollProgress`, `viewReveal`, `scrollFade`) plus the shared `durations`/`easings` tokens.                                                                        |
+| `@pkg/ui/behaviors`  | `src/behaviors/index.ts`  | Headless, DOM-free `TypedEventTarget` classes (`Announcer`, `CalendarModel`, `DragSession`, `FilterModel`, `ResizeSession`, `ScrollFollowModel`, `SelectionModel`, `Toaster`).                                                                                                                 |
+| `@pkg/ui/mixins`     | `src/mixins/index.ts`     | Opt-in `createMixin`-based DOM adapters (`menuKeys`, `validate`, `dismiss`, `dropZone`, `themeToggle`, and the rest of the 38-module mixin catalog) applied through a component's `mix` prop.                                                                                                  |
+| `@pkg/ui/styles`     | `src/styles/index.ts`     | Shared style-recipe factories (`focusRingPrimary`, `floatingSurface`, `panelChrome`, `semanticColorPanel`, and 10 more) composed directly inside a `mix` array.                                                                                                                                |
+| `@pkg/ui/utils`      | `src/utils/index.ts`      | Framework-free helper logic with no `remix/ui` dependency — color parsing and conversion (`parseColor`, `formatHex`/`formatRgb`/`formatHsl`, RGB/HSL/HSV conversions), scale and geometry math, the shared `SemanticColor` type, and the dev-mode accessible-name checks components call into. |
+| `@pkg/ui/reset.css`  | `src/reset.css`           | The base CSS reset (zeroed margins, border-box sizing, form-control inheritance, …), opened with `@layer base, rmx;`.                                                                                                                                                                          |
+| `@pkg/ui/theme.css`  | `src/theme.css`           | The `--ui-*` semantic variable layer (`:root`, `.dark`, `.system`).                                                                                                                                                                                                                            |
 
 ### Catalog areas
 
@@ -409,9 +409,9 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Command } from "@pkg/r3-ui";
-import { FilterModel } from "@pkg/r3-ui/behaviors";
-import { commandFilter } from "@pkg/r3-ui/mixins";
+import { Command } from "@pkg/ui";
+import { FilterModel } from "@pkg/ui/behaviors";
+import { commandFilter } from "@pkg/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type SearchPaletteProps = { pages: Array<Page> };
@@ -452,8 +452,8 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Toast } from "@pkg/r3-ui";
-import { Toaster } from "@pkg/r3-ui/behaviors";
+import { Toast } from "@pkg/ui";
+import { Toaster } from "@pkg/ui/behaviors";
 
 export const AppToaster = clientEntry(
 	"/app/components/app-toaster.tsx#AppToaster",
@@ -520,8 +520,8 @@ import type { Handle, HeadingLevel } from "remix/ui";
 
 import { clientEntry } from "remix/ui";
 
-import { Heading, HeadingScope } from "@pkg/r3-ui";
-import { headingLevelFallback } from "@pkg/r3-ui/mixins";
+import { Heading, HeadingScope } from "@pkg/ui";
+import { headingLevelFallback } from "@pkg/ui/mixins";
 
 export const CommentsIsland = clientEntry(
 	"/app/components/comments-island.tsx#CommentsIsland",
@@ -585,8 +585,8 @@ The same shape recurs across the catalog wherever markup alone can't guarantee t
 A style-mixin factory, an animation factory, and a component's own local `css()` call compose as disjoint siblings in one `mix` array — never merged into a single object:
 
 ```tsx
-import { zoom } from "@pkg/r3-ui/animations";
-import { floatingSurface, interactiveTransition } from "@pkg/r3-ui/styles";
+import { zoom } from "@pkg/ui/animations";
+import { floatingSurface, interactiveTransition } from "@pkg/ui/styles";
 import { css } from "remix/ui";
 
 <div
@@ -675,7 +675,7 @@ import { parseSafe } from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 import type { Handle } from "remix/ui";
 
-import { Button, Form, TextField } from "@pkg/r3-ui";
+import { Button, Form, TextField } from "@pkg/ui";
 import routes from "~/routes/web";
 
 let ContactSchema = f.object({
@@ -716,7 +716,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import { Chart } from "@pkg/r3-ui";
+import { Chart } from "@pkg/ui";
 
 type RevenueChartProps = { months: Array<{ index: number; revenue: number; refunds: number }> };
 
@@ -772,9 +772,9 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry, css } from "remix/ui";
 
-import { Bubble, Marker, Message, MessageScroller } from "@pkg/r3-ui";
-import { ScrollFollowModel } from "@pkg/r3-ui/behaviors";
-import { messageFollow } from "@pkg/r3-ui/mixins";
+import { Bubble, Marker, Message, MessageScroller } from "@pkg/ui";
+import { ScrollFollowModel } from "@pkg/ui/behaviors";
+import { messageFollow } from "@pkg/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type ChatThreadProps = { turns: Array<Turn> };
@@ -852,8 +852,8 @@ import {
 	ColorWheel,
 	Input,
 	Label,
-} from "@pkg/r3-ui";
-import { colorAreaDrag, colorPreview, colorWheelDrag } from "@pkg/r3-ui/mixins";
+} from "@pkg/ui";
+import { colorAreaDrag, colorPreview, colorWheelDrag } from "@pkg/ui/mixins";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type BrandColorPickerProps = { hue: number; saturation: number; brightness: number; alpha: number };

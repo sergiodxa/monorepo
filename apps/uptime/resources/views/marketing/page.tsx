@@ -22,7 +22,6 @@ import type { TFunction } from "@pkg/i18n";
 import type { Handle } from "remix/ui";
 
 import { ArrowRightIcon, CheckIcon, Icon } from "@pkg/lucide-remix";
-import { Heading, LinkButton } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient, radialGradient } from "@pkg/u/color";
 import { opacity, rounded, shadow } from "@pkg/u/effects";
 import { counterReset } from "@pkg/u/general";
@@ -49,6 +48,7 @@ import { dark, media } from "@pkg/u/responsive";
 import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
 import { translateX, translateY } from "@pkg/u/transform";
 import { fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { Heading, LinkButton } from "@pkg/ui";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 

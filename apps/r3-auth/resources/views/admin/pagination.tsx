@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { Pagination } from "@pkg/r3-ui";
 import { justify } from "@pkg/u/layout";
 import { mbs } from "@pkg/u/size";
+import { Pagination } from "@pkg/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

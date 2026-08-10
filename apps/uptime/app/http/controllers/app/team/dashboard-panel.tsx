@@ -17,7 +17,6 @@
 import type { Handle } from "remix/ui";
 
 import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
@@ -25,6 +24,7 @@ import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@
 import { is, mbe } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { Badge, Empty, LinkButton, Table, Tabs } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

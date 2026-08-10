@@ -3,7 +3,7 @@
  * works with no JS at all (a plain navigating submit, same as before this
  * component existed) — `on("submit")` only runs once hydrated, where it
  * intercepts the submit to `fetch()` the same action instead, so clicking
- * doesn't navigate away, and hands its pending state to `@pkg/r3-ui`'s
+ * doesn't navigate away, and hands its pending state to `@pkg/ui`'s
  * `Button` (`isPending`), which swaps its content for a spinner while the
  * request is in flight. `Monitor.ping` only enqueues the check — the
  * check itself finishes asynchronously — so "done" here means "the queue
@@ -26,8 +26,8 @@ import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
 import { PlayIcon } from "@pkg/lucide-remix";
-import { Button } from "@pkg/r3-ui";
 import { m } from "@pkg/u/size";
+import { Button } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

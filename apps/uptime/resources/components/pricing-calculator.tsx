@@ -25,7 +25,6 @@ import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
 import { PlusIcon, XIcon } from "@pkg/lucide-remix";
-import { Button, Card, Heading, HeadingScope, Label, Separator, Slider } from "@pkg/r3-ui";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
@@ -48,6 +47,7 @@ import { dark, media } from "@pkg/u/responsive";
 import { bs, is, m, mbs, p, pis } from "@pkg/u/size";
 import { before } from "@pkg/u/state";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
+import { Button, Card, Heading, HeadingScope, Label, Separator, Slider } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
 import {

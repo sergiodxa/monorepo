@@ -11,8 +11,6 @@
 import type { SchemaOrg } from "@pkg/seo";
 import type { Handle, RemixNode } from "remix/ui";
 
-import resetStyles from "@pkg/r3-ui/reset.css?url";
-import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { Seo } from "@pkg/seo";
 import { bg, colorScheme, fg } from "@pkg/u/color";
 import { raw } from "@pkg/u/general";
@@ -20,6 +18,8 @@ import { vstack } from "@pkg/u/layout";
 import { dark } from "@pkg/u/responsive";
 import { minBs } from "@pkg/u/size";
 import { font } from "@pkg/u/typography";
+import resetStyles from "@pkg/ui/reset.css?url";
+import themeStyles from "@pkg/ui/theme.css?url";
 
 import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
 import colorStyles from "~/resources/css/colors.css?url";

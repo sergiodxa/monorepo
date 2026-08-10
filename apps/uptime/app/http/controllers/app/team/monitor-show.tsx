@@ -29,13 +29,13 @@ import {
 	ShieldCheckIcon,
 	ShieldXIcon,
 } from "@pkg/lucide-remix";
-import { Badge, LinkButton } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@pkg/u/layout";
 import { m, mbe, mbs, p } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
+import { Badge, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

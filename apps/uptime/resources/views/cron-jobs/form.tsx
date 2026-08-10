@@ -11,8 +11,8 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Label, NumberField, Switch, TextField } from "@pkg/r3-ui";
 import { mbe } from "@pkg/u/size";
+import { Label, NumberField, Switch, TextField } from "@pkg/ui";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 

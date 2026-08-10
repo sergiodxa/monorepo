@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Badge, Heading, Link } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { listStyle } from "@pkg/u/general";
 import { gap, grid, gridTemplate, hstack, items } from "@pkg/u/layout";
 import { m, maxIs, mbs, mis, p } from "@pkg/u/size";
 import { leading, nowrap, tabularNums, text, textDecoration } from "@pkg/u/typography";
+import { Badge, Heading, Link } from "@pkg/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -129,7 +129,7 @@ export function BookmarksView() {
 									</time>
 									{item.suffixHref && item.suffixLabel && (
 										/* The suffix is a bare glyph rather than prose, so it keeps
-										native anchor markup: r3-ui's Link always underlines, which
+										native anchor markup: `@pkg/ui`'s Link always underlines, which
 										would draw a rule under a lone icon. */
 										<a
 											href={normalizeBookmarkHref(item.suffixHref)}

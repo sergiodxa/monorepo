@@ -14,18 +14,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	Button,
-	Checkbox,
-	CheckboxGroup,
-	DateField,
-	Description,
-	Label,
-	TextField,
-} from "@pkg/r3-ui";
 import { flex, flexCol, gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { mbe, pis } from "@pkg/u/size";
+import { Button, Checkbox, CheckboxGroup, DateField, Description, Label, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 

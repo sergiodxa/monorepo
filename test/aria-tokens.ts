@@ -3,9 +3,9 @@
  * a boolean reaches an ARIA attribute whose value is a token.
  *
  * It lives at the repo root, and is imported by both the repo-wide guard beside it and
- * `packages/r3-ui`'s own package-scoped one, so the rule has a single definition. The
+ * `packages/ui`'s own package-scoped one, so the rule has a single definition. The
  * full account of the failure mode is in the "ARIA values are tokens, never flags"
- * section of `packages/r3-ui/AGENTS.md`; the short version is that these attributes
+ * section of `packages/ui/AGENTS.md`; the short version is that these attributes
  * take text, the renderer writes a `true` prop as the bare attribute name, and the
  * empty value that produces is none of the tokens ARIA defines — so the attribute
  * falls back to its default and the state goes unannounced.

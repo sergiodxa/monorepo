@@ -3,7 +3,7 @@
  * a centered title and description, with a connector line reaching toward the next
  * step. Both the number and the connector are pure CSS — a `counter()` in `::before`
  * and a positioned `::after` rule — so a three-step row needs no client script and no
- * index prop threaded in from the caller. Reuses `@pkg/r3-ui`'s
+ * index prop threaded in from the caller. Reuses `@pkg/ui`'s
  * `Card.Title`/`Card.Description` for its title/description typography — the same
  * pieces `card.tsx` composes — instead of re-declaring the same two `css()` blocks a
  * second time.
@@ -14,7 +14,6 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, HeadingScope } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { counterIncrement, pseudoContent } from "@pkg/u/general";
@@ -34,6 +33,7 @@ import { dark, media } from "@pkg/u/responsive";
 import { bs, is, mbe } from "@pkg/u/size";
 import { after, before, not } from "@pkg/u/state";
 import { fontSize, textAlign, weight } from "@pkg/u/typography";
+import { Card, HeadingScope } from "@pkg/ui";
 
 namespace MarketingStep {
 	export interface Props {

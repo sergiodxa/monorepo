@@ -3,7 +3,7 @@
  * host `animation-*` declarations that reference it together, in one mixin.
  * It does not introduce animation opinions such as fade, slide, scale, spin,
  * or shimmer recipes; it only provides CSS keyframe emission and animation
- * declaration composition. Named recipes belong in `r3-ui/animations` or a
+ * declaration composition. Named recipes belong in `@pkg/ui/animations` or a
  * future animation package built on top of this layer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

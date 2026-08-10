@@ -1,8 +1,8 @@
-# packages/r3-ui AGENTS
+# packages/ui AGENTS
 
 ## Purpose
 
-Guidance for implementing and updating components, mixins, behaviors, and animations in `packages/r3-ui`, a styled, accessible component catalog for `remix/ui`. This file keeps day-to-day contributions consistent with the architecture described in the sections below.
+Guidance for implementing and updating components, mixins, behaviors, and animations in `packages/ui`, a styled, accessible component catalog for `remix/ui`. This file keeps day-to-day contributions consistent with the architecture described in the sections below.
 
 ## Core Principles
 
@@ -179,7 +179,7 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 ## Documentation Style
 
 - Describe every component, mixin, behavior class, and animation factory standalone, purely by what it is and does. Never name another monorepo app or package as a source/counterpart/comparison, never cite a design record (an ADR) by name, and never define something by what it _isn't_ (no "zero React", "no Tailwind needed", "unlike X") — state the affirmative fact instead ("styled through `css()` mixins", "a plain `:root` block is enough").
-- This applies to JSDoc, this file, the README, TODO.md, and code comments alike. The one place the package's own npm name (`@pkg/r3-ui`) belongs in prose is the README's H1 — everywhere else, either omit it or refer to "this package"/"the component"/"the mixin" instead. Import paths inside actual code examples and API-reference tables are exempt (they're documenting real values, not descriptive prose).
+- This applies to JSDoc, this file, the README, TODO.md, and code comments alike. The one place the package's own npm name (`@pkg/ui`) belongs in prose is the README's H1 — everywhere else, either omit it or refer to "this package"/"the component"/"the mixin" instead. Import paths inside actual code examples and API-reference tables are exempt (they're documenting real values, not descriptive prose).
 
 ## Tooling
 

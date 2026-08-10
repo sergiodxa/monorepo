@@ -12,7 +12,6 @@
 import type { Handle } from "remix/ui";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@pkg/lucide-remix";
-import { Button, LinkButton, Text } from "@pkg/r3-ui";
 import { RouterProvider } from "@pkg/r3-ui-router";
 import { bg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -33,6 +32,7 @@ import {
 } from "@pkg/u/layout";
 import { bs, is, mbe, p, width } from "@pkg/u/size";
 import { translateY } from "@pkg/u/transform";
+import { Button, LinkButton, Text } from "@pkg/ui";
 import { Frame, addEventListeners, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
@@ -176,7 +176,7 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 						]}
 					>
 						{/*
-						 * Not r3-ui's Dialog: this overlay's open/close state comes from
+						 * Not `@pkg/ui`'s Dialog: this overlay's open/close state comes from
 						 * router navigation (the masked photo URL), not commandfor Invoker
 						 * Commands, so a plain backdrop fits without fighting that model.
 						 * The white card itself is PhotoPreview's own Card — no extra panel

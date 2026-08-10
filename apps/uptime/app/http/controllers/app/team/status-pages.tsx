@@ -6,11 +6,11 @@
  */
 
 import { FileTextIcon, PlusIcon } from "@pkg/lucide-remix";
-import { Badge, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
+import { Badge, Empty, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

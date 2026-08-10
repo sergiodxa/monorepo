@@ -13,10 +13,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { AlertDialog, Badge, Button, Card, Empty, Form, Table, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, justify } from "@pkg/u/layout";
 import { nowrap, text } from "@pkg/u/typography";
+import { AlertDialog, Badge, Button, Card, Empty, Form, Table, Text } from "@pkg/ui";
 
 import type { SessionRow } from "~/app/http/view-models/account-session";
 

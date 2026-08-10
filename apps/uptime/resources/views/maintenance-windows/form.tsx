@@ -10,9 +10,9 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { Input, Label, Select, Switch, TextField } from "@pkg/r3-ui";
-import { fieldStackLayout } from "@pkg/r3-ui/styles";
 import { mbe } from "@pkg/u/size";
+import { Input, Label, Select, Switch, TextField } from "@pkg/ui";
+import { fieldStackLayout } from "@pkg/ui/styles";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 

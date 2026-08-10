@@ -28,7 +28,6 @@
  */
 
 import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@pkg/lucide-remix";
-import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
@@ -39,6 +38,7 @@ import { media } from "@pkg/u/responsive";
 import { is, m, maxIs, mi, p } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

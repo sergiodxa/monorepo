@@ -5,8 +5,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
+import { Button } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

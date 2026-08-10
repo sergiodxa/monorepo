@@ -9,11 +9,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, items, justify } from "@pkg/u/layout";
 import { is, maxIs, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Card, Text } from "@pkg/ui";
 
 import type { NotFoundViewModel } from "~/app/http/view-models/not-found";
 

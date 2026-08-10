@@ -11,13 +11,13 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Card, HeadingScope } from "@pkg/r3-ui";
 import { bg, fg } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { flex, gap, items, justify, shrink } from "@pkg/u/layout";
 import { dark } from "@pkg/u/responsive";
 import { bs, is, p } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
+import { Card, HeadingScope } from "@pkg/ui";
 
 namespace MarketingFeatureRow {
 	export interface Props {

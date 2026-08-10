@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
+import { Empty } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 

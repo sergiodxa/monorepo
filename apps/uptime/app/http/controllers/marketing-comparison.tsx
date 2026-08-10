@@ -23,7 +23,6 @@
 import type { TFunction } from "@pkg/i18n";
 
 import { CheckIcon, TriangleAlertIcon } from "@pkg/lucide-remix";
-import { Heading, Table } from "@pkg/r3-ui";
 import { bg, border, fg, linearGradient } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import { counterReset } from "@pkg/u/general";
@@ -44,6 +43,7 @@ import { overflow } from "@pkg/u/overflow";
 import { dark, media } from "@pkg/u/responsive";
 import { m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
 import { font, fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
+import { Heading, Table } from "@pkg/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 

@@ -12,9 +12,9 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
 
-import resetStyles from "@pkg/r3-ui/reset.css?url";
-import themeStyles from "@pkg/r3-ui/theme.css?url";
 import { colorScheme } from "@pkg/u/color";
+import resetStyles from "@pkg/ui/reset.css?url";
+import themeStyles from "@pkg/ui/theme.css?url";
 
 import colorStyles from "~/resources/css/colors.css?url";
 import prismStyles from "~/resources/css/prism.css?url";

@@ -27,7 +27,6 @@
 import type { TFunction } from "@pkg/i18n";
 import type { Handle, RemixNode } from "remix/ui";
 
-import { NavLink } from "@pkg/r3-ui";
 import { bg, borderEdge, colorMix, fg } from "@pkg/u/color";
 import { backdropBlur } from "@pkg/u/effects";
 import {
@@ -48,6 +47,7 @@ import { bs, is, m, maxIs, mbe, minBs, p } from "@pkg/u/size";
 import { z } from "@pkg/u/stacking";
 import { hover } from "@pkg/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { NavLink } from "@pkg/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import routes from "~/routes/web";

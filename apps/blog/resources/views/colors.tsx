@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/ui";
 
-import { Badge, Button, Heading } from "@pkg/r3-ui";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { ringShadow, rounded } from "@pkg/u/effects";
 import { listStyle } from "@pkg/u/general";
 import { flexWrap, gap, grid, gridTemplate, hstack, items, shrink } from "@pkg/u/layout";
 import { bs, is, m, mis, p, pbs } from "@pkg/u/size";
 import { text } from "@pkg/u/typography";
+import { Badge, Button, Heading } from "@pkg/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

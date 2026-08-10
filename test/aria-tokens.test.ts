@@ -4,7 +4,7 @@
  * and the rest of the set listed in the scanner this reuses.
  *
  * The rule is written out in full in the "ARIA values are tokens, never flags"
- * section of `packages/r3-ui/AGENTS.md`. The short version: these attributes take
+ * section of `packages/ui/AGENTS.md`. The short version: these attributes take
  * text, the renderer writes a `true` prop the way HTML wants a boolean attribute
  * written — as the bare name — so `aria-hidden={true}` reaches the document as
  * `aria-hidden=""`, which is none of the tokens ARIA defines and resolves to the
@@ -20,7 +20,7 @@
  *
  * The scanner lives beside this file in `aria-tokens.ts` and is exercised against
  * fixtures here before it is trusted against the repo — a codebase with zero current
- * violations cannot otherwise prove the scanner would catch one. `packages/r3-ui`
+ * violations cannot otherwise prove the scanner would catch one. `packages/ui`
  * imports the same scanner for a package-scoped run of its own, so the rule has one
  * definition and two scopes.
  *

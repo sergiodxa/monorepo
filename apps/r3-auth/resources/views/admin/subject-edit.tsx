@@ -9,18 +9,8 @@
 
 import type { Handle } from "remix/ui";
 
-import {
-	Alert,
-	Button,
-	Card,
-	Checkbox,
-	Form,
-	Label,
-	LinkButton,
-	Select,
-	TextField,
-} from "@pkg/r3-ui";
 import { flex, flexCol, gap } from "@pkg/u/layout";
+import { Alert, Button, Card, Checkbox, Form, Label, LinkButton, Select, TextField } from "@pkg/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

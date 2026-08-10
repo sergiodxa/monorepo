@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, Text } from "@pkg/r3-ui";
 import { gap, grid, gridTemplate } from "@pkg/u/layout";
 import { at } from "@pkg/u/responsive";
 import { m } from "@pkg/u/size";
+import { Card, Text } from "@pkg/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

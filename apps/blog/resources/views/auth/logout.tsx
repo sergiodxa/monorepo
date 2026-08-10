@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Form, Heading } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { contents, gap, grid, place } from "@pkg/u/layout";
 import { m, maxIs } from "@pkg/u/size";
 import { text, textAlign } from "@pkg/u/typography";
+import { Button, Form, Heading } from "@pkg/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";

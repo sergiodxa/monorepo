@@ -1,6 +1,6 @@
 /**
  * A single-value range control matching the visual language of `Field` (bold
- * label, muted description): `@pkg/r3-ui`'s `Slider` for the track/thumb, paired
+ * label, muted description): `@pkg/ui`'s `Slider` for the track/thumb, paired
  * with a live numeric readout (an `<output>` kept in sync as the user drags) plus
  * low/high range labels and optional helper text.
  *
@@ -21,11 +21,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Description, Label, Slider } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
+import { Description, Label, Slider } from "@pkg/ui";
 import { on } from "remix/ui";
 
 namespace RangeSlider {

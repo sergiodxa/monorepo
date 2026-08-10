@@ -5,10 +5,10 @@
  * not a raw `onerror` HTML string — that's not a typed `<img>` prop here). Per the
  * approved-islands list.
  *
- * Composes `@pkg/r3-ui`'s compound `Avatar` internally: `Avatar.Fallback` renders
+ * Composes `@pkg/ui`'s compound `Avatar` internally: `Avatar.Fallback` renders
  * first (so it paints underneath), and `Avatar.Image` renders on top of it when
  * `src` is given, hiding itself on the same `error` listener the original markup
- * used to reveal the fallback beneath. `@pkg/r3-ui`'s own `size` prop is a
+ * used to reveal the fallback beneath. `@pkg/ui`'s own `size` prop is a
  * `"sm"/"md"/"lg"` variant rather than this component's arbitrary pixel `size`,
  * so the host's dimensions and the fallback's inherited font size are overridden
  * directly through `mix` instead, keeping this component's numeric `size` API
@@ -21,9 +21,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { Avatar as UIAvatar } from "@pkg/r3-ui";
 import { is, bs } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
+import { Avatar as UIAvatar } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */

@@ -253,7 +253,7 @@ function renderChild(
 	if (tagName === "br") return <br />;
 
 	// `table`/`th`/`td` render bare here — the surrounding `Typeset` wrapper
-	// (see `@pkg/r3-ui`) already sizes and colors them (width, overflow-driven
+	// (see `@pkg/ui`) already sizes and colors them (width, overflow-driven
 	// scroll + edge fade for a table wider than its container, cell padding,
 	// borders, header weight), so styling them again here would only compete
 	// with it: two separate `overflow-x: auto` scroll containers nested

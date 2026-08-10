@@ -9,13 +9,13 @@
  */
 
 import { redirect } from "@pkg/http/response";
-import { Button } from "@pkg/r3-ui";
 import { border } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexCol, gap, items } from "@pkg/u/layout";
 import { dark } from "@pkg/u/responsive";
 import { m, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Button } from "@pkg/ui";
 import { createController } from "remix/fetch-router";
 
 import { getIdToken, logout } from "~/app/http/middleware/auth";

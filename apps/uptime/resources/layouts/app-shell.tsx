@@ -19,10 +19,10 @@
  * `align-items: stretch` gives every cell in a row the row's full height for free,
  * with no hardcoded pixel height to keep in sync between two unrelated elements.
  * This exact three-row/two-column grid-area layout, and the single-DOM-tree
- * `display: contents` off-canvas trick below, has no equivalent in `@pkg/r3-ui`'s own
+ * `display: contents` off-canvas trick below, has no equivalent in `@pkg/ui`'s own
  * `Sidebar` (which assumes a persistent `<aside>` beside an `Inset`, plus a *separate*
  * `Dialog`-based `MobileNav` tree for narrow viewports) — so this file keeps that
- * outer composition as its own layout and only swaps in the pieces `@pkg/r3-ui` does
+ * outer composition as its own layout and only swaps in the pieces `@pkg/ui` does
  * have a real component for: `Menu` (the team/user dropdowns), `Breadcrumbs` (the
  * trail), `Sidebar.Item` (the nav rows themselves), and `Toast`/`Toast.Region` (the
  * bottom notification).
@@ -62,9 +62,6 @@ import {
 	SettingsIcon,
 	WrenchIcon,
 } from "@pkg/lucide-remix";
-import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/r3-ui";
-import { easings } from "@pkg/r3-ui/animations";
-import { menuKeys } from "@pkg/r3-ui/mixins";
 import { animation } from "@pkg/u/animation";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
@@ -93,6 +90,9 @@ import { media } from "@pkg/u/responsive";
 import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { fontSize, textAlign, truncate, weight } from "@pkg/u/typography";
+import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/ui";
+import { easings } from "@pkg/ui/animations";
+import { menuKeys } from "@pkg/ui/mixins";
 
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
@@ -343,7 +343,7 @@ const main = combine([
 
 /**
  * Total time, in ms, the toast stays visible before fading out — matches
- * `@pkg/r3-ui`'s own `Toaster` behavior's default auto-dismiss delay, even though
+ * `@pkg/ui`'s own `Toaster` behavior's default auto-dismiss delay, even though
  * this toast is a single SSR-rendered prop rather than a JS-driven queue, so there's
  * no `Toaster` instance here to actually read that default from.
  */
@@ -353,7 +353,7 @@ const TOAST_VISIBLE_MS = 5000;
  * One-shot fade for the server-rendered toast: holds full opacity, then fades to
  * fully transparent over the tail of `TOAST_VISIBLE_MS`, with no JS driving its
  * removal — the toast simply becomes invisible in place once the animation ends.
- * `@pkg/r3-ui/animations`'s `fade()`/`enterExit()` factories are state-driven
+ * `@pkg/ui/animations`'s `fade()`/`enterExit()` factories are state-driven
  * (`[open]`/`:popover-open`, or a custom attribute a script would need to flip), which
  * doesn't fit a toast with no open/close state of its own — this reuses their
  * `easings.standard` curve instead of the plain `"ease"` keyword the previous

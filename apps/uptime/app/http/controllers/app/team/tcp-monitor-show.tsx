@@ -9,10 +9,10 @@
 
 import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
-import { Badge, Button, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
+import { Badge, Button, Empty, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

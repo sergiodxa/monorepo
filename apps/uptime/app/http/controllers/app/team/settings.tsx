@@ -27,7 +27,6 @@ import {
 	UserMinusIcon,
 	UserPlusIcon,
 } from "@pkg/lucide-remix";
-import { AlertDialog, Button, Empty, LinkButton, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
@@ -58,6 +57,7 @@ import {
 	weight,
 	wordBreak,
 } from "@pkg/u/typography";
+import { AlertDialog, Button, Empty, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

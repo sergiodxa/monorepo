@@ -37,11 +37,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Badge, Button, Input, Label } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, grow, items } from "@pkg/u/layout";
 import { m, mbs, minBs } from "@pkg/u/size";
 import { text } from "@pkg/u/typography";
+import { Badge, Button, Input, Label } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";

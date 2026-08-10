@@ -52,7 +52,7 @@ breaks something you cannot see from here:
   the typed `routes.x.href()` — never a hand-written path string.
 - **Views** are `remix/ui` components under `resources/`. Every component takes a
   `Handle` and returns a render function, and is used as JSX — never called as a plain
-  function. No `key=` on `remix/ui` or `@pkg/r3-ui` components.
+  function. No `key=` on `remix/ui` or `@pkg/ui` components.
 - **Styling** is `@pkg/u` mixins in a `mix` array, with anything bespoke written as an
   inline `css({...})` or `u.raw({...})` at the use site rather than as a module-level
   constant. Wrapper utilities (`u.dark()`, `u.focusVisible()`, `u.when()`) only accept

@@ -4,9 +4,9 @@
  * form. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong
  * to the current team.
  *
- * The content-checks table is `@pkg/r3-ui`'s `Table` compound, and every delete
+ * The content-checks table is `@pkg/ui`'s `Table` compound, and every delete
  * confirmation (a content check's own, and the monitor's own danger-zone one) is
- * `@pkg/r3-ui`'s `AlertDialog` composed directly rather than through the `Confirm`
+ * `@pkg/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
  * convenience wrapper, since the confirming control in each case is a real
  * `<form method="post">` submit button rather than a `command="close"` action.
  *
@@ -17,7 +17,6 @@
 import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
-import { AlertDialog, Button, Select, Table } from "@pkg/r3-ui";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
@@ -25,6 +24,7 @@ import { flex, gap, items } from "@pkg/u/layout";
 import { mbe, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { font, fontSize, textDecoration } from "@pkg/u/typography";
+import { AlertDialog, Button, Select, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

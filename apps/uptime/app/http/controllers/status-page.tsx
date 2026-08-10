@@ -23,7 +23,6 @@ import {
 	ClockIcon,
 	TriangleAlertIcon,
 } from "@pkg/lucide-remix";
-import { Badge, Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { bg, border, fg } from "@pkg/u/color";
@@ -34,6 +33,7 @@ import { dark } from "@pkg/u/responsive";
 import { m, maxIs, mbe, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { fontSize, textAlign, textDecoration, weight } from "@pkg/u/typography";
+import { Badge, Empty } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";

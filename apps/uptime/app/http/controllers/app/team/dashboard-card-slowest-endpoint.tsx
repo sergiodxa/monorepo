@@ -10,9 +10,9 @@
  */
 
 import { Trans } from "@pkg/i18n/ui";
-import { Empty } from "@pkg/r3-ui";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { Empty } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

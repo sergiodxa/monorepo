@@ -17,7 +17,7 @@ describe("colorMix", () => {
 		);
 	});
 
-	test("matches the exact literal replacing hardcoded color-mix strings in packages/r3-ui", () => {
+	test("matches the exact literal replacing hardcoded color-mix strings in packages/ui", () => {
 		expect(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")).toBe(
 			"color-mix(in oklab, currentcolor 70%, transparent)",
 		);

@@ -6,12 +6,12 @@
  * cached status has never been checked and renders as `unknown`.
  * Requires `requireUser` + `requireTeam`.
  *
- * The table is `@pkg/r3-ui`'s `Table` compound, and each row's delete confirmation is
- * `@pkg/r3-ui`'s `AlertDialog` (composed directly rather than through the `Confirm`
+ * The table is `@pkg/ui`'s `Table` compound, and each row's delete confirmation is
+ * `@pkg/ui`'s `AlertDialog` (composed directly rather than through the `Confirm`
  * convenience wrapper, since the confirming control here is a real `<form method="post">`
  * submit button rather than a `command="close"` action — the delete needs to actually
  * post to the delete action, not just dismiss the dialog). Each row's kebab-icon
- * actions menu is `@pkg/r3-ui`'s `Menu`, anchored to its own trigger via the Popover
+ * actions menu is `@pkg/ui`'s `Menu`, anchored to its own trigger via the Popover
  * API's implicit-anchor behavior, plus `menuKeys()` for the WAI-ARIA menu keyboard
  * pattern — inlined here rather than a shared component, since this is its only use.
  *
@@ -27,14 +27,14 @@ import {
 	PlusIcon,
 	TrashIcon,
 } from "@pkg/lucide-remix";
-import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/r3-ui";
-import { menuKeys } from "@pkg/r3-ui/mixins";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
 import { p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration, weight } from "@pkg/u/typography";
+import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
+import { menuKeys } from "@pkg/ui/mixins";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";

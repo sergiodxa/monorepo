@@ -17,10 +17,10 @@
 
 import type { Handle } from "remix/ui";
 
-import { Button, Card, Form } from "@pkg/r3-ui";
 import { flex, flexCol, items, justify } from "@pkg/u/layout";
 import { is, maxIs, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Button, Card, Form } from "@pkg/ui";
 
 import routes from "~/routes/web";
 

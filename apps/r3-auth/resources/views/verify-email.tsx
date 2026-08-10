@@ -12,11 +12,11 @@
 
 import type { Handle } from "remix/ui";
 
-import { Card, LinkButton, Text } from "@pkg/r3-ui";
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, items, justify } from "@pkg/u/layout";
 import { is, maxIs, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
+import { Card, LinkButton, Text } from "@pkg/ui";
 
 namespace VerifyEmailView {
 	export interface Props {

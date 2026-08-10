@@ -109,7 +109,6 @@ Run from the repository root:
 | [oidc-provider](packages/oidc-provider)                 | OIDC/OAuth2 provider engine                                   |
 | [pagination](packages/pagination)                       | Offset and keyset pagination with Link headers                |
 | [polar](packages/polar)                                 | Polar billing integration utilities                           |
-| [r3-ui](packages/r3-ui)                                 | Remix v3 UI component library                                 |
 | [r3-ui-router](packages/r3-ui-router)                   | SPA router for Remix UI apps                                  |
 | [rate-limit](packages/rate-limit)                       | Adapter-based rate limiting with standard headers             |
 | [response](packages/response)                           | HTTP response utilities                                       |
@@ -123,6 +122,7 @@ Run from the repository root:
 | [typeid](packages/typeid)                               | Type-safe prefixed id utilities                               |
 | [types](packages/types)                                 | Shared TypeScript types                                       |
 | [u](packages/u)                                         | Tailwind-like Remix UI styling utilities                      |
+| [ui](packages/ui)                                       | Remix v3 UI component library                                 |
 | [uuid](packages/uuid)                                   | UUID utilities                                                |
 | [validate](packages/validate)                           | Standard Schema validation utilities                          |
 | [webhooks](packages/webhooks)                           | Standard Webhooks signing, verification and replay guards     |
