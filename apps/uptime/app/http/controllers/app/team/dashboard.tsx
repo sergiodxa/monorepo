@@ -38,6 +38,7 @@ import { Frame } from "remix/ui";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
+import { COUNT_CARD_BREAKDOWN_LINES } from "~/app/http/controllers/app/team/dashboard-card-count";
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
@@ -132,7 +133,9 @@ export default createAction(routes.app.team.dashboard.index, {
 											team: ctx.team.slug,
 											resource: "http",
 										})}
-										fallback={<StatCardSkeleton count={1} />}
+										fallback={
+											<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />
+										}
 									/>
 									<Frame
 										name="dashboard-card-count-dns"
@@ -140,7 +143,9 @@ export default createAction(routes.app.team.dashboard.index, {
 											team: ctx.team.slug,
 											resource: "dns",
 										})}
-										fallback={<StatCardSkeleton count={1} />}
+										fallback={
+											<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />
+										}
 									/>
 									<Frame
 										name="dashboard-card-count-tcp"
@@ -148,7 +153,9 @@ export default createAction(routes.app.team.dashboard.index, {
 											team: ctx.team.slug,
 											resource: "tcp",
 										})}
-										fallback={<StatCardSkeleton count={1} />}
+										fallback={
+											<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />
+										}
 									/>
 									<Frame
 										name="dashboard-card-count-cron-jobs"
@@ -156,7 +163,9 @@ export default createAction(routes.app.team.dashboard.index, {
 											team: ctx.team.slug,
 											resource: "cron-jobs",
 										})}
-										fallback={<StatCardSkeleton count={1} />}
+										fallback={
+											<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />
+										}
 									/>
 									<Frame
 										name="dashboard-card-count-ssl"
@@ -164,7 +173,9 @@ export default createAction(routes.app.team.dashboard.index, {
 											team: ctx.team.slug,
 											resource: "ssl",
 										})}
-										fallback={<StatCardSkeleton count={1} />}
+										fallback={
+											<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />
+										}
 									/>
 								</div>
 							</div>

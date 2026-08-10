@@ -174,7 +174,11 @@ describe("dashboard-card-count", () => {
 		let body = await response.text();
 		expect(body).toContain("DNS Monitors");
 		expect(body).toContain("2");
-		expect(body).toContain("1 ok / 1 changed / 0 error");
+		// One line per state rather than one joined string, which is what keeps the
+		// breakdown readable and each part separately translatable.
+		expect(body).toContain(">1 ok</span>");
+		expect(body).toContain(">1 changed</span>");
+		expect(body).toContain(">0 error</span>");
 	});
 
 	test("resource=http renders the HTTP monitor count and up/down breakdown", async () => {
@@ -214,6 +218,7 @@ describe("dashboard-card-count", () => {
 
 		let body = await response.text();
 		expect(body).toContain("HTTP Monitors");
-		expect(body).toContain("1 up / 0 down");
+		expect(body).toContain(">1 up</span>");
+		expect(body).toContain(">0 down</span>");
 	});
 });

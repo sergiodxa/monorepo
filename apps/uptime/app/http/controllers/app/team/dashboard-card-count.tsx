@@ -6,12 +6,23 @@
  * (one per resource, all pointed at this same parameterized route) can swap in
  * independently over its own skeleton fallback. Requires `requireUser` + `requireTeam`.
  *
+ * Each card's status breakdown is one line per state, and every line is its own
+ * translation key rather than one interpolated sentence: a single string would have to
+ * be cut apart on a separator to be stacked, and which separator a language uses — or
+ * whether it uses one at all — is exactly the sort of thing a translation is free to
+ * change.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/ui";
+
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
+import { flex, flexCol } from "@pkg/u/layout";
+import { minBs } from "@pkg/u/size";
+import { text } from "@pkg/u/typography";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -29,6 +40,56 @@ import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 const RESOURCES = ["http", "dns", "tcp", "cron-jobs", "ssl"] as const;
+
+/**
+ * How many breakdown lines every count card holds room for, whatever it has to say.
+ * The five cards break down into either two states (http, tcp) or three (dns, cron
+ * jobs, ssl), and they sit side by side in one wrapping row, so the taller shape sets
+ * the row's height: a two-state card that only reserved its own two lines would be
+ * shorter than its neighbours. The skeleton the dashboard shows while each card streams
+ * in reads this same number, so the fallback and the card it becomes are the same
+ * height and nothing moves when they swap.
+ */
+export const COUNT_CARD_BREAKDOWN_LINES = 3;
+
+namespace Breakdown {
+	export interface Props {
+		/** One already-translated line per state, rendered in order. */
+		lines: string[];
+	}
+}
+
+/**
+ * A count card's per-state breakdown: one muted line per state, stacked, in a box that
+ * reserves {@link COUNT_CARD_BREAKDOWN_LINES} lines' worth of height even when there are
+ * fewer lines to fill it — the leftover stays empty rather than being padded with a
+ * state the card does not actually track.
+ *
+ * The reserved height is written in the subtitle's own line box (`1lh` under `text("sm")`,
+ * the step `Subtitle` renders at) plus each line's 0.25rem top margin, so it follows the
+ * type scale instead of freezing today's pixels. The box is a flex column because margins
+ * do not collapse through a flex container: the first line's top margin keeps separating
+ * the stack from the figure above it, exactly as a lone `Subtitle` did.
+ *
+ * A `<span>` rather than a `<div>`, because this renders inside `StatCard`'s value span,
+ * which only admits phrasing content; the flex display makes it a block box regardless.
+ */
+function Breakdown(handle: Handle<Breakdown.Props>) {
+	return () => (
+		<span
+			mix={[
+				flex(),
+				flexCol(),
+				text("sm"),
+				minBs(`calc(${COUNT_CARD_BREAKDOWN_LINES} * (1lh + 0.25rem))`),
+			]}
+		>
+			{handle.props.lines.map((line, index) => (
+				<Subtitle key={index}>{line}</Subtitle>
+			))}
+		</span>
+	);
+}
 
 /** GET /app/:team/dashboard/cards/count/:resource — one monitor-type count stat card, fragment-only. */
 export default createAction(routes.app.team.dashboard.cards.count, {
@@ -52,13 +113,19 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 					value={
 						<>
 							{dnsCounts.total}
-							<Subtitle>
-								{ctx.i18next.t("page.dashboard.stats.dnsMonitors.description", {
-									ok: dnsCounts.ok,
-									changed: dnsCounts.changed,
-									error: dnsCounts.error,
-								})}
-							</Subtitle>
+							<Breakdown
+								lines={[
+									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.ok", {
+										ok: dnsCounts.ok,
+									}),
+									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.changed", {
+										changed: dnsCounts.changed,
+									}),
+									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.error", {
+										error: dnsCounts.error,
+									}),
+								]}
+							/>
 						</>
 					}
 				/>,
@@ -81,12 +148,16 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 					value={
 						<>
 							{tcpCounts.total}
-							<Subtitle>
-								{ctx.i18next.t("page.dashboard.stats.tcpMonitors.description", {
-									up: tcpCounts.up,
-									down: tcpCounts.down,
-								})}
-							</Subtitle>
+							<Breakdown
+								lines={[
+									ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.up", {
+										up: tcpCounts.up,
+									}),
+									ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
+										down: tcpCounts.down,
+									}),
+								]}
+							/>
 						</>
 					}
 				/>,
@@ -108,13 +179,19 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 					value={
 						<>
 							{cronCounts.total}
-							<Subtitle>
-								{ctx.i18next.t("page.dashboard.stats.cronJobs.description", {
-									healthy: cronCounts.healthy,
-									late: cronCounts.late,
-									missed: cronCounts.missed,
-								})}
-							</Subtitle>
+							<Breakdown
+								lines={[
+									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.healthy", {
+										healthy: cronCounts.healthy,
+									}),
+									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.late", {
+										late: cronCounts.late,
+									}),
+									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.missed", {
+										missed: cronCounts.missed,
+									}),
+								]}
+							/>
 						</>
 					}
 				/>,
@@ -137,13 +214,19 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 					value={
 						<>
 							{sslCounts.total}
-							<Subtitle>
-								{ctx.i18next.t("page.dashboard.stats.sslMonitors.description", {
-									valid: sslCounts.valid,
-									expiring: sslCounts.expiring,
-									expired: sslCounts.expired,
-								})}
-							</Subtitle>
+							<Breakdown
+								lines={[
+									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.valid", {
+										valid: sslCounts.valid,
+									}),
+									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.expiring", {
+										expiring: sslCounts.expiring,
+									}),
+									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.expired", {
+										expired: sslCounts.expired,
+									}),
+								]}
+							/>
 						</>
 					}
 				/>,
@@ -171,12 +254,16 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 				value={
 					<>
 						{httpCounts.total}
-						<Subtitle>
-							{ctx.i18next.t("page.dashboard.stats.httpMonitors.description", {
-								up: httpCounts.up,
-								down: httpCounts.down,
-							})}
-						</Subtitle>
+						<Breakdown
+							lines={[
+								ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.up", {
+									up: httpCounts.up,
+								}),
+								ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.down", {
+									down: httpCounts.down,
+								}),
+							]}
+						/>
 					</>
 				}
 			/>,

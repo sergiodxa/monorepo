@@ -19,6 +19,13 @@
  * two control bars are the exception, since a control's height is its own, not its
  * text's.
  *
+ * A `"stat"` card's subtitle is one row per line it stands in for, since a card whose
+ * subtitle is a stack of lines is that many line boxes taller and a one-line fallback
+ * would jump by the difference. The 0.25rem column gap does double duty here: it is the
+ * `Subtitle`'s own top margin under the value, and — because every line of a stacked
+ * subtitle carries that same margin — the space between the lines too, so `n` rows and
+ * `n` gaps come to the same sum either way.
+ *
  * The description is two rows inside one box rather than two children of the header,
  * because the real one is a single wrapping paragraph and a second header child would
  * draw the header's gap through the middle of it.
@@ -106,6 +113,13 @@ namespace StatCardSkeleton {
 		count?: number;
 		/** Which card each placeholder stands in for. Defaults to `"stat"`. */
 		shape?: "stat" | "field";
+		/**
+		 * How many subtitle lines the `"stat"` card reserves under its value. Defaults to
+		 * 1, the shape of every stat card whose subtitle is a single caption; a caller
+		 * whose real card reserves more lines passes the same number the card does, so the
+		 * two stay the same height and the grid does not move when the frame swaps in.
+		 */
+		subtitleLines?: number;
 	}
 }
 
@@ -114,6 +128,7 @@ export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>)
 	return () => {
 		let count = handle.props.count ?? 1;
 		let shape = handle.props.shape ?? "stat";
+		let subtitleLines = handle.props.subtitleLines ?? 1;
 
 		return (
 			<>
@@ -149,7 +164,9 @@ export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>)
 								 */}
 								<div mix={[flex(), flexCol(), gap("0.25rem")]}>
 									<SkeletonLine size="2xl" width="45%" thickness="1.75rem" />
-									<SkeletonLine size="sm" width="100%" thickness="0.625rem" />
+									{Array.from({ length: subtitleLines }, (_, line) => (
+										<SkeletonLine key={line} size="sm" width="100%" thickness="0.625rem" />
+									))}
 								</div>
 							</Card.Header>
 						</Card>
