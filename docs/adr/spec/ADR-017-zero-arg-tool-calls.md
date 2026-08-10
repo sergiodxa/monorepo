@@ -95,7 +95,7 @@ README record the rule.
 
 - The `authorization_code` chain ADR-016 described is now expressible end to
   end: `browser` authorize → `let landing = browser.url` → box → `url.query …
-  "code"` → token exchange → `jwt.verify`. The middle step is no longer a gap.
+"code"` → token exchange → `jwt.verify`. The middle step is no longer a gap.
 - The refinement is general: any argument-less observable (present or future)
   becomes capturable into a binding with no further work.
 - The grammar did not grow — this is a resolution rule on an existing form, and
