@@ -11,7 +11,7 @@ Analytics turn raw monitoring results into readable operational trends. They hel
 - Average response times
 - Slowest services
 - Historical failure patterns
-- Long-term health heatmaps
+- 90-day uptime history bars
 - Daily aggregate status summaries
 
 ## How It Works
@@ -25,7 +25,7 @@ Analytics turn raw monitoring results into readable operational trends. They hel
 
 - Recent operational views focus on roughly the last 24 hours.
 - Long-term reporting uses daily aggregates.
-- Long-range history is intended to support year-long views such as 365-day heatmaps.
+- Daily aggregates are retained for 365 days; the app charts the trailing 90 days.
 
 ## Metrics
 
@@ -52,7 +52,7 @@ These summaries are derived from many individual checks rather than one isolated
 
 - Dashboard summary cards
 - Per-monitor detail metrics
-- Long-term calendars or heatmaps
+- 90-day uptime history bars
 - Incident-oriented historical views
 - Performance trend visualizations
 

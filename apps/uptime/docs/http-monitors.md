@@ -52,7 +52,7 @@ Newly created monitors are intended to start checking right away rather than wai
 - Historical results
 - Uptime percentage
 - Recent incidents or failures
-- Heatmap-style long-term history
+- 90-day uptime history
 - Slowest response summaries on team dashboards
 
 ## Defaults and Limits

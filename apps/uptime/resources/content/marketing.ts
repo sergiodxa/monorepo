@@ -9,7 +9,11 @@
  *
  * Two kinds of value here are load-bearing and must not be invented. Trust-indicator
  * figures are claims about our own product, so they track what Uptime actually does
- * today (9 regions, 1-60m intervals, 365-day retention, $5/mo + $1 per 10k pings). The
+ * today (9 regions, 1-60m intervals, 365-day retention with the last 90 days charted,
+ * $5/mo + $1 per 10k pings). Retention and charted history are two different claims and
+ * must not be collapsed into one: results are kept for a year, but the app plots the
+ * trailing 90 days, so copy promising a browsable "full year" would be selling something
+ * the product does not do. The
  * `theirCost` figures in `pricingScenarios` are claims about a named competitor's
  * public pricing — hedged with `~` where the plan mapping is approximate, and left
  * out entirely rather than guessed. `honestTake` exists for the same reason: a
@@ -185,7 +189,7 @@ const DEFAULT_STEPS: MarketingContent.Step[] = [
 	{
 		title: "Watch the dashboard",
 		description:
-			"See heatmaps, response times, and uptime history update as checks run automatically.",
+			"See uptime history, response times, and status update as checks run automatically.",
 	},
 ];
 
@@ -233,14 +237,15 @@ export const features: Record<string, MarketingContent.Page> = {
 				icon: "play",
 			},
 			{
-				title: "Heatmap visualization",
-				description: "See service health at a glance with daily heatmaps showing success rates.",
-				icon: "grid-2x2",
+				title: "Uptime history",
+				description:
+					"See service health at a glance: the last 90 days of daily uptime, colored by each day's success rate.",
+				icon: "chart-column",
 			},
 			{
-				title: "365-day history",
+				title: "365-day retention",
 				description:
-					"Access a full year of monitoring data for trend analysis and incident review.",
+					"Daily results are kept for a full year, with the most recent 90 days charted per monitor.",
 				icon: "calendar",
 			},
 		],
@@ -367,7 +372,7 @@ export const features: Record<string, MarketingContent.Page> = {
 		highlight: "without the support tickets",
 		description:
 			"Beautiful, customizable public status pages with real-time status, uptime history, and your own branding.",
-		highlights: ["Custom branding", "365-day heatmaps", "Public or private"],
+		highlights: ["Custom branding", "90-day uptime history", "Public or private"],
 		trustIndicators: [
 			{ icon: "globe", value: "Public", label: "Status Pages" },
 			{ icon: "palette", value: "Custom", label: "Branding" },
@@ -391,10 +396,10 @@ export const features: Record<string, MarketingContent.Page> = {
 				icon: "palette",
 			},
 			{
-				title: "Uptime heatmaps",
+				title: "Uptime history",
 				description:
-					"Each service shows a 365-day heatmap so visitors can see historical reliability.",
-				icon: "grid-2x2",
+					"Each service shows its last 90 days of daily uptime so visitors can see recent reliability.",
+				icon: "chart-column",
 			},
 			{
 				title: "Public or private",
@@ -427,33 +432,33 @@ export const features: Record<string, MarketingContent.Page> = {
 			},
 			{
 				question: "Does the status page update automatically?",
-				answer: "Yes, it reflects each attached monitor's latest status and historical heatmap.",
+				answer: "Yes, it reflects each attached monitor's latest status and recent uptime history.",
 			},
 		],
 	},
 
 	analytics: {
 		slug: "analytics",
-		metaTitle: "Uptime Analytics | Heatmaps & Trends",
+		metaTitle: "Uptime Analytics | History & Trends",
 		metaDescription:
-			"Visual heatmaps, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
+			"Visual uptime history, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
 		badge: "Analytics",
 		title: "Understand your reliability",
 		highlight: "at a glance",
 		description:
-			"Visual heatmaps, response time tracking, and 365 days of retained data across every monitor type.",
-		highlights: ["365-day retention", "Daily heatmaps", "P99 response time"],
+			"Visual uptime history, response time tracking, and 365 days of retained data across every monitor type.",
+		highlights: ["365-day retention", "90-day uptime history", "P99 response time"],
 		trustIndicators: [
 			{ icon: "calendar", value: "365", label: "Days Retention" },
-			{ icon: "grid-2x2", value: "Visual", label: "Heatmaps" },
+			{ icon: "chart-column", value: "90d", label: "Uptime History" },
 			{ icon: "clock", value: "P99", label: "Response Time" },
 			{ icon: "trending-up", value: "Trends", label: "Analysis" },
 		],
 		features: [
 			{
-				title: "Calendar heatmaps",
-				description: "See a full year of daily uptime at a glance, per monitor.",
-				icon: "grid-2x2",
+				title: "Daily uptime history",
+				description: "See the last 90 days of daily uptime at a glance, per monitor.",
+				icon: "chart-column",
 			},
 			{
 				title: "Response time tracking",
@@ -481,7 +486,8 @@ export const features: Record<string, MarketingContent.Page> = {
 			},
 			{
 				question: "Can I view historical performance trends?",
-				answer: "Yes — daily heatmaps and stored history give you a full year of reliability data.",
+				answer:
+					"Yes — the last 90 days of daily uptime are charted per monitor, and daily results are retained for a full year.",
 			},
 			{
 				question: "What is P99 response time?",
@@ -1030,7 +1036,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		trustIndicators: [
 			{ icon: "code", value: "Free", label: "To Start" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
-			{ icon: "database", value: "365", label: "Days History" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
 		features: [
@@ -2149,7 +2155,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			},
 			{
 				title: "Modern, minimal UI",
-				description: "A dashboard built around heatmaps and stat cards, not dense legacy tables.",
+				description:
+					"A dashboard built around uptime history and stat cards, not dense legacy tables.",
 				icon: "sparkles",
 			},
 			{
@@ -2183,7 +2190,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		perfectFor: {
 			title: "Perfect for teams that want a modern monitoring dashboard",
 			description:
-				"If you'd rather read a heatmap than a table of rows, and you don't want to work out which feature bundle you need, Uptime keeps the whole monitoring feature set on one plan.",
+				"If you'd rather read an uptime bar than a table of rows, and you don't want to work out which feature bundle you need, Uptime keeps the whole monitoring feature set on one plan.",
 			highlights: [
 				"Every monitor type on one plan",
 				"365-day retention included",
