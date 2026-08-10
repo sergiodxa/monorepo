@@ -1,9 +1,8 @@
 /**
- * Tests for the TCP monitor detail page controller. `~/app/data/tcp-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The page's two
- * data fetches now live behind `Frame`s, so what it asserts is the frames themselves.
+ * Tests for the DNS monitor uptime-history fragment controller. `~/app/data/dns-monitor`
+ * doesn't import `cloudflare:workers`, so no module mock is needed here.
+ * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
+ * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,12 +24,15 @@ import { renderToStream } from "remix/ui/server";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, teams, tcpMonitors } from "~/database/schema";
+import { dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let { handler } = (await import("./tcp-monitor-show")).default as { handler: RequestHandler<any> };
+let { handler } = (await import("./dns-monitor-card-uptime-history")).default as {
+	handler: RequestHandler<any>;
+};
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
@@ -68,7 +70,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
+/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
@@ -89,14 +91,14 @@ async function send(
 	container.instance(Database, db);
 
 	let router = createRouter({ middleware: [asyncContext()] });
-	router.map(routes.app.team.tcpMonitors.show, {
+	router.map(routes.app.team.dnsMonitors.cards.uptimeHistory, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,
 	});
 
 	let request = new Request(
 		new URL(
-			routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId }),
+			routes.app.team.dnsMonitors.cards.uptimeHistory.href({ team: team.slug, monitorId }),
 			"https://uptime.test",
 		),
 	);
@@ -104,38 +106,39 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
-describe("tcpMonitorShow", () => {
-	test("renders the monitor's configuration and the fragment frames", async () => {
+describe("dns-monitor-card-uptime-history", () => {
+	test("renders the uptime bar from the monitor's recent daily stats", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
-			tcpMonitors,
+			dnsMonitors,
 			{
 				id: crypto.randomUUID(),
 				team_id: team.id,
-				name: "Database",
-				host: "db.example.com",
-				port: 5432,
+				name: "Production DNS",
+				domain: "example.com",
+				record_type: "A",
 			},
 			{ touch: true, returnRow: true },
 		);
+
+		let today = new Date().toISOString().slice(0, 10);
+		await MonitorDailyStats.upsertDay(db, {
+			monitor_id: monitor.id,
+			monitor_type: "dns",
+			date: today,
+			total_checks: 10,
+			successful_checks: 10,
+			failed_checks: 0,
+			avg_response_time_ms: 100,
+			max_response_time_ms: 120,
+			status: "up",
+		});
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Database");
-		expect(body).toContain("db.example.com");
-		// The history bar and the result table are their own fragments now, so the page
-		// only promises the frames that will fetch them.
-		expect(body).toContain(
-			routes.app.team.tcpMonitors.cards.uptimeHistory.href({
-				team: team.slug,
-				monitorId: monitor.id,
-			}),
-		);
-		expect(body).toContain(
-			routes.app.team.tcpMonitors.cards.results.href({ team: team.slug, monitorId: monitor.id }),
-		);
+		expect(body).toContain(`${today}: up (10/10)`);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

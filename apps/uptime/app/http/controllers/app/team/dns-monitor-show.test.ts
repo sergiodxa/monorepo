@@ -1,10 +1,9 @@
 /**
- * Tests for the DNS monitor detail page controller. `~/app/data/dns-monitor` and
- * `~/app/data/monitor-daily-stats` don't import `cloudflare:workers`, so no module
- * mock is needed here. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded
- * directly by a fake middleware standing in for the real `auth`/`requireUser`/
- * `requireTeam` chain, matching the template in `app/http/controllers/actions/
- * monitors.test.ts`.
+ * Tests for the DNS monitor detail page controller. `~/app/data/dns-monitor` doesn't
+ * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
+ * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
+ * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The page's two
+ * data fetches now live behind `Frame`s, so what it asserts is the frames themselves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,10 +68,10 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
+/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit): Response {
-		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });
@@ -106,7 +105,7 @@ async function send(
 }
 
 describe("dnsMonitorShow", () => {
-	test("renders the monitor's configuration and check history", async () => {
+	test("renders the monitor's configuration and the fragment frames", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			dnsMonitors,
@@ -126,8 +125,17 @@ describe("dnsMonitorShow", () => {
 		let body = await response.text();
 		expect(body).toContain("Production DNS");
 		expect(body).toContain("example.com");
-		expect(body).toContain("Check History");
-		expect(body).toContain("No checks have been performed yet.");
+		// The history bar and the result table are their own fragments now, so the page
+		// only promises the frames that will fetch them.
+		expect(body).toContain(
+			routes.app.team.dnsMonitors.cards.uptimeHistory.href({
+				team: team.slug,
+				monitorId: monitor.id,
+			}),
+		);
+		expect(body).toContain(
+			routes.app.team.dnsMonitors.cards.results.href({ team: team.slug, monitorId: monitor.id }),
+		);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

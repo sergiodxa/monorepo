@@ -143,9 +143,9 @@ export default route({
 				}),
 				/**
 				 * Fragment routes: each renders exactly one monitor-detail-page stat card (or
-				 * the heatmap), loaded into its own named `Frame` with a skeleton `fallback` so
-				 * none of them block the page shell or each other — notably the usage card's
-				 * Polar API call, the slowest of the bunch. Same rationale as
+				 * the uptime history bar), loaded into its own named `Frame` with a skeleton
+				 * `fallback` so none of them block the page shell or each other — notably the
+				 * usage card's Polar API call, the slowest of the bunch. Same rationale as
 				 * `dashboard.cards` above, scoped down to one monitor via `:monitorId`.
 				 */
 				cards: {
@@ -153,7 +153,7 @@ export default route({
 					slowestResult: get("/app/:team/monitors/:monitorId/cards/slowest-result"),
 					p99ResponseTime: get("/app/:team/monitors/:monitorId/cards/p99-response-time"),
 					uptime: get("/app/:team/monitors/:monitorId/cards/uptime"),
-					heatmap: get("/app/:team/monitors/:monitorId/cards/heatmap"),
+					uptimeHistory: get("/app/:team/monitors/:monitorId/cards/uptime-history"),
 				},
 			},
 			/**
@@ -164,14 +164,33 @@ export default route({
 			 * than of this table.
 			 */
 			monitorsImport: get("/app/:team/import-monitors"),
-			dnsMonitors: resources("/app/:team/dns", {
-				param: "monitorId",
-				only: ["index", "new", "show", "edit"],
-			}),
-			tcpMonitors: resources("/app/:team/tcp", {
-				param: "monitorId",
-				only: ["index", "new", "show", "edit"],
-			}),
+			dnsMonitors: {
+				...resources("/app/:team/dns", {
+					param: "monitorId",
+					only: ["index", "new", "show", "edit"],
+				}),
+				/**
+				 * Fragment routes for the detail page's two data fetches, same rationale as
+				 * `monitors.cards` above: the shell renders from the monitor row alone, while the
+				 * uptime history bar and the result table each load into their own `Frame` rather
+				 * than the page awaiting both before its first byte.
+				 */
+				cards: {
+					uptimeHistory: get("/app/:team/dns/:monitorId/cards/uptime-history"),
+					results: get("/app/:team/dns/:monitorId/cards/results"),
+				},
+			},
+			tcpMonitors: {
+				...resources("/app/:team/tcp", {
+					param: "monitorId",
+					only: ["index", "new", "show", "edit"],
+				}),
+				/** Fragment routes, same rationale as `dnsMonitors.cards` above. */
+				cards: {
+					uptimeHistory: get("/app/:team/tcp/:monitorId/cards/uptime-history"),
+					results: get("/app/:team/tcp/:monitorId/cards/results"),
+				},
+			},
 			cronJobs: resources("/app/:team/cron-jobs", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],

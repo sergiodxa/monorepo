@@ -35,6 +35,7 @@ import {
 	maintenanceWindows,
 	memberships,
 	monitorContentChecks,
+	monitorDailyStats,
 	monitorResults,
 	statusPageMonitors,
 	statusPages,
@@ -281,7 +282,9 @@ async function expectSeedIntact(db: Database, seed: SeededTeam) {
 	expect(await db.find(monitorResults, seed.monitorResult.id)).not.toBeNull();
 	expect(await db.find(monitorContentChecks, seed.contentCheck.id)).not.toBeNull();
 	expect(
-		(await MonitorDailyStats.listForCurrentYear(db, seed.monitor.id, "http")).map((row) => row.id),
+		(await db.findMany(monitorDailyStats, { where: { monitor_id: seed.monitor.id } })).map(
+			(row) => row.id,
+		),
 	).toContain(seed.dailyStats.id);
 	expect(await db.find(dnsMonitors, seed.dnsMonitor.id)).not.toBeNull();
 	expect(await db.find(dnsMonitorResults, seed.dnsResult.id)).not.toBeNull();
@@ -308,7 +311,9 @@ async function expectSeedGone(db: Database, seed: SeededTeam) {
 	expect(await Monitor.findByIdForTeam(db, seed.team.id, seed.monitor.id)).toBeNull();
 	expect(await db.find(monitorResults, seed.monitorResult.id)).toBeNull();
 	expect(await db.find(monitorContentChecks, seed.contentCheck.id)).toBeNull();
-	expect(await MonitorDailyStats.listForCurrentYear(db, seed.monitor.id, "http")).toEqual([]);
+	expect(await db.findMany(monitorDailyStats, { where: { monitor_id: seed.monitor.id } })).toEqual(
+		[],
+	);
 	expect(await db.find(dnsMonitors, seed.dnsMonitor.id)).toBeNull();
 	expect(await db.find(dnsMonitorResults, seed.dnsResult.id)).toBeNull();
 	expect(await db.find(tcpMonitors, seed.tcpMonitor.id)).toBeNull();

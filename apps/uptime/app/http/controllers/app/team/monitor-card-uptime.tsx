@@ -1,12 +1,12 @@
 /**
  * Monitor detail page "Uptime percentage" stat-card fragment controller. GET
  * /app/:team/monitors/:monitorId/cards/uptime — loads just this one monitor's daily
- * stats for the current calendar year and reduces them into an overall uptime
- * percentage, with no document shell, so the monitor page's uptime `Frame` can swap it
- * in over its skeleton fallback. Fetches `MonitorDailyStats.listForCurrentYear`
- * independently of the heatmap fragment's own identical fetch — duplicated on purpose
- * since each `Frame` loads independently, matching the dashboard cards' convention.
- * Requires `requireUser` + `requireTeam`.
+ * stats for the last 90 days and reduces them into an overall uptime percentage, with
+ * no document shell, so the monitor page's uptime `Frame` can swap it in over its
+ * skeleton fallback. Fetches `MonitorDailyStats.listRecentDays` independently of the
+ * uptime-history fragment's own identical fetch — duplicated on purpose since each
+ * `Frame` loads independently, matching the dashboard cards' convention. Requires
+ * `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,7 +37,7 @@ export default createAction(routes.app.team.monitors.cards.uptime, {
 		let monitor = await Monitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "http");
+		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "http");
 		let totalChecks = dailyStats.reduce((sum, day) => sum + day.total_checks, 0);
 		let successfulChecks = dailyStats.reduce((sum, day) => sum + day.successful_checks, 0);
 		let uptimePercent = totalChecks > 0 ? Math.round((successfulChecks / totalChecks) * 100) : null;

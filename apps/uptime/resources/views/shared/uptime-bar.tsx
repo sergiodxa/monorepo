@@ -1,17 +1,15 @@
 /**
  * Compact uptime bar: a single row of thin vertical bars covering the last
- * {@link UPTIME_BAR_DAYS} days (today inclusive), one bar per day, colored by that
+ * {@link UPTIME_WINDOW_DAYS} days (today inclusive), one bar per day, colored by that
  * day's `monitor_daily_stats.status`. A range/uptime caption sits above the row and a
  * status-color legend below it. Days with no data (not yet reached, or the monitor
  * didn't exist yet) render as empty bars, and the bars stretch to fill the full row
  * width (no per-bar max width), so the row never trails off into empty space
  * regardless of how many days actually have data.
  *
- * Distinct from `resources/views/shared/heatmap.tsx`, which plots a whole calendar
- * year across two axes: this is one time axis and one value, a summary rather than a
- * grid. Shared because the public status page and the signed-in monitor detail pages
- * both want that summary of the same table, and a second copy would be a second thing
- * to keep in step. Bar/legend colors read the shared `--ui-success/warning/danger/
+ * Shared because the public status page and every signed-in monitor detail page want
+ * the same summary of the same table, and a second copy would be a second thing to keep
+ * in step. Bar/legend colors read the shared `--ui-success/warning/danger/
  * neutral-*` design tokens instead of ad-hoc `oklch(...)` literals, so they follow the
  * app's light/dark theming automatically.
  *
@@ -39,16 +37,15 @@ import { fontSize, nowrap } from "@pkg/u/typography";
 
 import type { SelectMonitorDailyStats } from "~/database/schema";
 
-/** How many trailing days {@link UptimeBar}'s row of bars covers. */
-const UPTIME_BAR_DAYS = 90;
+import { UPTIME_WINDOW_DAYS } from "~/app/data/monitor-daily-stats";
 
-/** The last {@link UPTIME_BAR_DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
+/** The last {@link UPTIME_WINDOW_DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
 function buildLastNDays(): string[] {
 	let today = new Date();
 	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
 	let dates: string[] = [];
-	for (let i = UPTIME_BAR_DAYS - 1; i >= 0; i--) {
+	for (let i = UPTIME_WINDOW_DAYS - 1; i >= 0; i--) {
 		dates.push(new Date(end.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
 	}
 	return dates;
@@ -57,10 +54,9 @@ function buildLastNDays(): string[] {
 /**
  * Aggregate uptime across `days` as a formatted percentage value (no unit or
  * copy attached — pass it through {@link UptimeBar.Props.formatUptime} for the
- * translated caption), or `null` when there's no data at all. `days` may cover
- * more than {@link UPTIME_BAR_DAYS} (callers pass a full year's worth) — this only
- * sums entries whose `date` falls in `dates`, so the percentage matches the same
- * window the bars render.
+ * translated caption), or `null` when there's no data at all. Only sums entries whose
+ * `date` falls in `dates`, so a caller that hands over a wider window still gets a
+ * percentage matching the bars actually rendered.
  */
 function calculateUptimePercentage(
 	days: SelectMonitorDailyStats[],

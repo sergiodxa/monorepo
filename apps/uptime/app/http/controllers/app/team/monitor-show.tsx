@@ -1,12 +1,12 @@
 /**
  * HTTP monitor detail page controller. Shows the monitor's usage/performance stat
- * cards, SSL status, and a calendar-year uptime heatmap from `monitor_daily_stats`,
- * plus run/edit actions. Requires `requireUser` + `requireTeam`; 404s when the
- * monitor doesn't belong to the current team. The usage/slowest-result/uptime stat
- * cards and the heatmap all load via named `Frame`s pointed at their own fragment
- * routes (`monitor-card-usage.tsx`, `-slowest-result.tsx`, `-uptime.tsx`,
- * `-heatmap.tsx`), so this controller no longer blocks on any of it (notably Polar's
- * API, the slowest of those fetches) before it can render the page shell.
+ * cards, SSL status, and a 90-day uptime bar from `monitor_daily_stats`, plus run/edit
+ * actions. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't
+ * belong to the current team. The usage/slowest-result/uptime stat cards and the
+ * uptime history all load via named `Frame`s pointed at their own fragment routes
+ * (`monitor-card-usage.tsx`, `-slowest-result.tsx`, `-uptime.tsx`,
+ * `-uptime-history.tsx`), so this controller no longer blocks on any of it (notably
+ * Polar's API, the slowest of those fetches) before it can render the page shell.
  *
  * The certificate's last-checked instant reads as a distance from now, with the
  * absolute timestamp on `title`, matching how every other monitor detail page words
@@ -163,8 +163,8 @@ export default createAction(routes.app.team.monitors.show, {
 
 						<div mix={[mbs("24px")]}>
 							<Frame
-								name="monitor-card-heatmap"
-								src={routes.app.team.monitors.cards.heatmap.href({
+								name="monitor-card-uptime-history"
+								src={routes.app.team.monitors.cards.uptimeHistory.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}

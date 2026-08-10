@@ -9,13 +9,13 @@
  * into the minute the person signed in, which is worse than having none: the uptime figure
  * would be right and every timestamp under it would be a lie. `monitor_daily_stats` is keyed
  * on a date column instead, so it is the one place a past day can honestly be written, and it
- * is what the 365-day heatmap and the year view read. The trade is that the carried history
+ * is what the uptime bar and the long-term reports read. The trade is that the carried history
  * has day resolution rather than hour resolution, which is the correct thing to lose.
  *
  * The rollup deliberately matches `AggregateDailyStatsJob`'s definitions rather than
  * inventing its own — "successful" means a check that reported `up`, so a degraded check
  * counts against the day exactly as it does for a paying monitor. A carried day and a day
- * the sweep produced have to be the same kind of fact, or the heatmap shows a seam where the
+ * the sweep produced have to be the same kind of fact, or the uptime bar shows a seam where the
  * trial ended.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -46,7 +46,7 @@ export interface HistoricCheck {
 /**
  * Rolls checks up into one {@link DailyStatsInput} per UTC day they cover.
  *
- * Days with no checks produce no row, which is what the heatmap already expects from a
+ * Days with no checks produce no row, which is what the uptime bar already expects from a
  * monitor that was not running: a gap reads as "not watched", and writing a zero-check row
  * would draw it as a day that was watched and failed.
  *

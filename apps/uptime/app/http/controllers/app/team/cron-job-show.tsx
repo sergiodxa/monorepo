@@ -87,7 +87,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 			routes.api.cronJobPing.href({ cronJobId: monitor.id }),
 			ctx.request.url,
 		).toString();
-		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "cron");
+		let dailyStats = await MonitorDailyStats.listRecentDays(db, monitor.id, "cron");
 
 		let totalPings = pings.length;
 		let onTimeCount = pings.filter((ping) => ping.was_on_time).length;

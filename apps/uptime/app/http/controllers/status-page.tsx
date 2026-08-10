@@ -183,7 +183,7 @@ export default createAction(
 					id: monitor.id,
 					name: monitor.name,
 					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
-					days: await MonitorDailyStats.listForCurrentYear(db, monitor.id, "http"),
+					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "http"),
 				})),
 		);
 
@@ -196,7 +196,7 @@ export default createAction(
 					id: monitor.id,
 					name: monitor.name,
 					status: deriveDnsStatus(monitor.last_status),
-					days: await MonitorDailyStats.listForCurrentYear(db, monitor.id, "dns"),
+					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "dns"),
 				})),
 		);
 
@@ -209,7 +209,7 @@ export default createAction(
 					id: monitor.id,
 					name: monitor.name,
 					status: deriveTcpStatus(monitor.last_status),
-					days: await MonitorDailyStats.listForCurrentYear(db, monitor.id, "tcp"),
+					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
 				})),
 		);
 
@@ -232,8 +232,8 @@ export default createAction(
 			...cronServices.map((service) => service.status),
 		]);
 
-		let heatmapServices = [...httpServices, ...dnsServices, ...tcpServices];
-		let isEmpty = heatmapServices.length === 0 && cronServices.length === 0;
+		let barServices = [...httpServices, ...dnsServices, ...tcpServices];
+		let isEmpty = barServices.length === 0 && cronServices.length === 0;
 		let BannerIcon = BANNER_ICON[overallStatus];
 
 		let bannerLabel: Record<ServiceStatus, string> = {
@@ -316,7 +316,7 @@ export default createAction(
 						</Empty>
 					) : (
 						<>
-							{heatmapServices.map((service) => (
+							{barServices.map((service) => (
 								<div
 									key={`${service.kind}-${service.id}`}
 									mix={[
@@ -346,9 +346,7 @@ export default createAction(
 
 							{cronServices.length > 0 && (
 								<>
-									{heatmapServices.length > 0 && (
-										<h2>{ctx.i18next.t("statusPage.cronJobs.title")}</h2>
-									)}
+									{barServices.length > 0 && <h2>{ctx.i18next.t("statusPage.cronJobs.title")}</h2>}
 									{cronServices.map((service) => (
 										<div
 											key={service.id}

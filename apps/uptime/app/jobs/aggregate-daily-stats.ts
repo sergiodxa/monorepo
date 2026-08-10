@@ -1,6 +1,6 @@
 /**
  * Daily background job that rolls up the previous UTC day's checks into one
- * `monitor_daily_stats` row per monitor — the source for the 365-day heatmap and
+ * `monitor_daily_stats` row per monitor — the source for the uptime bars and
  * long-term reporting (`docs/analytics.md`). HTTP aggregates come from Analytics
  * Engine, since that's the only store HTTP results land in; DNS, TCP, and cron-job
  * aggregates come from their own D1 result tables. All four monitor types are

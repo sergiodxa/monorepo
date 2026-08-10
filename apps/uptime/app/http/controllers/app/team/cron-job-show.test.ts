@@ -147,9 +147,8 @@ describe("cronJobShow", () => {
 		expect(body).toContain("Nightly Backup");
 		expect(body).toContain(routes.api.cronJobPing.href({ cronJobId: monitor.id }));
 		expect(body).toContain("No pings received yet");
-		// Uptime history is the 90-day bar, not the calendar-year heatmap — whose legend
-		// is the "Success"/"Mixed"/"Failure" scale, and which is what forced the page to
-		// scroll sideways.
+		// The uptime history section is the 90-day bar, so its range caption is what the
+		// page must carry.
 		expect(body).toContain("90 days ago");
 		expect(body).not.toContain("Failure");
 	});

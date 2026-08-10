@@ -1,7 +1,15 @@
 /**
- * DNS monitor detail page controller. Shows the monitor's configuration, stats
- * derived from its result history, and the history itself. Requires `requireUser` +
- * `requireTeam`; 404s when the monitor doesn't belong to the current team.
+ * DNS monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s
+ * when the monitor doesn't belong to the current team.
+ *
+ * The controller reads the monitor row and nothing else, so the shell reaches the
+ * browser on one query. The cards it does render — domain, record type, status,
+ * expected/current value — are all fields of that row, so they cost nothing extra.
+ * The two things that cost a query each, the 90-day uptime bar and the result history
+ * (with the success-rate/response-time/total-checks cards derived from it), load into
+ * their own named `Frame`s over a skeleton fallback, so neither delays the page nor
+ * the other. The bar sits above the table for the same reason it does everywhere: the
+ * summary is read first, the rows only when it prompts a question.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,24 +20,24 @@ import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
-import { Badge, Button, Empty, LinkButton, Table } from "@pkg/ui";
+import { Badge, Button, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { Frame } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
 import DnsMonitor from "~/app/data/dns-monitor";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
+import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
@@ -49,21 +57,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 		let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
-
-		let results = await DnsMonitor.listResults(db, monitor.id);
-		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "dns");
-
-		let totalChecks = results.length;
-		let okChecks = results.filter((result) => result.status === "ok").length;
-		let successRate = totalChecks > 0 ? Math.round((okChecks / totalChecks) * 100) : null;
-		let timedResults = results.filter((result) => result.response_time_ms !== null);
-		let avgResponseTime =
-			timedResults.length > 0
-				? Math.round(
-						timedResults.reduce((sum, result) => sum + (result.response_time_ms ?? 0), 0) /
-							timedResults.length,
-					)
-				: null;
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
@@ -148,71 +141,23 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							)}
 						</div>
 
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.stats.successRate.label")}
-								value={successRate === null ? "—" : `${successRate}%`}
-							/>
-							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.stats.avgResponseTime.label")}
-								value={avgResponseTime === null ? "—" : `${avgResponseTime}ms`}
-							/>
-							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.stats.totalChecks.label")}
-								value={totalChecks}
-							/>
-						</div>
+						<Frame
+							name="dns-monitor-card-uptime-history"
+							src={routes.app.team.dnsMonitors.cards.uptimeHistory.href({
+								team: ctx.team.slug,
+								monitorId: monitor.id,
+							})}
+							fallback={<StatCardSkeleton count={1} />}
+						/>
 
-						<h2>{ctx.i18next.t("page.dnsMonitorDetail.uptimeHistory")}</h2>
-						<Heatmap days={dailyStats} />
-
-						<h2>{ctx.i18next.t("page.dnsMonitorDetail.results.title")}</h2>
-						{results.length === 0 ? (
-							<Empty>
-								<Empty.Description>
-									{ctx.i18next.t("page.dnsMonitorDetail.results.empty")}
-								</Empty.Description>
-							</Empty>
-						) : (
-							<Table.Container>
-								<Table aria-label={ctx.i18next.t("page.dnsMonitorDetail.results.title")}>
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.checkedAt")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.status")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.value")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.responseTime")}
-											</Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{results.map((result) => (
-											<Table.Row key={result.id}>
-												<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
-												<Table.Cell>
-													<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-														{result.status}
-													</Badge>
-												</Table.Cell>
-												<Table.Cell>
-													<code>{result.resolved_value ?? result.error_message ?? "—"}</code>
-												</Table.Cell>
-												<Table.Cell>
-													{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
-												</Table.Cell>
-											</Table.Row>
-										))}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
+						<Frame
+							name="dns-monitor-card-results"
+							src={routes.app.team.dnsMonitors.cards.results.href({
+								team: ctx.team.slug,
+								monitorId: monitor.id,
+							})}
+							fallback={<StatCardSkeleton count={3} />}
+						/>
 					</div>
 				</AppShell>
 			</DocumentLayout>,

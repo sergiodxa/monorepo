@@ -31,7 +31,7 @@
  *
  * **Nothing is re-derived from the result streams.** Both windows are read out of
  * `monitor_daily_stats`, which the 01:00 roll-up has already written for every monitor of every
- * type, so the digests report the same numbers the dashboard's heatmap does and cost one range
+ * type, so the digests report the same numbers the dashboard's uptime bars do and cost one range
  * scan per team (see `TeamDigest`). Both triggers therefore have to run after that roll-up, and
  * do.
  *

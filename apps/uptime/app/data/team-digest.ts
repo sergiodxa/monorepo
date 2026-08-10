@@ -14,7 +14,7 @@
  * is a range scan over `monitor_daily_stats` — one query per team, whatever the window — where
  * going to the sources would mean an Analytics Engine query for HTTP plus three D1 scans per
  * team and a retention window that no longer reaches back seven days. It also means the digest
- * and the dashboard's heatmap report the same numbers, because they read the same rows.
+ * and the dashboard's uptime bars report the same numbers, because they read the same rows.
  *
  * The window is therefore whole UTC days ending yesterday, and both digests are scheduled after
  * the roll-up that writes them (see `SendTeamDigestsJob`).
