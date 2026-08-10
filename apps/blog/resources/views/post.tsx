@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { MarkdownView } from "@pkg/markdown/client/remix";
+import { MarkdownView } from "@pkg/markdown/client";
 import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@pkg/r3-ui";
 import { bg, border, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";

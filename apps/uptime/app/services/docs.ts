@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "@pkg/markdown-server";
+import { Markdown } from "@pkg/markdown/server";
 import { isSuccess } from "@pkg/result";
 import * as s from "remix/data-schema";
 

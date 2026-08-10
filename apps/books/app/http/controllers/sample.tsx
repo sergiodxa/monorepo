@@ -11,8 +11,8 @@
 import type { RequestContext } from "remix/fetch-router";
 
 import { getClientIP } from "@pkg/get-client-ip";
-import { renderToRemix } from "@pkg/markdown-remix";
-import { Markdown } from "@pkg/markdown-server";
+import { renderToRemix } from "@pkg/markdown/client";
+import { Markdown } from "@pkg/markdown/server";
 import { isFailure, isSuccess } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";

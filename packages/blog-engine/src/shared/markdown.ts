@@ -1,19 +1,19 @@
 /**
- * Shared markdown parsing for post bodies: a single configured `@pkg/markdown-server`
+ * Shared markdown parsing for post bodies: a single configured `@pkg/markdown/server`
  * parser and the {@link parseMarkdown} helper returning a Markdoc render tree (or
  * `null`). Kept in one place so every post type highlights and parses identically.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Markdown } from "@pkg/markdown-server";
+import { Markdown } from "@pkg/markdown/server";
 import { isFailure } from "@pkg/result";
 import * as s from "remix/data-schema";
 
 /**
  * Shared markdown parser (prism-highlighted fences, per the repo rule). Post bodies
  * carry no frontmatter, so a permissive schema is used. The parsed Markdoc tree is
- * rendered to `remix/ui` nodes by `MarkdownView` from `@pkg/markdown/client/remix`.
+ * rendered to `remix/ui` nodes by `MarkdownView` from `@pkg/markdown/client`.
  */
 const parser = new Markdown({ frontmatter: s.object({}) });
 

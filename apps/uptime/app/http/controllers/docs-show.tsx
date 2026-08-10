@@ -2,7 +2,7 @@
  * `/docs/*slug` controller. Resolves the wildcard slug to a doc file, parses its
  * Markdoc content and frontmatter, and renders the frontmatter title, description,
  * and last-updated date followed by the Markdoc content — rendered through
- * `@pkg/markdown-remix`'s `renderToRemix`, called directly rather than via the
+ * `@pkg/markdown/client`'s `renderToRemix`, called directly rather than via the
  * package's `MarkdownView` component, since this composes the result into the
  * shared `DocsLayout` sidebar chrome rather than needing a standalone wrapper
  * element. The current slug also drives the layout's active nav link and its
@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToRemix } from "@pkg/markdown-remix";
+import { renderToRemix } from "@pkg/markdown/client";
 import { isFailure } from "@pkg/result";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";

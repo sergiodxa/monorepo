@@ -187,7 +187,7 @@ This clears and rewrites `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, a
 
 ## Related Packages
 
-- [`@pkg/markdown-remix`](/packages/markdown-remix) - Renders Markdoc content as `remix/ui` components, the same component model icons use here.
+- [`@pkg/markdown/client`](/packages/markdown) - Renders Markdoc content as `remix/ui` components, the same component model icons use here.
 
 ## Tips
 

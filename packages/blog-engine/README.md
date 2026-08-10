@@ -138,7 +138,7 @@ the last admin cannot be demoted or deleted.
 
 - [`@pkg/data-table-d1`](/packages/data-table-d1) — D1 adapter for self-hosting
 - [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) — Durable Object adapter
-- [`@pkg/markdown-server`](/packages/markdown-server) — markdown parsing for post content
+- [`@pkg/markdown/server`](/packages/markdown) — markdown parsing for post content
 - [`@pkg/oidc-provider`](/packages/oidc-provider) — the OIDC provider the SaaS authenticates against
 
 ## Tips
