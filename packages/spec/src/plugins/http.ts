@@ -286,8 +286,11 @@ function portOf(url: URL): number {
  * new network destination and must pass the same `net` check as the
  * spec-written URL — otherwise a granted host could bounce the request to a
  * host the caller never granted. The prebuilt `init` (method, body, and any
- * author headers) carries forward on a body-preserving redirect; a redirect
- * that rewrites the method to GET drops the body and its headers with it.
+ * author headers) carries forward on a body-preserving redirect, except the
+ * credential headers (`Authorization`/`Cookie`/`Proxy-Authorization`), which
+ * are stripped when the hop crosses origins so they never leak to another
+ * host; a redirect that rewrites the method to GET drops the body and all its
+ * headers with it.
  */
 async function perform(
 	verb: HttpVerb,
@@ -320,7 +323,7 @@ async function perform(
 		if (isFailure(next)) return next;
 		let allowed = permissions.checkNet(next.data.hostname, portOf(next.data));
 		if (isFailure(allowed)) return allowed;
-		init = redirectInit(init, response.status);
+		init = redirectInit(init, response.status, current, next.data);
 		current = next.data;
 	}
 }
@@ -380,17 +383,42 @@ function parseLocation(verb: HttpVerb, location: string, base: URL): Result<URL,
 	return success(url);
 }
 
+/** Credential headers the fetch standard strips on a cross-origin redirect. */
+const CROSS_ORIGIN_STRIPPED_HEADERS = ["authorization", "cookie", "proxy-authorization"];
+
 /**
  * The init for the next hop, per the fetch standard's method rewrite: a 303 —
  * and a 301/302 answering a non-GET — switches to GET and drops the body (and
  * the author headers that rode with it); a body-preserving redirect (307/308,
- * or 301/302 on a GET) keeps the whole init, headers included.
+ * or 301/302 on a GET) keeps the init, but strips the credential headers
+ * (`Authorization`/`Cookie`/`Proxy-Authorization`) when the hop crosses
+ * origins, matching fetch so a credential set for one host never rides along
+ * to a different one.
  */
-function redirectInit(init: RequestInit, status: number): RequestInit {
+function redirectInit(init: RequestInit, status: number, from: URL, to: URL): RequestInit {
 	if (status === 303 || ((status === 301 || status === 302) && init.method !== "GET")) {
 		return { method: "GET" };
 	}
-	return init;
+	if (from.origin === to.origin) return init;
+	return stripCredentialHeaders(init);
+}
+
+/**
+ * Drop the credential headers the fetch standard removes on a cross-origin
+ * redirect. The prebuilt init's header names are already lowercased, but the
+ * comparison lowercases too so the guard holds regardless.
+ */
+function stripCredentialHeaders(init: RequestInit): RequestInit {
+	if (init.headers === undefined) return init;
+	let kept: Record<string, string> = {};
+	for (let [name, value] of Object.entries(init.headers as Record<string, string>)) {
+		if (!CROSS_ORIGIN_STRIPPED_HEADERS.includes(name.toLowerCase())) kept[name] = value;
+	}
+	if (Object.keys(kept).length === Object.keys(init.headers as Record<string, string>).length) {
+		return init;
+	}
+	let { headers: _stripped, ...rest } = init;
+	return Object.keys(kept).length === 0 ? rest : { ...rest, headers: kept };
 }
 
 /**

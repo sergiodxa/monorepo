@@ -361,6 +361,61 @@ describe(createHttpPlugin.name, () => {
 		expect(data.json).toEqual({ moved: true });
 	});
 
+	test("a cross-origin body-preserving redirect strips credential headers", async () => {
+		let seen: { auth: string | null; cookie: string | null; trace: string | null } | undefined;
+		SERVER.use(
+			http.post(
+				"http://a.test/start",
+				() => new HttpResponse(null, { status: 307, headers: { location: "http://b.test/next" } }),
+			),
+			http.post("http://b.test/next", ({ request }) => {
+				seen = {
+					auth: request.headers.get("authorization"),
+					cookie: request.headers.get("cookie"),
+					trace: request.headers.get("x-trace"),
+				};
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[
+				value("http://a.test/start"),
+				word("headers"),
+				value({ authorization: "Bearer secret", cookie: "sid=abc", "x-trace": "keep" }),
+			],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		// The credential headers must not reach the different-origin target.
+		expect(seen?.auth).toBeNull();
+		expect(seen?.cookie).toBeNull();
+		// A non-credential header still rides along.
+		expect(seen?.trace).toBe("keep");
+	});
+
+	test("a same-origin body-preserving redirect keeps credential headers", async () => {
+		let auth: string | null | undefined;
+		SERVER.use(
+			http.post(
+				"http://a.test/start",
+				() => new HttpResponse(null, { status: 307, headers: { location: "http://a.test/next" } }),
+			),
+			http.post("http://a.test/next", ({ request }) => {
+				auth = request.headers.get("authorization");
+				return HttpResponse.json({ ok: true });
+			}),
+		);
+		let result = await PLUGIN.call(
+			"post",
+			[value("http://a.test/start"), word("headers"), value({ authorization: "Bearer secret" })],
+			buildContext(),
+		);
+		expect(isSuccess(result)).toBe(true);
+		// Same origin is not a leak, so the credential is preserved.
+		expect(auth).toBe("Bearer secret");
+	});
+
 	test("a relative URL is a tool error naming the environments gap", async () => {
 		let result = await PLUGIN.call("get", [value("/health")], buildContext());
 		let error = unwrapError(result);
