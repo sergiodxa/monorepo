@@ -163,6 +163,19 @@ class MissingValidationError extends OAuth2Error {
 	}
 }
 
+/**
+ * The bearer access token presented at a protected endpoint is unusable — here, one that
+ * was not issued with a scope the endpoint requires. Carries the `invalid_token` code
+ * RFC 6750 §3.1 defines for the `WWW-Authenticate` challenge a bearer endpoint answers with.
+ */
+class InvalidTokenError extends OAuth2Error {
+	override readonly name = "InvalidTokenError";
+
+	constructor(override readonly description: string) {
+		super("invalid_token", description);
+	}
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -434,6 +447,8 @@ export class OIDC {
 	static InternalServerError = InternalServerError;
 	/** Sign-in blocked pending email verification. */
 	static MissingValidationError = MissingValidationError;
+	/** A bearer token that is unusable at a protected endpoint, e.g. missing a required scope. */
+	static InvalidTokenError = InvalidTokenError;
 
 	/** The access-token value object, exposed so callers verify tokens with the same class the engine mints. */
 	static AccessToken = AccessToken;
@@ -618,6 +633,7 @@ export class OIDC {
 	 * shape.
 	 *
 	 * @throws When the token fails signature, issuer or expiry verification.
+	 * @throws {InvalidTokenError} When the token was not issued with the `openid` scope.
 	 */
 	async userinfo(args: { accessToken: string; clientId?: string }) {
 		let accessToken = await AccessToken.verify(
@@ -626,8 +642,18 @@ export class OIDC {
 			{ issuer: this.issuer },
 		);
 
+		// UserInfo speaks for an end user, which OIDC marks with the `openid` scope. Reading
+		// the scopes through the presence-checked accessor keeps a scope-less token from
+		// crashing the endpoint; requiring `openid` then refuses one that has no end user to
+		// speak for. A `client_credentials` token — whose subject is the client itself and
+		// which carries no scope — is exactly that, and must not be answered with a person's
+		// claims. The scope is not defaulted to `openid`, since that would readmit it.
+		let scope = accessToken.scopes;
+		if (!scope.includes("openid")) {
+			throw new InvalidTokenError("The access token was not issued with the openid scope");
+		}
+
 		let subject = await this.repository.findSubjectById(accessToken.subject);
-		let scope = accessToken.scope?.split(" ") ?? ["openid"];
 
 		return { subject, scope };
 	}
@@ -1221,7 +1247,14 @@ export class OIDC {
 		let subject = await this.repository.findSubjectById(session.subjectId);
 		if (!subject) throw new InvalidGrantError("Subject not found");
 
-		let accessToken = await this.signJWT(AccessToken.generate(session.clientId, session.subjectId));
+		// Stamp the baseline `openid` scope so the refreshed token is one /userinfo will
+		// serve — it answers only tokens that carry `openid`. This matches the id_token this
+		// grant issues below, which is itself `openid`-scoped by default. A session does not
+		// persist the wider scope its original grant may have held, so email/profile are not
+		// re-derived here; the token stays as narrow as the id_token it is paired with.
+		let accessToken = await this.signJWT(
+			AccessToken.generate(session.clientId, session.subjectId, ["openid"]),
+		);
 
 		let authTime = Math.floor(session.createdAt.getTime() / 1000);
 

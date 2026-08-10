@@ -43,6 +43,36 @@ async function tokenWithScope(scope: string): Promise<string> {
 	return tokens.access_token;
 }
 
+/** Redeems a refresh token at the token endpoint, returning the access token it mints. */
+async function tokenFromRefresh(refreshToken: string): Promise<string> {
+	let response = await app.fetch(
+		new Request(`${ORIGIN}${routes.oauth.token.href()}`, {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }),
+		}),
+	);
+	let tokens = (await response.json()) as { access_token: string };
+	return tokens.access_token;
+}
+
+/** Mints a client-credentials access token, authenticating the client with HTTP Basic. */
+async function clientCredentialsToken(): Promise<string> {
+	let basic = btoa(`${fixtures.clientId}:${fixtures.clientSecret}`);
+	let response = await app.fetch(
+		new Request(`${ORIGIN}${routes.oauth.token.href()}`, {
+			method: "POST",
+			headers: {
+				"content-type": "application/x-www-form-urlencoded",
+				authorization: `Basic ${basic}`,
+			},
+			body: new URLSearchParams({ grant_type: "client_credentials" }),
+		}),
+	);
+	let tokens = (await response.json()) as { access_token: string };
+	return tokens.access_token;
+}
+
 beforeEach(async () => {
 	app = await createTestApp();
 	fixtures = await seed(app);
@@ -87,6 +117,33 @@ describe("GET /userinfo", () => {
 		let response = await userinfo(await tokenWithScope("openid"));
 
 		expect(await response.json()).toEqual({ sub: fixtures.subjectId });
+	});
+
+	// A refresh-minted token used to 401 here: the refresh grant issued it with no `scope`
+	// claim, and reading that absent claim threw before the endpoint could answer. The token
+	// now carries `openid`, so the endpoint serves the subject it speaks for.
+	test("serves the subject for a token minted by the refresh_token grant", async () => {
+		let { refresh_token } = await signIn(app, fixtures);
+
+		let response = await userinfo(await tokenFromRefresh(refresh_token));
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ sub: fixtures.subjectId });
+	});
+
+	// A client-credentials token has no end user — its subject is the client — and carries
+	// no `openid` scope, so the endpoint refuses it with the ordinary bearer challenge rather
+	// than crashing on the absent scope or leaking a person's claims to a machine.
+	test("refuses a client-credentials token cleanly, without a 500", async () => {
+		let response = await userinfo(await clientCredentialsToken());
+
+		expect(response.status).toBe(401);
+		expect(response.status).not.toBe(500);
+		expect(response.headers.get("www-authenticate")).toContain("invalid_token");
+		expect(await response.json()).toEqual({
+			error: "invalid_token",
+			error_description: "Invalid or expired access token",
+		});
 	});
 
 	test("ignores a scope this server does not grant", async () => {

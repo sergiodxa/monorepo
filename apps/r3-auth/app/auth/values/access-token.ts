@@ -44,9 +44,18 @@ export default class AccessToken extends JWT {
 		return this.parser.string("sub");
 	}
 
-	/** Granted scopes as the space-separated string RFC 9068 specifies. */
-	get scope() {
-		return this.parser.string("scope");
+	/**
+	 * Granted scopes as an array, empty when the token carries no `scope` claim.
+	 *
+	 * RFC 9068 writes `scope` only when scopes were granted and omits it otherwise, so this
+	 * reads through a presence check rather than the parser's throwing accessor: a
+	 * scope-less token — a `client_credentials` token, or a refresh token minted without
+	 * scope — yields an empty list instead of raising, leaving the caller to decide whether
+	 * that token is entitled to what it is asking for.
+	 */
+	get scopes(): string[] {
+		if (!this.parser.has("scope")) return [];
+		return this.parser.string("scope").split(" ");
 	}
 
 	/**
