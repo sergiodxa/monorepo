@@ -173,7 +173,7 @@ function segmentFill(status: UptimeBar.Status) {
 
 /** The locale key naming what one day of the bar reports, `noData` included. */
 function segmentLabelKey(status: UptimeBar.Status) {
-	return `trial.report.bar.status.${status ?? "noData"}`;
+	return `page.trial.report.bar.status.${status ?? "noData"}`;
 }
 
 /**
@@ -181,7 +181,7 @@ function segmentLabelKey(status: UptimeBar.Status) {
  * failed. No duration — see the module comment for why that number does not exist.
  */
 function incidentLine(incident: TrialIncident, locale: string, t: TFunction) {
-	return t("trial.report.incidents.entry", {
+	return t("page.trial.report.incidents.entry", {
 		started: formatDateTime(new Date(incident.startedAt), { locale, timeZone: REPORT_ZONE }),
 		// `count`, so the sentence can decline "one check" against "four checks" in every
 		// language rather than in the one it was written in.
@@ -225,12 +225,15 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 	let headlineFigures: Figure[] = [
 		{
-			label: t("trial.report.summary.uptime"),
+			label: t("page.trial.report.summary.uptime"),
 			value: stats.uptime === null ? NO_DATA : formatPercent(stats.uptime, locale),
 		},
-		{ label: t("trial.report.summary.checks"), value: measured ? String(stats.checks) : NO_DATA },
 		{
-			label: t("trial.report.summary.healthy"),
+			label: t("page.trial.report.summary.checks"),
+			value: measured ? String(stats.checks) : NO_DATA,
+		},
+		{
+			label: t("page.trial.report.summary.healthy"),
 			value: measured ? String(watch.checks_ok) : NO_DATA,
 		},
 	];
@@ -239,9 +242,18 @@ export default createAction(routes.trial.report, async (ctx) => {
 		timings === null
 			? []
 			: [
-					{ label: t("trial.report.timing.fastest"), value: formatMs(timings.fastest, locale) },
-					{ label: t("trial.report.timing.average"), value: formatMs(timings.average, locale) },
-					{ label: t("trial.report.timing.slowest"), value: formatMs(timings.slowest, locale) },
+					{
+						label: t("page.trial.report.timing.fastest"),
+						value: formatMs(timings.fastest, locale),
+					},
+					{
+						label: t("page.trial.report.timing.average"),
+						value: formatMs(timings.average, locale),
+					},
+					{
+						label: t("page.trial.report.timing.slowest"),
+						value: formatMs(timings.slowest, locale),
+					},
 				];
 
 	/**
@@ -258,10 +270,10 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
-			title={t("trial.report.meta.title")}
+			title={t("page.trial.report.meta.title", { days: TRIAL_WATCH_DURATION_DAYS })}
 			locale={locale}
 			seo={{
-				description: t("trial.report.meta.description"),
+				description: t("page.trial.report.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 				/**
 				 * The one page on the site that must never be indexed: it is the record of somebody's
@@ -283,7 +295,9 @@ export default createAction(routes.trial.report, async (ctx) => {
 						]}
 					>
 						<div mix={[vstack({ gap: 2 })]}>
-							<Text mix={[fontSize("xs"), fg("neutral.muted")]}>{t("trial.report.eyebrow")}</Text>
+							<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
+								{t("page.trial.report.eyebrow", { days: TRIAL_WATCH_DURATION_DAYS })}
+							</Text>
 							<Heading
 								level={1}
 								mix={[m(0), fontSize("2xl"), weight(700), leading(1.15), wordBreak("break-all")]}
@@ -291,7 +305,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 								{watch.url}
 							</Heading>
 							<Text mix={[fontSize("sm"), fg("neutral")]}>
-								{t("trial.report.period", {
+								{t("page.trial.report.period", {
 									start: formatDate(new Date(period.from), { locale, timeZone: REPORT_ZONE }),
 									end: formatDate(new Date(period.to), { locale, timeZone: REPORT_ZONE }),
 									zone: REPORT_ZONE,
@@ -302,7 +316,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 						<HeadingScope level={2}>
 							<Card>
 								<Card.Header>
-									<Card.Title>{t("trial.report.summary.title")}</Card.Title>
+									<Card.Title>{t("page.trial.report.summary.title")}</Card.Title>
 								</Card.Header>
 								<Card.Content mix={[vstack({ gap: 6 })]}>
 									<div mix={[vstack({ gap: 2 })]}>
@@ -321,7 +335,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 											))}
 										</div>
 										<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-											{t("trial.report.bar.caption", { days: TRIAL_WATCH_DURATION_DAYS })}
+											{t("page.trial.report.bar.caption", { days: TRIAL_WATCH_DURATION_DAYS })}
 										</Text>
 									</div>
 
@@ -343,7 +357,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 									{measured ? null : (
 										<Text mix={[fontSize("sm"), fg("neutral")]}>
-											{t("trial.report.summary.noChecks")}
+											{t("page.trial.report.summary.noChecks")}
 										</Text>
 									)}
 								</Card.Content>
@@ -351,17 +365,17 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 							<Card>
 								<Card.Header>
-									<Card.Title>{t("trial.report.incidents.title")}</Card.Title>
+									<Card.Title>{t("page.trial.report.incidents.title")}</Card.Title>
 								</Card.Header>
 								<Card.Content mix={[vstack({ gap: 3 })]}>
 									{!measured ? (
-										<Text>{t("trial.report.incidents.unknown")}</Text>
+										<Text>{t("page.trial.report.incidents.unknown")}</Text>
 									) : incidents.length === 0 ? (
-										<Text>{t("trial.report.incidents.none", { count: stats.checks })}</Text>
+										<Text>{t("page.trial.report.incidents.none", { count: stats.checks })}</Text>
 									) : (
 										<>
 											<Text>
-												{t("trial.report.incidents.summary", { count: incidents.length })}
+												{t("page.trial.report.incidents.summary", { count: incidents.length })}
 											</Text>
 											<ul mix={[m(0), pi(0), vstack({ gap: 2 }), raw({ listStyle: "none" })]}>
 												{incidents.map((incident) => (
@@ -378,7 +392,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 							{timings === null ? null : (
 								<Card>
 									<Card.Header>
-										<Card.Title>{t("trial.report.timing.title")}</Card.Title>
+										<Card.Title>{t("page.trial.report.timing.title")}</Card.Title>
 									</Card.Header>
 									<Card.Content mix={[vstack({ gap: 3 })]}>
 										<dl
@@ -397,7 +411,8 @@ export default createAction(routes.trial.report, async (ctx) => {
 											))}
 										</dl>
 										<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-											{t("trial.report.timing.basis", { checks: timings.answered })}
+											{/* `count`, so the sentence declines "the one check" against "the 4 checks". */}
+											{t("page.trial.report.timing.basis", { count: timings.answered })}
 										</Text>
 									</Card.Content>
 								</Card>
@@ -409,20 +424,20 @@ export default createAction(routes.trial.report, async (ctx) => {
 								>
 									<Heading level={2} mix={[m(0), fontSize("xl"), weight(700)]}>
 										{offer === "converted"
-											? t("trial.report.cta.converted.title")
-											: t("trial.report.cta.title", { price: formatUsd(BASE_PRICE_USD) })}
+											? t("page.trial.report.cta.converted.title")
+											: t("page.trial.report.cta.title", { price: formatUsd(BASE_PRICE_USD) })}
 									</Heading>
 									<Text mix={[fontSize("sm"), fg("neutral")]}>
 										{offer === "converted"
-											? t("trial.report.cta.converted.body")
+											? t("page.trial.report.cta.converted.body")
 											: offer === "convertible"
-												? t("trial.report.cta.convertible.body")
-												: t("trial.report.cta.expired.body")}
+												? t("page.trial.report.cta.convertible.body")
+												: t("page.trial.report.cta.expired.body")}
 									</Text>
 									<LinkButton href={routes.app.index.href()} size="lg">
 										{offer === "converted"
-											? t("trial.report.cta.converted.action")
-											: t("trial.report.cta.action")}
+											? t("page.trial.report.cta.converted.action")
+											: t("page.trial.report.cta.action")}
 									</LinkButton>
 								</Card.Content>
 							</Card>

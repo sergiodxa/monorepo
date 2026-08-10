@@ -36,8 +36,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TrialReport,
-	TrialReportLink,
-	TrialUnsubscribe,
+	TrialFooter,
 	trialDisplayUrl,
 	trialUnsubscribeHeaders,
 } from "~/app/emails/shared/trial";
@@ -57,7 +56,7 @@ export namespace TrialWeeklyDigestEmail {
 		subscribeUrl: string;
 		/**
 		 * The watch's own `report_token`, which turns this report into a page the reader can
-		 * reopen — see `TrialReportLink`. Omitted when the sender has no token to give: a mail
+		 * reopen — see `TrialFooter`. Omitted when the sender has no token to give: a mail
 		 * is worth sending without the link, and a report link built from a missing token would
 		 * be a 404 in somebody's inbox forever.
 		 */
@@ -134,8 +133,12 @@ export class TrialWeeklyDigestEmail implements Email {
 				<Email.Text>{t("emails.trial.weekly.closing", { url: trialDisplayUrl(url) })}</Email.Text>
 				<Email.Button href={subscribeUrl}>{t("emails.trial.weekly.action")}</Email.Button>
 				<Email.Footer>
-					{reportToken ? <TrialReportLink token={reportToken} t={t} /> : null}
-					{t("emails.trial.weekly.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
+					<TrialFooter
+						reportToken={reportToken}
+						unsubscribeToken={unsubscribeToken}
+						reason={t("emails.trial.weekly.footer")}
+						t={t}
+					/>
 				</Email.Footer>
 			</Email.Layout>
 		);

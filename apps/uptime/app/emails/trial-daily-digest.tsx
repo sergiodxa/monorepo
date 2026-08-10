@@ -33,7 +33,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TrialReport,
-	TrialUnsubscribe,
+	TrialFooter,
 	trialDisplayUrl,
 	trialStatusKey,
 	trialUnsubscribeHeaders,
@@ -166,7 +166,11 @@ export class TrialDailyDigestEmail implements Email {
 					<TargetSection key={target.url} target={target} headed={only === null} t={t} />
 				))}
 				<Email.Footer>
-					{t("emails.trial.daily.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
+					<TrialFooter
+						unsubscribeToken={unsubscribeToken}
+						reason={t("emails.trial.daily.footer")}
+						t={t}
+					/>
 				</Email.Footer>
 			</Email.Layout>
 		);

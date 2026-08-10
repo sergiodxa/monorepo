@@ -17,9 +17,9 @@
  * in the past, so nothing here depends on when the suite runs: the period the page prints ends
  * at `expires_at`, which is already behind every fixture.
  *
- * Copy comes back as bare locale keys, since `trial.report.*` is not translated yet. That is
- * why the assertions are on computed values, on the presence or absence of a key rather than
- * of a sentence, and on rendered structure.
+ * Assertions are on computed values and on the sentences the page is allowed to say, since
+ * every figure has to come from the seeded rows and every "nothing to report" wording has to
+ * be the one the data supports.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -169,7 +169,7 @@ describe("GET /try/report/:token", () => {
 
 		// The dates themselves are interpolated into copy that is not translated yet, so what is
 		// asserted here is that the line is rendered and rendered once.
-		expect(body.split("trial.report.period").length - 1).toBe(1);
+		expect(body.split("Monitored ").length - 1).toBe(1);
 	});
 
 	test("summarizes the response times of the checks that answered", async () => {
@@ -182,7 +182,7 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.timing.title");
+		expect(body).toContain("Response times");
 		expect(body).toContain("120 ms");
 		expect(body).toContain("240 ms");
 		// The average is over the two that answered — 180 — and not over all three.
@@ -196,7 +196,7 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).not.toContain("trial.report.timing.title");
+		expect(body).not.toContain("Response times");
 	});
 
 	test("names each incident it can see in the history", async () => {
@@ -210,10 +210,10 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.incidents.summary");
+		expect(body).toContain("2 incidents.");
 		// Two runs of consecutive failures, so two entries — not five, and not one.
-		expect(body.split("trial.report.incidents.entry").length - 1).toBe(2);
-		expect(body).not.toContain("trial.report.incidents.none");
+		expect(body.split("First failure seen").length - 1).toBe(2);
+		expect(body).not.toContain("No incident");
 	});
 
 	test("states plainly that there were no incidents rather than implying one", async () => {
@@ -224,10 +224,10 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.incidents.none");
-		expect(body).not.toContain("trial.report.incidents.entry");
-		expect(body).not.toContain("trial.report.incidents.summary");
-		expect(body).not.toContain("trial.report.incidents.unknown");
+		expect(body).toContain("No incident");
+		expect(body).not.toContain("First failure seen");
+		expect(body).not.toContain("One incident.");
+		expect(body).not.toContain("we cannot say whether");
 	});
 
 	test("a degraded check is not an outage, so it opens no incident", async () => {
@@ -238,8 +238,8 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.incidents.none");
-		expect(body).not.toContain("trial.report.incidents.entry");
+		expect(body).toContain("No incident");
+		expect(body).not.toContain("First failure seen");
 	});
 
 	test("renders no fake zeroes for a watch that has completed no check", async () => {
@@ -259,10 +259,10 @@ describe("GET /try/report/:token", () => {
 		expect(body).not.toContain("0.0%");
 		expect(body).not.toContain("100.0%");
 		// And nothing that reads as a verdict on a week nobody has observed.
-		expect(body).toContain("trial.report.summary.noChecks");
-		expect(body).toContain("trial.report.incidents.unknown");
-		expect(body).not.toContain("trial.report.incidents.none");
-		expect(body).not.toContain("trial.report.incidents.entry");
+		expect(body).toContain("No check has completed yet");
+		expect(body).toContain("we cannot say whether");
+		expect(body).not.toContain("No incident");
+		expect(body).not.toContain("First failure seen");
 	});
 
 	test("offers the subscription at the price the pricing model states", async () => {
@@ -271,8 +271,8 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.cta.title");
-		expect(body).toContain("trial.report.cta.convertible.body");
+		expect(body).toContain("Keep monitoring this site for");
+		expect(body).toContain("with the history above carried over");
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 
@@ -282,8 +282,8 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.cta.expired.body");
-		expect(body).not.toContain("trial.report.cta.convertible.body");
+		expect(body).toContain("past its claim window");
+		expect(body).not.toContain("with the history above carried over");
 	});
 
 	test("does not sell a target that is already a real monitor", async () => {
@@ -295,8 +295,8 @@ describe("GET /try/report/:token", () => {
 
 		let { body } = await visit(db, watch.report_token);
 
-		expect(body).toContain("trial.report.cta.converted.title");
-		expect(body).not.toContain("trial.report.cta.title");
+		expect(body).toContain("This URL is already being monitored");
+		expect(body).not.toContain("Keep monitoring this site for");
 	});
 
 	test("keeps itself out of search indexes", async () => {

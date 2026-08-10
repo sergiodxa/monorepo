@@ -81,41 +81,18 @@ export function trialUnsubscribeHeaders(token: string): Record<string, string> {
 	};
 }
 
-export namespace TrialUnsubscribe {
-	/** Props accepted by {@link TrialUnsubscribe}. */
-	export interface Props {
-		/** The lead's unguessable unsubscribe token. */
-		token: string;
-		/** Translator already bound to the reader's language. */
-		t: TFunction;
-	}
-}
-
 /**
- * The footer's opt-out: a link, then one sentence saying how much it stops. It is a
- * real anchor so the plain-text alternative keeps the URL, and the sentence spells out
- * that the effect is every watch on the address rather than only the one this message
- * is about, because that is the part a reader would otherwise have to guess.
- *
- * @example <TrialUnsubscribe token={token} t={t} />
+ * The style every footer paragraph carries, since a mail client cannot be trusted to have a
+ * default margin on `<p>` and several strip the stylesheet that would have given it one. The
+ * gap goes below rather than above so the first paragraph still sits tight under the hairline.
  */
-export function TrialUnsubscribe(handle: Handle<TrialUnsubscribe.Props>) {
-	return () => {
-		let { token, t } = handle.props;
+const FOOTER_PARAGRAPH = "margin:0 0 8px;";
 
-		return (
-			<>
-				<a
-					href={trialUnsubscribeUrl(token)}
-					style="color:inherit;text-decoration:underline;font-weight:600;"
-				>
-					{t("emails.trial.stopAction")}
-				</a>{" "}
-				{t("emails.trial.stop")}
-			</>
-		);
-	};
-}
+/** The same, for the last paragraph, which must not push the footer open at the bottom. */
+const FOOTER_PARAGRAPH_LAST = "margin:0;";
+
+/** The look of a link inside the footer: inherits the muted colour it sits in. */
+const FOOTER_LINK = "color:inherit;text-decoration:underline;font-weight:600;";
 
 /**
  * Absolute URL of a watch's report page, which only its own token addresses.
@@ -128,44 +105,65 @@ export function trialReportUrl(token: string): string {
 	return `${APP_ORIGIN}${routes.trial.report.href({ token })}`;
 }
 
-export namespace TrialReportLink {
-	/** Props accepted by {@link TrialReportLink}. */
+export namespace TrialFooter {
+	/** Props accepted by {@link TrialFooter}. */
 	export interface Props {
-		/** The watch's own `report_token`. */
-		token: string;
+		/**
+		 * The watch's own `report_token`, when this email reports on a single target and can
+		 * therefore point at its durable copy. Omitted where there is no one report to link.
+		 */
+		reportToken?: string | null;
+		/** The lead's unguessable unsubscribe token. */
+		unsubscribeToken: string;
+		/** Already-translated sentence saying why this message arrived, which each email writes. */
+		reason: string;
 		/** Translator already bound to the reader's language. */
 		t: TFunction;
 	}
 }
 
 /**
- * The footer sentence pointing at the report as a page.
+ * The footer every trial email closes with: where the report lives, why this arrived, and how
+ * to make it stop — each on a line of its own.
  *
- * Shared by the wrap-up and by the answer to a repeat submission, because both describe one
- * target's checks and both point at the same page with the same words — and because the
- * report only becomes worth anything as an artifact if every email that reports on a target
- * offers the durable copy of it.
+ * They are three separate paragraphs and not one run of sentences because they answer three
+ * unrelated questions, and a reader looking for the opt-out should find it as its own block
+ * rather than at the end of a wall of small grey text. The mail kit's footer is a single
+ * container by design — it ships no wording of its own — so the paragraphs belong here, with
+ * their margins inline, since a footer whose spacing depended on a stylesheet would collapse
+ * back into one blob in every client that strips one.
  *
- * It belongs in the footer and not beside the subscribe button on purpose: it is the same
+ * The opt-out is a real anchor pointing at the harmless `GET`, and the sentence after it
+ * spells out that one click ends every watch on the address rather than only the target this
+ * message is about, which is the part a reader would otherwise have to guess.
+ *
+ * The report link belongs here and not beside the subscribe button on purpose: it is the same
  * facts at a stable address rather than a second thing to do, and these emails are allowed
  * exactly one call to action.
  *
- * @example <TrialReportLink token={watch.report_token} t={t} />
+ * @example <TrialFooter reportToken={token} unsubscribeToken={lead} reason={reason} t={t} />
  */
-export function TrialReportLink(handle: Handle<TrialReportLink.Props>) {
+export function TrialFooter(handle: Handle<TrialFooter.Props>) {
 	return () => {
-		let { token, t } = handle.props;
+		let { reportToken, unsubscribeToken, reason, t } = handle.props;
 
 		return (
 			<>
-				{t("emails.trial.reportLink.body")}{" "}
-				<a
-					href={trialReportUrl(token)}
-					style="color:inherit;text-decoration:underline;font-weight:600;"
-				>
-					{t("emails.trial.reportLink.action")}
-				</a>
-				{". "}
+				{reportToken ? (
+					<p style={FOOTER_PARAGRAPH}>
+						{t("emails.trial.reportLink.body")}{" "}
+						<a href={trialReportUrl(reportToken)} style={FOOTER_LINK}>
+							{t("emails.trial.reportLink.action")}
+						</a>
+					</p>
+				) : null}
+				<p style={FOOTER_PARAGRAPH}>{reason}</p>
+				<p style={FOOTER_PARAGRAPH_LAST}>
+					<a href={trialUnsubscribeUrl(unsubscribeToken)} style={FOOTER_LINK}>
+						{t("emails.trial.stopAction")}
+					</a>{" "}
+					{t("emails.trial.stop")}
+				</p>
 			</>
 		);
 	};

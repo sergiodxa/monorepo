@@ -44,8 +44,7 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TrialReport,
-	TrialReportLink,
-	TrialUnsubscribe,
+	TrialFooter,
 	trialDateTime,
 	trialDisplayUrl,
 	trialUnsubscribeHeaders,
@@ -173,8 +172,12 @@ export class TrialRepeatReportEmail implements Email {
 				<Email.Text>{t("emails.trial.repeat.closing", { url: display })}</Email.Text>
 				<Email.Button href={subscribeUrl}>{t("emails.trial.repeat.action")}</Email.Button>
 				<Email.Footer>
-					{reportToken ? <TrialReportLink token={reportToken} t={t} /> : null}
-					{t("emails.trial.repeat.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
+					<TrialFooter
+						reportToken={reportToken}
+						unsubscribeToken={unsubscribeToken}
+						reason={t("emails.trial.repeat.footer")}
+						t={t}
+					/>
 				</Email.Footer>
 			</Email.Layout>
 		);

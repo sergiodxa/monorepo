@@ -19,7 +19,7 @@ import { Email } from "@pkg/mail";
 import type { TrialStatus } from "~/app/emails/shared/trial";
 
 import {
-	TrialUnsubscribe,
+	TrialFooter,
 	trialDateTime,
 	trialDisplayUrl,
 	trialStatusKey,
@@ -110,7 +110,11 @@ export class TrialChangeEmail implements Email {
 				</Email.Text>
 				<Email.Table rows={this.#rows()} />
 				<Email.Footer>
-					{t("emails.trial.change.footer")} <TrialUnsubscribe token={unsubscribeToken} t={t} />
+					<TrialFooter
+						unsubscribeToken={unsubscribeToken}
+						reason={t("emails.trial.change.footer")}
+						t={t}
+					/>
 				</Email.Footer>
 			</Email.Layout>
 		);
