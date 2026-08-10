@@ -22,9 +22,8 @@ bun run test                    # Run every test: the root pass above, then a se
                                  # workspace whose tests need a different JSX runtime. Bun resolves
                                  # one tsconfig.json per invocation, from the working directory, so a
                                  # single run has exactly one jsxImportSource. The root sets
-                                 # `remix/ui`; `apps/blog`, `apps/books`, `apps/uptime`,
-                                 # `packages/ui`, `packages/markdown-react`, and `packages/markdown`
-                                 # set `react`. A test that imports a React `.tsx` therefore cannot
+                                 # `remix/ui`; `apps/blog`, `apps/books`, `apps/uptime` and
+                                 # `packages/ui` set `react`. A test that imports a React `.tsx` cannot
                                  # run in the root pass: add that workspace to `pathIgnorePatterns`
                                  # in bunfig.toml and to the `test:react` script.
 bun test file-path               # Single file/directory scope doesn't need --isolate

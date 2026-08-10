@@ -1,8 +1,0 @@
-{
-	"extends": "../../tsconfig.json",
-	"include": ["src/**/*"],
-	// This is a React package; override the repo-wide remix/ui JSX default.
-	"compilerOptions": {
-		"jsxImportSource": "react"
-	}
-}

@@ -1,6 +1,6 @@
 # @pkg/markdown
 
-Type-safe Markdown parsing on the server with React and Remix renderers on the client.
+Type-safe Markdown parsing on the server with a Remix renderer on the client.
 
 ## Overview
 
@@ -10,10 +10,9 @@ The package is split by responsibility:
 
 - `@pkg/markdown` transforms markdown without rendering it, currently plain-text extraction
 - `@pkg/markdown/server` parses markdown and frontmatter only
-- `@pkg/markdown/client/react` renders content in React apps
 - `@pkg/markdown/client/remix` renders content in Remix apps
 
-This split keeps parsing and syntax highlighting logic centralized while allowing different rendering targets.
+This split keeps parsing and syntax highlighting logic centralized and out of the code that renders it.
 
 ## Usage
 
@@ -71,21 +70,7 @@ A [linked](https://example.com) paragraph with \`code\`.
 // "Hello\n\nA linked paragraph with code."
 ```
 
-### Client (React): render markdown
-
-```tsx
-import { MarkdownView } from "@pkg/markdown/client/react";
-import prismLight from "@pkg/markdown/styles/light.css?url";
-import type { Route } from "./+types/article";
-
-export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismLight }];
-
-export default function Article({ loaderData }: Route.ComponentProps) {
-	return <MarkdownView content={loaderData.content} className="my-8" />;
-}
-```
-
-### Client (Remix): render markdown
+### Client: render markdown
 
 ```tsx
 import { MarkdownView } from "@pkg/markdown/client/remix";
@@ -215,30 +200,7 @@ Error returned on validation failures.
 - `name`: `"MarkdownParseError"`
 - `issues`: Standard Schema issues list
 
-### `MarkdownView` (React)
-
-Import from `@pkg/markdown/client/react`.
-
-Renders parsed markdown content in React.
-
-**Props:**
-
-- `content`: `Markdown.AST`
-- `className?`: `cn.ClassName`
-- `components?`: `Record<string, React.ComponentType>`
-
-**Example:**
-
-```tsx
-import { MarkdownView } from "@pkg/markdown/client/react";
-import type { Markdown } from "@pkg/markdown/server";
-
-function Doc({ content }: { content: Markdown.AST }) {
-	return <MarkdownView content={content} className="prose" />;
-}
-```
-
-### `MarkdownView` (Remix)
+### `MarkdownView`
 
 Import from `@pkg/markdown/client/remix`.
 
@@ -247,7 +209,6 @@ Renders parsed markdown content in Remix Component runtime.
 **Props:**
 
 - `content`: `Markdown.AST`
-- `className?`: `cn.ClassName`
 - `components?`: `Record<string, MarkdownView.Component>`
 
 **Example:**
@@ -265,7 +226,7 @@ export function DocPage() {
 
 ### `Markdown.AST`
 
-Type alias for parsed renderable content in both client entry points.
+Type alias for parsed renderable content in the client entry point.
 
 ```typescript
 import type { Markdown } from "@pkg/markdown/server";
@@ -276,29 +237,6 @@ interface ArticleData {
 ```
 
 ## Patterns
-
-### Pattern: React Router loader + React renderer
-
-```tsx
-import { Markdown } from "@pkg/markdown/server";
-import { MarkdownView } from "@pkg/markdown/client/react";
-import { isFailure } from "@pkg/result";
-import type { Route } from "./+types/docs.$slug";
-import { z } from "zod";
-
-let parser = new Markdown({ frontmatter: z.object({ title: z.string() }) });
-
-export async function loader({ params }: Route.LoaderArgs) {
-	let raw = await Bun.file(`./content/${params.slug}.md`).text();
-	let result = parser.parse(raw);
-	if (isFailure(result)) throw new Response("Invalid markdown", { status: 500 });
-	return result.data;
-}
-
-export default function Docs({ loaderData }: Route.ComponentProps) {
-	return <MarkdownView content={loaderData.content} />;
-}
-```
 
 ### Pattern: Custom Markdoc tag + custom component
 
@@ -324,15 +262,18 @@ let parser = new Markdown({
 Then render with client components:
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client/react";
+import { MarkdownView } from "@pkg/markdown/client/remix";
 import type { Markdown } from "@pkg/markdown/server";
+import type { Handle, RemixNode } from "remix/ui";
 
-function Callout({ type, children }: { type: string; children: React.ReactNode }) {
-	return <div className={`callout-${type}`}>{children}</div>;
+function Callout({ props }: Handle<{ type: string; children: RemixNode }>) {
+	return () => <div className={`callout-${props.type}`}>{props.children}</div>;
 }
 
-function Page({ content }: { content: Markdown.AST }) {
-	return <MarkdownView content={content} components={{ Callout }} />;
+export function PostPage() {
+	return ({ content }: { content: Markdown.AST }) => {
+		return <MarkdownView content={content} components={{ Callout }} />;
+	};
 }
 ```
 
@@ -368,15 +309,13 @@ let metadata = result.data.frontmatter;
 
 - [`@pkg/result`](/packages/result) - Explicit success/failure handling
 - [`@pkg/validate`](/packages/validate) - Validation helpers with Standard Schema
-- [`@pkg/cn`](/packages/cn) - Class name composition used by renderers
 - [`@pkg/strings`](/packages/strings) - Excerpts, word counts, and slugs over the text `toPlainText()` returns
 
 ## Tips
 
-1. **Choose the right client entry** - Use `@pkg/markdown/client/react` for React apps and `@pkg/markdown/client/remix` for Remix apps.
-2. **Import only server code in loaders/actions** - Keep rendering code out of server-only modules to avoid unnecessary bundle weight.
-3. **Always load a Prism stylesheet** - Import `@pkg/markdown/styles/light.css` or `@pkg/markdown/styles/dark.css` in routes that render markdown.
-4. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests.
-5. **Prefer `Markdown.frontmatter` for index pages** - It is faster when you only need metadata and not full rendered content.
-6. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
-7. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.
+1. **Import only server code in loaders/actions** - Keep rendering code out of server-only modules to avoid unnecessary bundle weight.
+2. **Always load a Prism stylesheet** - Import `@pkg/markdown/styles/light.css` or `@pkg/markdown/styles/dark.css` in routes that render markdown.
+3. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests.
+4. **Prefer `Markdown.frontmatter` for index pages** - It is faster when you only need metadata and not full rendered content.
+5. **Use `toPlainText` for excerpts and search indexes** - It reads the parsed tree, so it cannot be fooled by markup a regular expression would miss.
+6. **Turn on `fences` only for a search index** - Code reads as noise in an excerpt but is worth indexing.

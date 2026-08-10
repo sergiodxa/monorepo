@@ -6,7 +6,7 @@ Remix UI renderer for parsed Markdown content.
 
 `@pkg/markdown-remix` renders Markdoc output with the `remix/ui` runtime instead of React DOM. It owns the SSR-friendly Markdown view used by Remix-based apps in this monorepo.
 
-Pair it with `@pkg/markdown-server` for parsing and frontmatter validation. The package keeps the Remix-specific renderer and code-fence UI isolated from the React renderer.
+Pair it with `@pkg/markdown-server` for parsing and frontmatter validation. The package keeps the Remix-specific renderer and code-fence UI isolated from the server-side parsing pipeline.
 
 ## Usage
 
@@ -49,8 +49,6 @@ Converts a Markdoc AST into Remix UI nodes.
 ## Related Packages
 
 - [`@pkg/markdown-server`](/packages/markdown-server) - Server parsing and highlighting.
-- [`@pkg/markdown-react`](/packages/markdown-react) - React renderer for the same content.
-- [`@pkg/ui`](/packages/ui) - Shared UI primitives used by the renderer.
 
 ## Tips
 

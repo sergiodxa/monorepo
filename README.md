@@ -107,7 +107,6 @@ Run from the repository root:
 | [lucide-remix](packages/lucide-remix)                   | Lucide icons for Remix UI                                     |
 | [mail](packages/mail)                                   | Transactional email with pluggable transports                 |
 | [markdown](packages/markdown)                           | Markdown processing utilities                                 |
-| [markdown-react](packages/markdown-react)               | React markdown rendering utilities                            |
 | [markdown-remix](packages/markdown-remix)               | Remix markdown rendering utilities                            |
 | [markdown-server](packages/markdown-server)             | Server-side markdown processing utilities                     |
 | [oidc-client](packages/oidc-client)                     | OIDC client utilities                                         |

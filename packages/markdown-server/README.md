@@ -6,7 +6,7 @@ Server-side Markdown parsing and frontmatter validation for this monorepo.
 
 `@pkg/markdown-server` parses Markdown with Markdoc and validates frontmatter with Standard Schema. It owns the server-only parsing pipeline, including fenced-code normalization and Prism highlighting.
 
-This package is intentionally framework-agnostic. Client renderers live in `@pkg/markdown-react` and `@pkg/markdown-remix`.
+This package is intentionally framework-agnostic. The client renderer lives in `@pkg/markdown-remix`.
 
 ## Usage
 
@@ -51,7 +51,6 @@ Normalizes fence language aliases to Prism identifiers.
 
 ## Related Packages
 
-- [`@pkg/markdown-react`](/packages/markdown-react) - React renderer for parsed Markdown.
 - [`@pkg/markdown-remix`](/packages/markdown-remix) - Remix UI renderer for parsed Markdown.
 - [`@pkg/result`](/packages/result) - Explicit success/failure return values.
 - [`@pkg/validate`](/packages/validate) - Schema validation utilities.
