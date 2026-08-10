@@ -21,6 +21,7 @@ import type { Middleware } from "remix/fetch-router";
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
+import logger from "@pkg/logger/middleware";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
@@ -36,7 +37,6 @@ import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "@pkg/logger/middleware";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { monitors, teamDomains, teams } from "~/database/schema";

@@ -13,6 +13,7 @@ import type { Middleware, RequestContext } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
+import logger from "@pkg/logger/middleware";
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -29,7 +30,6 @@ import * as sample from "~/app/http/controllers/sample";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
-import logger from "@pkg/logger/middleware";
 import routes from "~/routes/web";
 
 /**

@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
+import logger from "@pkg/logger/middleware";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import mail from "@pkg/mail/middleware";
 import { env } from "cloudflare:workers";
@@ -195,7 +196,6 @@ import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "@pkg/logger/middleware";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";

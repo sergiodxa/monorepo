@@ -13,6 +13,7 @@ import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
+import logger from "@pkg/logger/middleware";
 import mail from "@pkg/mail/middleware";
 import { getServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
@@ -58,7 +59,6 @@ import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "@pkg/logger/middleware";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { MailTransport } from "~/app/services/mail-transport";
 import routes from "~/routes/web";
