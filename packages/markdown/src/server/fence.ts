@@ -99,7 +99,6 @@ export const fence = {
 			language,
 			path: parsed.path,
 			title: parsed.title,
-			copyId: crypto.randomUUID(),
 		});
 	},
 } satisfies Schema;
