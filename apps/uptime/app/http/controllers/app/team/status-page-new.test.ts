@@ -135,4 +135,35 @@ describe("GET /app/:team/status-pages/new", () => {
 		let body = await response.text();
 		expect(body).toContain("Create Status Page");
 	});
+
+	test("posts every field to the create action from one form", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.statusPages.new, {
+			middleware: [seedTeam(team, membership)],
+			handler: statusPageNewModule.handler,
+		});
+
+		let request = new Request(
+			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let response = await container.scope(() => router.fetch(request));
+		let body = await response.text();
+
+		expect(body).toContain(
+			`action="${routes.actions.statusPage.create.href({ team: team.slug })}"`,
+		);
+		// The card grouping is layout only: a submitted form must still carry every field.
+		for (let name of ["name", "slug", "title", "description", "logo_url"]) {
+			expect(body).toContain(`name="${name}"`);
+		}
+		expect(body).toContain(`name="is_public"`);
+		expect(body).toContain(`name="show_overall_status"`);
+	});
 });

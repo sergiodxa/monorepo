@@ -1,7 +1,9 @@
 /**
- * Tests for the new cron-job monitor page controller. It renders an empty
- * `CronJobFormFields` form with no data dependency beyond the team, so this only
- * checks the 200 response and that the form's fields are present. Doesn't import
+ * Tests for the new cron-job monitor page controller. It renders an empty form with
+ * no data dependency beyond the team, so this only checks the 200 response, that the
+ * form's fields are present, and that they are framed as the three settings cards the
+ * page groups them into (asserted through the sections' anchor ids, which stay stable
+ * while their translated headings can change). Doesn't import
  * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed. `getViewer()`/
  * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
  * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the
@@ -118,5 +120,16 @@ describe("cronJobNew", () => {
 		expect(body).toContain('name="alert_on_late"');
 		expect(body).toContain('name="is_enabled"');
 		expect(body).toContain(`action="${routes.actions.cronJob.create.href({ team: team.slug })}"`);
+	});
+
+	test("groups the fields into the basics, schedule and alerting cards", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(db, team, membership);
+		let body = await response.text();
+
+		expect(body).toContain('id="basics"');
+		expect(body).toContain('id="schedule"');
+		expect(body).toContain('id="alerting"');
 	});
 });

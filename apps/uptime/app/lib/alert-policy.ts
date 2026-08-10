@@ -9,7 +9,7 @@
  * reaching into `~/app/http`) or drag that layer's imports somewhere they must not go.
  *
  * The second failure is the concrete one, and it is why this module has no imports at all:
- * `resources/views/alerts/form.tsx` needs the floor to explain it to a customer, and importing
+ * the alert form needs the floor to explain it to a customer, and importing
  * the dispatcher to get it pulled `~/app/services/cost` — and through it `cloudflare:workers` —
  * into the client bundle, which fails the build outright. `~/app/lib/pricing` is dependency-free
  * for exactly this reason and says so; this is the same rule applied to the same shape of fact.

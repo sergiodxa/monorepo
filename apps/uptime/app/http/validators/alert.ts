@@ -1,6 +1,6 @@
 /**
  * Form validation schemas for alert create/update/delete actions. One form posts all
- * four channels' fields at once (see `resources/views/alerts/form.tsx`); `.refine()`
+ * four channels' fields at once (the alert create/edit pages render them together); `.refine()`
  * enforces that only the fields for the selected `strategy` are actually required,
  * mirroring the content-check schema's inline-validation pattern.
  *

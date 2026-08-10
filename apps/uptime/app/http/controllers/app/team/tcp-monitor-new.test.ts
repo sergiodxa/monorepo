@@ -113,4 +113,30 @@ describe("tcpMonitorNew", () => {
 		expect(body).toContain('name="port"');
 		expect(body).toContain("Host");
 	});
+
+	test("posts to the create-TCP-monitor action with every field", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		// The card layout is presentation only: the request this form produces has to stay
+		// exactly what the create action already accepts.
+		expect(body).toContain('method="post"');
+		expect(body).toContain(
+			`action="${routes.actions.monitor.tcp.create.href({ team: team.slug })}"`,
+		);
+		expect(body).toContain('name="name"');
+		expect(body).toContain('name="interval_seconds"');
+		expect(body).toContain('name="timeout_ms"');
+		// A new monitor is always created enabled, so the toggle is edit-only.
+		expect(body).not.toContain('name="is_enabled"');
+	});
+
+	test("renders the fields inside a settings card", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain('<section id="basics"');
+	});
 });

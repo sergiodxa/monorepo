@@ -2,9 +2,10 @@
  * Tests for the new maintenance window page controller. `cloudflare:workers` is mocked
  * because `~/app/data/monitor` (used here to populate the monitor-scope dropdown)
  * reads `env` at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. It renders an empty
- * `MaintenanceWindowFormFields` form, so this only checks the 200 response and that
- * the form's fields are present. `getViewer()`/`ctx.team`/`ctx.membership`/
+ * `app/http/controllers/actions/monitors.test.ts`. It renders an empty form, so this
+ * only checks the 200 response and that every field the create action reads is still
+ * present after the fields were regrouped into cards.
+ * `getViewer()`/`ctx.team`/`ctx.membership`/
  * `ctx.teams` are seeded directly by a fake middleware standing in for the real
  * `auth`/`requireUser`/`requireTeam` chain, matching the template in
  * `app/http/controllers/app/team/http-monitors.test.ts`.
