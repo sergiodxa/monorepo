@@ -93,7 +93,6 @@ Run from the repository root:
 | [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1                    |
 | [data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL               |
 | [dates](packages/dates)                                 | Zone-aware date operations with Intl-only formatting          |
-| [db-helpers](packages/db-helpers)                       | Database helper utilities for Drizzle                         |
 | [duration](packages/duration)                           | Typed duration strings converted to milliseconds or seconds   |
 | [get-client-ip](packages/get-client-ip)                 | Extract client IP from requests                               |
 | [hooks](packages/hooks)                                 | Shared React hooks                                            |
