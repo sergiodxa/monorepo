@@ -16,14 +16,20 @@ import type { Result } from "@pkg/result";
 import { failure, isFailure, success } from "@pkg/result";
 
 import type { SpecError } from "../errors";
-import type { PermissionSet } from "../permissions";
+import type { ExecutionContext } from "../executor";
+import type { LoadedSuite } from "../loader";
+import type { Grants, PermissionSet } from "../permissions";
 import type { Plugin, ToolContext } from "../plugin";
 import type { ToolArg, Value } from "../values";
 import type { Workspace } from "../workspace";
 
 import { ExpectationError, PermissionDeniedError } from "../errors";
+import { executeTest } from "../executor";
+import { parse } from "../parser";
+import { createRegistry } from "../registry";
 
 import { createBrowserPlugin } from "./browser";
+import { createUrlPlugin } from "./url";
 
 /** Whether the real `agent-browser` CLI is installed; gates the e2e suite. */
 const AVAILABLE = Bun.which("agent-browser") !== null;
@@ -321,4 +327,105 @@ describe("browser end to end", () => {
 		expect(mismatch).toBeInstanceOf(ExpectationError);
 		expect(mismatch.code).toBe("expectation-failed");
 	});
+});
+
+/**
+ * Parse a single-test `.spec` source, build a registry over the given plugins,
+ * and execute the test — the real runtime path, so a bare-path `let`/`return`
+ * right-hand side goes through the same zero-arg-tool resolution production code
+ * uses. Net is granted so the coarse gate lets the browser tools through; the
+ * permission set allows every scoped check for the loopback host.
+ */
+async function runSpec(
+	source: string,
+	plugins: Plugin[],
+	root: string,
+): Promise<Result<undefined, SpecError>> {
+	let parsed = parse({ path: "e2e.spec", text: source });
+	if (isFailure(parsed)) throw new Error(`expected the spec to parse: ${parsed.error.message}`);
+	let file = parsed.data;
+	let test0 = file.tests[0];
+	if (test0 === undefined) throw new Error("expected the spec to contain a test");
+	let suite: LoadedSuite = { files: [file], commands: new Map(), fixtures: new Map() };
+	let uses = file.uses.map((entry) => entry.namespace);
+	let grants: Grants = {
+		run: { mode: "denied" },
+		net: { mode: "all" },
+		env: { mode: "denied" },
+		hostFs: { mode: "denied" },
+	};
+	let context: ExecutionContext = {
+		registry: createRegistry(plugins, suite),
+		workspace: stubWorkspace(root),
+		permissions: allowAll(),
+		uses,
+		usesFor: () => uses,
+		grants,
+	};
+	return executeTest(test0, context);
+}
+
+// End to end through the executor: `let current = browser.url` must capture the
+// current URL as a value, so the authorization_code chain (land on ?code=…,
+// read the code) is expressible. Skipped wholesale without `agent-browser`.
+describe("browser.url captured through the executor", () => {
+	let browserPlugin: Plugin;
+	let urlPlugin: Plugin;
+	let server: ReturnType<typeof Bun.serve> | undefined;
+	let baseUrl = "";
+
+	beforeAll(() => {
+		browserPlugin = createBrowserPlugin();
+		urlPlugin = createUrlPlugin();
+		// Any path returns the page, so navigating to a URL with a query string
+		// leaves the session's current URL carrying that query string verbatim.
+		server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch: () => new Response(PAGE_HTML, { headers: { "content-type": "text/html" } }),
+		});
+		baseUrl = `http://127.0.0.1:${server.port}/`;
+	});
+
+	afterAll(async () => {
+		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
+		server?.stop(true);
+	});
+
+	test.skipIf(!AVAILABLE)(
+		"`let current = browser.url` captures the landing URL and url.query reads its code",
+		async () => {
+			let landing = `${baseUrl}callback?code=abc123&state=xyz`;
+			// `current` is a scalar binding; a bare identifier in tool-argument
+			// position is a symbolic word (ADR-002), so it is boxed to reach
+			// url.query through a dotted reference — the documented v1 pattern.
+			let source = [
+				"use browser",
+				"use url",
+				"",
+				'test "capture the browser url" {',
+				"	given {",
+				`		browser.open "${landing}"`,
+				"	}",
+				"	when {",
+				"		let current = browser.url",
+				"		let box = { url: current }",
+				'		let code = url.query box.url "code"',
+				"	}",
+				"	then {",
+				`		expect current "${landing}"`,
+				'		expect code "abc123"',
+				"	}",
+				"}",
+				"",
+			].join("\n");
+			let outcome = await runSpec(
+				source,
+				[browserPlugin, urlPlugin],
+				"/tmp/spec-browser-url-capture-session",
+			);
+			if (isFailure(outcome))
+				throw new Error(`expected the spec to pass: ${outcome.error.message}`);
+		},
+	);
 });

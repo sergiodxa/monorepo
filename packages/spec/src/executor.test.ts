@@ -677,4 +677,124 @@ describe(executeTest, () => {
 		expectSuccess(await executeTest(node, makeContext({ registry, uses: ["probe"] })));
 		expect(attempts).toBe(3);
 	});
+
+	// A bare-path `let`/`return` right-hand side normally reads a binding, but
+	// when its head is not bound it may name a zero-argument tool — the change
+	// that lets `let current = browser.url` capture the current URL as a value.
+	describe("a bare-path RHS that names a zero-arg tool", () => {
+		test("a qualified zero-arg tool is invoked and its value captured", async () => {
+			let recorded = makePlugin("ns", () => success("captured-value"));
+			let registry = makeRegistry({
+				tools: [
+					{
+						namespace: "ns",
+						descriptor: descriptor("thing", "observable"),
+						plugin: recorded.plugin,
+					},
+				],
+			});
+			let node = makeTest({
+				when: [letStmt("x", ref("ns", "thing"))],
+				verify: [expectStmt(ref("x"), str("captured-value"))],
+			});
+			expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+			expect(recorded.calls).toEqual([{ tool: "thing", args: [] }]);
+		});
+
+		test("a bare zero-arg tool imported with `use` is invoked and captured", async () => {
+			let recorded = makePlugin("ns", () => success(42));
+			let registry = makeRegistry({
+				tools: [
+					{ namespace: "ns", descriptor: descriptor("now", "observable"), plugin: recorded.plugin },
+				],
+			});
+			let node = makeTest({
+				when: [letStmt("t", ref("now"))],
+				verify: [expectStmt(ref("t"), num(42))],
+			});
+			expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+			expect(recorded.calls).toEqual([{ tool: "now", args: [] }]);
+		});
+
+		test("a zero-arg tool value is capturable from a return inside a fixture", async () => {
+			let recorded = makePlugin("ns", () => success("from-fixture"));
+			let registry = makeRegistry({
+				tools: [
+					{
+						namespace: "ns",
+						descriptor: descriptor("thing", "observable"),
+						plugin: recorded.plugin,
+					},
+				],
+				fixtures: [fixtureNode("landing", [retStmt(ref("ns", "thing"))])],
+			});
+			let node = makeTest({
+				given: [letStmt("v", fixtureCall("landing"))],
+				verify: [expectStmt(ref("v"), str("from-fixture"))],
+			});
+			expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+			expect(recorded.calls).toEqual([{ tool: "thing", args: [] }]);
+		});
+
+		test("a bound head is always a reference; the same-named tool is never called", async () => {
+			let recorded = makePlugin("ns", () => success("tool-value"));
+			let registry = makeRegistry({
+				tools: [
+					{
+						namespace: "ns",
+						descriptor: descriptor("thing", "observable"),
+						plugin: recorded.plugin,
+					},
+				],
+			});
+			// `thing` is both a binding and an imported tool name; the binding wins
+			// because a reference requires a bound head, so the two never collide.
+			let node = makeTest({
+				given: [letStmt("thing", str("bound-value"))],
+				when: [letStmt("y", ref("thing"))],
+				verify: [expectStmt(ref("y"), str("bound-value"))],
+			});
+			expectSuccess(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+			expect(recorded.calls).toHaveLength(0);
+		});
+
+		test("a tool with a required argument is not auto-invoked; the path is unknown", async () => {
+			let recorded = makePlugin("ns", () => success("x"));
+			let needsArg: ToolDescriptor = {
+				name: "needs",
+				summary: "needs an argument",
+				kind: "observable",
+				params: [{ name: "a", kind: "value", required: true, summary: "a required argument" }],
+			};
+			let registry = makeRegistry({
+				tools: [{ namespace: "ns", descriptor: needsArg, plugin: recorded.plugin }],
+			});
+			let node = makeTest({ when: [letStmt("x", ref("ns", "needs"))] });
+			let error = expectFailure(await executeTest(node, makeContext({ registry, uses: ["ns"] })));
+			expect(error.code).toBe("unknown-name");
+			expect(recorded.calls).toHaveLength(0);
+		});
+
+		test("capturing a zero-arg tool still passes through the permission gate", async () => {
+			let recorded = makePlugin("browser", () => success("http://localhost/cb"));
+			let registry = makeRegistry({
+				tools: [
+					{
+						namespace: "browser",
+						descriptor: descriptor("url", "observable", "net"),
+						plugin: recorded.plugin,
+					},
+				],
+			});
+			let node = makeTest({ when: [letStmt("current", ref("browser", "url"))] });
+			let error = expectFailure(
+				await executeTest(node, makeContext({ registry, uses: ["browser"], grants: makeGrants() })),
+			);
+			expect(error).toBeInstanceOf(PermissionDeniedError);
+			if (!(error instanceof PermissionDeniedError)) throw new Error("narrowing");
+			expect(error.permission).toBe("net");
+			expect(error.resource).toBe("browser.url");
+			expect(recorded.calls).toHaveLength(0);
+		});
+	});
 });

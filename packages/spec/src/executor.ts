@@ -199,7 +199,38 @@ async function evaluateRhs(
 	if (rhs.kind === "call-expr") {
 		return invokeCallable(rhs.target, rhs.args, rhs.span, scope, environment);
 	}
+	if (rhs.kind === "reference") {
+		let call = zeroArgToolCall(rhs, scope, environment);
+		if (call !== undefined) return call;
+	}
 	return evaluateExpression(rhs, scope);
+}
+
+/**
+ * A bare-path `let`/`return` right-hand side names the value to bind. Normally
+ * that is a reference into the scope, but when its head is not a binding it may
+ * instead name a zero-argument tool — `let current = browser.url` — whose
+ * observed value is what the binding should hold. The resolution is
+ * deliberately narrow and never guesses: a bound head is always a reference (a
+ * binding and a tool cannot collide here, because a reference requires a bound
+ * head), and the path is a call only when it resolves — honoring the file's
+ * `use` — to a tool that requires no arguments. Anything else (an ambiguous or
+ * unknown path, a command, a tool with required arguments) returns undefined so
+ * the caller evaluates the reference normally and its unknown-name error still
+ * stands. The call is dispatched through the ordinary tool path, so the
+ * runtime's permission gate applies exactly as it does to a written call.
+ */
+function zeroArgToolCall(
+	reference: ReferenceNode,
+	scope: Map<string, Value>,
+	environment: Environment,
+): Promise<Result<Value, SpecError>> | undefined {
+	let head = reference.path[0];
+	if (head === undefined || scope.has(head)) return undefined;
+	let resolved = environment.registry.resolveCallable(reference.path.join("."), environment.uses);
+	if (isFailure(resolved) || resolved.data.kind !== "tool") return undefined;
+	if (resolved.data.descriptor.params.some((param) => param.required)) return undefined;
+	return invokeTool(resolved.data, [], reference.span, scope, environment);
 }
 
 /** Evaluate one expression in the given scope. */

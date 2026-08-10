@@ -112,9 +112,17 @@ Notes:
   valid as the entire right-hand side of `let` or `return`. Arguments are
   literals, references, objects, or words — never nested calls. This keeps
   every statement linear and diffable.
-- A `PATH` on the right-hand side with no arguments is a reference
-  (`let e = user.email`); with arguments it is an invocation
-  (`let r = run "node" "index.js"`).
+- A `PATH` on the right-hand side with arguments is an invocation
+  (`let r = run "node" "index.js"`). With no arguments it is a reference when
+  its head segment is a binding (`let e = user.email`); when the head is not a
+  binding and the path resolves — honoring the file's `use` — to a tool that
+  requires no arguments, it is a zero-argument tool call, so
+  `let current = browser.url` captures that tool's observed value. A binding
+  and a tool never collide here, because a reference requires a bound head, and
+  a path that is neither a binding nor a zero-argument tool is the usual
+  unknown-name error. This refinement is confined to the `let`/`return`
+  right-hand side: a bare path in argument position stays a word (to a tool) or
+  a binding read (to a command / the value form of `expect`), unchanged.
 - There is deliberately no `if`, `else`, `while`, `for`, `switch`, or `match`
   production, and no operators: no arithmetic, no boolean logic, no
   comparison syntax. Verification happens through `expect`.
@@ -144,6 +152,11 @@ Notes:
 - References are dotted lookups into bound values: `user.email` reads the
   `email` field of the binding `user`. A missing binding or field is a
   runtime error, not `null`.
+- On a `let`/`return` right-hand side, a bare path whose head is not a binding
+  is a zero-argument tool call when it resolves to a tool that needs no
+  arguments (`let current = browser.url`). The call runs through the ordinary
+  tool path, so its permission family is gated exactly as a written call would
+  be — deny-by-default is preserved.
 - Commands execute with a fresh scope containing only their parameters.
   Fixtures execute with a fresh, empty scope. `return` ends the body and
   produces the value; a body that never returns produces `null`.

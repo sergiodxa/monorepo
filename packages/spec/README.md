@@ -181,6 +181,12 @@ variable. `write "f" content` hands the tool the literal word `content`. To pass
 a bound value to a tool, use a dotted reference (`result.stdout`), boxing it in
 an object if needed (`let x = { path: p }` then `write x.path …`).
 
+A bare path on the right of `let`/`return` is a reference when its head names a
+binding, but when the head is not a binding and the path resolves to a tool that
+needs no arguments, it is a **zero-argument tool call** — so `let current =
+browser.url` binds that tool's observed value. This works for any argument-less
+tool, and the call is permission-gated like any other.
+
 ### `eventually`
 
 Wrap an observable assertion in `eventually` to retry it until it holds or the
@@ -418,6 +424,20 @@ test "the sign-in form authenticates" {
 
 ```sh
 spec run spec --allow-net=localhost:3000
+```
+
+`browser.url` also reads as a value: `let current = browser.url` binds the
+session's current URL, so a spec can pull the authorization `code` out of the
+page the browser landed on. (A bare binding reaches a tool through a dotted
+reference, so box it first — see [`let` and references](#let-and-references).)
+
+```
+when {
+	browser.click button "Authorize"
+	let landing = browser.url            # capture the redirect URL
+	let where = { url: landing }
+	let code = url.query where.url "code" # read ?code=… out of it
+}
 ```
 
 ### `db` — query a database · `--allow-env=DATABASE_URL`
