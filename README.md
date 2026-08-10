@@ -87,7 +87,6 @@ Run from the repository root:
 | [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com                   |
 | [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                                     |
 | [cloudflare-mocks](packages/cloudflare-mocks)           | In-memory Cloudflare binding mocks for tests                  |
-| [cn](packages/cn)                                       | Class name utility                                            |
 | [cron](packages/cron)                                   | Cron schedules with zone-aware occurrences and descriptors    |
 | [crypto](packages/crypto)                               | WebCrypto primitives: hashing, HMAC, passwords, TOTP, AES-GCM |
 | [data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1                    |
