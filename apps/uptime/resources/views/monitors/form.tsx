@@ -1,6 +1,8 @@
 /**
  * Shared HTTP monitor form fields, used by both the new-monitor and edit-monitor
- * views. Renders name/URL/check-interval/expected-status/region inputs, pre-filled
+ * views. Renders name/URL/check-interval/expected-status/region inputs — split
+ * across two `group`s so a page can card them as "what is being watched" and "how
+ * it is checked" while still posting them as one form — pre-filled
  * from `handle.props.monitor` when editing, and from `handle.props.defaultUrl` when
  * a caller creating a monitor already knows the URL. Method, timeout and degraded-threshold
  * aren't collected here — they keep their table default on create (HEAD / 10s /
@@ -95,6 +97,13 @@ namespace MonitorFormFields {
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
 		page: "createMonitor" | "editMonitor";
 		/**
+		 * Which half of the fields to render: `"basics"` is what gets watched (name,
+		 * URL), `"checks"` is how it gets watched (interval, expected status, region).
+		 * Both belong to the same `<form>`; the split only lets a caller frame them as
+		 * two groups.
+		 */
+		group: "basics" | "checks";
+		/**
 		 * Starting value for the URL field when creating, for a caller that already knows
 		 * which URL the viewer wants watched. Ignored when `monitor` supplies one, since an
 		 * edit's own value is never something a query string should be able to replace.
@@ -106,36 +115,42 @@ namespace MonitorFormFields {
 /** Renders the name/URL/check-interval/expected-status/region fields, pre-filled from `monitor` when editing and defaulted to a 10-minute interval expecting status 200 when creating. */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
-		let { monitor, i18next, page, defaultUrl } = handle.props;
+		let { monitor, i18next, page, group, defaultUrl } = handle.props;
 		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
 		let expectedStatus = monitor?.expected_status ?? 200;
 		let locationHint = monitor?.location_hint;
 
+		if (group === "basics") {
+			return (
+				<>
+					<TextField
+						label={t("name.label")}
+						description={t("name.description")}
+						type="text"
+						name="name"
+						required
+						defaultValue={monitor?.name}
+						placeholder={t("name.placeholder")}
+						mix={[mbe("28px")]}
+					/>
+
+					<TextField
+						label={t("url.label")}
+						description={t("url.description")}
+						type="url"
+						name="url"
+						required
+						defaultValue={monitor?.url ?? defaultUrl}
+						placeholder={t("url.placeholder")}
+						mix={[mbe("28px")]}
+					/>
+				</>
+			);
+		}
+
 		return (
 			<>
-				<TextField
-					label={t("name.label")}
-					description={t("name.description")}
-					type="text"
-					name="name"
-					required
-					defaultValue={monitor?.name}
-					placeholder={t("name.placeholder")}
-					mix={[mbe("28px")]}
-				/>
-
-				<TextField
-					label={t("url.label")}
-					description={t("url.description")}
-					type="url"
-					name="url"
-					required
-					defaultValue={monitor?.url ?? defaultUrl}
-					placeholder={t("url.placeholder")}
-					mix={[mbe("28px")]}
-				/>
-
 				<RangeSlider
 					label={t("interval.label")}
 					name="interval_seconds"

@@ -2,6 +2,11 @@
  * New HTTP monitor form page controller. Posts to the `create-monitor` action.
  * Requires `requireUser` + `requireTeam`.
  *
+ * The fields are grouped into two bordered cards — what gets watched, and how it
+ * gets checked — inside a single `<form>`, so the page reads as distinct settings
+ * groups while still submitting as one request. The submit control sits at the foot
+ * of the last card rather than loose under the fields.
+ *
  * Accepts a `?url=` pre-fill, so anywhere in the app that already knows which URL a viewer
  * wants watched can hand them this form with it filled in. It only seeds the field: the
  * monitor is still created by the `POST`, so a link, a crawler or a reload creates nothing.
@@ -10,6 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { vstack } from "@pkg/u/layout";
 import { Button } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -19,6 +25,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { MONITOR_URL_PREFILL } from "~/app/http/validators/monitor";
 import FormPage from "~/resources/components/form-page";
+import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorFormFields from "~/resources/views/monitors/form";
@@ -55,9 +62,39 @@ export default createAction(routes.app.team.monitors.new, {
 						<form
 							method="post"
 							action={routes.actions.monitor.http.create.href({ team: ctx.team.slug })}
+							mix={[vstack({ gap: 12 })]}
 						>
-							<MonitorFormFields i18next={ctx.i18next} page="createMonitor" defaultUrl={prefill} />
-							<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
+							<SettingsSection
+								id="basics"
+								title={ctx.i18next.t("page.createMonitor.form.sections.basics.title")}
+								description={ctx.i18next.t("page.createMonitor.form.sections.basics.description")}
+							>
+								<SettingsSection.Card>
+									<SettingsSection.Body>
+										<MonitorFormFields
+											i18next={ctx.i18next}
+											page="createMonitor"
+											group="basics"
+											defaultUrl={prefill}
+										/>
+									</SettingsSection.Body>
+								</SettingsSection.Card>
+							</SettingsSection>
+
+							<SettingsSection
+								id="checks"
+								title={ctx.i18next.t("page.createMonitor.form.sections.checks.title")}
+								description={ctx.i18next.t("page.createMonitor.form.sections.checks.description")}
+							>
+								<SettingsSection.Card>
+									<SettingsSection.Body>
+										<MonitorFormFields i18next={ctx.i18next} page="createMonitor" group="checks" />
+									</SettingsSection.Body>
+									<SettingsSection.Footer>
+										<Button type="submit">{ctx.i18next.t("page.createMonitor.form.cta")}</Button>
+									</SettingsSection.Footer>
+								</SettingsSection.Card>
+							</SettingsSection>
 						</form>
 					</FormPage>
 				</AppShell>

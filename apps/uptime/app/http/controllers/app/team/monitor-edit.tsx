@@ -4,6 +4,13 @@
  * form. Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong
  * to the current team.
  *
+ * Each group is its own bordered card with its own heading, description and — for
+ * the three separately-posting forms — its own action row at the card's foot, so the
+ * page reads as distinct settings groups rather than one continuous column. The
+ * groups stay on separate `<form>` elements exactly as before: the main form, the
+ * add-content-check form, the SSL form and the delete form each post to their own
+ * action, and only the two main-form cards share a `<form>`.
+ *
  * The content-checks table is `@pkg/ui`'s `Table` compound, and every delete
  * confirmation (a content check's own, and the monitor's own danger-zone one) is
  * `@pkg/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
@@ -18,13 +25,12 @@ import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
-import { bg, border, fg } from "@pkg/u/color";
+import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { flex, gap, items } from "@pkg/u/layout";
-import { mbe, p } from "@pkg/u/size";
-import { hover } from "@pkg/u/state";
-import { font, fontSize, textDecoration } from "@pkg/u/typography";
-import { AlertDialog, Button, Select, Table } from "@pkg/ui";
+import { flex, gap, items, vstack } from "@pkg/u/layout";
+import { m, mbe, p } from "@pkg/u/size";
+import { font, fontSize } from "@pkg/u/typography";
+import { AlertDialog, Button, LinkButton, Select, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -39,6 +45,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
+import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorFormFields from "~/resources/views/monitors/form";
@@ -68,131 +75,145 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 		let deleteAction = routes.actions.monitor.http.deleteContentCheck.href({ team: team.slug });
 
 		return (
-			<div>
-				<h2>{i18next.t("contentMonitoring.title")}</h2>
-				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-					{i18next.t("contentMonitoring.description")}
-				</p>
-
-				{contentChecks.length > 0 && (
-					<Table.Container>
-						<Table aria-label={i18next.t("contentMonitoring.title")}>
-							<Table.Header>
-								<Table.Row>
-									<Table.Column>{i18next.t("contentMonitoring.item.type")}</Table.Column>
-									<Table.Column>{i18next.t("contentMonitoring.form.value.label")}</Table.Column>
-									<Table.Column>{i18next.t("contentMonitoring.item.caseSensitive")}</Table.Column>
-									<Table.Column>{i18next.t("contentMonitoring.item.status")}</Table.Column>
-									<Table.Column></Table.Column>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{contentChecks.map((check) => {
-									let dialogId = `delete-content-check-${check.id}`;
-									let titleId = `${dialogId}-title`;
-
-									return (
-										<Table.Row key={check.id}>
-											<Table.Cell>{contentCheckTypeLabel(i18next, check.type)}</Table.Cell>
-											<Table.Cell>
-												<code>{check.value}</code>
-											</Table.Cell>
-											<Table.Cell>
-												{check.case_sensitive
-													? i18next.t("contentMonitoring.item.yes")
-													: i18next.t("contentMonitoring.item.no")}
-											</Table.Cell>
-											<Table.Cell>
-												{check.is_enabled
-													? i18next.t("contentMonitoring.item.enabled")
-													: i18next.t("contentMonitoring.item.disabled")}
-											</Table.Cell>
-											<Table.Cell>
-												<Button
-													type="button"
-													color="danger"
-													commandfor={dialogId}
-													command="show-modal"
-												>
-													{i18next.t("contentMonitoring.item.delete")}
-												</Button>
-
-												<AlertDialog id={dialogId} aria-labelledby={titleId}>
-													<AlertDialog.Header>
-														<AlertDialog.Title id={titleId}>
-															{i18next.t("contentMonitoring.item.deleteConfirmTitle")}
-														</AlertDialog.Title>
-													</AlertDialog.Header>
-													<form method="post" action={deleteAction}>
-														<input type="hidden" name="_method" value="DELETE" />
-														<input type="hidden" name="content_check_id" value={check.id} />
-														<input type="hidden" name="monitor_id" value={monitorId} />
-														<AlertDialog.Footer>
-															<AlertDialog.Cancel type="button" commandfor={dialogId}>
-																{i18next.t("contentMonitoring.form.cancel")}
-															</AlertDialog.Cancel>
-															<Button type="submit" color="danger">
-																{i18next.t("contentMonitoring.item.delete")}
-															</Button>
-														</AlertDialog.Footer>
-													</form>
-												</AlertDialog>
-											</Table.Cell>
+			<SettingsSection
+				id="content-monitoring"
+				title={i18next.t("contentMonitoring.title")}
+				description={i18next.t("contentMonitoring.description")}
+			>
+				<SettingsSection.Card>
+					{contentChecks.length > 0 && (
+						<div mix={[borderEdge("block-end", { color: "neutral", width: 1 })]}>
+							<Table.Container>
+								<Table aria-label={i18next.t("contentMonitoring.title")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>{i18next.t("contentMonitoring.item.type")}</Table.Column>
+											<Table.Column>{i18next.t("contentMonitoring.form.value.label")}</Table.Column>
+											<Table.Column>
+												{i18next.t("contentMonitoring.item.caseSensitive")}
+											</Table.Column>
+											<Table.Column>{i18next.t("contentMonitoring.item.status")}</Table.Column>
+											<Table.Column></Table.Column>
 										</Table.Row>
-									);
-								})}
-							</Table.Body>
-						</Table>
-					</Table.Container>
-				)}
+									</Table.Header>
+									<Table.Body>
+										{contentChecks.map((check) => {
+											let dialogId = `delete-content-check-${check.id}`;
+											let titleId = `${dialogId}-title`;
 
-				<form
-					method="post"
-					action={routes.actions.monitor.http.createContentCheck.href({ team: team.slug })}
-				>
-					<input type="hidden" name="monitor_id" value={monitorId} />
+											return (
+												<Table.Row key={check.id}>
+													<Table.Cell>{contentCheckTypeLabel(i18next, check.type)}</Table.Cell>
+													<Table.Cell>
+														<code>{check.value}</code>
+													</Table.Cell>
+													<Table.Cell>
+														{check.case_sensitive
+															? i18next.t("contentMonitoring.item.yes")
+															: i18next.t("contentMonitoring.item.no")}
+													</Table.Cell>
+													<Table.Cell>
+														{check.is_enabled
+															? i18next.t("contentMonitoring.item.enabled")
+															: i18next.t("contentMonitoring.item.disabled")}
+													</Table.Cell>
+													<Table.Cell>
+														<Button
+															type="button"
+															color="danger"
+															commandfor={dialogId}
+															command="show-modal"
+														>
+															{i18next.t("contentMonitoring.item.delete")}
+														</Button>
 
-					<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
-						<Select name="type" defaultValue="contains">
-							<Select.Option value="contains">
-								{i18next.t("contentMonitoring.form.checkType.options.contains")}
-							</Select.Option>
-							<Select.Option value="not_contains">
-								{i18next.t("contentMonitoring.form.checkType.options.notContains")}
-							</Select.Option>
-							<Select.Option value="regex">
-								{i18next.t("contentMonitoring.form.checkType.options.regex")}
-							</Select.Option>
-						</Select>
-					</Field>
+														<AlertDialog id={dialogId} aria-labelledby={titleId}>
+															<AlertDialog.Header>
+																<AlertDialog.Title id={titleId}>
+																	{i18next.t("contentMonitoring.item.deleteConfirmTitle")}
+																</AlertDialog.Title>
+															</AlertDialog.Header>
+															<form method="post" action={deleteAction}>
+																<input type="hidden" name="_method" value="DELETE" />
+																<input type="hidden" name="content_check_id" value={check.id} />
+																<input type="hidden" name="monitor_id" value={monitorId} />
+																<AlertDialog.Footer>
+																	<AlertDialog.Cancel type="button" commandfor={dialogId}>
+																		{i18next.t("contentMonitoring.form.cancel")}
+																	</AlertDialog.Cancel>
+																	<Button type="submit" color="danger">
+																		{i18next.t("contentMonitoring.item.delete")}
+																	</Button>
+																</AlertDialog.Footer>
+															</form>
+														</AlertDialog>
+													</Table.Cell>
+												</Table.Row>
+											);
+										})}
+									</Table.Body>
+								</Table>
+							</Table.Container>
+						</div>
+					)}
 
-					<Field label={i18next.t("contentMonitoring.form.value.label")}>
-						<input
-							type="text"
-							name="value"
-							required
-							mix={[
-								p("8px", "12px"),
-								rounded("6px"),
-								border({ color: "neutral.border", width: 1 }),
-								fontSize("0.875rem"),
-								font("inherit"),
-								bg("neutral.tint"),
-								fg("inherit"),
-							]}
+					<form
+						method="post"
+						action={routes.actions.monitor.http.createContentCheck.href({ team: team.slug })}
+					>
+						<input type="hidden" name="monitor_id" value={monitorId} />
+
+						<SettingsSection.Header
+							title={i18next.t("contentMonitoring.form.title")}
+							description={i18next.t("contentMonitoring.form.description")}
 						/>
-					</Field>
 
-					<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
-						<input type="checkbox" name="case_sensitive" value="true" />
-						<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
-					</label>
+						<SettingsSection.Body>
+							<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
+								<Select name="type" defaultValue="contains">
+									<Select.Option value="contains">
+										{i18next.t("contentMonitoring.form.checkType.options.contains")}
+									</Select.Option>
+									<Select.Option value="not_contains">
+										{i18next.t("contentMonitoring.form.checkType.options.notContains")}
+									</Select.Option>
+									<Select.Option value="regex">
+										{i18next.t("contentMonitoring.form.checkType.options.regex")}
+									</Select.Option>
+								</Select>
+							</Field>
 
-					<Button type="submit" variant="outline">
-						{i18next.t("contentMonitoring.form.add")}
-					</Button>
-				</form>
-			</div>
+							<Field label={i18next.t("contentMonitoring.form.value.label")}>
+								<input
+									type="text"
+									name="value"
+									required
+									mix={[
+										p("8px", "12px"),
+										rounded("6px"),
+										border({ color: "neutral.border", width: 1 }),
+										fontSize("0.875rem"),
+										font("inherit"),
+										bg("neutral.tint"),
+										fg("inherit"),
+									]}
+								/>
+							</Field>
+
+							<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
+								<input type="checkbox" name="case_sensitive" value="true" />
+								<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
+							</label>
+						</SettingsSection.Body>
+
+						<SettingsSection.Footer>
+							<Button type="submit" variant="outline">
+								{i18next.t("contentMonitoring.form.add")}
+							</Button>
+						</SettingsSection.Footer>
+					</form>
+				</SettingsSection.Card>
+			</SettingsSection>
 		);
 	};
 }
@@ -214,80 +235,98 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 			: "";
 
 		return (
-			<div>
-				<h2>{i18next.t("page.editMonitor.ssl.title")}</h2>
-				<form
-					method="post"
-					action={routes.actions.monitor.http.updateSsl.href({ team: team.slug })}
-				>
-					<input type="hidden" name="monitor_id" value={monitor.id} />
+			<SettingsSection
+				id="ssl"
+				title={i18next.t("page.editMonitor.ssl.title")}
+				description={i18next.t("page.editMonitor.ssl.description")}
+			>
+				<SettingsSection.Card>
+					<form
+						method="post"
+						action={routes.actions.monitor.http.updateSsl.href({ team: team.slug })}
+					>
+						<input type="hidden" name="monitor_id" value={monitor.id} />
 
-					<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
-						<input
-							type="checkbox"
-							name="ssl_monitoring_enabled"
-							value="true"
-							defaultChecked={monitor.ssl_monitoring_enabled}
-						/>
-						<span>{i18next.t("page.editMonitor.form.fields.ssl.enabled.label")}</span>
-					</label>
+						<SettingsSection.Body>
+							<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
+								<input
+									type="checkbox"
+									name="ssl_monitoring_enabled"
+									value="true"
+									defaultChecked={monitor.ssl_monitoring_enabled}
+								/>
+								<span>{i18next.t("page.editMonitor.form.fields.ssl.enabled.label")}</span>
+							</label>
 
-					<Field label={i18next.t("page.editMonitor.form.fields.ssl.expiresAt.label")}>
-						<input
-							type="date"
-							name="ssl_expires_at"
-							defaultValue={expiresAtValue}
-							mix={[
-								p("8px", "12px"),
-								rounded("6px"),
-								border({ color: "neutral.border", width: 1 }),
-								fontSize("0.875rem"),
-								font("inherit"),
-								bg("neutral.tint"),
-								fg("inherit"),
-							]}
-						/>
-					</Field>
+							<Field
+								label={i18next.t("page.editMonitor.form.fields.ssl.expiresAt.label")}
+								description={i18next.t("page.editMonitor.form.fields.ssl.expiresAt.description")}
+							>
+								<input
+									type="date"
+									name="ssl_expires_at"
+									defaultValue={expiresAtValue}
+									mix={[
+										p("8px", "12px"),
+										rounded("6px"),
+										border({ color: "neutral.border", width: 1 }),
+										fontSize("0.875rem"),
+										font("inherit"),
+										bg("neutral.tint"),
+										fg("inherit"),
+									]}
+								/>
+							</Field>
 
-					<Field label={i18next.t("page.editMonitor.form.fields.ssl.issuer.label")}>
-						<input
-							type="text"
-							name="ssl_issuer"
-							defaultValue={monitor.ssl_issuer ?? ""}
-							mix={[
-								p("8px", "12px"),
-								rounded("6px"),
-								border({ color: "neutral.border", width: 1 }),
-								fontSize("0.875rem"),
-								font("inherit"),
-								bg("neutral.tint"),
-								fg("inherit"),
-							]}
-						/>
-					</Field>
+							<Field
+								label={i18next.t("page.editMonitor.form.fields.ssl.issuer.label")}
+								description={i18next.t("page.editMonitor.form.fields.ssl.issuer.description")}
+							>
+								<input
+									type="text"
+									name="ssl_issuer"
+									defaultValue={monitor.ssl_issuer ?? ""}
+									mix={[
+										p("8px", "12px"),
+										rounded("6px"),
+										border({ color: "neutral.border", width: 1 }),
+										fontSize("0.875rem"),
+										font("inherit"),
+										bg("neutral.tint"),
+										fg("inherit"),
+									]}
+								/>
+							</Field>
 
-					<Field label={i18next.t("page.editMonitor.form.fields.ssl.warningDays.label")}>
-						<input
-							type="number"
-							name="ssl_expiry_warning_days"
-							min={1}
-							max={365}
-							defaultValue={monitor.ssl_expiry_warning_days}
-							mix={[
-								p("8px", "12px"),
-								rounded("6px"),
-								border({ color: "neutral.border", width: 1 }),
-								fontSize("0.875rem"),
-								font("inherit"),
-								bg("neutral.tint"),
-								fg("inherit"),
-							]}
-						/>
-					</Field>
+							<Field
+								label={i18next.t("page.editMonitor.form.fields.ssl.warningDays.label")}
+								description={i18next.t("page.editMonitor.form.fields.ssl.warningDays.description")}
+							>
+								<input
+									type="number"
+									name="ssl_expiry_warning_days"
+									min={1}
+									max={365}
+									defaultValue={monitor.ssl_expiry_warning_days}
+									mix={[
+										p("8px", "12px"),
+										rounded("6px"),
+										border({ color: "neutral.border", width: 1 }),
+										fontSize("0.875rem"),
+										font("inherit"),
+										bg("neutral.tint"),
+										fg("inherit"),
+									]}
+								/>
+							</Field>
+						</SettingsSection.Body>
 
-					<Button type="submit">{i18next.t("page.editMonitor.ssl.cta")}</Button>
-				</form>
-			</div>
+						<SettingsSection.Footer>
+							<Button type="submit">{i18next.t("page.editMonitor.ssl.cta")}</Button>
+						</SettingsSection.Footer>
+					</form>
+				</SettingsSection.Card>
+			</SettingsSection>
 		);
 	};
 }
@@ -333,69 +372,127 @@ export default createAction(routes.app.team.monitors.edit, {
 					]}
 				>
 					<FormPage>
-						<form
-							method="post"
-							action={routes.actions.monitor.http.update.href({ team: ctx.team.slug })}
-						>
-							<input type="hidden" name="monitor_id" value={monitor.id} />
-							<MonitorFormFields monitor={monitor} i18next={ctx.i18next} page="editMonitor" />
-							<Button type="submit">{ctx.i18next.t("page.editMonitor.form.cta")}</Button>
-						</form>
-
-						<a
-							href={routes.app.team.monitors.show.href({
-								team: ctx.team.slug,
-								monitorId: monitor.id,
-							})}
-							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
-						>
-							{ctx.i18next.t("page.editMonitor.form.cancel")}
-						</a>
-
-						<ContentChecksSection
-							team={ctx.team}
-							monitorId={monitor.id}
-							contentChecks={contentChecks}
-							i18next={ctx.i18next}
-						/>
-
-						<SslSettingsSection team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
-
-						<h2>{ctx.i18next.t("page.editMonitor.dangerZone.title")}</h2>
-						<Button type="button" color="danger" commandfor="delete-monitor" command="show-modal">
-							{ctx.i18next.t("page.editMonitor.dangerZone.delete")}
-						</Button>
-						<AlertDialog
-							id="delete-monitor"
-							aria-labelledby={deleteMonitorTitleId}
-							aria-describedby={deleteMonitorDescriptionId}
-						>
-							<AlertDialog.Header>
-								<AlertDialog.Title id={deleteMonitorTitleId}>
-									{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
-										name: monitor.name,
-									})}
-								</AlertDialog.Title>
-								<AlertDialog.Description id={deleteMonitorDescriptionId}>
-									{ctx.i18next.t("page.httpMonitors.table.confirmation.deleteDescription")}
-								</AlertDialog.Description>
-							</AlertDialog.Header>
+						<div mix={[vstack({ gap: 12 })]}>
 							<form
 								method="post"
-								action={routes.actions.monitor.http.delete.href({ team: ctx.team.slug })}
+								action={routes.actions.monitor.http.update.href({ team: ctx.team.slug })}
+								mix={[vstack({ gap: 12 })]}
 							>
-								<input type="hidden" name="_method" value="DELETE" />
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<AlertDialog.Footer>
-									<AlertDialog.Cancel type="button" commandfor="delete-monitor">
-										{ctx.i18next.t("page.editMonitor.form.cancel")}
-									</AlertDialog.Cancel>
-									<Button type="submit" color="danger">
-										{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
-									</Button>
-								</AlertDialog.Footer>
+
+								<SettingsSection
+									id="basics"
+									title={ctx.i18next.t("page.editMonitor.form.sections.basics.title")}
+									description={ctx.i18next.t("page.editMonitor.form.sections.basics.description")}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											<MonitorFormFields
+												monitor={monitor}
+												i18next={ctx.i18next}
+												page="editMonitor"
+												group="basics"
+											/>
+										</SettingsSection.Body>
+									</SettingsSection.Card>
+								</SettingsSection>
+
+								<SettingsSection
+									id="checks"
+									title={ctx.i18next.t("page.editMonitor.form.sections.checks.title")}
+									description={ctx.i18next.t("page.editMonitor.form.sections.checks.description")}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											<MonitorFormFields
+												monitor={monitor}
+												i18next={ctx.i18next}
+												page="editMonitor"
+												group="checks"
+											/>
+										</SettingsSection.Body>
+										<SettingsSection.Footer>
+											<LinkButton
+												variant="outline"
+												href={routes.app.team.monitors.show.href({
+													team: ctx.team.slug,
+													monitorId: monitor.id,
+												})}
+											>
+												{ctx.i18next.t("page.editMonitor.form.cancel")}
+											</LinkButton>
+											<Button type="submit">{ctx.i18next.t("page.editMonitor.form.cta")}</Button>
+										</SettingsSection.Footer>
+									</SettingsSection.Card>
+								</SettingsSection>
 							</form>
-						</AlertDialog>
+
+							<ContentChecksSection
+								team={ctx.team}
+								monitorId={monitor.id}
+								contentChecks={contentChecks}
+								i18next={ctx.i18next}
+							/>
+
+							<SslSettingsSection team={ctx.team} monitor={monitor} i18next={ctx.i18next} />
+
+							<SettingsSection
+								id="danger"
+								tone="danger"
+								title={ctx.i18next.t("page.editMonitor.dangerZone.title")}
+								description={ctx.i18next.t("page.editMonitor.dangerZone.description")}
+							>
+								<SettingsSection.Card tone="danger">
+									<SettingsSection.Body>
+										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+											{ctx.i18next.t("page.editMonitor.dangerZone.warning")}
+										</p>
+									</SettingsSection.Body>
+									<SettingsSection.Footer tone="danger">
+										<Button
+											type="button"
+											color="danger"
+											commandfor="delete-monitor"
+											command="show-modal"
+										>
+											{ctx.i18next.t("page.editMonitor.dangerZone.delete")}
+										</Button>
+									</SettingsSection.Footer>
+								</SettingsSection.Card>
+							</SettingsSection>
+
+							<AlertDialog
+								id="delete-monitor"
+								aria-labelledby={deleteMonitorTitleId}
+								aria-describedby={deleteMonitorDescriptionId}
+							>
+								<AlertDialog.Header>
+									<AlertDialog.Title id={deleteMonitorTitleId}>
+										{ctx.i18next.t("page.httpMonitors.table.confirmation.delete", {
+											name: monitor.name,
+										})}
+									</AlertDialog.Title>
+									<AlertDialog.Description id={deleteMonitorDescriptionId}>
+										{ctx.i18next.t("page.httpMonitors.table.confirmation.deleteDescription")}
+									</AlertDialog.Description>
+								</AlertDialog.Header>
+								<form
+									method="post"
+									action={routes.actions.monitor.http.delete.href({ team: ctx.team.slug })}
+								>
+									<input type="hidden" name="_method" value="DELETE" />
+									<input type="hidden" name="monitor_id" value={monitor.id} />
+									<AlertDialog.Footer>
+										<AlertDialog.Cancel type="button" commandfor="delete-monitor">
+											{ctx.i18next.t("page.editMonitor.form.cancel")}
+										</AlertDialog.Cancel>
+										<Button type="submit" color="danger">
+											{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
+										</Button>
+									</AlertDialog.Footer>
+								</form>
+							</AlertDialog>
+						</div>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,
