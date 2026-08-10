@@ -68,7 +68,7 @@ parse or resolution error:
 
 ```sh
 bun packages/spec/src/cli.ts run apps/r3-auth/spec
-# → "Permission denied: net (56 tests)", exit code 1
+# → "Permission denied: net (57 tests)", exit code 1
 ```
 
 Exit code 1 (a clean permission denial) confirms structural validity; exit code
@@ -134,18 +134,27 @@ A few constraints of the v1 runtime shaped what each spec asserts:
 - **Redirects are followed, never observed.** `http` transparently follows up to
   ten redirect hops and returns the final response, so a guard's `303 →
 /authorize` surfaces as the sign-in page (a final `200`), not as a `3xx`. No
-  spec asserts a `3xx` status or a `Location` header. `browser.url` compares
-  whole URLs with no substring match, so a redirect carrying a random value (an
-  authorization `code`) is asserted by the page it lands on, not by its URL.
-- **No custom request headers.** `http` sends only a method and an optional
-  body, so no `Authorization` or `Cookie` can be attached. Every bearer/Basic
-  authenticated _success_ path is therefore out of reach and is specified at its
-  auth-failure observable instead (see below). The signed-in HTML paths are
-  reached through `browser`, which carries the session cookie across navigations.
-- **No urlencoded/multipart bodies.** A bodyless `http.post` reaches each POST
-  controller with an empty `FormData`, which drives its validation-failure
-  branch — the assertable observable. Genuine form submissions (the happy paths)
-  go through `browser`, which posts real form encoding.
+  spec asserts a `3xx` status or a `Location` header. `browser.url` observes the
+  current URL but the runtime cannot _bind_ that observation into a value, so a
+  redirect carrying a random value (an authorization `code`) is asserted by the
+  page it lands on, not read out of its URL.
+- **Request headers, bearer and Basic credentials are available.** `http` can
+  attach a `headers { … }` block, a `bearer <token>`, or `basic <user> <pass>`
+  (`docs/adr/spec/ADR-015` and `ADR-016`). So the bearer/Basic authenticated
+  _success_ paths are specified directly — `GET /api/subjects/:id` with a
+  client-credentials bearer, `POST /oauth/{token,introspect,revoke}` with a form
+  body and `basic` client auth. The signed-in HTML paths still go through
+  `browser`, which carries the session cookie across navigations.
+- **Urlencoded and JSON bodies are available; multipart is not.** `http` sends a
+  `form { … }` (application/x-www-form-urlencoded), `json`, or `text` body, which
+  is what makes the OAuth machine endpoints' happy paths reachable. A bodyless
+  `http.post` still reaches a controller with an empty `FormData`, which is how
+  the validation-failure envelopes are asserted. Multipart form-data and genuine
+  browser form submissions still go through `browser`.
+- **Signed tokens are verifiable.** `jwt.verify <token> <jwks_url>` fetches the
+  server's JWKS and checks an ES256 signature, returning the payload only when it
+  is genuine; `jwt.decode` reads a token's header and claims without verifying.
+  The id_token from a token exchange is proven issuer-signed end to end.
 - **Scalars and array-presence only.** The language has no array literal and no
   index path segment, so array-valued JSON (`scopes_supported`, `keys`, …) is
   asserted for presence only, and hyphenated header/field names
@@ -159,17 +168,37 @@ every guarded page (which redirects an anonymous visitor onto the sign-in page).
 `browser` is backed by the globally-installed `agent-browser` CLI, needed only
 when a `browser.*` test actually runs; `db` is needed only for the two seeds.
 
-## Still out of reach of this runtime
+## The OAuth 2.0 / OIDC flows, and the one gap that remains
 
-- **Token exchange.** A browser can drive `/authorize` all the way to the
-  redirect that carries `?code=`, but redeeming it at `POST /oauth/token` needs a
-  urlencoded body and a client-secret auth header that neither `browser` nor the
-  v1 `http` capability can construct. The authorization-code spec asserts the
-  redirect and stops there.
-- **Bearer/Basic success paths.** `GET /userinfo` claims, `GET /api/subjects/:id`
-  `200`, and `POST /oauth/{token,revoke,introspect}` success cannot be reached —
-  `http` sends no `Authorization` header and no urlencoded body, and `browser`
-  cannot attach a bearer token. Specified at their auth-failure observable only.
+The machine endpoints are specified on both sides — the credentialed success
+_and_ the documented failure — using the `http` `form`/`bearer`/`basic` options
+and the `jwt` tools:
+
+- **Token issuance.** `POST /oauth/token` issues a `client_credentials` access
+  token (`basic` client auth) and, through the `refresh_token` grant (which needs
+  no client credentials), a full token set including a signed `id_token`.
+- **id_token verification.** `jwt.verify` checks that `id_token` against the live
+  JWKS and its `iss`/`aud`/`sub` claims are asserted — proof it is genuinely
+  issuer-signed, not merely well-formed (`id-token.spec`).
+- **Introspection and revocation.** `POST /oauth/introspect` reports a live token
+  active and an unknown token inactive; `POST /oauth/revoke` invalidates a refresh
+  token, which then introspects inactive (`oauth.spec`).
+- **Machine API.** `GET /api/subjects/:id` returns a subject for a
+  client-credentials bearer, and `404` for a missing one (`api.spec`).
+
+Two success paths remain out of reach, both for the same root cause:
+
+- **A browser-obtained authorization code cannot be exchanged.** The
+  `authorization_code` grant itself is expressible (`http.post … form {…} basic
+…`), but lifting the fresh `code` out of the `/authorize` redirect would need to
+  bind `browser.url` into a value, which the runtime cannot do — and the codes
+  live in KV, which the `db` seed cannot populate. The token-endpoint specs use
+  the `refresh_token` grant (a seeded session) to reach the same signed token set.
+- **`GET /userinfo` claims.** userinfo returns only the claims the access token's
+  granted `scope` covers, and the sole grant that stamps a `scope` onto its token
+  is `authorization_code` — so the `200` claims body depends on the code exchange
+  above. userinfo is specified at its bearer-challenge observable instead, and the
+  bearer-carrying success path is proven against `GET /api/subjects/:id`.
 
 ## Files
 
@@ -177,21 +206,22 @@ when a `browser.*` test actually runs; `db` is needed only for the two seeds.
 | ---------------------------- | ---------------------------------------------------------------------------- |
 | `config.jsonc`               | Scoped `net` (`localhost:3002`) and `env` (`DATABASE_URL`) grants            |
 | `commands/login.spec`        | `login(email, password)` — register-or-sign-in through the real form         |
-| `commands/seed.spec`         | `seed_admin`, `seed_code_client` — the two SQL seeds                         |
+| `commands/seed.spec`         | `seed_admin`, `seed_code_client`, `seed_refresh_session` — the SQL seeds     |
 | `commands/sign-in-page.spec` | `assert_on_sign_in_page` — the shared sign-in-page assertion                 |
 | `account-signed-in.spec`     | signed-in `/account/*`: landing, profile view/edit, sessions, grants, logout |
 | `admin-signed-in.spec`       | admin `/admin/*`: dashboard, subject list, create a client                   |
 | `authorize-code.spec`        | signed-in `/authorize` → redirect carrying a `code`                          |
+| `id-token.spec`              | `refresh_token` grant → `jwt.verify`/`jwt.decode` the signed `id_token`      |
 | `home.spec`                  | `GET /`                                                                      |
 | `health.spec`                | `GET /healthcheck`                                                           |
 | `discovery.spec`             | both `.well-known` documents + `jwks.json`                                   |
-| `userinfo.spec`              | `GET /userinfo`                                                              |
+| `userinfo.spec`              | `GET /userinfo` — bearer challenge for a missing and a forged token          |
 | `authorize.spec`             | `form /authorize` (anonymous observables)                                    |
 | `verify-email.spec`          | `form /verify-email`                                                         |
 | `password.spec`              | `form /password/forgot` + `form /password/reset`                             |
 | `auth-providers.spec`        | `POST /auth/:provider`, both callbacks                                       |
-| `oauth.spec`                 | `POST /oauth/{token,revoke,introspect}`                                      |
+| `oauth.spec`                 | `POST /oauth/{token,revoke,introspect}` — credentialed success and failure   |
 | `oidc.spec`                  | `form /oidc/logout` + `GET /oidc/check-session`                              |
 | `account.spec`               | every `/account/*` route (anonymous guard observable)                        |
 | `admin.spec`                 | every `/admin/*` route (anonymous guard observable)                          |
-| `api.spec`                   | `GET /api/subjects/:subjectId`                                               |
+| `api.spec`                   | `GET /api/subjects/:subjectId` — client-credentials bearer success, 404, 401 |

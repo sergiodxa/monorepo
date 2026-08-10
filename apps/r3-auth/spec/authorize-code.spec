@@ -12,9 +12,13 @@
 # and `browser.url` compares whole URLs with no substring match (a runtime gap), so
 # the exact redirect URL cannot be written down.
 #
-# Exchanging the code at POST /oauth/token is out of scope: the exchange needs a
-# urlencoded body and a client-secret auth header that neither `browser` nor the v1
-# `http` capability can construct.
+# Exchanging a code at POST /oauth/token is itself specified — with `http.post … form
+# {…} basic …`, which builds the urlencoded body and the client-secret header the
+# exchange needs (see oauth.spec and id-token.spec). What this browser test cannot do is
+# exchange *this* redirect's code: the runtime has no way to bind `browser.url` into a
+# value, so the fresh random `code` cannot be lifted out of the landing URL and handed
+# to `url.query`. The token-endpoint specs instead redeem a seeded session through the
+# `refresh_token` grant, which reaches the same signed token set without a browser code.
 test "an authenticated authorize request redirects to the client carrying a code" {
 	given {
 		login "spec-user@spec.test" "correct horse battery"

@@ -1,15 +1,15 @@
-# GET /userinfo — the OIDC UserInfo endpoint. It answers a bearer access token
-# with the subject's claims. The claims (happy) path is out of reach of this
-# runtime: the `http` capability sends no custom headers, so it cannot present
-# an `Authorization: Bearer …`. What is fully specifiable is the challenge a
-# request with no bearer token gets — a 401 with the RFC 6750 error envelope,
-# deliberately identical for a missing, malformed, expired or forged token so it
-# is not an oracle.
+# GET /userinfo — the OIDC UserInfo endpoint. It answers a bearer access token with the
+# subject's claims. A bearer token IS presentable now, with `http.get … bearer …`, so
+# both refusal paths are asserted directly: a request with no token and a request
+# carrying a forged one. The RFC 6750 challenge is deliberately identical for a missing,
+# malformed, expired or forged token so the endpoint is not an oracle.
 #
-# seeded happy path: with a valid bearer access token this returns 200 and the
-# scope-gated claims (`sub` always; `email`/`email_verified` with the email
-# scope; `name`/`preferred_username`/`picture` with the profile scope). Not
-# assertable here because `http` cannot send an Authorization header.
+# The claims (200) path is not asserted here. userinfo returns only the claims the
+# access token's granted scope covers, and the sole grant that stamps a `scope` onto its
+# access token is `authorization_code`; a spec cannot drive that grant to completion,
+# because the runtime cannot bind `browser.url` to lift the redirect's `code`. The
+# bearer-carrying success path is instead proven in api.spec, where a client-credentials
+# bearer against GET /api/subjects/:id returns 200.
 
 test "GET /userinfo refuses a request that carries no bearer token" {
 	when {
@@ -19,5 +19,16 @@ test "GET /userinfo refuses a request that carries no bearer token" {
 		expect result.status 401
 		expect result.json.error "invalid_token"
 		expect result.json.error_description "Missing or invalid access token"
+	}
+}
+
+test "GET /userinfo refuses a request carrying a forged bearer token" {
+	when {
+		let result = http.get "http://localhost:3002/userinfo" bearer "not-a-real-token"
+	}
+	then {
+		expect result.status 401
+		expect result.json.error "invalid_token"
+		expect result.json.error_description "Invalid or expired access token"
 	}
 }
