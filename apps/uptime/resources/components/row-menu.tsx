@@ -7,10 +7,10 @@
  * panel with no manual anchor-name wiring), plus the `menuKeys()` mixin for
  * the WAI-ARIA menu keyboard pattern (roving tabindex, arrow-key/Home/End
  * navigation, typeahead) over whatever `[role^="menuitem"]` descendants a
- * caller's own children happen to carry. Unlike `MonitorRowActions`, which
- * hardcodes a view/edit/delete set, this one takes arbitrary `children` — the
- * team settings page needs three different action sets (member rows,
- * pending-invite rows, domain rows) from a single row-menu shell.
+ * caller's own children happen to carry. It takes arbitrary `children` because
+ * no two callers want the same action set: the team settings page alone needs
+ * three (member rows, pending-invite rows, domain rows), and the monitor tables
+ * want view/edit/delete, all from a single row-menu shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,18 +40,32 @@ namespace RowMenu {
 	}
 }
 
-/** Square, icon-only trigger. */
+/**
+ * Square, icon-only trigger.
+ *
+ * 40px with a 20px glyph, widening to 44px wherever the pointer is coarse: a finger
+ * cannot aim at the 32px box a mouse manages fine, and 44px is the smallest target
+ * WCAG 2.5.5 accepts. The media query keys on pointer type rather than viewport width
+ * because it is the input device, not the screen size, that decides how big the target
+ * has to be — a touch laptop needs the larger box at desktop widths.
+ *
+ * The glyph is three small dots, so it reads far lighter than its nominal size and
+ * needs a full-weight stroke and the emphasis foreground to stay visible. Inheriting
+ * the cell's color left it at the muted body tone, which all but disappeared against a
+ * dark background.
+ */
 const trigger = [
 	inlineFlex(),
 	items("center"),
 	justify("center"),
-	width("32px"),
-	height("32px"),
+	width("40px"),
+	height("40px"),
+	media("(pointer: coarse)", [width("44px"), height("44px")]),
 	p(0),
 	rounded("md"),
 	border({ color: "transparent", width: 1 }),
 	bg("transparent"),
-	fg("inherit"),
+	fg("neutral.emphasis"),
 	cursor("pointer"),
 	when("&:hover", bg("neutral.bg-tint-hover")),
 ];
@@ -108,7 +122,7 @@ export default function RowMenu(handle: Handle<RowMenu.Props>) {
 					aria-label={label}
 					mix={[trigger]}
 				>
-					<EllipsisVerticalIcon size={16} strokeWidth={1.5} />
+					<EllipsisVerticalIcon size={20} strokeWidth={2} />
 				</button>
 
 				<Menu id={id} placement="bottom-end" aria-label={label} mix={[menuKeys(), panel]}>

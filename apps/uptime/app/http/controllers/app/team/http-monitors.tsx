@@ -11,30 +11,23 @@
  * convenience wrapper, since the confirming control here is a real `<form method="post">`
  * submit button rather than a `command="close"` action — the delete needs to actually
  * post to the delete action, not just dismiss the dialog). Each row's kebab-icon
- * actions menu is `@pkg/ui`'s `Menu`, anchored to its own trigger via the Popover
- * API's implicit-anchor behavior, plus `menuKeys()` for the WAI-ARIA menu keyboard
- * pattern — inlined here rather than a shared component, since this is its only use.
+ * actions menu is the shared `RowMenu`, which owns the trigger's hit area and the
+ * WAI-ARIA menu keyboard pattern; this file supplies only the entries. It was once
+ * inlined here on the grounds that this was its only use, which stopped being true
+ * and left two triggers to keep in step — they had already drifted to different
+ * sizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	EllipsisVerticalIcon,
-	EyeIcon,
-	MonitorIcon,
-	PencilIcon,
-	PlusIcon,
-	TrashIcon,
-} from "@pkg/lucide-remix";
+import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
-import { p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { textDecoration, weight } from "@pkg/u/typography";
 import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
-import { menuKeys } from "@pkg/ui/mixins";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -46,6 +39,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
+import RowMenu from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -189,23 +183,9 @@ export default createAction(routes.app.team.monitors.index, {
 														)}
 													</Table.Cell>
 													<Table.Cell>
-														<Button
-															type="button"
-															variant="ghost"
-															size="sm"
-															commandfor={menuId}
-															command="toggle-popover"
-															aria-label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
-															mix={[p(0)]}
-														>
-															<EllipsisVerticalIcon size={16} strokeWidth={1.5} />
-														</Button>
-
-														<Menu
+														<RowMenu
 															id={menuId}
-															placement="bottom-end"
-															aria-label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
-															mix={[menuKeys()]}
+															label={ctx.i18next.t("page.httpMonitors.table.actions.menu")}
 														>
 															<Menu.Item
 																href={routes.app.team.monitors.show.href({
@@ -230,7 +210,7 @@ export default createAction(routes.app.team.monitors.index, {
 																<TrashIcon size={16} strokeWidth={1.5} />
 																{ctx.i18next.t("page.httpMonitors.table.actions.delete")}
 															</Menu.Item>
-														</Menu>
+														</RowMenu>
 
 														<AlertDialog
 															id={deleteDialogId}
