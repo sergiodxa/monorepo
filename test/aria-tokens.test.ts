@@ -46,17 +46,16 @@ const SCANNED = ["apps", "packages"];
 /**
  * Paths carrying known, deliberately unfixed occurrences.
  *
- * `packages/ui` is the previous generation of the component library, kept alive only
- * for the apps still on the old runtime — `apps/auth-saas` and the two markdown
- * packages — and slated for deletion once those finish migrating to Remix 3.
- * Its affected files are real defects rather than dead code, so they are exempted
- * rather than declared clean, but fixing them buys nothing that outlives the package.
+ * Empty, and the scan below is genuinely repo-wide because of it. The one entry this
+ * ever held was `packages/ui`, the previous generation of the component library,
+ * exempted because its violations were real defects in code that no consumer reached
+ * any more. The package is gone, so that debt is settled rather than deferred.
  *
  * An entry here is a debt with an end date, not a permanent carve-out, and the test
  * below is what stops it outliving its reason: the exemption fails once the package is
  * clean or gone, so it is removed by the same change that removes the need for it.
  */
-const EXEMPT = ["packages/ui/"];
+const EXEMPT: string[] = [];
 
 describe("ARIA token attributes, repo-wide", () => {
 	describe("the scanner itself", () => {

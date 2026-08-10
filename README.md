@@ -127,7 +127,6 @@ Run from the repository root:
 | [typeid](packages/typeid)                               | Type-safe prefixed id utilities                               |
 | [types](packages/types)                                 | Shared TypeScript types                                       |
 | [u](packages/u)                                         | Tailwind-like Remix UI styling utilities                      |
-| [ui](packages/ui)                                       | Shared React UI components                                    |
 | [uuid](packages/uuid)                                   | UUID utilities                                                |
 | [validate](packages/validate)                           | Standard Schema validation utilities                          |
 | [webhooks](packages/webhooks)                           | Standard Webhooks signing, verification and replay guards     |

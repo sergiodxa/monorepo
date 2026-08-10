@@ -187,7 +187,6 @@ This clears and rewrites `src/icons/`, `src/registry.ts`, `src/icon-names.ts`, a
 
 ## Related Packages
 
-- [`@pkg/ui`](/packages/ui) - The React/`react-aria-components` design system, which depends on `lucide-react` directly for the same icon set.
 - [`@pkg/markdown-remix`](/packages/markdown-remix) - Renders Markdoc content as `remix/ui` components, the same component model icons use here.
 
 ## Tips

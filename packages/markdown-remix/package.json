@@ -12,9 +12,7 @@
 	},
 	"dependencies": {
 		"@markdoc/markdoc": "^0.4.0",
-		"@pkg/cn": "workspace:*",
 		"@pkg/markdown-server": "workspace:*",
-		"@pkg/ui": "workspace:*",
 		"lucide-react": "^1.26.0",
 		"remix": "^3.0.0-beta.5"
 	},

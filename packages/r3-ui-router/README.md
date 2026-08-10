@@ -597,10 +597,6 @@ export const routes = route({
 
 Server code can still use `remix/router` to return `Response` objects, while browser-only entry points can use `@pkg/r3-ui-router` to render Remix UI components for the same URL patterns.
 
-## Related Packages
-
-- [`@pkg/ui`](/packages/ui) - Shared UI package used by applications in this monorepo.
-
 ## Tips
 
 1. **Define routes once** - Use `remix/routes` as the shared contract and avoid hard-coded path strings in view handlers.
