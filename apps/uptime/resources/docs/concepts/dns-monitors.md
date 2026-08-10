@@ -81,9 +81,19 @@ Select which DNS record type to monitor from the supported types listed above.
 
 ### Expected Value
 
-Optionally specify the value you expect the record to contain. When set, the monitor will alert you if the resolved value differs from your expected value.
+Optionally specify the values you expect the record to contain. Separate several values with commas. The check passes as long as **every** value you list is present among the resolved records; the monitor alerts you when any of them goes missing.
 
-Leave this blank if you only want to monitor that the record exists and resolves successfully, without checking for a specific value.
+Extra records that you did not list do not fail the check. That means you can monitor a single mail host on a domain with five MX records, without transcribing all five:
+
+```
+aspmx.l.google.com
+```
+
+Matching compares whole records, so `aspmx.l.google.com` is not satisfied by `alt1.aspmx.l.google.com`. Hostnames are matched case-insensitively and the trailing root dot is optional. For MX records you may write just the host, or pin the preference number as well (`5 aspmx.l.google.com`), in which case both must match.
+
+Because extra records are tolerated, this mode does not detect a record that was **added** alongside your expected ones. If you need to catch additions too, leave this blank and rely on change detection.
+
+Leave this blank if you only want to monitor that the record exists and resolves successfully, or if you want to be alerted on any change at all to the resolved records.
 
 ### Check Interval
 
@@ -97,8 +107,8 @@ DNS monitors report one of three statuses:
 
 | Status      | Description                                                                                                                              |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **OK**      | The DNS record resolved successfully. If an expected value is configured, the resolved value matches.                                    |
-| **Changed** | The DNS record resolved, but the value differs from the expected value you configured.                                                   |
+| **OK**      | The DNS record resolved successfully. If expected values are configured, all of them are present.                                        |
+| **Changed** | The DNS record resolved, but at least one of your expected values is missing (or, with no expected value, the resolved records changed). |
 | **Error**   | The DNS query failed. This could mean the record doesn't exist, the nameservers are unreachable, or there's a DNS configuration problem. |
 
 ## Best Practices
@@ -113,7 +123,7 @@ Focus on the DNS records that matter most to your business:
 
 ### Set Expected Values for Stable Records
 
-For records that shouldn't change, configure an expected value. This catches unauthorized modifications immediately rather than waiting for an outage.
+For records that shouldn't change, list the values you depend on. This catches removals and replacements immediately rather than waiting for an outage. To also catch records being added, leave the expected value blank so the monitor compares against the previously resolved set instead.
 
 ### Use Longer Check Intervals
 

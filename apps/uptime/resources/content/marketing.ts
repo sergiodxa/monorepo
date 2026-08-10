@@ -781,7 +781,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			},
 			{
 				title: "Multiple record types",
-				description: "Track A, AAAA, CNAME, MX, TXT, and NS in one monitor.",
+				description: "Track A, AAAA, CNAME, MX, TXT, and NS records.",
 				icon: "database",
 			},
 			{
@@ -790,8 +790,9 @@ export const features: Record<string, MarketingContent.Page> = {
 				icon: "shield-check",
 			},
 			{
-				title: "Propagation-aware",
-				description: "Checks account for normal DNS propagation delay before alerting.",
+				title: "Tolerates unrelated records",
+				description:
+					"List the values that must be present; other records alongside them don't trigger an alert.",
 				icon: "globe",
 			},
 		],

@@ -101,6 +101,21 @@ describe("checkDns", () => {
 		expect(result.errorMessage).toBeUndefined();
 	});
 
+	test("is ok when extra resolved records surround the single expected one", async () => {
+		mockDohResponse({
+			Status: 0,
+			Answer: [
+				{ name: "example.com", type: 1, TTL: 300, data: "1.2.3.4" },
+				{ name: "example.com", type: 1, TTL: 300, data: "5.6.7.8" },
+			],
+		});
+
+		let result = await checkDns("example.com", "A", "1.2.3.4", null);
+
+		expect(result.status).toBe("ok");
+		expect(result.resolvedValue).toBe("1.2.3.4, 5.6.7.8");
+	});
+
 	test("normalizes and sorts multi-value expected values before comparing", async () => {
 		mockDohResponse({
 			Status: 0,
@@ -162,6 +177,120 @@ describe("checkDns", () => {
 		expect(result.resolvedValue).toBe("1.2.3.4");
 	});
 
+	test("is changed when only some of the comma-separated expected values are present", async () => {
+		mockDohResponse({
+			Status: 0,
+			Answer: [{ name: "example.com", type: 1, TTL: 300, data: "1.1.1.1" }],
+		});
+
+		let result = await checkDns("example.com", "A", "1.1.1.1, 2.2.2.2", null);
+
+		expect(result.status).toBe("changed");
+	});
+
+	test("is ok when a CNAME expected value omits the trailing dot and differs in case", async () => {
+		mockDohResponse({
+			Status: 0,
+			Answer: [{ name: "www.example.com", type: 5, TTL: 300, data: "Target.Example.NET." }],
+		});
+
+		let result = await checkDns("www.example.com", "CNAME", "target.example.net", null);
+
+		expect(result.status).toBe("ok");
+	});
+});
+
+describe("checkDns expected-value containment", () => {
+	/** The five MX answers a live Google Workspace domain returns, in DoH shape. */
+	function googleWorkspaceMx() {
+		return {
+			Status: 0,
+			Answer: [
+				{ name: "example.com", type: 15, TTL: 300, data: "5 alt1.aspmx.l.google.com." },
+				{ name: "example.com", type: 15, TTL: 300, data: "5 alt2.aspmx.l.google.com." },
+				{ name: "example.com", type: 15, TTL: 300, data: "5 alt3.aspmx.l.google.com." },
+				{ name: "example.com", type: 15, TTL: 300, data: "5 alt4.aspmx.l.google.com." },
+				{ name: "example.com", type: 15, TTL: 300, data: "5 aspmx.l.google.com." },
+			],
+		};
+	}
+
+	test("is ok when a single bare MX host is present among the resolved records", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns("example.com", "MX", "aspmx.l.google.com", null);
+
+		expect(result.status).toBe("ok");
+	});
+
+	test("is ok when several comma-separated MX hosts are all present", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns(
+			"example.com",
+			"MX",
+			"aspmx.l.google.com, alt1.aspmx.l.google.com",
+			null,
+		);
+
+		expect(result.status).toBe("ok");
+	});
+
+	test("is changed when one of the listed MX hosts is missing", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns(
+			"example.com",
+			"MX",
+			"aspmx.l.google.com, mx.hostile.example",
+			null,
+		);
+
+		expect(result.status).toBe("changed");
+	});
+
+	test("does not accept a longer record that merely contains the expected host", async () => {
+		mockDohResponse({
+			Status: 0,
+			Answer: [{ name: "example.com", type: 15, TTL: 300, data: "5 alt1.aspmx.l.google.com." }],
+		});
+
+		let result = await checkDns("example.com", "MX", "aspmx.l.google.com", null);
+
+		expect(result.status).toBe("changed");
+	});
+
+	test("is ok when the expected MX token pins the preference number too", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns("example.com", "MX", "5 aspmx.l.google.com", null);
+
+		expect(result.status).toBe("ok");
+	});
+
+	test("is changed when the expected MX token pins a preference the record doesn't have", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns("example.com", "MX", "10 aspmx.l.google.com", null);
+
+		expect(result.status).toBe("changed");
+	});
+
+	test("keeps passing legacy configs that list the full record set verbatim", async () => {
+		mockDohResponse(googleWorkspaceMx());
+
+		let result = await checkDns(
+			"example.com",
+			"MX",
+			"5 alt1.aspmx.l.google.com., 5 alt2.aspmx.l.google.com., 5 alt3.aspmx.l.google.com., 5 alt4.aspmx.l.google.com., 5 aspmx.l.google.com.",
+			null,
+		);
+
+		expect(result.status).toBe("ok");
+	});
+});
+
+describe("checkDns errors", () => {
 	test("is error, not a throw, when the DNS query returns a non-zero Status", async () => {
 		mockDohResponse({ Status: 2 });
 
