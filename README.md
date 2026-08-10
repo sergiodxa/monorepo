@@ -18,10 +18,10 @@ templates/          # Templates for apps and packages
 ## Tech Stack
 
 - **Runtime**: Cloudflare Workers for deployed web apps; Bun for local tooling and selected apps
-- **Framework**: React Router v8 and Remix v3
+- **Framework**: Remix v3
 - **Package manager**: Bun
 - **Database**: Cloudflare D1, Durable Object SQLite, and Remix Data Table
-- **Styling**: Tailwind CSS v4 and Remix UI
+- **Styling**: Remix UI `css()` mixins
 
 ## Getting Started
 

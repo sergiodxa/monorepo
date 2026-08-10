@@ -1,643 +1,444 @@
 # @pkg/response
 
-Type-safe response helpers for React Router loaders and actions.
+Semantic helpers that build real `Response` objects for JSON APIs and redirects.
 
 ## Overview
 
-This package provides type-safe response helpers for React Router applications:
+Every helper in this package is a thin, named wrapper over `Response.json()` with the
+status code baked in, so a handler says what it means (`notFound({ ... })`) instead of
+repeating `Response.json(body, { status: 404 })` at every call site.
 
-- All responses automatically add `ok: true` or `ok: false` for discriminated unions
-- Built on top of React Router's `data()` function
-- Supports all common HTTP status codes with semantic function names
+The one thing the helpers add on top of the platform is a discriminant: success helpers
+merge `ok: true` into the body, error helpers merge `ok: false`. A client that parses the
+JSON can branch on a single field it can always count on, without inspecting the status
+code first, and TypeScript narrows the parsed body from that same field.
+
+The return value is a plain `Response`. It can be returned straight out of a
+`remix/fetch-router` controller, handed to any fetch handler, or asserted on in a test
+with `response.status` and `await response.json()`. Nothing here is tied to a framework;
+the package's only dependency is [`@pkg/location`](/packages/location), which `redirect`
+uses to accept path-only targets.
 
 ## Usage
 
+### In a controller
+
+```tsx
+import { conflict, created } from "@pkg/response";
+import { getServiceContainer } from "@pkg/service-container";
+import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
+
+import Monitor from "~/app/data/monitor";
+import routes from "~/routes/web";
+
+const Body = s.object({ url: s.string(), name: s.string() });
+
+/** POST /api/v1/monitors — registers a monitor for the team. */
+export default createAction(routes.api.v1.monitors.create, async (ctx) => {
+	let input = s.parse(Body, await ctx.request.json());
+	let db = getServiceContainer().get(Database);
+
+	let existing = await Monitor.findByUrl(db, input.url);
+	if (existing) return conflict({ error: "That URL is already monitored" });
+
+	let monitor = await Monitor.create(db, input);
+	return created({ monitor });
+});
+```
+
+`created({ monitor })` is a `201` whose body is `{ monitor: {...}, ok: true }`, with
+`Content-Type: application/json;charset=utf-8`.
+
+### From the caller's side
+
+Because the helpers return responses, a test or a fetch client reads them the same way it
+reads any other HTTP response:
+
 ```typescript
-import { ok, badRequest, notFound, redirect } from "@pkg/response";
-import { Location } from "@pkg/location";
+let response = created({ monitor: { id: "mon_1" } });
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let data = await fetchData();
+response.status; // 201
+response.headers.get("Content-Type"); // "application/json;charset=utf-8"
+await response.json(); // { monitor: { id: "mon_1" }, ok: true }
+```
 
-	if (!data) {
-		return notFound({ message: "Data not found" });
-	}
+### Discriminating success from failure
 
-	return ok({ data });
-}
+```typescript
+let response = await fetch("/api/v1/monitors", { method: "POST", body });
+let result = await response.json();
 
-export async function action({ request }: Route.ActionArgs) {
-	let result = await validateForm(request);
-
-	if (!result.success) {
-		return badRequest({ errors: result.errors });
-	}
-
-	await processData(result.data);
-
-	// Redirect using Location for programmatic URL building
-	let location = new Location({
-		pathname: "/success",
-		search: { id: result.data.id },
-	});
-	return redirect(location);
-}
+if (result.ok) console.log(result.monitor);
+else console.error(result.error);
 ```
 
 ## API
 
-All response helpers accept an optional `init` parameter of type `Omit<ResponseInit, "status" | "statusText">` for additional headers, etc.
-
-### Success Responses (2xx)
-
-All success responses (except `noContent`) add `ok: true` to the data for type discrimination.
-
-#### `ok<T>(input: T, init?: Init)`
-
-Returns a successful response with status 200 and adds `ok: true` to the data.
-
-**When to use:** Default success response for GET requests returning data, or successful operations that return a result.
-
-**Example:**
+Every JSON helper has the same shape:
 
 ```typescript
-return ok({ users: await db.users.findMany() });
-// Returns: { users: [...], ok: true }
+function helper<T>(input: T, init?: Init): Response;
+
+type Init = Omit<ResponseInit, "status" | "statusText">;
 ```
 
-#### `created<T>(input: T, init?: Init)`
+`input` is spread into the response body alongside the `ok` discriminant, and `init` is
+forwarded to the `Response` for headers and other options. `status` and `statusText` are
+omitted from `Init` on purpose: the helper owns the status, and a caller that wants a
+different one should reach for a different helper.
 
-Returns a created response with status 201 and adds `ok: true` to the data.
+### Success responses (2xx)
 
-**When to use:** After successfully creating a new resource (user signup, new post, file upload).
+Success helpers merge `ok: true` into the body.
 
-**Example:**
+#### `ok<T>(input: T, init?: Init): Response`
+
+A `200` response. The default answer for a read, or for a write whose result the client
+wants back.
 
 ```typescript
-let user = await db.users.create({ data: formData });
-return created({ user });
-// Returns: { user: {...}, ok: true }
+return ok({ monitors: await Monitor.listForTeam(db, teamId) });
+// 200 { monitors: [...], ok: true }
 ```
 
-#### `accepted<T>(input: T, init?: Init)`
+#### `created<T>(input: T, init?: Init): Response`
 
-Returns an accepted response with status 202 and adds `ok: true` to the data.
-
-**When to use:** When a request has been accepted but will be processed asynchronously (background jobs, queued tasks, long-running operations).
-
-**Example:**
+A `201` response, for when the request created a resource. Pair it with a `Location`
+header pointing at the new resource when there is a URL for it.
 
 ```typescript
-let job = await queue.enqueue("process-video", { videoId });
-return accepted({ jobId: job.id, status: "processing" });
-// Returns: { jobId: "456", status: "processing", ok: true }
+let apiKey = await ApiKey.create(db, input);
+return created({ apiKey }, { headers: { Location: `/api/v1/api-keys/${apiKey.id}` } });
+// 201 { apiKey: {...}, ok: true }
 ```
 
-#### `noContent(init?: Init)`
+#### `accepted<T>(input: T, init?: Init): Response`
 
-Returns an empty response with status 204 and `null` body. Per HTTP specification, this response has no content.
-
-**When to use:** Successful operations that don't need to return data (DELETE requests, updates where client doesn't need confirmation data, marking notifications as read).
-
-**Example:**
+A `202` response, for work that was queued rather than finished. Return whatever the
+client needs to follow up, such as a job id.
 
 ```typescript
-await db.posts.delete({ where: { id: postId } });
+let job = await queue.enqueue("backfill-daily-stats", { monitorId });
+return accepted({ jobId: job.id });
+// 202 { jobId: "job_1", ok: true }
+```
+
+#### `noContent(init?: Init): Response`
+
+A `204` response with a `null` body.
+
+This is the one helper that does not go through `Response.json()`. A `204` means "no
+representation", and the platform forbids a body on one — constructing it with
+`Response.json()` would attach a JSON payload and throw. So there is no `ok` field to
+merge into either: the status alone carries the outcome.
+
+```typescript
+await ApiKey.deleteById(db, apiKeyId);
 return noContent();
-// Returns: data(null) with status 204
+// 204, response.body === null
 ```
 
-### Redirects
+`init` still applies, so headers pass through:
 
-#### `redirect(target: URL | Location | string, init?: RedirectInit)`
+```typescript
+return noContent({ headers: { "Clear-Site-Data": '"*"' } });
+```
 
-Returns a redirect response with status 307 by default (or custom 3xx status).
+### Redirects (3xx)
+
+#### `redirect(target: URL | Location | string, init?: redirect.Init): Response`
+
+A redirect response with the `Location` header set to `target` and a `null` body.
 
 **Parameters:**
 
-- `target`: The URL, Location, or string path to redirect to
-- `init`: Optional init with custom headers and status code
-
-**Supported status codes:**
-
-Use the `redirect.Status` enum for better readability:
-
-```typescript
-redirect.Status.SeeOther; // 303 - POST → GET redirect
-redirect.Status.Temporary; // 307 - preserves method (default)
-redirect.Status.Permanent; // 308 - preserves method, permanent
-```
-
-Or use numeric literals directly:
-
-```typescript
-303; // See Other - POST → GET redirect
-307; // Temporary Redirect (default)
-308; // Permanent Redirect
-```
+- `target`: a `URL`, a [`Location`](/packages/location), or a string path. Anything
+  `Location.canParse` rejects throws `Invalid redirect target`.
+- `init`: headers and other response options, plus an optional `status` restricted to
+  `redirect.Status`.
 
 **Returns:**
 
-- A Response with 3xx status and Location header
+- A `3xx` `Response`. The status defaults to `redirect.Status.Temporary` (307).
 
-**Examples:**
+**Example:**
 
 ```typescript
-import { redirect } from "@pkg/response";
-import { Location } from "@pkg/location";
-
-// Simple string redirect (defaults to 307)
 return redirect("/login");
+// 307, Location: /login
 
-// Using enum (more readable)
-return redirect("/new-path", { status: redirect.Status.Permanent });
+return redirect(new URL("/dashboard", ctx.request.url));
 
-// Using number literal
-return redirect("/new-path", { status: 308 });
-
-// See Other - POST → GET redirect (303)
-return redirect("/success", { status: redirect.Status.SeeOther });
-
-// URL redirect
-return redirect(new URL("/users", request.url));
-
-// Location redirect with search params
-let location = new Location({
-	pathname: "/search",
-	search: { q: "react", page: "1" },
-});
+let location = new Location({ pathname: "/monitors", search: "status=down&page=1" });
 return redirect(location);
+// 307, Location: /monitors?status=down&page=1
 
-// With custom headers
 return redirect("/logout", {
 	status: redirect.Status.SeeOther,
-	headers: {
-		"Set-Cookie": "session=; Max-Age=0",
-	},
+	headers: { "Set-Cookie": "session=; Max-Age=0" },
 });
 ```
 
-**When to use which redirect status:**
+#### `redirect.Status`
 
-- `303` - See Other (after POST to prevent form resubmission)
-- `307` - Temporary redirect preserving request method
-- `308` - Permanent redirect preserving request method
+An enum of the three redirect statuses worth using:
 
-### Client Error Responses (4xx)
+| Member      | Status | Behaviour                                        |
+| ----------- | ------ | ------------------------------------------------ |
+| `SeeOther`  | `303`  | Always turns the follow-up request into a `GET`  |
+| `Temporary` | `307`  | Preserves the method — a `POST` stays a `POST`   |
+| `Permanent` | `308`  | Preserves the method, and is cached as permanent |
 
-All error responses add `ok: false` to the data for type discrimination.
+Redirect after a successful `POST` with `303`. The default `307` replays the same method
+at the new location, so a browser that re-follows the redirect submits the form again;
+`303` forces the `GET` that the POST-Redirect-GET pattern depends on.
 
-#### `badRequest<T>(input: T, init?: Init)`
+Numeric literals work too — `{ status: 303 }` is the same as
+`{ status: redirect.Status.SeeOther }` — but the enum reads better at the call site.
 
-Returns a bad request response with status 400 and adds `ok: false` to the data.
+### Client error responses (4xx)
 
-**When to use:** Malformed request syntax, invalid request parameters, or missing required fields that prevent the server from understanding the request.
+Error helpers merge `ok: false` into the body. Their signature is identical to the success
+helpers; only the status differs.
 
-**Example:**
+#### `badRequest<T>(input: T, init?: Init): Response`
+
+`400`. The request itself is malformed — unparseable body, wrong shape, missing required
+field.
 
 ```typescript
-if (!request.headers.get("Content-Type")?.includes("application/json")) {
-	return badRequest({ error: "Request must be JSON" });
+if (!ctx.request.headers.get("Content-Type")?.includes("application/json")) {
+	return badRequest({ error: "Request body must be JSON" });
 }
-// Returns: { error: "Request must be JSON", ok: false }
+// 400 { error: "Request body must be JSON", ok: false }
 ```
 
-#### `unauthorized<T>(input: T, init?: Init)`
+#### `unauthorized<T>(input: T, init?: Init): Response`
 
-Returns an unauthorized response with status 401 and adds `ok: false`.
-
-**When to use:** User is not authenticated (no session, expired token, invalid credentials). The user needs to log in.
-
-**Example:**
+`401`. The caller is not authenticated. Send the `WWW-Authenticate` challenge alongside it
+when the endpoint takes a bearer token.
 
 ```typescript
-let session = await getSession(request);
-if (!session.userId) {
-	return unauthorized({ error: "Please log in to continue" });
-}
-// Returns: { error: "Please log in to continue", ok: false }
-```
-
-#### `paymentRequired<T>(input: T, init?: Init)`
-
-Returns a payment required response with status 402 and adds `ok: false`.
-
-**When to use:** User needs to pay or upgrade their subscription to access a feature or resource.
-
-**Example:**
-
-```typescript
-if (user.plan === "free" && usage.apiCalls >= 1000) {
-	return paymentRequired({ error: "Upgrade to Pro for unlimited API calls" });
-}
-// Returns: { error: "Upgrade to Pro for unlimited API calls", ok: false }
-```
-
-#### `forbidden<T>(input: T, init?: Init)`
-
-Returns a forbidden response with status 403 and adds `ok: false`.
-
-**When to use:** User is authenticated but lacks permission to access the resource (wrong role, not the owner, feature disabled for their account).
-
-**Example:**
-
-```typescript
-if (post.authorId !== session.userId && !user.isAdmin) {
-	return forbidden({ error: "You can only edit your own posts" });
-}
-// Returns: { error: "You can only edit your own posts", ok: false }
-```
-
-#### `notFound<T>(input: T, init?: Init)`
-
-Returns a not found response with status 404 and adds `ok: false`.
-
-**When to use:** Requested resource doesn't exist (invalid ID, deleted content, wrong URL).
-
-**Example:**
-
-```typescript
-let post = await db.posts.findUnique({ where: { id: postId } });
-if (!post) {
-	return notFound({ error: "Post not found" });
-}
-// Returns: { error: "Post not found", ok: false }
-```
-
-#### `methodNotAllowed<T>(input: T, init?: Init)`
-
-Returns a method not allowed response with status 405 and adds `ok: false`.
-
-**When to use:** HTTP method is not supported for the endpoint (trying to DELETE on a read-only resource, GET on a write-only endpoint).
-
-**Example:**
-
-```typescript
-if (request.method === "DELETE") {
-	return methodNotAllowed({ error: "Cannot delete system resources" });
-}
-// Returns: { error: "Cannot delete system resources", ok: false }
-```
-
-#### `notAcceptable<T>(input: T, init?: Init)`
-
-Returns a not acceptable response with status 406 and adds `ok: false`.
-
-**When to use:** Server cannot produce a response matching the Accept headers (requested format not supported, language not available).
-
-**Example:**
-
-```typescript
-let accept = request.headers.get("Accept");
-if (accept && !accept.includes("application/json")) {
-	return notAcceptable({ error: "Only JSON responses are supported" });
-}
-// Returns: { error: "Only JSON responses are supported", ok: false }
-```
-
-#### `conflict<T>(input: T, init?: Init)`
-
-Returns a conflict response with status 409 and adds `ok: false`.
-
-**When to use:** Request conflicts with current state (duplicate entry, concurrent edit conflict, trying to create something that already exists).
-
-**Example:**
-
-```typescript
-let existing = await db.users.findUnique({ where: { email } });
-if (existing) {
-	return conflict({ error: "A user with this email already exists" });
-}
-// Returns: { error: "A user with this email already exists", ok: false }
-```
-
-#### `gone<T>(input: T, init?: Init)`
-
-Returns a gone response with status 410 and adds `ok: false`.
-
-**When to use:** Resource existed but has been permanently deleted (better than 404 when you know it was intentionally removed, deprecated API endpoints).
-
-**Example:**
-
-```typescript
-if (post.deletedAt) {
-	return gone({ error: "This post has been permanently deleted" });
-}
-// Returns: { error: "This post has been permanently deleted", ok: false }
-```
-
-#### `preconditionFailed<T>(input: T, init?: Init)`
-
-Returns a precondition failed response with status 412 and adds `ok: false`.
-
-**When to use:** Conditional request headers (If-Match, If-Unmodified-Since) failed, typically for optimistic concurrency control.
-
-**Example:**
-
-```typescript
-let ifMatch = request.headers.get("If-Match");
-if (ifMatch && ifMatch !== post.etag) {
-	return preconditionFailed({ error: "Resource was modified, please refresh" });
-}
-// Returns: { error: "Resource was modified, please refresh", ok: false }
-```
-
-#### `requestEntityTooLarge<T>(input: T, init?: Init)`
-
-Returns a request entity too large response with status 413 and adds `ok: false`.
-
-**When to use:** Request body or uploaded file exceeds size limits.
-
-**Example:**
-
-```typescript
-let contentLength = Number(request.headers.get("Content-Length"));
-if (contentLength > 10 * 1024 * 1024) {
-	return requestEntityTooLarge({ error: "File exceeds 10MB limit", maxSize: "10MB" });
-}
-// Returns: { error: "File exceeds 10MB limit", maxSize: "10MB", ok: false }
-```
-
-#### `unsupportedMediaType<T>(input: T, init?: Init)`
-
-Returns an unsupported media type response with status 415 and adds `ok: false`.
-
-**When to use:** Request Content-Type is not supported (wrong file format, unexpected encoding).
-
-**Example:**
-
-```typescript
-let contentType = request.headers.get("Content-Type");
-if (!contentType?.includes("multipart/form-data")) {
-	return unsupportedMediaType({ error: "File uploads require multipart/form-data" });
-}
-// Returns: { error: "File uploads require multipart/form-data", ok: false }
-```
-
-#### `unprocessableEntity<T>(input: T, init?: Init)`
-
-Returns an unprocessable entity response with status 422 and adds `ok: false`.
-
-**When to use:** Request is well-formed but contains semantic errors (validation failures, business rule violations). Preferred over 400 for form validation errors.
-
-**Example:**
-
-```typescript
-let result = schema.safeParse(formData);
-if (!result.success) {
-	return unprocessableEntity({ errors: result.error.flatten().fieldErrors });
-}
-// Returns: { errors: { email: ["Invalid email"], ... }, ok: false }
-```
-
-#### `tooManyRequests<T>(input: T, init?: Init)`
-
-Returns a too many requests response with status 429 and adds `ok: false`.
-
-**When to use:** Rate limiting - user has sent too many requests in a given time window.
-
-**Example:**
-
-```typescript
-let rateLimit = await checkRateLimit(request);
-if (rateLimit.exceeded) {
-	return tooManyRequests({
-		error: "Rate limit exceeded",
-		retryAfter: rateLimit.resetIn,
-	});
-}
-// Returns: { error: "Rate limit exceeded", retryAfter: 60, ok: false }
-```
-
-### Server Error Responses (5xx)
-
-All server error responses add `ok: false` to the data for type discrimination.
-
-#### `internalServerError<T>(input: T, init?: Init)`
-
-Returns an internal server error response with status 500 and adds `ok: false`.
-
-**When to use:** Unexpected server error that isn't the client's fault. Use sparingly - prefer specific error types when possible.
-
-**Example:**
-
-```typescript
-try {
-	await processPayment(order);
-} catch (error) {
-	logger.error("Payment processing failed", { error, orderId: order.id });
-	return internalServerError({ error: "Payment processing failed" });
-}
-// Returns: { error: "Payment processing failed", ok: false }
-```
-
-#### `notImplemented<T>(input: T, init?: Init)`
-
-Returns a not implemented response with status 501 and adds `ok: false`.
-
-**When to use:** Server doesn't support the functionality required (feature not built yet, planned but unfinished endpoints).
-
-**Example:**
-
-```typescript
-export async function action() {
-	return notImplemented({ error: "CSV export coming soon" });
-}
-// Returns: { error: "CSV export coming soon", ok: false }
-```
-
-#### `badGateway<T>(input: T, init?: Init)`
-
-Returns a bad gateway response with status 502 and adds `ok: false`.
-
-**When to use:** An upstream/external service returned an invalid response (third-party API error, malformed response from microservice).
-
-**Example:**
-
-```typescript
-let response = await fetch(PAYMENT_API);
-if (!response.ok) {
-	return badGateway({ error: "Payment provider returned an error" });
-}
-// Returns: { error: "Payment provider returned an error", ok: false }
-```
-
-#### `serviceUnavailable<T>(input: T, init?: Init)`
-
-Returns a service unavailable response with status 503 and adds `ok: false`.
-
-**When to use:** Server is temporarily unavailable (maintenance mode, overloaded, dependencies down).
-
-**Example:**
-
-```typescript
-if (await isMaintenanceMode()) {
-	return serviceUnavailable({
-		error: "System is under maintenance",
-		retryAfter: 300,
-	});
-}
-// Returns: { error: "System is under maintenance", retryAfter: 300, ok: false }
-```
-
-#### `gatewayTimeout<T>(input: T, init?: Init)`
-
-Returns a gateway timeout response with status 504 and adds `ok: false`.
-
-**When to use:** An upstream/external service took too long to respond.
-
-**Example:**
-
-```typescript
-try {
-	await fetchWithTimeout(EXTERNAL_API, { timeout: 5000 });
-} catch (error) {
-	if (error.name === "TimeoutError") {
-		return gatewayTimeout({ error: "External service timed out" });
-	}
-	throw error;
-}
-// Returns: { error: "External service timed out", ok: false }
-```
-
-## Type Safety
-
-All response helpers preserve the type of the input and add the `ok` property:
-
-```typescript
-let response = ok({ message: "Success", data: [1, 2, 3] });
-// Type: { message: string, data: number[], ok: true }
-
-let error = badRequest({ error: "Invalid input", fields: ["email"] });
-// Type: { error: string, fields: string[], ok: false }
-
-let notFoundResponse = notFound({ message: "Not found" });
-// Type: { message: string, ok: false }
-```
-
-## Custom Headers
-
-You can pass additional headers or options:
-
-```typescript
-return ok(
-	{ data },
-	{
-		headers: {
-			"Cache-Control": "max-age=3600",
-		},
-	},
+return unauthorized(
+	{ error: "invalid_token" },
+	{ headers: { "WWW-Authenticate": `Bearer realm="${ISSUER}"` } },
 );
+```
 
-return redirect("/login", {
-	headers: {
-		"Set-Cookie": "session=; Max-Age=0",
-	},
-});
+#### `paymentRequired<T>(input: T, init?: Init): Response`
+
+`402`. The account needs to pay or upgrade before it can do this.
+
+#### `forbidden<T>(input: T, init?: Init): Response`
+
+`403`. The caller is authenticated but not allowed. Use this when they are known and
+denied; use `unauthorized` when they are unknown.
+
+#### `notFound<T>(input: T, init?: Init): Response`
+
+`404`. No such resource. Also the right answer when a resource exists but the caller has
+no business knowing it does.
+
+```typescript
+let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+if (!monitor) return notFound({ error: "Monitor not found" });
+```
+
+#### `methodNotAllowed<T>(input: T, init?: Init): Response`
+
+`405`. The path exists but not for this HTTP method. Pair it with an `Allow` header.
+
+#### `notAcceptable<T>(input: T, init?: Init): Response`
+
+`406`. Nothing the endpoint can produce satisfies the request's `Accept` header.
+
+#### `conflict<T>(input: T, init?: Init): Response`
+
+`409`. The request contradicts the current state — a duplicate record, a concurrent edit.
+
+#### `gone<T>(input: T, init?: Init): Response`
+
+`410`. The resource existed and was deliberately removed. Prefer it over `404` when the
+removal is known and permanent, such as a retired endpoint.
+
+#### `preconditionFailed<T>(input: T, init?: Init): Response`
+
+`412`. A conditional header (`If-Match`, `If-Unmodified-Since`) did not hold — the usual
+answer for a failed optimistic-concurrency check.
+
+#### `requestEntityTooLarge<T>(input: T, init?: Init): Response`
+
+`413`. The body or upload is over the size limit.
+
+#### `unsupportedMediaType<T>(input: T, init?: Init): Response`
+
+`415`. The request's `Content-Type` is not one the endpoint accepts.
+
+#### `unprocessableEntity<T>(input: T, init?: Init): Response`
+
+`422`. The request parsed fine but failed validation or a business rule. Prefer it over
+`400` for field-level errors, and return them keyed by field so the client can attach each
+message to its input.
+
+```typescript
+let result = await validate(ctx.request, CreateMonitorSchema);
+if (isFailure(result)) {
+	return unprocessableEntity({ issues: result.error.issues.map((issue) => issue.message) });
+}
+// 422 { issues: ["Invalid URL"], ok: false }
+```
+
+#### `tooManyRequests<T>(input: T, init?: Init): Response`
+
+`429`. The caller is rate limited. Send `Retry-After` so they know when to come back.
+
+```typescript
+return tooManyRequests({ error: "Rate limit exceeded" }, { headers: { "Retry-After": "60" } });
+```
+
+### Server error responses (5xx)
+
+These also merge `ok: false`.
+
+#### `internalServerError<T>(input: T, init?: Init): Response`
+
+`500`. Something broke that is not the caller's fault. Log the detail; return a message
+that gives an attacker nothing.
+
+#### `notImplemented<T>(input: T, init?: Init): Response`
+
+`501`. The endpoint exists but the functionality is not built.
+
+#### `badGateway<T>(input: T, init?: Init): Response`
+
+`502`. An upstream service answered with something unusable.
+
+#### `serviceUnavailable<T>(input: T, init?: Init): Response`
+
+`503`. Temporarily down — maintenance, an overloaded dependency, a tripped circuit
+breaker. Send `Retry-After` when there is a credible estimate.
+
+#### `gatewayTimeout<T>(input: T, init?: Init): Response`
+
+`504`. An upstream service took too long.
+
+### Types
+
+#### `Init`
+
+```typescript
+type Init = Omit<ResponseInit, "status" | "statusText">;
+```
+
+#### `redirect.Init`
+
+```typescript
+namespace redirect {
+	type Init = Omit<ResponseInit, "status" | "statusText"> & {
+		status?: redirect.Status;
+	};
+}
 ```
 
 ## Patterns
 
-### Discriminated Unions
+### Narrowing the parsed body
 
-The `ok` property makes responses work great with discriminated unions:
+The `ok` field is typed as a literal (`true` on success helpers, `false` on error ones),
+so a union of the bodies an endpoint can return narrows on a single check:
 
 ```typescript
-export async function action({ request }: Route.ActionArgs) {
-	let result = await processForm(request);
+type CreateMonitor = { monitor: Monitor; ok: true } | { error: string; ok: false };
 
-	if (!result.success) {
-		return badRequest({ errors: result.errors });
-	}
+let result: CreateMonitor = await response.json();
 
-	return ok({ data: result.data });
-}
-
-// In your component:
-export default function Component({ actionData }: Route.ComponentProps) {
-	if (actionData?.ok === false) {
-		// TypeScript knows this has an error
-		return <ErrorMessage errors={actionData.errors} />;
-	}
-
-	if (actionData?.ok === true) {
-		// TypeScript knows this has data
-		return <SuccessMessage data={actionData.data} />;
-	}
-
-	return <Form />;
-}
+if (result.ok) return result.monitor;
+throw new Error(result.error);
 ```
 
-### Client Action with Toast Notifications
+That check works regardless of which status the endpoint chose, which is what makes it
+worth merging the field at all — the client does not have to keep a list of which statuses
+are failures.
 
-A common pattern is using client actions to show toast notifications based on server action results:
+### Asserting on responses in tests
+
+Helpers return responses, so tests read the status and body directly instead of reaching
+into a framework-specific wrapper:
 
 ```typescript
-import { redirect } from "@pkg/response";
-import { href } from "react-router";
-import { toast } from "sonner";
+test("rejects a duplicate URL", async () => {
+	let response = await app.fetch(new Request(url, { method: "POST", body }));
 
-export async function clientAction({ serverAction, params }: Route.ClientActionArgs) {
-	let result = await serverAction();
-	if (result.ok) {
-		toast.success(result.message);
-		return redirect(href("/dashboard", params));
-	}
-	toast.error(result.message);
-	return result;
-}
+	expect(response.status).toBe(409);
+	expect(await response.json()).toEqual({ error: "That URL is already monitored", ok: false });
+});
+```
+
+### Caching a read
+
+`init` reaches the underlying `Response`, so cache headers ride along with the body:
+
+```typescript
+return ok({ status }, { headers: { "Cache-Control": "public, max-age=60" } });
+```
+
+### Post-redirect-get after a form submission
+
+```typescript
+await Monitor.create(db, input);
+return redirect(routes.monitors.index.href(), { status: redirect.Status.SeeOther });
 ```
 
 ## Related Packages
 
-- `@pkg/result` - Commonly used with response for error handling
-- `@pkg/validate` - Validation results often returned as badRequest
-- `@pkg/location` - Used for building redirect URLs
+- [`@pkg/location`](/packages/location) - path-only URL builder accepted by `redirect`
+- [`@pkg/result`](/packages/result) - Result type for the error handling that precedes an
+  error response
+- [`@pkg/validate`](/packages/validate) - validation failures that map onto
+  `unprocessableEntity`
 
 ## Tips
 
-1. Use 303 (SeeOther) after POST to prevent form resubmission
-2. Use 307/308 when you need to preserve the HTTP method
-3. All responses add `ok` property automatically for type discrimination
-4. Combine with @pkg/validate for consistent error responses
+1. **Pick the status, not the wrapper** - the helper name is the documentation; reserve
+   `internalServerError` for genuine bugs rather than using it as a catch-all.
+2. **`422` over `400` for validation** - `400` says the request was unreadable, `422` says
+   it was read and rejected.
+3. **`303` after a `POST`** - the default `307` preserves the method and can resubmit the
+   form; `303` is what makes post-redirect-get work.
+4. **Don't hand-merge `ok`** - the helpers add it; passing `ok` in `input` only fights the
+   spread that follows it.
+5. **`204` carries no body** - if there is anything to say, use `ok()` instead.
 
 ## Status Code Reference
 
-### Success (2xx)
+| Helper                  | Status | Body                      |
+| ----------------------- | ------ | ------------------------- |
+| `ok`                    | `200`  | `{ ...input, ok: true }`  |
+| `created`               | `201`  | `{ ...input, ok: true }`  |
+| `accepted`              | `202`  | `{ ...input, ok: true }`  |
+| `noContent`             | `204`  | `null`                    |
+| `redirect`              | `307`  | `null`, `Location` header |
+| `badRequest`            | `400`  | `{ ...input, ok: false }` |
+| `unauthorized`          | `401`  | `{ ...input, ok: false }` |
+| `paymentRequired`       | `402`  | `{ ...input, ok: false }` |
+| `forbidden`             | `403`  | `{ ...input, ok: false }` |
+| `notFound`              | `404`  | `{ ...input, ok: false }` |
+| `methodNotAllowed`      | `405`  | `{ ...input, ok: false }` |
+| `notAcceptable`         | `406`  | `{ ...input, ok: false }` |
+| `conflict`              | `409`  | `{ ...input, ok: false }` |
+| `gone`                  | `410`  | `{ ...input, ok: false }` |
+| `preconditionFailed`    | `412`  | `{ ...input, ok: false }` |
+| `requestEntityTooLarge` | `413`  | `{ ...input, ok: false }` |
+| `unsupportedMediaType`  | `415`  | `{ ...input, ok: false }` |
+| `unprocessableEntity`   | `422`  | `{ ...input, ok: false }` |
+| `tooManyRequests`       | `429`  | `{ ...input, ok: false }` |
+| `internalServerError`   | `500`  | `{ ...input, ok: false }` |
+| `notImplemented`        | `501`  | `{ ...input, ok: false }` |
+| `badGateway`            | `502`  | `{ ...input, ok: false }` |
+| `serviceUnavailable`    | `503`  | `{ ...input, ok: false }` |
+| `gatewayTimeout`        | `504`  | `{ ...input, ok: false }` |
 
-- `200` - OK (success)
-- `201` - Created (resource created)
-- `202` - Accepted (async processing)
-- `204` - No Content (empty response)
-
-### Redirects (3xx)
-
-- `303` - See Other (POST -> GET redirect)
-- `307` - Temporary Redirect (preserves method)
-- `308` - Permanent Redirect (preserves method)
-
-### Client Errors (4xx)
-
-- `400` - Bad Request (client error)
-- `401` - Unauthorized (authentication required)
-- `402` - Payment Required
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `405` - Method Not Allowed
-- `406` - Not Acceptable
-- `409` - Conflict
-- `410` - Gone
-- `412` - Precondition Failed
-- `413` - Request Entity Too Large
-- `415` - Unsupported Media Type
-- `422` - Unprocessable Entity (validation errors)
-- `429` - Too Many Requests (rate limiting)
-
-### Server Errors (5xx)
-
-- `500` - Internal Server Error
-- `501` - Not Implemented
-- `502` - Bad Gateway
-- `503` - Service Unavailable
-- `504` - Gateway Timeout
+`redirect` also accepts `303` (`redirect.Status.SeeOther`) and `308`
+(`redirect.Status.Permanent`); `307` is the default.
