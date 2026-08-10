@@ -37,10 +37,7 @@ bun dev                         # Run dev server
 bun build                       # Build for production
 bun db:local:migrate            # Apply migrations locally
 bun db:remote:migrate           # Apply migrations to production
-bun orm:generate                # Generate Drizzle migrations
-bun rr:typegen                  # Generate TypeScript types for React Router routes
 bun cf:typegen                  # Generate TypeScript types for Cloudflare Workers bindings
-bunx react-router routes --json # Extract React Router routes as JSON for AI agents
 ```
 
 ## Rules
@@ -54,7 +51,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST write using `bun:test`, never using external test runners like Jest or Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories
 - MUST use `oxfmt` for code formatting and `oxlint` for linting, never using other tools like Prettier or ESLint
-- MUST generate Drizzle migrations using `bun run orm:generate` and apply them using `bun run db:local:migrate` or `bun run db:remote:migrate`, never using Drizzle CLI directly
+- MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `wrangler d1 migrations` directly
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
 - MUST write an ADR for any significant architectural decisions, following [](./docs/guides/adr-writing.md) as guidelines

@@ -70,7 +70,6 @@ jobs:
             cp "$file" "${file%/.env.example}/.dev.vars"
           done
 
-          bun --filter '*' rr:typegen
           bun --filter '*' cf:typegen
 
       - name: Run ${{ matrix.name }}
