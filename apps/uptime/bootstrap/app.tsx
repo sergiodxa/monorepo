@@ -195,7 +195,7 @@ import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { attribution } from "~/app/http/middleware/attribution";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "~/app/http/middleware/logger";
+import logger from "@pkg/logger/middleware";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";

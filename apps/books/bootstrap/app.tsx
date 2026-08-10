@@ -29,7 +29,7 @@ import * as sample from "~/app/http/controllers/sample";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
-import logger from "~/app/http/middleware/logger";
+import logger from "@pkg/logger/middleware";
 import routes from "~/routes/web";
 
 /**

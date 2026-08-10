@@ -39,7 +39,7 @@ import logout from "~/app/http/controllers/logout";
 import notFound from "~/app/http/controllers/not-found";
 import onboardingCallback from "~/app/http/controllers/onboarding/callback";
 import onboardingIndex from "~/app/http/controllers/onboarding/index";
-import logger from "~/app/http/middleware/logger";
+import logger from "@pkg/logger/middleware";
 import render from "~/app/http/middleware/render";
 import requireTenantRole from "~/app/http/middleware/require-tenant-role";
 import session from "~/app/http/middleware/session";

@@ -7,86 +7,100 @@ Structured logging for Cloudflare Workers and other runtimes.
 This package provides three logging modes:
 
 - **Immediate logging (`Logger`)**: Each log call outputs directly to the console
-- **Batched logging (`BatchedLogger`)**: Accumulates all logs from a request and outputs them as a single entry when flushed
-- **Request logging (`RequestLogger`)**: Structured logging optimized for React Router HTTP requests with scoped logging for middleware, loaders, actions, and render phases
+- **Batched logging (`BatchedLogger`)**: Accumulates all logs from an execution context and outputs them as a single entry when flushed
+- **Request logging (`RequestLogger`)**: A request-scoped logger that groups events into named scopes (middleware, loaders, actions, render) and flushes them as one entry with request/response metadata
 
 Batched logging is designed for Cloudflare Workers to consolidate all logs from a single execution context (request, workflow, cron job) into one log entry. This works well with Cloudflare's logging system which automatically captures request metadata.
 
-Request logging provides parallel-safe scoped logging and rich context capture including request/response metadata, Cloudflare data, and user/billing information.
+Request logging builds on batched logging: each scope is its own batched logger, so parallel work can log independently without interleaving, and the whole request lands in the dashboard as a single searchable entry with Cloudflare, user, and billing context attached.
+
+### Entry points
+
+| Import                   | Exports                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `@pkg/logger`            | `Logger` (immediate), `logger` singleton, `BatchedLogger`, `RequestLogger`, `Log` |
+| `@pkg/logger/middleware` | `logger`, the request-logging middleware (also the default export)                |
+| `@pkg/logger/batched`    | `Logger` (batched)                                                                |
+| `@pkg/logger/request`    | `Logger` (request-scoped)                                                         |
+
+`BatchedLogger` and `RequestLogger` from the root are aliases of the `Logger` classes exported by the `/batched` and `/request` subpaths. Import from the root when you need more than one of them in the same file.
+
+The package has no runtime dependencies. `remix` is a devDependency only: the middleware imports `Middleware` with `import type`, so nothing from remix survives into the emitted code.
 
 ## Usage
 
-### Setting up the middleware
+### Immediate logging
 
-Create the middleware and getter in your app:
+For anything outside a request or job — service modules, bootstrap code, one-off scripts — use the exported singleton:
 
 ```typescript
-// app/middleware/logger.ts
-import { createBatchedLoggerMiddleware } from "@pkg/logger/batched";
+import { logger } from "@pkg/logger";
 
-export let [batchedLoggerMiddleware, getLogger] = createBatchedLoggerMiddleware();
+logger.info("app.started");
+logger.error("startup.failed", { reason: "missing config" });
 ```
 
-Register the middleware in your routes:
+### Batched logging
+
+For a self-contained unit of work with a known identifier — a queue message, a cron run, a workflow step:
 
 ```typescript
-// app/routes.ts
-import { batchedLoggerMiddleware } from "~/middleware/logger";
+import { BatchedLogger } from "@pkg/logger";
 
-export default [
-	batchedLoggerMiddleware,
-	// ... your routes
-];
+let log = new BatchedLogger("cron:daily-cleanup");
+
+log.info("cleanup.started");
+let deleted = await deleteExpiredSessions();
+log.info("cleanup.completed", { deleted });
+
+log.flush();
 ```
 
-### Creating a logger helper
+`flush()` is a no-op when nothing was logged, and picks `console.error` over `console.info` if any entry was an error.
 
-Create a helper function to access the logger from route context:
+### Request logging
+
+Add the middleware to your router and every handler logs through `ctx.logger` instead of the console:
 
 ```typescript
-// app/helpers/logger.ts
-import type { Route } from "./+types/root";
-import { getLogger } from "~/middleware/logger";
+// bootstrap/worker.ts
+import { logger } from "@pkg/logger/middleware";
 
-export function logger(context: Route.LoaderArgs["context"]) {
-	return getLogger(context);
-}
+let router = createRouter({ middleware: [logger] });
 ```
 
-### Using the logger in routes
+Register it as the outermost middleware so every later middleware and handler can reach it. It is also the module's default export, if you prefer `import logger from "@pkg/logger/middleware"`.
+
+Importing the middleware is also what gives you the type. The `declare module "remix/fetch-router"` augmentation that adds `logger` to `RequestContext` ships from the middleware module itself rather than an ambient `.d.ts`, because ambient declarations are not pulled in transitively — a consumer only picks up the type by importing the module it comes with.
+
+### Using scoped loggers
+
+Each scope returns a `BatchedLogger` of its own, so concurrent work never interleaves:
 
 ```typescript
-import type { Route } from "./+types/users";
-import { logger } from "~/helpers/logger";
+// In a middleware
+let log = ctx.logger.middleware("session");
+log.info("session.read", { subject: session.subject });
 
-export async function loader({ context, params }: Route.LoaderArgs) {
-	let log = logger(context);
+// In a read handler
+let log = ctx.logger.loader("/dashboard/tenants");
+log.info("tenants.loaded", { count: tenants.length });
 
-	log.info("user.fetch.started", { userId: params.id });
+// In a write handler
+let log = ctx.logger.action("/dashboard/tenants");
+log.error("tenant.create.failed", { error: result.error.message });
 
-	let user = await getUser(params.id);
+// Around rendering
+let log = ctx.logger.render;
+log.info("render.complete");
+```
 
-	log.info("user.fetch.completed", { userId: params.id, found: !!user });
+Attach request-wide context as you learn it, and it shows up at the top level of the flushed entry:
 
-	return { user };
-}
-
-export async function action({ request, context }: Route.ActionArgs) {
-	let log = logger(context);
-
-	let formData = await request.formData();
-	let email = formData.get("email");
-
-	log.info("user.update.started", { email });
-
-	try {
-		await updateUser(email);
-		log.info("user.update.completed", { email });
-	} catch (error) {
-		log.error("user.update.failed", { email, error: String(error) });
-		throw error;
-	}
-}
+```typescript
+ctx.logger.subject = { id: user.id, email: user.email };
+ctx.logger.profile = { role: membership.role, teamId: team.id };
+ctx.logger.billing = { polarId: customer.polarId, plan: subscription.plan };
 ```
 
 ## API
@@ -99,12 +113,11 @@ Singleton instance of `Logger` for immediate logging outside of request contexts
 import { logger } from "@pkg/logger";
 
 logger.info("app.started");
-logger.error("startup.failed", { reason: "missing config" });
 ```
 
-### `Logger`
+### `Logger` (immediate)
 
-Immediate logger that outputs each log call directly to the console.
+Immediate logger that outputs each log call directly to the console. Each call emits `{ ...payload, event, timestamp }`.
 
 ```typescript
 import { Logger } from "@pkg/logger";
@@ -117,7 +130,7 @@ log.error(event: string, payload?: Log.Payload): void
 
 ### `Logger` (batched)
 
-Batched logger that accumulates log entries and outputs them all at once when flushed.
+Available as `BatchedLogger` from `@pkg/logger` or `Logger` from `@pkg/logger/batched`. Accumulates log entries and outputs them all at once when flushed.
 
 ```typescript
 import { Logger } from "@pkg/logger/batched";
@@ -127,17 +140,13 @@ let log = Logger.fromRequest(request);
 
 // Or create with a custom identifier
 let log = new Logger("workflow:cleanup:abc123");
-
-log.info(event: string, payload?: Log.Payload): void
-log.error(event: string, payload?: Log.Payload): void
-log.flush(): void  // Outputs all accumulated logs and clears the buffer
 ```
 
 #### `Logger.fromRequest(request: Request): Logger`
 
-Factory method that creates a logger with identifier `"METHOD URL"` (e.g., `"POST https://example.com/api/users"`).
+Creates a logger with identifier `"METHOD URL"` (e.g. `"POST https://example.com/api/users"`).
 
-#### `constructor(identifier: string)`
+#### `new Logger(identifier: string)`
 
 Creates a logger with a custom identifier for non-HTTP contexts like workflows or cron jobs.
 
@@ -149,9 +158,25 @@ Adds an info-level log entry to the batch.
 
 Adds an error-level log entry to the batch.
 
+#### `get events(): Logger.Event[]`
+
+The accumulated entries, each flattened to `{ level, event, ...payload }`.
+
+#### `get hasEvents(): boolean`
+
+Whether anything has been logged yet.
+
+#### `get hasError(): boolean`
+
+Whether any accumulated entry is error-level.
+
+#### `toJSON(): Logger.Output`
+
+Returns `{ timestamp, events }`.
+
 #### `flush(): void`
 
-Outputs all accumulated logs as a single console call and clears the buffer. Uses `console.error` if any error is present, otherwise `console.info`.
+Outputs all accumulated logs as a single console call and clears the buffer. Does nothing when no events were recorded. Uses `console.error` if any error is present, otherwise `console.info`.
 
 ### `Logger.Event` (batched)
 
@@ -165,295 +190,12 @@ type Event = {
 };
 ```
 
-### `createBatchedLoggerMiddleware()`
+### `Logger` (request)
 
-Creates a React Router middleware that provides a `Logger` instance for each request.
-
-```typescript
-import { createBatchedLoggerMiddleware } from "@pkg/logger/batched";
-
-let [middleware, getter] = createBatchedLoggerMiddleware();
-```
-
-Returns a tuple of:
-
-- `middleware: MiddlewareFunction<Response>` - The middleware to add to your routes
-- `getter: (context) => Logger` - Function to retrieve the logger from context
-
-The middleware automatically flushes the logger after the handler completes (including on errors).
-
-### `Log` namespace
-
-Type definitions for logging:
-
-```typescript
-namespace Log {
-	type Payload = Record<string, unknown>;
-	type Level = "info" | "error";
-	type Entry = { level: Level; event: string; payload?: Payload };
-}
-```
-
-## Patterns
-
-### Middleware setup
-
-```typescript
-// app/middleware/logger.ts
-import { createBatchedLoggerMiddleware } from "@pkg/logger/batched";
-
-export let [batchedLoggerMiddleware, getLogger] = createBatchedLoggerMiddleware();
-
-// app/helpers/logger.ts
-import type { Route } from "./+types/root";
-import { getLogger } from "~/middleware/logger";
-
-export function logger(context: Route.LoaderArgs["context"]) {
-	return getLogger(context);
-}
-```
-
-### Action/loader logging
-
-```typescript
-export async function loader({ context, params }: Route.LoaderArgs) {
-	let log = logger(context);
-
-	log.info("resource.load", { resourceId: params.id });
-
-	let result = await fetchResource(params.id);
-
-	if (isFailure(result)) {
-		log.error("resource.load.failed", {
-			resourceId: params.id,
-			error: result.error.message,
-		});
-		throw new Response("Not found", { status: 404 });
-	}
-
-	return { resource: result.data };
-}
-```
-
-### Error logging with structured data
-
-```typescript
-export async function action({ request, context }: Route.ActionArgs) {
-	let log = logger(context);
-	let formData = await request.formData();
-
-	try {
-		let result = await processForm(formData);
-
-		if (isFailure(result)) {
-			log.error("form.validation.failed", {
-				errors: result.error.flatten(),
-			});
-			return { errors: result.error.flatten() };
-		}
-
-		log.info("form.submitted", { id: result.data.id });
-		return redirect(`/success/${result.data.id}`);
-	} catch (error) {
-		log.error("form.unexpected.error", {
-			message: error instanceof Error ? error.message : String(error),
-			stack: error instanceof Error ? error.stack : undefined,
-		});
-		throw error;
-	}
-}
-```
-
-## Related Packages
-
-- `@pkg/jobs` - Uses `BatchedLogger` for job execution logging
-- `@pkg/result` - Commonly used with logger for error tracking and control flow
-
-## Tips
-
-1. **Use batched logging in request contexts** - Consolidates all logs from a request into one entry, making it easier to trace request flow in Cloudflare's logging dashboard.
-
-2. **Use the singleton logger for non-request contexts** - For cron jobs, `entry.server.tsx` error handling, or other contexts without middleware, use the exported `logger` singleton.
-
-3. **Always include relevant context in log payloads** - Add `userId`, `routeName`, `resourceId`, or other identifiers to help with debugging and filtering logs.
-
-4. **The logger automatically flushes when middleware completes** - You don't need to manually call `flush()` when using the middleware; it handles this in the `finally` block.
-
-## Request Logger
-
-`Logger` from `@pkg/logger/request` is optimized for React Router HTTP requests with scoped logging for parallel-safe loader execution.
-
-### Creating a logger helper
-
-Create a helper function to access the logger from route context:
-
-```typescript
-// app/middleware/logger.ts
-import { Logger } from "@pkg/logger/request";
-import { getContext } from "./context-storage";
-
-export function logger(): Logger {
-	return Logger.getFromContext(getContext());
-}
-```
-
-### Setup in entry.worker.ts
-
-Initialize the logger before React Router processes the request:
-
-```typescript
-// entry.worker.ts
-import { Logger } from "@pkg/logger/request";
-import { createRequestHandler, RouterContextProvider } from "react-router";
-
-let handler: ReturnType<typeof createRequestHandler>;
-
-export default {
-	async fetch(request: Request) {
-		let build = await import("virtual:react-router/server-build");
-		if (!handler) handler = createRequestHandler(build, import.meta.env.MODE);
-
-		let context = new RouterContextProvider();
-		let log = new Logger(request);
-		context.set(Logger.context, log);
-
-		try {
-			let response = await handler(request, context);
-			log.response = response;
-			return response;
-		} catch (error) {
-			log.error("request.unhandled_error", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			throw error;
-		} finally {
-			log.flush();
-		}
-	},
-};
-```
-
-### Using scoped loggers
-
-#### In middleware
-
-```typescript
-export const middleware: Route.MiddlewareFunction[] = [
-	async ({ context }, next) => {
-		let log = logger().middleware("auth");
-		log.info("auth.start");
-
-		// Set user context
-		logger().subject = { id: user.id, email: user.email };
-		logger().profile = { role: membership.role, teamId: team.id };
-		logger().billing = { polarId: customer.polarId, plan: subscription.plan };
-
-		log.info("auth.complete");
-		return await next();
-	},
-];
-```
-
-#### In loaders (parallel-safe)
-
-```typescript
-export async function loader({ context }: Route.LoaderArgs) {
-	let log = logger().loader("$team");
-
-	log.info("team.loader.start", { teamId: team.id });
-	let memberships = await db.query.memberships.findMany({ ... });
-	log.info("team.loader.complete", { membershipCount: memberships.length });
-
-	return { memberships };
-}
-```
-
-#### In actions
-
-```typescript
-export async function action({ request }: Route.ActionArgs) {
-	let log = logger().action("$team.settings");
-
-	log.info("settings.update.start");
-	// ... handle form
-	log.info("settings.update.success");
-
-	return redirect("/settings");
-}
-```
-
-#### In entry.server.tsx
-
-```typescript
-import { logger } from "~/middleware/logger";
-
-export default async function handleRequest(..., routerContext) {
-	let log = logger().render;
-
-	log.info("render.start");
-
-	let stream = await renderToReadableStream(..., {
-		onError(error) {
-			log.error("render.error", { error: String(error) });
-		},
-	});
-
-	log.info("render.complete");
-
-	return new Response(stream, { status, headers });
-}
-```
-
-### Output format
-
-```
-GET https://example.com/app/team-1/monitors 200
-```
-
-```json
-{
-	"id": "abc123-DFW",
-	"timestamp": 123.45,
-	"duration": 145,
-	"request": {
-		"method": "GET",
-		"url": {
-			"protocol": "https:",
-			"hostname": "example.com",
-			"pathname": "/app/team-1/monitors",
-			"search": ""
-		},
-		"headers": { "user-agent": "Mozilla/5.0..." },
-		"cf": {
-			"colo": "DFW",
-			"country": "US",
-			"city": "Austin"
-		}
-	},
-	"response": { "status": 200, "headers": {} },
-	"subject": { "id": "user_123", "email": "..." },
-	"profile": { "role": "admin", "teamId": "team_456" },
-	"billing": { "polarId": "cust_abc", "plan": "pro" },
-	"middleware": {
-		"auth": [{ "level": "info", "event": "auth.complete" }]
-	},
-	"loaders": {
-		"$team": [{ "level": "info", "event": "team.loaded" }]
-	},
-	"render": [{ "level": "info", "event": "render.complete" }]
-}
-```
-
-### API
-
-#### `Logger` (request)
+Available as `RequestLogger` from `@pkg/logger` or `Logger` from `@pkg/logger/request`.
 
 ```typescript
 class Logger {
-	// Static context for React Router
-	static context: Context<Logger>;
-	static getFromContext(context: RouterContextProvider): Logger;
-
 	constructor(request: Request);
 
 	// Context setters
@@ -462,10 +204,10 @@ class Logger {
 	set billing(billing: Logger.Billing);
 	set response(response: Response);
 
-	// Scoped loggers (parallel-safe, returns BatchedLogger)
+	// Scoped loggers (each is an independent BatchedLogger)
 	middleware(name: string): BatchedLogger;
-	loader(routeId: string): BatchedLogger;
-	action(routeId: string): BatchedLogger;
+	loader(id: string): BatchedLogger;
+	action(id: string): BatchedLogger;
 	get render(): BatchedLogger;
 
 	// Unscoped logging (for catch blocks, edge cases)
@@ -479,7 +221,13 @@ class Logger {
 }
 ```
 
-Scoped loggers return `Logger` from `@pkg/logger/batched` (aliased as `BatchedLogger` when importing from `@pkg/logger`).
+The constructor captures the request method, URL, filtered headers, and Cloudflare `cf` properties, and starts a duration timer. The entry `id` is the `cf-ray` header when present, otherwise a random UUID.
+
+`middleware(name)`, `loader(id)`, and `action(id)` are get-or-create: calling them twice with the same key returns the same scoped logger, so a handler can grab its logger in several places without splitting the output. Only one action scope exists per request. `render` is a lazily created scope for work done while producing the response body.
+
+The scope names come from the phases a request goes through: `middleware` for anything in the middleware chain, `loader` for handlers that read, `action` for handlers that write, and `render` for response generation. The `id` you pass is free-form — apps in this repo pass the route path, e.g. `"/dashboard/tenants"`.
+
+`flush()` writes one console entry with `identifier` as the message and `toJSON()` as the payload, using `console.error` if any scope recorded an error. Unlike the batched logger it does not clear its buffer, so call it exactly once per request.
 
 #### Namespace types (request)
 
@@ -545,12 +293,191 @@ namespace Logger {
 }
 ```
 
-### Header filtering
+### `logger` (middleware)
+
+The request-logging middleware, from `@pkg/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/fetch-router`.
+
+```typescript
+import { logger } from "@pkg/logger/middleware";
+
+let router = createRouter({ middleware: [logger] });
+```
+
+For each request it:
+
+- Constructs `new Logger(ctx.request)` from `@pkg/logger/request` and assigns it to `ctx.logger`
+- On success, assigns the downstream response to `ctx.logger.response` and returns it
+- On a throw, logs `unhandled_error` with `error` (the message, or `String(error)` for non-`Error` throws) and `stack`, then re-throws
+- Calls `ctx.logger.flush()` in a `finally` block, so both paths flush exactly once
+
+The module also declares the `RequestContext` augmentation that types `ctx.logger`, so importing the middleware is what brings the type along with it.
+
+### `Log` namespace
+
+Type definitions shared by the immediate and batched loggers:
+
+```typescript
+namespace Log {
+	type Payload = Record<string, unknown>;
+	type Level = "info" | "error";
+	type Entry = { level: Level; event: string; payload?: Payload };
+}
+```
+
+## Output format
+
+A flushed request logger produces one console line plus one JSON payload:
+
+```
+GET https://example.com/app/team-1/monitors 200
+```
+
+```json
+{
+	"id": "abc123-DFW",
+	"timestamp": 123.45,
+	"duration": 145,
+	"request": {
+		"method": "GET",
+		"url": {
+			"protocol": "https:",
+			"hostname": "example.com",
+			"pathname": "/app/team-1/monitors",
+			"search": ""
+		},
+		"headers": { "user-agent": "Mozilla/5.0..." },
+		"cf": {
+			"colo": "DFW",
+			"country": "US",
+			"city": "Austin"
+		}
+	},
+	"response": { "status": 200, "headers": {} },
+	"subject": { "id": "user_123", "email": "..." },
+	"profile": { "role": "admin", "teamId": "team_456" },
+	"billing": { "polarId": "cust_abc", "plan": "pro" },
+	"middleware": {
+		"session": [{ "level": "info", "event": "session.read" }]
+	},
+	"loaders": {
+		"/app/team-1/monitors": [{ "level": "info", "event": "monitors.loaded" }]
+	},
+	"render": [{ "level": "info", "event": "render.complete" }]
+}
+```
+
+Empty scopes are omitted, and `request.cf` is dropped when the request has no Cloudflare properties (local runs, tests).
+
+## Patterns
+
+### Request middleware
+
+Apps that serve HTTP put `logger` from `@pkg/logger/middleware` at the head of the router's middleware stack and log through `ctx.logger` from there on. Construct a `Logger` from `@pkg/logger/request` directly only when you are outside a router — a Durable Object, a custom `fetch` handler — and then you own the `response` assignment and the `flush()` in a `finally` yourself.
+
+### Handler logging
+
+```typescript
+async function handler(ctx: RequestContext) {
+	let log = ctx.logger.loader("/monitors/:id");
+
+	log.info("monitor.load", { monitorId: ctx.params.id });
+
+	let result = await fetchMonitor(ctx.params.id);
+
+	if (isFailure(result)) {
+		log.error("monitor.load.failed", {
+			monitorId: ctx.params.id,
+			error: result.error.message,
+		});
+		throw new Response("Not found", { status: 404 });
+	}
+
+	return ctx.render(<Monitor monitor={result.data} />);
+}
+```
+
+### Error logging with structured data
+
+```typescript
+async function handler(ctx: RequestContext) {
+	let log = ctx.logger.action("/settings");
+	let formData = await ctx.request.formData();
+
+	try {
+		let result = await processForm(formData);
+
+		if (isFailure(result)) {
+			log.error("form.validation.failed", { errors: result.error.flatten() });
+			return ctx.render(<Settings errors={result.error.flatten()} />);
+		}
+
+		log.info("form.submitted", { id: result.data.id });
+		return ctx.redirect(`/success/${result.data.id}`);
+	} catch (error) {
+		log.error("form.unexpected.error", {
+			message: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+		});
+		throw error;
+	}
+}
+```
+
+### Background jobs
+
+`@pkg/jobs` constructs a `BatchedLogger` per job, named after the job id, and flushes it when the job settles. Inside a job, log through `this.logger`:
+
+```typescript
+export class CleanupJob extends Job {
+	async perform() {
+		this.logger.info("cleanup.started");
+		let deleted = await deleteExpiredSessions();
+		this.logger.info("cleanup.completed", { deleted });
+	}
+}
+```
+
+### Testing
+
+Handlers and jobs that take a logger can be tested with a real `BatchedLogger` — nothing is written to the console until `flush()` is called, and `events` exposes what was recorded:
+
+```typescript
+import { BatchedLogger } from "@pkg/logger";
+
+let logger = new BatchedLogger("test");
+
+await performWork({ logger });
+
+expect(logger.events).toContainEqual({ level: "info", event: "work.completed" });
+```
+
+## Header filtering
+
+The request logger records only non-sensitive headers.
 
 **Included request headers**: `content-type`, `accept`, `accept-language`, `accept-encoding`, `user-agent`, `referer`, `origin`, `x-forwarded-for`, `x-real-ip`, `x-forwarded-proto`, `x-forwarded-host`, `x-request-id`, `x-correlation-id`
 
 **Excluded request headers**: `authorization`, `cookie`, `x-api-key`, `x-auth-token`, and any containing `secret`, `token`, `key`, `password`, `credential`
 
-**Included response headers**: `content-type`, `content-length`, `content-encoding`, `cache-control`, `etag`, `last-modified`, `x-request-id`, `cf-ray`, `server-timing`
+**Included response headers**: `content-type`, `content-length`, `content-encoding`, `cache-control`, `etag`, `last-modified`, `location`, `x-request-id`, `cf-ray`, `server-timing`
 
-**Excluded response headers**: `set-cookie`
+**Excluded response headers**: `set-cookie` — the value carries session data, but the names alone are what you need to debug session and auth issues, so they are surfaced separately as `set-cookie-names`.
+
+## Related Packages
+
+- [`@pkg/jobs`](/packages/jobs) - Constructs a `BatchedLogger` per job execution
+- [`@pkg/result`](/packages/result) - Result type commonly paired with the logger for error tracking and control flow
+
+## Tips
+
+1. **Use the middleware in HTTP contexts** - `@pkg/logger/middleware` consolidates every scope of a request into one entry, making it easy to trace a request in Cloudflare's logging dashboard.
+
+2. **Use the singleton logger for module-level code** - Service modules and bootstrap code have no request or job context to log through; import `logger` from `@pkg/logger` there.
+
+3. **Name scopes after the thing doing the work** - A middleware name or a route path makes the flushed entry readable; a generic name makes every request look the same.
+
+4. **Always include relevant context in log payloads** - Add `userId`, `teamId`, `resourceId`, or other identifiers to help with debugging and filtering logs.
+
+5. **Flush in a `finally` block** - The middleware already does this for requests; if you flush a logger yourself, do the same, since errors are the logs you most want and flushing outside a `finally` loses them exactly when something throws.
+
+6. **Never log credentials** - Header filtering protects the request metadata, not your payloads. Tokens, authorization codes, client secrets, and password material must never reach a log payload.

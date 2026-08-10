@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
-import { RouterContextProvider } from "react-router";
-
 import { Logger } from "./request-logger";
 
 describe(Logger.name, () => {
@@ -571,45 +569,5 @@ describe(Logger.name, () => {
 				expect.any(Object),
 			);
 		});
-	});
-});
-
-describe("Logger.context", () => {
-	test("is a React Router context", () => {
-		expect(Logger.context).toBeDefined();
-	});
-});
-
-describe("Logger.getFromContext", () => {
-	test("retrieves Logger from context", () => {
-		let context = new RouterContextProvider();
-		let request = new Request("https://example.com/test");
-		let logger = new Logger(request);
-
-		context.set(Logger.context, logger);
-
-		let retrieved = Logger.getFromContext(context);
-		expect(retrieved).toBe(logger);
-	});
-
-	test("throws ReferenceError if Logger not in context", () => {
-		let context = new RouterContextProvider();
-
-		// React Router's context.get throws "No value found for context" when key doesn't exist
-		expect(() => Logger.getFromContext(context)).toThrow();
-	});
-
-	test("works with readonly context", () => {
-		let context = new RouterContextProvider();
-		let request = new Request("https://example.com/test");
-		let logger = new Logger(request);
-
-		context.set(Logger.context, logger);
-
-		// Cast to readonly to simulate what's passed to loaders/actions
-		let readonlyContext = context as Readonly<RouterContextProvider>;
-		let retrieved = Logger.getFromContext(readonlyContext);
-
-		expect(retrieved).toBe(logger);
 	});
 });

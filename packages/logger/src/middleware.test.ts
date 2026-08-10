@@ -1,116 +1,100 @@
+/**
+ * Unit tests for the request-logging middleware: verifies it attaches a `Logger`
+ * to the context before the downstream handler runs, flushes exactly once on the
+ * success path, and on the error path logs an `unhandled_error` event (deriving
+ * the message from both `Error` and non-`Error` throws) before re-throwing and
+ * still flushing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
-import { RouterContextProvider } from "react-router";
+import { RequestContext } from "remix/fetch-router";
 
-import { Logger } from "./batched-logger";
-import { createBatchedLoggerMiddleware } from "./middleware";
+import logger from "./middleware";
+import { Logger } from "./request-logger";
 
-describe(createBatchedLoggerMiddleware.name, () => {
+describe("logger middleware", () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
-	let dateNowSpy: ReturnType<typeof spyOn>;
-
-	let testRequest = new Request("https://example.com/test");
 
 	beforeEach(() => {
 		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
 		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
-		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
 	});
 
 	afterEach(() => {
 		consoleInfoSpy.mockRestore();
 		consoleErrorSpy.mockRestore();
-		dateNowSpy.mockRestore();
 	});
 
-	test("creates a Logger and stores it in context", async () => {
-		let [middleware, getLogger] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
-		let capturedLogger: Logger | undefined;
+	function createContext(url = "https://example.com/test") {
+		return new RequestContext(new Request(url));
+	}
 
-		await middleware(
-			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
-			async () => {
-				capturedLogger = getLogger(context);
-				return new Response("OK");
-			},
-		);
+	test("attaches a Logger to the context before calling next", async () => {
+		let ctx = createContext();
+		let seen: Logger | undefined;
 
-		expect(capturedLogger).toBeInstanceOf(Logger);
+		await logger(ctx, async () => {
+			seen = ctx.logger;
+			return new Response("ok");
+		});
+
+		expect(seen).toBeInstanceOf(Logger);
 	});
 
-	test("flushes logger after handler completes", async () => {
-		let [middleware, getLogger] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
+	test("returns the downstream response unchanged and flushes once on success", async () => {
+		let ctx = createContext();
 
-		await middleware(
-			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
-			async () => {
-				let logger = getLogger(context);
-				logger.info("test_event");
-				return new Response("OK");
-			},
-		);
+		let response = await logger(ctx, async () => new Response("ok", { status: 201 }));
 
+		expect(response.status).toBe(201);
+		expect(await response.text()).toBe("ok");
 		expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+		expect(consoleErrorSpy).not.toHaveBeenCalled();
 	});
 
-	test("flushes logger even if handler throws", async () => {
-		let [middleware, getLogger] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
+	test("logs unhandled_error with the error message and stack, then re-throws", async () => {
+		let ctx = createContext();
+		let error = new Error("boom");
 
-		try {
-			await middleware(
-				{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
-				async () => {
-					let logger = getLogger(context);
-					logger.error("error_before_throw");
-					throw new Error("Handler error");
-				},
-			);
-		} catch {
-			// Expected
-		}
+		await expect(
+			logger(ctx, async () => {
+				throw error;
+			}),
+		).rejects.toBe(error);
 
 		expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+		expect(consoleInfoSpy).not.toHaveBeenCalled();
+
+		let [, output] = consoleErrorSpy.mock.calls[0] as [
+			string,
+			{ events?: Array<Record<string, unknown>> },
+		];
+		expect(output.events?.[0]?.event).toBe("unhandled_error");
+		expect(output.events?.[0]?.error).toBe("boom");
+		expect(typeof output.events?.[0]?.stack).toBe("string");
 	});
 
-	test("returns the response from the handler", async () => {
-		let [middleware] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
+	test("stringifies a non-Error throw instead of reading .message/.stack, and still flushes", async () => {
+		let ctx = createContext();
 
-		let response = await middleware(
-			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
-			async () => {
-				return new Response("Test body", { status: 201 });
-			},
-		);
+		await expect(
+			logger(ctx, async () => {
+				throw "not an error object";
+			}),
+		).rejects.toBe("not an error object");
 
-		expect(response).toBeInstanceOf(Response);
-		expect((response as Response).status).toBe(201);
-		expect(await (response as Response).text()).toBe("Test body");
-	});
+		expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 
-	test("getter retrieves the Logger from context", async () => {
-		let [middleware, getLogger] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
-
-		await middleware(
-			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
-			async () => {
-				let logger = getLogger(context);
-				expect(logger).toBeInstanceOf(Logger);
-				return new Response("OK");
-			},
-		);
-	});
-
-	test("getter throws error if logger middleware was not used", () => {
-		let [, getLogger] = createBatchedLoggerMiddleware();
-		let context = new RouterContextProvider();
-
-		// React Router's context.get throws "No value found for context" when key doesn't exist
-		expect(() => getLogger(context)).toThrow();
+		let [, output] = consoleErrorSpy.mock.calls[0] as [
+			string,
+			{ events?: Array<Record<string, unknown>> },
+		];
+		expect(output.events?.[0]?.error).toBe("not an error object");
+		expect(output.events?.[0]?.stack).toBeUndefined();
 	});
 });

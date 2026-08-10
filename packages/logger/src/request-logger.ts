@@ -1,7 +1,4 @@
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types";
-import type { RouterContextProvider } from "react-router";
-
-import { createContext } from "react-router";
 
 import { Logger as BatchedLogger } from "./batched-logger";
 
@@ -185,25 +182,6 @@ function extractCfInfo(
  * Organizes logs by lifecycle phase (middleware, loaders, actions, render).
  */
 export class Logger {
-	/**
-	 * React Router context for storing the Logger instance.
-	 */
-	static context = createContext<Logger>();
-
-	/**
-	 * Retrieves the Logger instance from the React Router context.
-	 * Must be called within a request that has the Logger set.
-	 *
-	 * @throws ReferenceError if Logger is not found in context
-	 */
-	static getFromContext(context: RouterContextProvider | Readonly<RouterContextProvider>): Logger {
-		let logger = context.get(Logger.context);
-		if (logger) return logger;
-		throw new ReferenceError(
-			"Failed to find Logger in context. Did you forget to set it in entry.worker.ts?",
-		);
-	}
-
 	#id: string;
 	#url: URL;
 	#startTime: number;

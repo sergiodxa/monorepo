@@ -36,7 +36,7 @@ import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "~/app/http/middleware/logger";
+import logger from "@pkg/logger/middleware";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { monitors, teamDomains, teams } from "~/database/schema";

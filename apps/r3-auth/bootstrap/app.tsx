@@ -58,7 +58,7 @@ import jwks from "~/app/http/controllers/well-known/jwks";
 import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-authorization-server";
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import i18n from "~/app/http/middleware/i18n";
-import logger from "~/app/http/middleware/logger";
+import logger from "@pkg/logger/middleware";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { MailTransport } from "~/app/services/mail-transport";
 import routes from "~/routes/web";
