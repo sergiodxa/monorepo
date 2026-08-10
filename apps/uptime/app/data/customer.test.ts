@@ -30,7 +30,6 @@ type FakePolarClient = Pick<
 	| "listSubscriptions"
 	| "listActiveSubscriptions"
 	| "revokeSubscription"
-	| "getMeterUsage"
 >;
 
 /** Builds a fake `PolarClient` that throws for any method not explicitly overridden. */
@@ -50,7 +49,6 @@ function fakePolar(overrides: Partial<FakePolarClient>): PolarClient {
 		listSubscriptions: notImplemented("listSubscriptions"),
 		listActiveSubscriptions: notImplemented("listActiveSubscriptions"),
 		revokeSubscription: notImplemented("revokeSubscription"),
-		getMeterUsage: notImplemented("getMeterUsage"),
 		...overrides,
 	};
 
@@ -132,49 +130,6 @@ describe("Customer.findOrCreate", () => {
 		let customer = await Customer.findOrCreate(polar, idToken);
 		expect(customer).toEqual(created);
 		expect(createCalls).toEqual([{ email: "user@example.com", name: "User One" }]);
-	});
-});
-
-describe("Customer.getUsagePerMonth", () => {
-	test("queries the ping meter for the owner, scoped to the team, over the full calendar month", async () => {
-		let calls: Array<{
-			externalCustomerId: string;
-			meterId: string;
-			range: { start: Date; end: Date };
-			metadata: Record<string, string> | undefined;
-		}> = [];
-		let polar = fakePolar({
-			getMeterUsage: async (externalCustomerId, meterId, range, metadata) => {
-				calls.push({ externalCustomerId, meterId, range, metadata });
-				return 128;
-			},
-		});
-
-		let usage = await Customer.getUsagePerMonth(
-			polar,
-			"owner-1",
-			"team-1",
-			new Date("2026-07-15T12:00:00.000Z"),
-		);
-
-		expect(usage).toBe(128);
-		expect(calls).toHaveLength(1);
-		expect(calls[0]?.externalCustomerId).toBe("owner-1");
-		expect(calls[0]?.metadata).toEqual({ teamId: "team-1" });
-		expect(calls[0]?.range.start.toISOString()).toBe("2026-07-01T00:00:00.000Z");
-		expect(calls[0]?.range.end.toISOString()).toBe("2026-07-31T23:59:59.999Z");
-	});
-
-	test("propagates errors so callers can distinguish 'no usage' from 'unavailable'", async () => {
-		let polar = fakePolar({
-			getMeterUsage: async () => {
-				throw new Error("Polar is down");
-			},
-		});
-
-		await expect(
-			Customer.getUsagePerMonth(polar, "owner-1", "team-1", new Date("2026-07-15")),
-		).rejects.toThrow("Polar is down");
 	});
 });
 

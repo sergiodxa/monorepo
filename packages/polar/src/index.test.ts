@@ -59,7 +59,6 @@ let ingestImpl: () => unknown = () => ({});
 let getExternalImpl: () => unknown = () => ({ id: "cus_1" });
 let listCustomersImpl: () => unknown[] = () => [{ id: "cus_1" }];
 let subscriptionsListImpl: () => unknown[][] = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
-let meterQuantitiesImpl: () => unknown = () => ({ quantities: [], total: 42 });
 let discountsListImpl: () => unknown[][] = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
 let ordersListImpl: () => unknown[][] = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 
@@ -157,12 +156,6 @@ mock.module("@polar-sh/sdk", () => ({
 			ingest: async (arg: unknown) => {
 				record("events.ingest", arg);
 				return ingestImpl();
-			},
-		};
-		meters = {
-			quantities: async (arg: unknown) => {
-				record("meters.quantities", arg);
-				return meterQuantitiesImpl();
 			},
 		};
 	},
@@ -283,7 +276,6 @@ afterEach(() => {
 	getExternalImpl = () => ({ id: "cus_1" });
 	listCustomersImpl = () => [{ id: "cus_1" }];
 	subscriptionsListImpl = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
-	meterQuantitiesImpl = () => ({ quantities: [], total: 42 });
 	discountsListImpl = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
 	ordersListImpl = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 });
@@ -496,69 +488,6 @@ describe("PolarClient", () => {
 
 			expect<Partial<Subscription>[]>(subscriptions).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
 			expect(calls["subscriptions.list"]).toEqual([{ productId: "prod_1", active: true }]);
-		});
-	});
-
-	describe("getMeterUsage", () => {
-		test("queries the meter by external id, date range, and metadata, returning the total", async () => {
-			meterQuantitiesImpl = () => ({
-				quantities: [{ timestamp: "2026-07-01", quantity: 42 }],
-				total: 42,
-			});
-			let polar = new PolarClient({ accessToken: "t" });
-			let start = new Date("2026-07-01T00:00:00.000Z");
-			let end = new Date("2026-07-31T23:59:59.999Z");
-
-			let total = await polar.getMeterUsage(
-				"ext_1",
-				"meter_1",
-				{ start, end },
-				{ teamId: "team_1" },
-			);
-
-			expect(total).toBe(42);
-			expect(calls["meters.quantities"]).toEqual([
-				{
-					externalCustomerId: "ext_1",
-					startTimestamp: start,
-					endTimestamp: end,
-					interval: "month",
-					id: "meter_1",
-					metadata: { teamId: "team_1" },
-				},
-			]);
-		});
-
-		test("defaults metadata to an empty object", async () => {
-			let polar = new PolarClient({ accessToken: "t" });
-			let start = new Date("2026-07-01T00:00:00.000Z");
-			let end = new Date("2026-07-31T23:59:59.999Z");
-
-			await polar.getMeterUsage("ext_1", "meter_1", { start, end });
-
-			expect(calls["meters.quantities"]).toEqual([
-				{
-					externalCustomerId: "ext_1",
-					startTimestamp: start,
-					endTimestamp: end,
-					interval: "month",
-					id: "meter_1",
-					metadata: {},
-				},
-			]);
-		});
-
-		test("throws when the request fails", async () => {
-			meterQuantitiesImpl = () => {
-				throw new Error("network error");
-			};
-			let polar = new PolarClient({ accessToken: "t" });
-			let start = new Date("2026-07-01T00:00:00.000Z");
-			let end = new Date("2026-07-31T23:59:59.999Z");
-
-			await expect(polar.getMeterUsage("ext_1", "meter_1", { start, end })).rejects.toThrow(
-				"network error",
-			);
 		});
 	});
 

@@ -4,11 +4,10 @@
  * cron-job ping it receives, an ad-hoc `POST /api/v1/ping` — is one ping against the
  * allowance `app/lib/pricing.ts` describes, and each one ingests exactly one event here.
  *
- * The meter id and the event name live together on purpose: for a long time this app
- * queried the meter (the dashboard and monitor usage cards both do) while nothing fed it,
- * so every team's usage read zero and metered usage was never charged. Keeping "what the
- * meter is" next to "what fills it" is what makes that state visible in one file instead
- * of inferable from its absence in several.
+ * The meter id and the event name live together on purpose: for a long time the meter was
+ * queried while nothing fed it, so every team's usage read zero and metered usage was
+ * never charged. Keeping "what the meter is" next to "what fills it" is what makes that
+ * state visible in one file instead of inferable from its absence in several.
  *
  * One event per ping, unlike `app/jobs/report-costs.ts`, which deliberately rolls
  * infrastructure cost up to one event per team per day. Cost is a figure nobody reads
@@ -27,8 +26,8 @@ import { logger } from "@pkg/logger";
 import type { PingType } from "~/app/services/analytics";
 
 /**
- * The Polar meter tracking ingested `ping` usage events, and the meter the usage cards in
- * `app/data/customer.ts` query.
+ * The Polar meter tracking ingested `ping` usage events, and the meter the customer's
+ * metered charge is computed from.
  */
 export const PING_METER_ID = "22fabd9b-8b03-4cc2-8981-230717267cd5";
 
@@ -68,11 +67,13 @@ export interface BillablePing {
  * chunks them into as few requests as Polar accepts, so a sweep that checked eighty
  * monitors costs one subrequest instead of eighty.
  *
- * The metadata keys are load-bearing rather than decorative. `Customer.getUsagePerMonth`
- * filters the meter by `teamId` and `getUsagePerMonthForMonitor` by `monitorId`, so a
- * missing key doesn't lose the event, it hides it from the card that should show it. An
- * ad-hoc ping deliberately carries no `monitorId`: it counts toward its team's total and
- * belongs on no monitor's card.
+ * The metadata keys are load-bearing rather than decorative. Nothing in this app reads the
+ * meter back any more — the usage cards count checks from local history — but the meter is
+ * still what the customer is billed from, and `teamId`/`monitorId` are what make a charge
+ * attributable to a team and a monitor when a bill is disputed or inspected in Polar. A
+ * missing key doesn't lose the event, it makes that event impossible to account for. An
+ * ad-hoc ping deliberately carries no `monitorId`: it is billed to its team and belongs to
+ * no monitor.
  *
  * @param polar The billing client.
  * @param pings The pings to bill. An empty array is a no-op and makes no request.

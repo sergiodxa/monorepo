@@ -13,7 +13,6 @@ import type { PolarClient } from "@pkg/polar";
 import type IdToken from "~/app/auth/value-objects/id-token";
 
 import { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
-import { PING_METER_ID } from "~/app/services/ping-meter";
 
 export default class Customer {
 	/**
@@ -29,34 +28,6 @@ export default class Customer {
 		if (customer.externalId) return customer;
 
 		return await polar.updateCustomer(customer.id, { externalId: idToken.subject });
-	}
-
-	/**
-	 * The team's Polar-billed `ping` usage for the calendar month containing `date`,
-	 * scoped to `teamId` via the meter's ingested metadata (see
-	 * `~/app/services/ping-meter.ts` for where usage is ingested).
-	 * Throws when the request fails or the owner has no Polar customer — callers on
-	 * a billing dashboard should treat that as "usage unavailable" rather than "0".
-	 */
-	static async getUsagePerMonth(polar: PolarClient, ownerId: string, teamId: string, date: Date) {
-		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-		return await polar.getMeterUsage(ownerId, PING_METER_ID, { start, end }, { teamId });
-	}
-
-	/**
-	 * The same monthly `ping` usage as {@link getUsagePerMonth}, scoped down further to
-	 * one monitor's own ingested metadata, for a monitor detail page's usage stat.
-	 */
-	static async getUsagePerMonthForMonitor(
-		polar: PolarClient,
-		ownerId: string,
-		monitorId: string,
-		date: Date,
-	) {
-		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-		return await polar.getMeterUsage(ownerId, PING_METER_ID, { start, end }, { monitorId });
 	}
 
 	/** Creates a hosted Polar checkout session for the team owner to subscribe. */

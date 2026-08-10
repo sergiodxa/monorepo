@@ -3,10 +3,11 @@
  * to a team, enqueuing a subscription-gated on-demand check, the claim the `scheduled`
  * handler runs every minute to take the monitors that are due for a check, the write that
  * caches a completed check's status back onto the monitor row,
- * and the two monthly ping-consumption figures the dashboard's usage card shows side
- * by side across every monitor type (HTTP, DNS, TCP, cron): the pings already
- * consumed, counted from the daily rollup plus the days it hasn't reached yet, and
- * the consumption the team's current intervals project over the whole month.
+ * and the two monthly ping-consumption figures the usage cards show side by side: the
+ * pings already consumed, counted from the daily rollup plus the days it hasn't
+ * reached yet, and the consumption current intervals project over the whole month —
+ * each available team-wide across every monitor type (HTTP, DNS, TCP, cron) and
+ * scoped to a single HTTP monitor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,11 +41,11 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * How many recent days {@link Monitor.countConsumedPingsByTeam} counts from the raw
- * result tables instead of the daily rollup: today plus yesterday, so the count holds
- * whether or not the 01:00 UTC aggregation job has run. Must stay well below
- * `CleanJob`'s 7-day `monitor_results` retention, which is what keeps those rows
- * around to be counted.
+ * How many recent days {@link Monitor.countConsumedPingsByTeam} and
+ * {@link Monitor.countConsumedPingsByMonitor} count from the raw result tables instead
+ * of the daily rollup: today plus yesterday, so the count holds whether or not the
+ * 01:00 UTC aggregation job has run. Must stay well below `CleanJob`'s 7-day
+ * `monitor_results` retention, which is what keeps those rows around to be counted.
  */
 const RAW_PING_WINDOW_DAYS = 2;
 
@@ -409,6 +410,60 @@ export default class Monitor {
 				...rawScope,
 				...rawScope,
 			],
+		);
+
+		let [row] = (result.rows ?? []) as unknown as Array<{ consumed: number }>;
+		return row?.consumed ?? 0;
+	}
+
+	/**
+	 * Counts one HTTP monitor's pings actually consumed during the calendar month
+	 * containing `date`, the single-monitor counterpart of
+	 * {@link countConsumedPingsByTeam} and read the same two stores in the same
+	 * non-overlapping windows: `monitor_daily_stats.total_checks` for the earlier part
+	 * of the month, and raw `monitor_results` rows for the
+	 * {@link RAW_PING_WINDOW_DAYS} most recent days the rollup hasn't reached yet.
+	 *
+	 * This is the app's own count of checks it recorded, not the figure the customer is
+	 * billed for: billing is settled from the ping events ingested into the billing
+	 * meter, and the two can diverge whenever an event was ingested without a check row
+	 * landing here, or the reverse.
+	 *
+	 * It undercounts in one known case, inherited from the same retention caveat: a day
+	 * the aggregation job failed for is missing from the rollup, and once `CleanJob` has
+	 * purged that day's `monitor_results` rows (7-day retention) nothing is left to
+	 * count it from. Overlapping the windows to compensate would double count, which is
+	 * worse.
+	 *
+	 * Returns 0 — never `null` — for a monitor with no checks in the month, since the
+	 * card renders a real zero differently from an unavailable figure.
+	 */
+	static async countConsumedPingsByMonitor(
+		db: Database,
+		monitorId: string,
+		date: Date,
+	): Promise<number> {
+		let monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+		let monthEnd = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999);
+
+		let dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * MS_PER_DAY);
+
+		/**
+		 * The rollup half ends the day before the raw half begins. Early in the month
+		 * that lands in the previous month, leaving `BETWEEN` an empty range — correct,
+		 * since the raw window already covers everything the month contains.
+		 */
+		let rollupFrom = utcDate(monthStart);
+		let rollupTo = utcDate(rawStart - MS_PER_DAY);
+
+		let result = await db.exec(
+			`SELECT
+			   (SELECT COALESCE(SUM(s.total_checks), 0) FROM monitor_daily_stats s
+			     WHERE s.monitor_type = 'http' AND s.monitor_id = ? AND s.date BETWEEN ? AND ?)
+			 + (SELECT COUNT(*) FROM monitor_results r
+			     WHERE r.monitor_id = ? AND r.created_at BETWEEN ? AND ?) AS consumed`,
+			[monitorId, rollupFrom, rollupTo, monitorId, rawStart, monthEnd],
 		);
 
 		let [row] = (result.rows ?? []) as unknown as Array<{ consumed: number }>;

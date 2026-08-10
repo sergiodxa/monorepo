@@ -827,6 +827,149 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 	});
 });
 
+/**
+ * Same month and same windows as the team-scoped block above — as of 2026-07-15 the raw
+ * window is July 14–15 and the rollup window July 1–13 — since both methods have to cut
+ * the two stores identically or the monitor card and the dashboard card would disagree.
+ */
+describe("Monitor.countConsumedPingsByMonitor", () => {
+	let date = new Date("2026-07-15T12:00:00.000Z");
+	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
+
+	/** A completed HTTP check recorded at `createdAt`, the row one consumed ping produces. */
+	async function createHttpResult(db: Database, monitorId: string, createdAt: number) {
+		let result = await db.create(
+			monitorResults,
+			{
+				id: crypto.randomUUID(),
+				monitor_id: monitorId,
+				response_status: 200,
+				response_time_ms: 100,
+				completed_at: createdAt,
+			},
+			{ touch: true, returnRow: true },
+		);
+		// `touch` stamps `created_at` with the current time, so backdate it afterwards.
+		await db.update(monitorResults, result.id, { created_at: createdAt }, { touch: false });
+	}
+
+	/** A rolled-up day for one monitor, as `AggregateDailyStatsJob` would have written it. */
+	async function createDailyStats(
+		db: Database,
+		monitorId: string,
+		day: string,
+		totalChecks: number,
+	) {
+		await db.create(
+			monitorDailyStats,
+			{
+				id: crypto.randomUUID(),
+				monitor_id: monitorId,
+				monitor_type: "http",
+				date: day,
+				total_checks: totalChecks,
+				successful_checks: totalChecks,
+				failed_checks: 0,
+				avg_response_time_ms: 100,
+				max_response_time_ms: 200,
+				p95_response_time_ms: null,
+				status: "up",
+			},
+			{ touch: true },
+		);
+	}
+
+	test("sums this monitor's rollup days and its raw window", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+
+		await createDailyStats(db, monitor.id, "2026-07-02", 100);
+		await createDailyStats(db, monitor.id, "2026-07-13", 10);
+		await createHttpResult(db, monitor.id, insideRawWindow);
+		await createHttpResult(db, monitor.id, insideRawWindow + 60_000);
+
+		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(112);
+	});
+
+	test("never double counts a day that has both a rollup row and surviving raw rows", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+
+		// The 13th is rolled up, and its raw rows are still inside the 7-day retention.
+		await createDailyStats(db, monitor.id, "2026-07-13", 5);
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 6, 0, 0));
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 7, 0, 0));
+
+		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(5);
+	});
+
+	test("counts the whole month raw when the raw window covers it", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+
+		// On the 1st the raw window is clamped to the month, leaving no rolled-up days.
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1, 0, 30, 0));
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1, 1, 30, 0));
+
+		expect(
+			await Monitor.countConsumedPingsByMonitor(
+				db,
+				monitor.id,
+				new Date("2026-07-01T12:00:00.000Z"),
+			),
+		).toBe(2);
+	});
+
+	test("never counts another month or another monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+		let sibling = await Monitor.create(db, team.id, "author-1", {
+			name: "Other",
+			url: "https://other.example.com",
+		});
+
+		// Rolled-up days on either side of July.
+		await createDailyStats(db, monitor.id, "2026-06-30", 1000);
+		await createDailyStats(db, monitor.id, "2026-08-01", 1000);
+		// Raw checks the millisecond before July starts and the millisecond after it ends.
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1) - 1);
+		await createHttpResult(db, monitor.id, Date.UTC(2026, 7, 1));
+
+		// The other monitor on the same team is fully checked, and counts for none of it.
+		await createDailyStats(db, sibling.id, "2026-07-02", 1000);
+		await createHttpResult(db, sibling.id, insideRawWindow);
+
+		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(0);
+	});
+
+	test("counts zero, not null, for a monitor that has never been checked", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+		});
+
+		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(0);
+	});
+});
+
 describe("Monitor.estimateConsumedPingsByTeam", () => {
 	test("projects HTTP/DNS/TCP monitors from their interval and sums cron occurrences", async () => {
 		let { db } = createTestDatabase();
