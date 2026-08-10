@@ -8,12 +8,6 @@
 			"port": 3000
 		},
 		{
-			"name": "auth",
-			"runtimeExecutable": "bun",
-			"runtimeArgs": ["run", "--cwd", "apps/auth", "dev"],
-			"port": 3001
-		},
-		{
 			"name": "r3-auth",
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/r3-auth", "dev"],

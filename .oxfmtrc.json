@@ -25,14 +25,6 @@
 			"options": {
 				"useTabs": true
 			}
-		},
-		{
-			"files": ["apps/auth/**/*.{js,jsx,ts,tsx}"],
-			"options": {
-				"experimentalTailwindcss": {
-					"stylesheet": "./apps/auth/app/styles.css"
-				}
-			}
 		}
 	]
 }

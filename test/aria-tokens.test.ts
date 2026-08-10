@@ -47,8 +47,8 @@ const SCANNED = ["apps", "packages"];
  * Paths carrying known, deliberately unfixed occurrences.
  *
  * `packages/ui` is the previous generation of the component library, kept alive only
- * for the apps still on the old runtime — `apps/auth`, `apps/auth-saas`, and the two
- * markdown packages — and slated for deletion once those finish migrating to Remix 3.
+ * for the apps still on the old runtime — `apps/auth-saas` and the two markdown
+ * packages — and slated for deletion once those finish migrating to Remix 3.
  * Its affected files are real defects rather than dead code, so they are exempted
  * rather than declared clean, but fixing them buys nothing that outlives the package.
  *

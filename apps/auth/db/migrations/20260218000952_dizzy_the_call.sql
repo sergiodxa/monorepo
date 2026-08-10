@@ -1,1 +1,0 @@
-ALTER TABLE `clients` ADD `description` text(280);

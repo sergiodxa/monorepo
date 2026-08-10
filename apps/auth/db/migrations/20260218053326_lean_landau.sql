@@ -1,1 +1,0 @@
-ALTER TABLE `clients` ADD `logo_url` text(2048);
