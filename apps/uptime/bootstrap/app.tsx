@@ -162,6 +162,7 @@ import monitorCardUptimeHistory from "~/app/http/controllers/app/team/monitor-ca
 import monitorCardUsage from "~/app/http/controllers/app/team/monitor-card-usage";
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
+import monitorRunStatus from "~/app/http/controllers/app/team/monitor-run-status";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
 import monitorsImport from "~/app/http/controllers/app/team/monitors-import";
 import settings from "~/app/http/controllers/app/team/settings";
@@ -356,6 +357,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.monitors.cards.uptime, monitorCardUptime);
 	router.map(routes.app.team.monitors.cards.uptimeHistory, monitorCardUptimeHistory);
 	router.map(routes.app.team.monitors.cards.p99ResponseTime, monitorCardP99ResponseTime);
+	router.map(routes.app.team.monitors.runStatus, monitorRunStatus);
 	router.map(routes.app.team.dnsMonitors.index, dnsMonitors);
 	router.map(routes.app.team.dnsMonitors.new, dnsMonitorNew);
 	router.map(routes.app.team.dnsMonitors.show, dnsMonitorShow);

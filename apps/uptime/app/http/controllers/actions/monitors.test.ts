@@ -414,6 +414,121 @@ describe("playMonitor", () => {
 });
 
 /**
+ * The JSON branch a hydrated page takes. It exists because the check is enqueued, not run,
+ * so the only thing this request can report is the baseline to compare a later poll
+ * against — and because a page that never navigates would otherwise leave a flash message
+ * queued for some unrelated later navigation.
+ */
+describe("playMonitor for a caller asking for JSON", () => {
+	/** Sends the play action with an explicit JSON `Accept`, the way the hydrated button does. */
+	async function sendJson(
+		db: Database,
+		team: SelectTeam,
+		membership: SelectMembership,
+		monitorId: string,
+	): Promise<Response> {
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
+		router.map(routes.actions.monitor.http.play, {
+			middleware: [seedTeam(team, membership)],
+			handler: playMonitor as RequestHandler<any>,
+		});
+
+		let request = new Request(
+			new URL(routes.actions.monitor.http.play.href({ team: team.slug }), "https://uptime.test"),
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/x-www-form-urlencoded",
+					accept: "application/json",
+				},
+				body: new URLSearchParams({ monitor_id: monitorId }).toString(),
+			},
+		);
+
+		return container.scope(() => router.fetch(request));
+	}
+
+	/** Creates one monitor for `team`, optionally with a check outcome already cached on it. */
+	async function createMonitorRow(
+		db: Database,
+		team: SelectTeam,
+		membership: SelectMembership,
+		changes: Record<string, unknown> = {},
+	) {
+		return await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+				...changes,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("queues the check and reports the pre-run status instead of redirecting", async () => {
+		let { db, team, membership } = await createFixture();
+		let checkedAt = Date.now();
+		let monitor = await createMonitorRow(db, team, membership, {
+			last_status: "up",
+			last_checked_at: checkedAt,
+		});
+		queueSend.mockClear();
+
+		let response = await sendJson(db, team, membership, monitor.id);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ queued: true, status: "up", checkedAt });
+		expect(queueSend).toHaveBeenCalledTimes(1);
+	});
+
+	test("reports that nothing was queued when the team owner is known to be unsubscribed", async () => {
+		let { db, team, membership } = await createFixture();
+		await createRevokedSubscription(db, team.owner_id);
+		let monitor = await createMonitorRow(db, team, membership);
+		queueSend.mockClear();
+
+		let response = await sendJson(db, team, membership, monitor.id);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ queued: false, status: null, checkedAt: null });
+		expect(queueSend).not.toHaveBeenCalled();
+	});
+
+	/**
+	 * The regression that matters most here: every caller that does not ask for JSON — the
+	 * no-JS form post included — must keep getting the redirect it has always got.
+	 */
+	test("still redirects a caller that did not ask for JSON", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await createMonitorRow(db, team, membership);
+		queueSend.mockClear();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.play,
+			playMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
+		);
+	});
+});
+
+/**
  * The `funnel.second_monitor_created` event — the activation step. The first monitor can be
  * the one a sign-in converted or the one somebody made to see whether the product works; the
  * second is somebody who decided to keep using it, so the boundary is what these tests pin.

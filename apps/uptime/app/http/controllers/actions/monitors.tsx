@@ -2,6 +2,8 @@
  * Form actions for HTTP monitor create/update/delete/play. Each follows the
  * validate → mutate → flash → redirect pattern: on validation failure the visitor is
  * sent back to the form with an error toast; on success, to the monitor (or list).
+ * `playMonitor` additionally answers with JSON when the caller explicitly asks for it, so a
+ * hydrated page can start a run without navigating and still learn what to compare against.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +11,7 @@
 
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
+import { ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -155,6 +158,18 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 	if (!monitor) return notFound("Not Found");
 
 	let queued = await Monitor.ping(db, monitor.id, ctx.team.owner_id);
+
+	/**
+	 * A caller that asked for JSON is a hydrated page that isn't going to navigate, so it
+	 * gets the outcome in the body instead of a redirect and a flash it would never render
+	 * (the flash would surface on some later, unrelated navigation). The reported status is
+	 * the one *before* the queued check runs — the check completes asynchronously, so the
+	 * only thing this request can hand back is the baseline to compare against. Gated on an
+	 * explicit `Accept`, so the browser form post and every other caller keep the redirect.
+	 */
+	if (ctx.request.headers.get("accept")?.includes("application/json")) {
+		return ok({ queued, status: monitor.last_status, checkedAt: monitor.last_checked_at });
+	}
 
 	// Nothing was enqueued without a subscription, so don't claim a check is coming.
 	session?.flash(

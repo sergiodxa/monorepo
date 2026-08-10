@@ -94,6 +94,7 @@ import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/ui";
 import { easings } from "@pkg/ui/animations";
 import { menuKeys } from "@pkg/ui/mixins";
 
+import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
@@ -639,6 +640,14 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						</Toast>
 					</Toast.Region>
 				)}
+
+				{/*
+				 * Mounted on every signed-in page, not just the ones that toast today, so any
+				 * island can call `showToast()` without first arranging for a region of its
+				 * own. It renders no markup until something is queued, so the cost of having
+				 * it here is one hydration marker.
+				 */}
+				<AppToaster />
 			</div>
 		);
 	};

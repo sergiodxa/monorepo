@@ -105,6 +105,11 @@ export default createAction(routes.app.team.monitors.show, {
 								<RunMonitorButton
 									action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
 									monitorId={monitor.id}
+									name={monitor.name}
+									statusUrl={routes.app.team.monitors.runStatus.href({
+										team: ctx.team.slug,
+										monitorId: monitor.id,
+									})}
 								/>
 							</IntlProvider>
 							<LinkButton

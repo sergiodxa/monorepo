@@ -6,9 +6,11 @@
  * doesn't navigate away, and hands its pending state to `@pkg/ui`'s
  * `Button` (`isPending`), which swaps its content for a spinner while the
  * request is in flight. `Monitor.ping` only enqueues the check — the
- * check itself finishes asynchronously — so "done" here means "the queue
- * request completed" (tied to request state, not to whether the queued
- * check has finished).
+ * check itself finishes asynchronously — so the hydrated path keeps the
+ * button pending and polls the run-status route until the queued check
+ * commits a result (or the wait times out), then reloads the detail page's
+ * stat-card and uptime-history frames in place and, when the check moved the
+ * monitor to a different status, queues a toast about it.
  *
  * Its label reads through `@pkg/i18n/ui`'s `intl(handle)` rather than
  * `ctx.i18next.t`, since this component runs both server-side (the no-JS
@@ -22,16 +24,132 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { i18n as I18n } from "i18next";
 import type { Handle } from "remix/ui";
 
 import { intl } from "@pkg/i18n/ui";
 import { PlayIcon } from "@pkg/lucide-remix";
 import { m } from "@pkg/u/size";
 import { Button } from "@pkg/ui";
+import * as s from "remix/data-schema";
 import { clientEntry, on } from "remix/ui";
 
+import type { AppToast } from "~/resources/components/app-toaster";
+
+import { showToast } from "~/resources/components/app-toaster";
+
+/**
+ * Every named `Frame` on the monitor detail page whose content a completed check can
+ * change. Listed here rather than derived, because the button sits in the page header,
+ * outside all of them, and `handle.frames.get()` is a lookup by name.
+ */
+const MONITOR_FRAMES = [
+	"monitor-card-usage",
+	"monitor-card-slowest-result",
+	"monitor-card-p99-response-time",
+	"monitor-card-uptime",
+	"monitor-card-uptime-history",
+];
+
+/** How long to wait between run-status polls while a queued check is still outstanding. */
+const POLL_INTERVAL_MS = 2000;
+
+/**
+ * How long to keep polling before giving up. Generous, since the wait covers queue
+ * delivery plus the probe's own timeout; giving up only means no toast, never a wrong one.
+ */
+const POLL_TIMEOUT_MS = 45_000;
+
+/** What a completed check can classify a monitor as, mirrored from the column's value set. */
+const RunStatusSchema = s.nullable(s.enum_(["up", "down", "degraded"]));
+
+/** The action's JSON answer: whether a check was enqueued, plus the state to compare against. */
+const PlayResponseSchema = s.object({
+	queued: s.boolean(),
+	status: RunStatusSchema,
+	checkedAt: s.nullable(s.number()),
+});
+
+/** The run-status route's answer: the monitor row's cached last check outcome. */
+const RunStatusResponseSchema = s.object({
+	status: RunStatusSchema,
+	checkedAt: s.nullable(s.number()),
+});
+
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
-type RunMonitorButtonProps = { action: string; monitorId: string };
+type RunMonitorButtonProps = {
+	action: string;
+	monitorId: string;
+	/** Absolute path of the run-status route for this monitor, polled after a run starts. */
+	statusUrl: string;
+	/** The monitor's name, interpolated into the toast copy. */
+	name: string;
+};
+
+/** Resolves after `ms`, or as soon as `signal` aborts, whichever comes first. */
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+	return new Promise((resolve) => {
+		let timer = setTimeout(resolve, ms);
+		signal.addEventListener("abort", () => {
+			clearTimeout(timer);
+			resolve();
+		});
+	});
+}
+
+/**
+ * Polls `statusUrl` until the monitor's last-checked instant moves past `since`, which is
+ * what tells the queued check apart from the result that was already there. Returns the
+ * new status, or `undefined` when the wait ran out or anything about the response was
+ * unusable — both mean "say nothing", never "assume it stayed the same".
+ */
+async function waitForCheck(
+	statusUrl: string,
+	since: number | null,
+	signal: AbortSignal,
+): Promise<"up" | "down" | "degraded" | null | undefined> {
+	let deadline = Date.now() + POLL_TIMEOUT_MS;
+
+	while (Date.now() < deadline && !signal.aborted) {
+		await delay(POLL_INTERVAL_MS, signal);
+		if (signal.aborted) return undefined;
+
+		try {
+			let response = await fetch(statusUrl, {
+				credentials: "same-origin",
+				headers: { accept: "application/json" },
+				signal,
+			});
+			if (!response.ok) return undefined;
+
+			let result = s.parse(RunStatusResponseSchema, await response.json());
+			if (result.checkedAt !== since) return result.status;
+		} catch {
+			return undefined;
+		}
+	}
+
+	return undefined;
+}
+
+/**
+ * The toast a status change deserves, or `undefined` when the check left the monitor where
+ * it was — an unchanged run is not news, and must stay silent.
+ */
+export function transitionToast(
+	t: I18n["t"],
+	name: string,
+	previous: string | null,
+	current: "up" | "down" | "degraded" | null,
+): AppToast | undefined {
+	if (current === null || current === previous) return undefined;
+
+	return {
+		title: t(`page.monitor.run.toast.${current}`, { name }),
+		description: t("page.monitor.run.toast.changed"),
+		color: current === "up" ? "success" : current === "degraded" ? "warning" : "danger",
+	};
+}
 
 /** Posts {@link RunMonitorButtonProps.action} with the monitor's id, spinning the icon until the request settles. */
 export const RunMonitorButton = clientEntry(
@@ -50,13 +168,47 @@ export const RunMonitorButton = clientEntry(
 						m(0),
 						on("submit", async (event) => {
 							event.preventDefault();
+							let body = new FormData(event.currentTarget);
+							/**
+							 * The island's own signal, not the render-scoped one: `handle.update()`
+							 * below aborts the latter, and this flow outlives several updates.
+							 */
+							let signal = handle.signal;
+
 							pending = true;
 							handle.update();
+
 							try {
-								await fetch(handle.props.action, {
+								let response = await fetch(handle.props.action, {
 									method: "POST",
-									body: new FormData(event.currentTarget),
+									credentials: "same-origin",
+									headers: { accept: "application/json" },
+									body,
+									signal,
 								});
+								if (!response.ok) return;
+
+								let run = s.parse(PlayResponseSchema, await response.json());
+
+								if (!run.queued) {
+									showToast({
+										title: t("page.monitor.run.toast.notQueued.title"),
+										description: t("page.monitor.run.toast.notQueued.description"),
+										color: "danger",
+									});
+									return;
+								}
+
+								let status = await waitForCheck(handle.props.statusUrl, run.checkedAt, signal);
+								if (status === undefined) return;
+
+								// Reloaded before the toast so the numbers behind it are already the new ones.
+								await Promise.all(MONITOR_FRAMES.map((name) => handle.frames.get(name)?.reload()));
+
+								let toast = transitionToast(t, handle.props.name, run.status, status);
+								if (toast) showToast(toast);
+							} catch {
+								// A failed run is already visible in the page; a broken toast helps nobody.
 							} finally {
 								pending = false;
 								handle.update();

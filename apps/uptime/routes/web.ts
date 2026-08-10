@@ -155,6 +155,14 @@ export default route({
 					uptime: get("/app/:team/monitors/:monitorId/cards/uptime"),
 					uptimeHistory: get("/app/:team/monitors/:monitorId/cards/uptime-history"),
 				},
+				/**
+				 * JSON probe reporting the monitor's cached last status and last-checked
+				 * instant. An on-demand run only *enqueues* a check, so the request that
+				 * starts it cannot report the outcome; this is what a hydrated page polls
+				 * afterwards to notice the result landing, and it stays a page-area route
+				 * (session-authenticated) rather than an API one so no key is involved.
+				 */
+				runStatus: get("/app/:team/monitors/:monitorId/run-status"),
 			},
 			/**
 			 * Paste-a-list bulk creation. `/app/:team/import-monitors` rather than a leaf under the
