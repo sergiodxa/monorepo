@@ -95,7 +95,6 @@ Run from the repository root:
 | [dates](packages/dates)                                 | Zone-aware date operations with Intl-only formatting          |
 | [duration](packages/duration)                           | Typed duration strings converted to milliseconds or seconds   |
 | [get-client-ip](packages/get-client-ip)                 | Extract client IP from requests                               |
-| [hooks](packages/hooks)                                 | Shared React hooks                                            |
 | [hostname](packages/hostname)                           | Hostname parsing and validation utilities                     |
 | [http](packages/http)                                   | HTTP helper utilities                                         |
 | [i18n](packages/i18n)                                   | Internationalization utilities                                |
