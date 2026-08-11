@@ -19,7 +19,7 @@ import { opacity, rounded, transition } from "@pkg/u/effects";
 import { cursor, pseudoContent } from "@pkg/u/general";
 import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
-import { after, when } from "@pkg/u/state";
+import { after, precededBy, when } from "@pkg/u/state";
 import { scale } from "@pkg/u/transform";
 import { text } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
@@ -248,9 +248,16 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 						border({ color: "neutral.strong", width: 2 }),
 						bg("neutral.tint"),
 						transition("background-color, border-color"),
-						when("input:checked ~ &::after", scale(1)),
-						when("input:checked ~ &", [border("brand.solid"), bg("brand.solid")]),
-						when("input:focus-visible ~ &", outline({ color: "brand.ring", offset: 2 })),
+						// `precededBy()` rather than a bare `when("input:checked ~ &", …)`:
+						// the style serializer only recognizes a key as a nested selector
+						// when it starts with `&`, `@`, `:`, `[` or `.`, so an element-first
+						// selector is emitted as a *declaration* and the whole checked and
+						// focus state silently never reaches the browser. `precededBy()`
+						// leads with `:is(...)`, which is recognized, and `:is()` carries
+						// its argument's specificity so matching is unchanged.
+						precededBy("input:checked", after(scale(1))),
+						precededBy("input:checked", [border("brand.solid"), bg("brand.solid")]),
+						precededBy("input:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 						parts?.indicator,
 					]}
 				/>

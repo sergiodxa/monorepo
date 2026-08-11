@@ -45,8 +45,14 @@ const DEFAULT_SHOW_ARROW = true;
  * `@media (hover: hover)` block (see the render function below), so a coarse
  * pointer that merely taps the trigger never latches into a stuck-open hover
  * state.
+ *
+ * The `:is()` wrapper is load-bearing, not cosmetic: the style serializer only
+ * recognizes a key as a nested selector when it starts with `&`, `@`, `:`, `[`
+ * or `.`, so a bare `*:hover ~ &` would be emitted as a declaration and the
+ * hover-open rule would never reach the browser. `:is()` takes the specificity
+ * of its argument, so what this matches is unchanged.
  */
-const HOVERED_TRIGGER_SELECTOR = "*:hover ~ &";
+const HOVERED_TRIGGER_SELECTOR = ":is(*:hover) ~ &";
 
 /**
  * Selector matching {@link Tooltip}'s entered state through either its own

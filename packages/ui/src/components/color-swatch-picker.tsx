@@ -21,7 +21,7 @@ import { border, outline } from "@pkg/u/color";
 import { opacity, ringShadow, transition } from "@pkg/u/effects";
 import { cursor } from "@pkg/u/general";
 import { flexWrap, hstack, inlineFlex } from "@pkg/u/layout";
-import { when } from "@pkg/u/state";
+import { precededBy, when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
 import { ColorSwatch } from "./color-swatch";
@@ -228,9 +228,16 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 					size={size}
 					mix={[
 						transition("border-color, box-shadow"),
-						when("input:checked ~ &", border("brand.solid")),
-						when("input:focus-visible ~ &", outline({ color: "brand.ring", offset: 2 })),
-						when("input:checked ~ &", ringShadow("brand")),
+						// `precededBy()` rather than a bare `when("input:checked ~ &", …)`:
+						// the style serializer only recognizes a key as a nested selector
+						// when it starts with `&`, `@`, `:`, `[` or `.`, so an element-first
+						// selector is emitted as a *declaration* and the selected state
+						// silently never reaches the browser. `precededBy()` leads with
+						// `:is(...)`, which is recognized, and `:is()` carries its
+						// argument's specificity so matching is unchanged.
+						precededBy("input:checked", border("brand.solid")),
+						precededBy("input:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						precededBy("input:checked", ringShadow("brand")),
 						parts?.indicator,
 					]}
 				/>
