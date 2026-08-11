@@ -24,8 +24,9 @@
  * `Dialog`-based `MobileNav` tree for narrow viewports) — so this file keeps that
  * outer composition as its own layout and only swaps in the pieces `@pkg/ui` does
  * have a real component for: `Menu` (the team/user dropdowns), `Breadcrumbs` (the
- * trail), `Sidebar.Item` (the nav rows themselves), and `Toast`/`Toast.Region` (the
- * bottom notification).
+ * trail), and `Sidebar.Item` (the nav rows themselves). The bottom notification is
+ * `FlashToast`, which is `@pkg/ui`'s `Toast` in the region and the self-fading treatment
+ * this app renders one in.
  *
  * The sidebar's three sections (team picker / nav list / user menu) are DOM children
  * of one `<nav popover>` element (so the mobile off-canvas drawer can show/hide them
@@ -62,7 +63,6 @@ import {
 	SettingsIcon,
 	WrenchIcon,
 } from "@pkg/lucide-remix";
-import { animation } from "@pkg/u/animation";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded, shadow } from "@pkg/u/effects";
 import { combine, cursor, listStyle, raw } from "@pkg/u/general";
@@ -90,12 +90,12 @@ import { media } from "@pkg/u/responsive";
 import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@pkg/u/size";
 import { hover, when } from "@pkg/u/state";
 import { fontSize, textAlign, truncate, weight } from "@pkg/u/typography";
-import { Breadcrumbs, Menu, Sidebar, Toast } from "@pkg/ui";
-import { easings } from "@pkg/ui/animations";
+import { Breadcrumbs, Menu, Sidebar } from "@pkg/ui";
 import { menuKeys } from "@pkg/ui/mixins";
 
 import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
+import FlashToast from "~/resources/components/flash-toast";
 import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
 
@@ -341,40 +341,6 @@ const main = combine([
 	overflow("auto"),
 	media("(min-width: 768px)", [gridArea("content"), p(12)]),
 ]);
-
-/**
- * Total time, in ms, the toast stays visible before fading out — matches
- * `@pkg/ui`'s own `Toaster` behavior's default auto-dismiss delay, even though
- * this toast is a single SSR-rendered prop rather than a JS-driven queue, so there's
- * no `Toaster` instance here to actually read that default from.
- */
-const TOAST_VISIBLE_MS = 5000;
-
-/**
- * One-shot fade for the server-rendered toast: holds full opacity, then fades to
- * fully transparent over the tail of `TOAST_VISIBLE_MS`, with no JS driving its
- * removal — the toast simply becomes invisible in place once the animation ends.
- * `@pkg/ui/animations`'s `fade()`/`enterExit()` factories are state-driven
- * (`[open]`/`:popover-open`, or a custom attribute a script would need to flip), which
- * doesn't fit a toast with no open/close state of its own — this reuses their
- * `easings.standard` curve instead of the plain `"ease"` keyword the previous
- * hand-rolled `@keyframes` used, so the motion still settles into the same rhythm as
- * every other transition in the catalog. Built on `@pkg/u/animation`'s `animation()`,
- * which emits the same `@keyframes` rule plus longhand `animationName`/
- * `animationDuration`/`animationTimingFunction`/`animationFillMode` host declarations.
- */
-function toastAutoFade() {
-	return animation("uptime-toast-fade", {
-		keyframes: {
-			"0%": { opacity: 1 },
-			"85%": { opacity: 1 },
-			"100%": { opacity: 0, visibility: "hidden" },
-		},
-		duration: `${TOAST_VISIBLE_MS}ms`,
-		easing: easings.standard,
-		fillMode: "forwards",
-	});
-}
 
 namespace AppShell {
 	export interface Props {
@@ -629,16 +595,11 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				<main mix={[main]}>{children}</main>
 
 				{toast && (
-					<Toast.Region aria-label="Notifications">
-						<Toast
-							color={toast.intent === "success" ? "success" : "danger"}
-							mix={[toastAutoFade()]}
-						>
-							<Toast.Content>
-								<Toast.Description>{toast.message}</Toast.Description>
-							</Toast.Content>
-						</Toast>
-					</Toast.Region>
+					<FlashToast
+						color={toast.intent === "success" ? "success" : "danger"}
+						label="Notifications"
+						description={toast.message}
+					/>
 				)}
 
 				{/*

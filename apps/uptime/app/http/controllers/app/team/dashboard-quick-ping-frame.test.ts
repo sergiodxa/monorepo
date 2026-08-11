@@ -1,6 +1,6 @@
 /**
- * Tests the no-JavaScript path of the dashboard's quick check, end to end: the card's
- * form posts to `POST /actions/:team/run-ping`, which redirects to
+ * Tests the no-JavaScript path of the dashboard's quick check, end to end: the header
+ * bar's form posts to `POST /actions/:team/run-ping`, which redirects to
  * `GET /app/:team/dashboard`, and that document request server-side-resolves its
  * quick-check `<Frame>` by dispatching `GET /app/:team/dashboard/quick-ping` back through
  * the same router with the request's cookie forwarded. Two requests, one session — which
@@ -10,7 +10,7 @@
  * the moment it is read, and the session middleware saves as soon as the handler returns —
  * which, for a streamed HTML response, is before the body's frames have resolved. The
  * dashboard document request therefore cleared the flash before the fragment that renders
- * it ever ran, and the card came back empty on every unscripted submit. Nothing caught it:
+ * it ever ran, and the answer never reached the page on any unscripted submit. Nothing caught it:
  * the page tests stub `resolveFrame` to an empty string, and the fragment tests seed the
  * session themselves, so no test ever had one session cross both requests. Here the frame
  * resolution is the real one, mirroring `bootstrap/app.tsx`, and the result is carried
@@ -295,12 +295,12 @@ describe("the dashboard's quick-check frame, resolved server-side", () => {
 
 		let body = await (await harness.visitDashboard()).text();
 
-		// The card's own markup, which only the fragment route renders: if frame resolution
+		// The bar's own markup, which only the fragment route renders: if frame resolution
 		// were stubbed out, everything below would be asserting on an empty string.
-		expect(body).toContain(en.page.dashboard.quickPing.title);
+		expect(body).toContain(en.page.dashboard.quickPing.field.label);
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
 		expect(body).toContain(`action="${routes.actions.runPing.href({ team: harness.team.slug })}"`);
-		// Nothing has run, so the card is the form alone.
+		// Nothing has run, so the header is the bar alone, with no toast beside it.
 		expect(body).not.toContain("HTTP 200");
 		expect(body).not.toContain("12 ms");
 	});

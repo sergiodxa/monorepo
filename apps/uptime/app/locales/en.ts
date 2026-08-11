@@ -2009,23 +2009,23 @@ export default {
 		dashboard: {
 			header: {
 				title: "Dashboard",
-				action: {
-					create: "Create Monitor",
-					refresh: "Refresh",
-				},
 			},
 
 			quickPing: {
 				title: "Quick check",
 				description: "Check a URL once. Nothing saved, no alerts — costs one ping.",
 				field: {
-					label: "URL",
+					label: "URL to check",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "Run check",
+					submit: "Check once",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Open quick check",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Check result",
 					noResponse: "No response",
 					status: {
 						up: "Up",
@@ -2077,6 +2077,7 @@ export default {
 
 				httpMonitors: {
 					label: "HTTP Monitors",
+					create: "New HTTP monitor",
 					breakdown: {
 						up: "{{up}} up",
 						down: "{{down}} down",
@@ -2085,6 +2086,7 @@ export default {
 
 				dnsMonitors: {
 					label: "DNS Monitors",
+					create: "New DNS monitor",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "One monitor covers a whole domain and every record tracked on it.",
 					breakdown: {
@@ -2096,6 +2098,7 @@ export default {
 
 				tcpMonitors: {
 					label: "TCP Monitors",
+					create: "New TCP monitor",
 					breakdown: {
 						up: "{{up}} up",
 						down: "{{down}} down",
@@ -2104,19 +2107,11 @@ export default {
 
 				cronJobs: {
 					label: "Cron Jobs",
+					create: "New cron job",
 					breakdown: {
 						healthy: "{{healthy}} healthy",
 						late: "{{late}} late",
 						missed: "{{missed}} missed",
-					},
-				},
-
-				sslMonitors: {
-					label: "SSL Monitors",
-					breakdown: {
-						valid: "{{valid}} valid",
-						expiring: "{{expiring}} expiring",
-						expired: "{{expired}} expired",
 					},
 				},
 			},

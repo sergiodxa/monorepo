@@ -111,8 +111,8 @@ export default route({
 			dashboard: {
 				index: get("/app/:team/dashboard"),
 				/**
-				 * Fragment route: the quick-check card. Its own `Frame` so submitting the
-				 * form swaps just this card — running a check must not cost the page its
+				 * Fragment route: the header's quick-check bar. Its own `Frame` so submitting
+				 * the form swaps just that bar — running a check must not cost the page its
 				 * stat cards, its tab table, and every fetch behind them.
 				 */
 				quickPing: get("/app/:team/dashboard/quick-ping"),

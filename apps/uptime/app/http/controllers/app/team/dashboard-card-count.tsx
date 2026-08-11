@@ -1,10 +1,14 @@
 /**
  * Dashboard per-monitor-type count stat-card fragment controller. GET
  * /app/:team/dashboard/cards/count/:resource — loads only the one monitor table
- * named by `:resource` (http, dns, tcp, cron-jobs, or ssl) and renders its `StatCard`
- * directly, with no document shell, so each of the dashboard's five count `Frame`s
+ * named by `:resource` (http, dns, tcp, or cron-jobs) and renders its `StatCard`
+ * directly, with no document shell, so each of the dashboard's four count `Frame`s
  * (one per resource, all pointed at this same parameterized route) can swap in
  * independently over its own skeleton fallback. Requires `requireUser` + `requireTeam`.
+ *
+ * Every one of the four counts something a visitor can create, so every card carries the
+ * link to that type's own form — which is the dashboard's only route to one now that the
+ * header holds the quick check where a single "create monitor" button used to be.
  *
  * Each card's status breakdown is one line per state, and every line is its own
  * translation key rather than one interpolated sentence: a single string would have to
@@ -39,12 +43,12 @@ import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
-const RESOURCES = ["http", "dns", "tcp", "cron-jobs", "ssl"] as const;
+const RESOURCES = ["http", "dns", "tcp", "cron-jobs"] as const;
 
 /**
  * How many breakdown lines every count card holds room for, whatever it has to say.
- * The five cards break down into either two states (http, tcp) or three (dns, cron
- * jobs, ssl), and they sit side by side in one wrapping row, so the taller shape sets
+ * The four cards break down into either two states (http, tcp) or three (dns, cron
+ * jobs), and they sit side by side in one wrapping row, so the taller shape sets
  * the row's height: a two-state card that only reserved its own two lines would be
  * shorter than its neighbours. The skeleton the dashboard shows while each card streams
  * in reads this same number, so the fallback and the card it becomes are the same
@@ -110,6 +114,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 			return ctx.render(
 				<StatCard
 					label={ctx.i18next.t("page.dashboard.stats.dnsMonitors.label")}
+					create={{
+						href: routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }),
+						label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.create"),
+					}}
 					value={
 						<>
 							{dnsCounts.total}
@@ -145,6 +153,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 			return ctx.render(
 				<StatCard
 					label={ctx.i18next.t("page.dashboard.stats.tcpMonitors.label")}
+					create={{
+						href: routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug }),
+						label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.create"),
+					}}
 					value={
 						<>
 							{tcpCounts.total}
@@ -176,6 +188,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 			return ctx.render(
 				<StatCard
 					label={ctx.i18next.t("page.dashboard.stats.cronJobs.label")}
+					create={{
+						href: routes.app.team.cronJobs.new.href({ team: ctx.team.slug }),
+						label: ctx.i18next.t("page.dashboard.stats.cronJobs.create"),
+					}}
 					value={
 						<>
 							{cronCounts.total}
@@ -189,41 +205,6 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 									}),
 									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.missed", {
 										missed: cronCounts.missed,
-									}),
-								]}
-							/>
-						</>
-					}
-				/>,
-			);
-		}
-
-		if (resource === "ssl") {
-			let monitors = await Monitor.listByTeam(db, ctx.team.id);
-			let sslMonitors = monitors.filter((monitor) => monitor.ssl_monitoring_enabled);
-			let sslCounts = {
-				total: sslMonitors.length,
-				valid: sslMonitors.filter((monitor) => monitor.ssl_status === "valid").length,
-				expiring: sslMonitors.filter((monitor) => monitor.ssl_status === "expiring").length,
-				expired: sslMonitors.filter((monitor) => monitor.ssl_status === "expired").length,
-			};
-
-			return ctx.render(
-				<StatCard
-					label={ctx.i18next.t("page.dashboard.stats.sslMonitors.label")}
-					value={
-						<>
-							{sslCounts.total}
-							<Breakdown
-								lines={[
-									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.valid", {
-										valid: sslCounts.valid,
-									}),
-									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.expiring", {
-										expiring: sslCounts.expiring,
-									}),
-									ctx.i18next.t("page.dashboard.stats.sslMonitors.breakdown.expired", {
-										expired: sslCounts.expired,
 									}),
 								]}
 							/>
@@ -251,6 +232,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		return ctx.render(
 			<StatCard
 				label={ctx.i18next.t("page.dashboard.stats.httpMonitors.label")}
+				create={{
+					href: routes.app.team.monitors.new.href({ team: ctx.team.slug }),
+					label: ctx.i18next.t("page.dashboard.stats.httpMonitors.create"),
+				}}
 				value={
 					<>
 						{httpCounts.total}

@@ -97,16 +97,6 @@ function frameMarkers(body: string): Map<string, number> {
 	return markers;
 }
 
-/**
- * How many `<div>`s open minus close between two offsets: negative means the second
- * offset sits that many levels shallower than the first, which is how a "these are
- * siblings, that one is outside them both" relationship is read off flat HTML.
- */
-function divDepthBetween(body: string, from: number, to: number): number {
-	let between = body.slice(from, to);
-	return (between.match(/<div[ >]/g)?.length ?? 0) - (between.match(/<\/div>/g)?.length ?? 0);
-}
-
 /** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
 	let { db } = createTestDatabase();
@@ -126,7 +116,7 @@ async function createFixture() {
 }
 
 describe("app/team/dashboard", () => {
-	test("renders the dashboard shell with the header title and create-monitor action", async () => {
+	test("renders the dashboard shell with the header title and the quick check as its action", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
@@ -149,10 +139,9 @@ describe("app/team/dashboard", () => {
 
 		let body = await response.text();
 		expect(body).toContain(en.page.dashboard.header.title);
-		expect(body).toContain(en.page.dashboard.header.action.create);
 	});
 
-	test("makes the quick check a column beside the stat rows, with the panel outside both", async () => {
+	test("puts the quick check in the header, ahead of every stat card and the panel", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let router = createRouter({
@@ -172,23 +161,25 @@ describe("app/team/dashboard", () => {
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
 		let markers = frameMarkers(body);
-		let ssl = markers.get("dashboard-card-count-ssl");
 		let quickPing = markers.get("dashboard-quick-ping");
+		let usage = markers.get("dashboard-card-usage");
+		let cron = markers.get("dashboard-card-count-cron-jobs");
 		let panel = markers.get("dashboard-panel");
 
-		// Source order survives the two-column layout: the quick check still trails every stat
-		// card and still precedes the tab table, which is the single-column order the grid
-		// falls back to when there is no room beside the numbers.
-		expect(ssl).toBeGreaterThan(-1);
-		expect(quickPing).toBeGreaterThan(ssl!);
-		expect(panel).toBeGreaterThan(quickPing!);
+		// The quick check is the shell's header action now, which is the whole point of the
+		// move: it sits outside `<main>` entirely, so the stat rows below get the full width
+		// the fixed column beside them used to take.
+		expect(quickPing).toBeGreaterThan(-1);
+		expect(quickPing).toBeLessThan(body.indexOf("<main"));
+		expect(usage).toBeGreaterThan(body.indexOf("<main"));
 
-		// Nesting is what changed, and it is what makes the card as tall as the numbers beside
-		// it. Two `<div>`s close between the last stat card and the quick check, putting the
-		// card next to the region that holds both stat rows rather than inside it; one more
-		// closes before the panel, leaving the panel outside the grid those two share.
-		expect(divDepthBetween(body, ssl!, quickPing!)).toBe(-2);
-		expect(divDepthBetween(body, quickPing!, panel!)).toBe(-1);
+		// And the content is the two stat rows then the tab table, in that order.
+		expect(cron).toBeGreaterThan(usage!);
+		expect(panel).toBeGreaterThan(cron!);
+
+		// SSL is a flag on an HTTP monitor rather than a monitor of its own, so there is no
+		// card counting them and no form for its `+` to have pointed at.
+		expect(markers.has("dashboard-card-count-ssl")).toBe(false);
 	});
 
 	test("streams the quick check behind a fallback instead of blocking the document on it", async () => {
@@ -211,12 +202,9 @@ describe("app/team/dashboard", () => {
 		let body = await (await container.scope(() => router.fetch(request))).text();
 
 		// A frame with no `fallback` blocks the whole document on its fragment, and the quick
-		// check used to be that frame. The placeholder's control-height bars — which only the
-		// taller `field` skeleton draws — are the proof it renders a fallback now and streams.
+		// check used to be that frame. The placeholder is the bar's own two controls at the
+		// height they render at, which is the proof it renders a fallback now and streams.
 		expect(body).toContain("block-size: 2.5rem");
-		// And it holds open the same height the real card holds open for a check's answer, so
-		// swapping the real one in over it doesn't move the page a second time.
-		expect(body).toContain("min-block-size: calc(0.75rem + 0.25rem + 2px + 0.5rem + 1.25rem)");
 	});
 
 	test("sets the dashboardTab cookie on the response", async () => {

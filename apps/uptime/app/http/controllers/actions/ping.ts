@@ -78,20 +78,21 @@ export interface QuickPingResult {
 export type QuickPingErrorCode = "invalidUrl" | "subscriptionRequired";
 
 /**
- * A refusal, rendered in the card where a result would have gone.
+ * A refusal, reported where a result would have been.
  *
- * A refusal travels the same way a result does rather than as a toast, because the card
- * is the only thing the scripted path re-renders: the form island reloads its own frame
- * and nothing else, so a toast flashed here would go unseen and then surface, stale, on
- * whatever page happened to load next. Carrying a code rather than a message keeps the
- * stored value free of a language choice made in a different request.
+ * It travels the same way a result does — stored for the quick-check fragment to render —
+ * rather than being flashed for the page shell to draw, because that fragment is the only
+ * thing the scripted path re-renders: the form island reloads its own frame and nothing
+ * else, so a message flashed here would go unseen and then surface, stale, on whatever
+ * page happened to load next. Carrying a code rather than a message keeps the stored value
+ * free of a language choice made in a different request.
  */
 export interface QuickPingError {
 	kind: "error";
 	code: QuickPingErrorCode;
 }
 
-/** Either outcome the card can be asked to render. */
+/** Either outcome the fragment can be asked to render. */
 export type QuickPingOutcome = QuickPingResult | QuickPingError;
 
 /**
@@ -102,7 +103,7 @@ export type QuickPingOutcome = QuickPingResult | QuickPingError;
  * is loaded, and the session middleware saves after the handler returns — which, for the
  * no-JavaScript path, is the *dashboard document* request, whose save runs before its
  * streamed frames have resolved. The flash would be cleared before the fragment that
- * needs it ever ran, and the card would render empty every time. A plain value leaves
+ * needs it ever ran, and the check's answer would never reach the page. A plain value leaves
  * that request clean, so it saves nothing, and the fragment removes the value itself.
  */
 export const QUICK_PING_RESULT = "pingResult";

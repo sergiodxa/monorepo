@@ -1,9 +1,9 @@
 /**
  * Tests the dashboard's quick-check fragment, `GET /app/:team/dashboard/quick-ping`. It
- * renders the URL box on its own and, when the action that just ran left a result in the
- * session, the status badge and the code and timing next to it — the two states the same
- * markup has to cover, since the scripted frame reload and a plain no-JavaScript
- * navigation both land here.
+ * renders the header's URL bar on its own and, when the action that just ran left a
+ * result in the session, a toast reporting the status and the code and timing — the two
+ * states the same markup has to cover, since the scripted frame reload and a plain
+ * no-JavaScript navigation both land here.
  *
  * The case worth the harness is the third one: a stored result is rendered exactly
  * once, so a second load of this frame comes back to an empty form instead of to an
@@ -180,44 +180,57 @@ function upResult(overrides: Partial<QuickPingResult> = {}): QuickPingResult {
 }
 
 describe("dashboard-quick-ping", () => {
-	test("renders the form alone when no check has run", async () => {
+	test("renders the bar alone when no check has run", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await render(db, team, membership);
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain(en.page.dashboard.quickPing.title);
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
 		// The one place a visitor is told a check saves nothing and sends no alerts. It spent
 		// a while as the heading's `title`, where a touch screen never showed it at all; the
-		// tall card has the room to draw it, and the tooltip is gone rather than doubled up.
+		// sheet has the room to draw it, and the field points `aria-describedby` at it in
+		// both layouts rather than the copy existing only in one.
 		expect(body).toContain(en.page.dashboard.quickPing.description);
 		expect(body).not.toContain(`title="${en.page.dashboard.quickPing.description}"`);
-		// Nothing to report yet, so the card carries no status line at all.
+		expect(body).toContain('aria-describedby="quick-ping-help"');
+		// Nothing to report yet, so no toast at all.
 		expect(body).not.toContain(en.page.dashboard.quickPing.result.status.up);
 		expect(body).not.toContain("HTTP");
-		// The space that line will take is drawn anyway. Without it the card grows the moment
-		// a check comes back, and everything laid out beside it moves every time one does.
-		expect(body).toContain("min-block-size: calc(0.75rem + 0.25rem + 2px + 0.5rem + 1.25rem)");
 	});
 
-	test("puts the result between the field and the button that runs the next check", async () => {
+	test("serves both layouts from one form, opened by the trigger where it is a sheet", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await render(db, team, membership)).text();
+
+		// Two renderings — a bar in the header and a card below it — would be two frames
+		// reading one session, and only whichever ran first would find the result in it. So
+		// there is one form, and below 768px it is a popover the trigger button opens.
+		expect(body.match(/<form/g)?.length).toBe(1);
+		expect(body).toContain('id="quick-ping-form"');
+		expect(body).toContain('popover="auto"');
+		expect(body).toContain('commandfor="quick-ping-form"');
+		expect(body).toContain(`aria-label="${en.page.dashboard.quickPing.action.open}"`);
+	});
+
+	test("reports the answer as a toast beside the bar rather than a line inside it", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await render(db, team, membership, await storeResult(upResult()))).text();
 
-		// Source order is the ordering: an answer belongs under the field it is about and
-		// ahead of the button. Floating it up there visually instead would have left tab and
-		// screen-reader order reading the two the other way round, which is why the button
-		// moved in beside the field rather than the answer being reordered past it.
+		// The bar sits in the header's fixed 64px row, which has no line to draw an answer on.
+		// So the answer is a region of its own, after the whole form: the field and the button
+		// keep the order they submit in, and nothing between them moves when a check comes back.
 		let field = body.indexOf('name="url"');
-		let status = body.indexOf(`>${en.page.dashboard.quickPing.result.status.up}<`);
 		let submit = body.indexOf(`>${en.page.dashboard.quickPing.action.submit}<`);
+		let status = body.indexOf(`>${en.page.dashboard.quickPing.result.status.up}<`);
 
 		expect(field).toBeGreaterThan(-1);
-		expect(status).toBeGreaterThan(field);
-		expect(submit).toBeGreaterThan(status);
+		expect(submit).toBeGreaterThan(field);
+		expect(status).toBeGreaterThan(submit);
+		expect(body).toContain(`aria-label="${en.page.dashboard.quickPing.result.label}"`);
 	});
 
 	test("names the field through a label that wraps it rather than through an id", async () => {
@@ -225,9 +238,10 @@ describe("dashboard-quick-ping", () => {
 
 		let body = await (await render(db, team, membership)).text();
 
-		// The caption is drawn again now that the card is a tall column with a line to draw it
-		// on, but the accessible name never depended on that and must not start to: it rests
-		// on the `<label>` still wrapping the control, which no restyle can quietly take away.
+		// The caption is clipped in the header layout, but the accessible name never depended
+		// on it being visible and must not start to: it rests on the `<label>` still wrapping
+		// the control, and only the caption's own `<span>` is ever clipped — clipping the
+		// label itself would take the field down with it.
 		expect(body).toMatch(
 			new RegExp(
 				`<label[^>]*>\\s*<span[^>]*>${en.page.dashboard.quickPing.field.label}</span>\\s*<input[^>]*name="url"`,
@@ -235,7 +249,7 @@ describe("dashboard-quick-ping", () => {
 		);
 	});
 
-	test("renders the status, the code and the timing of the check that just ran", async () => {
+	test("names the status and reports the code and the timing of the check that just ran", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await render(db, team, membership, await storeResult(upResult()));
@@ -261,7 +275,7 @@ describe("dashboard-quick-ping", () => {
 		expect(body).not.toContain("HTTP");
 	});
 
-	test("shows a result once, so a reloaded frame doesn't keep a stale answer", async () => {
+	test("shows an answer once, so a reloaded frame doesn't keep a stale one", async () => {
 		let { db, team, membership } = await createFixture();
 		let cookie = await storeResult(upResult());
 

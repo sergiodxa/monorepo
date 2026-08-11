@@ -1934,23 +1934,23 @@ export default {
 		dashboard: {
 			header: {
 				title: "ダッシュボード",
-				action: {
-					create: "モニターを作成",
-					refresh: "更新",
-				},
 			},
 
 			quickPing: {
 				title: "クイックチェック",
 				description: "URLを1回チェック。保存もアラートもなし、pingを1回消費します。",
 				field: {
-					label: "URL",
+					label: "チェックするURL",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "チェックを実行",
+					submit: "1回チェック",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "クイックチェックを開く",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "チェック結果",
 					noResponse: "応答なし",
 					status: {
 						up: "稼働中",
@@ -1993,6 +1993,7 @@ export default {
 
 				httpMonitors: {
 					label: "HTTPモニター",
+					create: "新しいHTTPモニター",
 					breakdown: {
 						up: "{{up}} 稼働中",
 						down: "{{down}} 停止中",
@@ -2000,6 +2001,7 @@ export default {
 				},
 				dnsMonitors: {
 					label: "DNSモニター",
+					create: "新しいDNSモニター",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "1つのモニターがドメイン全体と、そこで追跡しているすべてのレコードを対象とします。",
 					breakdown: {
@@ -2010,6 +2012,7 @@ export default {
 				},
 				tcpMonitors: {
 					label: "TCPモニター",
+					create: "新しいTCPモニター",
 					breakdown: {
 						up: "{{up}} 稼働中",
 						down: "{{down}} 停止中",
@@ -2017,6 +2020,7 @@ export default {
 				},
 				cronJobs: {
 					label: "Cronジョブ",
+					create: "新しいCronジョブ",
 					breakdown: {
 						healthy: "{{healthy}} 正常",
 						late: "{{late}} 遅延",
@@ -2031,15 +2035,6 @@ export default {
 					},
 					value: { noData: "N/A" },
 					description: "過去24時間",
-				},
-
-				sslMonitors: {
-					label: "SSLモニター",
-					breakdown: {
-						valid: "{{valid}} 有効",
-						expiring: "{{expiring}} 期限間近",
-						expired: "{{expired}} 期限切れ",
-					},
 				},
 			},
 

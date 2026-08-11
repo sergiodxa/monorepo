@@ -1986,10 +1986,6 @@ export default {
 		dashboard: {
 			header: {
 				title: "Dashboard",
-				action: {
-					create: "Crea Monitor",
-					refresh: "Aggiorna",
-				},
 			},
 
 			quickPing: {
@@ -1997,13 +1993,17 @@ export default {
 				description:
 					"Controlli un URL una volta. Nulla viene salvato, nessun avviso — costa un ping.",
 				field: {
-					label: "URL",
+					label: "URL da controllare",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "Esegui Controllo",
+					submit: "Controlla una volta",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Apri controllo rapido",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Risultato del controllo",
 					noResponse: "Nessuna risposta",
 					status: {
 						up: "Attivo",
@@ -2046,6 +2046,7 @@ export default {
 
 				httpMonitors: {
 					label: "Monitor HTTP",
+					create: "Nuovo monitor HTTP",
 					breakdown: {
 						up: "{{up}} attivi",
 						down: "{{down}} non funzionanti",
@@ -2053,6 +2054,7 @@ export default {
 				},
 				dnsMonitors: {
 					label: "Monitor DNS",
+					create: "Nuovo monitor DNS",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "Un monitor copre un intero dominio e ogni record tracciato su di esso.",
 					breakdown: {
@@ -2063,6 +2065,7 @@ export default {
 				},
 				tcpMonitors: {
 					label: "Monitor TCP",
+					create: "Nuovo monitor TCP",
 					breakdown: {
 						up: "{{up}} attivi",
 						down: "{{down}} non funzionanti",
@@ -2070,6 +2073,7 @@ export default {
 				},
 				cronJobs: {
 					label: "Cron Job",
+					create: "Nuovo cron job",
 					breakdown: {
 						healthy: "{{healthy}} sani",
 						late: "{{late}} in ritardo",
@@ -2084,15 +2088,6 @@ export default {
 					},
 					value: { noData: "N/D" },
 					description: "Nelle ultime 24 ore",
-				},
-
-				sslMonitors: {
-					label: "Monitor SSL",
-					breakdown: {
-						valid: "{{valid}} validi",
-						expiring: "{{expiring}} in scadenza",
-						expired: "{{expired}} scaduti",
-					},
 				},
 			},
 

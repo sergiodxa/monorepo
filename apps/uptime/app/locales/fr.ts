@@ -1998,10 +1998,6 @@ export default {
 		dashboard: {
 			header: {
 				title: "Tableau de bord",
-				action: {
-					create: "Créer un moniteur",
-					refresh: "Actualiser",
-				},
 			},
 
 			quickPing: {
@@ -2009,13 +2005,17 @@ export default {
 				description:
 					"Vérifiez une URL une fois. Rien n'est enregistré, aucune alerte — coûte un ping.",
 				field: {
-					label: "URL",
+					label: "URL à vérifier",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "Lancer la vérification",
+					submit: "Vérifier une fois",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Ouvrir la vérification rapide",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Résultat de la vérification",
 					noResponse: "Aucune réponse",
 					status: {
 						up: "Actif",
@@ -2058,6 +2058,7 @@ export default {
 
 				httpMonitors: {
 					label: "Moniteurs HTTP",
+					create: "Nouveau moniteur HTTP",
 					breakdown: {
 						up: "{{up}} actifs",
 						down: "{{down}} hors service",
@@ -2065,6 +2066,7 @@ export default {
 				},
 				dnsMonitors: {
 					label: "Moniteurs DNS",
+					create: "Nouveau moniteur DNS",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "Un moniteur couvre tout un domaine et chaque enregistrement qui y est suivi.",
 					breakdown: {
@@ -2075,6 +2077,7 @@ export default {
 				},
 				tcpMonitors: {
 					label: "Moniteurs TCP",
+					create: "Nouveau moniteur TCP",
 					breakdown: {
 						up: "{{up}} actifs",
 						down: "{{down}} hors service",
@@ -2082,6 +2085,7 @@ export default {
 				},
 				cronJobs: {
 					label: "Tâches Cron",
+					create: "Nouvelle tâche cron",
 					breakdown: {
 						healthy: "{{healthy}} saines",
 						late: "{{late}} en retard",
@@ -2096,15 +2100,6 @@ export default {
 					},
 					value: { noData: "N/A" },
 					description: "Au cours des dernières 24 heures",
-				},
-
-				sslMonitors: {
-					label: "Moniteurs SSL",
-					breakdown: {
-						valid: "{{valid}} valides",
-						expiring: "{{expiring}} bientôt expirés",
-						expired: "{{expired}} expirés",
-					},
 				},
 			},
 

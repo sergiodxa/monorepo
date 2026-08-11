@@ -177,6 +177,11 @@ describe("dashboard-card-count", () => {
 		expect(body).toContain(">1 ok</span>");
 		expect(body).toContain(">1 changed</span>");
 		expect(body).toContain(">0 error</span>");
+		// Each card carries the link to its own type's form, which is what replaced the single
+		// "create monitor" button the header gave up to the quick check. It lands on the DNS
+		// form rather than on a chooser.
+		expect(body).toContain(`href="${routes.app.team.dnsMonitors.new.href({ team: team.slug })}"`);
+		expect(body).toContain(`aria-label="${en.page.dashboard.stats.dnsMonitors.create}"`);
 	});
 
 	test("resource=http renders the HTTP monitor count and up/down breakdown", async () => {
@@ -218,5 +223,7 @@ describe("dashboard-card-count", () => {
 		expect(body).toContain("HTTP Monitors");
 		expect(body).toContain(">1 up</span>");
 		expect(body).toContain(">0 down</span>");
+		expect(body).toContain(`href="${routes.app.team.monitors.new.href({ team: team.slug })}"`);
+		expect(body).toContain(`aria-label="${en.page.dashboard.stats.httpMonitors.create}"`);
 	});
 });

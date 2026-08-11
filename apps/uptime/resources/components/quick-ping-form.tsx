@@ -1,31 +1,29 @@
 /**
- * Client island: the quick-check form. A real `<form>` posting to the run-ping action,
- * so it works with no JavaScript at all — a plain navigating submit that lands back on
- * the dashboard with the result. Once hydrated, `on("submit")` intercepts instead and
- * `fetch()`es the same action, then reloads the enclosing `Frame` so only the card
- * re-renders: running a check must not cost the dashboard its stat cards, its tab
- * table, and every fetch behind them.
+ * Client island: the quick-check form that lives in the dashboard's header, where the
+ * "create monitor" button used to be. A real `<form>` posting to the run-ping action, so
+ * it works with no JavaScript at all — a plain navigating submit that lands back on the
+ * dashboard with the answer. Once hydrated, `on("submit")` intercepts instead and
+ * `fetch()`es the same action, then reloads the enclosing `Frame` so only this bar
+ * re-renders: running a check must not cost the dashboard its stat cards, its tab table,
+ * and every fetch behind them.
  *
- * The whole column under the card's header lives here — caption, field, the last
- * check's answer, then the button — because the answer belongs between the field and
- * the button, and the two used to sit in different containers. Reordering them
- * visually would have left the reading and tabbing order saying the opposite, so the
- * button came in here instead. What it did not bring with it is any say over the
- * answer: that arrives as finished strings, already decided, formatted and translated
- * by the fragment that read them out of the session, so the scripted and unscripted
- * paths still render the same card from the same one place.
+ * What a check came back as is not drawn here at all — it is a toast the fragment renders
+ * beside this form, which is what a 64px header row has room for. That also means this
+ * island holds no state about the last check beyond the URL still sitting in the field.
  *
- * The answer's slot is held open whether or not there is one to draw, so a check
- * fills the card rather than growing it and shoving the dashboard down: a `Badge`'s
- * own pill — an `xs` line box, its `0.5` block padding and its two borders — the
- * `0.5rem` under it, and one `sm` line for the code and the timing. Whatever is left
- * over then falls to the button's leading margin, which drops it onto the card's
- * bottom edge while the grid stretches this card to the two stat rows beside it, and
- * costs nothing on the narrower layout where it is stretched to nothing at all.
+ * The form element is its own `[popover]`, and that is what makes one form serve both
+ * layouts. At ≥768px a `display: flex !important` rule beats the UA's
+ * `[popover]:not(:popover-open) { display: none }` and the bar simply sits in the header
+ * as a row. Below that there is no room for a URL field next to the page title, so the
+ * bar stays a popover: the fragment's icon button opens it as a sheet under the header,
+ * a column with room for the caption explaining what a check does. Two renderings of the
+ * same form would have been two frames reading one session, and only whichever ran first
+ * would have found the result in it.
  *
- * The `<label>` wraps the `<input>` rather than pointing at it by `id`: that is what
- * the control's accessible name rests on, and it survives whichever way the caption
- * is styled.
+ * The `<label>` wraps the `<input>` rather than pointing at it by `id`: that is what the
+ * control's accessible name rests on, and it survives whichever way the caption is
+ * styled. Only the caption's `<span>` is clipped, never the label itself — clipping the
+ * label would take the field down with it.
  *
  * Its labels come in as props rather than through `@pkg/i18n/ui`'s `intl(handle)`,
  * since the fragment this renders inside wires up no `IntlProvider` of its own for the
@@ -37,16 +35,39 @@
 
 import type { Handle } from "remix/ui";
 
-import { fg } from "@pkg/u/color";
-import { flex, flexCol, gap, grow, items } from "@pkg/u/layout";
-import { m, mbs, minBs } from "@pkg/u/size";
+import { visuallyHidden } from "@pkg/u/a11y";
+import { bg, border, fg } from "@pkg/u/color";
+import { rounded, shadow } from "@pkg/u/effects";
+import { raw } from "@pkg/u/general";
+import {
+	boxSizing,
+	fixed,
+	flex,
+	flexCol,
+	gap,
+	grow,
+	hidden,
+	insBs,
+	insIe,
+	insIs,
+	items,
+	shrink,
+} from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
+import { is, m, maxIs, minIs, p } from "@pkg/u/size";
+import { when } from "@pkg/u/state";
 import { text } from "@pkg/u/typography";
-import { Badge, Button, Input, Label } from "@pkg/ui";
+import { Button, Input, Label } from "@pkg/ui";
 import { clientEntry, on } from "remix/ui";
 
-import type { BadgeTone } from "~/resources/components/badge";
+/**
+ * The form's own element id, which the fragment's narrow-viewport trigger button points
+ * `commandfor` at to open it as a popover. Exported so the two can never drift apart.
+ */
+export const QUICK_PING_FORM_ID = "quick-ping-form";
 
-import { badgeVariant } from "~/resources/components/badge";
+/** The caption's element id, referenced by the field's `aria-describedby`. */
+const HELP_ID = "quick-ping-help";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type QuickPingFormProps = {
@@ -54,40 +75,71 @@ type QuickPingFormProps = {
 	action: string;
 	/** Fragment URL the frame reloads from once the check has run. */
 	src: string;
-	/** Kept after a check so the field still names the target the answer above it is about. */
+	/** Kept after a check so the field still names the target the toast is about. */
 	url?: string;
 	label: string;
 	placeholder: string;
+	/** What a check does and does not do; drawn in the popover, read out in both layouts. */
+	description: string;
 	submit: string;
-	/** Why the last submission never ran a check at all, already translated. */
-	error?: string;
-	/** What the last check came back as, already translated and formatted. */
-	result?: {
-		tone: BadgeTone;
-		status: string;
-		detail: string;
-	};
 };
 
-/** Posts the URL to the run-ping action, then reloads the card's frame with the result. */
+/** Posts the URL to the run-ping action, then reloads the bar's frame with the answer. */
 export const QuickPingForm = clientEntry(
 	"/resources/components/quick-ping-form.tsx#QuickPingForm",
 	function QuickPingForm(handle: Handle<QuickPingFormProps>) {
 		let pending = false;
 
 		return () => {
-			let { action, src, url, label, placeholder, submit, error, result } = handle.props;
+			let { action, src, url, label, placeholder, description, submit } = handle.props;
 
 			return (
 				<form
+					id={QUICK_PING_FORM_ID}
+					popover="auto"
 					method="post"
 					action={action}
 					mix={[
+						/**
+						 * The narrow-viewport sheet: a panel pinned under the header's own 64px
+						 * row, inset from both edges, laid out as a column. Every declaration
+						 * here is undone by the `raw()` block in the media query below, where
+						 * this becomes an ordinary row in the header's flex line.
+						 */
+						fixed(),
+						insBs("64px"),
+						insIs("12px"),
+						insIe("12px"),
 						m(0),
-						flex(),
+						p(3),
+						boxSizing("border-box"),
+						is("auto"),
+						bg("neutral.tint"),
+						border({ color: "neutral", width: 1 }),
+						rounded("lg"),
+						shadow("lg"),
+						hidden(),
 						flexCol(),
-						gap("12px"),
-						grow(1),
+						gap("8px"),
+						/**
+						 * Beats the UA stylesheet's `[popover]:not(:popover-open) { display: none }`,
+						 * which wins on specificity over a plain `display` declaration.
+						 */
+						when("&:popover-open", raw({ display: "flex !important" })),
+						media("(min-width: 768px)", [
+							raw({
+								display: "flex !important",
+								flexDirection: "row",
+								position: "static",
+								inset: "auto",
+								padding: "0",
+								background: "transparent",
+								border: "none",
+								borderRadius: "0",
+								boxShadow: "none",
+							}),
+							items("center"),
+						]),
 						on("submit", async (event) => {
 							event.preventDefault();
 							if (pending) return;
@@ -115,40 +167,41 @@ export const QuickPingForm = clientEntry(
 						}),
 					]}
 				>
-					<Label mix={[flex(), flexCol(), gap("4px")]}>
-						<span>{label}</span>
+					{/**
+					 * The one place a visitor is told a check saves nothing and sends no alerts.
+					 * The sheet has a line to draw it on; the header row does not, so there it is
+					 * clipped rather than dropped — the field points `aria-describedby` at it
+					 * either way.
+					 */}
+					<p
+						id={HELP_ID}
+						mix={[
+							m(0),
+							text("sm"),
+							fg("neutral.muted"),
+							media("(min-width: 768px)", visuallyHidden()),
+						]}
+					>
+						{description}
+					</p>
+
+					<Label mix={[flex(), grow(1), minIs(0), media("(min-width: 768px)", maxIs("360px"))]}>
+						<span mix={[visuallyHidden()]}>{label}</span>
 						<Input
 							type="url"
 							name="url"
 							required
 							inputMode="url"
 							autoComplete="url"
+							aria-describedby={HELP_ID}
 							placeholder={placeholder}
 							defaultValue={url}
 							disabled={pending}
+							mix={[is("full")]}
 						/>
 					</Label>
 
-					<div
-						mix={[
-							flex(),
-							flexCol(),
-							gap("8px"),
-							items("start"),
-							minBs("calc(0.75rem + 0.25rem + 2px + 0.5rem + 1.25rem)"),
-						]}
-					>
-						{error && <span mix={[text("sm"), fg("danger")]}>{error}</span>}
-
-						{result && (
-							<>
-								<Badge {...badgeVariant(result.tone)}>{result.status}</Badge>
-								<span mix={[text("sm"), fg("neutral.muted")]}>{result.detail}</span>
-							</>
-						)}
-					</div>
-
-					<Button type="submit" isPending={pending} disabled={pending} mix={[mbs("auto")]}>
+					<Button type="submit" isPending={pending} disabled={pending} mix={[shrink()]}>
 						{submit}
 					</Button>
 				</form>

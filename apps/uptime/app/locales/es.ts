@@ -1976,23 +1976,23 @@ export default {
 		dashboard: {
 			header: {
 				title: "Panel de control",
-				action: {
-					create: "Crear Monitor",
-					refresh: "Actualizar",
-				},
 			},
 
 			quickPing: {
 				title: "Verificación rápida",
 				description: "Verifique una URL una vez. Nada se guarda, sin alertas; cuesta un ping.",
 				field: {
-					label: "URL",
+					label: "URL a verificar",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "Ejecutar verificación",
+					submit: "Verificar una vez",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Abrir verificación rápida",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Resultado de la verificación",
 					noResponse: "Sin respuesta",
 					status: {
 						up: "Activo",
@@ -2036,6 +2036,7 @@ export default {
 
 				httpMonitors: {
 					label: "Monitores HTTP",
+					create: "Nuevo monitor HTTP",
 					breakdown: {
 						up: "{{up}} activos",
 						down: "{{down}} caídos",
@@ -2043,6 +2044,7 @@ export default {
 				},
 				dnsMonitors: {
 					label: "Monitores DNS",
+					create: "Nuevo monitor DNS",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "Un monitor cubre un dominio entero y todos los registros que se le siguen.",
 					breakdown: {
@@ -2053,6 +2055,7 @@ export default {
 				},
 				tcpMonitors: {
 					label: "Monitores TCP",
+					create: "Nuevo monitor TCP",
 					breakdown: {
 						up: "{{up}} activos",
 						down: "{{down}} caídos",
@@ -2060,6 +2063,7 @@ export default {
 				},
 				cronJobs: {
 					label: "Trabajos Cron",
+					create: "Nuevo cron job",
 					breakdown: {
 						healthy: "{{healthy}} saludables",
 						late: "{{late}} retrasados",
@@ -2074,15 +2078,6 @@ export default {
 					},
 					value: { noData: "N/D" },
 					description: "En las últimas 24 horas",
-				},
-
-				sslMonitors: {
-					label: "Monitores SSL",
-					breakdown: {
-						valid: "{{valid}} válidos",
-						expiring: "{{expiring}} por expirar",
-						expired: "{{expired}} expirados",
-					},
 				},
 			},
 

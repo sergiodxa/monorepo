@@ -1991,10 +1991,6 @@ export default {
 		dashboard: {
 			header: {
 				title: "Dashboard",
-				action: {
-					create: "Monitor erstellen",
-					refresh: "Aktualisieren",
-				},
 			},
 
 			quickPing: {
@@ -2002,13 +1998,17 @@ export default {
 				description:
 					"Prüfen Sie eine URL einmalig. Nichts gespeichert, keine Benachrichtigungen, ein Ping.",
 				field: {
-					label: "URL",
+					label: "Zu prüfende URL",
 					placeholder: "https://example.com/healthcheck",
 				},
 				action: {
-					submit: "Prüfung starten",
+					submit: "Einmal prüfen",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Schnellprüfung öffnen",
 				},
 				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Prüfergebnis",
 					noResponse: "Keine Antwort",
 					status: {
 						up: "Aktiv",
@@ -2059,6 +2059,7 @@ export default {
 
 				httpMonitors: {
 					label: "HTTP-Monitore",
+					create: "Neuer HTTP-Monitor",
 					breakdown: {
 						up: "{{up}} aktiv",
 						down: "{{down}} ausgefallen",
@@ -2066,6 +2067,7 @@ export default {
 				},
 				dnsMonitors: {
 					label: "DNS-Monitore",
+					create: "Neuer DNS-Monitor",
 					/** One monitor is one domain, so this count is smaller than the work behind it. */
 					hint: "Ein Monitor deckt eine gesamte Domain und alle darauf erfassten Einträge ab.",
 					breakdown: {
@@ -2076,6 +2078,7 @@ export default {
 				},
 				tcpMonitors: {
 					label: "TCP-Monitore",
+					create: "Neuer TCP-Monitor",
 					breakdown: {
 						up: "{{up}} aktiv",
 						down: "{{down}} ausgefallen",
@@ -2083,6 +2086,7 @@ export default {
 				},
 				cronJobs: {
 					label: "Cron-Jobs",
+					create: "Neuer Cron-Job",
 					breakdown: {
 						healthy: "{{healthy}} gesund",
 						late: "{{late}} verspätet",
@@ -2097,15 +2101,6 @@ export default {
 					},
 					value: { noData: "N/V" },
 					description: "In den letzten 24 Stunden",
-				},
-
-				sslMonitors: {
-					label: "SSL-Monitore",
-					breakdown: {
-						valid: "{{valid}} gültig",
-						expiring: "{{expiring}} bald ablaufend",
-						expired: "{{expired}} abgelaufen",
-					},
 				},
 			},
 
