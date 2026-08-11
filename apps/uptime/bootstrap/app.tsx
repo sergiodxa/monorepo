@@ -2,18 +2,19 @@
  * Application bootstrap that assembles the uptime fetch-router. It registers the
  * core middleware stack (async context, logging, form data, method override, session,
  * auth, language resolution for the HTML surface, cross-origin protection, HTML
- * rendering), mounts the web routes with their auth guards, and wires a
- * request-scoped SSR renderer that resolves and follows nested frame redirects. It
- * exists as the composition root shared by the worker and any other runtime entry
- * point.
+ * rendering), and mounts the web routes with their auth guards. It exists as the
+ * composition root shared by the worker and any other runtime entry point.
+ *
+ * The SSR renderer it installs lives in `~/app/http/render` rather than here, because
+ * nothing can import this module in a test — the controllers it mounts pull in
+ * bundler-only globs — and a renderer no test can reach is a renderer every page test
+ * has to restate for itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext, Router } from "remix/fetch-router";
-import type { RemixNode } from "remix/ui";
-import type { ResolveFrameContext } from "remix/ui/server";
+import type { Middleware } from "remix/fetch-router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
@@ -26,7 +27,6 @@ import { createController, createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
-import { renderToStream } from "remix/ui/server";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import {
@@ -212,6 +212,7 @@ import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import { createHtmlRenderer } from "~/app/http/render";
 import routes from "~/routes/web";
 
 /**
@@ -631,64 +632,4 @@ function htmlOnly(middleware: Middleware): Middleware {
 		if (isMachinePath(context.url.pathname)) return next();
 		return middleware(context, next);
 	};
-}
-
-/** Creates a request-scoped renderer for server-side HTML responses. */
-function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, {
-			frameSrc: ctx.request.url,
-			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, src, target, context);
-			},
-		});
-
-		let headers = new Headers(init?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		return new Response(stream, { ...init, headers });
-	};
-}
-
-/** Fetches frame HTML through the current router so SSR frames share request context. */
-async function resolveFrame(
-	router: Router,
-	request: Request,
-	src: string,
-	target?: string,
-	context?: ResolveFrameContext,
-) {
-	let frameSrc = context?.currentFrameSrc ?? request.url;
-	let url = new URL(src, frameSrc);
-	let headers = new Headers();
-	headers.set("accept", "text/html");
-	headers.set("accept-encoding", "identity");
-	headers.set("x-remix-frame", "true");
-
-	if (target) headers.set("x-remix-target", target);
-
-	let cookie = request.headers.get("cookie");
-	if (cookie) headers.set("cookie", cookie);
-
-	let res = await followFrameRedirects(router, request, url, headers);
-	if (res.body) return res.body;
-	if (res.ok) return res.text();
-	return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`;
-}
-
-/** Follows SSR frame redirects without letting fetch auto-follow with changed headers. */
-async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
-	let currentUrl = url;
-	let redirectsRemaining = 10;
-
-	while (true) {
-		let res = await router.fetch(
-			new Request(currentUrl, { method: "GET", headers, signal: request.signal }),
-		);
-		let location = res.headers.get("location");
-		if (!location || res.status < 300 || res.status >= 400) return res;
-
-		if (redirectsRemaining-- <= 0) throw new Error("Too many frame redirects");
-		currentUrl = new URL(location, currentUrl);
-	}
 }

@@ -77,6 +77,24 @@ async function seedRecord(
 	);
 }
 
+/**
+ * The CSS declarations a rendered element's classes resolve to, read out of the `<style>`
+ * tags the renderer emits alongside the markup. `css()` mixins turn into generated class
+ * names, so a layout assertion has to go through them rather than matching a class name
+ * that changes whenever the rule does.
+ */
+function declarationsFor(html: string, classAttribute: string): string {
+	let rules = new Map<string, string>();
+	for (let match of html.matchAll(/<style data-rmx="([^"]+)">.*?\{\s*\.\1\s*\{([^}]*)\}/gs)) {
+		rules.set(match[1] ?? "", (rules.get(match[1] ?? "") ?? "") + (match[2] ?? ""));
+	}
+
+	return classAttribute
+		.split(/\s+/)
+		.map((name) => rules.get(name) ?? "")
+		.join("");
+}
+
 /** How many elements the page draws in the destructive tone, the signal "something is wrong". */
 function dangerCount(html: string): number {
 	return html.match(/data-color="danger"/g)?.length ?? 0;
@@ -203,6 +221,36 @@ describe("dnsMonitorShow", () => {
 		expect(body).toContain("Watch");
 		expect(body).toContain("Stop watching");
 		expect(body).toContain(routes.actions.monitor.dns.toggleRecord.href({ team: team.slug }));
+	});
+
+	/**
+	 * "Stop watching" is a phrase, not a word, and a column sized for the header broke it
+	 * over two lines — which made every row in the table taller. The column has to size to
+	 * its content instead, which is `1%` plus a cell that refuses to wrap.
+	 */
+	test("sizes the watch column to its control, so the longer label stays on one line", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		await seedRecord(db, monitor.id, { name: "acme.test", record_type: "A", value: "192.0.2.1" });
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		// The records table is the only one this page renders inline — the check history is
+		// behind a frame this harness resolves to nothing — so the last header cell and the
+		// last body cell in the document are the watch column's.
+		let header = [...body.matchAll(/<th[^>]*class="([^"]*)"/g)].at(-1);
+		let cell = [...body.matchAll(/<td[^>]*class="([^"]*)"/g)].at(-1);
+
+		for (let match of [header, cell]) {
+			let declarations = declarationsFor(body, match?.[1] ?? "");
+			expect(declarations).toContain("white-space: nowrap");
+			expect(declarations).toContain("inline-size: 1%");
+		}
 	});
 
 	/**

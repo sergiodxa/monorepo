@@ -19,9 +19,8 @@ import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { mbe } from "@pkg/u/size";
-import { fontSize, overflowWrap } from "@pkg/u/typography";
+import { is, m, mbe, mbs } from "@pkg/u/size";
+import { fontSize, nowrap, overflowWrap } from "@pkg/u/typography";
 import { Badge, Button, Empty, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -207,7 +206,17 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 												<Table.Column>
 													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.state")}
 												</Table.Column>
-												<Table.Column>
+												{/*
+												 * The control's label is a whole phrase ("Stop watching"), and a
+												 * column wide enough for one word breaks it over two lines, which
+												 * makes every row in the table taller. `1%` is the shrink-to-fit
+												 * width in an auto-laid-out table — the column takes what its
+												 * content demands and the value column absorbs the slack — and the
+												 * cell refuses to wrap so that demand is the label's full width.
+												 * The table scrolls in its own container, so nothing here can push
+												 * the page sideways.
+												 */}
+												<Table.Column mix={[is("1%"), nowrap()]}>
 													{ctx.i18next.t("page.dnsMonitorDetail.records.table.columns.watched")}
 												</Table.Column>
 											</Table.Row>
@@ -243,7 +252,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 													 * did, not something that happened by not reading the email — and
 													 * this button is that act.
 													 */}
-													<Table.Cell>
+													<Table.Cell mix={[is("1%"), nowrap()]}>
 														<form
 															method="post"
 															action={routes.actions.monitor.dns.toggleRecord.href({
@@ -273,23 +282,47 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							)}
 						</section>
 
+						{/*
+						 * `StatCardSkeleton` renders bare cards with no row of its own, so that
+						 * several frames can share one row a caller lays out. Neither frame here
+						 * shares a row with anything, so each supplies the row its own placeholders
+						 * sit in — otherwise the four cards stack flush against each other while
+						 * the page is loading, which is not the shape either fragment resolves to.
+						 * The gap matches the stat row above.
+						 */}
 						<Frame
 							name="dns-monitor-card-uptime-history"
 							src={routes.app.team.dnsMonitors.cards.uptimeHistory.href({
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							fallback={<StatCardSkeleton count={1} />}
+							fallback={
+								<div mix={[flex(), flexWrap(), gap("16px")]}>
+									<StatCardSkeleton count={1} />
+								</div>
+							}
 						/>
 
-						<Frame
-							name="dns-monitor-card-results"
-							src={routes.app.team.dnsMonitors.cards.results.href({
-								team: ctx.team.slug,
-								monitorId: monitor.id,
-							})}
-							fallback={<StatCardSkeleton count={3} />}
-						/>
+						{/*
+						 * The two fragments are separate blocks, and a `Frame` is a region rather
+						 * than an element — so the space between them belongs to a wrapper here, and
+						 * it has to survive the swap: the resolved history section and result table
+						 * need it just as much as the skeletons do.
+						 */}
+						<div mix={[mbs("24px")]}>
+							<Frame
+								name="dns-monitor-card-results"
+								src={routes.app.team.dnsMonitors.cards.results.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={
+									<div mix={[flex(), flexWrap(), gap("16px")]}>
+										<StatCardSkeleton count={3} />
+									</div>
+								}
+							/>
+						</div>
 					</div>
 				</AppShell>
 			</DocumentLayout>,
