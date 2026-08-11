@@ -91,8 +91,8 @@ export function createBunSqliteDatabaseAdapter(
 			/**
 			 * `c.json()` columns hold JS objects/arrays at the model layer, but neither
 			 * `bun:sqlite` nor D1's binder accepts anything but strings/numbers/booleans/
-			 * null — encode them to JSON text before binding, and decode any JSON-typed
-			 * columns back out of rows read from the database.
+			 * null — encode them to JSON text before binding. `decodeColumns` undoes
+			 * this, and the boolean-to-integer narrowing SQLite forces, on rows read back.
 			 */
 			operation = encodeJsonColumns(operation);
 
@@ -105,7 +105,7 @@ export function createBunSqliteDatabaseAdapter(
 			if (isReadStatement) {
 				let rawRows = stmt.all(...values) as Record<string, unknown>[];
 				let rows = normalizeRows(rawRows);
-				rows = decodeJsonColumns(operation, rows);
+				rows = decodeColumns(operation, rows);
 
 				if (operation.kind === "count" || operation.kind === "exists") {
 					rows = normalizeCountRows(rows);
@@ -281,8 +281,47 @@ function encodeJsonColumns(operation: DataManipulationOperation): DataManipulati
 	return operation;
 }
 
-/** JSON-decodes every `c.json()` column in every row, for operations with a resolvable table. */
-function decodeJsonColumns(
+/** A table's columns whose stored representation differs from their declared JS type. */
+interface DecodableColumns {
+	/** `c.json()` columns, stored as JSON text. */
+	json: Set<string>;
+	/** `c.boolean()` columns, stored as the integers 1 and 0. */
+	boolean: Set<string>;
+}
+
+/**
+ * Collects a table's `c.json()` and `c.boolean()` column names in a single pass.
+ *
+ * One pass rather than two because this runs per read statement: the read path needs
+ * both sets together, while the write path only ever needs the JSON one.
+ */
+function getDecodableColumnNames(table: StatementTable): DecodableColumns {
+	let definitions = getTableColumnDefinitions(table);
+	let json = new Set<string>();
+	let booleans = new Set<string>();
+
+	for (let [column, definition] of Object.entries(definitions)) {
+		if (definition.type === "json") json.add(column);
+		else if (definition.type === "boolean") booleans.add(column);
+	}
+
+	return { json, boolean: booleans };
+}
+
+/**
+ * Restores, on every row read back, the JS types SQLite cannot store natively.
+ *
+ * `c.json()` columns go in as JSON text and must come back as the objects the model
+ * layer works with. `c.boolean()` columns are the same problem with a quieter failure:
+ * SQLite has no boolean storage class, so `normalizeBoundValue` writes `true`/`false`
+ * as `1`/`0` and, without this decode, the column reads back as a number while the
+ * generated row type still claims `boolean` — which rendered a stored `false` as a
+ * ticked checkbox and served `1` from JSON APIs that promise `boolean`.
+ *
+ * `null` is left alone: a nullable boolean column's `null` is a third state, and the
+ * `?? true` defaults callers write over it depend on telling it apart from `false`.
+ */
+function decodeColumns(
 	operation: DataManipulationOperation,
 	rows: Record<string, unknown>[],
 ): Record<string, unknown>[] {
@@ -290,13 +329,13 @@ function decodeJsonColumns(
 		return rows;
 	}
 
-	let jsonColumns = getJsonColumnNames(operation.table);
-	if (jsonColumns.size === 0) return rows;
+	let columns = getDecodableColumnNames(operation.table);
+	if (columns.json.size === 0 && columns.boolean.size === 0) return rows;
 
 	return rows.map((row) => {
 		let decoded: Record<string, unknown> = { ...row };
 
-		for (let column of jsonColumns) {
+		for (let column of columns.json) {
 			let value = decoded[column];
 			if (typeof value === "string") {
 				try {
@@ -305,6 +344,12 @@ function decodeJsonColumns(
 					/** Leaves the raw string in place if it somehow isn't valid JSON. */
 				}
 			}
+		}
+
+		for (let column of columns.boolean) {
+			let value = decoded[column];
+			if (typeof value === "number") decoded[column] = value !== 0;
+			else if (typeof value === "bigint") decoded[column] = value !== 0n;
 		}
 
 		return decoded;

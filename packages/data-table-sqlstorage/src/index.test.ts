@@ -61,6 +61,15 @@ let settings = table({
 	},
 });
 
+let flags = table({
+	name: "flags",
+	columns: {
+		id: c.integer().primaryKey(),
+		enabled: c.boolean(),
+		archived: c.boolean().nullable(),
+	},
+});
+
 /**
  * Builds a fresh in-memory database, adapter, and `remix/data-table` handle.
  * @returns The `remix/data-table` `db` and the raw `bun:sqlite` instance.
@@ -213,5 +222,44 @@ describe("createSQLStorageDatabaseAdapter", () => {
 
 		let found = await db.findOne(settings, { where: { id: 1 } });
 		expect(found?.config).toEqual(config);
+	});
+
+	test("c.boolean() columns read back as real booleans, not SQLite's 1 and 0", async () => {
+		await db.exec(
+			"CREATE TABLE flags (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, archived INTEGER)",
+		);
+
+		await db.create(flags, { id: 1, enabled: false, archived: null });
+		await db.create(flags, { id: 2, enabled: true, archived: true });
+
+		let off = await db.findOne(flags, { where: { id: 1 } });
+		let on = await db.findOne(flags, { where: { id: 2 } });
+
+		// `toBe` rather than a truthiness check on purpose: `0` is the exact value that
+		// used to leak out here, and it renders `checked="0"` — an HTML boolean attribute
+		// that is ON — so a stored `false` came back ticked. Only identity catches that.
+		expect(off?.enabled).toBe(false);
+		expect(on?.enabled).toBe(true);
+
+		// A nullable boolean's `null` is a third state and must survive the decode, or
+		// every `?? true` default written over one silently stops firing.
+		expect(off?.archived).toBe(null);
+		expect(on?.archived).toBe(true);
+	});
+
+	test("c.boolean() columns decode on the returning path too, not only on select", async () => {
+		await db.exec(
+			"CREATE TABLE flags (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL, archived INTEGER)",
+		);
+
+		let created = await db.create(
+			flags,
+			{ id: 1, enabled: false, archived: null },
+			{ returnRow: true },
+		);
+		expect(created.enabled).toBe(false);
+
+		let updated = await db.update(flags, 1, { enabled: true });
+		expect(updated.enabled).toBe(true);
 	});
 });

@@ -78,6 +78,15 @@ async function renderForm(
 	let ctx = getContext();
 	let { user, permissions, siteTitle } = await chrome(db);
 	let granted = new Set<Permission>(role?.permissions ?? []);
+	/*
+	 * Narrowed once, here, because `builtin` is a `c.integer()` column and so arrives as
+	 * the number `0` or `1`. Every use of it below is a place where that number behaves
+	 * differently from the boolean it stands for: an HTML boolean attribute is on
+	 * whenever it is merely present, so `readonly={0}` renders `readonly="0"` and locks
+	 * the very fields an editable role exists to edit; and `{0 && …}` renders a literal
+	 * "0" into the page rather than nothing.
+	 */
+	let isBuiltin = Boolean(role?.builtin);
 	return ctx.render(
 		<CmsLayout
 			title={title}
@@ -96,7 +105,7 @@ async function renderForm(
 					id="name"
 					name="name"
 					defaultValue={role?.name ?? ""}
-					readonly={role?.builtin}
+					readonly={isBuiltin}
 				/>
 				<label mix={[s.label]} htmlFor="label">
 					Label
@@ -126,13 +135,13 @@ async function renderForm(
 								type="checkbox"
 								name={`perm_${key}`}
 								defaultChecked={granted.has(key)}
-								disabled={role?.builtin}
+								disabled={isBuiltin}
 							/>{" "}
 							<code>{key}</code> — {PERMISSIONS[key]}
 						</label>
 					))}
 				</fieldset>
-				{role?.builtin && (
+				{isBuiltin && (
 					<p mix={[s.help]}>
 						Built-in roles keep their permissions; only label/description can change.
 					</p>
