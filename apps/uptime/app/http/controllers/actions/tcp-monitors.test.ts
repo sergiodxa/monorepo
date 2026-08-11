@@ -12,6 +12,11 @@
  * returned without checking (rejected form, another team's monitor, an owner without an
  * active subscription) is none.
  *
+ * The same stub carries a `PING_RESULTS` double, which pins the other half of that: a check
+ * that ran writes exactly one Analytics Engine point with the same dimensions the scheduled
+ * sweep writes, and a refused one writes none — so billed work and reported work stay in
+ * step.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -62,9 +67,22 @@ mock.module("cloudflare:sockets", () => ({
  */
 let deferred: Promise<unknown>[] = [];
 
-/** No binding is read on these paths, so only `waitUntil` needs to behave. */
+/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
+interface DataPoint {
+	blobs: string[];
+	doubles: number[];
+	indexes: string[];
+}
+
+/** Records the data points `writePingResult` sends to Analytics Engine. */
+let writeDataPointMock = mock((_point: DataPoint) => {});
+
+/**
+ * `waitUntil` collects deferred work, and `PING_RESULTS` records the analytics point the
+ * check writes — the only binding these paths touch.
+ */
 mock.module("cloudflare:workers", () => ({
-	env: {},
+	env: { PING_RESULTS: { writeDataPoint: writeDataPointMock } },
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -81,6 +99,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
+	writeDataPointMock.mockClear();
 	deferred = [];
 });
 
@@ -499,5 +518,75 @@ describe("checkTcpMonitor billing", () => {
 		);
 
 		expect(await ingestedEvents()).toEqual([]);
+	});
+});
+
+/**
+ * A manual check must be indistinguishable from a scheduled one in the dataset: same
+ * dimensions, same vocabulary, one point per check. A check the action never ran writes
+ * nothing, so a refused request leaves no trace to inflate a chart with.
+ */
+describe("checkTcpMonitor analytics", () => {
+	/** Seeds a monitor this team owns, which is what an on-demand check needs to exist. */
+	async function createMonitor(db: Database, teamId: string) {
+		return await db.create(
+			tcpMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: teamId,
+				name: "Redis",
+				host: "redis.internal",
+				port: 6379,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("writes exactly one data point carrying TCP's own status and the team index", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await createMonitor(db, team.id);
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+
+		let [point] = writeDataPointMock.mock.calls[0]!;
+		expect(point.blobs).toEqual([monitor.id, "tcp", "up"]);
+		expect(point.indexes).toEqual([team.id]);
+		/**
+		 * The connection's latency is measured, not stubbed, so only its shape is pinned. The
+		 * three that follow are fixed: one row means one check, and TCP has no notion of an
+		 * HTTP status to report or to expect.
+		 */
+		expect(point.doubles).toHaveLength(4);
+		expect(point.doubles[0]).toBeGreaterThanOrEqual(0);
+		expect(point.doubles.slice(1)).toEqual([1, 0, 0]);
+	});
+
+	test("writes no data point when the owner has no active subscription", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await createMonitor(db, team.id);
+		await createLapsedSubscription(db, team.owner_id);
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		// No connection was attempted, so there is no result to report.
+		expect(writeDataPointMock).not.toHaveBeenCalled();
 	});
 });

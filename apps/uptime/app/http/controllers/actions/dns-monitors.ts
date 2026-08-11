@@ -6,8 +6,9 @@
  * The manual check is the one action here that performs billable work: it resolves DNS
  * inline, so unlike the HTTP monitors' "run check" — which only enqueues, and is billed by
  * the job that later carries it out — nothing downstream of this request would ever meter
- * it. Both halves of that live in {@link checkDnsMonitor}: the entitlement gate that
- * decides whether the lookup happens at all, and the meter event for the one that did.
+ * it. All of that lives in {@link checkDnsMonitor}: the entitlement gate that decides
+ * whether the lookup happens at all, the Analytics Engine data point recording it, and the
+ * meter event for the one that did.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,6 +35,7 @@ import {
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
 import { notifyDnsResult } from "~/app/services/alerts";
+import { writePingResult } from "~/app/services/analytics";
 import { checkDns } from "~/app/services/dns-check";
 import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
@@ -181,6 +183,24 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 		monitor.last_value,
 	);
 	let resultId = await DnsMonitor.recordCheckResult(db, monitor.id, checkResult);
+
+	/**
+	 * Written here, between the history row and the meter, exactly where the scheduled sweep
+	 * writes it — a check the visitor asked for is the same event as one the cron asked for,
+	 * so nothing reading the dataset should be able to tell which produced a row. Without
+	 * this the check was billed and stored in D1 but absent from every chart and aggregate
+	 * built on Analytics Engine.
+	 *
+	 * DNS's own `ok`/`changed`/`error` vocabulary goes in as-is, matching the sweep: nothing
+	 * reads a status without filtering to one ping type first.
+	 */
+	writePingResult({
+		monitorId: monitor.id,
+		teamId: ctx.team.id,
+		type: "dns",
+		status: checkResult.status,
+		responseTimeMs: checkResult.responseTimeMs,
+	});
 
 	/**
 	 * Keyed on the history row this check just wrote, which is the same key the scheduled

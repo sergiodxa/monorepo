@@ -17,6 +17,11 @@
  * row it wrote, and every request that returned without resolving anything (rejected form,
  * another team's monitor, an owner without an active subscription) is none.
  *
+ * The same stub carries a `PING_RESULTS` double, which pins the other half of that: a check
+ * that ran writes exactly one Analytics Engine point with the same dimensions the scheduled
+ * sweep writes, and a refused one writes none — so billed work and reported work stay in
+ * step.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -53,9 +58,22 @@ import routes from "~/routes/web";
  */
 let deferred: Promise<unknown>[] = [];
 
-/** No binding is read on these paths, so only `waitUntil` needs to behave. */
+/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
+interface DataPoint {
+	blobs: string[];
+	doubles: number[];
+	indexes: string[];
+}
+
+/** Records the data points `writePingResult` sends to Analytics Engine. */
+let writeDataPointMock = mock((_point: DataPoint) => {});
+
+/**
+ * `waitUntil` collects deferred work, and `PING_RESULTS` records the analytics point the
+ * check writes — the only binding these paths touch.
+ */
 mock.module("cloudflare:workers", () => ({
-	env: {},
+	env: { PING_RESULTS: { writeDataPoint: writeDataPointMock } },
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -76,6 +94,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
+	writeDataPointMock.mockClear();
 	deferred = [];
 });
 
@@ -789,6 +808,154 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 			expect(await ingestedEvents()).toEqual([]);
 		} finally {
 			restore();
+		}
+	});
+});
+
+/**
+ * A manual check must be indistinguishable from a scheduled one in the dataset: same
+ * dimensions, same vocabulary, one point per check. A check the action never ran writes
+ * nothing, so a refused request leaves no trace to inflate a chart with.
+ */
+describe("POST /actions/:team/check-dns-monitor analytics", () => {
+	/** Resolves every lookup to one A record, so a check that runs always completes. */
+	function stubResolver() {
+		let original = globalThis.fetch;
+		globalThis.fetch = mock(async () =>
+			Response.json({
+				Status: 0,
+				Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }],
+			}),
+		) as unknown as typeof fetch;
+		return () => {
+			globalThis.fetch = original;
+		};
+	}
+
+	/** Seeds a monitor owned by `teamId`, which is what an on-demand check needs to exist. */
+	async function createMonitorRow(
+		db: ReturnType<typeof createTestDatabase>["db"],
+		teamId: string,
+		overrides: { expected_value?: string | null; last_value?: string | null } = {},
+	) {
+		return await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: teamId,
+				name: "Example A record",
+				domain: "example.com",
+				record_type: "A",
+				expected_value: "1.2.3.4",
+				interval_seconds: 3600,
+				is_enabled: true,
+				last_checked_at: null,
+				last_status: null,
+				last_value: null,
+				...overrides,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("writes exactly one data point carrying DNS's own status and the team index", async () => {
+		let restore = stubResolver();
+		try {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			let monitor = await createMonitorRow(db, team.id);
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+
+			let [point] = writeDataPointMock.mock.calls[0]!;
+			expect(point.blobs).toEqual([monitor.id, "dns", "ok"]);
+			expect(point.indexes).toEqual([team.id]);
+			/**
+			 * The lookup's latency is measured, not stubbed, so only its shape is pinned. The
+			 * three that follow are fixed: one row means one check, and DNS has no notion of an
+			 * HTTP status to report or to expect.
+			 */
+			expect(point.doubles).toHaveLength(4);
+			expect(point.doubles[0]).toBeGreaterThanOrEqual(0);
+			expect(point.doubles.slice(1)).toEqual([1, 0, 0]);
+		} finally {
+			restore();
+		}
+	});
+
+	test("records `changed` as-is rather than remapping it onto HTTP's vocabulary", async () => {
+		let restore = stubResolver();
+		try {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			// An expectation the stubbed resolver's answer doesn't satisfy, so the check classifies
+			// as `changed` — a status HTTP has no equivalent for.
+			let monitor = await createMonitorRow(db, team.id, { expected_value: "9.9.9.9" });
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+			expect(writeDataPointMock.mock.calls[0]![0].blobs).toEqual([monitor.id, "dns", "changed"]);
+		} finally {
+			restore();
+		}
+	});
+
+	test("writes no data point when the owner has no active subscription", async () => {
+		let originalFetch = globalThis.fetch;
+		try {
+			globalThis.fetch = mock(async () => Response.json({ Status: 0 })) as unknown as typeof fetch;
+
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			let monitor = await createMonitorRow(db, team.id);
+			await db.create(
+				subscriptions,
+				{
+					id: crypto.randomUUID(),
+					external_customer_id: team.owner_id,
+					polar_subscription_id: crypto.randomUUID(),
+					polar_product_id: "product-1",
+					status: "canceled",
+					current_period_end: null,
+					revoked_at: Date.now(),
+					polar_modified_at: Date.now(),
+				},
+				{ touch: true, returnRow: true },
+			);
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			// No lookup ran, so there is no result to report.
+			expect(writeDataPointMock).not.toHaveBeenCalled();
+		} finally {
+			globalThis.fetch = originalFetch;
 		}
 	});
 });

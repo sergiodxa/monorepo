@@ -6,9 +6,9 @@
  * The manual check is the one action here that performs billable work: it opens the
  * connection inline, so unlike the HTTP monitors' "run check" — which only enqueues, and is
  * billed by the job that later carries it out — nothing downstream of this request would
- * ever meter it. Both halves of that live in {@link checkTcpMonitor}: the entitlement gate
- * that decides whether the connection is attempted at all, and the meter event for the one
- * that was.
+ * ever meter it. All of that lives in {@link checkTcpMonitor}: the entitlement gate that
+ * decides whether the connection is attempted at all, the Analytics Engine data point
+ * recording it, and the meter event for the one that was.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +35,7 @@ import {
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
 import { notifyTcpResult } from "~/app/services/alerts";
+import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
 import { checkTcpConnection } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
@@ -162,6 +163,25 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 
 	let checkResult = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
 	let resultId = await TcpMonitor.recordCheckResult(db, monitor.id, checkResult);
+
+	/**
+	 * Written here, between the history row and the meter, exactly where the scheduled sweep
+	 * writes it — a check the visitor asked for is the same event as one the cron asked for,
+	 * so nothing reading the dataset should be able to tell which produced a row. Without
+	 * this the check was billed and stored in D1 but absent from every chart and aggregate
+	 * built on Analytics Engine.
+	 *
+	 * A refused or timed-out connection has no latency to report and the column is nullable
+	 * for exactly that, but the dataset's doubles are not — zero is how the rest of the
+	 * dataset already spells "no measurement", so it is what goes in.
+	 */
+	writePingResult({
+		monitorId: monitor.id,
+		teamId: ctx.team.id,
+		type: "tcp",
+		status: checkResult.status,
+		responseTimeMs: checkResult.responseTimeMs ?? 0,
+	});
 
 	/**
 	 * Keyed on the history row this check just wrote, which is the same key the scheduled
