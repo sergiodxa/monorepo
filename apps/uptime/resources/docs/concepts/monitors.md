@@ -33,12 +33,12 @@ HTTP monitors can verify status codes, response times, and even specific content
 
 ### DNS Monitors
 
-DNS monitors verify that your domain names resolve correctly. They're essential for:
+A DNS monitor watches a whole domain: it imports the records it finds, then re-checks them on a schedule. They're essential for:
 
 - Ensuring domains point to the right IP addresses
-- Detecting DNS propagation issues
-- Monitoring DNS record changes
-- Validating DNS failover configurations
+- Noticing a record that was edited by someone who isn't you
+- Noticing a record that appeared without being asked for
+- Watching who is delegated authority over your zone
 
 DNS issues can be subtle and hard to diagnose—DNS monitors catch them early. See [DNS Monitors](/docs/concepts/dns-monitors) for details.
 
@@ -160,7 +160,7 @@ Review your monitors periodically:
 ## Next Steps
 
 - [HTTP Monitors](/docs/concepts/http-monitors) — Deep dive into monitoring web endpoints
-- [DNS Monitors](/docs/concepts/dns-monitors) — Learn about DNS verification
+- [DNS Monitors](/docs/concepts/dns-monitors) — Learn how a domain's records are watched
 - [TCP Monitors](/docs/concepts/tcp-monitors) — Monitor services at the network level
 - [Cron Job Monitors](/docs/concepts/cron-jobs) — Track scheduled jobs
 - [Understanding Alerts](/docs/concepts/alerts) — Configure how you get notified

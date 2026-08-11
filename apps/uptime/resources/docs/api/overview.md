@@ -31,7 +31,7 @@ All responses are returned as JSON. Successful responses include a `data` field,
 - [Status](/docs/api/resources/status) - Check API health and your account status
 - [Ping](/docs/api/resources/ping) - Run a one-off HTTP, DNS or TCP check without creating a monitor
 - [HTTP Monitors](/docs/api/resources/http-monitors) - Monitor websites and HTTP endpoints
-- [DNS Monitors](/docs/api/resources/dns-monitors) - Monitor DNS records and propagation
+- [DNS Monitors](/docs/api/resources/dns-monitors) - Watch a domain's DNS records for changes
 - [TCP Monitors](/docs/api/resources/tcp-monitors) - Monitor TCP ports and services
 - [Cron Jobs](/docs/api/resources/cron-jobs) - Monitor scheduled tasks and cron jobs
 - [Alerts](/docs/api/resources/alerts) - Configure alert channels and notifications

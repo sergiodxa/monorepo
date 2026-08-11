@@ -876,17 +876,37 @@ them first is what makes the rest parallelisable.
 
 **Phase 3 — copy and cleanup**
 
-- [ ] 3.1 ~~`app/lib/pricing.ts` + the calculator copy that interpolates it.~~ **Dropped
+- [x] 3.1 ~~`app/lib/pricing.ts` + the calculator copy that interpolates it.~~ **Dropped
       from scope** — per-check billing (§9) leaves `monthlyPings`'s one-check-per-interval
-      assumption true, so the calculator needs no change.
-- [ ] 3.2 `resources/docs/concepts/dns-monitors.md`, `resources/docs/api/resources/dns-monitors.md`
-      and `docs/dns-monitors.md`.
-- [ ] 3.3 `resources/content/marketing.ts`, checked line by line against §14. The
-      "propagation-aware" claim is already deleted (no grace period exists; the first non-ok
-      result notifies), as is "every record type in one monitor" — which this ADR would
-      finally make true and which may be worth reinstating once it ships.
-- [ ] 3.4 Delete dead code: the record-type enum's import sites that no longer have a record
-      type to validate. **Amended:** this originally also listed `containsExpected` and the
+      assumption true, so the calculator needs no change. **Verified:** `monthlyPings` takes
+      only `{ monitors, intervalMinutes }` and has no per-monitor-type factor; no caller
+      (`resources/components/pricing-calculator.tsx`, `resources/content/marketing.ts`,
+      `app/http/controllers/marketing-comparison.tsx`, `app/http/controllers/home.tsx`)
+      distinguishes DNS; `app/lib/cost-rates.ts` prices no outbound subrequest; and both
+      `app/jobs/check-dns.ts` and `app/http/controllers/actions/dns-monitors.ts` ingest one
+      `BillablePing` keyed `ping:${resultId}`. No change.
+- [x] 3.2 ~~`resources/docs/concepts/dns-monitors.md`, `resources/docs/api/resources/dns-monitors.md`
+      and `docs/dns-monitors.md`.~~ **Done.** The concepts doc leads with §14's limits; the
+      API doc was re-read against the shipped controllers and its drift corrected. The
+      cross-referencing blurbs in `resources/docs/concepts/monitors.md`,
+      `resources/docs/quickstart.md`, `resources/docs/overview.md` and
+      `resources/docs/api/overview.md` were corrected too — they still promised propagation
+      verification, which nothing implements.
+- [x] 3.3 ~~`resources/content/marketing.ts`, checked line by line against §14.~~ **Done.**
+      "Every record type in one monitor" is reinstated, always next to the enumeration of the
+      six so it cannot be read as "all your DNS records". "Global resolvers" is deleted (§14:
+      one recursive resolver), as is "Tolerates unrelated records", which described the
+      containment matching §6 removed. "Get alerted the moment a record changes" now says "on
+      the next check", per §14's TTL floor.
+- [x] 3.4 ~~Delete dead code: the record-type enum's import sites that no longer have a record
+      type to validate.~~ **Done, and there was almost nothing left.** Phase 0 removed the
+      columns and their call sites together: no orphaned symbol survives, and no
+      `expected_value`/`last_value`/`resolved_value` reference remains outside the migrations
+      and the ad-hoc probe. What was removed is the enum's duplication — a hand-copied
+      `DNS_RECORD_TYPES` literal in `app/http/controllers/api/ping.ts` and the pass-through
+      `export type { DnsRecordType }` in `app/services/dns-check.ts`, both left over from
+      `dns-check.ts` owning the vocabulary before `app/lib/dns-record-value.ts` did.
+      **Amended:** this originally also listed `containsExpected` and the
       `hostOnly` MX path, which contradicts §6 — that section keeps the ad-hoc probe's `dns`
       variant, and those two are its mechanism. Both are retained, rescoped and re-documented
       as belonging to the stateless probe alone. Follow this amendment, not the original line.

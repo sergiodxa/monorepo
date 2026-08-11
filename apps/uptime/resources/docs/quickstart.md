@@ -67,7 +67,7 @@ Now that you have basic monitoring in place, explore these additional features:
 
 ### Other Monitor Types
 
-- **DNS Monitors** - Track DNS record changes and verify propagation. See [DNS Monitoring](/docs/concepts/dns-monitors).
+- **DNS Monitors** - Watch a domain's records and get told when one changes, disappears, or appears. See [DNS Monitoring](/docs/concepts/dns-monitors).
 - **TCP Monitors** - Check if a port is open and responding. Useful for databases and custom services. See [TCP Monitoring](/docs/concepts/tcp-monitors).
 - **Cron Job Monitors** - Ensure your scheduled tasks run on time. Your jobs ping Uptime when they complete. See [Cron Job Monitoring](/docs/concepts/cron-jobs).
 

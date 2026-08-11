@@ -41,11 +41,12 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import type { ContentCheckRule } from "~/app/data/content-check";
+import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { PingStatus } from "~/app/services/analytics";
-import type { DnsRecordType } from "~/app/services/dns-check";
 
 import Subscription from "~/app/data/subscription";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apportionCostByTeam } from "~/app/services/cost";
@@ -59,9 +60,6 @@ import routes from "~/routes/web";
  * carry so an ad-hoc check and a monitored one measure the same thing from the same place.
  */
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
-
-/** Record types a DNS ping may resolve, matching what DNS monitors support. */
-const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 
 /** Methods a ping may use, matching what an HTTP monitor may be configured with. */
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;

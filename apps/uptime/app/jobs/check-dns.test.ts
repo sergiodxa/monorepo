@@ -39,8 +39,9 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import type { DnsRecordImport } from "~/app/data/dns-monitor-record";
+import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
-import type { DnsNameSweep, DnsQueryOutcome, DnsRecordType } from "~/app/services/dns-check";
+import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 import type { InsertDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";

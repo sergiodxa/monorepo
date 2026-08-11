@@ -15,7 +15,7 @@ Uptime continuously monitors your infrastructure and notifies you the moment an 
 ### Flexible Monitoring Options
 
 - **HTTP Monitors** - Check website and API availability, response times, and content
-- **DNS Monitors** - Verify DNS records resolve correctly
+- **DNS Monitors** - Watch a domain's DNS records for unexpected changes
 - **TCP Monitors** - Monitor server ports and services
 
 ### Cron Job Monitoring

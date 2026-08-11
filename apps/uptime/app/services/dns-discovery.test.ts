@@ -25,12 +25,8 @@ import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
-import type {
-	DnsCheckStatus,
-	DnsNameSweep,
-	DnsQueryOutcome,
-	DnsRecordType,
-} from "~/app/services/dns-check";
+import type { DnsRecordType } from "~/app/lib/dns-record-value";
+import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";

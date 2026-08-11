@@ -179,7 +179,7 @@ export namespace MarketingContent {
 const DEFAULT_STEPS: MarketingContent.Step[] = [
 	{
 		title: "Create your monitor",
-		description: "Point Uptime at the URL, DNS record, port, or scheduled job you want to track.",
+		description: "Point Uptime at the URL, domain, port, or scheduled job you want to track.",
 	},
 	{
 		title: "Choose how you're alerted",
@@ -760,60 +760,71 @@ export const features: Record<string, MarketingContent.Page> = {
 		slug: "dns",
 		metaTitle: "DNS Monitoring | Uptime",
 		metaDescription:
-			"Monitor DNS records for unexpected changes. Track A, AAAA, CNAME, MX, TXT, and NS records to catch hijacking attempts.",
+			"Monitor a domain for unexpected DNS changes. One monitor covers six record types — A, AAAA, CNAME, MX, TXT and NS — to catch hijacking attempts.",
 		badge: "DNS Monitors",
 		title: "Catch DNS changes",
 		highlight: "before they cause an outage",
 		description:
-			"Monitor DNS records for unexpected changes. Track A, AAAA, CNAME, MX, TXT, and NS records to catch hijacking or misconfiguration.",
-		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "Global resolvers"],
+			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT and NS — so hijacking and misconfiguration surface as findings rather than outages.",
+		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "One monitor per domain"],
 		trustIndicators: [
-			{ icon: "globe", value: "A/AAAA", label: "Records" },
-			{ icon: "server", value: "CNAME", label: "Records" },
-			{ icon: "layers", value: "MX/TXT", label: "Records" },
+			{ icon: "layers", value: "6", label: "Record types" },
+			{ icon: "globe", value: "1", label: "Monitor per domain" },
+			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
 			{ icon: "shield-check", value: "Hijack", label: "Detection" },
 		],
 		features: [
 			{
 				title: "Record change detection",
-				description: "Get alerted the moment a monitored record's value changes.",
+				description:
+					"A watched record that changes or stops resolving is reported on the next check.",
 				icon: "refresh-cw",
 			},
 			{
-				title: "Multiple record types",
-				description: "Track A, AAAA, CNAME, MX, TXT, and NS records.",
+				title: "Every record type in one monitor",
+				description:
+					"One monitor checks A, AAAA, CNAME, MX, TXT and NS records at every name it tracks.",
 				icon: "database",
 			},
 			{
-				title: "Hijack protection",
+				title: "Hijack detection",
 				description: "Unexpected DNS changes are often the first sign of an account compromise.",
 				icon: "shield-check",
 			},
 			{
-				title: "Tolerates unrelated records",
+				title: "New records are reported",
 				description:
-					"List the values that must be present; other records alongside them don't trigger an alert.",
+					"A record that appears beside the ones you imported is reported as an addition, not hidden inside a changed value.",
 				icon: "globe",
 			},
 		],
 		steps: [
 			{
 				title: "Add a DNS monitor",
-				description: "Enter the hostname and record type you want to track.",
+				description:
+					"Enter the domain you want to watch, and paste your zone file to cover its other names.",
 			},
 			{
-				title: "Set the expected value",
-				description: "Uptime baselines the current value automatically.",
+				title: "Review what we found",
+				description:
+					"Uptime checks every record type at every name it knows about, and you pick which records to watch.",
 			},
 			{
 				title: "Get alerted on change",
-				description: "Any deviation from the expected value triggers an alert.",
+				description:
+					"A watched record that changes or disappears, or a record that appears unannounced, triggers an alert.",
 			},
 		],
 		faqs: [
 			{
 				question: "Which record types can I monitor?",
-				answer: "A, AAAA, CNAME, MX, TXT, and NS records.",
+				answer:
+					"Six: A, AAAA, CNAME, MX, TXT and NS. CAA, SOA, SRV and the rest aren't checked yet.",
+			},
+			{
+				question: "Does one monitor cover my subdomains?",
+				answer:
+					"Only the names it knows about. DNS can't be listed from outside a zone, so a monitor covers your domain itself unless you paste a zone file naming the rest.",
 			},
 			{
 				question: "Why would my DNS records change unexpectedly?",
@@ -2260,7 +2271,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		features: [
 			{
 				title: "No agent required",
-				description: "Point a monitor at a URL, port, or DNS record — nothing to install.",
+				description: "Point a monitor at a URL, port, or domain — nothing to install.",
 				icon: "plug",
 			},
 			{
@@ -2663,7 +2674,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				question: "Do I need a Laravel app to use Uptime?",
 				answer:
-					"No — Uptime is framework-agnostic and monitors any HTTP endpoint, DNS record, TCP port, or cron job.",
+					"No — Uptime is framework-agnostic and monitors any HTTP endpoint, domain, TCP port, or cron job.",
 			},
 		],
 	},

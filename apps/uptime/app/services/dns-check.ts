@@ -21,8 +21,6 @@ import {
 
 const DOH_URL = new URL("https://cloudflare-dns.com/dns-query");
 
-export type { DnsRecordType };
-
 export type DnsCheckStatus = "ok" | "changed" | "error";
 
 /**

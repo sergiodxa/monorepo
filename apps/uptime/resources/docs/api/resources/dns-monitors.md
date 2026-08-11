@@ -33,6 +33,8 @@ The single-probe DNS check on `POST /api/v1/ping` is **unchanged**: it still tak
 - **Detection latency is floored by your records' TTL**, not by the check interval.
 - **One check is one ping**, however many names and types it swept.
 
+Every response on this resource carries the standard envelope — `data` alongside `meta`, which holds the `requestId` to quote in a support request and the `timestamp` the response was written. The schema blocks below describe `data` only.
+
 ## The DNS monitor object
 
 ```json
@@ -160,7 +162,9 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 
 Creates a domain monitor and runs discovery immediately: every supported record type is queried at the domain, and at every name a pasted zone file declares.
 
-**Everything discovered is imported and watched.** There is no review step on an API call — the dashboard's exists because a human is standing there — so a script that wants something left alone turns it off through the records sub-resource afterwards.
+**Everything the resolver answered with is imported and watched.** There is no review step on an API call — the dashboard's exists because a human is standing there — so a script that wants something left alone turns it off through the records sub-resource afterwards. The one exception is a record the zone file declares that the resolver does not answer for: it is imported unwatched, for the reason given below.
+
+The response is `201 Created`.
 
 ```
 POST /api/v1/dns-monitors
@@ -381,7 +385,7 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123 \
 
 Updates a DNS monitor's editable fields. All fields are optional; only provided fields are updated.
 
-There is no `zoneFile` here. The pasted text is never stored, so re-importing one is a deliberate act rather than something carried along by a rename — create a fresh import from the dashboard, or create a new monitor.
+There is no `zoneFile` here, and one sent is ignored rather than refused. The pasted text is never stored, so re-importing is a deliberate act rather than something carried along by a rename — import again from the dashboard, or create a new monitor.
 
 ```
 PUT /api/v1/dns-monitors/:dnsMonitorId
@@ -539,12 +543,13 @@ A value edited inside a record set holding several values reads as one missing r
 
 ### Errors
 
-| Status | Code             | Description                             |
-| ------ | ---------------- | --------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid query parameters                |
-| 401    | UNAUTHORIZED     | Missing or invalid API key              |
-| 403    | FORBIDDEN        | API key lacks `dns-monitors:read` scope |
-| 404    | NOT_FOUND        | DNS monitor not found                   |
+`limit` is clamped rather than refused: anything unreadable or below 1 falls back to 50, and anything above 200 is truncated to 200.
+
+| Status | Code         | Description                             |
+| ------ | ------------ | --------------------------------------- |
+| 401    | UNAUTHORIZED | Missing or invalid API key              |
+| 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
+| 404    | NOT_FOUND    | DNS monitor not found                   |
 
 ### Response Schema
 
@@ -676,7 +681,7 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records" \
 				"value": "10 mx.example.com",
 				"source": "zone_file",
 				"isEnabled": false,
-				"status": "new",
+				"status": "missing",
 				"firstSeenAt": 1770086400000,
 				"lastSeenAt": null,
 				"lastCheckedAt": 1770086400000,
@@ -686,7 +691,7 @@ curl "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records" \
 		]
 	},
 	"meta": {
-		"requestId": "3f0c…",
+		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
 		"timestamp": "2026-08-11T10:30:00.000Z"
 	}
 }
@@ -865,7 +870,7 @@ curl -X PATCH "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/recor
 		}
 	},
 	"meta": {
-		"requestId": "3f0c…",
+		"requestId": "6b1f9d5e-4a2c-4f7e-9a10-2c8d5f3b7e41",
 		"timestamp": "2026-08-11T10:30:00.000Z"
 	}
 }
