@@ -112,5 +112,9 @@ describe("dnsMonitorNew", () => {
 		expect(body).toContain('name="domain"');
 		expect(body).toContain('name="record_type"');
 		expect(body).toContain("Domain");
+		// `<select>` has no `defaultValue` attribute, so each default is marked on its option.
+		expect(body).toContain('value="A" selected');
+		expect(body).toContain('value="3600" selected');
+		expect(body).not.toContain("defaultvalue");
 	});
 });

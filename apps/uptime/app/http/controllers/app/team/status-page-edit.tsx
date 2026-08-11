@@ -24,11 +24,12 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
+import { fontSize, weight } from "@pkg/u/typography";
 import {
 	AlertDialog,
 	Button,
@@ -55,6 +56,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
@@ -63,6 +65,17 @@ import routes from "~/routes/web";
 
 /** `id` shared between the danger-zone trigger and its confirmation `AlertDialog`. */
 const DELETE_DIALOG_ID = "delete-status-page";
+
+/**
+ * The page renders once per request, so the checkbox groups can label themselves through
+ * fixed ids instead of generated ones — there is never a second instance to collide with.
+ */
+const MONITORS_LABEL_ID = "status-page-monitors-label";
+const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
+
+/** `id` of each checkbox list, so its own select-all control can find the boxes it drives. */
+const MONITORS_GROUP_ID = "status-page-monitors-group";
+const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 
 /** GET /app/:team/status-pages/:statusPageId/edit — a status page's edit form. */
 export default createAction(routes.app.team.statusPages.edit, {
@@ -221,7 +234,8 @@ export default createAction(routes.app.team.statusPages.edit, {
 												<Description>{t("isPublic.description")}</Description>
 											</div>
 
-											<div mix={[fieldStackLayout(), mbe("16px")]}>
+											{/* The body draws no block-end padding, so the last control carries the trailing gap itself. */}
+											<div mix={[fieldStackLayout(), mbe("28px")]}>
 												<Switch
 													name="show_overall_status"
 													value="true"
@@ -246,8 +260,29 @@ export default createAction(routes.app.team.statusPages.edit, {
 										<SettingsSection.Body>
 											{selectableMonitors.length > 0 && (
 												<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
-													<CheckboxGroup aria-labelledby="status-page-monitors-label">
-														<Label id="status-page-monitors-label">{t("monitors.label")}</Label>
+													{/*
+													 * The group's caption reads as a heading over the list rather than as
+													 * another row in it, with its description directly beneath — the same
+													 * order every single field on this page puts the two in.
+													 */}
+													<div mix={[fieldStackLayout()]}>
+														<Label
+															id={MONITORS_LABEL_ID}
+															mix={[fontSize("base"), weight("semibold")]}
+														>
+															{t("monitors.label")}
+														</Label>
+														<Description>{t("monitors.description")}</Description>
+													</div>
+
+													{/* The island reads its copy through `intl(handle)`, which server-side has no
+													    module-scoped `setIntl()` default to fall back on, so it needs an
+													    `IntlProvider` ancestor to resolve against at all. */}
+													<IntlProvider i18n={ctx.i18next}>
+														<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
+													</IntlProvider>
+
+													<CheckboxGroup id={MONITORS_GROUP_ID} aria-labelledby={MONITORS_LABEL_ID}>
 														{selectableMonitors.map((monitor) => (
 															<Checkbox
 																key={`${monitor.fieldName}-${monitor.id}`}
@@ -259,14 +294,29 @@ export default createAction(routes.app.team.statusPages.edit, {
 															</Checkbox>
 														))}
 													</CheckboxGroup>
-													<Description>{t("monitors.description")}</Description>
 												</div>
 											)}
 
 											{cronJobs.length > 0 && (
 												<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
-													<CheckboxGroup aria-labelledby="status-page-cron-jobs-label">
-														<Label id="status-page-cron-jobs-label">{t("cronJobs.label")}</Label>
+													<div mix={[fieldStackLayout()]}>
+														<Label
+															id={CRON_JOBS_LABEL_ID}
+															mix={[fontSize("base"), weight("semibold")]}
+														>
+															{t("cronJobs.label")}
+														</Label>
+														<Description>{t("cronJobs.description")}</Description>
+													</div>
+
+													<IntlProvider i18n={ctx.i18next}>
+														<CheckboxGroupSelectAll groupId={CRON_JOBS_GROUP_ID} />
+													</IntlProvider>
+
+													<CheckboxGroup
+														id={CRON_JOBS_GROUP_ID}
+														aria-labelledby={CRON_JOBS_LABEL_ID}
+													>
 														{cronJobs.map((cronJob) => (
 															<Checkbox
 																key={cronJob.id}
@@ -278,7 +328,6 @@ export default createAction(routes.app.team.statusPages.edit, {
 															</Checkbox>
 														))}
 													</CheckboxGroup>
-													<Description>{t("cronJobs.description")}</Description>
 												</div>
 											)}
 

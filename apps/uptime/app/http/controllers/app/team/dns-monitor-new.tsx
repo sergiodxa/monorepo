@@ -46,6 +46,12 @@ const INTERVAL_OPTIONS = [
 	{ value: 86_400, key: "24h" },
 ] as const;
 
+/** Record type a new monitor starts on, matched against {@link RECORD_TYPES} to mark its option. */
+const DEFAULT_RECORD_TYPE = "A";
+
+/** Interval a new monitor starts on, in seconds, matched against {@link INTERVAL_OPTIONS} to mark its option. */
+const DEFAULT_INTERVAL_SECONDS = 3600;
+
 /** GET /app/:team/dns/new — the new DNS monitor form. */
 export default createAction(routes.app.team.dnsMonitors.new, {
 	middleware: [requireUser, requireTeam],
@@ -118,9 +124,14 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										<Field label={t("recordType.label")} description={t("recordType.description")}>
-											<Select name="record_type" defaultValue="A">
+											{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
+											<Select name="record_type">
 												{RECORD_TYPES.map((type) => (
-													<Select.Option key={type} value={type}>
+													<Select.Option
+														key={type}
+														value={type}
+														selected={type === DEFAULT_RECORD_TYPE}
+													>
 														{type}
 													</Select.Option>
 												))}
@@ -137,9 +148,14 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 										/>
 
 										<Field label={t("interval.label")} description={t("interval.description")}>
-											<Select name="interval_seconds" defaultValue={3600}>
+											{/* Both sides are numbers here, so the match never leans on string coercion. */}
+											<Select name="interval_seconds">
 												{INTERVAL_OPTIONS.map((option) => (
-													<Select.Option key={option.value} value={option.value}>
+													<Select.Option
+														key={option.value}
+														value={option.value}
+														selected={option.value === DEFAULT_INTERVAL_SECONDS}
+													>
 														{t(`interval.options.${option.key}`)}
 													</Select.Option>
 												))}

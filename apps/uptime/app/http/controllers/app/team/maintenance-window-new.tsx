@@ -92,8 +92,11 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 										/>
 
 										<Field label={t("scope.label")}>
-											<Select name="monitor_id" defaultValue="">
-												<Select.Option value="">{t("scope.allMonitors")}</Select.Option>
+											{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
+											<Select name="monitor_id">
+												<Select.Option value="" selected>
+													{t("scope.allMonitors")}
+												</Select.Option>
 												{monitors.map((monitor) => (
 													<Select.Option key={monitor.id} value={monitor.id}>
 														{monitor.name} (HTTP)
@@ -146,17 +149,20 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<Switch name="suppress_alerts" value="true" defaultChecked>
-											{t("suppressAlerts.label")}
-										</Switch>
+										{/* The switches carry no trailing margin of their own, so the group wrapper supplies both the rhythm between the rows and the card's field rhythm before the pattern field below. */}
+										<div mix={[vstack({ gap: 4 }), mbe("28px")]}>
+											<Switch name="suppress_alerts" value="true" defaultChecked>
+												{t("suppressAlerts.label")}
+											</Switch>
 
-										<Switch name="show_on_status_page" value="true" defaultChecked>
-											{t("showOnStatusPage.label")}
-										</Switch>
+											<Switch name="show_on_status_page" value="true" defaultChecked>
+												{t("showOnStatusPage.label")}
+											</Switch>
 
-										<Switch name="is_recurring" value="true">
-											{t("recurring.label")}
-										</Switch>
+											<Switch name="is_recurring" value="true">
+												{t("recurring.label")}
+											</Switch>
+										</div>
 
 										<TextField
 											label={t("recurringPattern.label")}

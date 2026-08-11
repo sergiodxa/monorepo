@@ -33,7 +33,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { maintenanceWindows, memberships, teams } from "~/database/schema";
+import { maintenanceWindows, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 mock.module("cloudflare:workers", () => ({ env: {} }));
@@ -149,6 +149,47 @@ describe("maintenanceWindowEdit", () => {
 		);
 		expect(body).toContain(`value="${window.id}"`);
 		expect(body).not.toContain("End maintenance now");
+	});
+
+	test("marks the scoped monitor's option as selected, not the all-monitors one", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+		let now = Date.now();
+		let window = await db.create(
+			maintenanceWindows,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: monitor.id,
+				name: "Scoped upgrade",
+				starts_at: now + 3_600_000,
+				ends_at: now + 7_200_000,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, window.id);
+		let body = await response.text();
+
+		/*
+		 * `<select>` has no `defaultValue` attribute, so the saved scope has to be marked
+		 * on the option itself — otherwise the first one wins and re-saving this window
+		 * would widen it back to "all monitors".
+		 */
+		expect(body).toContain(`value="${monitor.id}" selected`);
+		expect(body).not.toContain(`value="" selected`);
+		expect(body).not.toContain("defaultvalue");
 	});
 
 	test("shows the end-early button for a window that's currently active", async () => {

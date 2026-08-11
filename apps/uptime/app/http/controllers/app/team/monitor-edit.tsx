@@ -170,8 +170,9 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 
 						<SettingsSection.Body>
 							<Field label={i18next.t("contentMonitoring.form.checkType.label")}>
-								<Select name="type" defaultValue="contains">
-									<Select.Option value="contains">
+								{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
+								<Select name="type">
+									<Select.Option value="contains" selected>
 										{i18next.t("contentMonitoring.form.checkType.options.contains")}
 									</Select.Option>
 									<Select.Option value="not_contains">
@@ -200,7 +201,8 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 								/>
 							</Field>
 
-							<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
+							{/* A toggle row carries no trailing margin of its own, so it states the card's field rhythm itself. */}
+							<label mix={[flex(), items("center"), gap("8px"), mbe("28px"), fontSize("0.875rem")]}>
 								<input type="checkbox" name="case_sensitive" value="true" />
 								<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
 							</label>
@@ -248,7 +250,8 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 
 						<SettingsSection.Body>
-							<label mix={[flex(), items("center"), gap("8px"), mbe("16px"), fontSize("0.875rem")]}>
+							{/* A toggle row carries no trailing margin of its own, so it states the card's field rhythm itself. */}
+							<label mix={[flex(), items("center"), gap("8px"), mbe("28px"), fontSize("0.875rem")]}>
 								<input
 									type="checkbox"
 									name="ssl_monitoring_enabled"

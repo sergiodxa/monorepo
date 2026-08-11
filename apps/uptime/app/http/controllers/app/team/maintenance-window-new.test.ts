@@ -127,6 +127,9 @@ describe("maintenanceWindowNew", () => {
 		expect(body).toContain('name="ends_at"');
 		expect(body).toContain('name="suppress_alerts"');
 		expect(body).toContain('name="is_recurring"');
+		// `<select>` has no `defaultValue` attribute, so the default is marked on its option.
+		expect(body).toContain('value="" selected');
+		expect(body).not.toContain("defaultvalue");
 		expect(body).toContain(
 			`action="${routes.actions.maintenanceWindow.create.href({ team: team.slug })}"`,
 		);

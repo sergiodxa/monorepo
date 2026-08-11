@@ -138,10 +138,10 @@ const CARD_BLEED_FROM = "(min-width: 768px)";
  * inside the card lines up with the section heading above it rather than sitting one
  * padding-width to its right.
  */
-function settingsCard() {
+function settingsCard(tone: "neutral" | "danger" = "neutral") {
 	return [
 		rounded("xl"),
-		border({ color: "neutral", width: 1 }),
+		border({ color: tone, width: 1 }),
 		overflow(),
 		media(CARD_BLEED_FROM, mi(-6)),
 	];
@@ -1010,7 +1010,7 @@ export default createAction(routes.app.team.settings, {
 									</p>
 								</div>
 
-								<div mix={[rounded("xl"), border({ color: "danger", width: 1 }), overflow()]}>
+								<div mix={settingsCard("danger")}>
 									<form
 										method="post"
 										action={routes.teamAdminActions.team.delete.href({ team: team.slug })}

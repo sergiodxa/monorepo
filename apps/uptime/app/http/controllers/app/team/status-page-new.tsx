@@ -16,9 +16,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
+import { fontSize, weight } from "@pkg/u/typography";
 import {
 	Button,
 	Checkbox,
@@ -41,6 +43,7 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -54,6 +57,10 @@ import routes from "~/routes/web";
  */
 const MONITORS_LABEL_ID = "status-page-monitors-label";
 const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
+
+/** `id` of each checkbox list, so its own select-all control can find the boxes it drives. */
+const MONITORS_GROUP_ID = "status-page-monitors-group";
+const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 
 /** GET /app/:team/status-pages/new — the new status-page form. */
 export default createAction(routes.app.team.statusPages.new, {
@@ -217,8 +224,29 @@ export default createAction(routes.app.team.statusPages.new, {
 									<SettingsSection.Body>
 										{selectableMonitors.length > 0 && (
 											<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
-												<CheckboxGroup aria-labelledby={MONITORS_LABEL_ID}>
-													<Label id={MONITORS_LABEL_ID}>{t("monitors.label")}</Label>
+												{/*
+												 * The group's caption reads as a heading over the list rather than as
+												 * another row in it, with its description directly beneath — the same
+												 * order every single field on this page puts the two in.
+												 */}
+												<div mix={[fieldStackLayout()]}>
+													<Label
+														id={MONITORS_LABEL_ID}
+														mix={[fontSize("base"), weight("semibold")]}
+													>
+														{t("monitors.label")}
+													</Label>
+													<Description>{t("monitors.description")}</Description>
+												</div>
+
+												{/* The island reads its copy through `intl(handle)`, which server-side has no
+												    module-scoped `setIntl()` default to fall back on, so it needs an
+												    `IntlProvider` ancestor to resolve against at all. */}
+												<IntlProvider i18n={ctx.i18next}>
+													<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
+												</IntlProvider>
+
+												<CheckboxGroup id={MONITORS_GROUP_ID} aria-labelledby={MONITORS_LABEL_ID}>
 													{selectableMonitors.map((monitor) => (
 														<Checkbox
 															key={`${monitor.field}-${monitor.id}`}
@@ -229,21 +257,32 @@ export default createAction(routes.app.team.statusPages.new, {
 														</Checkbox>
 													))}
 												</CheckboxGroup>
-												<Description>{t("monitors.description")}</Description>
 											</div>
 										)}
 
 										{cronJobs.length > 0 && (
 											<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
-												<CheckboxGroup aria-labelledby={CRON_JOBS_LABEL_ID}>
-													<Label id={CRON_JOBS_LABEL_ID}>{t("cronJobs.label")}</Label>
+												<div mix={[fieldStackLayout()]}>
+													<Label
+														id={CRON_JOBS_LABEL_ID}
+														mix={[fontSize("base"), weight("semibold")]}
+													>
+														{t("cronJobs.label")}
+													</Label>
+													<Description>{t("cronJobs.description")}</Description>
+												</div>
+
+												<IntlProvider i18n={ctx.i18next}>
+													<CheckboxGroupSelectAll groupId={CRON_JOBS_GROUP_ID} />
+												</IntlProvider>
+
+												<CheckboxGroup id={CRON_JOBS_GROUP_ID} aria-labelledby={CRON_JOBS_LABEL_ID}>
 													{cronJobs.map((cronJob) => (
 														<Checkbox key={cronJob.id} name="cron_job_ids" value={cronJob.id}>
 															{cronJob.name}
 														</Checkbox>
 													))}
 												</CheckboxGroup>
-												<Description>{t("cronJobs.description")}</Description>
 											</div>
 										)}
 

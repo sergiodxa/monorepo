@@ -21,7 +21,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon } from "@pkg/lucide-remix";
+import {
+	EyeIcon,
+	MonitorIcon,
+	PencilIcon,
+	PlusIcon,
+	TrashIcon,
+	UploadIcon,
+} from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
@@ -31,6 +38,7 @@ import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { Fragment } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
@@ -77,10 +85,25 @@ export default createAction(routes.app.team.monitors.index, {
 						},
 					]}
 					actions={
-						<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
-							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.httpMonitors.header.action.create")}
-						</LinkButton>
+						<Fragment>
+							{/*
+							 * The bulk importer had a route, a page and six locales' worth of copy, and
+							 * nothing anywhere linked to it — reachable only by typing the URL. It
+							 * belongs beside "Create Monitor" because that is the moment somebody with
+							 * a list of URLs is deciding how to enter them.
+							 */}
+							<LinkButton
+								href={routes.app.team.monitorsImport.href({ team: ctx.team.slug })}
+								color="neutral"
+							>
+								<UploadIcon size={16} strokeWidth={1.5} />
+								{ctx.i18next.t("page.httpMonitors.header.action.import")}
+							</LinkButton>
+							<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
+								<PlusIcon size={16} strokeWidth={1.5} />
+								{ctx.i18next.t("page.httpMonitors.header.action.create")}
+							</LinkButton>
+						</Fragment>
 					}
 				>
 					<div>

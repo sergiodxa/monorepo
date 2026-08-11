@@ -96,11 +96,14 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<DnsMonitorFormFields
-												monitor={monitor}
-												i18next={ctx.i18next}
-												page="editDnsMonitor"
-											/>
+											{/* The run ends on a switch, which carries no trailing margin of its own, so the wrapper supplies the card's field rhythm before the action row. */}
+											<div mix={[mbe("28px")]}>
+												<DnsMonitorFormFields
+													monitor={monitor}
+													i18next={ctx.i18next}
+													page="editDnsMonitor"
+												/>
+											</div>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={showHref}>

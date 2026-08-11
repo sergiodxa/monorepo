@@ -30,7 +30,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, teams } from "~/database/schema";
+import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
@@ -165,5 +165,48 @@ describe("GET /app/:team/status-pages/new", () => {
 		}
 		expect(body).toContain(`name="is_public"`);
 		expect(body).toContain(`name="show_overall_status"`);
+	});
+
+	test("labels the monitor list as a group and gives it a select-all control", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.statusPages.new, {
+			middleware: [seedTeam(team, membership)],
+			handler: statusPageNewModule.handler,
+		});
+
+		let request = new Request(
+			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let response = await container.scope(() => router.fetch(request));
+		let body = await response.text();
+
+		// The select-all control drives the list by id, so the two must stay in step.
+		expect(body).toContain(`id="status-page-monitors-group"`);
+		expect(body).toContain(`aria-labelledby="status-page-monitors-label"`);
+		// The description belongs under the group's caption, not after the whole list.
+		expect(body.indexOf("Select which monitors to display")).toBeLessThan(
+			body.indexOf("status-page-monitors-group"),
+		);
+		// The control is an enhancement: it posts nothing, and the boxes keep their own name.
+		expect(body).toContain(`name="monitor_ids"`);
 	});
 });

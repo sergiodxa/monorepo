@@ -121,10 +121,22 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 											/>
 
 											<Field label={fields("scope.label")}>
-												<Select name="monitor_id" defaultValue={window.monitor_id ?? ""}>
-													<Select.Option value="">{fields("scope.allMonitors")}</Select.Option>
+												{/*
+												 * The saved scope is marked on the option itself: `defaultValue` is not
+												 * an attribute a `<select>` carries, so a server-rendered one is dropped
+												 * and the first option would win — re-saving a window scoped to a single
+												 * monitor as "all monitors".
+												 */}
+												<Select name="monitor_id">
+													<Select.Option value="" selected={!window.monitor_id}>
+														{fields("scope.allMonitors")}
+													</Select.Option>
 													{monitors.map((monitor) => (
-														<Select.Option key={monitor.id} value={monitor.id}>
+														<Select.Option
+															key={monitor.id}
+															value={monitor.id}
+															selected={monitor.id === window.monitor_id}
+														>
 															{monitor.name} (HTTP)
 														</Select.Option>
 													))}
