@@ -67,6 +67,8 @@ const QUICK_CHECK = {
  */
 export interface QuickPingResult {
 	kind: "result";
+	/** This submission's id; see {@link QuickPingError.id} for what the fragment does with it. */
+	id: string;
 	url: string;
 	status: MonitorStatus;
 	/** `null` when the target never answered, which is what distinguishes it from a 0. */
@@ -89,6 +91,13 @@ export type QuickPingErrorCode = "invalidUrl" | "subscriptionRequired";
  */
 export interface QuickPingError {
 	kind: "error";
+	/**
+	 * This submission's id. It is what tells one answer apart from the answer before it,
+	 * which the fragment needs because the toast it renders is patched into a bar that is
+	 * already on screen rather than built fresh: two answers that read the same would
+	 * otherwise be the same element, still holding the finished state of its own fade.
+	 */
+	id: string;
 	code: QuickPingErrorCode;
 }
 
@@ -122,9 +131,16 @@ export const runPing = createAction(routes.actions.runPing, {
 		let dashboard = routes.app.team.dashboard.index.href({ team: ctx.team.slug });
 		let back = redirect(dashboard, { status: redirect.Status.SeeOther });
 
+		/**
+		 * One id for this submission, minted before it is known whether there will be a check
+		 * to bill for: every path out of here stores an answer, and every answer has to be
+		 * distinguishable from the one it replaces on the dashboard.
+		 */
+		let id = generateUUID();
+
 		let result = await validate(ctx.formData, RunPingSchema);
 		if (isFailure(result)) {
-			session?.set(QUICK_PING_RESULT, { kind: "error", code: "invalidUrl" });
+			session?.set(QUICK_PING_RESULT, { kind: "error", id, code: "invalidUrl" });
 			return back;
 		}
 
@@ -135,7 +151,7 @@ export const runPing = createAction(routes.actions.runPing, {
 		 */
 		let db = getServiceContainer().get(Database);
 		if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
-			session?.set(QUICK_PING_RESULT, { kind: "error", code: "subscriptionRequired" });
+			session?.set(QUICK_PING_RESULT, { kind: "error", id, code: "subscriptionRequired" });
 			return back;
 		}
 
@@ -158,7 +174,7 @@ export const runPing = createAction(routes.actions.runPing, {
 		let status = check.classify(outcome, true);
 
 		recordAdhocPing({
-			id: generateUUID(),
+			id,
 			team: ctx.team,
 			status,
 			responseTimeMs: outcome.responseTimeMs ?? 0,
@@ -166,6 +182,7 @@ export const runPing = createAction(routes.actions.runPing, {
 
 		session?.set(QUICK_PING_RESULT, {
 			kind: "result",
+			id,
 			url: result.data.url,
 			status,
 			responseStatus: outcome.responseStatus,

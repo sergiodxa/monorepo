@@ -126,6 +126,7 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 					<FlashToast
 						color={badgeVariant(result.status).color}
 						label={ctx.i18next.t("page.dashboard.quickPing.result.label")}
+						occurrence={result.id}
 						title={ctx.i18next.t(`page.dashboard.quickPing.result.status.${result.status}`)}
 						description={detail}
 					/>
@@ -135,6 +136,7 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 					<FlashToast
 						color="danger"
 						label={ctx.i18next.t("page.dashboard.quickPing.result.label")}
+						occurrence={outcome.id}
 						title={ctx.i18next.t("page.dashboard.quickPing.title")}
 						description={ctx.i18next.t(`page.dashboard.quickPing.error.${outcome.code}`)}
 					/>

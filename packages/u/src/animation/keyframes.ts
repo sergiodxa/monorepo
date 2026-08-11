@@ -19,6 +19,12 @@ import { nest, utility } from "../internal/descriptor";
  * `u.animation()` instead) that sets `animationName` and `animationDuration`
  * at the use site.
  *
+ * Reach for this rather than writing an `@keyframes` key by hand inside a
+ * nested block. The serializer only reads stop keys (`from`, `to`, `50%`) as
+ * stop selectors while the `@keyframes` rule sits outside any selector block;
+ * nested inside one, every stop serializes as a `50%: [object Object]`
+ * declaration that browsers drop. This helper always emits at the top level.
+ *
  * @example
  * <div
  *   mix={[
@@ -33,6 +39,7 @@ import { nest, utility } from "../internal/descriptor";
  *   ]}
  * />
  * @example
+ * // Equivalent only at the top level of a `css()` call, never nested deeper.
  * css({ "@keyframes fade-in": { from: { opacity: 0 }, to: { opacity: 1 } } })
  */
 export function keyframes<Node extends Element = Element>(

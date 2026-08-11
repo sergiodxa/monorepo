@@ -28,6 +28,31 @@ import { easings } from "@pkg/ui/animations";
 const VISIBLE_MS = 5000;
 
 /**
+ * Base name of the fade's `@keyframes` rule, and the name used verbatim whenever no
+ * `occurrence` distinguishes one toast from the last — see {@link fadeName}.
+ */
+const FADE_NAME = "uptime-toast-fade";
+
+/**
+ * The animation name this toast fades under: {@link FADE_NAME} on its own, or suffixed
+ * with `occurrence` when the caller has something that tells this toast apart from the
+ * one before it.
+ *
+ * That suffix is the whole reason the prop exists. A toast rendered into a frame is
+ * patched onto whatever element the last render left behind, not built fresh, so it
+ * inherits that element's already-finished fade — held at `opacity: 0` by
+ * `animation-fill-mode`, and never restarted, because re-applying the same animation to
+ * the same element does nothing. A different name is a different animation, which plays.
+ *
+ * Sanitized rather than trusted: the value is an identifier from somewhere else in the
+ * app, and anything outside an ident would produce a `@keyframes` rule no browser parses.
+ */
+function fadeName(occurrence?: string): string {
+	let suffix = occurrence?.replace(/[^a-zA-Z0-9_-]/g, "");
+	return suffix ? `${FADE_NAME}-${suffix}` : FADE_NAME;
+}
+
+/**
  * One-shot fade: holds full opacity, then fades to fully transparent over the tail of
  * {@link VISIBLE_MS}, with no JS driving its removal — the toast simply becomes
  * invisible in place once the animation ends. `@pkg/ui/animations`'s `fade()`/
@@ -38,8 +63,8 @@ const VISIBLE_MS = 5000;
  * `@pkg/u/animation`'s `animation()`, which emits the `@keyframes` rule plus the
  * longhand host declarations.
  */
-function autoFade() {
-	return animation("uptime-toast-fade", {
+function autoFade(occurrence?: string) {
+	return animation(fadeName(occurrence), {
 		keyframes: {
 			"0%": { opacity: 1 },
 			"85%": { opacity: 1 },
@@ -57,6 +82,13 @@ namespace FlashToast {
 		color: Toast.Color;
 		/** Accessible name for the region landmark holding the toast. */
 		label: string;
+		/**
+		 * Identifies the thing being reported, for callers that render this into a frame:
+		 * two answers in a row are patched onto one element, and only a value that changes
+		 * between them gets the fade to play a second time. Omit it where every render is a
+		 * fresh document, which is where the element is new anyway.
+		 */
+		occurrence?: string;
 		/** Optional bold first line, for a message whose body needs naming. */
 		title?: string;
 		description: string;
@@ -66,11 +98,11 @@ namespace FlashToast {
 /** Renders one already-settled toast, pinned to the viewport corner, that fades on its own. */
 export default function FlashToast(handle: Handle<FlashToast.Props>) {
 	return () => {
-		let { color, label, title, description } = handle.props;
+		let { color, label, occurrence, title, description } = handle.props;
 
 		return (
 			<Toast.Region aria-label={label}>
-				<Toast color={color} mix={[autoFade()]}>
+				<Toast color={color} mix={[autoFade(occurrence)]}>
 					<Toast.Content>
 						{title && <Toast.Title>{title}</Toast.Title>}
 						<Toast.Description>{description}</Toast.Description>

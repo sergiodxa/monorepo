@@ -22,6 +22,23 @@ describe("keyframes", () => {
 		).toEqual(["opacity: 0", "opacity: 1"]);
 	});
 
+	test("emits percentage stops as real stop blocks, not as declarations", async () => {
+		let css = await serialize(
+			keyframes("ramp", {
+				"0%": { opacity: 0 },
+				"10%, 90%": { opacity: 1 },
+				"100%": { opacity: 0 },
+			}),
+		);
+
+		// A stop that reached the declaration path instead of the selector path
+		// serializes as `0%: [object Object];` and the browser drops the rule.
+		expect(css).not.toContain("[object Object]");
+		expect(css).toMatch(/\b0%\s*\{/);
+		expect(css).toMatch(/\b10%,\s*90%\s*\{/);
+		expect(css).toMatch(/\b100%\s*\{/);
+	});
+
 	test("never emits host declarations such as animationName", async () => {
 		let css = await serialize(keyframes("fade-in", { from: { opacity: 0 }, to: { opacity: 1 } }));
 

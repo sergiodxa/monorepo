@@ -39,7 +39,7 @@ import { session } from "remix/session-middleware";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
 
-import type { QuickPingResult } from "~/app/http/controllers/actions/ping";
+import type { QuickPingError, QuickPingResult } from "~/app/http/controllers/actions/ping";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -129,6 +129,26 @@ async function storeResult(result: QuickPingResult): Promise<string> {
 	return setCookie.split(";")[0] ?? "";
 }
 
+/** Same, for a refusal — the outcome the action stores when no check ever ran. */
+async function storeRefusal(error: QuickPingError): Promise<string> {
+	let stored = createSession();
+	stored.set(QUICK_PING_RESULT, error);
+	let value = await sessionStorage.save(stored);
+	let setCookie = await sessionCookie.serialize(value ?? "");
+	return setCookie.split(";")[0] ?? "";
+}
+
+/**
+ * The name of the animation the response's toast fades under, read out of the emitted
+ * stylesheet. It is the only observable in server-rendered HTML for "this is a different
+ * animation from the last one", which is what the browser needs in order to play it.
+ */
+function fadeName(body: string): string {
+	let match = body.match(/animation-name:\s*(uptime-toast-fade[\w-]*)/);
+	expect(match).not.toBeNull();
+	return match?.[1] ?? "";
+}
+
 /** Requests the fragment, optionally carrying a session cookie back with it. */
 async function render(
 	db: Database,
@@ -167,10 +187,11 @@ async function render(
 	return container.scope(() => router.fetch(request));
 }
 
-/** An `up` result, as the action stores one. */
+/** An `up` result, as the action stores one — a fresh id each time, as the action mints one. */
 function upResult(overrides: Partial<QuickPingResult> = {}): QuickPingResult {
 	return {
 		kind: "result",
+		id: crypto.randomUUID(),
 		url: "https://example.com/health",
 		status: "up",
 		responseStatus: 200,
@@ -288,6 +309,41 @@ describe("dashboard-quick-ping", () => {
 		let body = await second.text();
 		expect(body).not.toContain("HTTP 200");
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
+	});
+
+	test("fades each answer under an animation of its own, so a second one still plays", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let first = await (await render(db, team, membership, await storeResult(upResult()))).text();
+		let second = await (await render(db, team, membership, await storeResult(upResult()))).text();
+
+		// The frame swap patches the toast that is on screen rather than building a new one,
+		// and re-applying a finished animation to the same element plays nothing — so the
+		// second answer arrived invisible, held at `opacity: 0` by the first one's fill mode.
+		// What makes it play is being a different animation, which is what this asserts.
+		let firstFade = fadeName(first);
+		let secondFade = fadeName(second);
+		expect(firstFade).not.toBe(secondFade);
+		// Both still have to be an animation the response also defines keyframes for.
+		expect(first).toContain(`@keyframes ${firstFade}`);
+		expect(second).toContain(`@keyframes ${secondFade}`);
+	});
+
+	test("distinguishes two identical refusals, which nothing in their wording could", async () => {
+		let { db, team, membership } = await createFixture();
+		let refusal = (): QuickPingError => ({
+			kind: "error",
+			id: crypto.randomUUID(),
+			code: "invalidUrl",
+		});
+
+		let first = await (await render(db, team, membership, await storeRefusal(refusal()))).text();
+		let second = await (await render(db, team, membership, await storeRefusal(refusal()))).text();
+
+		// Typing the same nonsense twice is the case a name derived from what the toast says
+		// could never tell apart: same code, same copy, same colour, byte-identical markup.
+		expect(first).toContain(en.page.dashboard.quickPing.error.invalidUrl);
+		expect(fadeName(first)).not.toBe(fadeName(second));
 	});
 
 	test("points the form at the run-ping action and the frame back at itself", async () => {

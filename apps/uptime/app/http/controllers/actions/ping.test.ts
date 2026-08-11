@@ -268,6 +268,8 @@ describe("POST /actions/:team/run-ping", () => {
 		);
 		expect(flashed.outcome).toEqual({
 			kind: "result",
+			// Minted per submission; what it is worth is that it differs from the last one.
+			id: expect.any(String),
 			url: "https://example.com/health",
 			status: "up",
 			responseStatus: 200,
@@ -321,6 +323,8 @@ describe("POST /actions/:team/run-ping", () => {
 
 		expect(flashed.outcome).toEqual({
 			kind: "result",
+			// Minted per submission; what it is worth is that it differs from the last one.
+			id: expect.any(String),
 			url: "https://example.com/health",
 			status: "down",
 			responseStatus: 500,
@@ -344,6 +348,8 @@ describe("POST /actions/:team/run-ping", () => {
 		// `null`, not a zero: no status and no measurement is a different fact from a 0.
 		expect(flashed.outcome).toEqual({
 			kind: "result",
+			// Minted per submission; what it is worth is that it differs from the last one.
+			id: expect.any(String),
 			url: "https://nothing.invalid",
 			status: "down",
 			responseStatus: null,
@@ -377,7 +383,11 @@ describe("POST /actions/:team/run-ping refusals", () => {
 			expect(response.headers.get("Location")).toBe(
 				routes.app.team.dashboard.index.href({ team: team.slug }),
 			);
-			expect(flashed.outcome).toEqual({ kind: "error", code: "invalidUrl" });
+			expect(flashed.outcome).toEqual({
+				kind: "error",
+				id: expect.any(String),
+				code: "invalidUrl",
+			});
 			expect(flashed.toast).toBeNull();
 
 			expect(doFetchMock).not.toHaveBeenCalled();
@@ -393,7 +403,11 @@ describe("POST /actions/:team/run-ping refusals", () => {
 		let { response, flashed } = await dispatch(db, team, "https://example.com/health");
 
 		expect(response.status).toBe(303);
-		expect(flashed.outcome).toEqual({ kind: "error", code: "subscriptionRequired" });
+		expect(flashed.outcome).toEqual({
+			kind: "error",
+			id: expect.any(String),
+			code: "subscriptionRequired",
+		});
 		expect(flashed.toast).toBeNull();
 
 		// Refused before any billable work: no probe, no data point, no meter event.

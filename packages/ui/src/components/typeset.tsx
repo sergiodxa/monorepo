@@ -16,6 +16,7 @@
 
 import type { Handle, Props as TagProps } from "remix/ui";
 
+import { keyframes } from "@pkg/u/animation";
 import { bg, border, borderEdge, fg, outline } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
@@ -72,16 +73,17 @@ function tableFadeMask(startStop: string, endStop: string): string {
 const TABLE_FADE_SETTLED_STOP = `calc(100% - ${TABLE_FADE_SIZE})`;
 const TABLE_FADE_SETTLED_MASK = tableFadeMask(TABLE_FADE_SIZE, TABLE_FADE_SETTLED_STOP);
 
-// Built as its own statement rather than inline inside the `css()` call: an
-// object literal mixing a computed key with literal ones widens past what
-// `css()`'s style type accepts, where an already-typed variable assigned
-// into afterward does not.
-let tableFadeKeyframes: Styles = {
+/**
+ * Stops the wide-table edge fade animates through: fully faded on the leading
+ * edge at rest, settled on both edges across the long middle of the scroll
+ * range, and fully faded on the trailing edge at the end.
+ */
+const TABLE_FADE_KEYFRAMES: Record<string, Styles> = {
 	"0%": { maskImage: tableFadeMask("0%", TABLE_FADE_SETTLED_STOP) },
+	[`${TABLE_FADE_RAMP_PERCENT}%, ${100 - TABLE_FADE_RAMP_PERCENT}%`]: {
+		maskImage: TABLE_FADE_SETTLED_MASK,
+	},
 	"100%": { maskImage: tableFadeMask(TABLE_FADE_SIZE, "100%") },
-};
-tableFadeKeyframes[`${TABLE_FADE_RAMP_PERCENT}%, ${100 - TABLE_FADE_RAMP_PERCENT}%`] = {
-	maskImage: TABLE_FADE_SETTLED_MASK,
 };
 
 /**
@@ -174,6 +176,13 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 				mix={[
 					fg("neutral.emphasis"),
 					container(CONTAINER_NAME),
+					// Emitted as its own top-level mixin, not as a key nested under
+					// the table's selector: the serializer only recognizes keyframe
+					// stops (`0%`, `from`, …) as stop selectors while the `@keyframes`
+					// rule sits outside any selector block. Nested inside one, every
+					// stop silently serialized as a dropped declaration and the fade
+					// never animated.
+					keyframes(TABLE_FADE_KEYFRAMES_NAME, TABLE_FADE_KEYFRAMES),
 					raw({
 						fontSize: "var(--ui-typeset-size, 1rem)",
 						lineHeight: "var(--ui-typeset-leading, 1.75)",
@@ -317,7 +326,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 								animationTimingFunction: easings.linear,
 								animationFillMode: "both",
 								animationTimeline: "scroll(self inline)",
-								[`@keyframes ${TABLE_FADE_KEYFRAMES_NAME}`]: tableFadeKeyframes,
 								// A mask fade ramping in and out at each edge has no
 								// positional movement to collapse to opacity — the closest
 								// reduced-motion equivalent is to stop tying the fade to
