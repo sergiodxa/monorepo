@@ -175,7 +175,10 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 	session?.flash(
 		"toast",
 		queued
-			? { intent: "success", message: `Check queued for "${monitor.name}".` }
+			? {
+					intent: "success",
+					message: ctx.i18next.t("actions.checks.queued", { name: monitor.name }),
+				}
 			: { intent: "error", message: ctx.i18next.t("actions.checks.subscriptionRequired") },
 	);
 	return redirect(
