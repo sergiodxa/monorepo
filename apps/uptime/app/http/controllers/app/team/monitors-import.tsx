@@ -19,6 +19,12 @@
  * re-submitting our summary of somebody's text as if it were their text is how a truncated line
  * turns into a monitor watching the wrong URL.
  *
+ * The paste box and the cadence applied to every line it creates sit in two bordered cards
+ * inside a single `<form>`, so the page reads as distinct settings groups while still
+ * submitting as one request. The report is a reading of the *previous* submission rather than
+ * an input to the next one, so it gets a section of its own above the form instead of being
+ * folded into a form card.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -41,6 +47,7 @@ import { IMPORT_INTERVAL, MAX_IMPORT_LINES } from "~/app/http/validators/monitor
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import RangeSlider from "~/resources/components/range-slider";
+import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -82,97 +89,145 @@ export default createAction(routes.app.team.monitorsImport, {
 					]}
 				>
 					<FormPage>
-						{/* The `id`s name the two regions of the report — the per-line table and the
-						unexamined remainder — so what this page renders can be asserted on without
-						depending on the copy inside them. */}
-						{report && (report.rejected.length > 0 || report.overflow > 0) && (
-							<div id="import-report" mix={[vstack({ gap: "12px" }), mbe("28px")]}>
-								<p>
-									{ctx.i18next.t("page.monitorsImport.report.title", { count: report.created })}
-								</p>
+						<div mix={[vstack({ gap: 12 })]}>
+							{/* The `id`s name the two regions of the report — the per-line table and the
+							unexamined remainder — so what this page renders can be asserted on without
+							depending on the copy inside them. The count of what *was* created leads the
+							section as its description, so a partial import never reads as a failed one. */}
+							{report && (report.rejected.length > 0 || report.overflow > 0) && (
+								<SettingsSection
+									id="import-report"
+									title={ctx.i18next.t("page.monitorsImport.report.section.title")}
+									description={ctx.i18next.t("page.monitorsImport.report.title", {
+										count: report.created,
+									})}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											{/* The body draws no block-end padding, so the report carries the trailing gap itself. */}
+											<div mix={[vstack({ gap: "12px" }), mbe(6)]}>
+												{report.rejected.length > 0 && (
+													<Table.Container>
+														<Table
+															aria-label={ctx.i18next.t("page.monitorsImport.report.table.label")}
+														>
+															<Table.Header>
+																<Table.Row>
+																	<Table.Column>
+																		{ctx.i18next.t("page.monitorsImport.report.table.columns.line")}
+																	</Table.Column>
+																	<Table.Column>
+																		{ctx.i18next.t(
+																			"page.monitorsImport.report.table.columns.input",
+																		)}
+																	</Table.Column>
+																	<Table.Column>
+																		{ctx.i18next.t(
+																			"page.monitorsImport.report.table.columns.reason",
+																		)}
+																	</Table.Column>
+																</Table.Row>
+															</Table.Header>
+															<Table.Body>
+																{report.rejected.map((rejection) => (
+																	<Table.Row key={`${rejection.line}`}>
+																		<Table.Cell>{rejection.line}</Table.Cell>
+																		<Table.Cell>
+																			<code>{rejection.input}</code>
+																		</Table.Cell>
+																		<Table.Cell>
+																			{ctx.i18next.t(
+																				`page.monitorsImport.report.reasons.${rejection.reason}`,
+																			)}
+																		</Table.Cell>
+																	</Table.Row>
+																))}
+															</Table.Body>
+														</Table>
+													</Table.Container>
+												)}
 
-								{report.rejected.length > 0 && (
-									<Table.Container>
-										<Table aria-label={ctx.i18next.t("page.monitorsImport.report.table.label")}>
-											<Table.Header>
-												<Table.Row>
-													<Table.Column>
-														{ctx.i18next.t("page.monitorsImport.report.table.columns.line")}
-													</Table.Column>
-													<Table.Column>
-														{ctx.i18next.t("page.monitorsImport.report.table.columns.input")}
-													</Table.Column>
-													<Table.Column>
-														{ctx.i18next.t("page.monitorsImport.report.table.columns.reason")}
-													</Table.Column>
-												</Table.Row>
-											</Table.Header>
-											<Table.Body>
-												{report.rejected.map((rejection) => (
-													<Table.Row key={`${rejection.line}`}>
-														<Table.Cell>{rejection.line}</Table.Cell>
-														<Table.Cell>
-															<code>{rejection.input}</code>
-														</Table.Cell>
-														<Table.Cell>
-															{ctx.i18next.t(
-																`page.monitorsImport.report.reasons.${rejection.reason}`,
-															)}
-														</Table.Cell>
-													</Table.Row>
-												))}
-											</Table.Body>
-										</Table>
-									</Table.Container>
-								)}
+												{report.overflow > 0 && (
+													<p id="import-overflow" mix={[fg("neutral")]}>
+														{ctx.i18next.t("page.monitorsImport.report.overflow", {
+															count: report.overflow,
+															limit: MAX_IMPORT_LINES,
+														})}
+													</p>
+												)}
+											</div>
+										</SettingsSection.Body>
+									</SettingsSection.Card>
+								</SettingsSection>
+							)}
 
-								{report.overflow > 0 && (
-									<p id="import-overflow" mix={[fg("neutral")]}>
-										{ctx.i18next.t("page.monitorsImport.report.overflow", {
-											count: report.overflow,
-											limit: MAX_IMPORT_LINES,
-										})}
-									</p>
-								)}
-							</div>
-						)}
-
-						<form
-							method="post"
-							action={routes.actions.monitor.http.import.href({ team: ctx.team.slug })}
-						>
-							<Field
-								label={ctx.i18next.t("page.monitorsImport.form.fields.urls.label")}
-								description={ctx.i18next.t("page.monitorsImport.form.fields.urls.description", {
-									limit: MAX_IMPORT_LINES,
-								})}
+							<form
+								method="post"
+								action={routes.actions.monitor.http.import.href({ team: ctx.team.slug })}
+								mix={[vstack({ gap: 12 })]}
 							>
-								<TextArea
-									name="urls"
-									required
-									spellcheck={false}
-									placeholder={ctx.i18next.t("page.monitorsImport.form.fields.urls.placeholder")}
-								/>
-							</Field>
+								<SettingsSection
+									id="urls"
+									title={ctx.i18next.t("page.monitorsImport.form.sections.urls.title")}
+									description={ctx.i18next.t("page.monitorsImport.form.sections.urls.description")}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											<Field
+												label={ctx.i18next.t("page.monitorsImport.form.fields.urls.label")}
+												description={ctx.i18next.t(
+													"page.monitorsImport.form.fields.urls.description",
+													{ limit: MAX_IMPORT_LINES },
+												)}
+											>
+												<TextArea
+													name="urls"
+													required
+													spellcheck={false}
+													placeholder={ctx.i18next.t(
+														"page.monitorsImport.form.fields.urls.placeholder",
+													)}
+												/>
+											</Field>
+										</SettingsSection.Body>
+									</SettingsSection.Card>
+								</SettingsSection>
 
-							{/* The same control, bounds and default the single-monitor form offers, applied
-							to every line at once: a pasted list carries no per-site cadence, and asking
-							for thirty of them one at a time is the tedium this page exists to remove. */}
-							<RangeSlider
-								label={ctx.i18next.t("page.monitorsImport.form.fields.interval.label")}
-								description={ctx.i18next.t("page.monitorsImport.form.fields.interval.description")}
-								name="interval_seconds"
-								min={IMPORT_INTERVAL.min}
-								max={IMPORT_INTERVAL.max}
-								step={60}
-								scale={60}
-								unit="m"
-								defaultValue={IMPORT_INTERVAL.default}
-								rangeLabels={["1m", "60m"]}
-							/>
-
-							<Button type="submit">{ctx.i18next.t("page.monitorsImport.form.cta")}</Button>
-						</form>
+								<SettingsSection
+									id="schedule"
+									title={ctx.i18next.t("page.monitorsImport.form.sections.schedule.title")}
+									description={ctx.i18next.t(
+										"page.monitorsImport.form.sections.schedule.description",
+									)}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											{/* The same control, bounds and default the single-monitor form offers,
+											applied to every line at once: a pasted list carries no per-site cadence,
+											and asking for thirty of them one at a time is the tedium this page
+											exists to remove. */}
+											<RangeSlider
+												label={ctx.i18next.t("page.monitorsImport.form.fields.interval.label")}
+												description={ctx.i18next.t(
+													"page.monitorsImport.form.fields.interval.description",
+												)}
+												name="interval_seconds"
+												min={IMPORT_INTERVAL.min}
+												max={IMPORT_INTERVAL.max}
+												step={60}
+												scale={60}
+												unit="m"
+												defaultValue={IMPORT_INTERVAL.default}
+												rangeLabels={["1m", "60m"]}
+											/>
+										</SettingsSection.Body>
+										<SettingsSection.Footer>
+											<Button type="submit">{ctx.i18next.t("page.monitorsImport.form.cta")}</Button>
+										</SettingsSection.Footer>
+									</SettingsSection.Card>
+								</SettingsSection>
+							</form>
+						</div>
 					</FormPage>
 				</AppShell>
 			</DocumentLayout>,

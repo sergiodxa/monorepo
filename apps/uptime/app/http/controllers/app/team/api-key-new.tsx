@@ -3,6 +3,12 @@
  * `requireRole("admin")`. Renders the new API key form, listing every value of
  * `apiKeyScopes` as a scope checkbox.
  *
+ * The fields are grouped into two bordered cards — what the key is called and how
+ * long it lives, and what it is allowed to do — inside a single `<form>`, so the
+ * page reads as distinct settings groups while still submitting as one request. The
+ * submit control sits at the foot of the last card rather than loose under the
+ * fields.
+ *
  * There are two dozen scopes and each carries a sentence or two of prose, so the
  * list is a row-flow grid that splits into two columns on wide viewports: grid
  * items are atomic, so no entry can be torn across the column boundary the way CSS
@@ -14,10 +20,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flex, flexCol, gap, grid, gridTemplate, repeat } from "@pkg/u/layout";
+import { gap, grid, gridTemplate, repeat, vstack } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { mbe, pis } from "@pkg/u/size";
-import { Button, Checkbox, CheckboxGroup, DateField, Description, Label, TextField } from "@pkg/ui";
+import { Button, Checkbox, CheckboxGroup, DateField, Description, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 
@@ -29,12 +35,10 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { apiKeyScopes } from "~/database/schema";
 import FormPage from "~/resources/components/form-page";
+import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
-
-/** DOM id for the scopes {@link CheckboxGroup}'s visible caption, wired through `aria-labelledby`. */
-const SCOPES_LABEL_ID = "api-key-scopes-label";
 
 /**
  * Widest this form's column is allowed to grow, overriding `FormPage`'s default.
@@ -87,60 +91,83 @@ export default createAction(routes.app.team.apiKeys.new, {
 						<form
 							method="post"
 							action={routes.teamAdminActions.apiKey.create.href({ team: ctx.team.slug })}
+							mix={[vstack({ gap: 12 })]}
 						>
-							<TextField
-								label={ctx.i18next.t("page.apiKeys.form.fields.name.label")}
-								type="text"
-								name="name"
-								required
-								placeholder={ctx.i18next.t("page.apiKeys.form.fields.name.placeholder")}
-								description={ctx.i18next.t("page.apiKeys.form.fields.name.description")}
-								mix={mbe("28px")}
-							/>
+							<SettingsSection
+								id="details"
+								title={ctx.i18next.t("page.apiKeys.form.sections.details.title")}
+								description={ctx.i18next.t("page.apiKeys.form.sections.details.description")}
+							>
+								<SettingsSection.Card>
+									<SettingsSection.Body>
+										<TextField
+											label={ctx.i18next.t("page.apiKeys.form.fields.name.label")}
+											type="text"
+											name="name"
+											required
+											placeholder={ctx.i18next.t("page.apiKeys.form.fields.name.placeholder")}
+											description={ctx.i18next.t("page.apiKeys.form.fields.name.description")}
+											mix={mbe("28px")}
+										/>
 
-							<div mix={[flex(), flexCol(), gap(2), mbe(5)]}>
-								<CheckboxGroup aria-labelledby={SCOPES_LABEL_ID}>
-									<Label id={SCOPES_LABEL_ID}>
-										{ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
-									</Label>
-									<div
-										mix={[
-											grid(),
-											gap(3),
-											media(SCOPES_TWO_COLUMN_QUERY, gridTemplate({ columns: repeat(2, 1) })),
-										]}
-									>
-										{apiKeyScopes.map((scope) => (
-											<div key={scope} mix={[flex(), flexCol(), gap(1)]}>
-												<Checkbox
-													name="scopes"
-													value={scope}
-													aria-describedby={descriptionId(scope)}
-												>
-													{scope}
-												</Checkbox>
-												<Description id={descriptionId(scope)} mix={pis("1.75rem")}>
-													{ctx.i18next.t(`page.apiKeys.form.fields.scopes.descriptions.${scope}`, {
-														nsSeparator: false,
-													})}
-												</Description>
+										<DateField
+											label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}
+											name="expires_at"
+											description={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.description")}
+											mix={mbe("28px")}
+										/>
+									</SettingsSection.Body>
+								</SettingsSection.Card>
+							</SettingsSection>
+
+							{/* The section heading is the group's visible caption now, so the group is named
+							through `aria-label` with that same string rather than repeating it as a second
+							"Permissions" line inside the card. */}
+							<SettingsSection
+								id="scopes"
+								title={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
+								description={ctx.i18next.t("page.apiKeys.form.fields.scopes.description")}
+							>
+								<SettingsSection.Card>
+									<SettingsSection.Body>
+										<CheckboxGroup
+											aria-label={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
+											mix={[mbe("28px")]}
+										>
+											<div
+												mix={[
+													grid(),
+													gap(3),
+													media(SCOPES_TWO_COLUMN_QUERY, gridTemplate({ columns: repeat(2, 1) })),
+												]}
+											>
+												{apiKeyScopes.map((scope) => (
+													<div key={scope} mix={[vstack({ gap: 1 })]}>
+														<Checkbox
+															name="scopes"
+															value={scope}
+															aria-describedby={descriptionId(scope)}
+														>
+															{scope}
+														</Checkbox>
+														<Description id={descriptionId(scope)} mix={pis("1.75rem")}>
+															{ctx.i18next.t(
+																`page.apiKeys.form.fields.scopes.descriptions.${scope}`,
+																{ nsSeparator: false },
+															)}
+														</Description>
+													</div>
+												))}
 											</div>
-										))}
-									</div>
-								</CheckboxGroup>
-								<Description>
-									{ctx.i18next.t("page.apiKeys.form.fields.scopes.description")}
-								</Description>
-							</div>
-
-							<DateField
-								label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}
-								name="expires_at"
-								description={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.description")}
-								mix={mbe("28px")}
-							/>
-
-							<Button type="submit">{ctx.i18next.t("page.apiKeys.form.actions.create")}</Button>
+										</CheckboxGroup>
+									</SettingsSection.Body>
+									<SettingsSection.Footer>
+										<Button type="submit">
+											{ctx.i18next.t("page.apiKeys.form.actions.create")}
+										</Button>
+									</SettingsSection.Footer>
+								</SettingsSection.Card>
+							</SettingsSection>
 						</form>
 					</FormPage>
 				</AppShell>
