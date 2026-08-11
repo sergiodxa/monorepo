@@ -1,9 +1,9 @@
 /**
- * Tests for the DNS monitor results-summary fragment controller — the stat cards reduced
- * from the result rows, which used to live on the detail page. The rows themselves are the
- * check-history fragment's business and are tested there.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
+ * Tests for the DNS monitor check-history fragment controller — the raw log of checks
+ * that renders at the very bottom of the detail page, and in particular how a findings
+ * cell reads a partial sweep. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
+ * seeded directly by a fake middleware standing in for the real
+ * `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,7 +30,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitorResults, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let { handler } = (await import("./dns-monitor-card-results")).default as {
+let { handler } = (await import("./dns-monitor-card-check-history")).default as {
 	handler: RequestHandler<any>;
 };
 
@@ -91,14 +91,14 @@ async function send(
 	container.instance(Database, db);
 
 	let router = createRouter({ middleware: [asyncContext()] });
-	router.map(routes.app.team.dnsMonitors.cards.results, {
+	router.map(routes.app.team.dnsMonitors.cards.checkHistory, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,
 	});
 
 	let request = new Request(
 		new URL(
-			routes.app.team.dnsMonitors.cards.results.href({ team: team.slug, monitorId }),
+			routes.app.team.dnsMonitors.cards.checkHistory.href({ team: team.slug, monitorId }),
 			"https://uptime.test",
 		),
 	);
@@ -106,8 +106,8 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
-describe("dns-monitor-card-results", () => {
-	test("renders both summary cards with no checks to reduce", async () => {
+describe("dns-monitor-card-check-history", () => {
+	test("renders the empty state for a monitor that has never been checked", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			dnsMonitors,
@@ -124,11 +124,16 @@ describe("dns-monitor-card-results", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Success Rate");
-		expect(body).toContain("Total Checks");
+		expect(body).toContain("Check History");
+		expect(body).toContain("No checks have been performed yet.");
 	});
 
-	test("reduces the result rows into a success rate and a count", async () => {
+	/**
+	 * A query that did not answer is never diffed, so a check that lost some of its queries
+	 * knows less about the domain than a whole one does. Reporting it as "no changes" would
+	 * turn the part we never looked at into a clean bill of health.
+	 */
+	test("reports a partial sweep as partial rather than as a clean check", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			dnsMonitors,
@@ -136,31 +141,24 @@ describe("dns-monitor-card-results", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		for (let status of ["ok", "ok", "ok", "error"]) {
-			await db.create(dnsMonitorResults, {
-				id: crypto.randomUUID(),
-				dns_monitor_id: monitor.id,
-				status,
-				records_checked: 12,
-				queries_failed: 0,
-				response_time_ms: 40,
-				error_message: null,
-				checked_at: Date.now(),
-			});
-		}
+		await db.create(dnsMonitorResults, {
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitor.id,
+			status: "ok",
+			records_checked: 12,
+			queries_failed: 2,
+			response_time_ms: 40,
+			error_message: null,
+			checked_at: Date.now(),
+		});
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		expect(body).toContain("75%");
+		expect(body).toContain("2 queries did not answer");
+		expect(body).not.toContain("No changes");
 	});
 
-	/**
-	 * Resolution time measures how fast our own resolver answered, not anything about the
-	 * visitor's DNS, so averaging it into a headline card states a fact about our
-	 * infrastructure as if it were one about theirs. The column stays on the check log,
-	 * where it can explain a single odd row.
-	 */
-	test("never reduces resolution time into a headline card", async () => {
+	test("says nothing moved only when the whole sweep answered", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			dnsMonitors,
@@ -181,8 +179,8 @@ describe("dns-monitor-card-results", () => {
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
 
-		expect(body).not.toContain("Avg. Response Time");
-		expect(body).not.toContain("40ms");
+		expect(body).toContain("No changes");
+		expect(body).not.toContain("did not answer");
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

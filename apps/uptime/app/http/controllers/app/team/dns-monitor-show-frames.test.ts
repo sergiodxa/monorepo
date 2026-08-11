@@ -1,7 +1,7 @@
 /**
- * Tests the DNS monitor detail page's two `Frame`s end to end, through the app's real
+ * Tests the DNS monitor detail page's three `Frame`s end to end, through the app's real
  * renderer: the document request dispatches each frame's `src` back through the same
- * router, so both fragment controllers run for real — middleware chain, current schema,
+ * router, so every fragment controller runs for real — middleware chain, current schema,
  * migrated tables — and their HTML has to land inside the document.
  *
  * The page's own tests stub `resolveFrame` to an empty string, which makes every frame
@@ -13,7 +13,7 @@
  * that template is the only thing that ends the skeleton — so every case here asserts it
  * arrived, closed, under the id the document's own placeholder carries. Asserting on the
  * fragment's markup alone does not: a fragment can render perfectly and still never be
- * emitted, which is precisely how a page with two permanent skeletons passed its tests.
+ * emitted, which is precisely how a page with permanent skeletons passed its tests.
  *
  * The last two cases are the failure mode itself, once for each side of it. A fragment
  * response's headers exist before its HTML does, so a fragment can fail either before the
@@ -21,9 +21,9 @@
  * the same way: no template, no error, a skeleton the visitor keeps forever.
  *
  * The record list is seeded rather than left empty, so the table the page renders inline
- * above both frames is actually emitted and can be checked for the markup a browser would
- * foster-parent out of it — which would relocate everything after it, frame placeholders
- * included.
+ * between the frames is actually emitted and can be checked for the markup a browser would
+ * foster-parent out of it — which would relocate everything after it, the check-history
+ * placeholder that sits directly below it included.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +58,7 @@ import {
 import routes from "~/routes/web";
 
 /**
- * The page and its two fragments, mapped whole — middleware chain included — rather than
+ * The page and its three fragments, mapped whole — middleware chain included — rather than
  * unwrapped to their handlers, so `requireUser`/`requireTeam` run on the frame
  * sub-requests exactly as they do in production.
  */
@@ -69,6 +69,8 @@ interface Mapped {
 
 let show = (await import("./dns-monitor-show")).default as unknown as Mapped;
 let cardResults = (await import("./dns-monitor-card-results")).default as unknown as Mapped;
+let cardCheckHistory = (await import("./dns-monitor-card-check-history"))
+	.default as unknown as Mapped;
 let cardUptimeHistory = (await import("./dns-monitor-card-uptime-history"))
 	.default as unknown as Mapped;
 
@@ -111,6 +113,16 @@ function unresolvedFrameIds(html: string): string[] {
 	return [...html.matchAll(/<!-- rmx:f:(\S+) -->/g)]
 		.map((match) => match[1] ?? "")
 		.filter((id) => !streamed.has(id));
+}
+
+/**
+ * Where each frame placeholder sits in the document, in document order — which is the only
+ * handle a test has on *which* frame is which, since the id in the placeholder is generated
+ * rather than the name the page declared. Document order is also what the client honours:
+ * a frame fills the region it was declared in, so position is the page's layout contract.
+ */
+function frameOffsets(html: string): number[] {
+	return [...html.matchAll(/<!-- rmx:f:\S+ -->/g)].map((match) => match.index);
 }
 
 /** Elements the HTML parser accepts as a direct child of each table-structure element. */
@@ -190,7 +202,7 @@ namespace createHarness {
 	}
 }
 
-/** One team, one DNS monitor, and the page plus both fragment routes on a single router. */
+/** One team, one DNS monitor, and the page plus every fragment route on a single router. */
 async function createHarness(options: createHarness.Options = {}) {
 	let { db } = createTestDatabase();
 
@@ -210,7 +222,7 @@ async function createHarness(options: createHarness.Options = {}) {
 		{ touch: true, returnRow: true },
 	);
 
-	// One record per state the row can be drawn in, so the inline table above both frames is
+	// One record per state the row can be drawn in, so the inline table between the frames is
 	// rendered with every branch its cells have — including the watch toggle's own form.
 	for (let record of [
 		{ record_type: "A", value: "1.2.3.4", status: "ok", is_enabled: true },
@@ -252,6 +264,7 @@ async function createHarness(options: createHarness.Options = {}) {
 	let map = router.map as (target: unknown, action: unknown) => void;
 	map(routes.app.team.dnsMonitors.show, show);
 	map(routes.app.team.dnsMonitors.cards.results, options.results ?? cardResults);
+	map(routes.app.team.dnsMonitors.cards.checkHistory, cardCheckHistory);
 	map(routes.app.team.dnsMonitors.cards.uptimeHistory, cardUptimeHistory);
 
 	let container = new ServiceContainer();
@@ -262,7 +275,7 @@ async function createHarness(options: createHarness.Options = {}) {
 		team,
 		monitor,
 
-		/** The detail page document, with both frames resolved through this router. */
+		/** The detail page document, with every frame resolved through this router. */
 		async visit() {
 			let request = new Request(
 				new URL(
@@ -277,7 +290,7 @@ async function createHarness(options: createHarness.Options = {}) {
 }
 
 describe("the DNS monitor detail page's frames, resolved server-side", () => {
-	test("resolves the results fragment into the document instead of leaving its skeleton", async () => {
+	test("resolves the summary and check-history fragments instead of leaving their skeletons", async () => {
 		let harness = await createHarness();
 
 		await harness.db.create(
@@ -311,6 +324,9 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.totalChecks.label);
 		expect(body).toContain(en.page.dnsMonitorDetail.results.title);
 		expect(body).toContain("42ms");
+		// Per-check latency stays on the row it belongs to; averaging it into a headline card
+		// would report our resolver's speed as a fact about the visitor's DNS.
+		expect(body).not.toContain("Avg. Response Time");
 		// A sweep that lost queries knows less than a whole one did, and says so.
 		expect(body).toContain("2 queries did not answer");
 	});
@@ -344,7 +360,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		expect(body).toContain(en.statusPage.uptimeBar.legend.full);
 	});
 
-	test("resolves both frames on a monitor that has never been checked", async () => {
+	test("resolves every frame on a monitor that has never been checked", async () => {
 		let harness = await createHarness();
 
 		let body = await (await harness.visit()).text();
@@ -356,10 +372,32 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * The record table is rendered inline, above both frames, and a browser hoists content
+	 * The page reads from claim to evidence, and the raw check log is the least-scanned
+	 * thing on it, so it goes last — under a record table that on a real zone runs to dozens
+	 * of rows. Order is a property of where the placeholders sit in the document, which is
+	 * the only thing the client can honour: a frame fills the region it was declared in.
+	 */
+	test("puts the check history last, below the record table", async () => {
+		let harness = await createHarness();
+
+		let body = await (await harness.visit()).text();
+
+		// A placeholder's id is generated, so the frames are told apart by where they sit —
+		// which is the same thing the assertion is about.
+		let [summary, uptimeHistory, checkHistory] = frameOffsets(body);
+		let records = body.indexOf(en.page.dnsMonitorDetail.records.title);
+
+		expect(frameOffsets(body)).toHaveLength(3);
+		expect(uptimeHistory).toBeGreaterThan(summary ?? -1);
+		expect(records).toBeGreaterThan(uptimeHistory ?? -1);
+		expect(checkHistory).toBeGreaterThan(records);
+	});
+
+	/**
+	 * The record table is rendered inline, between the frames, and a browser hoists content
 	 * it finds directly inside a table out of it — carrying everything that follows along.
-	 * The frame placeholders follow, so a stray element in a row would move the very regions
-	 * the client is waiting to fill.
+	 * The check-history placeholder sits directly below it, so a stray element in a row
+	 * would move the very region the client is waiting to fill.
 	 */
 	test("emits the record table with nothing a browser would hoist out of it", async () => {
 		let harness = await createHarness();
@@ -374,7 +412,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	 * `StatCardSkeleton` renders bare cards deliberately, so several frames can share one
 	 * row a caller lays out. This page's frames each stand alone, so each has to open its
 	 * fallback with a row of its own — without one the placeholder cards stack flush, which
-	 * is not the shape either fragment resolves to.
+	 * is not the shape any fragment resolves to.
 	 */
 	test("opens each frame's fallback with a row, so the placeholder cards are not flush", async () => {
 		let harness = await createHarness();
@@ -382,13 +420,31 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		let fallbacks = [...body.matchAll(/<!-- rmx:f:[^>]*-->\s*<div class="([^"]*)"/g)];
-		expect(fallbacks).toHaveLength(2);
+		expect(fallbacks).toHaveLength(3);
 
 		for (let fallback of fallbacks) {
 			let declarations = declarationsFor(body, fallback[1] ?? "");
 			expect(declarations).toContain("display: flex");
 			expect(declarations).toContain("gap: 16px");
 		}
+	});
+
+	/**
+	 * A fallback of the wrong height moves the page when the frame swaps out, so the number
+	 * of placeholder cards has to be the number the fragment resolves to. The summary is two
+	 * cards — success rate and total checks — since the average-response-time card was
+	 * dropped, and a stale three-card fallback would leave a card-wide hole behind.
+	 */
+	test("holds exactly as many placeholder cards as the summary resolves to", async () => {
+		let harness = await createHarness();
+
+		let body = await (await harness.visit()).text();
+
+		let [summary, uptimeHistory] = frameOffsets(body);
+		let fallback = body.slice(summary, uptimeHistory);
+
+		// `Card` renders as a tinted `<section>`, so one match is one placeholder card.
+		expect([...fallback.matchAll(/<section data-color=/g)]).toHaveLength(2);
 	});
 
 	/**

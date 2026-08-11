@@ -191,14 +191,21 @@ export default route({
 				 */
 				review: get("/app/:team/dns/:monitorId/review"),
 				/**
-				 * Fragment routes for the detail page's two data fetches, same rationale as
+				 * Fragment routes for the detail page's data fetches, same rationale as
 				 * `monitors.cards` above: the shell renders from the monitor row alone, while the
-				 * uptime history bar and the result table each load into their own `Frame` rather
-				 * than the page awaiting both before its first byte.
+				 * uptime history bar, the result-derived stat cards and the check history each
+				 * load into their own `Frame` rather than the page awaiting all three before its
+				 * first byte.
+				 *
+				 * `results` and `checkHistory` are two routes over the same result rows because
+				 * the page puts them in different places — the summary above the record table, the
+				 * raw log below it — and a `Frame` fills the region it was declared in, so content
+				 * that has to appear in two places cannot come from one fragment.
 				 */
 				cards: {
 					uptimeHistory: get("/app/:team/dns/:monitorId/cards/uptime-history"),
 					results: get("/app/:team/dns/:monitorId/cards/results"),
+					checkHistory: get("/app/:team/dns/:monitorId/cards/check-history"),
 				},
 			},
 			tcpMonitors: {

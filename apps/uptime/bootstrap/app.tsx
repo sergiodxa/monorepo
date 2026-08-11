@@ -150,6 +150,7 @@ import dashboardCardUptime from "~/app/http/controllers/app/team/dashboard-card-
 import dashboardCardUsage from "~/app/http/controllers/app/team/dashboard-card-usage";
 import dashboardPanel from "~/app/http/controllers/app/team/dashboard-panel";
 import dashboardQuickPing from "~/app/http/controllers/app/team/dashboard-quick-ping";
+import dnsMonitorCardCheckHistory from "~/app/http/controllers/app/team/dns-monitor-card-check-history";
 import dnsMonitorCardResults from "~/app/http/controllers/app/team/dns-monitor-card-results";
 import dnsMonitorCardUptimeHistory from "~/app/http/controllers/app/team/dns-monitor-card-uptime-history";
 import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
@@ -373,6 +374,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dnsMonitors.review, dnsMonitorReview);
 	router.map(routes.app.team.dnsMonitors.cards.uptimeHistory, dnsMonitorCardUptimeHistory);
 	router.map(routes.app.team.dnsMonitors.cards.results, dnsMonitorCardResults);
+	router.map(routes.app.team.dnsMonitors.cards.checkHistory, dnsMonitorCardCheckHistory);
 	router.map(routes.app.team.tcpMonitors.index, tcpMonitors);
 	router.map(routes.app.team.tcpMonitors.new, tcpMonitorNew);
 	router.map(routes.app.team.tcpMonitors.show, tcpMonitorShow);

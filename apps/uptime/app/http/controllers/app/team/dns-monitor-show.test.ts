@@ -174,8 +174,8 @@ describe("dnsMonitorShow", () => {
 		let body = await response.text();
 		expect(body).toContain("Production DNS");
 		expect(body).toContain("example.com");
-		// The history bar and the result table are their own fragments now, so the page
-		// only promises the frames that will fetch them.
+		// The history bar, the result summary and the check log are their own fragments now,
+		// so the page only promises the frames that will fetch them.
 		expect(body).toContain(
 			routes.app.team.dnsMonitors.cards.uptimeHistory.href({
 				team: team.slug,
@@ -184,6 +184,12 @@ describe("dnsMonitorShow", () => {
 		);
 		expect(body).toContain(
 			routes.app.team.dnsMonitors.cards.results.href({ team: team.slug, monitorId: monitor.id }),
+		);
+		expect(body).toContain(
+			routes.app.team.dnsMonitors.cards.checkHistory.href({
+				team: team.slug,
+				monitorId: monitor.id,
+			}),
 		);
 	});
 
