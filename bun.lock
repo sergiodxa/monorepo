@@ -229,6 +229,7 @@
         "@pkg/service-container": "workspace:*",
         "@pkg/session-storage-kv": "workspace:*",
         "@pkg/sitemap": "workspace:*",
+        "@pkg/spec": "workspace:*",
         "@pkg/strings": "workspace:*",
         "@pkg/u": "workspace:*",
         "@pkg/ui": "workspace:*",

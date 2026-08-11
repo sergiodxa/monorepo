@@ -198,6 +198,7 @@ describe("CleanJob.perform", () => {
 			{ table: "monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
 			{ table: "dns_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
 			{ table: "tcp_monitor_results", rowsDeleted: 1, batches: 1, reachedCeiling: false },
+			{ table: "flow_monitor_results", rowsDeleted: 0, batches: 1, reachedCeiling: false },
 			{ table: "alert_events", rowsDeleted: 1, batches: 1, reachedCeiling: false },
 			{ table: "trial_watch_results", rowsDeleted: 0, batches: 1, reachedCeiling: false },
 			{ table: "trial_watches", rowsDeleted: 0, batches: 1, reachedCeiling: false },
@@ -210,7 +211,7 @@ describe("CleanJob.perform", () => {
 
 		let event = logger.events.find((entry) => entry.event === "job.clean.completed");
 		expect(event?.rowsDeleted).toBe(0);
-		expect(event?.tables).toHaveLength(7);
+		expect(event?.tables).toHaveLength(8);
 	});
 });
 

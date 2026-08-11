@@ -5,11 +5,18 @@
 **Proposed** — 2026-08-11. Adds a sixth monitor type whose configuration is a `.spec` file
 written by the customer, executed server-side against a hosted browser.
 
-The `@pkg/spec` side of it is **in place** as of 2026-08-11: the package now runs a suite in a
-V8-isolate runtime, loads specs from strings instead of a directory, and lets a host choose
-which capabilities exist at all ([§9](#9-what-pkgspec-has-to-grow)). What remains before a
-flow monitor can run is the Browser Run plugin, the schema, and the metering — the rate card
-still has no browser resource ([§7](#7-cost)).
+**Being built in two phases, and the first one is HTTP-only.** A flow whose steps are requests
+— sign in, read the token back, call the endpoint it authorises — needs no browser at all, and
+it is most of the value: it is already a question no single-request monitor can be asked. So
+phase one registers `http`, `url` and `jwt` and no browser capability, which also means it
+carries none of the browser's cost, none of its beta dependency, and a different billing
+answer ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
+
+Landed as of 2026-08-11: the `@pkg/spec` Workers seam ([§9](#9-what-pkgspec-has-to-grow)),
+`flow_monitors` and `flow_monitor_results`, the check service, the sweep, retention, and
+per-request metering. Not yet built: alerting and any UI — a notification needs a dashboard
+URL to link to and flow monitors have no pages — the API surface, and everything browser
+([§5](#5-two-phases-stateless-first)), whose prices in [§7](#7-cost) stay unspent until then.
 
 Nothing here is a migration of existing rows: there is no monitor type being replaced. The
 five existing types (`http`, `dns`, `tcp`, `ssl`, `cron`) are untouched.
@@ -218,16 +225,36 @@ The grant set is computed per run:
 | `net`                              | Scoped to the hosts of the team's **verified** domains, and nothing else |
 | `run`, `host-fs`, `plugins`, `env` | Never granted, and their namespaces are not registered                   |
 
-Scoping `net` to verified domains is the SSRF control, and it costs nothing new: domain
-verification already runs on the `*/10 * * * *` trigger and already gates other features. A
-spec pointed at `http://192.168.0.1/` or at a competitor's login page is refused by the
-permission layer before a request leaves, and refused with the language's own denial
-message, which names what it tried to reach.
+Scoping `net` to verified domains is the control that matters, and it costs nothing new:
+domain verification already runs on the `*/10 * * * *` trigger and already gates other
+features. A spec pointed at `http://192.168.0.1/` or at a competitor's login page is refused
+before a request leaves.
 
 The consequence to state in the UI: **a flow monitor cannot be created for a domain the team
 has not verified.** That is a harder gate than an HTTP monitor's, which watches any URL. It
 is the right asymmetry — an HTTP monitor sends one request a stranger could send anyway, a
-flow monitor drives a browser through a login.
+flow drives a _sequence_: signing in, carrying a token, calling the endpoint it authorises.
+Without the gate this feature is a way to automate somebody else's site, which is not a
+monitoring product.
+
+Three details the implementation settled:
+
+- **Ownership covers subdomains, exactly one level of inference and no more.** A team that
+  verified `example.com` controls the zone, so `app.example.com` and `api.staging.example.com`
+  are theirs. `notexample.com` and `example.com.evil.test` both fail the label boundary.
+- **The grant names hosts, not domains.** `--allow-net` scopes match a host exactly, and
+  rather than work around that, the run resolves the hosts its own spec names down to the ones
+  a verified domain covers. So a flow authorised for `app.example.com` cannot reach
+  `internal.example.com` even though the team owns both — the stricter reading, and the one
+  that keeps a monitor's blast radius equal to what it was written to do.
+- **Resolved every run, never stored.** The allowance is team state, so caching it on the
+  monitor would go stale in the one direction that matters: un-verifying or removing a domain
+  has to stop its flows at the next check, not whenever somebody remembers to re-save them.
+
+A spec that reaches a host no verified domain covers is refused **before the run starts**,
+not left to the grant to deny mid-request, so the failure names the host and the policy
+rather than a `--allow-net` flag no customer can pass. And it is refused as a whole: a flow
+is a sequence, so a partially authorised one is a monitor to fix, not a check to attempt.
 
 ### 3. One run is one session, under one wall-clock cap
 
@@ -436,6 +463,34 @@ discover the consequence on an invoice. A fixed list of seven values makes the w
 range finite, quotable on the pricing page, and renderable as a select whose every option can
 show its own monthly cost — which is the actual fix for the bait-and-switch risk in
 [Consequences](#negative).
+
+### 7b. An HTTP-only flow is metered in pings, not browser-seconds
+
+Everything in [§7](#7-cost) prices a browser session. Phase one has no browser, so none of it
+applies yet, and inventing a second meter for a run that costs what it already knows how to
+bill would be a commercial term with no cost behind it.
+
+**An HTTP-only flow run is metered as one ping per HTTP request it made.** That is what it
+costs and what it _is_ — several pings with assertions between them. Consequences, all of them
+the point rather than concessions:
+
+- No new Polar meter, no new pricing constant, no pricing-page change. A flow's requests land
+  in the same 100,000-ping allowance a customer already understands, and a five-request flow at
+  hourly is 3,360 pings a month — comfortably inside it.
+- The external id is `ping:<result row id>:<request ordinal>`. Both halves are load-bearing:
+  the row id is what makes a redelivered sweep free rather than double-billed, and the ordinal
+  is what stops one run's several requests deduplicating into one.
+- A run refused before it starts — an unverified host, a spec that will not parse — made no
+  requests and therefore bills nothing. The result row still exists, so it is visible without
+  being charged for.
+- The interval floor and ceiling from [§7a](#7a-the-interval-is-a-discrete-choice-from-15-minutes-to-a-day)
+  stay as they are, even though HTTP-only economics would tolerate a finer floor. They are the
+  floor the browser phase needs, and moving a floor down and then back up is worse than
+  starting where it lands.
+
+When the browser plugin arrives, its runs are the ones [§7](#7-cost) prices, and the two meters
+coexist: a monitor's engine decides which it is billed by. That is also why `browserSecond`
+is not on the rate card yet — there is nothing to record against it.
 
 ### 8. The result is the spec's own output
 

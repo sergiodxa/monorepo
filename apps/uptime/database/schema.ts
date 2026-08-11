@@ -1348,3 +1348,102 @@ export const trialDailyStats = table({
 
 export type SelectTrialDailyStats = TableRow<typeof trialDailyStats>;
 export type InsertTrialDailyStats = InsertRow<typeof trialDailyStats>;
+
+// Flow monitors
+
+/**
+ * What a flow check concluded. `down` is a failed assertion — the flow is broken. `error`
+ * is this app failing to find out: a spec that will not parse, a host the monitor is not
+ * allowed to reach, a run that could not start. The distinction is the same one the HTTP
+ * check draws between a bad response and a probe that never happened, and it is what keeps
+ * a mistyped spec from paging somebody about their own site.
+ */
+export const flowStatuses = ["up", "down", "error"] as const;
+
+export type FlowStatus = (typeof flowStatuses)[number];
+
+/**
+ * A flow monitor: several requests and the assertions that make them a flow, written as an
+ * executable spec (ADR-027). Where an HTTP monitor asks "did this endpoint answer", a flow
+ * asks "does this sequence still work" — sign in, read the token back, call the endpoint it
+ * authorises — which is a question no single request can be asked.
+ *
+ * The configuration is the spec text. That is deliberate and it is the whole design: the
+ * spec language cannot compute, branch or loop, so a customer's monitor is a list of
+ * permission-gated tool calls rather than code, and running it needs no sandbox beyond the
+ * grants derived here.
+ */
+export const flowMonitors = table({
+	name: "flow_monitors",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		team_id: c.text(),
+		name: c.text(),
+		/**
+		 * The spec source, verbatim as written.
+		 *
+		 * Which hosts it may reach is deliberately **not** stored beside it. The `net` grant a
+		 * run gets is computed from the team's verified domains every time, so a monitor can
+		 * only ever drive a domain the team has proved it owns — and un-verifying or removing a
+		 * domain stops its flows at the next check rather than whenever somebody remembers to
+		 * re-save them. A stored allowance would be a copy of team state that goes stale in
+		 * exactly the direction that matters.
+		 */
+		source: c.text(),
+		/**
+		 * One of `FLOW_INTERVALS_SECONDS`, defaulting to an hour (ADR-027 §7a). Unlike the
+		 * other monitor types this is a fixed list rather than any integer: a flow run costs
+		 * orders of magnitude more than a single ping, so the interval is a commercial term
+		 * before it is a cadence and every selectable value has a price printed beside it.
+		 */
+		interval_seconds: c.integer().default(3_600),
+		/** Same column, same meaning, as on every other monitor table (ADR-006). */
+		next_due_at: c.integer().nullable(),
+		is_enabled: c.boolean().default(true),
+		last_checked_at: c.integer().nullable(),
+		last_status: c.enum(flowStatuses).nullable(),
+	},
+});
+
+export type SelectFlowMonitor = TableRow<typeof flowMonitors>;
+export type InsertFlowMonitor = InsertRow<typeof flowMonitors>;
+
+/**
+ * One flow check's outcome. Counters plus the first failure, not a transcript: what makes
+ * this readable during an incident is the assertion that broke and where it is written, and
+ * a per-step log would multiply retention volume by the step count to add detail nobody
+ * reads twice.
+ */
+export const flowMonitorResults = table({
+	name: "flow_monitor_results",
+	columns: {
+		id: c.text().primaryKey(),
+		flow_monitor_id: c.text(),
+		status: c.enum(flowStatuses),
+		tests_total: c.integer().default(0),
+		tests_passed: c.integer().default(0),
+		tests_failed: c.integer().default(0),
+		/**
+		 * HTTP requests the run performed. The billable quantity: a flow run is metered as
+		 * one ping per request, because that is what it costs and what it is — several pings
+		 * with assertions between them.
+		 */
+		requests_made: c.integer().default(0),
+		/** The first failing test's title, and the line of the source it failed on. */
+		failed_test: c.text().nullable(),
+		failed_at_line: c.integer().nullable(),
+		/** The formatted first failure: what was expected, what was observed. */
+		failure_detail: c.text().nullable(),
+		/** Wall-clock of the whole run, which is also the monitor's latency series. */
+		duration_ms: c.integer().nullable(),
+		/** Why the run could not be performed at all. Only set alongside an `error` status. */
+		error_message: c.text().nullable(),
+		checked_at: c.integer(),
+	},
+});
+
+export type SelectFlowMonitorResult = TableRow<typeof flowMonitorResults>;
+export type InsertFlowMonitorResult = InsertRow<typeof flowMonitorResults>;

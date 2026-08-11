@@ -27,6 +27,7 @@ import { GeoFetchDO } from "~/app/do/geo-fetch";
 import { AggregateDailyStatsJob } from "~/app/jobs/aggregate-daily-stats";
 import { CheckCronJobsJob } from "~/app/jobs/check-cron-jobs";
 import { CheckDnsJob } from "~/app/jobs/check-dns";
+import { CheckFlowsJob } from "~/app/jobs/check-flows";
 import { CheckHttpJob } from "~/app/jobs/check-http";
 import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
@@ -75,6 +76,7 @@ const QueueMessageSchema = s.variant("type", {
 	verifyDomainOwnership: s.object({ type: s.literal("verifyDomainOwnership") }),
 	checkSsl: s.object({ type: s.literal("checkSsl") }),
 	checkDns: s.object({ type: s.literal("checkDns") }),
+	checkFlows: s.object({ type: s.literal("checkFlows") }),
 	checkTcp: s.object({ type: s.literal("checkTcp") }),
 	checkCronJobs: s.object({ type: s.literal("checkCronJobs") }),
 	aggregateDailyStats: s.object({ type: s.literal("aggregateDailyStats") }),
@@ -185,6 +187,13 @@ async function dispatchCron(controller: ScheduledController): Promise<void> {
 		 */
 		waitUntil(sendQueueMessage({ type: "checkTcp" }));
 		waitUntil(sendQueueMessage({ type: "checkDns" }));
+		/**
+		 * Flow monitors too, even though their finest interval is fifteen minutes (ADR-027 §7a).
+		 * Sharing this delivery rather than taking a trigger of its own for the same reason the
+		 * two above share it: the claim reads an indexed range that matches nothing in the
+		 * minutes when nothing is due, which is cheaper than a trigger per monitor type.
+		 */
+		waitUntil(sendQueueMessage({ type: "checkFlows" }));
 	}
 
 	// Every 10 minutes: re-enqueue verification for every unverified team domain.
@@ -382,6 +391,9 @@ export default {
 						break;
 					case "checkTcp":
 						waitUntil(CheckTcpJob.run({ message, uptime }));
+						break;
+					case "checkFlows":
+						waitUntil(CheckFlowsJob.run({ message, uptime }));
 						break;
 					case "checkCronJobs":
 						waitUntil(CheckCronJobsJob.run({ message, uptime }));

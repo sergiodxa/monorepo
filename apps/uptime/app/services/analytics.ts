@@ -32,7 +32,7 @@ const MAX_CACHE_TTL_SECONDS = 600;
  * What kind of check produced a ping, matching the `blob2` dimension in the dataset.
  * `adhoc` is a `POST /api/v1/ping` call, which belongs to a team but to no monitor.
  */
-export type PingType = "http" | "dns" | "tcp" | "cron" | "adhoc";
+export type PingType = "http" | "dns" | "tcp" | "cron" | "adhoc" | "flow";
 
 /**
  * A ping's outcome, matching the `blob3` dimension in the Analytics Engine dataset.

@@ -48,6 +48,12 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MONITOR_RESULT_RETENTION_DAYS = 7;
 const DNS_RESULT_RETENTION_DAYS = 90;
 const TCP_RESULT_RETENTION_DAYS = 90;
+/**
+ * Longer than the HTTP window and the same as the other two, which the volume permits: the
+ * finest flow interval is fifteen minutes (ADR-027 §7a), so a flow monitor writes at most
+ * 2,688 rows a month against an HTTP monitor's 40,320.
+ */
+const FLOW_RESULT_RETENTION_DAYS = 90;
 const ALERT_EVENT_RETENTION_DAYS = 90;
 
 interface RetainedTable {
@@ -79,6 +85,11 @@ const RETAINED_TABLES: readonly RetainedTable[] = [
 		table: "tcp_monitor_results",
 		dateColumn: "checked_at",
 		retentionDays: TCP_RESULT_RETENTION_DAYS,
+	},
+	{
+		table: "flow_monitor_results",
+		dateColumn: "checked_at",
+		retentionDays: FLOW_RESULT_RETENTION_DAYS,
 	},
 	{ table: "alert_events", dateColumn: "sent_at", retentionDays: ALERT_EVENT_RETENTION_DAYS },
 ];

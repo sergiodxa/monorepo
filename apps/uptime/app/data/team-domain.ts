@@ -11,7 +11,7 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
-import { isNull } from "remix/data-table";
+import { and, eq, inList, isNull, notNull } from "remix/data-table";
 
 import { teamDomains } from "~/database/schema";
 
@@ -51,6 +51,46 @@ export default class TeamDomain {
 	/** Lists every domain across every team that has not yet been verified. */
 	static async listUnverified(db: Database) {
 		return await db.findMany(teamDomains, { where: isNull("verified_at") });
+	}
+
+	/**
+	 * The hostnames a team has verified. What a flow monitor may be pointed at (ADR-027 §2):
+	 * a flow drives a sequence rather than sending one request, so it may only reach a domain
+	 * the team has proved it owns.
+	 */
+	static async verifiedHostnamesForTeam(db: Database, teamId: string): Promise<string[]> {
+		let rows = await db.findMany(teamDomains, {
+			where: and(eq("team_id", teamId), notNull("verified_at")),
+		});
+		return rows.map((row) => row.hostname);
+	}
+
+	/**
+	 * Verified hostnames for several teams at once, keyed by team id.
+	 *
+	 * For the flow sweep, which claims monitors across every team and then needs each one's
+	 * allowance: a lookup per monitor would put a D1 read on every check in the batch, and two
+	 * monitors on the same team would read the same rows twice. A team with no verified domain
+	 * is absent from the map rather than present with an empty list, so a caller has to decide
+	 * what that means instead of running a check that can reach nothing.
+	 */
+	static async verifiedHostnamesByTeamIds(
+		db: Database,
+		teamIds: string[],
+	): Promise<Map<string, string[]>> {
+		if (teamIds.length === 0) return new Map();
+
+		let rows = await db.findMany(teamDomains, {
+			where: and(inList("team_id", [...new Set(teamIds)]), notNull("verified_at")),
+		});
+
+		let byTeam = new Map<string, string[]>();
+		for (let row of rows) {
+			let hostnames = byTeam.get(row.team_id);
+			if (hostnames === undefined) byTeam.set(row.team_id, [row.hostname]);
+			else hostnames.push(row.hostname);
+		}
+		return byTeam;
 	}
 
 	/** Marks a domain verified now. */

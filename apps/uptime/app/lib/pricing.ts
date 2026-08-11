@@ -52,6 +52,60 @@ export const DAYS_PER_BILLING_MONTH = 28;
 /** Minutes in the {@link DAYS_PER_BILLING_MONTH} billing month. */
 const MINUTES_PER_BILLING_MONTH = DAYS_PER_BILLING_MONTH * 24 * 60;
 
+/**
+ * Intervals a flow monitor may run on: 15 minutes to a day (ADR-027 §7a).
+ *
+ * A fixed list, unlike every other monitor type's free `interval_seconds`, because a flow
+ * run costs orders of magnitude more than a single ping — each step down this list roughly
+ * doubles the bill, and a free integer would invite somebody to type `600` and find out on
+ * an invoice. Seven values make the whole price range finite, quotable on the pricing page,
+ * and renderable as a select whose every option can show its own monthly cost.
+ *
+ * The floor is 15 minutes and not one minute: a flow's detection latency is bounded below
+ * by the run itself, and a flow that must be verified faster wants an HTTP monitor on the
+ * endpoint it depends on, which this app already sells at 1-minute resolution for a
+ * hundredth of the price. The ceiling is a day because the useful range genuinely ends —
+ * a flow checked less often than daily is a reminder, not monitoring.
+ */
+export const FLOW_INTERVALS_SECONDS = [900, 1_800, 3_600, 10_800, 21_600, 43_200, 86_400] as const;
+
+/** A flow monitor's interval, in seconds. */
+export type FlowIntervalSeconds = (typeof FLOW_INTERVALS_SECONDS)[number];
+
+/**
+ * The interval a flow monitor gets when its creator doesn't choose one: an hour.
+ *
+ * Not the floor, deliberately. Nothing about a flow run is included in the subscription, so
+ * the default must not also be the most expensive value on the list; an hour is what
+ * somebody would pick for a check that costs money per run, and tightening it is one click.
+ */
+export const DEFAULT_FLOW_INTERVAL_SECONDS: FlowIntervalSeconds = 3_600;
+
+/**
+ * How long one flow run may take, and how many requests it may make.
+ *
+ * Both are commercial terms before they are timeouts, which is why they live here beside the
+ * price rather than beside the runner that enforces them: they are what bound the cost of a
+ * run, so a run can be billed for what it did rather than for what it might have done.
+ * Twenty requests is far more than a flow needs — sign in, read something back, call the
+ * endpoint it authorises is three — and the ceiling exists for the spec that loops through a
+ * catalogue by hand.
+ */
+export const FLOW_RUN_TIMEOUT_MS = 30_000;
+
+/** See {@link FLOW_RUN_TIMEOUT_MS}. */
+export const FLOW_RUN_MAX_REQUESTS = 20;
+
+/**
+ * Is this a selectable flow interval?
+ *
+ * A type guard rather than a clamp: somebody who asked for 60 seconds should be told no, not
+ * silently given 900 and left to discover the difference in a latency chart.
+ */
+export function isFlowIntervalSeconds(seconds: number): seconds is FlowIntervalSeconds {
+	return (FLOW_INTERVALS_SECONDS as readonly number[]).includes(seconds);
+}
+
 /** A monitoring setup, as the input to a monthly ping projection. */
 export interface Usage {
 	/** How many monitors run on this schedule. */
