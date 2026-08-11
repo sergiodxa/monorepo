@@ -147,4 +147,38 @@ describe("alertEdit", () => {
 		expect(body).toContain(`action="${routes.actions.alert.update.href({ team: team.slug })}"`);
 		expect(body).toContain(`value="${alert.id}"`);
 	});
+
+	test("keeps the saved channel selected and switches the settings blocks in CSS", async () => {
+		let { db, team, membership } = await createFixture();
+		let alert = await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "CTO Alert",
+				notify_on_recovery: true,
+				cooldown_minutes: 30,
+				config: WEBHOOK_CONFIG,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, alert.id);
+		let body = await response.text();
+
+		// Exactly one option carries `selected`, so the saved channel is what the browser
+		// shows and what `:checked` reads with no JavaScript involved.
+		expect(body.match(/<option value="[a-z]+" selected/g)).toHaveLength(1);
+		// The saved channel is the selected option, so its block is the one CSS leaves visible.
+		expect(body).toContain('value="webhook" selected');
+		expect(body).toContain('value="shh"');
+
+		for (let channel of ["email", "webhook", "slack", "discord"]) {
+			expect(body).toContain(`data-channel="${channel}"`);
+			expect(body).toContain(
+				`&:has(select[name="strategy"] option:checked:not([value="${channel}"]))`,
+			);
+		}
+	});
 });

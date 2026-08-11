@@ -123,6 +123,38 @@ describe("alertNew", () => {
 		expect(body).toContain(`action="${routes.actions.alert.create.href({ team: team.slug })}"`);
 	});
 
+	test("posts every channel's inputs while showing only the selected channel", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(db, team, membership);
+		let body = await response.text();
+
+		// Every channel's inputs stay in the document — the validator only requires the
+		// selected strategy's, and the action reads no others.
+		for (let name of [
+			"email_to",
+			"email_subject_prefix",
+			"webhook_url",
+			"webhook_secret",
+			"slack_webhook_url",
+			"slack_channel",
+			"discord_webhook_url",
+		]) {
+			expect(body).toContain(`name="${name}"`);
+		}
+
+		// The webhook signing note stays with the field it explains.
+		expect(body).toContain("Webhook-Signature");
+
+		// What hides the other three is CSS alone, so the picker works with no JavaScript.
+		for (let channel of ["email", "webhook", "slack", "discord"]) {
+			expect(body).toContain(`data-channel="${channel}"`);
+			expect(body).toContain(
+				`&:has(select[name="strategy"] option:checked:not([value="${channel}"]))`,
+			);
+		}
+	});
+
 	test("lists the team's HTTP monitors in the scope dropdown", async () => {
 		let { db, team, membership } = await createFixture();
 		await db.create(
@@ -143,5 +175,36 @@ describe("alertNew", () => {
 
 		let body = await response.text();
 		expect(body).toContain("Homepage (HTTP)");
+	});
+
+	/**
+	 * The default has to be marked on the option, not through a `defaultValue` on the
+	 * host: `<select>` has no such attribute, so a form that names its default only there
+	 * is one monitor away from posting something nobody picked.
+	 */
+	test("marks team-wide as the selected scope, and only it", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+		let scope = /<select[^>]*\bname="monitor_id"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
+		let selected = [...scope.matchAll(/<option\b[^>]*>/g)]
+			.map((match) => match[0])
+			.filter((tag) => /\sselected(?=[\s/>])/.test(tag))
+			.map((tag) => /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? "");
+
+		expect(selected).toEqual([""]);
+		expect(/<select[^>]*defaultvalue=/i.test(body)).toBe(false);
 	});
 });

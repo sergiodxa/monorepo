@@ -7,25 +7,24 @@
  * The submit control sits at the foot of the last card rather than loose under the
  * fields.
  *
- * The field markup is spelled out here instead of coming from the shared alert field
- * component, because carding the form means rendering the fields across three separate
- * boxes and that component emits all of them as one fragment with no way to ask for a
- * subset. The edit page still renders it unchanged.
+ * Most of the field markup is spelled out here instead of coming from a shared fragment,
+ * because carding the form means rendering the fields across three separate boxes and a
+ * fragment that emitted all of them at once would have no way to be asked for a subset.
+ * The channel card is the exception: its contents are identical to the edit page's down
+ * to the last attribute, so they come from `AlertChannelFields`, which also owns the
+ * CSS-only disclosure that shows one channel's settings at a time.
  *
- * All four channel fieldsets render together; the server only requires the fields for
- * the selected channel (see `app/http/validators/alert.ts`). Only HTTP monitors can be
- * individually targeted — the `alerts` table has no `monitor_type` column, so scoping to
- * a DNS/TCP/cron-job monitor could never be resolved back to the right table.
+ * Only HTTP monitors can be individually targeted — the `alerts` table has no
+ * `monitor_type` column, so scoping to a DNS/TCP/cron-job monitor could never be
+ * resolved back to the right table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { inject } from "@pkg/service-container";
-import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
-import { fontSize } from "@pkg/u/typography";
 import { Button, Input, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -36,26 +35,13 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
-
-/** Splits a translated string containing exactly one `<code>...</code>` span into plain text plus a `<code>` node. */
-function renderInlineCode(text: string) {
-	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
-	if (!match) return text;
-	let [, before, code, after] = match;
-	return (
-		<>
-			{before}
-			<code>{code}</code>
-			{after}
-		</>
-	);
-}
 
 /** GET /app/:team/alerts/new — the new alert form. */
 export default createAction(routes.app.team.alerts.new, {
@@ -105,8 +91,16 @@ export default createAction(routes.app.team.alerts.new, {
 										<TextField label={t("name.label")} name="name" required mix={[mbe("28px")]} />
 
 										<Field label={t("scope.label")}>
-											<Select name="monitor_id" defaultValue="">
-												<Select.Option value="">{t("scope.teamWide")}</Select.Option>
+											{/*
+											 * `<select>` has no `defaultValue` attribute, so naming the default on
+											 * the host is inert markup that only happens to agree with the first
+											 * option here. The default is marked on the option itself, the way the
+											 * edit page has to mark the saved value.
+											 */}
+											<Select name="monitor_id">
+												<Select.Option value="" selected>
+													{t("scope.teamWide")}
+												</Select.Option>
 												{monitors.map((monitor) => (
 													<Select.Option key={monitor.id} value={monitor.id}>
 														{monitor.name} (HTTP)
@@ -125,81 +119,7 @@ export default createAction(routes.app.team.alerts.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<Field label={t("channel.label")}>
-											<Select name="strategy" defaultValue="email">
-												<Select.Option value="email">{t("channel.options.email")}</Select.Option>
-												<Select.Option value="webhook">
-													{t("channel.options.webhook")}
-												</Select.Option>
-												<Select.Option value="slack">{t("channel.options.slack")}</Select.Option>
-												<Select.Option value="discord">
-													{t("channel.options.discord")}
-												</Select.Option>
-											</Select>
-										</Field>
-
-										<fieldset mix={[mbe("28px")]}>
-											<legend>{t("legends.email")}</legend>
-											<TextField
-												label={t("config.email.to.label")}
-												type="email"
-												name="email_to"
-												defaultValue=""
-												mix={[mbe("28px")]}
-											/>
-											<TextField
-												label={t("config.email.subjectPrefix.label")}
-												name="email_subject_prefix"
-												defaultValue=""
-											/>
-										</fieldset>
-
-										<fieldset mix={[mbe("28px")]}>
-											<legend>{t("legends.webhook")}</legend>
-											<TextField
-												label={t("config.webhook.url.label")}
-												type="url"
-												name="webhook_url"
-												defaultValue=""
-												mix={[mbe("28px")]}
-											/>
-											<TextField
-												label={t("config.webhook.secret.label")}
-												name="webhook_secret"
-												defaultValue=""
-												mix={[mbe("28px")]}
-											/>
-											<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{renderInlineCode(t("config.webhook.signatureNote"))}
-											</p>
-										</fieldset>
-
-										<fieldset mix={[mbe("28px")]}>
-											<legend>{t("legends.slack")}</legend>
-											<TextField
-												label={t("config.slack.webhookUrl.label")}
-												type="url"
-												name="slack_webhook_url"
-												defaultValue=""
-												mix={[mbe("28px")]}
-											/>
-											<TextField
-												label={t("config.slack.channel.label")}
-												name="slack_channel"
-												placeholder="#incidents"
-												defaultValue=""
-											/>
-										</fieldset>
-
-										<fieldset mix={[mbe("28px")]}>
-											<legend>{t("legends.discord")}</legend>
-											<TextField
-												label={t("config.discord.webhookUrl.label")}
-												type="url"
-												name="discord_webhook_url"
-												defaultValue=""
-											/>
-										</fieldset>
+										<AlertChannelFields i18next={ctx.i18next} />
 									</SettingsSection.Body>
 								</SettingsSection.Card>
 							</SettingsSection>
@@ -211,9 +131,12 @@ export default createAction(routes.app.team.alerts.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<Switch name="notify_on_recovery" value="true" defaultChecked>
-											{t("notifyOnRecovery.label")}
-										</Switch>
+										{/* The switch carries no trailing margin of its own, unlike every `Field` around it. */}
+										<div mix={[mbe("28px")]}>
+											<Switch name="notify_on_recovery" value="true" defaultChecked>
+												{t("notifyOnRecovery.label")}
+											</Switch>
+										</div>
 
 										<Field
 											label={t("cooldownMinutes.label")}

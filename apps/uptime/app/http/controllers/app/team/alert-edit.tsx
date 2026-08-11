@@ -10,10 +10,12 @@
  * the action row. The destructive action gets a second, danger-toned section below,
  * on its own `<form>`.
  *
- * The field markup is written out here rather than pulled from a shared view: the
- * create page draws the same fields as one uninterrupted block, and a view that had
- * to render either as one block or as three separately-carded groups would exist only
- * to carry that difference between its two callers.
+ * Most of the field markup is written out here rather than pulled from a shared view:
+ * a view that had to render either as one block or as three separately-carded groups
+ * would exist only to carry that difference between its two callers. The channel card
+ * is the exception: its contents match the create page's down to the last attribute,
+ * differing only in being prefilled, so they come from `AlertChannelFields`, which also
+ * owns the CSS-only disclosure that shows one channel's settings at a time.
  *
  * The danger-zone delete confirmation is `@pkg/ui`'s `AlertDialog` composed
  * directly rather than through the `Confirm` convenience wrapper, since the
@@ -42,6 +44,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -52,20 +55,6 @@ import routes from "~/routes/web";
 const DELETE_ALERT_DIALOG_ID = "delete-alert";
 const DELETE_ALERT_TITLE_ID = "delete-alert-title";
 const DELETE_ALERT_DESCRIPTION_ID = "delete-alert-description";
-
-/** Splits a translated string containing exactly one `<code>...</code>` span into plain text plus a `<code>` node. */
-function renderInlineCode(text: string) {
-	let match = /^(.*)<code>(.*)<\/code>(.*)$/s.exec(text);
-	if (!match) return text;
-	let [, before, code, after] = match;
-	return (
-		<>
-			{before}
-			<code>{code}</code>
-			{after}
-		</>
-	);
-}
 
 /** GET /app/:team/alerts/:alertId/edit — an alert's edit form. */
 export default createAction(routes.app.team.alerts.edit, {
@@ -128,10 +117,22 @@ export default createAction(routes.app.team.alerts.edit, {
 											/>
 
 											<Field label={t("scope.label")}>
-												<Select name="monitor_id" defaultValue={alert.monitor_id ?? ""}>
-													<Select.Option value="">{t("scope.teamWide")}</Select.Option>
+												{/*
+												 * The saved scope is marked `selected` on its own `<option>`: `<select>` has
+												 * no `defaultValue` attribute, so spelling it on the host renders as inert
+												 * markup and leaves the first option — "team-wide" — showing, which a save
+												 * would then write back over whichever monitor the alert was scoped to.
+												 */}
+												<Select name="monitor_id">
+													<Select.Option value="" selected={alert.monitor_id === null}>
+														{t("scope.teamWide")}
+													</Select.Option>
 													{monitors.map((monitor) => (
-														<Select.Option key={monitor.id} value={monitor.id}>
+														<Select.Option
+															key={monitor.id}
+															value={monitor.id}
+															selected={monitor.id === alert.monitor_id}
+														>
 															{monitor.name} (HTTP)
 														</Select.Option>
 													))}
@@ -148,89 +149,7 @@ export default createAction(routes.app.team.alerts.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<Field label={t("channel.label")}>
-												<Select name="strategy" defaultValue={config?.strategy ?? "email"}>
-													<Select.Option value="email">{t("channel.options.email")}</Select.Option>
-													<Select.Option value="webhook">
-														{t("channel.options.webhook")}
-													</Select.Option>
-													<Select.Option value="slack">{t("channel.options.slack")}</Select.Option>
-													<Select.Option value="discord">
-														{t("channel.options.discord")}
-													</Select.Option>
-												</Select>
-											</Field>
-
-											<fieldset mix={[mbe("28px")]}>
-												<legend>{t("legends.email")}</legend>
-												<TextField
-													label={t("config.email.to.label")}
-													type="email"
-													name="email_to"
-													defaultValue={config?.strategy === "email" ? config.config.to : ""}
-													mix={[mbe("28px")]}
-												/>
-												<TextField
-													label={t("config.email.subjectPrefix.label")}
-													name="email_subject_prefix"
-													defaultValue={
-														config?.strategy === "email" ? config.config.subjectPrefix : ""
-													}
-												/>
-											</fieldset>
-
-											<fieldset mix={[mbe("28px")]}>
-												<legend>{t("legends.webhook")}</legend>
-												<TextField
-													label={t("config.webhook.url.label")}
-													type="url"
-													name="webhook_url"
-													defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
-													mix={[mbe("28px")]}
-												/>
-												<TextField
-													label={t("config.webhook.secret.label")}
-													name="webhook_secret"
-													defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
-													mix={[mbe("28px")]}
-												/>
-												<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-													{renderInlineCode(t("config.webhook.signatureNote"))}
-												</p>
-											</fieldset>
-
-											<fieldset mix={[mbe("28px")]}>
-												<legend>{t("legends.slack")}</legend>
-												<TextField
-													label={t("config.slack.webhookUrl.label")}
-													type="url"
-													name="slack_webhook_url"
-													defaultValue={
-														config?.strategy === "slack" ? config.config.webhookUrl : ""
-													}
-													mix={[mbe("28px")]}
-												/>
-												<TextField
-													label={t("config.slack.channel.label")}
-													name="slack_channel"
-													placeholder="#incidents"
-													defaultValue={
-														config?.strategy === "slack" ? (config.config.channel ?? "") : ""
-													}
-												/>
-											</fieldset>
-
-											<fieldset mix={[mbe("28px")]}>
-												<legend>{t("legends.discord")}</legend>
-												<TextField
-													label={t("config.discord.webhookUrl.label")}
-													type="url"
-													name="discord_webhook_url"
-													defaultValue={
-														config?.strategy === "discord" ? config.config.webhookUrl : ""
-													}
-												/>
-											</fieldset>
+											<AlertChannelFields i18next={ctx.i18next} config={config} />
 										</SettingsSection.Body>
 									</SettingsSection.Card>
 								</SettingsSection>
