@@ -3362,11 +3362,6 @@ export default {
 					label: "Success Rate",
 					description: "Percentage of successful checks",
 				},
-
-				avgResponseTime: {
-					label: "Avg. Response Time",
-					description: "Average DNS resolution time",
-				},
 			},
 
 			results: {

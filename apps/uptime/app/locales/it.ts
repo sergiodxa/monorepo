@@ -3348,11 +3348,6 @@ export default {
 					label: "Tasso di Successo",
 					description: "Percentuale di controlli riusciti",
 				},
-
-				avgResponseTime: {
-					label: "Tempo di Risposta Medio",
-					description: "Tempo medio di risoluzione DNS",
-				},
 			},
 
 			results: {

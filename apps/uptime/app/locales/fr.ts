@@ -3365,11 +3365,6 @@ export default {
 					label: "Taux de réussite",
 					description: "Pourcentage de vérifications réussies",
 				},
-
-				avgResponseTime: {
-					label: "Temps de réponse moy.",
-					description: "Temps moyen de résolution DNS",
-				},
 			},
 
 			results: {

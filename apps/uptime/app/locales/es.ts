@@ -3346,11 +3346,6 @@ export default {
 					label: "Tasa de éxito",
 					description: "Porcentaje de verificaciones exitosas",
 				},
-
-				avgResponseTime: {
-					label: "Tiempo de respuesta prom.",
-					description: "Tiempo promedio de resolución DNS",
-				},
 			},
 
 			results: {

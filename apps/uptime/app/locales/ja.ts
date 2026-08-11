@@ -3277,11 +3277,6 @@ export default {
 					label: "成功率",
 					description: "成功したチェックの割合",
 				},
-
-				avgResponseTime: {
-					label: "平均応答時間",
-					description: "平均DNS解決時間",
-				},
 			},
 
 			results: {

@@ -3366,11 +3366,6 @@ export default {
 					label: "Erfolgsrate",
 					description: "Prozentsatz erfolgreicher Prüfungen",
 				},
-
-				avgResponseTime: {
-					label: "Durchschn. Antwortzeit",
-					description: "Durchschnittliche DNS-Auflösungszeit",
-				},
 			},
 
 			results: {
