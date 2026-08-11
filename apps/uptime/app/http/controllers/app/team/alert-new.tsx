@@ -14,9 +14,8 @@
  * to the last attribute, so they come from `AlertChannelFields`, which also owns the
  * CSS-only disclosure that shows one channel's settings at a time.
  *
- * Only HTTP monitors can be individually targeted — the `alerts` table has no
- * `monitor_type` column, so scoping to a DNS/TCP/cron-job monitor could never be
- * resolved back to the right table.
+ * The scope picker offers every monitor of every type, plus a per-type "all of them"
+ * choice, from the one control `AlertScopeField` owns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,17 +23,19 @@
 
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
-import { Button, Input, Select, Switch, TextField } from "@pkg/ui";
+import { Button, Input, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import { TEAM_WIDE_ALERT_SCOPE } from "~/app/lib/alert-scope";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
+import AlertScopeField from "~/resources/components/alert-scope-field";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -50,7 +51,7 @@ export default createAction(routes.app.team.alerts.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
 		// The create and edit pages describe the same form, so the field copy lives in one
 		// shared namespace instead of a per-page one.
@@ -90,24 +91,11 @@ export default createAction(routes.app.team.alerts.new, {
 									<SettingsSection.Body>
 										<TextField label={t("name.label")} name="name" required />
 
-										<Field label={t("scope.label")}>
-											{/*
-											 * `<select>` has no `defaultValue` attribute, so naming the default on
-											 * the host is inert markup that only happens to agree with the first
-											 * option here. The default is marked on the option itself, the way the
-											 * edit page has to mark the saved value.
-											 */}
-											<Select name="monitor_id">
-												<Select.Option value="" selected>
-													{t("scope.teamWide")}
-												</Select.Option>
-												{monitors.map((monitor) => (
-													<Select.Option key={monitor.id} value={monitor.id}>
-														{monitor.name} (HTTP)
-													</Select.Option>
-												))}
-											</Select>
-										</Field>
+										<AlertScopeField
+											groups={scopeGroups}
+											selected={TEAM_WIDE_ALERT_SCOPE}
+											i18next={ctx.i18next}
+										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
 							</SettingsSection>

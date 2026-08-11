@@ -601,6 +601,20 @@ export const alerts = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		team_id: c.text(),
+		/**
+		 * Which monitor table {@link alerts.monitor_id} points into, and — on its own — the
+		 * whole of a type-wide scope. `null` in both columns is team-wide: every monitor of
+		 * every type, which is what every alert created before this column was.
+		 *
+		 * `"ssl"` is deliberately not a value here even though `alert_events.monitor_type`
+		 * has one: a certificate event is dispatched against the HTTP monitor's own row, so
+		 * it is matched by whatever watches that monitor. See `~/app/lib/alert-scope`.
+		 */
+		// Cast because a nullable enum column infers as `string | null`, which would leak an
+		// unchecked string into every scope comparison; the values are the ones listed here.
+		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
+			"http" | "dns" | "tcp" | "cron" | null
+		>,
 		monitor_id: c.text().nullable(),
 		name: c.text(),
 		notify_on_recovery: c.boolean().default(true),

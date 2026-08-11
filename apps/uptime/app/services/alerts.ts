@@ -3,9 +3,9 @@
  * `CheckDnsJob`, `CheckTcpJob`, `CheckCronJobsJob`, and the cron-job ping endpoint) —
  * one module instead of one dispatch implementation duplicated per monitor type. For
  * every qualifying event it: skips entirely when an active, suppressing maintenance
- * window covers the monitor; otherwise resolves the applicable alerts
- * (monitor-specific + team-wide for HTTP, team-wide only for other monitor types —
- * see `app/data/alert.ts`), skips any repeat notification still inside its cooldown,
+ * window covers the monitor; otherwise resolves the applicable alerts (the ones scoped
+ * to that monitor, to its type, or to nothing at all — see `app/data/alert.ts`), skips
+ * any repeat notification still inside its cooldown,
  * delivers the rest (email/webhook/Slack/Discord), and records every outcome to
  * `alert_events`.
  * Cooldown and recovery notifications, and a real HMAC-SHA256 signature on webhook
@@ -135,20 +135,27 @@ export interface DispatchAlertsParams {
 export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void> {
 	apportionCostByTeam([params.teamId]);
 
-	let isHttpMonitor = params.monitorType === "http" || params.monitorType === "ssl";
-	let maintenanceMonitorType: MaintenanceMonitorKind =
-		params.monitorType === "http" || params.monitorType === "ssl" ? "http" : params.monitorType;
+	/**
+	 * SSL collapses to `"http"` for both lookups below: a certificate check runs against an
+	 * HTTP monitor's own row, so the windows that cover that monitor and the alerts that
+	 * watch it are the same ones. It stays `"ssl"` everywhere it is recorded.
+	 */
+	let scopeMonitorType: MaintenanceMonitorKind =
+		params.monitorType === "ssl" ? "http" : params.monitorType;
 
 	let suppressed = await MaintenanceWindow.isSuppressing(params.db, {
 		teamId: params.teamId,
 		monitorId: params.monitorId,
-		monitorType: maintenanceMonitorType,
+		monitorType: scopeMonitorType,
 	});
 	if (suppressed) return;
 
-	let candidates = isHttpMonitor
-		? await Alert.listForHttpMonitor(params.db, params.teamId, params.monitorId)
-		: await Alert.listTeamWide(params.db, params.teamId);
+	let candidates = await Alert.listForMonitor(
+		params.db,
+		params.teamId,
+		scopeMonitorType,
+		params.monitorId,
+	);
 
 	let applicable =
 		params.eventType === "up" ? candidates.filter((alert) => alert.notify_on_recovery) : candidates;

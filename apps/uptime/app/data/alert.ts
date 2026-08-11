@@ -1,10 +1,9 @@
 /**
  * Data-access model for alerts. Exposes CRUD over the `alerts` table scoped to a team
  * and the query `app/services/alerts.ts` uses to resolve which alerts apply to a given
- * check result. `monitor_id` scoping only ever applies to HTTP monitors — the `alerts`
- * table predates DNS/TCP/cron-job monitors and has no `monitor_type` column to
- * disambiguate which monitor table a non-null `monitor_id` would point into, so DNS,
- * TCP, and cron-job checks only ever match team-wide alerts (`monitor_id IS NULL`).
+ * check result. Scoping is the `(monitor_type, monitor_id)` pair described in
+ * `~/app/lib/alert-scope`, and it works the same way for every monitor type: an alert
+ * watches everything, or one type, or one monitor of one type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,8 +13,10 @@ import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
 
+import type { AlertScopeType } from "~/app/lib/alert-scope";
 import type { InsertAlert } from "~/database/schema";
 
+import { alertScopeMatches, storedAlertScope } from "~/app/lib/alert-scope";
 import { alerts } from "~/database/schema";
 
 /** Per-team limit from `docs/alerts.md`. */
@@ -60,8 +61,8 @@ export default class Alert {
 	}
 
 	/**
-	 * Finds the alerts applicable to an HTTP monitor's check result: the team's
-	 * monitor-specific alerts for it, plus every team-wide alert.
+	 * Finds every alert applicable to one monitor's check result: the ones scoped to that
+	 * exact monitor, the ones scoped to its whole type, and every team-wide alert.
 	 *
 	 * Deliberately two statements instead of one `monitor_id = ? OR monitor_id IS NULL`
 	 * disjunction: SQLite cannot satisfy an `OR` across two different conditions on the
@@ -70,20 +71,26 @@ export default class Alert {
 	 * `alerts_team_monitor_idx (team_id, monitor_id)` returning a handful of rows, and
 	 * both run concurrently so the extra statement costs no latency.
 	 *
+	 * The type is then matched in memory rather than by a third statement or a wider
+	 * index: a team holds at most {@link MAX_ALERTS_PER_TEAM} alerts, so both seeks
+	 * together return a set small enough that filtering it costs nothing measurable.
+	 *
 	 * Monitor-scoped rows come first so the more specific alerts keep their current
 	 * precedence if a caller ever stops treating the list as unordered.
 	 */
-	static async listForHttpMonitor(db: Database, teamId: string, monitorId: string) {
-		let [monitorScoped, teamWide] = await Promise.all([
+	static async listForMonitor(
+		db: Database,
+		teamId: string,
+		monitorType: AlertScopeType,
+		monitorId: string,
+	) {
+		let [monitorScoped, unscopedByMonitor] = await Promise.all([
 			db.findMany(alerts, { where: { team_id: teamId, monitor_id: monitorId } }),
 			db.findMany(alerts, { where: { team_id: teamId, monitor_id: null } }),
 		]);
 
-		return [...monitorScoped, ...teamWide];
-	}
-
-	/** Finds the team-wide alerts applicable to a DNS, TCP, or cron-job check result. */
-	static async listTeamWide(db: Database, teamId: string) {
-		return await db.findMany(alerts, { where: { team_id: teamId, monitor_id: null } });
+		return [...monitorScoped, ...unscopedByMonitor].filter((alert) =>
+			alertScopeMatches(storedAlertScope(alert), monitorType, monitorId),
+		);
 	}
 }

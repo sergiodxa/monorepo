@@ -38,8 +38,7 @@ import type {
 import { AlertEmail } from "~/app/emails/alert";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
-let listForHttpMonitorMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
-let listTeamWideMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
+let listForMonitorMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
 let recordMock = mock(async (..._args: unknown[]) => ({}) as unknown);
 let isInCooldownMock = mock(async (..._args: unknown[]) => false);
 let countSentSinceRecoveryMock = mock(async (..._args: unknown[]) => 0);
@@ -72,8 +71,7 @@ let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceReco
 
 beforeAll(async () => {
 	class FakeAlert extends realAlertModule.default {
-		static override listForHttpMonitor = listForHttpMonitorMock;
-		static override listTeamWide = listTeamWideMock;
+		static override listForMonitor = listForMonitorMock;
 	}
 	class FakeAlertEvent extends realAlertEventModule.default {
 		static override record =
@@ -118,6 +116,7 @@ function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
 		created_at: Date.now(),
 		updated_at: Date.now(),
 		team_id: "team-1",
+		monitor_type: null,
 		monitor_id: null,
 		name: "Alert",
 		notify_on_recovery: true,
@@ -170,14 +169,12 @@ function makeDnsSnapshot(
 }
 
 beforeEach(() => {
-	listForHttpMonitorMock.mockClear();
-	listTeamWideMock.mockClear();
+	listForMonitorMock.mockClear();
 	recordMock.mockClear();
 	isInCooldownMock.mockClear();
 	countSentSinceRecoveryMock.mockClear();
 	summarizeIncidentMock.mockClear();
-	listForHttpMonitorMock.mockImplementation(async () => []);
-	listTeamWideMock.mockImplementation(async () => []);
+	listForMonitorMock.mockImplementation(async () => []);
 	recordMock.mockImplementation(async () => ({}));
 	isInCooldownMock.mockImplementation(async () => false);
 	countSentSinceRecoveryMock.mockImplementation(async () => 0);
@@ -233,8 +230,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 		expect(recordMock).not.toHaveBeenCalled();
 	});
 
@@ -264,7 +260,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).toHaveBeenCalledTimes(1);
+		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
 	});
 
 	test("does not suppress once the window's time range has already ended", async () => {
@@ -293,7 +289,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).toHaveBeenCalledTimes(1);
+		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
 	});
 
 	test("a team-wide window (monitor_id null) suppresses any HTTP monitor in the team", async () => {
@@ -322,7 +318,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("a monitor-specific window never suppresses a non-HTTP monitor type, even with a matching monitor_id", async () => {
@@ -351,7 +347,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listTeamWideMock).toHaveBeenCalledTimes(1);
+		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
 	});
 
 	test("an 'ssl' monitor type is suppressed like 'http' (same monitor id, same windows)", async () => {
@@ -386,11 +382,35 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 });
 
 describe("dispatchAlerts — candidate resolution", () => {
+	test("resolves an 'ssl' event as 'http', so it reaches whatever watches that monitor", async () => {
+		let { db } = createTestDatabase();
+
+		await dispatchAlerts({
+			db,
+			mailer: makeMailer(),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "ssl",
+			monitorName: "Homepage",
+			eventType: "degraded",
+			snapshot: {
+				type: "ssl",
+				status: "expiring_soon",
+				expiresAt: null,
+				daysUntilExpiry: 5,
+				hostname: "example.com",
+			},
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", "http", "monitor-1");
+	});
+
 	test("resolves monitor-specific + team-wide alerts for an HTTP monitor", async () => {
 		let { db } = createTestDatabase();
 
@@ -406,16 +426,14 @@ describe("dispatchAlerts — candidate resolution", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForHttpMonitorMock).toHaveBeenCalledWith(db, "team-1", "monitor-1");
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", "http", "monitor-1");
 	});
 
-	test("resolves only team-wide alerts for a DNS, TCP, or cron-job monitor", async () => {
+	test("resolves alerts by the monitor's own type for a DNS, TCP, or cron-job monitor", async () => {
 		let { db } = createTestDatabase();
 
 		for (let monitorType of ["dns", "tcp", "cron"] as const) {
-			listTeamWideMock.mockClear();
-			listForHttpMonitorMock.mockClear();
+			listForMonitorMock.mockClear();
 
 			await dispatchAlerts({
 				db,
@@ -429,8 +447,7 @@ describe("dispatchAlerts — candidate resolution", () => {
 				dashboardUrl: "https://uptime.sergiodxa.com/x",
 			});
 
-			expect(listTeamWideMock).toHaveBeenCalledWith(db, "team-1");
-			expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+			expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", monitorType, "monitor-1");
 		}
 	});
 });
@@ -440,7 +457,7 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 		let { db } = createTestDatabase();
 		let recovers = makeAlert({ id: "recovers", notify_on_recovery: true });
 		let silent = makeAlert({ id: "silent", notify_on_recovery: false });
-		listForHttpMonitorMock.mockImplementation(async () => [recovers, silent]);
+		listForMonitorMock.mockImplementation(async () => [recovers, silent]);
 
 		await dispatchAlerts({
 			db,
@@ -462,7 +479,7 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 		let { db } = createTestDatabase();
 		let a = makeAlert({ id: "a", notify_on_recovery: true });
 		let b = makeAlert({ id: "b", notify_on_recovery: false });
-		listForHttpMonitorMock.mockImplementation(async () => [a, b]);
+		listForMonitorMock.mockImplementation(async () => [a, b]);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
@@ -485,7 +502,7 @@ describe("dispatchAlerts — cooldown", () => {
 	test("skips delivery and records skipped_cooldown when the alert is in cooldown", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({ cooldown_minutes: 30 });
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 1);
 		isInCooldownMock.mockImplementation(async () => true);
 		let transport = new MemoryTransport();
@@ -513,7 +530,7 @@ describe("dispatchAlerts — cooldown", () => {
 	test("delivers and checks cooldown per-alert-id/monitor/event-type with the alert's own cooldown_minutes", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({ id: "alert-7", cooldown_minutes: 15 });
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		countSentSinceRecoveryMock.mockImplementation(async () => 1);
 
 		await dispatchAlerts({
@@ -583,7 +600,7 @@ describe("dispatchAlerts — repeat policy", () => {
 		alert: SelectAlert,
 		eventType: "down" | "up" | "degraded",
 	): Promise<{ delivered: number; status: unknown }> {
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
@@ -674,7 +691,7 @@ describe("dispatchAlerts — repeat policy", () => {
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-ssl", cooldown_minutes: 60 });
 		await seedSent(db, alert.id, "degraded", now - 30 * 60_000);
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
@@ -711,7 +728,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 	 */
 	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [
+		listForMonitorMock.mockImplementation(async () => [
 			makeAlert({
 				id: "alert-11",
 				config: {
@@ -746,7 +763,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 
 	test("leaves a recovery message alone when nothing was suppressed", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 		summarizeIncidentMock.mockImplementation(async () => ({ sent: 1, suppressed: 0 }));
 		let transport = new MemoryTransport();
 
@@ -767,7 +784,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 
 	test("doesn't summarize an incident for a non-recovery event", async () => {
 		let { db } = createTestDatabase();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await dispatchAlerts({
 			db,
@@ -789,7 +806,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("records 'sent' with a null error_message on a successful delivery", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await dispatchAlerts({
 			db,
@@ -814,7 +831,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("records 'failed' with the error message when the transport refuses the message", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let transport = failingTransport("bad recipient");
 
 		await dispatchAlerts({
@@ -841,7 +858,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			id: "succeeding",
 			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [failing, succeeding]);
+		listForMonitorMock.mockImplementation(async () => [failing, succeeding]);
 		let transport = failingTransport("boom");
 
 		await dispatchAlerts({
@@ -867,7 +884,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 		let alert = makeAlert({
 			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "[PROD]" } },
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await dispatchAlerts({
 			db,
@@ -890,7 +907,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("sends the alert email itself, identified by type rather than by its copy", async () => {
 		let { db } = createTestDatabase();
 		let transport = new MemoryTransport();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await dispatchAlerts({
 			db,
@@ -910,7 +927,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("reports the monitor, the snapshot, and the dashboard link in both body parts", async () => {
 		let { db } = createTestDatabase();
 		let transport = new MemoryTransport();
-		listForHttpMonitorMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await dispatchAlerts({
 			db,
@@ -940,7 +957,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 describe("dispatchAlerts — the DNS body", () => {
 	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [
+		listForMonitorMock.mockImplementation(async () => [
 			makeAlert({
 				config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
 			}),
@@ -1056,7 +1073,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 				config: { url: "https://hooks.example.com/uptime", secret: "shh" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -1098,7 +1115,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 				config: { url: "https://hooks.example.com/uptime", secret: "" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -1127,7 +1144,7 @@ describe("dispatchAlerts — webhook delivery", () => {
 				config: { url: "https://hooks.example.com/uptime", secret: "" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response(null, { status: 500 }),
 		) as unknown as typeof fetch;
@@ -1159,7 +1176,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 				config: { webhookUrl: "https://hooks.slack.example/abc", channel: "#alerts" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -1187,7 +1204,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 		let alert = makeAlert({
 			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -1213,7 +1230,7 @@ describe("dispatchAlerts — Slack delivery", () => {
 		let alert = makeAlert({
 			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response(null, { status: 404 }),
 		) as unknown as typeof fetch;
@@ -1245,7 +1262,7 @@ describe("dispatchAlerts — Discord delivery", () => {
 				config: { webhookUrl: "https://discord.example/webhooks/abc" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -1275,7 +1292,7 @@ describe("dispatchAlerts — Discord delivery", () => {
 				config: { webhookUrl: "https://discord.example/webhooks/abc" },
 			},
 		});
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response(null, { status: 503 }),
 		) as unknown as typeof fetch;
@@ -1333,7 +1350,7 @@ describe("notifyHttpResult", () => {
 	test("does not dispatch on the first-ever 'up' result (previousStatus null never counts as a recovery)", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), null, {
 			status: "up",
@@ -1341,7 +1358,7 @@ describe("notifyHttpResult", () => {
 			responseTimeMs: 50,
 		});
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 		expect(recordMock).not.toHaveBeenCalled();
 	});
 
@@ -1353,13 +1370,13 @@ describe("notifyHttpResult", () => {
 			responseTimeMs: 50,
 		});
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("dispatches a recovery ('up') event when transitioning from down to up", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "down", {
 			status: "up",
@@ -1382,7 +1399,7 @@ describe("notifyHttpResult", () => {
 	test("dispatches a 'down' event on a down result", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
 			status: "down",
@@ -1397,7 +1414,7 @@ describe("notifyHttpResult", () => {
 	test("dispatches a 'degraded' event on a degraded result", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
 			status: "degraded",
@@ -1466,13 +1483,13 @@ describe("notifyDnsResult", () => {
 		let { db } = createTestDatabase();
 		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, dnsResult("ok"));
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("dispatches a recovery event when a DNS check goes from error to ok", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", dnsResult("ok"));
 
@@ -1484,7 +1501,7 @@ describe("notifyDnsResult", () => {
 	test("maps an 'error' result to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("error"));
 
@@ -1495,7 +1512,7 @@ describe("notifyDnsResult", () => {
 	test("maps a 'changed' result to a 'degraded' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("changed"));
 
@@ -1505,7 +1522,7 @@ describe("notifyDnsResult", () => {
 
 	test("records the sweep's counters and findings in the snapshot", async () => {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await notifyDnsResult(
 			db,
@@ -1543,7 +1560,7 @@ describe("notifyDnsResult", () => {
 	 */
 	test("caps the stored findings without capping the counters", async () => {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await notifyDnsResult(
 			db,
@@ -1695,13 +1712,13 @@ describe("notifyTcpResult", () => {
 			responseTimeMs: 10,
 		});
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("dispatches a recovery event when transitioning from down to up", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "down", {
 			status: "up",
@@ -1716,7 +1733,7 @@ describe("notifyTcpResult", () => {
 	test("maps a 'down' result to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
 			status: "down",
@@ -1730,7 +1747,7 @@ describe("notifyTcpResult", () => {
 	test("maps a 'timeout' result to a 'degraded' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
 			status: "timeout",
@@ -1767,31 +1784,31 @@ describe("notifyCronJobResult", () => {
 	test("never dispatches when the new status is 'new'", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "missed", "new");
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("does not dispatch a first-ever 'healthy' status (previousStatus null)", async () => {
 		let { db } = createTestDatabase();
 		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), null, "healthy");
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("a transition from 'new' to 'healthy' never counts as a recovery", async () => {
 		let { db } = createTestDatabase();
 		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "new", "healthy");
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("dispatches a recovery event transitioning from 'late' to 'healthy'", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyCronJobResult(
 			db,
@@ -1809,7 +1826,7 @@ describe("notifyCronJobResult", () => {
 	test("maps 'missed' to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
 
@@ -1820,7 +1837,7 @@ describe("notifyCronJobResult", () => {
 	test("maps 'late' to a 'degraded' event and formats last-ping/next-expected as ISO strings", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 		let lastPingAt = Date.UTC(2026, 0, 1, 0, 0, 0);
 		let nextExpectedAt = Date.UTC(2026, 0, 2, 0, 0, 0);
 
@@ -1848,7 +1865,7 @@ describe("notifyCronJobResult", () => {
 
 	test("does not dispatch a 'late' transition when the monitor's alert_on_late is off", async () => {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await notifyCronJobResult(
 			db,
@@ -1858,13 +1875,13 @@ describe("notifyCronJobResult", () => {
 			"late",
 		);
 
-		expect(listTeamWideMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 		expect(recordMock).not.toHaveBeenCalled();
 	});
 
 	test("still dispatches 'missed' when alert_on_late is off", async () => {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await notifyCronJobResult(
 			db,
@@ -1880,7 +1897,7 @@ describe("notifyCronJobResult", () => {
 
 	test("dispatches nothing recovering from a suppressed 'late'", async () => {
 		let { db } = createTestDatabase();
-		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
 
 		await notifyCronJobResult(
 			db,
@@ -1896,7 +1913,7 @@ describe("notifyCronJobResult", () => {
 	test("formats a null last-ping/next-expected as null in the snapshot", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listTeamWideMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
 
@@ -1912,13 +1929,13 @@ describe("notifySslResult", () => {
 		let { db } = createTestDatabase();
 		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "valid", 90);
 
-		expect(listForHttpMonitorMock).not.toHaveBeenCalled();
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 
 	test("dispatches a 'down' event for an expired certificate", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expired", -3);
 
@@ -1930,7 +1947,7 @@ describe("notifySslResult", () => {
 	test("dispatches a 'degraded' event for a certificate expiring within a warning threshold", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expiring", 7);
 
@@ -1941,7 +1958,7 @@ describe("notifySslResult", () => {
 	test("derives the hostname from the monitor's URL", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifySslResult(
 			db,
@@ -1958,7 +1975,7 @@ describe("notifySslResult", () => {
 	test("falls back to the raw URL as the hostname when it doesn't parse as a URL", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForHttpMonitorMock.mockImplementation(async () => [alert]);
+		listForMonitorMock.mockImplementation(async () => [alert]);
 
 		await notifySslResult(db, makeMailer(), makeHttpMonitor({ url: "not-a-url" }), "expired", -1);
 

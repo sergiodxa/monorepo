@@ -21,7 +21,7 @@ The flow is straightforward:
 3. Each matching alert sends a notification through its configured channel
 4. The alert event is recorded in your alert history
 
-You can link alerts to specific monitors or configure them to trigger for any monitor on your team. This flexibility lets you set up focused alerts for critical services while maintaining a catch-all alert for everything else.
+Every alert has a **scope** that decides which monitors it hears about: every monitor on the team, every monitor of one kind, or a single monitor. This lets you set up focused alerts for critical services while maintaining a catch-all alert for everything else.
 
 ### When an Alert Fires During an Outage
 
@@ -161,20 +161,28 @@ Recovery notifications are spaced by the cooldown you configured, and the five-m
 
 Changing an alert's cooldown only affects that alert. Alerts you configured before the one-hour default existed keep the cooldown you gave them, including `0`.
 
-### Linked Monitor
+### Scope
 
-Alerts can be configured in two ways:
+Every alert is scoped one of three ways, chosen from a single dropdown on the alert form:
 
-- **Linked to a specific monitor** — The alert only fires for that one monitor
-- **Not linked (all monitors)** — The alert fires for any monitor on your team
+- **Team-wide** — The alert fires for every monitor on your team, of every kind. This is the default, and it is what every alert created before scoping existed still does.
+- **Every monitor of one kind** — The alert fires for all your HTTP monitors, or all your DNS monitors, or all your TCP monitors, or all your cron jobs, and for nothing else. The choice covers monitors you add later too, so a new domain is watched the moment you create it.
+- **One monitor** — The alert fires only for that monitor, whichever kind it is.
 
-Linking to specific monitors is useful when:
+Narrowing the scope is useful when:
 
 - Different services have different on-call rotations
 - You want different notification channels for different environments
 - Critical services need dedicated alerting separate from general monitoring
+- One kind of monitor is noisier than the rest and deserves its own channel
 
-Leaving alerts unlinked provides a safety net—even if you forget to configure specific alerts for a new monitor, the catch-all alert will notify you.
+That last case is what DNS monitoring usually runs into. A domain monitor reports every record that stops resolving, every record that changes, and every record it newly discovers across the whole zone, so a busy domain can produce far more notifications than a website going down. Scoping a DNS-only alert to its own channel keeps that traffic away from the one your on-call phone is attached to.
+
+Leaving an alert team-wide provides a safety net—even if you forget to configure a specific alert for a new monitor, the catch-all alert will notify you.
+
+Certificate expiry warnings follow the HTTP monitor they belong to: an alert scoped to that monitor, or to HTTP monitors as a kind, receives them.
+
+If an alert is scoped to a monitor you later delete, its scope reads as an unknown monitor and it stops firing. Editing it makes you pick a new scope before it can be saved, rather than silently widening it back to everything.
 
 ## Alert Events and History
 

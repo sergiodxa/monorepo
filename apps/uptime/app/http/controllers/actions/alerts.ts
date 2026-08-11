@@ -16,15 +16,18 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
+import type { AlertScope } from "~/app/lib/alert-scope";
 import type { AlertConfig } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
+import { isResolvableScope } from "~/app/data/alert-scope-monitors";
 import {
 	AlertIdSchema,
 	CreateAlertSchema,
 	type CreateAlertValues,
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
+import { parseAlertScope } from "~/app/lib/alert-scope";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
@@ -54,6 +57,24 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 	}
 }
 
+/**
+ * Reads the submitted scope, or `null` when it is not one the team can be given.
+ *
+ * Both failures are the same answer on purpose: a value the encoding does not produce and
+ * a monitor the team does not own are both "this form was not the one we rendered", and
+ * neither should fall back to team-wide — silently widening an alert to every monitor is
+ * exactly the noise this scope exists to avoid.
+ */
+async function resolveSubmittedScope(
+	db: Database,
+	teamId: string,
+	value: string,
+): Promise<AlertScope | null> {
+	let scope = parseAlertScope(value);
+	if (!scope) return null;
+	return (await isResolvableScope(db, teamId, scope)) ? scope : null;
+}
+
 /** POST /actions/:team/create-alert */
 export const createAlert = createAction(routes.actions.alert.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateAlertSchema);
@@ -71,6 +92,17 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 
 	let db = getServiceContainer().get(Database);
 
+	let scope = await resolveSubmittedScope(db, ctx.team.id, result.data.scope);
+	if (!scope) {
+		session?.flash("toast", {
+			intent: "error",
+			message: "Please check the alert details and try again.",
+		});
+		return redirect(routes.app.team.alerts.new.href({ team: ctx.team.slug }), {
+			status: redirect.Status.SeeOther,
+		});
+	}
+
 	let existingCount = await Alert.countByTeam(db, ctx.team.id);
 	if (existingCount >= MAX_ALERTS_PER_TEAM) {
 		return unprocessableEntity(`A team supports at most ${MAX_ALERTS_PER_TEAM} alerts.`);
@@ -78,7 +110,8 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 
 	let alert = await Alert.create(db, ctx.team.id, {
 		name: result.data.name,
-		monitor_id: result.data.monitor_id || null,
+		monitor_type: scope.monitorType,
+		monitor_id: scope.monitorId,
 		notify_on_recovery: result.data.notify_on_recovery,
 		cooldown_minutes: result.data.cooldown_minutes,
 		config: buildConfig(result.data),
@@ -125,9 +158,23 @@ export const updateAlert = createAction(routes.actions.alert.update, async (ctx)
 	let existing = await Alert.findByIdForTeam(db, ctx.team.id, result.data.alert_id);
 	if (!existing) return notFound("Not Found");
 
+	let scope = await resolveSubmittedScope(db, ctx.team.id, result.data.scope);
+	if (!scope) {
+		session?.flash("toast", {
+			intent: "error",
+			message: "Please check the alert details and try again.",
+		});
+		return redirect(
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.alerts.index.href({ team: ctx.team.slug }),
+			{ status: redirect.Status.SeeOther },
+		);
+	}
+
 	await Alert.updateById(db, result.data.alert_id, {
 		name: result.data.name,
-		monitor_id: result.data.monitor_id || null,
+		monitor_type: scope.monitorType,
+		monitor_id: scope.monitorId,
 		notify_on_recovery: result.data.notify_on_recovery,
 		cooldown_minutes: result.data.cooldown_minutes,
 		config: buildConfig(result.data),

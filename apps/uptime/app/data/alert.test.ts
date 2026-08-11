@@ -1,7 +1,8 @@
 /**
  * Unit tests for the `Alert` data-access model: team-scoped CRUD, the per-team
- * {@link MAX_ALERTS_PER_TEAM} limit, and the HTTP-monitor-specific vs. team-wide
- * lookups `app/services/alerts.ts` uses to resolve applicable alerts.
+ * {@link MAX_ALERTS_PER_TEAM} limit, and the scope resolution `app/services/alerts.ts`
+ * uses to decide which alerts a check result reaches — team-wide, one monitor type, or
+ * one monitor, including the pre-`monitor_type` rows that predate the distinction.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -223,7 +224,7 @@ describe("Alert.deleteById", () => {
 	});
 });
 
-describe("Alert.listForHttpMonitor", () => {
+describe("Alert.listForMonitor", () => {
 	test("returns the monitor-specific alert plus every team-wide alert", async () => {
 		let teamWide = await Alert.create(db, "team-1", {
 			monitor_id: null,
@@ -246,7 +247,7 @@ describe("Alert.listForHttpMonitor", () => {
 			config: emailConfig,
 		});
 
-		let alerts = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		let alerts = await Alert.listForMonitor(db, "team-1", "http", "monitor-1");
 		expect(new Set(alerts.map((alert) => alert.id))).toEqual(
 			new Set([teamWide.id, monitorSpecific.id]),
 		);
@@ -264,7 +265,7 @@ describe("Alert.listForHttpMonitor", () => {
 			config: emailConfig,
 		});
 
-		let alerts = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		let alerts = await Alert.listForMonitor(db, "team-1", "http", "monitor-1");
 		expect(alerts.map((alert) => alert.id)).toEqual([monitorSpecific.id, teamWide.id]);
 	});
 
@@ -290,7 +291,7 @@ describe("Alert.listForHttpMonitor", () => {
 			config: emailConfig,
 		});
 
-		let found = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		let found = await Alert.listForMonitor(db, "team-1", "http", "monitor-1");
 		let ids = found.map((alert) => alert.id);
 
 		expect(ids).toContain(ours.id);
@@ -312,7 +313,7 @@ describe("Alert.listForHttpMonitor", () => {
 		});
 		await Alert.updateById(db, silent.id, { notify_on_recovery: false });
 
-		let alerts = await Alert.listForHttpMonitor(db, "team-1", "monitor-1");
+		let alerts = await Alert.listForMonitor(db, "team-1", "http", "monitor-1");
 		expect(alerts.filter((alert) => alert.notify_on_recovery).map((alert) => alert.name)).toEqual([
 			"Recovery on",
 		]);
@@ -321,29 +322,135 @@ describe("Alert.listForHttpMonitor", () => {
 	test("returns an empty array when the team has no applicable alerts", async () => {
 		await Alert.create(db, "team-2", { monitor_id: null, name: "Other", config: emailConfig });
 
-		expect(await Alert.listForHttpMonitor(db, "team-1", "monitor-1")).toEqual([]);
+		expect(await Alert.listForMonitor(db, "team-1", "http", "monitor-1")).toEqual([]);
 	});
 });
 
-describe("Alert.listTeamWide", () => {
-	test("returns only team-wide alerts, scoped to the team", async () => {
+describe("Alert.listForMonitor scoping", () => {
+	/** The three scopes a team can express, all present at once, plus another team's copy. */
+	async function seedScopes() {
 		let teamWide = await Alert.create(db, "team-1", {
+			monitor_type: null,
 			monitor_id: null,
 			name: "Team wide",
 			config: emailConfig,
 		});
-		await Alert.create(db, "team-1", {
-			monitor_id: "monitor-1",
-			name: "Monitor specific",
+		let everyDns = await Alert.create(db, "team-1", {
+			monitor_type: "dns",
+			monitor_id: null,
+			name: "Every DNS monitor",
 			config: emailConfig,
 		});
-		await Alert.create(db, "team-2", {
+		let oneDns = await Alert.create(db, "team-1", {
+			monitor_type: "dns",
+			monitor_id: "dns-1",
+			name: "One DNS monitor",
+			config: emailConfig,
+		});
+		let everyHttp = await Alert.create(db, "team-1", {
+			monitor_type: "http",
 			monitor_id: null,
-			name: "Other team wide",
+			name: "Every HTTP monitor",
+			config: emailConfig,
+		});
+		let oneHttp = await Alert.create(db, "team-1", {
+			monitor_type: "http",
+			monitor_id: "http-1",
+			name: "One HTTP monitor",
 			config: emailConfig,
 		});
 
-		let alerts = await Alert.listTeamWide(db, "team-1");
-		expect(alerts.map((alert) => alert.id)).toEqual([teamWide.id]);
+		return { teamWide, everyDns, oneDns, everyHttp, oneHttp };
+	}
+
+	test("an unscoped alert still matches every monitor of every type", async () => {
+		let { teamWide } = await seedScopes();
+
+		for (let [type, id] of [
+			["http", "http-1"],
+			["dns", "dns-9"],
+			["tcp", "tcp-1"],
+			["cron", "cron-1"],
+		] as const) {
+			let alerts = await Alert.listForMonitor(db, "team-1", type, id);
+			expect(alerts.map((alert) => alert.id)).toContain(teamWide.id);
+		}
+	});
+
+	test("a type-scoped alert matches every monitor of that type and no other type", async () => {
+		let { everyDns } = await seedScopes();
+
+		let dnsAlerts = await Alert.listForMonitor(db, "team-1", "dns", "dns-7");
+		expect(dnsAlerts.map((alert) => alert.id)).toContain(everyDns.id);
+
+		let tcpAlerts = await Alert.listForMonitor(db, "team-1", "tcp", "tcp-1");
+		expect(tcpAlerts.map((alert) => alert.id)).not.toContain(everyDns.id);
+	});
+
+	test("a monitor-scoped alert matches only that monitor", async () => {
+		let { oneDns } = await seedScopes();
+
+		let matched = await Alert.listForMonitor(db, "team-1", "dns", "dns-1");
+		expect(matched.map((alert) => alert.id)).toContain(oneDns.id);
+
+		let sibling = await Alert.listForMonitor(db, "team-1", "dns", "dns-2");
+		expect(sibling.map((alert) => alert.id)).not.toContain(oneDns.id);
+	});
+
+	test("a DNS finding never reaches an alert scoped to HTTP", async () => {
+		let { teamWide, everyDns, oneDns, everyHttp, oneHttp } = await seedScopes();
+
+		let matched = await Alert.listForMonitor(db, "team-1", "dns", "dns-1");
+		let ids = matched.map((alert) => alert.id);
+
+		expect(new Set(ids)).toEqual(new Set([teamWide.id, everyDns.id, oneDns.id]));
+		expect(ids).not.toContain(everyHttp.id);
+		expect(ids).not.toContain(oneHttp.id);
+	});
+
+	test("an HTTP monitor sees only the alerts that watch it", async () => {
+		let { teamWide, everyHttp, oneHttp, everyDns } = await seedScopes();
+
+		let matched = await Alert.listForMonitor(db, "team-1", "http", "http-1");
+		let ids = matched.map((alert) => alert.id);
+
+		expect(new Set(ids)).toEqual(new Set([teamWide.id, everyHttp.id, oneHttp.id]));
+		expect(ids).not.toContain(everyDns.id);
+	});
+
+	/**
+	 * The pre-`monitor_type` shape, which the migration backfills but which the model must
+	 * read correctly regardless: an id with no type could only ever have been an HTTP
+	 * monitor, so widening it to every type would start alerting on things nobody chose.
+	 */
+	test("a legacy row with a monitor but no type is read as HTTP-scoped", async () => {
+		let legacy = await Alert.create(db, "team-1", {
+			monitor_type: null,
+			monitor_id: "http-1",
+			name: "Legacy",
+			config: emailConfig,
+		});
+
+		let http = await Alert.listForMonitor(db, "team-1", "http", "http-1");
+		expect(http.map((alert) => alert.id)).toContain(legacy.id);
+
+		let otherHttp = await Alert.listForMonitor(db, "team-1", "http", "http-2");
+		expect(otherHttp.map((alert) => alert.id)).not.toContain(legacy.id);
+
+		let dns = await Alert.listForMonitor(db, "team-1", "dns", "http-1");
+		expect(dns.map((alert) => alert.id)).not.toContain(legacy.id);
+	});
+
+	test("never returns another team's alerts, however they are scoped", async () => {
+		await seedScopes();
+		let theirs = await Alert.create(db, "team-2", {
+			monitor_type: "dns",
+			monitor_id: "dns-1",
+			name: "Theirs",
+			config: emailConfig,
+		});
+
+		let matched = await Alert.listForMonitor(db, "team-1", "dns", "dns-1");
+		expect(matched.map((alert) => alert.id)).not.toContain(theirs.id);
 	});
 });

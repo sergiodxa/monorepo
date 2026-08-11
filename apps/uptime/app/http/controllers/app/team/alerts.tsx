@@ -16,11 +16,14 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
+import type { SelectAlert } from "~/database/schema";
+
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { storedAlertScope } from "~/app/lib/alert-scope";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -34,9 +37,31 @@ export default createAction(routes.app.team.alerts.index, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let alerts = await Alert.listByTeam(db, ctx.team.id);
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
-		let monitorsById = new Map(monitors.map((monitor) => [monitor.id, monitor]));
 		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
+
+		/**
+		 * Names for the monitor-scoped rows, keyed across every type: a scope's id is unique
+		 * on its own, and pairing it with its type here would only make the lookup below
+		 * restate what {@link storedAlertScope} already resolved.
+		 */
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let monitorNamesById = new Map(
+			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
+		);
+
+		/** How one alert's scope reads in the table: a monitor's name, a type, or team-wide. */
+		function scopeLabel(alert: SelectAlert): string {
+			let scope = storedAlertScope(alert);
+			if (scope.monitorType === null) return ctx.i18next.t("page.alerts.table.scope.teamWide");
+			if (scope.monitorId === null) {
+				return ctx.i18next.t(`page.alerts.table.scope.allOfType.${scope.monitorType}`);
+			}
+
+			return (
+				monitorNamesById.get(scope.monitorId) ??
+				ctx.i18next.t("page.alerts.table.scope.unknownMonitor")
+			);
+		}
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${ctx.i18next.t("page.alerts.header.title")}`}>
@@ -117,12 +142,7 @@ export default createAction(routes.app.team.alerts.index, {
 										{alerts.map((alert) => (
 											<Table.Row key={alert.id}>
 												<Table.Cell>{alert.name}</Table.Cell>
-												<Table.Cell>
-													{alert.monitor_id
-														? (monitorsById.get(alert.monitor_id)?.name ??
-															ctx.i18next.t("page.alerts.table.scope.unknownMonitor"))
-														: ctx.i18next.t("page.alerts.table.scope.teamWide")}
-												</Table.Cell>
+												<Table.Cell>{scopeLabel(alert)}</Table.Cell>
 												<Table.Cell>
 													{ctx.i18next.t(`page.alerts.table.types.${alert.config.strategy}`)}
 												</Table.Cell>

@@ -147,11 +147,20 @@ describe("CreateAlertSchema", () => {
 		if (result.success) expect(result.value.cooldown_minutes).toBe(0);
 	});
 
-	test("leaves monitor_id undefined when omitted, since it is optional", () => {
+	/** An omitted scope is the team-wide one, which is what an alert nobody narrows watches. */
+	test("defaults scope to the empty string when omitted", () => {
 		let result = s.parseSafe(CreateAlertSchema, baseFormData());
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.value.monitor_id).toBeUndefined();
+			expect(result.value.scope).toBe("");
+		}
+	});
+
+	test("carries a type-scoped and a monitor-scoped value through untouched", () => {
+		for (let scope of ["type:dns", "monitor:dns:abc"]) {
+			let result = s.parseSafe(CreateAlertSchema, baseFormData({ scope }));
+			expect(result.success).toBe(true);
+			if (result.success) expect(result.value.scope).toBe(scope);
 		}
 	});
 });

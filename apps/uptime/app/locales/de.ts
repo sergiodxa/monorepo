@@ -2729,7 +2729,22 @@ export default {
 
 					scope: {
 						label: "Umfang",
+						description:
+							"Was diese Benachrichtigung überwacht. Lassen Sie sie teamweit, beschränken Sie sie auf eine Monitor-Art oder richten Sie sie auf einen einzelnen Monitor.",
 						teamWide: "Teamweit (alle Monitore)",
+						unknownMonitor: "Ein Monitor, den es nicht mehr gibt",
+						types: {
+							http: "HTTP-Monitore",
+							dns: "DNS-Monitore",
+							tcp: "TCP-Monitore",
+							cron: "Cron-Jobs",
+						},
+						allOfType: {
+							http: "Jeder HTTP-Monitor",
+							dns: "Jeder DNS-Monitor",
+							tcp: "Jeder TCP-Monitor",
+							cron: "Jeder Cron-Job",
+						},
 					},
 
 					channel: {
@@ -2855,6 +2870,12 @@ export default {
 				scope: {
 					unknownMonitor: "Unbekannter Monitor",
 					teamWide: "Teamweit",
+					allOfType: {
+						http: "Alle HTTP-Monitore",
+						dns: "Alle DNS-Monitore",
+						tcp: "Alle TCP-Monitore",
+						cron: "Alle Cron-Jobs",
+					},
 				},
 
 				cooldown: {

@@ -52,6 +52,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts \
 			"strategy": "email",
 			"notifyOnRecovery": true,
 			"cooldownMinutes": 5,
+			"monitorType": null,
 			"monitorId": null,
 			"createdAt": "2026-02-14T10:00:00Z",
 			"updatedAt": "2026-02-14T10:00:00Z"
@@ -62,6 +63,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts \
 			"strategy": "slack",
 			"notifyOnRecovery": true,
 			"cooldownMinutes": 0,
+			"monitorType": "http",
 			"monitorId": "mon_abc123",
 			"createdAt": "2026-02-14T11:00:00Z",
 			"updatedAt": "2026-02-14T11:00:00Z"
@@ -123,6 +125,10 @@ curl https://uptime.sergiodxa.com/api/v1/alerts \
 						"minimum": 0,
 						"maximum": 1440
 					},
+					"monitorType": {
+						"type": ["string", "null"],
+						"enum": ["http", "dns", "tcp", "cron", null]
+					},
 					"monitorId": {
 						"type": ["string", "null"],
 						"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -158,7 +164,8 @@ Creates a new alert. The request body varies based on the notification strategy.
 | `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`                                                                                                                                                                                    |
 | `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)                                                                                                                                                                         |
 | `cooldownMinutes`  | integer | No       | Minutes between repeat notifications while a monitor stays broken, 0-1440 (default: `60`; repeats are floored at 5 minutes, and the first notification of an outage is never delayed — see [Repeat Behaviour](#repeat-behaviour)) |
-| `monitorId`        | string  | No       | Limit alert to a specific monitor                                                                                                                                                                                                 |
+| `monitorType`      | string  | No       | Limit the alert to one kind of monitor: `http`, `dns`, `tcp` or `cron`. Sent on its own, the alert covers every monitor of that kind, including ones created later.                                                               |
+| `monitorId`        | string  | No       | Limit the alert to a single monitor. Sent together with `monitorType`, the id is looked up in that kind's monitors; sent on its own it is read as an HTTP monitor, which is what it has always meant.                             |
 
 ### Strategy: Email
 
@@ -261,6 +268,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 	"strategy": "email",
 	"notifyOnRecovery": true,
 	"cooldownMinutes": 5,
+	"monitorType": null,
 	"monitorId": null,
 	"createdAt": "2026-02-14T12:00:00Z",
 	"updatedAt": "2026-02-14T12:00:00Z"
@@ -312,6 +320,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"maximum": 1440,
 			"default": 60
 		},
+		"monitorType": {
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron"]
+		},
 		"monitorId": {
 			"type": "string",
 			"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -352,6 +364,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"minimum": 0,
 			"maximum": 1440,
 			"default": 60
+		},
+		"monitorType": {
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron"]
 		},
 		"monitorId": {
 			"type": "string",
@@ -394,6 +410,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"maximum": 1440,
 			"default": 60
 		},
+		"monitorType": {
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron"]
+		},
 		"monitorId": {
 			"type": "string",
 			"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -431,6 +451,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"minimum": 0,
 			"maximum": 1440,
 			"default": 60
+		},
+		"monitorType": {
+			"type": "string",
+			"enum": ["http", "dns", "tcp", "cron"]
 		},
 		"monitorId": {
 			"type": "string",
@@ -478,6 +502,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 			"minimum": 0,
 			"maximum": 1440
 		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
+		},
 		"monitorId": {
 			"type": ["string", "null"],
 			"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -520,6 +548,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 	"strategy": "email",
 	"notifyOnRecovery": true,
 	"cooldownMinutes": 5,
+	"monitorType": null,
 	"monitorId": null,
 	"createdAt": "2026-02-14T12:00:00Z",
 	"updatedAt": "2026-02-14T12:00:00Z"
@@ -574,6 +603,10 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 			"minimum": 0,
 			"maximum": 1440
 		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
+		},
 		"monitorId": {
 			"type": ["string", "null"],
 			"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -602,6 +635,15 @@ Updates an existing alert. You cannot change the `strategy` field.
 
 Include only the fields you want to update. The `strategy` field cannot be changed.
 
+`monitorType` and `monitorId` are the alert's scope, and they move as a pair: send either one and both are rewritten, so narrowing an alert to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
+
+- `{"monitorType": "dns"}` — every DNS monitor
+- `{"monitorType": "dns", "monitorId": "..."}` — that one DNS monitor
+- `{"monitorId": null}` — back to team-wide
+- `{"monitorId": "..."}` — that one HTTP monitor
+
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND`.
+
 ### Example Request
 
 #### cURL
@@ -626,6 +668,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 	"strategy": "email",
 	"notifyOnRecovery": false,
 	"cooldownMinutes": 10,
+	"monitorType": null,
 	"monitorId": null,
 	"createdAt": "2026-02-14T12:00:00Z",
 	"updatedAt": "2026-02-14T13:00:00Z"
@@ -685,6 +728,10 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 			"minimum": 0,
 			"maximum": 1440
 		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
+		},
 		"monitorId": {
 			"type": ["string", "null"],
 			"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -730,6 +777,10 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 1440
+		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
 		},
 		"monitorId": {
 			"type": ["string", "null"],

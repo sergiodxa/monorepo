@@ -2649,7 +2649,22 @@ export default {
 
 					scope: {
 						label: "対象範囲",
+						description:
+							"このアラートが監視する対象です。チーム全体のままにするか、モニターの種類で絞り込むか、特定の 1 つだけを指定できます。",
 						teamWide: "チーム全体（すべてのモニター）",
+						unknownMonitor: "すでに存在しないモニター",
+						types: {
+							http: "HTTP モニター",
+							dns: "DNS モニター",
+							tcp: "TCP モニター",
+							cron: "Cron ジョブ",
+						},
+						allOfType: {
+							http: "すべての HTTP モニター",
+							dns: "すべての DNS モニター",
+							tcp: "すべての TCP モニター",
+							cron: "すべての Cron ジョブ",
+						},
 					},
 
 					channel: {
@@ -2775,6 +2790,12 @@ export default {
 				scope: {
 					unknownMonitor: "不明なモニター",
 					teamWide: "チーム全体",
+					allOfType: {
+						http: "すべての HTTP モニター",
+						dns: "すべての DNS モニター",
+						tcp: "すべての TCP モニター",
+						cron: "すべての Cron ジョブ",
+					},
 				},
 
 				cooldown: {

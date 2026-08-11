@@ -2715,7 +2715,22 @@ export default {
 
 					scope: {
 						label: "Ambito",
+						description:
+							"Che cosa sorveglia questo avviso. Lascialo sull'intero team, restringilo a un tipo di monitor oppure puntalo su uno solo.",
 						teamWide: "Intero team (tutti i monitor)",
+						unknownMonitor: "Un monitor che non esiste più",
+						types: {
+							http: "Monitor HTTP",
+							dns: "Monitor DNS",
+							tcp: "Monitor TCP",
+							cron: "Processi pianificati",
+						},
+						allOfType: {
+							http: "Tutti i monitor HTTP",
+							dns: "Tutti i monitor DNS",
+							tcp: "Tutti i monitor TCP",
+							cron: "Tutti i processi pianificati",
+						},
 					},
 
 					channel: {
@@ -2841,6 +2856,12 @@ export default {
 				scope: {
 					unknownMonitor: "Monitor sconosciuto",
 					teamWide: "Intero team",
+					allOfType: {
+						http: "Tutti i monitor HTTP",
+						dns: "Tutti i monitor DNS",
+						tcp: "Tutti i monitor TCP",
+						cron: "Tutti i processi pianificati",
+					},
 				},
 
 				cooldown: {

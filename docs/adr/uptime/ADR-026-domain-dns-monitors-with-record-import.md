@@ -588,17 +588,21 @@ the monitor, and a domain monitor still performs one check per interval.
 
 ### 11. Alerting reuses the existing event types
 
-First, a constraint inherited rather than chosen, and one this ADR does not fix: **the
-`alerts` table has no `monitor_type` column** (`app/data/alert.ts` says so in its own
-header — the table predates DNS, TCP and cron monitors). A DNS result therefore only ever
-matches **team-wide** alerts, the ones with `monitor_id IS NULL`, via `Alert.listTeamWide`.
-There is no such thing today as an alert scoped to one DNS monitor, and there will not be
-one after this ADR either.
+First, a constraint inherited rather than chosen, and one this ADR did not fix: **the
+`alerts` table had no `monitor_type` column** (the table predates DNS, TCP and cron
+monitors). A DNS result therefore only ever matched **team-wide** alerts, the ones with
+`monitor_id IS NULL`. There was no such thing as an alert scoped to one DNS monitor.
 
-That matters more under the new shape than the old one, because a domain monitor is a
+That mattered more under the new shape than the old one, because a domain monitor is a
 higher-volume, noisier source than a single-record monitor: new records appear, zone edits
-land, and every one of those reaches every team-wide alert channel. It is named here so it
-is a known limitation rather than a surprise, and scoping alerts per monitor is its own ADR.
+land, and every one of those reached every team-wide alert channel.
+
+> **Resolved after this ADR shipped.** `alerts.monitor_type` was added (migration
+> `20260811100000_alert_monitor_scope.sql`), and `Alert.listForMonitor` now matches by the
+> `(monitor_type, monitor_id)` pair for every monitor type alike: team-wide, one type, or
+> one monitor. Existing rows are unchanged — a null type stays team-wide, and a
+> pre-existing `monitor_id` was backfilled to `http`, the only thing it could ever have
+> meant. Nothing in the rest of this section changes.
 
 `alert_events.event_type` is `["down", "up", "degraded"]`, stored, and read by the history
 view and `AlertEvent.summarizeIncident`. **No new value is added.** The mapping is the one
@@ -960,8 +964,12 @@ them first is what makes the rest parallelisable.
 
 Each of these is the owner's call, and none is invented here.
 
-1. **The 900-second minimum interval.** Argued in [§2](#2-setup-is-a-domain-a-textarea-and-a-daily-interval),
-   not decided by the owner. The other monitor types floor at 60.
+1. ~~**The 900-second minimum interval.**~~ **Decided: 900 stands.** The owner's reasoning is
+   that a shorter interval buys nothing — a DNS answer is TTL-cached, so a check inside the TTL
+   re-reads the cached answer and reports it as news while still costing a ping. The other
+   monitor types floor at 60 because an HTTP check genuinely observes something new each time;
+   a DNS check does not. The floor is therefore a property of the protocol rather than an
+   inconsistency, and lives in `MIN_DNS_INTERVAL_SECONDS`.
 2. **Is the projected cost advisory or a cap?** The review screen shows it. Whether a monitor
    whose projection exceeds some threshold requires an extra confirmation, or is refused, is a
    commercial decision.
@@ -1001,10 +1009,9 @@ Each of these is the owner's call, and none is invented here.
     domains' worth; under this one it is twenty domains, each of which may carry hundreds of
     records. Whether the cap belongs on monitors, on tracked records, or on projected queries
     per month is a commercial question this ADR does not answer.
-11. **Per-monitor DNS alerts.** `alerts` has no `monitor_type` column, so DNS results only
-    reach team-wide alerts ([§11](#11-alerting-reuses-the-existing-event-types)). A domain
-    monitor is noisier than the thing it replaces, so this may become the blocking gap rather
-    than an inherited quirk — but fixing it is a change to the alert model, not to DNS.
+11. ~~**Per-monitor DNS alerts.**~~ **Answered.** `alerts.monitor_type` was added and
+    matching is now scope-based for every monitor type alike, so an alert can watch one
+    domain, every DNS monitor, or everything ([§11](#11-alerting-reuses-the-existing-event-types)).
 12. **Does the "propagation-aware" claim get deleted or built?** Deleting it is one line.
     Building it means a confirming re-check before a `changed` classification, which is a
     second query, a second ping, and a detection-latency change across the whole feature.

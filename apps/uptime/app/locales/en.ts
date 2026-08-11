@@ -2731,7 +2731,22 @@ export default {
 
 					scope: {
 						label: "Scope",
+						description:
+							"What this alert watches. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
 						teamWide: "Team-wide (every monitor)",
+						unknownMonitor: "A monitor that no longer exists",
+						types: {
+							http: "HTTP Monitors",
+							dns: "DNS Monitors",
+							tcp: "TCP Monitors",
+							cron: "Cron Jobs",
+						},
+						allOfType: {
+							http: "Every HTTP monitor",
+							dns: "Every DNS monitor",
+							tcp: "Every TCP monitor",
+							cron: "Every cron job",
+						},
 					},
 
 					channel: {
@@ -2857,6 +2872,12 @@ export default {
 				scope: {
 					unknownMonitor: "Unknown monitor",
 					teamWide: "Team-wide",
+					allOfType: {
+						http: "All HTTP monitors",
+						dns: "All DNS monitors",
+						tcp: "All TCP monitors",
+						cron: "All cron jobs",
+					},
 				},
 
 				cooldown: {

@@ -32,19 +32,21 @@ import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, Input, LinkButton, Select, Switch, TextField } from "@pkg/ui";
+import { AlertDialog, Button, Input, LinkButton, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Alert from "~/app/data/alert";
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import { storedAlertScope } from "~/app/lib/alert-scope";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
+import AlertScopeField from "~/resources/components/alert-scope-field";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -68,7 +70,7 @@ export default createAction(routes.app.team.alerts.edit, {
 		let alert = await Alert.findByIdForTeam(db, ctx.team.id, alertId);
 		if (!alert) return notFound("Not Found");
 
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
 		// Same fixed namespace the create page reads, so both pages label the fields identically.
 		let t = ctx.i18next.getFixedT(null, "translation", "page.alerts.form.fields");
@@ -116,28 +118,11 @@ export default createAction(routes.app.team.alerts.edit, {
 												defaultValue={alert.name}
 											/>
 
-											<Field label={t("scope.label")}>
-												{/*
-												 * The saved scope is marked `selected` on its own `<option>`: `<select>` has
-												 * no `defaultValue` attribute, so spelling it on the host renders as inert
-												 * markup and leaves the first option — "team-wide" — showing, which a save
-												 * would then write back over whichever monitor the alert was scoped to.
-												 */}
-												<Select name="monitor_id">
-													<Select.Option value="" selected={alert.monitor_id === null}>
-														{t("scope.teamWide")}
-													</Select.Option>
-													{monitors.map((monitor) => (
-														<Select.Option
-															key={monitor.id}
-															value={monitor.id}
-															selected={monitor.id === alert.monitor_id}
-														>
-															{monitor.name} (HTTP)
-														</Select.Option>
-													))}
-												</Select>
-											</Field>
+											<AlertScopeField
+												groups={scopeGroups}
+												selected={storedAlertScope(alert)}
+												i18next={ctx.i18next}
+											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
 								</SettingsSection>

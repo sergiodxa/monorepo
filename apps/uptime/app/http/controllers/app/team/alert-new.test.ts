@@ -31,7 +31,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, monitors, teams } from "~/database/schema";
+import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 mock.module("cloudflare:workers", () => ({ env: {} }));
@@ -116,7 +116,7 @@ describe("alertNew", () => {
 		let body = await response.text();
 		expect(body).toContain("Create Alert");
 		expect(body).toContain('name="name"');
-		expect(body).toContain('name="monitor_id"');
+		expect(body).toContain('name="scope"');
 		expect(body).toContain('name="strategy"');
 		expect(body).toContain('name="notify_on_recovery"');
 		expect(body).toContain('name="cooldown_minutes"');
@@ -155,7 +155,7 @@ describe("alertNew", () => {
 		}
 	});
 
-	test("lists the team's HTTP monitors in the scope dropdown", async () => {
+	test("lists every type's monitors in the scope dropdown, grouped by type", async () => {
 		let { db, team, membership } = await createFixture();
 		await db.create(
 			monitors,
@@ -174,7 +174,40 @@ describe("alertNew", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Homepage (HTTP)");
+		expect(body).toContain("Homepage");
+		// The per-type group and its "all of them" choice come with it, so a team can watch
+		// a whole kind of monitor without naming each one.
+		expect(body).toContain("HTTP Monitors");
+		expect(body).toContain('value="type:http"');
+	});
+
+	test("offers a DNS monitor as its own scope, and its type as another", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Company domain",
+				domain: "example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain("Company domain");
+		expect(body).toContain(`value="monitor:dns:${monitor.id}"`);
+		expect(body).toContain('value="type:dns"');
+	});
+
+	test("omits a monitor type the team has none of", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).not.toContain('value="type:tcp"');
+		expect(body).not.toContain('value="type:cron"');
 	});
 
 	/**
@@ -198,7 +231,7 @@ describe("alertNew", () => {
 		);
 
 		let body = await (await send(db, team, membership)).text();
-		let scope = /<select[^>]*\bname="monitor_id"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
+		let scope = /<select[^>]*\bname="scope"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
 		let selected = [...scope.matchAll(/<option\b[^>]*>/g)]
 			.map((match) => match[0])
 			.filter((tag) => /\sselected(?=[\s/>])/.test(tag))

@@ -24,7 +24,13 @@ const isUrl = checks.url().check;
 const alertFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
-	monitor_id: f.field(s.optional(s.string())),
+	/**
+	 * The `(monitor_type, monitor_id)` pair encoded as one control value — see
+	 * `~/app/lib/alert-scope`. Validated for shape here and resolved against the team's
+	 * monitors in the action, which is the only place that can tell whether the monitor
+	 * named still exists and still belongs to the team.
+	 */
+	scope: f.field(s.defaulted(s.string(), "")),
 	notify_on_recovery: f.field(s.defaulted(coerce.boolean(), false)),
 	/**
 	 * Minutes an ongoing outage stays quiet between notifications; 60 by default, so an

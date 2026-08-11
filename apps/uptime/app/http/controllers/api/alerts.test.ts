@@ -21,7 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import ApiKey from "~/app/data/api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { alerts, teams } from "~/database/schema";
+import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 
 /**
  * `~/app/data/monitor` (imported transitively by `./alerts`, for its `monitorId`
@@ -201,6 +201,105 @@ describe("POST /api/v1/alerts", () => {
 			post(key, emailAlertBody({ monitorId: crypto.randomUUID() })),
 		);
 		expect(response.status).toBe(404);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	/**
+	 * `monitorId` shipped alone, when an id could only mean an HTTP monitor. A client still
+	 * sending one must keep getting exactly that, or its alert would silently change scope.
+	 */
+	test("reads a monitorId with no monitorType as an HTTP monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: crypto.randomUUID(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await dispatch(db, post(key, emailAlertBody({ monitorId: monitor.id })));
+		expect(response.status).toBe(201);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("http");
+		expect(created?.monitor_id).toBe(monitor.id);
+	});
+
+	test("creates a type-scoped alert from monitorType alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(db, post(key, emailAlertBody({ monitorType: "dns" })));
+		expect(response.status).toBe(201);
+
+		let body = (await response.json()) as { data: { alert: { monitorType: string | null } } };
+		expect(body.data.alert.monitorType).toBe("dns");
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBeNull();
+	});
+
+	test("creates an alert scoped to one DNS monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await dispatch(
+			db,
+			post(key, emailAlertBody({ monitorType: "dns", monitorId: monitor.id })),
+		);
+		expect(response.status).toBe(201);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBe(monitor.id);
+	});
+
+	test("returns 404 when the monitorId belongs to a different monitor type", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: crypto.randomUUID(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await dispatch(
+			db,
+			post(key, emailAlertBody({ monitorType: "dns", monitorId: monitor.id })),
+		);
+		expect(response.status).toBe(404);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	test("returns 400 for a monitorType outside the supported set", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(db, post(key, emailAlertBody({ monitorType: "pigeon" })));
+		expect(response.status).toBe(400);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 

@@ -1,9 +1,9 @@
 /**
  * API v1 item endpoints for a single alert: get/update/delete (`alerts:read`/
  * `alerts:write`) and its delivery-event history (`alerts:read`). Update only ever
- * touches `name`/`notifyOnRecovery`/`cooldownMinutes`/`monitorId` — the channel
- * strategy and its config are immutable after creation; delete and recreate the
- * alert to change channel.
+ * touches `name`/`notifyOnRecovery`/`cooldownMinutes` and the
+ * `monitorType`/`monitorId` scope pair — the channel strategy and its config are
+ * immutable after creation; delete and recreate the alert to change channel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,9 +22,14 @@ import type { InsertAlert } from "~/database/schema";
 
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
-import Monitor from "~/app/data/monitor";
-import { serializeAlertSafe, serializeAlertStrategyOnly } from "~/app/http/controllers/api/alerts";
+import { isResolvableScope } from "~/app/data/alert-scope-monitors";
+import {
+	apiScopeFrom,
+	serializeAlertSafe,
+	serializeAlertStrategyOnly,
+} from "~/app/http/controllers/api/alerts";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { ALERT_SCOPE_TYPES } from "~/app/lib/alert-scope";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -34,6 +39,7 @@ const UpdateAlertSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	notifyOnRecovery: s.optional(s.boolean()),
 	cooldownMinutes: s.optional(s.number().pipe(checks.min(0), checks.max(1440))),
+	monitorType: s.optional(s.enum_(ALERT_SCOPE_TYPES)),
 	monitorId: s.optional(s.nullable(s.string())),
 });
 
@@ -77,18 +83,27 @@ export default createController(alertRoutes, {
 					);
 				}
 
-				if (result.data.monitorId) {
-					let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
-					if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
-				}
-
 				let changes: Partial<InsertAlert> = {};
 				if (result.data.name !== undefined) changes.name = result.data.name;
 				if (result.data.notifyOnRecovery !== undefined)
 					changes.notify_on_recovery = result.data.notifyOnRecovery;
 				if (result.data.cooldownMinutes !== undefined)
 					changes.cooldown_minutes = result.data.cooldownMinutes;
-				if (result.data.monitorId !== undefined) changes.monitor_id = result.data.monitorId;
+
+				/**
+				 * The scope moves as a unit or not at all: sending either field rewrites both, so
+				 * a request narrowing an alert to a whole type cannot leave the previous monitor's
+				 * id behind it, and one that mentions neither leaves the alert exactly where it is.
+				 */
+				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
+					let scope = apiScopeFrom(result.data);
+					if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+						return apiError("NOT_FOUND", "Monitor not found", NotFound);
+					}
+
+					changes.monitor_type = scope.monitorType;
+					changes.monitor_id = scope.monitorId;
+				}
 
 				let alert = await Alert.updateById(db, alertId, changes);
 				return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });

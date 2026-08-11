@@ -18,14 +18,31 @@ import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
+import type { AlertScope, AlertScopeType } from "~/app/lib/alert-scope";
 import type { AlertConfig, SelectAlert } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import Monitor from "~/app/data/monitor";
+import { isResolvableScope } from "~/app/data/alert-scope-monitors";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import { ALERT_SCOPE_TYPES, storedAlertScope } from "~/app/lib/alert-scope";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
+
+/**
+ * The scope a request asks for, from the two fields that express it.
+ *
+ * A `monitorId` with no `monitorType` is read as HTTP rather than rejected: that pair
+ * shipped as the only scoping the API had, when an id could not mean anything else, and
+ * every client sending one today means the same thing it always did.
+ */
+export function apiScopeFrom(input: {
+	monitorType?: AlertScopeType;
+	monitorId?: string | null;
+}): AlertScope {
+	let monitorId = input.monitorId ?? null;
+	return { monitorType: input.monitorType ?? (monitorId === null ? null : "http"), monitorId };
+}
 
 /** Maps an alert row to a list/get response, stripping webhook URLs and secrets. */
 export function serializeAlertSafe(alert: SelectAlert) {
@@ -42,6 +59,7 @@ export function serializeAlertSafe(alert: SelectAlert) {
 			}),
 			...(alert.config.strategy === "slack" && { channel: alert.config.config.channel }),
 		},
+		monitorType: storedAlertScope(alert).monitorType,
 		monitorId: alert.monitor_id,
 		createdAt: alert.created_at,
 		updatedAt: alert.updated_at,
@@ -55,6 +73,7 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
 		name: alert.name,
 		notifyOnRecovery: alert.notify_on_recovery,
 		cooldownMinutes: alert.cooldown_minutes,
+		monitorType: storedAlertScope(alert).monitorType,
 		monitorId: alert.monitor_id,
 		config: { strategy: alert.config.strategy },
 		createdAt: alert.created_at,
@@ -77,6 +96,14 @@ const commonAlertFields = {
 		s.number().pipe(checks.min(0), checks.max(1440)),
 		DEFAULT_COOLDOWN_MINUTES,
 	),
+	/**
+	 * Which monitor table `monitorId` names, or — on its own — the whole type to watch.
+	 *
+	 * Optional beside an id purely for compatibility: `monitorId` shipped before this
+	 * field existed and could only ever mean an HTTP monitor, so a request that still
+	 * sends one alone keeps meaning exactly that (see {@link resolveApiScope}).
+	 */
+	monitorType: s.optional(s.enum_(ALERT_SCOPE_TYPES)),
 	monitorId: s.optional(s.string()),
 };
 
@@ -192,9 +219,9 @@ export default createController(alertsRoutes, {
 					);
 				}
 
-				if (result.data.monitorId) {
-					let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
-					if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				let scope = apiScopeFrom(result.data);
+				if (!(await isResolvableScope(db, ctx.apiTeam.id, scope))) {
+					return apiError("NOT_FOUND", "Monitor not found", NotFound);
 				}
 
 				/**
@@ -204,7 +231,8 @@ export default createController(alertsRoutes, {
 				 */
 				let alert = await Alert.create(db, ctx.apiTeam.id, {
 					name: result.data.name,
-					monitor_id: result.data.monitorId ?? null,
+					monitor_type: scope.monitorType,
+					monitor_id: scope.monitorId,
 					notify_on_recovery: result.data.notifyOnRecovery,
 					cooldown_minutes: result.data.cooldownMinutes,
 					config: buildConfig(result.data as CreateAlertValues),

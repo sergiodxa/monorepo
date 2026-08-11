@@ -158,7 +158,7 @@ The monitor rolls its records up into one of three statuses:
 
 ## Alerting
 
-DNS results reach your **team-wide** alert channels — the ones not scoped to a specific monitor. There is no per-monitor alert for a DNS monitor today.
+DNS results reach every alert whose scope covers the monitor: your team-wide alerts, any alert scoped to DNS monitors as a kind, and any alert scoped to that one domain. A domain monitor is noisier than a website check — it reports every record that stops resolving, changes, or newly appears across the whole zone — so a DNS-scoped alert on its own channel is usually worth setting up rather than letting all of it land wherever your outage alerts do. See [Alerts](/docs/concepts/alerts#scope).
 
 Notification is edge-triggered on the monitor's status. If a second record is discovered while the monitor is already reporting **Changed**, that discovery does not produce its own immediate email; it appears in the next repeat, whose body lists everything currently outstanding.
 

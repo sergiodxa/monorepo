@@ -2707,7 +2707,22 @@ export default {
 
 					scope: {
 						label: "Alcance",
+						description:
+							"Qué vigila esta alerta. Déjala para todo el equipo, limítala a un tipo de monitor o apúntala a uno solo.",
 						teamWide: "Todo el equipo (todos los monitores)",
+						unknownMonitor: "Un monitor que ya no existe",
+						types: {
+							http: "Monitores HTTP",
+							dns: "Monitores DNS",
+							tcp: "Monitores TCP",
+							cron: "Tareas programadas",
+						},
+						allOfType: {
+							http: "Todos los monitores HTTP",
+							dns: "Todos los monitores DNS",
+							tcp: "Todos los monitores TCP",
+							cron: "Todas las tareas programadas",
+						},
 					},
 
 					channel: {
@@ -2833,6 +2848,12 @@ export default {
 				scope: {
 					unknownMonitor: "Monitor desconocido",
 					teamWide: "Todo el equipo",
+					allOfType: {
+						http: "Todos los monitores HTTP",
+						dns: "Todos los monitores DNS",
+						tcp: "Todos los monitores TCP",
+						cron: "Todas las tareas programadas",
+					},
 				},
 
 				cooldown: {

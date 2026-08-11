@@ -212,6 +212,84 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		expect(response.status).toBe(404);
 	});
 
+	test("narrows an alert to a whole monitor type", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+				monitorType: "dns",
+			}),
+		);
+		expect(response.status).toBe(200);
+
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.monitor_type).toBe("dns");
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	/** The pair moves together, so a type-wide scope can't keep the old monitor's id. */
+	test("clears a monitor id when the update names only a type", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			monitor_type: "http",
+			monitor_id: crypto.randomUUID(),
+		});
+
+		await dispatch(
+			db,
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, {
+				monitorType: "cron",
+			}),
+		);
+
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.monitor_type).toBe("cron");
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	/** `monitorId: null` was, and stays, how a client widens an alert back to team-wide. */
+	test("a null monitorId clears the scope entirely", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			monitor_type: "dns",
+			monitor_id: crypto.randomUUID(),
+		});
+
+		await dispatch(
+			db,
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { monitorId: null }),
+		);
+
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.monitor_type).toBeNull();
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	test("leaves the scope untouched when the update mentions neither field", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let monitorId = crypto.randomUUID();
+		let alert = await createAlertRow(db, team.id, { monitor_type: "dns", monitor_id: monitorId });
+
+		await dispatch(
+			db,
+			req("PUT", alertRoutes.alertUpdate.href({ alertId: alert.id }), key, { name: "Renamed" }),
+		);
+
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.monitor_type).toBe("dns");
+		expect(updated?.monitor_id).toBe(monitorId);
+	});
+
 	test("404s when the alert doesn't belong to the team, without mutating it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

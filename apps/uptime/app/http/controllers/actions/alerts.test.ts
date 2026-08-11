@@ -19,7 +19,7 @@ import { formData } from "remix/form-data-middleware";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { alerts, memberships, teams } from "~/database/schema";
+import { alerts, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { createAlert, updateAlert, deleteAlert } = await import("./alerts");
@@ -182,6 +182,97 @@ describe("POST /actions/:team/create-alert", () => {
 		);
 
 		expect(response.status).toBe(303);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	test("stores a team-wide scope when the form posts none", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody(),
+		);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBeNull();
+		expect(created?.monitor_id).toBeNull();
+	});
+
+	test("stores a type-wide scope for a monitor type the team owns none of yet", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ scope: "type:dns" }),
+		);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBeNull();
+	});
+
+	test("stores a monitor scope against the type's own table", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ touch: true, returnRow: true },
+		);
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ scope: `monitor:dns:${monitor.id}` }),
+		);
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBe(monitor.id);
+	});
+
+	/**
+	 * Never falls back to team-wide: a scope nobody could have picked means the submission
+	 * is not the form we rendered, and quietly widening it would subscribe the channel to
+	 * every monitor the team has.
+	 */
+	test("rejects a scope naming a monitor the team doesn't own, without creating a row", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		for (let scope of [`monitor:dns:${crypto.randomUUID()}`, "type:pigeon", "monitor:dns:"]) {
+			let response = await postAlertAction(
+				createAlert,
+				routes.actions.alert.create,
+				team,
+				membership,
+				db,
+				emailAlertBody({ scope }),
+			);
+
+			expect(response.status).toBe(303);
+			expect(response.headers.get("Location")).toBe(
+				routes.app.team.alerts.new.href({ team: team.slug }),
+			);
+		}
+
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
