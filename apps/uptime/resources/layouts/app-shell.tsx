@@ -37,6 +37,13 @@
  * there), and the `<nav>` lays them out as an ordinary flex column, exactly like the
  * mobile drawer always has.
  *
+ * Page-specific copy (`heading`, `breadcrumbs`) arrives already translated from the
+ * controller, but the chrome's own copy — nav labels, the user menu, and the landmark
+ * names a screen reader announces — belongs to this file, so it takes the request's
+ * `i18next` and resolves those from `app.layout.*` itself. The prop is required: a shell
+ * that quietly falls back to English when a page forgets to pass it is a bug that
+ * renders perfectly and is only ever noticed by the readers it fails.
+ *
  * There is no separate top-level header spanning the sidebar's width — the team
  * switcher already names the team once, in the sidebar, so a page never repeats it a
  * second time as a header title or a third time as its own `<h1>`.
@@ -45,6 +52,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { getContext } from "remix/async-context-middleware";
 import type { Handle, RemixNode } from "remix/ui";
 
 import {
@@ -348,6 +356,14 @@ namespace AppShell {
 		teams: Array<{ id: string; slug: string; name: string; logo: string | null }>;
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
+		/**
+		 * The request's i18next instance, used to read every string the shell owns
+		 * (nav labels, menu items, and the landmark labels under `app.layout.*`).
+		 * Required rather than optional: a layout that falls back to English when a
+		 * caller forgets is a bug that renders fine and so never gets reported, while
+		 * a missing required prop is a type error the compiler reports at once.
+		 */
+		i18next: ReturnType<typeof getContext>["i18next"];
 		/** Bold page title, shown in the header in place of a per-page `<h1>`. */
 		heading: string;
 		/**
@@ -379,6 +395,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			teams,
 			viewer,
 			isAdmin,
+			i18next,
 			heading,
 			breadcrumbs,
 			currentPath,
@@ -387,6 +404,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			children,
 		} = handle.props;
 
+		let t = i18next.getFixedT(null, "translation", "app.layout");
 		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
 
 		/**
@@ -405,42 +423,42 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
 				href: dashboardHref,
-				label: "Dashboard",
+				label: t("sidebar.navigation.items.dashboard"),
 				icon: <ActivityIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.monitors.index.href({ team: team.slug }),
-				label: "HTTP Monitors",
+				label: t("sidebar.navigation.items.httpMonitors"),
 				icon: <MonitorCogIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.dnsMonitors.index.href({ team: team.slug }),
-				label: "DNS Monitors",
+				label: t("sidebar.navigation.items.dnsMonitors"),
 				icon: <GlobeIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.tcpMonitors.index.href({ team: team.slug }),
-				label: "TCP Monitors",
+				label: t("sidebar.navigation.items.tcpMonitors"),
 				icon: <NetworkIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.cronJobs.index.href({ team: team.slug }),
-				label: "Cron Jobs",
+				label: t("sidebar.navigation.items.cronJobs"),
 				icon: <ClockIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.alerts.index.href({ team: team.slug }),
-				label: "Alerts",
+				label: t("sidebar.navigation.items.alerts"),
 				icon: <BellIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
-				label: "Maintenance",
+				label: t("sidebar.navigation.items.maintenance"),
 				icon: <WrenchIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.statusPages.index.href({ team: team.slug }),
-				label: "Status pages",
+				label: t("sidebar.navigation.items.statusPages"),
 				icon: <FileTextIcon size={16} strokeWidth={1.5} />,
 			},
 		];
@@ -453,18 +471,18 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		}> = [
 			{
 				href: routes.docs.index.href(),
-				label: "Docs",
+				label: t("sidebar.navigation.items.docs"),
 				target: "_blank",
 				icon: <BookOpenIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.apiKeys.index.href({ team: team.slug }),
-				label: "API keys",
+				label: t("sidebar.navigation.items.apiKeys"),
 				icon: <KeyIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.settings.href({ team: team.slug }),
-				label: "Settings",
+				label: t("sidebar.navigation.items.settings"),
 				icon: <SettingsIcon size={16} strokeWidth={1.5} />,
 			},
 		];
@@ -484,14 +502,18 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									type="button"
 									commandfor="team-picker-menu"
 									command="toggle-popover"
-									aria-label="Switch team"
+									aria-label={t("sidebar.teamPicker.label")}
 									mix={[menuTriggerButton]}
 								>
 									<Logo src={team.logo} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
 									<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 								</button>
-								<Menu id="team-picker-menu" aria-label="Switch team" mix={[menuKeys()]}>
+								<Menu
+									id="team-picker-menu"
+									aria-label={t("sidebar.teamPicker.label")}
+									mix={[menuKeys()]}
+								>
 									{teams.map((t) => (
 										<Menu.Item
 											key={t.id}
@@ -543,18 +565,25 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							type="button"
 							commandfor="user-menu"
 							command="toggle-popover"
-							aria-label="Account menu"
+							aria-label={t("sidebar.userMenu.label")}
 							mix={[menuTriggerButton]}
 						>
 							<Avatar src={viewer.avatar || null} name={viewer.name} />
 							<span mix={[truncatedLabel]}>{viewer.name}</span>
 							<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 						</button>
-						<Menu id="user-menu" placement="top-start" aria-label="Account menu" mix={[menuKeys()]}>
+						<Menu
+							id="user-menu"
+							placement="top-start"
+							aria-label={t("sidebar.userMenu.label")}
+							mix={[menuKeys()]}
+						>
 							<Menu.Item href={routes.app.team.account.href({ team: team.slug })}>
-								Account
+								{t("sidebar.account.title")}
 							</Menu.Item>
-							<Menu.Item href={routes.logout.index.href()}>Sign out</Menu.Item>
+							<Menu.Item href={routes.logout.index.href()}>
+								{t("sidebar.account.signOut")}
+							</Menu.Item>
 						</Menu>
 					</div>
 				</nav>
@@ -565,14 +594,14 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							type="button"
 							commandfor="app-sidebar"
 							command="toggle-popover"
-							aria-label="Toggle navigation"
+							aria-label={t("sidebar.toggle")}
 							mix={[sidebarToggle]}
 						>
 							<PanelLeftIcon size={18} strokeWidth={1.5} />
 						</button>
 						<div mix={[headingColumn]}>
 							{breadcrumbs && breadcrumbs.length > 0 && (
-								<Breadcrumbs aria-label="Breadcrumb">
+								<Breadcrumbs aria-label={t("breadcrumbs.label")}>
 									<Breadcrumbs.List>
 										{breadcrumbs.map((crumb, index) => (
 											<Breadcrumbs.Item key={`${crumb.label}-${index}`}>
@@ -597,7 +626,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				{toast && (
 					<FlashToast
 						color={toast.intent === "success" ? "success" : "danger"}
-						label="Notifications"
+						label={t("toasts.region")}
 						description={toast.message}
 					/>
 				)}

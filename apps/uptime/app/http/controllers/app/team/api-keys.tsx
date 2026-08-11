@@ -59,6 +59,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					heading={ctx.i18next.t("page.apiKeys.header.title")}
 					actions={
 						apiKeys.length < 10 && (

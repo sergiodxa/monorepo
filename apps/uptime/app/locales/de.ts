@@ -983,6 +983,7 @@ export default {
 			sidebar: {
 				teamPicker: { label: "Team auswählen" },
 				userMenu: { label: "Benutzermenü" },
+				toggle: "Navigation ein- oder ausblenden",
 
 				navigation: {
 					items: {
@@ -1009,8 +1010,10 @@ export default {
 					title: "Konto",
 					overview: "Übersicht",
 					teams: "Ihre Teams",
+					signOut: "Abmelden",
 				},
 			},
+			breadcrumbs: { label: "Navigationspfad" },
 			toasts: {
 				region: "Benachrichtigungen",
 				dismiss: "Schließen",

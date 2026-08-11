@@ -1018,6 +1018,7 @@ export default {
 			sidebar: {
 				teamPicker: { label: "Select Team" },
 				userMenu: { label: "User Menu" },
+				toggle: "Toggle navigation",
 
 				navigation: {
 					items: {
@@ -1044,8 +1045,10 @@ export default {
 					title: "Account",
 					overview: "Overview",
 					teams: "Your Teams",
+					signOut: "Sign out",
 				},
 			},
+			breadcrumbs: { label: "Breadcrumb" },
 			toasts: {
 				region: "Notifications",
 				dismiss: "Dismiss",

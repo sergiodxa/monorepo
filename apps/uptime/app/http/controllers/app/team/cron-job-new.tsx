@@ -58,6 +58,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					heading={t("header.title")}
 					breadcrumbs={[
 						{

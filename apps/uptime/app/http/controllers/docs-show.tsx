@@ -43,6 +43,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let sidebarDescription = ctx.i18next.t("docs.sidebar.description");
 	let searchPlaceholder = ctx.i18next.t("docs.sidebar.searchPlaceholder");
 	let toggleNavLabel = ctx.i18next.t("docs.sidebar.openMenu");
+	let breadcrumbLabel = ctx.i18next.t("app.layout.breadcrumbs.label");
 
 	/**
 	 * Builds the `docs > ... > <segment>` trail, one crumb per URL path segment. Only
@@ -85,6 +86,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 					sidebarDescription={sidebarDescription}
 					searchPlaceholder={searchPlaceholder}
 					toggleNavLabel={toggleNavLabel}
+					breadcrumbLabel={breadcrumbLabel}
 				>
 					<h1>{ctx.i18next.t("docs.error.notFoundTitle")}</h1>
 					<p>{ctx.i18next.t("docs.error.notFoundDescription")}</p>
@@ -130,6 +132,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 				sidebarDescription={sidebarDescription}
 				searchPlaceholder={searchPlaceholder}
 				toggleNavLabel={toggleNavLabel}
+				breadcrumbLabel={breadcrumbLabel}
 			>
 				<article>
 					<header mix={[vstack({ gap: "2px" }), mbe("2rem")]}>

@@ -273,6 +273,7 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					toast={toast}
 					heading={t("header.title", { name: monitor.name })}
 					breadcrumbs={[

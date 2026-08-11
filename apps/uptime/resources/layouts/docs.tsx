@@ -112,6 +112,8 @@ namespace DocsLayout {
 		sidebarDescription: string;
 		searchPlaceholder: string;
 		toggleNavLabel: string;
+		/** Accessible name for the breadcrumb landmark, so screen readers hear it in the reader's own language. */
+		breadcrumbLabel: string;
 		children: RemixNode;
 	}
 }
@@ -130,6 +132,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			sidebarDescription,
 			searchPlaceholder,
 			toggleNavLabel,
+			breadcrumbLabel,
 			children,
 		} = handle.props;
 
@@ -220,7 +223,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								</button>
 
 								{breadcrumbs.length > 0 && (
-									<Breadcrumbs aria-label="Breadcrumb">
+									<Breadcrumbs aria-label={breadcrumbLabel}>
 										<Breadcrumbs.List>
 											{breadcrumbs.map((crumb, index) => (
 												<Breadcrumbs.Item key={`${crumb.label}-${index}`}>

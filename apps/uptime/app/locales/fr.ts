@@ -992,6 +992,7 @@ export default {
 			sidebar: {
 				teamPicker: { label: "Sélectionner une équipe" },
 				userMenu: { label: "Menu utilisateur" },
+				toggle: "Afficher ou masquer la navigation",
 
 				navigation: {
 					items: {
@@ -1018,8 +1019,10 @@ export default {
 					title: "Compte",
 					overview: "Aperçu",
 					teams: "Vos équipes",
+					signOut: "Se déconnecter",
 				},
 			},
+			breadcrumbs: { label: "Fil d'Ariane" },
 			toasts: {
 				region: "Notifications",
 				dismiss: "Fermer",

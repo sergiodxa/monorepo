@@ -54,6 +54,7 @@ export default createAction(routes.app.team.statusPages.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					heading={ctx.i18next.t("page.statusPages.header.title")}
 					breadcrumbs={[
 						{

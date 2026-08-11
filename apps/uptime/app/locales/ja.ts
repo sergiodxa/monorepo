@@ -953,6 +953,7 @@ export default {
 			sidebar: {
 				teamPicker: { label: "チームを選択" },
 				userMenu: { label: "ユーザーメニュー" },
+				toggle: "ナビゲーションの表示を切り替えます",
 
 				navigation: {
 					items: {
@@ -979,8 +980,10 @@ export default {
 					title: "アカウント",
 					overview: "概要",
 					teams: "チーム一覧",
+					signOut: "ログアウト",
 				},
 			},
+			breadcrumbs: { label: "パンくずリスト" },
 			toasts: {
 				region: "通知",
 				dismiss: "閉じる",

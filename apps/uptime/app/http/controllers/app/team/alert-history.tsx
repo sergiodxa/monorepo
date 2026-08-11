@@ -66,6 +66,7 @@ export default createAction(routes.app.team.alerts.history, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					heading={ctx.i18next.t("page.alertHistory.header.title")}
 					breadcrumbs={[
 						{

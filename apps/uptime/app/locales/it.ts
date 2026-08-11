@@ -984,6 +984,7 @@ export default {
 			sidebar: {
 				teamPicker: { label: "Seleziona Team" },
 				userMenu: { label: "Menu Utente" },
+				toggle: "Mostra o nascondi la navigazione",
 
 				navigation: {
 					items: {
@@ -1010,8 +1011,10 @@ export default {
 					title: "Account",
 					overview: "Panoramica",
 					teams: "I Suoi Team",
+					signOut: "Esci",
 				},
 			},
+			breadcrumbs: { label: "Percorso di navigazione" },
 			toasts: {
 				region: "Notifiche",
 				dismiss: "Chiudi",

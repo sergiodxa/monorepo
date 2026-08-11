@@ -66,6 +66,7 @@ export default createAction(routes.app.team.alerts.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					i18next={ctx.i18next}
 					heading={ctx.i18next.t("page.createAlert.header.title")}
 					breadcrumbs={[
 						{
