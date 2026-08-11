@@ -292,23 +292,55 @@ visible in monitor settings, so it can be flipped for a customer without shippin
 
 ### 7. Cost
 
-Per-run cost, at the published $0.09/browser-hour, is **0.0025 cents per browser-second** —
-0.0375¢ at 15 seconds, 0.075¢ at the 30-second cap. Projected over a 28-day billing month,
-across the interval range [§7a](#7a-the-interval-is-a-discrete-choice-from-15-minutes-to-a-day)
-allows:
+At the published $0.09/browser-hour, one browser-second costs **0.0025 cents**. Three
+per-run numbers follow, and every figure in this section is one of them multiplied by a run
+count:
 
-| Interval | Runs/month | @15s           | @30s cap |
-| -------- | ---------- | -------------- | -------- |
-| 15 min   | 2,688      | 11.2 h → $1.01 | $2.02    |
-| 1 h      | 672        | 2.8 h → $0.25  | $0.50    |
-| 6 h      | 112        | 0.47 h → $0.04 | $0.08    |
-| 24 h     | 28         | 0.12 h → $0.01 | $0.02    |
+| Per run                        | Price       | Basis                                         |
+| ------------------------------ | ----------- | --------------------------------------------- |
+| **What it costs us** — 30s cap | $0.00075    | 30 × $0.09/3600, the worst case we underwrite |
+| What it costs us — 15s typical | $0.000375   | what a Phase A run should actually take       |
+| **What we charge**             | **$0.0025** | a quarter of a cent, $2.50 per 1,000          |
+| **What Checkly charges**       | $0.0065     | $6.50 per 1,000, Starter overage rate         |
 
-The two rows the table no longer has are the point of [§7a](#7a-the-interval-is-a-discrete-choice-from-15-minutes-to-a-day):
-at one minute the same monitor costs $15.12 a month in browser hours, and at five minutes
-$3.02 — **more than the entire $5 subscription that today covers 100,000 pings.** A flow run
-is two to three orders of magnitude more expensive than an HTTP ping, so it cannot ride the
-ping meter, and the decisions follow from that arithmetic:
+So the margin is **3.3× at the cap and 6.7× at a typical run**, and we are **2.6× cheaper
+than the incumbent** either way. Over a 28-day month, across the seven intervals
+[§7a](#7a-the-interval-is-a-discrete-choice-from-15-minutes-to-a-day) allows:
+
+| Interval | Runs/month | Costs us @30s | **We charge** | Margin | Checkly |
+| -------- | ---------- | ------------- | ------------- | ------ | ------- |
+| 15 min   | 2,688      | $2.02         | **$6.72**     | $4.70  | $17.47  |
+| 30 min   | 1,344      | $1.01         | **$3.36**     | $2.35  | $8.74   |
+| 1 h      | 672        | $0.50         | **$1.68**     | $1.18  | $4.37   |
+| 3 h      | 224        | $0.17         | **$0.56**     | $0.39  | $1.46   |
+| 6 h      | 112        | $0.08         | **$0.28**     | $0.20  | $0.73   |
+| 12 h     | 56         | $0.04         | **$0.14**     | $0.10  | $0.36   |
+| 24 h     | 28         | $0.02         | **$0.07**     | $0.05  | $0.18   |
+
+Three things that table would mislead about if left unsaid.
+
+**The Checkly column is a marginal price, not their sticker.** It is the Starter overage
+rate, so it is what a customer already past their included 3,000 browser runs pays for one
+more monitor. A customer's _first_ 15-minute monitor is 2,688 runs and fits inside that
+allowance, so it reads as free — their base fee already bought it. The honest claim is
+therefore "each additional run costs 2.6× more there", not "we are 2.6× cheaper on day one".
+
+**30 seconds is the cap, not the expectation.** A Phase A run is one `/accessibilityTree`
+call per statement and should land in single digits of seconds; the cap only binds a spec
+that stacks `eventually` windows. Real margin sits nearer the 6.7× end, and the `costs us`
+column is the floor being underwritten rather than the expected bill.
+
+**Browser-seconds are ~99% of the cost.** A run also spends a queue operation, a couple of
+D1 row writes, a worker request and an Analytics Engine data point — together on the order
+of $0.000002, under 1% of the browser cost. Not worth modelling per run, though the ledger
+picks them up anyway through the instrumentation ADR-019 already installed.
+
+The two intervals the table does **not** have are the point of
+[§7a](#7a-the-interval-is-a-discrete-choice-from-15-minutes-to-a-day): at one minute the
+same monitor costs $30.24 a month at the cap, and at five minutes $6.05 — **more than the
+entire $5 subscription that today covers 100,000 pings.** A flow run is two to three orders
+of magnitude more expensive than an HTTP ping, so it cannot ride the ping meter, and the
+decisions follow from that arithmetic:
 
 - **A separate meter.** Flow runs are counted and billed as flow runs. A new Polar metered
   meter, a new event name, ingested one event per run through the same path
@@ -334,31 +366,21 @@ ping meter, and the decisions follow from that arithmetic:
   runs they did not perform, and the fewer runs they make the worse the ratio gets. Charging
   for the run removes the problem rather than tuning it, and it means no interval on the list
   is quietly worse value than another.
-- **What that works out to**, against a measured cost of 0.0375¢ at a typical 15s run and
-  0.075¢ at the 30s cap — **6.7× at typical, 3.3× worst case**, with no rounding anywhere:
 
-  | Interval | Runs/month | Charged |
-  | -------- | ---------- | ------- |
-  | 15 min   | 2,688      | $6.72   |
-  | 30 min   | 1,344      | $3.36   |
-  | 1 h      | 672        | $1.68   |
-  | 3 h      | 224        | $0.56   |
-  | 6 h      | 112        | $0.28   |
-  | 12 h     | 56         | $0.14   |
-  | 24 h     | 28         | $0.07   |
+  A sub-cent unit price is ordinary in metered billing — Polar prices the meter per unit and
+  charges the month's total, so nothing rounds to a cent until the invoice does. It is also
+  what makes every row of the table above exact rather than rounded up, which is the property
+  a per-interval price list on the pricing page needs to be quotable at all.
 
-  Checkly charges $6.50 per 1,000 browser runs on its Starter plan, so this is 2.6× cheaper
-  than the incumbent while holding a margin that survives the Kitesurf beta ending. A
-  sub-cent unit price is ordinary in metered billing — Polar prices the meter per unit and
-  charges the month's total, so nothing has to round to a cent until the invoice does.
-
-- **A jittered schedule.** Concurrency is billed on the monthly average of daily peaks, so a
-  fleet that fires on the minute boundary is billed at its burst all month. The existing
-  `next_due_at` scheduling (ADR-003) already gives us the mechanism; flow monitors offset
-  their first due time by a hash of the monitor id. At 15s sessions, the 10 included
-  concurrent browsers cover about **40 runs per minute** — roughly 600 monitors at the
-  15-minute floor, or 14,400 at hourly — and the paid ceiling of 120 covers 480 runs/minute.
-  Neither is the binding constraint for a long time, but only if the load is spread.
+- **A jittered schedule**, because the one cost that is _not_ per run is concurrency: $2.00 a
+  month per averaged concurrent browser above 10, computed from the monthly average of daily
+  peaks. A fleet that fires on the minute boundary is therefore billed at its burst for the
+  whole month, and no monitor can be blamed for it. The existing `next_due_at` scheduling
+  (ADR-003) already gives us the mechanism; flow monitors offset their first due time by a
+  hash of the monitor id. At 15s sessions the 10 included concurrent browsers absorb about
+  **40 runs per minute** — roughly 600 monitors at the 15-minute floor, or 14,400 at hourly —
+  and the paid ceiling of 120 covers 480 runs/minute. Spread, this line stays at zero; bursty,
+  it is the one cost the per-run price does not cover.
 - **A new rate-card resource.** `app/lib/cost-rates.ts` has no browser resource, so a flow
   monitor today would run entirely outside the cost ledger and every affected team's Polar
   Cost Insights figure would be silently short. `RATES` is documented append-only, so this is
@@ -383,8 +405,9 @@ Three decisions in that, each with its own reason.
 minutes to 60 seconds and kept API checks at 10 seconds — so the incumbent draws exactly the
 line this ADR draws, that a browser check is a different class of unit from a request check,
 and it draws it three notches lower than we do. We are not matching that, for two reasons
-that both point the same way. The cost is one: a 1-minute flow monitor is $15.12 a month in
-browser hours at 15s per run, which at any markup is a price nobody will pay for a check that
+that both point the same way. The cost is one: a 1-minute flow monitor is $30.24 a month in
+browser hours at the 30s cap and $15.12 even at a typical run, which at the 3.3× markup
+[§7](#7-cost) sets would be charged at $100 a month — a price nobody will pay for a check that
 drives a login. The product is the other: mean time to detection is bounded below by the run
 itself, and a 30-second run polled every minute spends half its life running. A flow that
 must be verified faster than a quarter-hour is a flow that wants an HTTP monitor on the
