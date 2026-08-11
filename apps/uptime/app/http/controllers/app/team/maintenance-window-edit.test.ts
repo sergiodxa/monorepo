@@ -185,11 +185,44 @@ describe("maintenanceWindowEdit", () => {
 		/*
 		 * `<select>` has no `defaultValue` attribute, so the saved scope has to be marked
 		 * on the option itself — otherwise the first one wins and re-saving this window
-		 * would widen it back to "all monitors".
+		 * would widen it back to "all monitors". The row is seeded with no `monitor_type`,
+		 * the shape every window had before the column existed, so this also covers that
+		 * being read back as HTTP rather than as team-wide.
 		 */
-		expect(body).toContain(`value="${monitor.id}" selected`);
+		expect(body).toContain(`value="monitor:http:${monitor.id}" selected`);
 		expect(body).not.toContain(`value="" selected`);
 		expect(body).not.toContain("defaultvalue");
+	});
+
+	/**
+	 * Without an option of its own the `<select>` would show its first — team-wide — and
+	 * saving the form untouched would silently widen the window to every monitor the team
+	 * has. It gets a selected option saying the monitor is gone instead, and the value it
+	 * carries fails the action's scope check until somebody picks one that exists.
+	 */
+	test("keeps a window scoped to a deleted monitor from reverting to team-wide", async () => {
+		let { db, team, membership } = await createFixture();
+		let now = Date.now();
+		let window = await db.create(
+			maintenanceWindows,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_type: "dns",
+				monitor_id: "deleted-monitor",
+				name: "Zone migration",
+				starts_at: now + 3_600_000,
+				ends_at: now + 7_200_000,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, window.id);
+		let body = await response.text();
+
+		expect(body).toContain(`value="monitor:dns:deleted-monitor" selected`);
+		expect(body).toContain("A monitor that no longer exists");
+		expect(body).not.toContain(`value="" selected`);
 	});
 
 	test("only marks the behaviour switches checked when their stored values are true", async () => {

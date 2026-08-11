@@ -28,7 +28,7 @@ import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, Input, Label, LinkButton, Select, Switch, TextField } from "@pkg/ui";
+import { AlertDialog, Button, Input, Label, LinkButton, Switch, TextField } from "@pkg/ui";
 import { fieldStackLayout } from "@pkg/ui/styles";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -36,12 +36,13 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Field from "~/resources/components/field";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import FormPage from "~/resources/components/form-page";
+import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -69,7 +70,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 		let window = await MaintenanceWindow.findByIdForTeam(db, ctx.team.id, windowId);
 		if (!window) return notFound("Not Found");
 
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 		let isActive =
 			window.ended_early_at === null && MaintenanceWindow.isActiveAt(window, Date.now());
 		let heading = ctx.i18next.t("page.editMaintenance.header.title", { name: window.name });
@@ -120,28 +121,12 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 												defaultValue={window.name}
 											/>
 
-											<Field label={fields("scope.label")}>
-												{/*
-												 * The saved scope is marked on the option itself: `defaultValue` is not
-												 * an attribute a `<select>` carries, so a server-rendered one is dropped
-												 * and the first option would win — re-saving a window scoped to a single
-												 * monitor as "all monitors".
-												 */}
-												<Select name="monitor_id">
-													<Select.Option value="" selected={!window.monitor_id}>
-														{fields("scope.allMonitors")}
-													</Select.Option>
-													{monitors.map((monitor) => (
-														<Select.Option
-															key={monitor.id}
-															value={monitor.id}
-															selected={monitor.id === window.monitor_id}
-														>
-															{monitor.name} (HTTP)
-														</Select.Option>
-													))}
-												</Select>
-											</Field>
+											<MonitorScopeField
+												groups={scopeGroups}
+												selected={storedMonitorScope(window)}
+												description={fields("scope.description")}
+												i18next={ctx.i18next}
+											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
 								</SettingsSection>

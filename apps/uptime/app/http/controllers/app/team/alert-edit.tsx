@@ -39,16 +39,16 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Alert from "~/app/data/alert";
-import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
-import { storedAlertScope } from "~/app/lib/alert-scope";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
-import AlertScopeField from "~/resources/components/alert-scope-field";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
+import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -118,9 +118,10 @@ export default createAction(routes.app.team.alerts.edit, {
 												defaultValue={alert.name}
 											/>
 
-											<AlertScopeField
+											<MonitorScopeField
 												groups={scopeGroups}
-												selected={storedAlertScope(alert)}
+												selected={storedMonitorScope(alert)}
+												description={t("scope.description")}
 												i18next={ctx.i18next}
 											/>
 										</SettingsSection.Body>

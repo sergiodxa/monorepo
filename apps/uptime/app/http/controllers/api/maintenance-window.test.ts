@@ -249,6 +249,60 @@ describe("PUT /api/v1/maintenance/:maintenanceId", () => {
 		expect(response.status).toBe(404);
 	});
 
+	/**
+	 * The pair moves as a unit: narrowing a window to a whole type must not leave the monitor
+	 * id it used to carry behind it, which would be a scope covering one monitor of a type
+	 * nobody asked for.
+	 */
+	test("clears the monitor id when only a monitorType is sent", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+		let window = await createMaintenanceWindowRow(db, team.id, {
+			monitor_type: "http",
+			monitor_id: monitor.id,
+		});
+
+		let response = await dispatch(
+			db,
+			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
+				key,
+				body: { monitorType: "dns" },
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.monitor_type).toBe("dns");
+		expect(updated?.monitor_id).toBeNull();
+	});
+
+	test("leaves the scope alone when neither scope field is sent", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+		let window = await createMaintenanceWindowRow(db, team.id, {
+			monitor_type: "http",
+			monitor_id: monitor.id,
+		});
+
+		let response = await dispatch(
+			db,
+			request("PUT", routes.api.v1.maintenance.update.href({ maintenanceId: window.id }), {
+				key,
+				body: { name: "Renamed" },
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
+		expect(updated?.name).toBe("Renamed");
+		expect(updated?.monitor_type).toBe("http");
+		expect(updated?.monitor_id).toBe(monitor.id);
+	});
+
 	test("404s when the window belongs to another team, without mutating it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

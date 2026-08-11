@@ -1,9 +1,9 @@
 /**
- * Resolves an alert scope against the monitors a team actually owns: the per-type lookup
- * the alert forms use to offer choices, and the per-type existence check the form action
- * and the API both run before storing a scope.
+ * Resolves a monitor scope against the monitors a team actually owns: the per-type lookup
+ * the alert and maintenance-window forms use to offer choices, and the per-type existence
+ * check those form actions and the API both run before storing a scope.
  *
- * Separate from `~/app/lib/alert-scope`, which stays import-free so the views can render
+ * Separate from `~/app/lib/monitor-scope`, which stays import-free so the views can render
  * scope options; everything here reaches into the four monitor tables.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -12,13 +12,13 @@
 
 import type { Database } from "remix/data-table";
 
-import type { AlertScope, AlertScopeType } from "~/app/lib/alert-scope";
+import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 
 import CronJob from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
-import { ALERT_SCOPE_TYPES } from "~/app/lib/alert-scope";
+import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 
 /** One monitor as a scope choice needs it: enough to name it and to store it. */
 export interface ScopeMonitor {
@@ -28,7 +28,7 @@ export interface ScopeMonitor {
 
 /** Every team's monitors of one type, as scope choices, in the order the forms list them. */
 export interface ScopeMonitorGroup {
-	monitorType: AlertScopeType;
+	monitorType: MonitorScopeType;
 	monitors: ScopeMonitor[];
 }
 
@@ -40,7 +40,7 @@ export interface ScopeMonitorGroup {
  * thing three times and go stale one at a time.
  */
 const SCOPE_MONITOR_MODELS: Record<
-	AlertScopeType,
+	MonitorScopeType,
 	{
 		listByTeam(db: Database, teamId: string): Promise<ScopeMonitor[]>;
 		findByIdForTeam(db: Database, teamId: string, monitorId: string): Promise<ScopeMonitor | null>;
@@ -53,7 +53,7 @@ const SCOPE_MONITOR_MODELS: Record<
 };
 
 /**
- * Every monitor the team can scope an alert to, grouped by type, with empty types kept
+ * Every monitor the team can scope a rule to, grouped by type, with empty types kept
  * out — a group whose only content would be its own heading tells a reader nothing.
  */
 export async function listScopeMonitors(
@@ -61,7 +61,7 @@ export async function listScopeMonitors(
 	teamId: string,
 ): Promise<ScopeMonitorGroup[]> {
 	let groups = await Promise.all(
-		ALERT_SCOPE_TYPES.map(async (monitorType) => ({
+		MONITOR_SCOPE_TYPES.map(async (monitorType) => ({
 			monitorType,
 			monitors: await SCOPE_MONITOR_MODELS[monitorType].listByTeam(db, teamId),
 		})),
@@ -81,7 +81,7 @@ export async function listScopeMonitors(
 export async function isResolvableScope(
 	db: Database,
 	teamId: string,
-	scope: AlertScope,
+	scope: MonitorScope,
 ): Promise<boolean> {
 	if (scope.monitorType === null || scope.monitorId === null) return true;
 

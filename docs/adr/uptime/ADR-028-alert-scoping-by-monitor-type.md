@@ -53,7 +53,7 @@ alert changes behaviour, in either direction, which is the constraint that decid
 design: widening a narrow alert floods a channel, and narrowing a wide one silently stops
 notifications somebody is relying on. The second is worse than the noise being fixed.
 
-`storedAlertScope` applies the same reading in code, so a row that somehow escaped the
+`storedMonitorScope` applies the same reading in code, so a row that somehow escaped the
 backfill is still read as HTTP-scoped rather than as team-wide.
 
 ### Matching
@@ -101,9 +101,10 @@ scope alone.
 ## Consequences
 
 - A customer can put DNS findings on their own channel without unsubscribing from outages.
-- `maintenance_windows` still has the same gap for the same reason — its `monitor_id` is also
-  HTTP-only. It is a smaller problem (a window suppresses rather than notifies) and is left
-  as its own change.
+- `maintenance_windows` had the same gap for the same reason, and
+  [ADR-029](./ADR-029-maintenance-window-scoping-by-monitor-type.md) closed it the same way.
+  Doing so generalised this ADR's vocabulary into `~/app/lib/monitor-scope`, which both
+  tables now share; the names here that begin with `alert` are its earlier spelling.
 - `MAX_ALERTS_PER_TEAM` stays at 10. Scoping makes each alert cheaper to keep, so the cap may
   bind sooner; whether it should move is a commercial question this ADR does not answer.
 
@@ -111,4 +112,5 @@ scope alone.
 
 - [ADR-026: Domain DNS Monitors with Record Import](./ADR-026-domain-dns-monitors-with-record-import.md) — §11 and open question 11, which this answers
 - [ADR-025: An Ongoing Outage Keeps Alerting](./ADR-025-alert-repeat-policy.md) — the repeat policy, unchanged by scoping
-- `apps/uptime/app/lib/alert-scope.ts`, `app/data/alert.ts`, `app/data/alert-scope-monitors.ts`, `app/services/alerts.ts`, `database/migrations/20260811100000_alert_monitor_scope.sql`
+- [ADR-029: A Maintenance Window Covers Everything, One Monitor Type, or One Monitor](./ADR-029-maintenance-window-scoping-by-monitor-type.md) — the same change for `maintenance_windows`, which generalised this one's module
+- `apps/uptime/app/lib/monitor-scope.ts`, `app/data/alert.ts`, `app/data/scope-monitors.ts`, `app/services/alerts.ts`, `database/migrations/20260811100000_alert_monitor_scope.sql`

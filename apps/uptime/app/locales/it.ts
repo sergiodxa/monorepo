@@ -1546,6 +1546,29 @@ export default {
 			select: "Seleziona tutto",
 			clear: "Deseleziona tutto",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Ambito",
+			teamWide: "Intero team (tutti i monitor)",
+			unknownMonitor: "Un monitor che non esiste più",
+			types: {
+				http: "Monitor HTTP",
+				dns: "Monitor DNS",
+				tcp: "Monitor TCP",
+				cron: "Processi pianificati",
+			},
+			allOfType: {
+				http: "Tutti i monitor HTTP",
+				dns: "Tutti i monitor DNS",
+				tcp: "Tutti i monitor TCP",
+				cron: "Tutti i processi pianificati",
+			},
+		},
 	},
 
 	cron: {
@@ -2713,24 +2736,11 @@ export default {
 						description: "Un nome per identificare l'avviso.",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "Ambito",
 						description:
 							"Che cosa sorveglia questo avviso. Lascialo sull'intero team, restringilo a un tipo di monitor oppure puntalo su uno solo.",
-						teamWide: "Intero team (tutti i monitor)",
-						unknownMonitor: "Un monitor che non esiste più",
-						types: {
-							http: "Monitor HTTP",
-							dns: "Monitor DNS",
-							tcp: "Monitor TCP",
-							cron: "Processi pianificati",
-						},
-						allOfType: {
-							http: "Tutti i monitor HTTP",
-							dns: "Tutti i monitor DNS",
-							tcp: "Tutti i monitor TCP",
-							cron: "Tutti i processi pianificati",
-						},
 					},
 
 					channel: {
@@ -3732,8 +3742,8 @@ export default {
 					},
 
 					scope: {
-						label: "Ambito",
-						allMonitors: "Tutti i monitor",
+						description:
+							"Che cosa copre questa finestra. Lasciala sull'intero team, restringila a un tipo di monitor oppure puntala su uno solo.",
 					},
 
 					startsAt: {

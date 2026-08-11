@@ -1544,6 +1544,29 @@ export default {
 			select: "Alle auswählen",
 			clear: "Auswahl aufheben",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Umfang",
+			teamWide: "Teamweit (alle Monitore)",
+			unknownMonitor: "Ein Monitor, den es nicht mehr gibt",
+			types: {
+				http: "HTTP-Monitore",
+				dns: "DNS-Monitore",
+				tcp: "TCP-Monitore",
+				cron: "Cron-Jobs",
+			},
+			allOfType: {
+				http: "Jeder HTTP-Monitor",
+				dns: "Jeder DNS-Monitor",
+				tcp: "Jeder TCP-Monitor",
+				cron: "Jeder Cron-Job",
+			},
+		},
 	},
 
 	cron: {
@@ -2727,24 +2750,11 @@ export default {
 						description: "Ein Name zur Identifizierung der Benachrichtigung.",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "Umfang",
 						description:
 							"Was diese Benachrichtigung überwacht. Lassen Sie sie teamweit, beschränken Sie sie auf eine Monitor-Art oder richten Sie sie auf einen einzelnen Monitor.",
-						teamWide: "Teamweit (alle Monitore)",
-						unknownMonitor: "Ein Monitor, den es nicht mehr gibt",
-						types: {
-							http: "HTTP-Monitore",
-							dns: "DNS-Monitore",
-							tcp: "TCP-Monitore",
-							cron: "Cron-Jobs",
-						},
-						allOfType: {
-							http: "Jeder HTTP-Monitor",
-							dns: "Jeder DNS-Monitor",
-							tcp: "Jeder TCP-Monitor",
-							cron: "Jeder Cron-Job",
-						},
 					},
 
 					channel: {
@@ -3756,8 +3766,8 @@ export default {
 					},
 
 					scope: {
-						label: "Bereich",
-						allMonitors: "Alle Monitore",
+						description:
+							"Was dieses Fenster abdeckt. Lassen Sie es teamweit, beschränken Sie es auf eine Monitor-Art oder richten Sie es auf einen einzelnen Monitor.",
 					},
 
 					startsAt: {

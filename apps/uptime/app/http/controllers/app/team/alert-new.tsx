@@ -15,7 +15,7 @@
  * CSS-only disclosure that shows one channel's settings at a time.
  *
  * The scope picker offers every monitor of every type, plus a per-type "all of them"
- * choice, from the one control `AlertScopeField` owns.
+ * choice, from the one control `MonitorScopeField` owns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,16 +28,16 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
-import { TEAM_WIDE_ALERT_SCOPE } from "~/app/lib/alert-scope";
+import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
-import AlertScopeField from "~/resources/components/alert-scope-field";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
+import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -91,9 +91,10 @@ export default createAction(routes.app.team.alerts.new, {
 									<SettingsSection.Body>
 										<TextField label={t("name.label")} name="name" required />
 
-										<AlertScopeField
+										<MonitorScopeField
 											groups={scopeGroups}
-											selected={TEAM_WIDE_ALERT_SCOPE}
+											selected={TEAM_WIDE_MONITOR_SCOPE}
+											description={t("scope.description")}
 											i18next={ctx.i18next}
 										/>
 									</SettingsSection.Body>

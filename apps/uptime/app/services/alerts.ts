@@ -22,7 +22,7 @@ import type { Database } from "remix/data-table";
 import { isFailure, wrap } from "@pkg/result";
 
 import type { DnsRecordDiff } from "~/app/data/dns-monitor-record";
-import type { MaintenanceMonitorKind } from "~/app/data/maintenance-window";
+import type { MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
@@ -107,7 +107,7 @@ export type AlertEventType = SelectAlertEvent["event_type"];
  * maintenance windows) but recorded as its own `alert_events.monitor_type` for
  * accurate history.
  */
-export type AlertMonitorKind = MaintenanceMonitorKind | "ssl";
+export type AlertMonitorKind = MonitorScopeType | "ssl";
 
 export interface DispatchAlertsParams {
 	db: Database;
@@ -140,7 +140,7 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 	 * HTTP monitor's own row, so the windows that cover that monitor and the alerts that
 	 * watch it are the same ones. It stays `"ssl"` everywhere it is recorded.
 	 */
-	let scopeMonitorType: MaintenanceMonitorKind =
+	let scopeMonitorType: MonitorScopeType =
 		params.monitorType === "ssl" ? "http" : params.monitorType;
 
 	let suppressed = await MaintenanceWindow.isSuppressing(params.db, {

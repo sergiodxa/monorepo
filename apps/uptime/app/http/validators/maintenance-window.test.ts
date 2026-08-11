@@ -78,12 +78,26 @@ describe("CreateMaintenanceWindowSchema", () => {
 		expect(s.parseSafe(CreateMaintenanceWindowSchema, formData).success).toBe(false);
 	});
 
-	test("leaves monitor_id and recurring_pattern undefined when omitted", () => {
+	test("leaves recurring_pattern undefined when omitted", () => {
 		let result = s.parseSafe(CreateMaintenanceWindowSchema, baseFormData());
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.value.monitor_id).toBeUndefined();
 			expect(result.value.recurring_pattern).toBeUndefined();
+		}
+	});
+
+	/** An omitted scope is the team-wide one, which is what a window nobody narrows covers. */
+	test("defaults scope to the empty string when omitted", () => {
+		let result = s.parseSafe(CreateMaintenanceWindowSchema, baseFormData());
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.value.scope).toBe("");
+	});
+
+	test("carries a type-scoped and a monitor-scoped value through untouched", () => {
+		for (let scope of ["type:dns", "monitor:dns:abc"]) {
+			let result = s.parseSafe(CreateMaintenanceWindowSchema, baseFormData({ scope }));
+			expect(result.success).toBe(true);
+			if (result.success) expect(result.value.scope).toBe(scope);
 		}
 	});
 

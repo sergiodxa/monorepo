@@ -1573,6 +1573,29 @@ export default {
 			select: "Select all",
 			clear: "Clear all",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Scope",
+			teamWide: "Team-wide (every monitor)",
+			unknownMonitor: "A monitor that no longer exists",
+			types: {
+				http: "HTTP Monitors",
+				dns: "DNS Monitors",
+				tcp: "TCP Monitors",
+				cron: "Cron Jobs",
+			},
+			allOfType: {
+				http: "Every HTTP monitor",
+				dns: "Every DNS monitor",
+				tcp: "Every TCP monitor",
+				cron: "Every cron job",
+			},
+		},
 	},
 
 	cron: {
@@ -2729,24 +2752,11 @@ export default {
 						description: "A name to identify the alert.",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "Scope",
 						description:
 							"What this alert watches. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
-						teamWide: "Team-wide (every monitor)",
-						unknownMonitor: "A monitor that no longer exists",
-						types: {
-							http: "HTTP Monitors",
-							dns: "DNS Monitors",
-							tcp: "TCP Monitors",
-							cron: "Cron Jobs",
-						},
-						allOfType: {
-							http: "Every HTTP monitor",
-							dns: "Every DNS monitor",
-							tcp: "Every TCP monitor",
-							cron: "Every cron job",
-						},
 					},
 
 					channel: {
@@ -3743,8 +3753,8 @@ export default {
 					},
 
 					scope: {
-						label: "Scope",
-						allMonitors: "All monitors",
+						description:
+							"What this window covers. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
 					},
 
 					startsAt: {

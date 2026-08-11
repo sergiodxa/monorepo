@@ -5,10 +5,22 @@ section:
   title: API Resources
   order: 5
 order: 8
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-11
 ---
 
 Maintenance windows allow you to schedule planned downtime for your monitors. During a maintenance window, alerts can be suppressed and the status page can display a maintenance notice.
+
+## Scope
+
+`monitorType` and `monitorId` are the window's scope, and together they mean one of three things:
+
+- Neither — every monitor the team has, of every kind.
+- `monitorType` alone — every monitor of that kind, including ones created later.
+- `monitorType` and `monitorId` — that one monitor, looked up in that kind's monitors.
+
+A `monitorId` sent on its own is read as an HTTP monitor, which is what it has always meant, so clients written before the other monitor kinds arrived keep working untouched.
+
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND` with "Monitor not found" — the window is never quietly widened to the whole team instead.
 
 ## GET /api/v1/maintenance
 
@@ -35,6 +47,7 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 		{
 			"id": "mnt_abc123",
 			"teamId": "team_xyz789",
+			"monitorType": "http",
 			"monitorId": "mon_def456",
 			"name": "Database Migration",
 			"startsAt": "2026-02-15T02:00:00Z",
@@ -98,6 +111,10 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance \
 					"type": "string",
 					"pattern": "^team_[a-zA-Z0-9]+$"
 				},
+				"monitorType": {
+					"type": ["string", "null"],
+					"enum": ["http", "dns", "tcp", "cron", null]
+				},
 				"monitorId": {
 					"type": ["string", "null"],
 					"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -149,14 +166,15 @@ Creates a new maintenance window.
 
 ### Request Body
 
-| Field              | Type           | Required | Description                                                     |
-| ------------------ | -------------- | -------- | --------------------------------------------------------------- |
-| `name`             | string         | Yes      | Name of the maintenance window (1-255 characters)               |
-| `startsAt`         | string         | Yes      | Start time in ISO 8601 format                                   |
-| `endsAt`           | string         | Yes      | End time in ISO 8601 format (must be after `startsAt`)          |
-| `monitorId`        | string \| null | No       | Monitor ID to apply maintenance to, or `null` for all monitors  |
-| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance (default: `true`) |
-| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page (default: `true`)    |
+| Field              | Type           | Required | Description                                                                                                                                                                                                                        |
+| ------------------ | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`             | string         | Yes      | Name of the maintenance window (1-255 characters)                                                                                                                                                                                  |
+| `startsAt`         | string         | Yes      | Start time in ISO 8601 format                                                                                                                                                                                                      |
+| `endsAt`           | string         | Yes      | End time in ISO 8601 format (must be after `startsAt`)                                                                                                                                                                             |
+| `monitorType`      | string \| null | No       | Limit the window to one kind of monitor: `http`, `dns`, `tcp` or `cron`. Sent on its own, the window covers every monitor of that kind, including ones created later.                                                              |
+| `monitorId`        | string \| null | No       | Limit the window to a single monitor, or `null` for all monitors. Sent together with `monitorType`, the id is looked up in that kind's monitors; sent on its own it is read as an HTTP monitor, which is what it has always meant. |
+| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance (default: `true`)                                                                                                                                                                    |
+| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page (default: `true`)                                                                                                                                                                       |
 
 ### Example Request
 
@@ -170,6 +188,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
     "name": "Database Migration",
     "startsAt": "2026-02-15T02:00:00Z",
     "endsAt": "2026-02-15T04:00:00Z",
+    "monitorType": "http",
     "monitorId": "mon_def456",
     "suppressAlerts": true,
     "showOnStatusPage": true
@@ -183,6 +202,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 	"data": {
 		"id": "mnt_abc123",
 		"teamId": "team_xyz789",
+		"monitorType": "http",
 		"monitorId": "mon_def456",
 		"name": "Database Migration",
 		"startsAt": "2026-02-15T02:00:00Z",
@@ -204,7 +224,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 | 400    | INVALID_DATE_RANGE | `endsAt` must be after `startsAt`              |
 | 401    | UNAUTHORIZED       | Missing or invalid API key                     |
 | 403    | FORBIDDEN          | API key doesn't have `maintenance:write` scope |
-| 404    | NOT_FOUND          | Monitor with specified `monitorId` not found   |
+| 404    | NOT_FOUND          | Monitor not found for the given scope          |
 | 429    | RATE_LIMITED       | Too many requests                              |
 | 500    | INTERNAL_ERROR     | Server error                                   |
 
@@ -228,6 +248,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 		"endsAt": {
 			"type": "string",
 			"format": "date-time"
+		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
 		},
 		"monitorId": {
 			"type": ["string", "null"],
@@ -276,6 +300,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance \
 				"teamId": {
 					"type": "string",
 					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorType": {
+					"type": ["string", "null"],
+					"enum": ["http", "dns", "tcp", "cron", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
@@ -342,6 +370,7 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 	"data": {
 		"id": "mnt_abc123",
 		"teamId": "team_xyz789",
+		"monitorType": "http",
 		"monitorId": "mon_def456",
 		"name": "Database Migration",
 		"startsAt": "2026-02-15T02:00:00Z",
@@ -397,6 +426,10 @@ curl https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 					"type": "string",
 					"pattern": "^team_[a-zA-Z0-9]+$"
 				},
+				"monitorType": {
+					"type": ["string", "null"],
+					"enum": ["http", "dns", "tcp", "cron", null]
+				},
 				"monitorId": {
 					"type": ["string", "null"],
 					"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -448,14 +481,24 @@ Updates an existing maintenance window.
 
 ### Request Body
 
-| Field              | Type           | Required | Description                                                    |
-| ------------------ | -------------- | -------- | -------------------------------------------------------------- |
-| `name`             | string         | No       | Name of the maintenance window (1-255 characters)              |
-| `startsAt`         | string         | No       | Start time in ISO 8601 format                                  |
-| `endsAt`           | string         | No       | End time in ISO 8601 format (must be after `startsAt`)         |
-| `monitorId`        | string \| null | No       | Monitor ID to apply maintenance to, or `null` for all monitors |
-| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance                  |
-| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page                     |
+| Field              | Type           | Required | Description                                                                  |
+| ------------------ | -------------- | -------- | ---------------------------------------------------------------------------- |
+| `name`             | string         | No       | Name of the maintenance window (1-255 characters)                            |
+| `startsAt`         | string         | No       | Start time in ISO 8601 format                                                |
+| `endsAt`           | string         | No       | End time in ISO 8601 format (must be after `startsAt`)                       |
+| `monitorType`      | string \| null | No       | The kind of monitor the window is limited to: `http`, `dns`, `tcp` or `cron` |
+| `monitorId`        | string \| null | No       | The single monitor the window is limited to, or `null` for all monitors      |
+| `suppressAlerts`   | boolean        | No       | Whether to suppress alerts during maintenance                                |
+| `showOnStatusPage` | boolean        | No       | Whether to show maintenance on status page                                   |
+
+`monitorType` and `monitorId` are the window's scope, and they move as a pair: send either one and both are rewritten, so narrowing a window to a whole kind of monitor cannot leave the previous monitor's id behind it. Mention neither and the scope is left exactly as it is.
+
+- `{"monitorType": "dns"}` — every DNS monitor
+- `{"monitorType": "dns", "monitorId": "..."}` — that one DNS monitor
+- `{"monitorId": null}` — back to team-wide
+- `{"monitorId": "..."}` — that one HTTP monitor
+
+A `monitorId` that does not belong to the team, or that belongs to a different kind of monitor than `monitorType` names, answers `404 NOT_FOUND`.
 
 ### Example Request
 
@@ -478,6 +521,7 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 	"data": {
 		"id": "mnt_abc123",
 		"teamId": "team_xyz789",
+		"monitorType": "http",
 		"monitorId": "mon_def456",
 		"name": "Extended Database Migration",
 		"startsAt": "2026-02-15T02:00:00Z",
@@ -522,6 +566,10 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 		"endsAt": {
 			"type": "string",
 			"format": "date-time"
+		},
+		"monitorType": {
+			"type": ["string", "null"],
+			"enum": ["http", "dns", "tcp", "cron", null]
 		},
 		"monitorId": {
 			"type": ["string", "null"],
@@ -568,6 +616,10 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123 \
 				"teamId": {
 					"type": "string",
 					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorType": {
+					"type": ["string", "null"],
+					"enum": ["http", "dns", "tcp", "cron", null]
 				},
 				"monitorId": {
 					"type": ["string", "null"],
@@ -669,6 +721,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 	"data": {
 		"id": "mnt_abc123",
 		"teamId": "team_xyz789",
+		"monitorType": "http",
 		"monitorId": "mon_def456",
 		"name": "Database Migration",
 		"startsAt": "2026-02-15T02:00:00Z",
@@ -726,6 +779,10 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 					"type": "string",
 					"pattern": "^team_[a-zA-Z0-9]+$"
 				},
+				"monitorType": {
+					"type": ["string", "null"],
+					"enum": ["http", "dns", "tcp", "cron", null]
+				},
 				"monitorId": {
 					"type": ["string", "null"],
 					"pattern": "^mon_[a-zA-Z0-9]+$"
@@ -769,16 +826,17 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/maintenance/mnt_abc123/end \
 
 ## Response Fields
 
-| Field              | Type           | Description                                                 |
-| ------------------ | -------------- | ----------------------------------------------------------- |
-| `id`               | string         | Unique maintenance window identifier                        |
-| `teamId`           | string         | Team that owns this maintenance window                      |
-| `monitorId`        | string \| null | Associated monitor ID, or `null` if applies to all monitors |
-| `name`             | string         | Display name of the maintenance window                      |
-| `startsAt`         | string         | Scheduled start time in ISO 8601 format                     |
-| `endsAt`           | string         | Scheduled end time in ISO 8601 format                       |
-| `endedEarlyAt`     | string \| null | Time when maintenance was ended early, or `null`            |
-| `suppressAlerts`   | boolean        | Whether alerts are suppressed during maintenance            |
-| `showOnStatusPage` | boolean        | Whether maintenance is displayed on the status page         |
-| `createdAt`        | string         | Creation timestamp in ISO 8601 format                       |
-| `updatedAt`        | string         | Last update timestamp in ISO 8601 format                    |
+| Field              | Type           | Description                                                                     |
+| ------------------ | -------------- | ------------------------------------------------------------------------------- |
+| `id`               | string         | Unique maintenance window identifier                                            |
+| `teamId`           | string         | Team that owns this maintenance window                                          |
+| `monitorType`      | string \| null | Kind of monitor the window is limited to, or `null` if it applies to every kind |
+| `monitorId`        | string \| null | Associated monitor ID, or `null` if applies to all monitors                     |
+| `name`             | string         | Display name of the maintenance window                                          |
+| `startsAt`         | string         | Scheduled start time in ISO 8601 format                                         |
+| `endsAt`           | string         | Scheduled end time in ISO 8601 format                                           |
+| `endedEarlyAt`     | string \| null | Time when maintenance was ended early, or `null`                                |
+| `suppressAlerts`   | boolean        | Whether alerts are suppressed during maintenance                                |
+| `showOnStatusPage` | boolean        | Whether maintenance is displayed on the status page                             |
+| `createdAt`        | string         | Creation timestamp in ISO 8601 format                                           |
+| `updatedAt`        | string         | Last update timestamp in ISO 8601 format                                        |

@@ -16,18 +16,18 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
-import type { AlertScope } from "~/app/lib/alert-scope";
+import type { MonitorScope } from "~/app/lib/monitor-scope";
 import type { AlertConfig } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import { isResolvableScope } from "~/app/data/alert-scope-monitors";
+import { isResolvableScope } from "~/app/data/scope-monitors";
 import {
 	AlertIdSchema,
 	CreateAlertSchema,
 	type CreateAlertValues,
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
-import { parseAlertScope } from "~/app/lib/alert-scope";
+import { parseMonitorScope } from "~/app/lib/monitor-scope";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
@@ -69,8 +69,8 @@ async function resolveSubmittedScope(
 	db: Database,
 	teamId: string,
 	value: string,
-): Promise<AlertScope | null> {
-	let scope = parseAlertScope(value);
+): Promise<MonitorScope | null> {
+	let scope = parseMonitorScope(value);
 	if (!scope) return null;
 	return (await isResolvableScope(db, teamId, scope)) ? scope : null;
 }

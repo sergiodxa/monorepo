@@ -1553,6 +1553,29 @@ export default {
 			select: "Tout sélectionner",
 			clear: "Tout désélectionner",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Portée",
+			teamWide: "Toute l'équipe (tous les moniteurs)",
+			unknownMonitor: "Un moniteur qui n'existe plus",
+			types: {
+				http: "Moniteurs HTTP",
+				dns: "Moniteurs DNS",
+				tcp: "Moniteurs TCP",
+				cron: "Tâches planifiées",
+			},
+			allOfType: {
+				http: "Tous les moniteurs HTTP",
+				dns: "Tous les moniteurs DNS",
+				tcp: "Tous les moniteurs TCP",
+				cron: "Toutes les tâches planifiées",
+			},
+		},
 	},
 
 	cron: {
@@ -2728,24 +2751,11 @@ export default {
 						description: "Un nom pour identifier l'alerte.",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "Portée",
 						description:
 							"Ce que surveille cette alerte. Laissez-la sur toute l'équipe, limitez-la à un type de moniteur ou visez-en un seul.",
-						teamWide: "Toute l'équipe (tous les moniteurs)",
-						unknownMonitor: "Un moniteur qui n'existe plus",
-						types: {
-							http: "Moniteurs HTTP",
-							dns: "Moniteurs DNS",
-							tcp: "Moniteurs TCP",
-							cron: "Tâches planifiées",
-						},
-						allOfType: {
-							http: "Tous les moniteurs HTTP",
-							dns: "Tous les moniteurs DNS",
-							tcp: "Tous les moniteurs TCP",
-							cron: "Toutes les tâches planifiées",
-						},
 					},
 
 					channel: {
@@ -3755,8 +3765,8 @@ export default {
 					},
 
 					scope: {
-						label: "Portée",
-						allMonitors: "Tous les moniteurs",
+						description:
+							"Ce que couvre cette fenêtre. Laissez-la sur toute l'équipe, limitez-la à un type de moniteur ou visez-en un seul.",
 					},
 
 					startsAt: {

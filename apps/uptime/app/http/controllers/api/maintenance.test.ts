@@ -279,6 +279,81 @@ describe("POST /api/v1/maintenance", () => {
 		expect(await db.count(maintenanceWindows, { where: { team_id: team.id } })).toBe(0);
 	});
 
+	/** The only thing a bare `monitorId` has ever meant, so clients sending one are unaffected. */
+	test("reads a monitorId sent without a monitorType as an HTTP monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request("POST", routes.api.v1.maintenance.create.href(), {
+				key,
+				body: {
+					name: "Scoped window",
+					monitorId: monitor.id,
+					startsAt: "2026-08-01T00:00:00.000Z",
+					endsAt: "2026-08-01T02:00:00.000Z",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(201);
+		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("http");
+		expect(created?.monitor_id).toBe(monitor.id);
+	});
+
+	test("covers a whole monitor type when monitorType is sent alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+
+		let response = await dispatch(
+			db,
+			request("POST", routes.api.v1.maintenance.create.href(), {
+				key,
+				body: {
+					name: "Zone freeze",
+					monitorType: "dns",
+					startsAt: "2026-08-01T00:00:00.000Z",
+					endsAt: "2026-08-01T02:00:00.000Z",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(201);
+		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBeNull();
+	});
+
+	/** An HTTP monitor's id under a DNS type names nothing, so it is a 404 rather than stored. */
+	test("returns 404 when the monitorId doesn't exist in the monitorType's own table", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["maintenance:write"]);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			request("POST", routes.api.v1.maintenance.create.href(), {
+				key,
+				body: {
+					name: "Wrong table",
+					monitorType: "dns",
+					monitorId: monitor.id,
+					startsAt: "2026-08-01T00:00:00.000Z",
+					endsAt: "2026-08-01T02:00:00.000Z",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(404);
+		expect(await db.count(maintenanceWindows, { where: { team_id: team.id } })).toBe(0);
+	});
+
 	test("returns 401 with a missing Authorization header", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(

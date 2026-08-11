@@ -7,7 +7,7 @@ Maintenance windows mark planned downtime so teams can avoid false alarms and co
 ## What Users Configure
 
 - Name
-- Scope: a specific monitor or all monitors
+- Scope: every monitor, every monitor of one type, or a single monitor of any type
 - Start time
 - End time or duration
 - Whether alerts are suppressed during maintenance
@@ -18,7 +18,7 @@ Maintenance windows mark planned downtime so teams can avoid false alarms and co
 ## How It Works
 
 1. The user creates a maintenance window.
-2. The window applies to either one monitor or the whole team.
+2. The window applies to one monitor, one kind of monitor, or the whole team.
 3. While active, the maintenance window can suppress alerts.
 4. The window remains visible as planned maintenance rather than an outage event.
 5. An active maintenance window can be ended early.
@@ -31,9 +31,14 @@ Maintenance windows mark planned downtime so teams can avoid false alarms and co
 
 ## Scope Rules
 
-- A window may target a specific monitor.
-- A window may also apply to all monitors in a team.
-- Monitor-scoped maintenance should affect only the selected service.
+- A window may target a specific monitor, of any monitor type.
+- A window may target every monitor of one type, including ones created later.
+- A window may also apply to all monitors in a team, which is the default.
+- Monitor-scoped maintenance should affect only the selected service, and type-scoped
+  maintenance only that type — a window covering an HTTP monitor never quiets a DNS check
+  that happens to share its id.
+- A scope naming a monitor the team does not own is a validation failure. It must never be
+  read as "all monitors": widening a window silences everything the team runs.
 
 ## Scheduling and Recurrence
 
@@ -71,5 +76,5 @@ Recurring maintenance should still behave like an active window when its current
 Preserve these product rules:
 
 - Maintenance must support both operational suppression and customer communication.
-- It should be possible to target one service or all services.
+- It should be possible to target one service, one kind of service, or all services.
 - Recurring maintenance should be a first-class concept, not a manual duplication workaround.

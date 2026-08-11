@@ -608,7 +608,7 @@ export const alerts = table({
 		 *
 		 * `"ssl"` is deliberately not a value here even though `alert_events.monitor_type`
 		 * has one: a certificate event is dispatched against the HTTP monitor's own row, so
-		 * it is matched by whatever watches that monitor. See `~/app/lib/alert-scope`.
+		 * it is matched by whatever watches that monitor. See `~/app/lib/monitor-scope`.
 		 */
 		// Cast because a nullable enum column infers as `string | null`, which would leak an
 		// unchecked string into every scope comparison; the values are the ones listed here.
@@ -746,7 +746,21 @@ export const maintenanceWindows = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 		team_id: c.text(),
-		monitor_id: c.text().nullable(), // null means all monitors
+		/**
+		 * Which monitor table {@link maintenanceWindows.monitor_id} points into, and — on its
+		 * own — the whole of a type-wide window. `null` in both columns is team-wide: every
+		 * monitor of every type, which is what every window created before this column was.
+		 *
+		 * `"ssl"` is deliberately not a value here, as in {@link alerts}: a certificate check
+		 * runs against the HTTP monitor's own row, so it is covered by whatever covers that
+		 * monitor. See `~/app/lib/monitor-scope`.
+		 */
+		// Cast because a nullable enum column infers as `string | null`, which would leak an
+		// unchecked string into every scope comparison; the values are the ones listed here.
+		monitor_type: c.enum(["http", "dns", "tcp", "cron"]).nullable() as ColumnBuilder<
+			"http" | "dns" | "tcp" | "cron" | null
+		>,
+		monitor_id: c.text().nullable(), // null (with a null type) means all monitors
 		name: c.text(),
 		starts_at: c.integer(),
 		ends_at: c.integer(),

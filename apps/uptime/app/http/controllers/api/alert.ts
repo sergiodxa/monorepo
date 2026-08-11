@@ -22,14 +22,14 @@ import type { InsertAlert } from "~/database/schema";
 
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
-import { isResolvableScope } from "~/app/data/alert-scope-monitors";
+import { isResolvableScope } from "~/app/data/scope-monitors";
 import {
 	apiScopeFrom,
 	serializeAlertSafe,
 	serializeAlertStrategyOnly,
 } from "~/app/http/controllers/api/alerts";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { ALERT_SCOPE_TYPES } from "~/app/lib/alert-scope";
+import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -39,7 +39,7 @@ const UpdateAlertSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	notifyOnRecovery: s.optional(s.boolean()),
 	cooldownMinutes: s.optional(s.number().pipe(checks.min(0), checks.max(1440))),
-	monitorType: s.optional(s.enum_(ALERT_SCOPE_TYPES)),
+	monitorType: s.optional(s.enum_(MONITOR_SCOPE_TYPES)),
 	monitorId: s.optional(s.nullable(s.string())),
 });
 

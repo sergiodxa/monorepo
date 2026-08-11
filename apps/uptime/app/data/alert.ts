@@ -2,7 +2,7 @@
  * Data-access model for alerts. Exposes CRUD over the `alerts` table scoped to a team
  * and the query `app/services/alerts.ts` uses to resolve which alerts apply to a given
  * check result. Scoping is the `(monitor_type, monitor_id)` pair described in
- * `~/app/lib/alert-scope`, and it works the same way for every monitor type: an alert
+ * `~/app/lib/monitor-scope`, and it works the same way for every monitor type: an alert
  * watches everything, or one type, or one monitor of one type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,10 +13,10 @@ import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
 
-import type { AlertScopeType } from "~/app/lib/alert-scope";
+import type { MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { InsertAlert } from "~/database/schema";
 
-import { alertScopeMatches, storedAlertScope } from "~/app/lib/alert-scope";
+import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { alerts } from "~/database/schema";
 
 /** Per-team limit from `docs/alerts.md`. */
@@ -81,7 +81,7 @@ export default class Alert {
 	static async listForMonitor(
 		db: Database,
 		teamId: string,
-		monitorType: AlertScopeType,
+		monitorType: MonitorScopeType,
 		monitorId: string,
 	) {
 		let [monitorScoped, unscopedByMonitor] = await Promise.all([
@@ -90,7 +90,7 @@ export default class Alert {
 		]);
 
 		return [...monitorScoped, ...unscopedByMonitor].filter((alert) =>
-			alertScopeMatches(storedAlertScope(alert), monitorType, monitorId),
+			monitorScopeMatches(storedMonitorScope(alert), monitorType, monitorId),
 		);
 	}
 }

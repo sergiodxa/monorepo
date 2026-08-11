@@ -26,7 +26,13 @@ const datetimeLocal = s
 /** Field shape shared by the create and update maintenance-window forms. */
 const maintenanceWindowFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	monitor_id: f.field(s.optional(s.string())),
+	/**
+	 * The `(monitor_type, monitor_id)` pair encoded as one control value — see
+	 * `~/app/lib/monitor-scope`. Validated for shape here and resolved against the team's
+	 * monitors in the action, which is the only place that can tell whether the monitor
+	 * named still exists and still belongs to the team.
+	 */
+	scope: f.field(s.defaulted(s.string(), "")),
 	starts_at: f.field(datetimeLocal),
 	ends_at: f.field(datetimeLocal),
 	suppress_alerts: f.field(s.defaulted(coerce.boolean(), false)),

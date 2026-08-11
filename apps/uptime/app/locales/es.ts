@@ -1541,6 +1541,29 @@ export default {
 			select: "Seleccionar todo",
 			clear: "Borrar todo",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Alcance",
+			teamWide: "Todo el equipo (todos los monitores)",
+			unknownMonitor: "Un monitor que ya no existe",
+			types: {
+				http: "Monitores HTTP",
+				dns: "Monitores DNS",
+				tcp: "Monitores TCP",
+				cron: "Tareas programadas",
+			},
+			allOfType: {
+				http: "Todos los monitores HTTP",
+				dns: "Todos los monitores DNS",
+				tcp: "Todos los monitores TCP",
+				cron: "Todas las tareas programadas",
+			},
+		},
 	},
 
 	cron: {
@@ -2705,24 +2728,11 @@ export default {
 						description: "Un nombre para identificar la alerta.",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "Alcance",
 						description:
 							"Qué vigila esta alerta. Déjala para todo el equipo, limítala a un tipo de monitor o apúntala a uno solo.",
-						teamWide: "Todo el equipo (todos los monitores)",
-						unknownMonitor: "Un monitor que ya no existe",
-						types: {
-							http: "Monitores HTTP",
-							dns: "Monitores DNS",
-							tcp: "Monitores TCP",
-							cron: "Tareas programadas",
-						},
-						allOfType: {
-							http: "Todos los monitores HTTP",
-							dns: "Todos los monitores DNS",
-							tcp: "Todos los monitores TCP",
-							cron: "Todas las tareas programadas",
-						},
 					},
 
 					channel: {
@@ -3732,8 +3742,8 @@ export default {
 					},
 
 					scope: {
-						label: "Alcance",
-						allMonitors: "Todos los monitores",
+						description:
+							"Qué cubre esta ventana. Déjala para todo el equipo, limítala a un tipo de monitor o apúntala a uno solo.",
 					},
 
 					startsAt: {

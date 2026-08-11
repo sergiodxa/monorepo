@@ -122,7 +122,7 @@ describe("maintenanceWindowNew", () => {
 		let body = await response.text();
 		expect(body).toContain("Schedule Maintenance");
 		expect(body).toContain('name="name"');
-		expect(body).toContain('name="monitor_id"');
+		expect(body).toContain('name="scope"');
 		expect(body).toContain('name="starts_at"');
 		expect(body).toContain('name="ends_at"');
 		expect(body).toContain('name="suppress_alerts"');
@@ -135,7 +135,7 @@ describe("maintenanceWindowNew", () => {
 		);
 	});
 
-	test("lists the team's HTTP monitors in the scope dropdown", async () => {
+	test("lists the team's monitors in the scope dropdown, grouped by type", async () => {
 		let { db, team, membership } = await createFixture();
 		await db.create(
 			monitors,
@@ -154,6 +154,8 @@ describe("maintenanceWindowNew", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Homepage (HTTP)");
+		expect(body).toContain("HTTP Monitors");
+		expect(body).toContain("Every HTTP monitor");
+		expect(body).toContain("Homepage");
 	});
 });

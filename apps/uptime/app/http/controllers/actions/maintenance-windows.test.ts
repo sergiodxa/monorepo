@@ -22,7 +22,7 @@ import { formData } from "remix/form-data-middleware";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { maintenanceWindows, memberships, teams } from "~/database/schema";
+import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -118,7 +118,89 @@ describe("createMaintenanceWindow", () => {
 		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
 		expect(created).not.toBeNull();
 		expect(created?.name).toBe("Deploy window");
+		expect(created?.monitor_type).toBeNull();
 		expect(created?.monitor_id).toBeNull();
+	});
+
+	test("stores a type-wide scope for a monitor type the team owns none of yet", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.maintenanceWindow.create,
+			createMaintenanceWindow as RequestHandler<any>,
+			"POST",
+			{
+				name: "Zone freeze",
+				scope: "type:dns",
+				starts_at: "2026-08-01T00:00",
+				ends_at: "2026-08-01T02:00",
+			},
+		);
+
+		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBeNull();
+	});
+
+	test("stores a monitor scope against the type's own table", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ touch: true, returnRow: true },
+		);
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.maintenanceWindow.create,
+			createMaintenanceWindow as RequestHandler<any>,
+			"POST",
+			{
+				name: "Zone migration",
+				scope: `monitor:dns:${monitor.id}`,
+				starts_at: "2026-08-01T00:00",
+				ends_at: "2026-08-01T02:00",
+			},
+		);
+
+		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
+		expect(created?.monitor_type).toBe("dns");
+		expect(created?.monitor_id).toBe(monitor.id);
+	});
+
+	/**
+	 * Never falls back to team-wide: a scope nobody could have picked means the submission
+	 * is not the form we rendered, and quietly widening it would silence every monitor the
+	 * team has for the window's duration.
+	 */
+	test("rejects a scope naming a monitor the team doesn't own, without creating a row", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.maintenanceWindow.create,
+			createMaintenanceWindow as RequestHandler<any>,
+			"POST",
+			{
+				name: "Someone else's monitor",
+				scope: "monitor:dns:not-ours",
+				starts_at: "2026-08-01T00:00",
+				ends_at: "2026-08-01T02:00",
+			},
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
+		);
+		expect(await db.findMany(maintenanceWindows, { where: { team_id: team.id } })).toHaveLength(0);
 	});
 
 	test("redirects back to the form without creating a window when ends_at is before starts_at", async () => {

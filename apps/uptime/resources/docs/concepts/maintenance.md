@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 8
-lastUpdated: 2026-02-14
+lastUpdated: 2026-08-11
 ---
 
 By defining maintenance windows in advance, you prevent false alerts during planned work and keep your team focused on real incidents.
@@ -40,14 +40,17 @@ When creating a maintenance window, you can configure the following options.
 
 A descriptive name for the maintenance window, such as "Database migration" or "Weekly infrastructure updates". This name appears in alerts, on status pages, and in maintenance history.
 
-### Monitor Selection
+### Scope
 
-Choose which monitors this maintenance window applies to:
+Choose how wide the maintenance window reaches:
 
-- **All monitors** — The window applies to your entire infrastructure
-- **Specific monitors** — Select individual monitors that will be affected
+- **All monitors** — Every monitor you have, of every kind
+- **A kind of monitor** — Every HTTP, DNS, TCP or cron monitor, including ones you create later
+- **A single monitor** — One monitor, picked from the monitors of its kind
 
-Use specific monitors when only some services will be impacted. For example, if you're upgrading a database server, apply the window only to monitors that depend on that database.
+Narrow the scope when only some services are affected. If you're upgrading a database server, apply the window to the monitor that depends on that database.
+
+A whole kind is the right choice when the work happens below your services rather than inside one of them. Migrating a zone to a new nameserver puts every DNS monitor in doubt at once, and a DNS-wide window quiets all of them — including the records you add mid-migration — without touching the HTTP checks that should still page you if the site itself goes down.
 
 ### Start Time
 

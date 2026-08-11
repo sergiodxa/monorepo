@@ -15,11 +15,14 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
+import type { SelectMaintenanceWindow } from "~/database/schema";
+
 import MaintenanceWindow from "~/app/data/maintenance-window";
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -34,8 +37,30 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let windows = await MaintenanceWindow.listByTeam(db, ctx.team.id);
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
-		let monitorsById = new Map(monitors.map((monitor) => [monitor.id, monitor]));
+		/**
+		 * Names for the monitor-scoped rows, keyed across every type: a scope's id is unique
+		 * on its own, so one map answers every row without a per-type lookup that would only
+		 * restate what {@link storedMonitorScope} already resolved.
+		 */
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
+		let monitorNamesById = new Map(
+			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
+		);
+
+		/** How one window's coverage reads in the table: a monitor's name, a type, or everything. */
+		function scopeLabel(window: SelectMaintenanceWindow): string {
+			let scope = storedMonitorScope(window);
+			if (scope.monitorType === null) return ctx.i18next.t("page.maintenance.table.allMonitors");
+			if (scope.monitorId === null) {
+				return ctx.i18next.t(`components.monitorScope.allOfType.${scope.monitorType}`);
+			}
+
+			return (
+				monitorNamesById.get(scope.monitorId) ??
+				ctx.i18next.t("page.maintenance.table.unknownMonitor")
+			);
+		}
+
 		let now = Date.now();
 
 		let active = windows.filter((window) => MaintenanceWindow.isActiveAt(window, now));
@@ -141,12 +166,7 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																		</Badge>
 																	)}
 																</Table.Cell>
-																<Table.Cell>
-																	{window.monitor_id
-																		? (monitorsById.get(window.monitor_id)?.name ??
-																			ctx.i18next.t("page.maintenance.table.unknownMonitor"))
-																		: ctx.i18next.t("page.maintenance.table.allMonitors")}
-																</Table.Cell>
+																<Table.Cell>{scopeLabel(window)}</Table.Cell>
 																<Table.Cell>
 																	{new Date(window.starts_at).toLocaleString()}
 																</Table.Cell>

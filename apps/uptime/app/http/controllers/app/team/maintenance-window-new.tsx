@@ -8,9 +8,9 @@
  *
  * The field markup is written out here rather than reused from the shared
  * maintenance-window fields view: that view renders every field as one flat run, which
- * cannot be split across cards, and it is still rendered as-is by the edit page. Only
- * HTTP monitors can be individually targeted, matching alerts (see
- * `app/data/maintenance-window.ts`'s docblock).
+ * cannot be split across cards, and it is still rendered as-is by the edit page. The
+ * scope picker is the exception — it offers every monitor of every type, plus a per-type
+ * "all of them" choice, from the one control `MonitorScopeField` owns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,18 +18,19 @@
 
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
-import { Button, Input, Label, Select, Switch, TextField } from "@pkg/ui";
+import { Button, Input, Label, Switch, TextField } from "@pkg/ui";
 import { fieldStackLayout } from "@pkg/ui/styles";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-import Monitor from "~/app/data/monitor";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import Field from "~/resources/components/field";
+import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
 import FormPage from "~/resources/components/form-page";
+import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -43,7 +44,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await Monitor.listByTeam(db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 
 		// The field copy is shared with the edit page, so it is read from the
 		// maintenance-window form namespace rather than this page's own.
@@ -85,19 +86,12 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 									<SettingsSection.Body>
 										<TextField label={t("name.label")} type="text" name="name" required />
 
-										<Field label={t("scope.label")}>
-											{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
-											<Select name="monitor_id">
-												<Select.Option value="" selected>
-													{t("scope.allMonitors")}
-												</Select.Option>
-												{monitors.map((monitor) => (
-													<Select.Option key={monitor.id} value={monitor.id}>
-														{monitor.name} (HTTP)
-													</Select.Option>
-												))}
-											</Select>
-										</Field>
+										<MonitorScopeField
+											groups={scopeGroups}
+											selected={TEAM_WIDE_MONITOR_SCOPE}
+											description={t("scope.description")}
+											i18next={ctx.i18next}
+										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
 							</SettingsSection>

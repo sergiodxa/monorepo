@@ -3,9 +3,9 @@
  * "end early" lifecycle action, and `isSuppressing` — the single active/recurring-aware
  * check both the dashboard status badge and `app/services/alerts.ts` use, so a
  * recurring window's current occurrence is treated as active consistently everywhere
- * it's checked. Like `alerts`, `monitor_id` scoping only ever applies to HTTP monitors —
- * the table has no `monitor_type` column to disambiguate, so DNS/TCP/cron-job checks
- * only ever match team-wide windows (`monitor_id IS NULL`).
+ * it's checked. Scoping is the `(monitor_type, monitor_id)` pair described in
+ * `~/app/lib/monitor-scope`, the same one `alerts` carries, and it works the same way for
+ * every monitor type: a window covers everything, or one type, or one monitor of one type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,8 +15,10 @@ import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
 
+import type { MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
+import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { maintenanceWindows } from "~/database/schema";
 
 const WEEKDAYS = [
@@ -38,9 +40,6 @@ interface RecurringPattern {
 	startTime: string;
 	endTime: string;
 }
-
-/** Monitor type a window can be scoped to; only `"http"` supports monitor-specific scoping. */
-export type MaintenanceMonitorKind = "http" | "dns" | "tcp" | "cron";
 
 export default class MaintenanceWindow {
 	/** Creates a maintenance window for a team. */
@@ -103,38 +102,41 @@ export default class MaintenanceWindow {
 	}
 
 	/**
-	 * Whether an active, alert-suppressing maintenance window covers a monitor right
-	 * now. Only HTTP monitors can be individually targeted; other monitor types only
-	 * ever match team-wide windows.
+	 * Whether an active, alert-suppressing maintenance window covers a monitor right now:
+	 * one scoped to that exact monitor, one scoped to its whole type, or a team-wide one.
 	 *
-	 * The HTTP path is deliberately two statements instead of one
-	 * `monitor_id = ? OR monitor_id IS NULL` disjunction: SQLite cannot satisfy an `OR`
-	 * across two different conditions on the same column with one index scan, so the
-	 * single-statement form falls back to seeking `team_id` alone and reading every one
-	 * of that team's windows. Split, each half is a seek on
-	 * `maintenance_windows_team_monitor_idx (team_id, monitor_id)`, and both run
+	 * Deliberately two statements instead of one `monitor_id = ? OR monitor_id IS NULL`
+	 * disjunction: SQLite cannot satisfy an `OR` across two different conditions on the
+	 * same column with one index scan, so the single-statement form falls back to seeking
+	 * `team_id` alone and reading every one of that team's windows. Split, each half is a
+	 * seek on `maintenance_windows_team_monitor_idx (team_id, monitor_id)`, and both run
 	 * concurrently so the extra statement costs no latency.
+	 *
+	 * The type is then matched in memory rather than by a third statement or a wider
+	 * index, as `Alert.listForMonitor` does: both seeks together return a team's windows
+	 * for one monitor plus its team-wide ones, which is a set small enough that filtering
+	 * it costs nothing measurable.
 	 */
 	static async isSuppressing(
 		db: Database,
-		params: { teamId: string; monitorId: string; monitorType: MaintenanceMonitorKind },
+		params: { teamId: string; monitorId: string; monitorType: MonitorScopeType },
 	): Promise<boolean> {
-		let [monitorScoped, teamWide] = await Promise.all([
-			params.monitorType === "http"
-				? db.findMany(maintenanceWindows, {
-						where: { team_id: params.teamId, monitor_id: params.monitorId },
-					})
-				: Promise.resolve<SelectMaintenanceWindow[]>([]),
+		let [monitorScoped, unscopedByMonitor] = await Promise.all([
+			db.findMany(maintenanceWindows, {
+				where: { team_id: params.teamId, monitor_id: params.monitorId },
+			}),
 			db.findMany(maintenanceWindows, {
 				where: { team_id: params.teamId, monitor_id: null },
 			}),
 		]);
 
-		let candidates = [...monitorScoped, ...teamWide];
 		let now = Date.now();
 
-		return candidates.some(
-			(window) => window.suppress_alerts && MaintenanceWindow.isActiveAt(window, now),
+		return [...monitorScoped, ...unscopedByMonitor].some(
+			(window) =>
+				window.suppress_alerts &&
+				monitorScopeMatches(storedMonitorScope(window), params.monitorType, params.monitorId) &&
+				MaintenanceWindow.isActiveAt(window, now),
 		);
 	}
 }

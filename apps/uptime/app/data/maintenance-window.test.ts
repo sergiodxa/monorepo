@@ -172,8 +172,82 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		).toBe(false);
 	});
 
-	test("a monitor-scoped window doesn't suppress a non-HTTP monitor", async () => {
-		await createActiveWindow("team-1", "monitor-1");
+	/**
+	 * A row from before `monitor_type` existed, whose id could only ever have named an HTTP
+	 * monitor. Read as team-wide it would silence every check the team runs; read as HTTP it
+	 * keeps covering exactly what it covered, which is what this asserts from both sides.
+	 */
+	test("a window with a monitor id and no type reads as HTTP-scoped, never as team-wide", async () => {
+		await createActiveWindow("team-1", "monitor-1", { monitor_type: null });
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "monitor-1",
+				monitorType: "http",
+			}),
+		).toBe(true);
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "monitor-1",
+				monitorType: "dns",
+			}),
+		).toBe(false);
+	});
+
+	test("a window scoped to a whole type suppresses every monitor of it, and nothing else", async () => {
+		await createActiveWindow("team-1", null, { monitor_type: "dns" });
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "dns-1",
+				monitorType: "dns",
+			}),
+		).toBe(true);
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "dns-2",
+				monitorType: "dns",
+			}),
+		).toBe(true);
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "http-1",
+				monitorType: "http",
+			}),
+		).toBe(false);
+	});
+
+	test("a window scoped to one non-HTTP monitor suppresses that monitor alone", async () => {
+		await createActiveWindow("team-1", "dns-1", { monitor_type: "dns" });
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "dns-1",
+				monitorType: "dns",
+			}),
+		).toBe(true);
+
+		expect(
+			await MaintenanceWindow.isSuppressing(db, {
+				teamId: "team-1",
+				monitorId: "dns-2",
+				monitorType: "dns",
+			}),
+		).toBe(false);
+	});
+
+	/** The gap this scoping closed: an HTTP window used to be the only monitor-scoped kind. */
+	test("an HTTP-scoped window doesn't suppress a DNS check that shares its id", async () => {
+		await createActiveWindow("team-1", "monitor-1", { monitor_type: "http" });
 
 		expect(
 			await MaintenanceWindow.isSuppressing(db, {

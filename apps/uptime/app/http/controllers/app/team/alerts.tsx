@@ -19,11 +19,11 @@ import { createAction } from "remix/fetch-router";
 import type { SelectAlert } from "~/database/schema";
 
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import { listScopeMonitors } from "~/app/data/alert-scope-monitors";
+import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { storedAlertScope } from "~/app/lib/alert-scope";
+import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -42,7 +42,7 @@ export default createAction(routes.app.team.alerts.index, {
 		/**
 		 * Names for the monitor-scoped rows, keyed across every type: a scope's id is unique
 		 * on its own, and pairing it with its type here would only make the lookup below
-		 * restate what {@link storedAlertScope} already resolved.
+		 * restate what {@link storedMonitorScope} already resolved.
 		 */
 		let scopeGroups = await listScopeMonitors(db, ctx.team.id);
 		let monitorNamesById = new Map(
@@ -51,7 +51,7 @@ export default createAction(routes.app.team.alerts.index, {
 
 		/** How one alert's scope reads in the table: a monitor's name, a type, or team-wide. */
 		function scopeLabel(alert: SelectAlert): string {
-			let scope = storedAlertScope(alert);
+			let scope = storedMonitorScope(alert);
 			if (scope.monitorType === null) return ctx.i18next.t("page.alerts.table.scope.teamWide");
 			if (scope.monitorId === null) {
 				return ctx.i18next.t(`page.alerts.table.scope.allOfType.${scope.monitorType}`);

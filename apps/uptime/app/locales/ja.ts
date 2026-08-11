@@ -1501,6 +1501,29 @@ export default {
 			select: "すべて選択",
 			clear: "選択を解除",
 		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "対象範囲",
+			teamWide: "チーム全体（すべてのモニター）",
+			unknownMonitor: "すでに存在しないモニター",
+			types: {
+				http: "HTTP モニター",
+				dns: "DNS モニター",
+				tcp: "TCP モニター",
+				cron: "Cron ジョブ",
+			},
+			allOfType: {
+				http: "すべての HTTP モニター",
+				dns: "すべての DNS モニター",
+				tcp: "すべての TCP モニター",
+				cron: "すべての Cron ジョブ",
+			},
+		},
 	},
 
 	cron: {
@@ -2647,24 +2670,11 @@ export default {
 						description: "アラートを識別するための名前。",
 					},
 
+					// The picker's own copy is shared with the maintenance-window form; only this
+					// sentence, which is about alerts, stays here. See `components.monitorScope`.
 					scope: {
-						label: "対象範囲",
 						description:
 							"このアラートが監視する対象です。チーム全体のままにするか、モニターの種類で絞り込むか、特定の 1 つだけを指定できます。",
-						teamWide: "チーム全体（すべてのモニター）",
-						unknownMonitor: "すでに存在しないモニター",
-						types: {
-							http: "HTTP モニター",
-							dns: "DNS モニター",
-							tcp: "TCP モニター",
-							cron: "Cron ジョブ",
-						},
-						allOfType: {
-							http: "すべての HTTP モニター",
-							dns: "すべての DNS モニター",
-							tcp: "すべての TCP モニター",
-							cron: "すべての Cron ジョブ",
-						},
 					},
 
 					channel: {
@@ -3660,8 +3670,8 @@ export default {
 					},
 
 					scope: {
-						label: "範囲",
-						allMonitors: "すべてのモニター",
+						description:
+							"このメンテナンスウィンドウが対象とする範囲です。チーム全体のままにするか、モニターの種類で絞り込むか、特定の 1 つだけを指定できます。",
 					},
 
 					startsAt: {

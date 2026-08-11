@@ -26,7 +26,7 @@ const alertFields = {
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	/**
 	 * The `(monitor_type, monitor_id)` pair encoded as one control value — see
-	 * `~/app/lib/alert-scope`. Validated for shape here and resolved against the team's
+	 * `~/app/lib/monitor-scope`. Validated for shape here and resolved against the team's
 	 * monitors in the action, which is the only place that can tell whether the monitor
 	 * named still exists and still belongs to the team.
 	 */
