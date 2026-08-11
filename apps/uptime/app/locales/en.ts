@@ -1343,7 +1343,6 @@ export default {
 				responseStatus: "Response status",
 				responseTime: "Response time",
 				domain: "Domain",
-				resolvedValue: "Resolved value",
 				endpoint: "Endpoint",
 				schedule: "Schedule",
 				lastPing: "Last ping",
@@ -1358,7 +1357,6 @@ export default {
 				monitor: "{{name}} ({{type}})",
 				responseStatus: "{{actual}} (expected {{expected}})",
 				milliseconds: "{{value}}ms",
-				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
 			},
@@ -1879,6 +1877,36 @@ export default {
 			success: "{{name}} DNS monitor was deleted.",
 		},
 
+		checkDnsMonitor: {
+			success: { checked: 'Checked "{{name}}".' },
+		},
+
+		reviewDnsMonitor: {
+			errors: { generic: "We could not save which records to watch. Please try again." },
+			success: {
+				saved_one: "Watching {{count}} record.",
+				saved_other: "Watching {{count}} records.",
+			},
+		},
+
+		toggleDnsMonitorRecord: {
+			errors: { generic: "We could not change that record. Please try again." },
+			success: { enabled: "Now watching {{name}}.", disabled: "No longer watching {{name}}." },
+		},
+
+		importDnsMonitorZoneFile: {
+			errors: {
+				generic: "We could not read that zone file. Please try again.",
+				tooLarge: "A zone file must be {{limit}} or smaller.",
+				tooManyNames:
+					"That zone has more than {{limit}} names, which is more than one monitor can sweep.",
+			},
+			success: {
+				imported_one: "Imported {{count}} name from your zone file.",
+				imported_other: "Imported {{count}} names from your zone file.",
+			},
+		},
+
 		createTcpMonitor: {
 			errors: {
 				generic: "Oops! Something went wrong while creating the TCP monitor.",
@@ -2034,6 +2062,8 @@ export default {
 
 				dnsMonitors: {
 					label: "DNS Monitors",
+					/** One monitor is one domain, so this count is smaller than the work behind it. */
+					hint: "One monitor covers a whole domain and every record tracked on it.",
 					breakdown: {
 						ok: "{{ok}} ok",
 						changed: "{{changed}} changed",
@@ -3110,12 +3140,14 @@ export default {
 				columns: {
 					name: "Name",
 					domain: "Domain",
-					recordType: "Type",
+					records: "Records",
 					status: "Status",
 					lastChecked: "Last Checked",
 					actions: "Actions",
 				},
 
+				records: "{{enabled}} of {{total}} watched",
+				noRecords: "None yet",
 				disabled: "Disabled",
 				neverChecked: "Never",
 				notChecked: "Not checked",
@@ -3146,8 +3178,12 @@ export default {
 					},
 					checks: {
 						title: "Check settings",
+						description: "How often every tracked name is resolved.",
+					},
+					zoneFile: {
+						title: "Zone file",
 						description:
-							"Which record is resolved, what it should return, and how often the check runs.",
+							"Paste your zone to monitor subdomains. Without it we can only see your domain's apex.",
 					},
 				},
 
@@ -3164,21 +3200,16 @@ export default {
 						description: "The domain to monitor DNS records for.",
 					},
 
-					recordType: {
-						label: "Record Type",
-						description: "The type of DNS record to check.",
-					},
-
-					expectedValue: {
-						label: "Expected Value",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Zone File",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Optional. Alert if any of these values is missing from the resolved records. Separate multiple values with commas. Extra records are allowed. Leave empty to track any change.",
+							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
 					},
 
 					interval: {
 						label: "Check Interval",
-						description: "How often to check the DNS record.",
+						description: "How often every tracked name is resolved.",
 						options: {
 							"5m": "5 minutes",
 							"15m": "15 minutes",
@@ -3192,9 +3223,13 @@ export default {
 
 					isEnabled: {
 						label: "Enable monitoring",
-						description: "Start monitoring this DNS record immediately.",
+						description: "Start monitoring this domain immediately.",
 					},
 				},
+
+				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				apexOnlyNotice:
+					"DNS does not let anyone list a zone's records. Without a zone file we can only watch your domain's apex — never a subdomain.",
 
 				cta: "Create DNS Monitor",
 			},
@@ -3226,21 +3261,16 @@ export default {
 						description: "The domain to monitor DNS records for.",
 					},
 
-					recordType: {
-						label: "Record Type",
-						description: "The type of DNS record to check.",
-					},
-
-					expectedValue: {
-						label: "Expected Value",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Zone File",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Optional. Alert if any of these values is missing from the resolved records. Separate multiple values with commas. Extra records are allowed. Leave empty to track any change.",
+							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
 					},
 
 					interval: {
 						label: "Check Interval",
-						description: "How often to check the DNS record.",
+						description: "How often every tracked name is resolved.",
 						options: {
 							"5m": "5 minutes",
 							"15m": "15 minutes",
@@ -3254,7 +3284,7 @@ export default {
 
 					isEnabled: {
 						label: "Enable monitoring",
-						description: "Whether to actively monitor this DNS record.",
+						description: "Whether to actively monitor this domain.",
 					},
 				},
 
@@ -3262,10 +3292,19 @@ export default {
 				cta: "Save Changes",
 			},
 
+			zoneFileImport: {
+				title: "Zone file",
+				description:
+					"Re-paste your zone to pick up names added since the last import. The text is read once and never stored, which is why refreshing it means asking for the file again.",
+				lastImported: "Last imported {{date}}.",
+				neverImported: "No zone file has been imported. This monitor covers the apex only.",
+				cta: "Import Zone File",
+			},
+
 			dangerZone: {
 				title: "Danger zone",
 				deleteMonitor: "Delete monitor",
-				deleteDescription: "This also deletes its check-result history. This can't be undone.",
+				deleteDescription: "This also deletes its records and check history. This can't be undone.",
 				description: "Actions here cannot be undone.",
 				warning: "Deleting this monitor removes its DNS checks, history and alerts for good.",
 			},
@@ -3287,10 +3326,11 @@ export default {
 
 			info: {
 				domain: "Domain",
-				recordType: "Record Type",
 				status: "Status",
-				expectedValue: "Expected Value",
-				currentValue: "Current Value",
+				recordsWatched: "Records Watched",
+				recordsWatchedValue: "{{enabled}} of {{total}}",
+				zoneFileImported: "Zone File Imported",
+				zoneFileNeverImported: "Never — apex only",
 			},
 
 			stats: {
@@ -3318,11 +3358,103 @@ export default {
 					columns: {
 						checkedAt: "Checked At",
 						status: "Status",
-						value: "Value",
-						responseTime: "Response Time",
+						findings: "Findings",
+						responseTime: "Slowest Query",
 					},
 				},
+
+				findings: "{{changed}} changed · {{missing}} missing · {{new}} new",
+				noFindings: "No changes",
+				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				queriesFailed_one: "{{count}} query did not answer",
+				queriesFailed_other: "{{count}} queries did not answer",
 			},
+
+			records: {
+				title: "Tracked Records",
+				description:
+					"Every record we have ever seen for this domain. Unwatched records are kept so they are never rediscovered as new.",
+				empty: "No records are tracked yet.",
+
+				table: {
+					columns: {
+						name: "Name",
+						type: "Type",
+						value: "Value",
+						source: "Source",
+						state: "State",
+						watched: "Watched",
+						actions: "Actions",
+					},
+				},
+
+				source: {
+					resolver: "Resolved",
+					zone_file: "Zone file",
+				},
+
+				state: {
+					ok: "OK",
+					changed: "Changed",
+					missing: "Missing",
+					new: "New",
+					error: "Error",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					enable: "Watch",
+					disable: "Stop watching",
+				},
+			},
+		},
+
+		/**
+		 * The review step between creating a domain monitor and monitoring anything with it.
+		 * Its own page, so a reload lands back on the decision rather than on a detail page
+		 * that implies it was already made.
+		 */
+		dnsMonitorReview: {
+			header: {
+				title: 'Review records for "{{name}}"',
+				description:
+					"Every record we found is watched by default. Uncheck anything you do not want to be alerted about — it is kept either way, so nothing you decline comes back as a new record later.",
+			},
+
+			/** A line the parser could not use is reported, never silently dropped. */
+			unparsed: {
+				title_one: "{{count}} line was not imported",
+				title_other: "{{count}} lines were not imported",
+				description:
+					"These lines are not part of the subset we read. Anything they declare is not monitored.",
+				line: "Line {{line}}: {{reason}}",
+			},
+
+			groups: {
+				resolving: {
+					title: "Resolving now",
+					description: "Found by resolving every supported record type at every known name.",
+				},
+				declared: {
+					title: "Declared but not resolving",
+					description:
+						"In your zone file, but nothing answers for them today. Left unwatched unless you say otherwise — a pasted zone is a snapshot, and it only gets older.",
+				},
+			},
+
+			table: {
+				columns: {
+					watched: "Watch",
+					name: "Name",
+					type: "Type",
+					value: "Value",
+				},
+			},
+
+			selectAll: "Watch every record",
+			empty: "Nothing was found for this domain.",
+			cancel: "Cancel",
+			cta: "Save Records",
 		},
 
 		maintenance: {

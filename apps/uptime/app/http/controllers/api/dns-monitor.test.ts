@@ -55,8 +55,6 @@ async function createDnsMonitorRow(
 	return await DnsMonitor.create(db, teamId, {
 		name: "Apex A record",
 		domain: "example.com",
-		record_type: "A",
-		expected_value: "1.2.3.4",
 		interval_seconds: 3600,
 		is_enabled: true,
 		...overrides,
@@ -181,17 +179,15 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as {
-			data: { dnsMonitor: { name: string; expectedValue: string } };
+			data: { dnsMonitor: { name: string } };
 		};
 		expect(body.data.dnsMonitor.name).toBe("New name");
-		expect(body.data.dnsMonitor.expectedValue).toBe("9.9.9.9");
 
 		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
 		expect(updated?.name).toBe("New name");
-		expect(updated?.expected_value).toBe("9.9.9.9");
 	});
 
-	test("returns 400 for a validation failure (invalid record type)", async () => {
+	test("returns 400 for a validation failure (out-of-range interval)", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
@@ -199,7 +195,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 
 		let response = await dispatch(
 			db,
-			updateRequest(monitor.id, { recordType: "PTR" }, { Authorization: `Bearer ${key}` }),
+			updateRequest(monitor.id, { intervalSeconds: 5 }, { Authorization: `Bearer ${key}` }),
 		);
 
 		expect(response.status).toBe(400);
@@ -207,7 +203,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		expect(body.error.code).toBe("VALIDATION_ERROR");
 
 		let unchanged = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
-		expect(unchanged?.record_type).toBe("A");
+		expect(unchanged?.interval_seconds).toBe(3600);
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -328,11 +324,12 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as {
-			data: { results: { status: string; resolvedValue: string }[] };
+			data: { results: { status: string; responseTimeMs: number; queriesFailed: number }[] };
 		};
 		expect(body.data.results).toHaveLength(1);
 		expect(body.data.results[0]?.status).toBe("ok");
-		expect(body.data.results[0]?.resolvedValue).toBe("1.2.3.4");
+		expect(body.data.results[0]?.responseTimeMs).toBe(42);
+		expect(body.data.results[0]?.queriesFailed).toBe(0);
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {

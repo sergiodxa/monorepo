@@ -1311,7 +1311,6 @@ export default {
 				responseStatus: "Antwortstatus",
 				responseTime: "Antwortzeit",
 				domain: "Domain",
-				resolvedValue: "Aufgelöster Wert",
 				endpoint: "Endpunkt",
 				schedule: "Zeitplan",
 				lastPing: "Letzter Ping",
@@ -1326,7 +1325,6 @@ export default {
 				monitor: "{{name}} ({{type}})",
 				responseStatus: "{{actual}} (erwartet {{expected}})",
 				milliseconds: "{{value}}ms",
-				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
 			},
@@ -1853,6 +1851,44 @@ export default {
 			success: "DNS-Monitor {{name}} wurde gelöscht.",
 		},
 
+		checkDnsMonitor: {
+			success: { checked: "„{{name}}“ wurde geprüft." },
+		},
+
+		reviewDnsMonitor: {
+			errors: {
+				generic:
+					"Wir konnten nicht speichern, welche Einträge überwacht werden sollen. Bitte versuchen Sie es erneut.",
+			},
+			success: {
+				saved_one: "{{count}} Eintrag wird überwacht.",
+				saved_other: "{{count}} Einträge werden überwacht.",
+			},
+		},
+
+		toggleDnsMonitorRecord: {
+			errors: {
+				generic: "Wir konnten diesen Eintrag nicht ändern. Bitte versuchen Sie es erneut.",
+			},
+			success: {
+				enabled: "{{name}} wird jetzt überwacht.",
+				disabled: "{{name}} wird nicht mehr überwacht.",
+			},
+		},
+
+		importDnsMonitorZoneFile: {
+			errors: {
+				generic: "Wir konnten diese Zonendatei nicht lesen. Bitte versuchen Sie es erneut.",
+				tooLarge: "Eine Zonendatei darf höchstens {{limit}} groß sein.",
+				tooManyNames:
+					"Diese Zone hat mehr als {{limit}} Namen – mehr, als ein einzelner Monitor abdecken kann.",
+			},
+			success: {
+				imported_one: "{{count}} Name aus Ihrer Zonendatei importiert.",
+				imported_other: "{{count}} Namen aus Ihrer Zonendatei importiert.",
+			},
+		},
+
 		createTcpMonitor: {
 			errors: {
 				generic: "Hoppla! Beim Erstellen des TCP-Monitors ist etwas schiefgelaufen.",
@@ -2007,6 +2043,8 @@ export default {
 				},
 				dnsMonitors: {
 					label: "DNS-Monitore",
+					/** One monitor is one domain, so this count is smaller than the work behind it. */
+					hint: "Ein Monitor deckt eine gesamte Domain und alle darauf erfassten Einträge ab.",
 					breakdown: {
 						ok: "{{ok}} ok",
 						changed: "{{changed}} geändert",
@@ -3103,12 +3141,14 @@ export default {
 				columns: {
 					name: "Name",
 					domain: "Domain",
-					recordType: "Typ",
+					records: "Einträge",
 					status: "Status",
 					lastChecked: "Zuletzt geprüft",
 					actions: "Aktionen",
 				},
 
+				records: "{{enabled}} von {{total}} überwacht",
+				noRecords: "Noch keine",
 				disabled: "Deaktiviert",
 				neverChecked: "Nie",
 				notChecked: "Nicht geprüft",
@@ -3139,8 +3179,12 @@ export default {
 					},
 					checks: {
 						title: "Prüfeinstellungen",
+						description: "Wie oft jeder erfasste Name aufgelöst wird.",
+					},
+					zoneFile: {
+						title: "Zonendatei",
 						description:
-							"Welcher Eintrag aufgelöst wird, was er zurückgeben soll und wie oft die Prüfung läuft.",
+							"Fügen Sie Ihre Zone ein, um Subdomains zu überwachen. Ohne sie sehen wir nur den Apex Ihrer Domain.",
 					},
 				},
 
@@ -3157,21 +3201,16 @@ export default {
 						description: "Die Domain, deren DNS-Einträge überwacht werden sollen.",
 					},
 
-					recordType: {
-						label: "Eintragstyp",
-						description: "Der Typ des zu prüfenden DNS-Eintrags.",
-					},
-
-					expectedValue: {
-						label: "Erwarteter Wert",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Zonendatei",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Optional. Meldet, wenn einer dieser Werte in den aufgelösten Einträgen fehlt. Mehrere Werte mit Kommas trennen. Zusätzliche Einträge sind erlaubt. Leer lassen, um jede Änderung zu verfolgen.",
+							"Optional. Fügen Sie eine BIND-Zonendatei aus Ihrem DNS-Anbieter ein. Sie wird einmal gelesen und nie gespeichert, und sie ist der einzige Weg, auf dem wir die Namen in Ihrer Zone erfahren können.",
 					},
 
 					interval: {
 						label: "Prüfintervall",
-						description: "Wie oft der DNS-Eintrag geprüft werden soll.",
+						description: "Wie oft jeder erfasste Name aufgelöst wird.",
 						options: {
 							"5m": "5 Minuten",
 							"15m": "15 Minuten",
@@ -3185,9 +3224,13 @@ export default {
 
 					isEnabled: {
 						label: "Überwachung aktivieren",
-						description: "Starten Sie die Überwachung dieses DNS-Eintrags sofort.",
+						description: "Starten Sie die Überwachung dieser Domain sofort.",
 					},
 				},
+
+				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				apexOnlyNotice:
+					"DNS erlaubt es niemandem, die Einträge einer Zone aufzulisten. Ohne Zonendatei können wir nur den Apex Ihrer Domain überwachen – niemals eine Subdomain.",
 
 				cta: "DNS-Monitor erstellen",
 			},
@@ -3219,21 +3262,16 @@ export default {
 						description: "Die Domain, deren DNS-Einträge überwacht werden sollen.",
 					},
 
-					recordType: {
-						label: "Eintragstyp",
-						description: "Der Typ des zu prüfenden DNS-Eintrags.",
-					},
-
-					expectedValue: {
-						label: "Erwarteter Wert",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Zonendatei",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Optional. Meldet, wenn einer dieser Werte in den aufgelösten Einträgen fehlt. Mehrere Werte mit Kommas trennen. Zusätzliche Einträge sind erlaubt. Leer lassen, um jede Änderung zu verfolgen.",
+							"Optional. Fügen Sie eine BIND-Zonendatei aus Ihrem DNS-Anbieter ein. Sie wird einmal gelesen und nie gespeichert, und sie ist der einzige Weg, auf dem wir die Namen in Ihrer Zone erfahren können.",
 					},
 
 					interval: {
 						label: "Prüfintervall",
-						description: "Wie oft der DNS-Eintrag geprüft werden soll.",
+						description: "Wie oft jeder erfasste Name aufgelöst wird.",
 						options: {
 							"5m": "5 Minuten",
 							"15m": "15 Minuten",
@@ -3247,7 +3285,7 @@ export default {
 
 					isEnabled: {
 						label: "Überwachung aktivieren",
-						description: "Ob dieser DNS-Eintrag aktiv überwacht werden soll.",
+						description: "Ob diese Domain aktiv überwacht werden soll.",
 					},
 				},
 
@@ -3255,11 +3293,21 @@ export default {
 				cta: "Änderungen speichern",
 			},
 
+			zoneFileImport: {
+				title: "Zonendatei",
+				description:
+					"Fügen Sie Ihre Zone erneut ein, um seit dem letzten Import hinzugekommene Namen zu erfassen. Der Text wird einmal gelesen und nie gespeichert – deshalb müssen wir für eine Aktualisierung erneut nach der Datei fragen.",
+				lastImported: "Zuletzt importiert am {{date}}.",
+				neverImported:
+					"Es wurde noch keine Zonendatei importiert. Dieser Monitor deckt nur den Apex ab.",
+				cta: "Zonendatei importieren",
+			},
+
 			dangerZone: {
 				title: "Gefahrenzone",
 				deleteMonitor: "Monitor löschen",
 				deleteDescription:
-					"Dies löscht auch den zugehörigen Prüfergebnisverlauf. Dies kann nicht rückgängig gemacht werden.",
+					"Dies löscht auch seine Einträge und seinen Prüfverlauf. Dies kann nicht rückgängig gemacht werden.",
 				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
 				warning:
 					"Wenn Sie diesen Monitor löschen, werden seine DNS-Prüfungen, sein Verlauf und seine Benachrichtigungen endgültig entfernt.",
@@ -3282,10 +3330,11 @@ export default {
 
 			info: {
 				domain: "Domain",
-				recordType: "Eintragstyp",
 				status: "Status",
-				expectedValue: "Erwarteter Wert",
-				currentValue: "Aktueller Wert",
+				recordsWatched: "Überwachte Einträge",
+				recordsWatchedValue: "{{enabled}} von {{total}}",
+				zoneFileImported: "Zonendatei importiert",
+				zoneFileNeverImported: "Nie – nur Apex",
 			},
 
 			stats: {
@@ -3313,11 +3362,104 @@ export default {
 					columns: {
 						checkedAt: "Geprüft am",
 						status: "Status",
-						value: "Wert",
-						responseTime: "Antwortzeit",
+						findings: "Befunde",
+						responseTime: "Langsamste Abfrage",
 					},
 				},
+
+				findings: "{{changed}} geändert · {{missing}} fehlen · {{new}} neu",
+				noFindings: "Keine Änderungen",
+				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				queriesFailed_one: "{{count}} Abfrage blieb ohne Antwort",
+				queriesFailed_other: "{{count}} Abfragen blieben ohne Antwort",
 			},
+
+			records: {
+				title: "Erfasste Einträge",
+				description:
+					"Alle Einträge, die wir jemals für diese Domain gesehen haben. Nicht überwachte Einträge bleiben erhalten, damit sie nie erneut als neu entdeckt werden.",
+				empty: "Es werden noch keine Einträge erfasst.",
+
+				table: {
+					columns: {
+						name: "Name",
+						type: "Typ",
+						value: "Wert",
+						source: "Quelle",
+						state: "Zustand",
+						watched: "Überwacht",
+						actions: "Aktionen",
+					},
+				},
+
+				source: {
+					resolver: "Aufgelöst",
+					zone_file: "Zonendatei",
+				},
+
+				state: {
+					ok: "OK",
+					changed: "Geändert",
+					missing: "Fehlt",
+					new: "Neu",
+					error: "Fehler",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					enable: "Überwachen",
+					disable: "Nicht mehr überwachen",
+				},
+			},
+		},
+
+		/**
+		 * The review step between creating a domain monitor and monitoring anything with it.
+		 * Its own page, so a reload lands back on the decision rather than on a detail page
+		 * that implies it was already made.
+		 */
+		dnsMonitorReview: {
+			header: {
+				title: "Einträge für „{{name}}“ prüfen",
+				description:
+					"Alle gefundenen Einträge werden standardmäßig überwacht. Entfernen Sie den Haken bei allem, worüber Sie nicht benachrichtigt werden möchten – der Eintrag bleibt so oder so erhalten, damit nichts, was Sie ablehnen, später erneut als neuer Eintrag auftaucht.",
+			},
+
+			/** A line the parser could not use is reported, never silently dropped. */
+			unparsed: {
+				title_one: "{{count}} Zeile wurde nicht importiert",
+				title_other: "{{count}} Zeilen wurden nicht importiert",
+				description:
+					"Diese Zeilen gehören nicht zu dem Teil, den wir lesen. Was darin deklariert wird, wird nicht überwacht.",
+				line: "Zeile {{line}}: {{reason}}",
+			},
+
+			groups: {
+				resolving: {
+					title: "Löst derzeit auf",
+					description:
+						"Gefunden, indem jeder unterstützte Eintragstyp für jeden bekannten Namen aufgelöst wurde.",
+				},
+				declared: {
+					title: "Deklariert, löst aber nicht auf",
+					description:
+						"In Ihrer Zonendatei enthalten, aber heute antwortet nichts darauf. Bleibt unüberwacht, sofern Sie nichts anderes bestimmen – eine eingefügte Zone ist eine Momentaufnahme, und sie wird nur älter.",
+				},
+			},
+
+			table: {
+				columns: {
+					watched: "Überwachen",
+					name: "Name",
+					type: "Typ",
+					value: "Wert",
+				},
+			},
+
+			selectAll: "Alle Einträge überwachen",
+			empty: "Für diese Domain wurde nichts gefunden.",
+			cancel: "Abbrechen",
+			cta: "Einträge speichern",
 		},
 
 		maintenance: {

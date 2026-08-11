@@ -100,7 +100,7 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 											{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.status")}
 										</Table.Column>
 										<Table.Column>
-											{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.value")}
+											{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.findings")}
 										</Table.Column>
 										<Table.Column>
 											{ctx.i18next.t("page.dnsMonitorDetail.results.table.columns.responseTime")}
@@ -117,7 +117,18 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 												</Badge>
 											</Table.Cell>
 											<Table.Cell>
-												<code>{result.resolved_value ?? result.error_message ?? "—"}</code>
+												{result.error_message ? (
+													<code>{result.error_message}</code>
+												) : result.records_changed + result.records_missing + result.records_new ===
+												  0 ? (
+													ctx.i18next.t("page.dnsMonitorDetail.results.noFindings")
+												) : (
+													ctx.i18next.t("page.dnsMonitorDetail.results.findings", {
+														changed: result.records_changed,
+														missing: result.records_missing,
+														new: result.records_new,
+													})
+												)}
 											</Table.Cell>
 											<Table.Cell>
 												{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}

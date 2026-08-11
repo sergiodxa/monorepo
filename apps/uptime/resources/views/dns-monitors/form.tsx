@@ -8,6 +8,10 @@
  * one; "Enabled" goes through `@pkg/ui`'s `Switch` directly, with an explicit
  * `value="true"` since a native checkbox otherwise submits `"on"`.
  *
+ * A monitor covers a whole domain, so there is no record type to pick and no expected value
+ * to transcribe: the expectation is imported from the zone and reviewed. The zone-file
+ * textarea that replaces them lands with the create and review screens (ADR-026 phase 2.5).
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -20,8 +24,6 @@ import { Select, Switch, TextField } from "@pkg/ui";
 import type { SelectDnsMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-
-const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 
 const INTERVAL_OPTIONS = [
 	{ value: 300, key: "5m" },
@@ -44,13 +46,12 @@ namespace DnsMonitorFormFields {
 	}
 }
 
-/** Renders the name/domain/record-type/expected-value/interval/enabled fields, pre-filled from `monitor` when editing. Leaving "expected value" blank alerts on any change instead of a mismatch. */
+/** Renders the name/domain/interval/enabled fields, pre-filled from `monitor` when editing. */
 export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields.Props>) {
 	return () => {
 		let { monitor, i18next, page } = handle.props;
 		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
-		let recordType = monitor?.record_type ?? "A";
 		let intervalSeconds = monitor?.interval_seconds ?? 3600;
 
 		return (
@@ -73,34 +74,13 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					placeholder={t("domain.placeholder")}
 				/>
 
-				<Field label={t("recordType.label")} description={t("recordType.description")}>
-					{/*
-					 * The saved record type is marked `selected` on its own `<option>`: `<select>`
-					 * has no `defaultValue` attribute, so spelling it on the host renders as inert
-					 * markup and leaves "A" — the first option — showing, which on the edit page
-					 * would silently rewrite an MX or TXT monitor into an A one on the next save.
-					 */}
-					<Select name="record_type">
-						{RECORD_TYPES.map((type) => (
-							<Select.Option key={type} value={type} selected={type === recordType}>
-								{type}
-							</Select.Option>
-						))}
-					</Select>
-				</Field>
-
-				<TextField
-					label={t("expectedValue.label")}
-					description={t("expectedValue.description")}
-					name="expected_value"
-					defaultValue={monitor?.expected_value ?? ""}
-					placeholder={t("expectedValue.placeholder")}
-				/>
-
 				<Field label={t("interval.label")} description={t("interval.description")}>
 					{/*
-					 * Same as the record type above: `selected` goes on the option, never a
-					 * `defaultValue` on the host. The comparison is deliberately between numbers
+					 * The saved interval is marked `selected` on its own `<option>`: `<select>` has
+					 * no `defaultValue` attribute, so spelling it on the host renders as inert
+					 * markup and leaves the first option showing, which on the edit page would
+					 * silently rewrite a daily monitor into a 5-minute one on the next save. The
+					 * comparison is deliberately between numbers
 					 * — the saved column and the option value are both numeric, and only the
 					 * rendered attribute is a string — so an interval is never matched by
 					 * coercion.

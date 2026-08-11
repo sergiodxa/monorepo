@@ -222,18 +222,8 @@ export class AlertEmail implements Email {
 
 			case "dns":
 				return [
-					{
-						label: t("emails.alert.fields.domain"),
-						value: t("emails.alert.values.domain", {
-							domain: snapshot.domain,
-							recordType: snapshot.recordType,
-						}),
-					},
+					{ label: t("emails.alert.fields.domain"), value: snapshot.domain },
 					{ label: t("emails.alert.fields.status"), value: snapshot.status },
-					{
-						label: t("emails.alert.fields.resolvedValue"),
-						value: snapshot.resolvedValue ?? none,
-					},
 				];
 
 			case "tcp":

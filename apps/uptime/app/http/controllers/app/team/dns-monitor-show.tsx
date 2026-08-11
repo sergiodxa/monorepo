@@ -115,10 +115,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								value={<code>{monitor.domain}</code>}
 							/>
 							<StatCard
-								label={ctx.i18next.t("page.dnsMonitorDetail.info.recordType")}
-								value={monitor.record_type}
-							/>
-							<StatCard
 								label={ctx.i18next.t("page.dnsMonitorDetail.info.status")}
 								value={
 									<Badge
@@ -128,18 +124,14 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 									</Badge>
 								}
 							/>
-							{monitor.expected_value && (
-								<StatCard
-									label={ctx.i18next.t("page.dnsMonitorDetail.info.expectedValue")}
-									value={<code>{monitor.expected_value}</code>}
-								/>
-							)}
-							{monitor.last_value && (
-								<StatCard
-									label={ctx.i18next.t("page.dnsMonitorDetail.info.currentValue")}
-									value={<code>{monitor.last_value}</code>}
-								/>
-							)}
+							<StatCard
+								label={ctx.i18next.t("page.dnsMonitorDetail.info.zoneFileImported")}
+								value={
+									monitor.zone_file_imported_at === null
+										? ctx.i18next.t("page.dnsMonitorDetail.info.zoneFileNeverImported")
+										: new Date(monitor.zone_file_imported_at).toLocaleString()
+								}
+							/>
 						</div>
 
 						<Frame

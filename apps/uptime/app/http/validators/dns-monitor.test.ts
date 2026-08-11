@@ -1,7 +1,6 @@
 /**
  * Unit tests for the DNS monitor create/update/delete/check form validators: the
- * `record_type` enum, the `interval_seconds` bounds and default, and the shared
- * `delete`/`check` id schema.
+ * `interval_seconds` bounds and default, and the shared `delete`/`check` id schema.
  *
  * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
  * `FormData`, not `@pkg/validate`'s `validate()`: `validate()` normalizes `FormData`
@@ -27,7 +26,6 @@ function baseFormData(overrides: Record<string, string> = {}): FormData {
 	let formData = new FormData();
 	formData.set("name", "Primary domain");
 	formData.set("domain", "example.com");
-	formData.set("record_type", "A");
 	for (let [key, value] of Object.entries(overrides)) formData.set(key, value);
 	return formData;
 }
@@ -35,16 +33,6 @@ function baseFormData(overrides: Record<string, string> = {}): FormData {
 describe("CreateDnsMonitorSchema", () => {
 	test("accepts valid required fields alone", () => {
 		expect(s.parseSafe(CreateDnsMonitorSchema, baseFormData()).success).toBe(true);
-	});
-
-	test.each(["A", "AAAA", "CNAME", "MX", "TXT", "NS"])("accepts record_type '%s'", (recordType) => {
-		let formData = baseFormData({ record_type: recordType });
-		expect(s.parseSafe(CreateDnsMonitorSchema, formData).success).toBe(true);
-	});
-
-	test("rejects an unknown record_type", () => {
-		let formData = baseFormData({ record_type: "SRV" });
-		expect(s.parseSafe(CreateDnsMonitorSchema, formData).success).toBe(false);
 	});
 
 	test("rejects an empty name", () => {
@@ -58,14 +46,6 @@ describe("CreateDnsMonitorSchema", () => {
 
 	test("rejects an empty domain", () => {
 		expect(s.parseSafe(CreateDnsMonitorSchema, baseFormData({ domain: "" })).success).toBe(false);
-	});
-
-	test("leaves expected_value undefined when omitted, since it is optional", () => {
-		let result = s.parseSafe(CreateDnsMonitorSchema, baseFormData());
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.value.expected_value).toBeUndefined();
-		}
 	});
 
 	test("defaults interval_seconds to 3600 when omitted", () => {

@@ -26,7 +26,7 @@ let { i18n: i18next } = await createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** A saved monitor whose record type and interval are both away from the form's create-time defaults. */
+/** A saved monitor whose interval is away from the form's create-time default. */
 function monitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMonitor {
 	return {
 		id: "dns-1",
@@ -35,14 +35,12 @@ function monitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMonitor {
 		team_id: "team-1",
 		name: "Acme MX",
 		domain: "acme.test",
-		record_type: "MX",
-		expected_value: null,
 		interval_seconds: 900,
 		next_due_at: null,
 		is_enabled: true,
 		last_checked_at: null,
 		last_status: null,
-		last_value: null,
+		zone_file_imported_at: null,
 		...overrides,
 	};
 }
@@ -63,14 +61,6 @@ function selectedValues(html: string, name: string): string[] {
 }
 
 describe("DnsMonitorFormFields", () => {
-	test("marks the saved record type selected, and only it", async () => {
-		let html = await renderToString(
-			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
-		);
-
-		expect(selectedValues(html, "record_type")).toEqual(["MX"]);
-	});
-
 	test("marks the saved interval selected, and only it", async () => {
 		let html = await renderToString(
 			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
@@ -79,12 +69,11 @@ describe("DnsMonitorFormFields", () => {
 		expect(selectedValues(html, "interval_seconds")).toEqual(["900"]);
 	});
 
-	test("falls back to A and one hour when creating", async () => {
+	test("falls back to one hour when creating", async () => {
 		let html = await renderToString(
 			<DnsMonitorFormFields i18next={i18next} page="createDnsMonitor" />,
 		);
 
-		expect(selectedValues(html, "record_type")).toEqual(["A"]);
 		expect(selectedValues(html, "interval_seconds")).toEqual(["3600"]);
 	});
 

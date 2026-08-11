@@ -95,9 +95,6 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 												{ctx.i18next.t("page.dnsMonitors.table.columns.domain")}
 											</Table.Column>
 											<Table.Column>
-												{ctx.i18next.t("page.dnsMonitors.table.columns.recordType")}
-											</Table.Column>
-											<Table.Column>
 												{ctx.i18next.t("page.dnsMonitors.table.columns.status")}
 											</Table.Column>
 										</Table.Row>
@@ -128,7 +125,6 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 												<Table.Cell>
 													<code>{monitor.domain}</code>
 												</Table.Cell>
-												<Table.Cell>{monitor.record_type}</Table.Cell>
 												<Table.Cell>
 													<Badge
 														{...badgeVariant(

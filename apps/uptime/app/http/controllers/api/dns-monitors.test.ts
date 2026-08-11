@@ -70,13 +70,7 @@ function createRequest(body: unknown, headers: Record<string, string> = {}) {
 }
 
 function validDnsMonitorBody(overrides: Record<string, unknown> = {}) {
-	return {
-		name: "Apex A record",
-		domain: "example.com",
-		recordType: "A",
-		expectedValue: "1.2.3.4",
-		...overrides,
-	};
+	return { name: "Apex A record", domain: "example.com", ...overrides };
 }
 
 describe("GET /api/v1/dns-monitors", () => {
@@ -88,8 +82,6 @@ describe("GET /api/v1/dns-monitors", () => {
 		await DnsMonitor.create(db, team.id, {
 			name: "Apex A record",
 			domain: "example.com",
-			record_type: "A",
-			expected_value: "1.2.3.4",
 			interval_seconds: 3600,
 			is_enabled: true,
 		});
@@ -111,16 +103,12 @@ describe("GET /api/v1/dns-monitors", () => {
 		await DnsMonitor.create(db, team.id, {
 			name: "Mine",
 			domain: "mine.example.com",
-			record_type: "A",
-			expected_value: "1.2.3.4",
 			interval_seconds: 3600,
 			is_enabled: true,
 		});
 		await DnsMonitor.create(db, otherTeam.id, {
 			name: "Theirs",
 			domain: "theirs.example.com",
-			record_type: "A",
-			expected_value: "5.6.7.8",
 			interval_seconds: 3600,
 			is_enabled: true,
 		});
@@ -166,11 +154,19 @@ describe("POST /api/v1/dns-monitors", () => {
 
 		expect(response.status).toBe(201);
 		let body = (await response.json()) as {
-			data: { dnsMonitor: { id: string; name: string; domain: string; recordType: string } };
+			data: {
+				dnsMonitor: {
+					id: string;
+					name: string;
+					domain: string;
+					zoneFileImportedAt: number | null;
+				};
+			};
 		};
 		expect(body.data.dnsMonitor.name).toBe("Apex A record");
 		expect(body.data.dnsMonitor.domain).toBe("example.com");
-		expect(body.data.dnsMonitor.recordType).toBe("A");
+		// Nothing has been pasted, so the monitor covers the apex and says so.
+		expect(body.data.dnsMonitor.zoneFileImportedAt).toBeNull();
 
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
 	});
@@ -191,14 +187,14 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
 	});
 
-	test("returns 400 for an invalid record type", async () => {
+	test("returns 400 for an out-of-range interval", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
 
 		let response = await dispatch(
 			db,
-			createRequest(validDnsMonitorBody({ recordType: "PTR" }), {
+			createRequest(validDnsMonitorBody({ intervalSeconds: 5 }), {
 				Authorization: `Bearer ${key}`,
 			}),
 		);

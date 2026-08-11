@@ -54,6 +54,9 @@ import {
 	checkDnsMonitor,
 	createDnsMonitor,
 	deleteDnsMonitor,
+	importDnsMonitorZoneFile,
+	reviewDnsMonitor,
+	toggleDnsMonitorRecord,
 	updateDnsMonitor,
 } from "~/app/http/controllers/actions/dns-monitors";
 import { createInvite, revokeInvite } from "~/app/http/controllers/actions/invites";
@@ -103,6 +106,9 @@ import cronJobController, { cronJobRoutes } from "~/app/http/controllers/api/cro
 import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
 import cronJobsController, { cronJobsRoutes } from "~/app/http/controllers/api/cron-jobs";
 import dnsMonitorController, { dnsMonitorRoutes } from "~/app/http/controllers/api/dns-monitor";
+import dnsMonitorRecordsController, {
+	dnsMonitorRecordsRoutes,
+} from "~/app/http/controllers/api/dns-monitor-records";
 import dnsMonitorsController, { dnsMonitorsRoutes } from "~/app/http/controllers/api/dns-monitors";
 import { inviteDestroy } from "~/app/http/controllers/api/invite";
 import invitesController, { invitesRoutes } from "~/app/http/controllers/api/invites";
@@ -148,6 +154,7 @@ import dnsMonitorCardResults from "~/app/http/controllers/app/team/dns-monitor-c
 import dnsMonitorCardUptimeHistory from "~/app/http/controllers/app/team/dns-monitor-card-uptime-history";
 import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
 import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
+import dnsMonitorReview from "~/app/http/controllers/app/team/dns-monitor-review";
 import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
 import dnsMonitors from "~/app/http/controllers/app/team/dns-monitors";
 import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
@@ -362,6 +369,7 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dnsMonitors.new, dnsMonitorNew);
 	router.map(routes.app.team.dnsMonitors.show, dnsMonitorShow);
 	router.map(routes.app.team.dnsMonitors.edit, dnsMonitorEdit);
+	router.map(routes.app.team.dnsMonitors.review, dnsMonitorReview);
 	router.map(routes.app.team.dnsMonitors.cards.uptimeHistory, dnsMonitorCardUptimeHistory);
 	router.map(routes.app.team.dnsMonitors.cards.results, dnsMonitorCardResults);
 	router.map(routes.app.team.tcpMonitors.index, tcpMonitors);
@@ -424,6 +432,9 @@ export default function application(options: application.Options) {
 				update: updateDnsMonitor,
 				delete: deleteDnsMonitor,
 				check: checkDnsMonitor,
+				review: reviewDnsMonitor,
+				toggleRecord: toggleDnsMonitorRecord,
+				importZoneFile: importDnsMonitorZoneFile,
 			},
 		}),
 	);
@@ -569,6 +580,7 @@ export default function application(options: application.Options) {
 
 	router.map(dnsMonitorsRoutes, dnsMonitorsController);
 	router.map(dnsMonitorRoutes, dnsMonitorController);
+	router.map(dnsMonitorRecordsRoutes, dnsMonitorRecordsController);
 
 	router.map(tcpMonitorsRoutes, tcpMonitorsController);
 	router.map(tcpMonitorRoutes, tcpMonitorController);

@@ -1319,7 +1319,6 @@ export default {
 				responseStatus: "Statut de la réponse",
 				responseTime: "Temps de réponse",
 				domain: "Domaine",
-				resolvedValue: "Valeur résolue",
 				endpoint: "Point de terminaison",
 				schedule: "Planification",
 				lastPing: "Dernier ping",
@@ -1334,7 +1333,6 @@ export default {
 				monitor: "{{name}} ({{type}})",
 				responseStatus: "{{actual}} (attendu {{expected}})",
 				milliseconds: "{{value}}ms",
-				domain: "{{domain}} ({{recordType}})",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
 			},
@@ -1861,6 +1859,42 @@ export default {
 			success: "Le moniteur DNS {{name}} a été supprimé.",
 		},
 
+		checkDnsMonitor: {
+			success: { checked: "Vérification de « {{name}} » effectuée." },
+		},
+
+		reviewDnsMonitor: {
+			errors: {
+				generic:
+					"Nous n'avons pas pu enregistrer les enregistrements à surveiller. Veuillez réessayer.",
+			},
+			success: {
+				saved_one: "{{count}} enregistrement surveillé.",
+				saved_other: "{{count}} enregistrements surveillés.",
+			},
+		},
+
+		toggleDnsMonitorRecord: {
+			errors: { generic: "Nous n'avons pas pu modifier cet enregistrement. Veuillez réessayer." },
+			success: {
+				enabled: "{{name}} est désormais surveillé.",
+				disabled: "{{name}} n'est plus surveillé.",
+			},
+		},
+
+		importDnsMonitorZoneFile: {
+			errors: {
+				generic: "Nous n'avons pas pu lire ce fichier de zone. Veuillez réessayer.",
+				tooLarge: "Un fichier de zone doit faire {{limit}} ou moins.",
+				tooManyNames:
+					"Cette zone contient plus de {{limit}} noms, c'est plus qu'un seul moniteur ne peut parcourir.",
+			},
+			success: {
+				imported_one: "{{count}} nom importé depuis votre fichier de zone.",
+				imported_other: "{{count}} noms importés depuis votre fichier de zone.",
+			},
+		},
+
 		createTcpMonitor: {
 			errors: {
 				generic: "Oups ! Une erreur s'est produite lors de la création du moniteur TCP.",
@@ -2008,6 +2042,8 @@ export default {
 				},
 				dnsMonitors: {
 					label: "Moniteurs DNS",
+					/** One monitor is one domain, so this count is smaller than the work behind it. */
+					hint: "Un moniteur couvre tout un domaine et chaque enregistrement qui y est suivi.",
 					breakdown: {
 						ok: "{{ok}} ok",
 						changed: "{{changed}} modifiés",
@@ -3105,12 +3141,14 @@ export default {
 				columns: {
 					name: "Nom",
 					domain: "Domaine",
-					recordType: "Type",
+					records: "Enregistrements",
 					status: "Statut",
 					lastChecked: "Dernière vérification",
 					actions: "Actions",
 				},
 
+				records: "{{enabled}} sur {{total}} surveillés",
+				noRecords: "Aucun pour l'instant",
 				disabled: "Désactivé",
 				neverChecked: "Jamais",
 				notChecked: "Non vérifié",
@@ -3141,8 +3179,12 @@ export default {
 					},
 					checks: {
 						title: "Paramètres de vérification",
+						description: "À quelle fréquence chaque nom suivi est résolu.",
+					},
+					zoneFile: {
+						title: "Fichier de zone",
 						description:
-							"Quel enregistrement est résolu, ce qu'il doit renvoyer et à quelle fréquence la vérification s'exécute.",
+							"Collez votre zone pour surveiller les sous-domaines. Sans cela, nous ne voyons que l'apex de votre domaine.",
 					},
 				},
 
@@ -3159,21 +3201,16 @@ export default {
 						description: "Le domaine pour lequel surveiller les enregistrements DNS.",
 					},
 
-					recordType: {
-						label: "Type d'enregistrement",
-						description: "Le type d'enregistrement DNS à vérifier.",
-					},
-
-					expectedValue: {
-						label: "Valeur attendue",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Fichier de zone",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Facultatif. Alerte si l'une de ces valeurs est absente des enregistrements résolus. Séparez plusieurs valeurs par des virgules. Les enregistrements supplémentaires sont autorisés. Laissez vide pour suivre tout changement.",
+							"Facultatif. Collez un fichier de zone BIND exporté depuis votre fournisseur DNS. Il est lu une seule fois et jamais conservé, et c'est le seul moyen pour nous de connaître les noms de votre zone.",
 					},
 
 					interval: {
 						label: "Intervalle de vérification",
-						description: "À quelle fréquence vérifier l'enregistrement DNS.",
+						description: "À quelle fréquence chaque nom suivi est résolu.",
 						options: {
 							"5m": "5 minutes",
 							"15m": "15 minutes",
@@ -3187,9 +3224,13 @@ export default {
 
 					isEnabled: {
 						label: "Activer la surveillance",
-						description: "Commencer à surveiller cet enregistrement DNS immédiatement.",
+						description: "Commencer à surveiller ce domaine immédiatement.",
 					},
 				},
+
+				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				apexOnlyNotice:
+					"Le DNS ne permet à personne de lister les enregistrements d'une zone. Sans fichier de zone, nous ne pouvons surveiller que l'apex de votre domaine — jamais un sous-domaine.",
 
 				cta: "Créer un moniteur DNS",
 			},
@@ -3221,21 +3262,16 @@ export default {
 						description: "Le domaine pour lequel surveiller les enregistrements DNS.",
 					},
 
-					recordType: {
-						label: "Type d'enregistrement",
-						description: "Le type d'enregistrement DNS à vérifier.",
-					},
-
-					expectedValue: {
-						label: "Valeur attendue",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "Fichier de zone",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"Facultatif. Alerte si l'une de ces valeurs est absente des enregistrements résolus. Séparez plusieurs valeurs par des virgules. Les enregistrements supplémentaires sont autorisés. Laissez vide pour suivre tout changement.",
+							"Facultatif. Collez un fichier de zone BIND exporté depuis votre fournisseur DNS. Il est lu une seule fois et jamais conservé, et c'est le seul moyen pour nous de connaître les noms de votre zone.",
 					},
 
 					interval: {
 						label: "Intervalle de vérification",
-						description: "À quelle fréquence vérifier l'enregistrement DNS.",
+						description: "À quelle fréquence chaque nom suivi est résolu.",
 						options: {
 							"5m": "5 minutes",
 							"15m": "15 minutes",
@@ -3249,7 +3285,7 @@ export default {
 
 					isEnabled: {
 						label: "Activer la surveillance",
-						description: "Surveiller activement cet enregistrement DNS ou non.",
+						description: "Surveiller activement ce domaine ou non.",
 					},
 				},
 
@@ -3257,11 +3293,20 @@ export default {
 				cta: "Enregistrer les modifications",
 			},
 
+			zoneFileImport: {
+				title: "Fichier de zone",
+				description:
+					"Recollez votre zone pour récupérer les noms ajoutés depuis le dernier import. Le texte est lu une seule fois et jamais conservé, c'est pourquoi l'actualiser suppose de redemander le fichier.",
+				lastImported: "Dernier import le {{date}}.",
+				neverImported: "Aucun fichier de zone n'a été importé. Ce moniteur ne couvre que l'apex.",
+				cta: "Importer un fichier de zone",
+			},
+
 			dangerZone: {
 				title: "Zone de danger",
 				deleteMonitor: "Supprimer le moniteur",
 				deleteDescription:
-					"Cela supprime également son historique de résultats de vérification. Cette action est irréversible.",
+					"Cela supprime également ses enregistrements et son historique de vérifications. Cette action est irréversible.",
 				description: "Les actions de cette section sont irréversibles.",
 				warning:
 					"Supprimer ce moniteur efface définitivement ses vérifications DNS, son historique et ses alertes.",
@@ -3284,10 +3329,11 @@ export default {
 
 			info: {
 				domain: "Domaine",
-				recordType: "Type d'enregistrement",
 				status: "Statut",
-				expectedValue: "Valeur attendue",
-				currentValue: "Valeur actuelle",
+				recordsWatched: "Enregistrements surveillés",
+				recordsWatchedValue: "{{enabled}} sur {{total}}",
+				zoneFileImported: "Fichier de zone importé",
+				zoneFileNeverImported: "Jamais — apex uniquement",
 			},
 
 			stats: {
@@ -3315,11 +3361,104 @@ export default {
 					columns: {
 						checkedAt: "Vérifié le",
 						status: "Statut",
-						value: "Valeur",
-						responseTime: "Temps de réponse",
+						findings: "Constats",
+						responseTime: "Requête la plus lente",
 					},
 				},
+
+				findings: "{{changed}} modifiés · {{missing}} manquants · {{new}} nouveaux",
+				noFindings: "Aucun changement",
+				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				queriesFailed_one: "{{count}} requête n'a pas répondu",
+				queriesFailed_other: "{{count}} requêtes n'ont pas répondu",
 			},
+
+			records: {
+				title: "Enregistrements suivis",
+				description:
+					"Tous les enregistrements que nous avons déjà vus pour ce domaine. Les enregistrements non surveillés sont conservés afin de ne jamais être redécouverts comme nouveaux.",
+				empty: "Aucun enregistrement n'est encore suivi.",
+
+				table: {
+					columns: {
+						name: "Nom",
+						type: "Type",
+						value: "Valeur",
+						source: "Source",
+						state: "État",
+						watched: "Surveillé",
+						actions: "Actions",
+					},
+				},
+
+				source: {
+					resolver: "Résolu",
+					zone_file: "Fichier de zone",
+				},
+
+				state: {
+					ok: "OK",
+					changed: "Modifié",
+					missing: "Manquant",
+					new: "Nouveau",
+					error: "Erreur",
+				},
+
+				actions: {
+					menu: "Menu d'actions",
+					enable: "Surveiller",
+					disable: "Ne plus surveiller",
+				},
+			},
+		},
+
+		/**
+		 * The review step between creating a domain monitor and monitoring anything with it.
+		 * Its own page, so a reload lands back on the decision rather than on a detail page
+		 * that implies it was already made.
+		 */
+		dnsMonitorReview: {
+			header: {
+				title: "Vérifier les enregistrements de « {{name}} »",
+				description:
+					"Chaque enregistrement trouvé est surveillé par défaut. Décochez ce pour quoi vous ne voulez pas être alerté — il est conservé dans tous les cas, donc rien de ce que vous refusez ne reviendra plus tard comme nouvel enregistrement.",
+			},
+
+			/** A line the parser could not use is reported, never silently dropped. */
+			unparsed: {
+				title_one: "{{count}} ligne n'a pas été importée",
+				title_other: "{{count}} lignes n'ont pas été importées",
+				description:
+					"Ces lignes ne font pas partie du sous-ensemble que nous lisons. Ce qu'elles déclarent n'est pas surveillé.",
+				line: "Ligne {{line}} : {{reason}}",
+			},
+
+			groups: {
+				resolving: {
+					title: "Résolus actuellement",
+					description:
+						"Trouvés en résolvant chaque type d'enregistrement pris en charge sur chaque nom connu.",
+				},
+				declared: {
+					title: "Déclarés mais non résolus",
+					description:
+						"Présents dans votre fichier de zone, mais rien ne répond pour eux aujourd'hui. Laissés non surveillés sauf indication contraire — une zone collée est un instantané, et il ne fait que vieillir.",
+				},
+			},
+
+			table: {
+				columns: {
+					watched: "Surveiller",
+					name: "Nom",
+					type: "Type",
+					value: "Valeur",
+				},
+			},
+
+			selectAll: "Surveiller tous les enregistrements",
+			empty: "Rien n'a été trouvé pour ce domaine.",
+			cancel: "Annuler",
+			cta: "Enregistrer les enregistrements",
 		},
 
 		maintenance: {

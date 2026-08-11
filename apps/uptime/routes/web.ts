@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { del, form, get, post, put, resources, route } from "remix/fetch-router/routes";
+import { del, form, get, patch, post, put, resources, route } from "remix/fetch-router/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
@@ -178,6 +178,19 @@ export default route({
 					only: ["index", "new", "show", "edit"],
 				}),
 				/**
+				 * The step between creating a domain monitor and monitoring anything with it:
+				 * discovery has run, and this lists what it found — grouped by name, then by
+				 * type — for the visitor to accept or decline before any of it becomes an
+				 * expectation. Its own page rather than a section of `show`, because a monitor
+				 * with unreviewed records is a distinct state and a reload must land back on
+				 * the decision rather than on a detail page that implies it was made.
+				 *
+				 * `/review` under `:monitorId` rather than a query flag: the monitor already
+				 * exists by the time it renders (discovery wrote its records), so the URL is
+				 * shareable, re-openable, and cannot be reached for a monitor that is not there.
+				 */
+				review: get("/app/:team/dns/:monitorId/review"),
+				/**
 				 * Fragment routes for the detail page's two data fetches, same rationale as
 				 * `monitors.cards` above: the shell renders from the monitor row alone, while the
 				 * uptime history bar and the result table each load into their own `Frame` rather
@@ -257,6 +270,25 @@ export default route({
 				update: post("/actions/:team/update-dns-monitor"),
 				delete: del("/actions/:team/delete-dns-monitor"),
 				check: post("/actions/:team/check-dns-monitor"),
+				/**
+				 * Submits the review screen: which of the discovered records are watched. A
+				 * declined record is stored disabled rather than dropped, so this settles every
+				 * record on the monitor at once instead of creating a subset of them.
+				 */
+				review: post("/actions/:team/review-dns-monitor"),
+				/**
+				 * Flips one already-stored record between watched and not, from the detail page.
+				 * Separate from `review` because that one settles a monitor nobody has looked at
+				 * yet, while this is the single-row edit a visitor makes later.
+				 */
+				toggleRecord: post("/actions/:team/toggle-dns-monitor-record"),
+				/**
+				 * Re-parses a freshly pasted zone file for an existing monitor. Its own action
+				 * rather than a field on the edit form, because the pasted text is never stored:
+				 * names can only be re-discovered by asking for the file again, which is a
+				 * deliberate, occasional act rather than part of renaming a monitor.
+				 */
+				importZoneFile: post("/actions/:team/import-dns-monitor-zone-file"),
 			},
 			tcp: {
 				create: post("/actions/:team/create-tcp-monitor"),
@@ -417,6 +449,20 @@ export default route({
 					exclude: ["new", "edit"],
 				}),
 				results: get("/api/v1/dns-monitors/:dnsMonitorId/results"),
+				/**
+				 * The monitor's tracked records, and the toggle deciding which of them alert.
+				 * Deliberately on the existing `dns-monitors:read`/`:write` scopes rather than a
+				 * pair of its own: a key that may reconfigure a domain monitor may decide which of
+				 * its records are watched, because the two are the same authority.
+				 *
+				 * `PATCH` rather than `PUT`: the only mutable field is `isEnabled`, and a caller
+				 * must never be able to rewrite a record's identity — the normalized value is the
+				 * key the diff runs on, so editing it would silently retarget the expectation.
+				 */
+				records: {
+					index: get("/api/v1/dns-monitors/:dnsMonitorId/records"),
+					update: patch("/api/v1/dns-monitors/:dnsMonitorId/records/:recordId"),
+				},
 			},
 
 			tcpMonitors: {

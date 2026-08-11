@@ -821,10 +821,29 @@ them first is what makes the rest parallelisable.
       table-dropping and the undeprecated API break are safe, and get more expensive the
       longer this waits.
 - [ ] 0.2 Obtain a real Cloudflare zone export and commit it as a parser fixture.
-- [ ] 0.3 `database/schema.ts` + the migration, SQL reviewed by hand for re-emitted
-      `*_id_unique` indexes and for ADR-020's retention indexes.
-- [ ] 0.4 `routes/web.ts` + `bootstrap/app.tsx`: every new route registered against a stub.
-- [ ] 0.5 `app/locales/en.ts` key skeleton, then the six translations.
+      **Partially done.** A real export could not be obtained, so
+      `app/services/fixtures/sergiodxa.com.reconstructed.zone` was built instead: real RRsets,
+      read back from the DoH API on 2026-08-10 for names the zone's own dashboard lists, laid
+      out per Cloudflare's published import/export format, plus one line for every "not
+      supported" row of §7. Its header says so. **The §7 BIND subset is still unverified
+      against genuine Cloudflare output**, so [Open Question 5](#open-questions) stands and
+      this box stays unticked.
+- [x] 0.3 ~~`database/schema.ts` + the migration, SQL reviewed by hand for re-emitted
+      `*_id_unique` indexes and for ADR-020's retention indexes.~~ **Done** —
+      `database/migrations/20260810100000_dns_domain_monitors.sql`. Three deviations, argued
+      in the migration's own header: `dns_monitors_is_enabled_idx` is not re-created (nothing
+      seeks on it alone), `dns_monitor_records` gets no `(dns_monitor_id, name, record_type)`
+      index (it is the leading prefix of the unique index, which SQLite seeks into by
+      prefix), and the five result counters carry `DEFAULT 0` so a caller with nothing to
+      report writes a truthful zero rather than being unable to insert. The
+      `AlertEventSnapshot` `dns` variant was subtracted, not replaced: `recordType` and
+      `resolvedValue` are gone, and the counters and findings arrive with the diff that
+      produces them (2.2).
+- [x] 0.4 ~~`routes/web.ts` + `bootstrap/app.tsx`: every new route registered against a
+      stub.~~ **Done.** Every stub answers `501`, never an empty list or a placeholder row.
+- [x] 0.5 ~~`app/locales/en.ts` key skeleton, then the six translations.~~ **Done** — 209
+      DNS-scoped keys, verified to resolve in all six locales by key-path comparison against
+      `en.ts` rather than by a green suite.
 
 **Phase 1 — parallel, no shared files**
 

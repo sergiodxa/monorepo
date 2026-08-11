@@ -159,10 +159,7 @@ export class NotifyJob extends Job {
 				if (!monitor) return false;
 
 				let { previous, current } = parseStatuses(job, DNS_STATUSES);
-				await notifyDnsResult(db, mailer, monitor, previous, {
-					status: current,
-					resolvedValue: monitor.last_value,
-				});
+				await notifyDnsResult(db, mailer, monitor, previous, { status: current });
 				return true;
 			}
 

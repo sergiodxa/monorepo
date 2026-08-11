@@ -23,8 +23,6 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
-
 const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
 
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
@@ -33,13 +31,11 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 		id: monitor.id,
 		name: monitor.name,
 		domain: monitor.domain,
-		recordType: monitor.record_type,
-		expectedValue: monitor.expected_value,
+		zoneFileImportedAt: monitor.zone_file_imported_at,
 		intervalSeconds: monitor.interval_seconds,
 		isEnabled: monitor.is_enabled,
 		lastCheckedAt: monitor.last_checked_at,
 		lastStatus: monitor.last_status,
-		lastValue: monitor.last_value,
 		createdAt: monitor.created_at,
 		updatedAt: monitor.updated_at,
 	};
@@ -48,8 +44,6 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 const UpdateDnsMonitorSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	recordType: s.optional(s.enum_(DNS_RECORD_TYPES)),
-	expectedValue: s.optional(s.nullable(s.string().pipe(checks.maxLength(1024)))),
 	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
 	isEnabled: s.optional(s.boolean()),
 });
@@ -97,9 +91,6 @@ export default createController(dnsMonitorRoutes, {
 				let changes: Partial<InsertDnsMonitor> = {};
 				if (result.data.name !== undefined) changes.name = result.data.name;
 				if (result.data.domain !== undefined) changes.domain = result.data.domain;
-				if (result.data.recordType !== undefined) changes.record_type = result.data.recordType;
-				if (result.data.expectedValue !== undefined)
-					changes.expected_value = result.data.expectedValue;
 				if (result.data.intervalSeconds !== undefined)
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
@@ -139,7 +130,11 @@ export default createController(dnsMonitorRoutes, {
 					results: results.map((row) => ({
 						id: row.id,
 						status: row.status,
-						resolvedValue: row.resolved_value,
+						recordsChecked: row.records_checked,
+						recordsChanged: row.records_changed,
+						recordsMissing: row.records_missing,
+						recordsNew: row.records_new,
+						queriesFailed: row.queries_failed,
 						responseTimeMs: row.response_time_ms,
 						errorMessage: row.error_message,
 						checkedAt: row.checked_at,

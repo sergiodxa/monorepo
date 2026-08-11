@@ -131,19 +131,13 @@ describe("AlertEmail", () => {
 	test("reports a DNS check's own detail", async () => {
 		let email = await makeEmail({
 			monitorType: "dns",
-			snapshot: {
-				type: "dns",
-				status: "changed",
-				resolvedValue: "203.0.113.4",
-				domain: "example.com",
-				recordType: "A",
-			},
+			snapshot: { type: "dns", status: "changed", domain: "example.com" },
 		});
 
 		let { text } = await render(email.body());
 
-		expect(text).toContain("Domain example.com (A)");
-		expect(text).toContain("Resolved value 203.0.113.4");
+		expect(text).toContain("Domain example.com");
+		expect(text).toContain("Status changed");
 	});
 
 	test("reports a TCP check's own detail, with an em dash for a missing response time", async () => {

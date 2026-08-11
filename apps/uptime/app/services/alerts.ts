@@ -284,11 +284,7 @@ function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 				`Response time: ${snapshot.responseTimeMs}ms`,
 			];
 		case "dns":
-			return [
-				`Domain: ${snapshot.domain} (${snapshot.recordType})`,
-				`Status: ${snapshot.status}`,
-				`Resolved value: ${snapshot.resolvedValue ?? "—"}`,
-			];
+			return [`Domain: ${snapshot.domain}`, `Status: ${snapshot.status}`];
 		case "tcp":
 			return [
 				`Endpoint: ${snapshot.host}:${snapshot.port}`,
@@ -566,7 +562,7 @@ export async function notifyDnsResult(
 	mailer: Mailer,
 	monitor: SelectDnsMonitor,
 	previousStatus: DnsCheckStatus | null,
-	result: Pick<DnsCheckResult, "status" | "resolvedValue">,
+	result: Pick<DnsCheckResult, "status">,
 ): Promise<void> {
 	if (!shouldNotifyDnsResult(previousStatus, result.status)) return;
 	/** Only reachable with an `ok` status when the policy above found a recovery. */
@@ -580,13 +576,7 @@ export async function notifyDnsResult(
 		monitorType: "dns",
 		monitorName: monitor.name,
 		eventType: isRecovery ? "up" : result.status === "error" ? "down" : "degraded",
-		snapshot: {
-			type: "dns",
-			status: result.status,
-			resolvedValue: result.resolvedValue,
-			domain: monitor.domain,
-			recordType: monitor.record_type,
-		},
+		snapshot: { type: "dns", status: result.status, domain: monitor.domain },
 		dashboardUrl: dashboardUrl(
 			routes.app.team.dnsMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),

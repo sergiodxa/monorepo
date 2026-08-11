@@ -731,7 +731,6 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 				team_id: teamId,
 				name: "DNS",
 				domain: "example.com",
-				record_type: "A",
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -767,7 +766,6 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 			id: crypto.randomUUID(),
 			dns_monitor_id: dns.id,
 			status: "ok",
-			resolved_value: "1.1.1.1",
 			response_time_ms: 10,
 			error_message: null,
 			checked_at: insideRawWindow,
@@ -1008,7 +1006,6 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
-			record_type: "A",
 			interval_seconds: 3600,
 			is_enabled: true,
 		});
@@ -1053,7 +1050,6 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
-			record_type: "A",
 			interval_seconds: 3600,
 			is_enabled: false,
 		});

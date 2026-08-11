@@ -293,7 +293,7 @@ export const monitors = table({
 		 * committed: the Analytics Engine result stream stays authoritative for history and
 		 * aggregation, and these exist only so transition detection and the list row cost no
 		 * query. When the two disagree, believe the stream — the same relationship
-		 * `dns_monitors.last_value` has with `dns_monitor_results`, and the same trio
+		 * `dns_monitors.last_status` has with `dns_monitor_results`, and the same trio
 		 * `tcp_monitors` already carries. `NULL` means "never checked", which recovery
 		 * detection reads as not-a-recovery, so no backfill is needed.
 		 */
@@ -352,10 +352,20 @@ export const dnsMonitors = table({
 		updated_at: c.integer(),
 		team_id: c.text(),
 		name: c.text(),
+		/** The zone apex this monitor covers, absolute, lowercased, no trailing dot. */
 		domain: c.text(),
-		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS"]),
-		expected_value: c.text().nullable(),
-		interval_seconds: c.integer().default(3600),
+		/**
+		 * When a zone file was last pasted and parsed. The pasted text itself is deliberately
+		 * never stored — a customer's complete zone is a map of their infrastructure, and a
+		 * re-paste serves every feature a stored copy would. `null` means every tracked name
+		 * was discovered by resolution, so the monitor covers the apex and nothing else.
+		 */
+		zone_file_imported_at: c.integer().nullable(),
+		/**
+		 * Daily by default: DNS changes are human-caused and human-paced, and a record's TTL
+		 * puts a floor under detection latency that a faster interval cannot get below.
+		 */
+		interval_seconds: c.integer().default(86_400),
 		/**
 		 * When this monitor's next check is due, or `null` when it isn't scheduled at all.
 		 * The sweep claims monitors by advancing this from its own previous value by whole
@@ -367,12 +377,59 @@ export const dnsMonitors = table({
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
 		last_status: c.enum(["ok", "changed", "error"]).nullable(),
-		last_value: c.text().nullable(),
 	},
 });
 
 export type SelectDnsMonitor = TableRow<typeof dnsMonitors>;
 export type InsertDnsMonitor = InsertRow<typeof dnsMonitors>;
+
+/**
+ * What the last check found for one tracked record. `new` and `missing` are states of a
+ * record, not of a check: a record stays `new` until the user enables or deletes it, and
+ * `changed` is reserved for the one case a diff can attribute without guessing — a
+ * name+type holding exactly one stored and one resolved record that differ.
+ */
+export const dnsRecordStates = ["ok", "changed", "missing", "new", "error"] as const;
+
+export type DnsRecordState = (typeof dnsRecordStates)[number];
+
+/**
+ * One tracked DNS record, identified by `(name, record_type, value)` rather than by RRset.
+ * A DNS record has no identity of its own — an RRset is a set of RDATA — so making the
+ * normalized value part of the key is what lets a sixth MX appearing beside five existing
+ * ones read as one addition instead of as "the MX records changed".
+ *
+ * The table is the complete set of everything ever seen for the domain, including records
+ * the user declined to watch: `is_enabled` says only whether a deviation alerts. Without
+ * that invariant a declined record would be rediscovered as `new` on every check.
+ */
+export const dnsMonitorRecords = table({
+	name: "dns_monitor_records",
+	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+		dns_monitor_id: c.text(),
+		/** Absolute owner name, lowercased, no trailing dot. The apex is `domain` itself. */
+		name: c.text(),
+		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS"]),
+		/** Normalized RDATA, per-type folding applied at write time. Part of the identity. */
+		value: c.text(),
+		/** How this row first entered the table. */
+		source: c.enum(["resolver", "zone_file"]),
+		/** Whether a deviation from this record alerts. Discovery-time default is `true`. */
+		is_enabled: c.boolean().default(true),
+		status: c.enum(dnsRecordStates),
+		first_seen_at: c.integer(),
+		/** Last check at which this exact record resolved. `null` for zone-file-only rows. */
+		last_seen_at: c.integer().nullable(),
+		last_checked_at: c.integer().nullable(),
+	},
+});
+
+export type SelectDnsMonitorRecord = TableRow<typeof dnsMonitorRecords>;
+export type InsertDnsMonitorRecord = InsertRow<typeof dnsMonitorRecords>;
 
 export const dnsMonitorResults = table({
 	name: "dns_monitor_results",
@@ -380,7 +437,28 @@ export const dnsMonitorResults = table({
 		id: c.text().primaryKey(),
 		dns_monitor_id: c.text(),
 		status: c.enum(["ok", "changed", "error"]),
-		resolved_value: c.text().nullable(),
+		/**
+		 * Counters, not values: one row per check of the monitor rather than per query, so
+		 * retention volume does not multiply by the number of names swept. The per-record
+		 * detail lives in `dns_monitor_records`, which is configuration and is not swept.
+		 *
+		 * Each defaults to `0` rather than being required, so a caller that has nothing to
+		 * report writes a truthful zero instead of being unable to insert at all.
+		 */
+		records_checked: c.integer().default(0),
+		records_changed: c.integer().default(0),
+		records_missing: c.integer().default(0),
+		records_new: c.integer().default(0),
+		/**
+		 * Queries that did not answer. A failed query is never diffed, so this is what keeps a
+		 * resolver having a bad minute from reading as "every record at that name vanished".
+		 */
+		queries_failed: c.integer().default(0),
+		/**
+		 * The slowest single query in the sweep, not the sum. The column means "how long did
+		 * DNS take to answer" and feeds a latency chart; summing would quietly turn that chart
+		 * into a cost chart.
+		 */
 		response_time_ms: c.integer().nullable(),
 		error_message: c.text().nullable(),
 		checked_at: c.integer(),
@@ -549,13 +627,15 @@ export type AlertEventSnapshot =
 			expectedStatus: number;
 			url: string;
 	  }
-	| {
-			type: "dns";
-			status: string;
-			resolvedValue: string | null;
-			domain: string;
-			recordType: string;
-	  }
+	/**
+	 * A DNS monitor watches a domain rather than one record type, so `recordType` and
+	 * `resolvedValue` — a type the monitor no longer has and a single joined blob that
+	 * cannot describe a per-record finding — are gone. The per-record counters and the
+	 * findings list that replace them are added with the diff that produces them
+	 * (ADR-026 phase 2.2); until then this variant is the part of the snapshot that has a
+	 * source, which is why it is a subtraction rather than a placeholder.
+	 */
+	| { type: "dns"; status: string; domain: string }
 	| { type: "tcp"; status: string; responseTimeMs: number | null; host: string; port: number }
 	| {
 			type: "cron";

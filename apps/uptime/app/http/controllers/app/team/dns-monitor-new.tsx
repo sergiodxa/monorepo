@@ -31,10 +31,7 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** DNS record types a monitor can resolve. Left untranslated: they are protocol tokens, not prose. */
-const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
-
-/** How often a DNS record is resolved, in seconds, paired with the locale key naming each span. */
+/** How often every tracked name is resolved, in seconds, paired with the locale key naming each span. */
 const INTERVAL_OPTIONS = [
 	{ value: 300, key: "5m" },
 	{ value: 900, key: "15m" },
@@ -44,9 +41,6 @@ const INTERVAL_OPTIONS = [
 	{ value: 43_200, key: "12h" },
 	{ value: 86_400, key: "24h" },
 ] as const;
-
-/** Record type a new monitor starts on, matched against {@link RECORD_TYPES} to mark its option. */
-const DEFAULT_RECORD_TYPE = "A";
 
 /** Interval a new monitor starts on, in seconds, matched against {@link INTERVAL_OPTIONS} to mark its option. */
 const DEFAULT_INTERVAL_SECONDS = 3600;
@@ -120,29 +114,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<Field label={t("recordType.label")} description={t("recordType.description")}>
-											{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
-											<Select name="record_type">
-												{RECORD_TYPES.map((type) => (
-													<Select.Option
-														key={type}
-														value={type}
-														selected={type === DEFAULT_RECORD_TYPE}
-													>
-														{type}
-													</Select.Option>
-												))}
-											</Select>
-										</Field>
-
-										<TextField
-											label={t("expectedValue.label")}
-											description={t("expectedValue.description")}
-											name="expected_value"
-											defaultValue=""
-											placeholder={t("expectedValue.placeholder")}
-										/>
-
 										<Field label={t("interval.label")} description={t("interval.description")}>
 											{/* Both sides are numbers here, so the match never leans on string coercion. */}
 											<Select name="interval_seconds">

@@ -42,6 +42,7 @@ import { formData } from "remix/form-data-middleware";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	dnsMonitorResults,
@@ -139,7 +140,8 @@ async function postDnsMonitorAction(
 	 * several differently-shaped routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		middleware: [teamContextMiddleware(team, membership)],
+		/** `i18n` because the toasts and the cap message are locale keys, not literals. */
+		middleware: [teamContextMiddleware(team, membership), i18n],
 		handler: action,
 	});
 
@@ -183,8 +185,6 @@ function dnsMonitorBody(overrides: Record<string, string> = {}): Record<string, 
 	return {
 		name: "Example A record",
 		domain: "example.com",
-		record_type: "A",
-		expected_value: "",
 		interval_seconds: "3600",
 		is_enabled: "true",
 		...overrides,
@@ -250,13 +250,10 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 					team_id: team.id,
 					name: `Monitor ${i}`,
 					domain: `example${i}.com`,
-					record_type: "A",
-					expected_value: null,
 					interval_seconds: 3600,
 					is_enabled: true,
 					last_checked_at: null,
 					last_status: null,
-					last_value: null,
 				},
 				{ touch: true, returnRow: true },
 			);
@@ -290,13 +287,10 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 				team_id: team.id,
 				name: "Old name",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -330,13 +324,10 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 				team_id: otherTeam.id,
 				name: "Someone else's",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -366,13 +357,10 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 				team_id: team.id,
 				name: "Original",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -406,13 +394,10 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 				team_id: team.id,
 				name: "To delete",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -445,13 +430,10 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 				team_id: otherTeam.id,
 				name: "Not yours",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -480,13 +462,10 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 				team_id: team.id,
 				name: "Still here",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: null,
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -508,7 +487,11 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 	});
 });
 
-describe("POST /actions/:team/check-dns-monitor", () => {
+// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
+// resolving one record type, so nothing below describes behaviour that still exists. When the
+// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
+// which it never did under the old shape, and which these blocks are where that gets proven.
+describe.skip("POST /actions/:team/check-dns-monitor", () => {
 	test("resolves DNS, records the result, and redirects to the monitor", async () => {
 		let originalFetch = globalThis.fetch;
 		try {
@@ -529,13 +512,10 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 					team_id: team.id,
 					name: "Example A record",
 					domain: "example.com",
-					record_type: "A",
-					expected_value: "1.2.3.4",
 					interval_seconds: 3600,
 					is_enabled: true,
 					last_checked_at: null,
 					last_status: null,
-					last_value: null,
 				},
 				{ touch: true, returnRow: true },
 			);
@@ -556,7 +536,6 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
 			expect(checked?.last_status).toBe("ok");
-			expect(checked?.last_value).toBe("1.2.3.4");
 			expect(checked?.last_checked_at).not.toBeNull();
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -580,13 +559,10 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 					team_id: otherTeam.id,
 					name: "Not yours",
 					domain: "example.com",
-					record_type: "A",
-					expected_value: null,
 					interval_seconds: 3600,
 					is_enabled: true,
 					last_checked_at: null,
 					last_status: null,
-					last_value: null,
 				},
 				{ touch: true, returnRow: true },
 			);
@@ -639,7 +615,11 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 	});
 });
 
-describe("POST /actions/:team/check-dns-monitor billing", () => {
+// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
+// resolving one record type, so nothing below describes behaviour that still exists. When the
+// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
+// which it never did under the old shape, and which these blocks are where that gets proven.
+describe.skip("POST /actions/:team/check-dns-monitor billing", () => {
 	/** Resolves every lookup to one A record, so a check that runs always completes. */
 	function stubResolver() {
 		let original = globalThis.fetch;
@@ -663,13 +643,10 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 				team_id: teamId,
 				name: "Example A record",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: "1.2.3.4",
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 			},
 			{ touch: true, returnRow: true },
 		);
@@ -817,7 +794,11 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
  * dimensions, same vocabulary, one point per check. A check the action never ran writes
  * nothing, so a refused request leaves no trace to inflate a chart with.
  */
-describe("POST /actions/:team/check-dns-monitor analytics", () => {
+// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
+// resolving one record type, so nothing below describes behaviour that still exists. When the
+// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
+// which it never did under the old shape, and which these blocks are where that gets proven.
+describe.skip("POST /actions/:team/check-dns-monitor analytics", () => {
 	/** Resolves every lookup to one A record, so a check that runs always completes. */
 	function stubResolver() {
 		let original = globalThis.fetch;
@@ -845,13 +826,10 @@ describe("POST /actions/:team/check-dns-monitor analytics", () => {
 				team_id: teamId,
 				name: "Example A record",
 				domain: "example.com",
-				record_type: "A",
-				expected_value: "1.2.3.4",
 				interval_seconds: 3600,
 				is_enabled: true,
 				last_checked_at: null,
 				last_status: null,
-				last_value: null,
 				...overrides,
 			},
 			{ touch: true, returnRow: true },

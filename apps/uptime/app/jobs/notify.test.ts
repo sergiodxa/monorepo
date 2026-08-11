@@ -156,16 +156,13 @@ describe("NotifyJob", () => {
 		expect(completed?.newStatus).toBe("down");
 	});
 
-	test("dispatches a DNS transition with the monitor's last resolved value", async () => {
+	test("dispatches a DNS transition carrying only the status it was told", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "Example domain",
 			domain: "example.com",
-			record_type: "A",
-			expected_value: null,
 			is_enabled: true,
 			last_status: "changed",
-			last_value: "5.6.7.8",
 		});
 
 		await runJob(db, {
@@ -182,7 +179,7 @@ describe("NotifyJob", () => {
 				monitorId: monitor.id,
 				monitorName: "Example domain",
 				previousStatus: null,
-				payload: { status: "changed", resolvedValue: "5.6.7.8" },
+				payload: { status: "changed" },
 			},
 		]);
 	});

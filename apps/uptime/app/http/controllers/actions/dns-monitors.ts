@@ -1,43 +1,33 @@
 /**
- * Form actions for DNS monitor create/update/delete/manual-check. Each follows the
- * validate → mutate → flash → redirect pattern: on validation failure the visitor is
- * sent back to the form with an error toast; on success, to the monitor (or list).
+ * Form actions for a DNS monitor: create, update, delete, the manual check, and the three
+ * record-level actions a domain monitor needs — reviewing what discovery found, toggling one
+ * stored record, and re-importing a zone file. Each follows the validate → mutate → flash →
+ * redirect pattern: on validation failure the visitor is sent back to the form with an error
+ * toast; on success, to the monitor (or list).
  *
- * The manual check is the one action here that performs billable work: it resolves DNS
- * inline, so unlike the HTTP monitors' "run check" — which only enqueues, and is billed by
- * the job that later carries it out — nothing downstream of this request would ever meter
- * it. All of that lives in {@link checkDnsMonitor}: the entitlement gate that decides
- * whether the lookup happens at all, the Analytics Engine data point recording it, and the
- * meter event for the one that did.
+ * The four actions that touch records or resolve anything answer `501` for now, because the
+ * sweep and the record table they act on are still being built. Each says so at its own
+ * definition, with the reason a placeholder answer would be worse than none.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { redirect } from "@pkg/http/response";
-import { notFound, unprocessableEntity } from "@pkg/http/response/html";
-import { PolarClient } from "@pkg/polar";
+import { notFound, notImplemented, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
-import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
-
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
-import Subscription from "~/app/data/subscription";
 import {
 	CreateDnsMonitorSchema,
 	DnsMonitorIdSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
-import { notifyDnsResult } from "~/app/services/alerts";
-import { writePingResult } from "~/app/services/analytics";
-import { checkDns } from "~/app/services/dns-check";
-import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-dns-monitor */
@@ -48,7 +38,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: "Please check the DNS monitor details and try again.",
+			message: ctx.i18next.t("actions.createDnsMonitor.errors.generic"),
 		});
 		return redirect(routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -60,17 +50,18 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	let existingCount = await DnsMonitor.countByTeam(db, ctx.team.id);
 	if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
 		return unprocessableEntity(
-			`A team supports at most ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors.`,
+			ctx.i18next.t("actions.createDnsMonitor.errors.limitExceeded", {
+				limit: MAX_DNS_MONITORS_PER_TEAM,
+			}),
 		);
 	}
 
-	let { expected_value, ...values } = result.data;
-	let monitor = await DnsMonitor.create(db, ctx.team.id, {
-		...values,
-		expected_value: expected_value || null,
-	});
+	let monitor = await DnsMonitor.create(db, ctx.team.id, result.data);
 
-	session?.flash("toast", { intent: "success", message: `DNS monitor "${monitor.name}" created.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.i18next.t("actions.createDnsMonitor.success.created", { name: monitor.name }),
+	});
 	return redirect(
 		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
@@ -85,7 +76,7 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: "Please check the DNS monitor details and try again.",
+			message: ctx.i18next.t("actions.updateDnsMonitor.errors.generic"),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
@@ -95,16 +86,16 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 	}
 
 	let db = getServiceContainer().get(Database);
-	let { monitor_id, expected_value, ...values } = result.data;
+	let { monitor_id, ...values } = result.data;
 	let existing = await DnsMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await DnsMonitor.updateById(db, monitor_id, {
-		...values,
-		expected_value: expected_value || null,
-	});
+	await DnsMonitor.updateById(db, monitor_id, values);
 
-	session?.flash("toast", { intent: "success", message: "DNS monitor updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.i18next.t("actions.updateDnsMonitor.success", { name: existing.name }),
+	});
 	return redirect(
 		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
@@ -130,7 +121,7 @@ export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: `DNS monitor "${existing.name}" deleted.`,
+		message: ctx.i18next.t("actions.deleteDnsMonitor.success", { name: existing.name }),
 	});
 	return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
@@ -140,15 +131,17 @@ export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, 
 /**
  * POST /actions/:team/check-dns-monitor — triggers an immediate on-demand check.
  *
- * A lookup this performs is one ping, the same as one the scheduled sweep performs, so it
- * is gated the same way and metered the same way. Everything that returns before
- * {@link checkDns} — a rejected form, a monitor this team does not own, an owner without
- * entitlement — performed no lookup and bills nothing; only work actually done reaches the
- * meter.
+ * Stubbed at `501` while the domain sweep is built (ADR-026 phase 2.1). A domain monitor
+ * sweeps every supported type at every known name; resolving the apex `A` alone and
+ * reporting `ok` in the meantime would tell the visitor their DNS is unchanged on the
+ * strength of one query out of the set they asked us to watch.
+ *
+ * When it returns, this must meter one ping keyed on the result row it writes. Under the
+ * old shape it ran a lookup inline and ingested nothing at all, which was an unbilled
+ * resolver call behind a button anybody can hold down.
  */
 export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, async (ctx) => {
 	let result = await validate(ctx.formData, DnsMonitorIdSchema);
-	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
 		return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
@@ -160,79 +153,43 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	let monitor = await DnsMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	/**
-	 * `stateFor`, not `isActive`: an owner whose entitlement cannot be determined still gets
-	 * their check, because refusing a paying customer over an inconclusive lookup is the
-	 * worse of the two mistakes. The same reading every other manual check takes.
-	 */
-	if ((await Subscription.stateFor(db, ctx.team.owner_id)) === "inactive") {
-		session?.flash("toast", {
-			intent: "error",
-			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
-		});
-		return redirect(
-			routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
-			{ status: redirect.Status.SeeOther },
-		);
-	}
-
-	let checkResult = await checkDns(
-		monitor.domain,
-		monitor.record_type as DnsRecordType,
-		monitor.expected_value,
-		monitor.last_value,
-	);
-	let resultId = await DnsMonitor.recordCheckResult(db, monitor.id, checkResult);
-
-	/**
-	 * Written here, between the history row and the meter, exactly where the scheduled sweep
-	 * writes it — a check the visitor asked for is the same event as one the cron asked for,
-	 * so nothing reading the dataset should be able to tell which produced a row. Without
-	 * this the check was billed and stored in D1 but absent from every chart and aggregate
-	 * built on Analytics Engine.
-	 *
-	 * DNS's own `ok`/`changed`/`error` vocabulary goes in as-is, matching the sweep: nothing
-	 * reads a status without filtering to one ping type first.
-	 */
-	writePingResult({
-		monitorId: monitor.id,
-		teamId: ctx.team.id,
-		type: "dns",
-		status: checkResult.status,
-		responseTimeMs: checkResult.responseTimeMs,
-	});
-
-	/**
-	 * Keyed on the history row this check just wrote, which is the same key the scheduled
-	 * sweep bills a DNS check under: it is unique, already persisted, and belongs to exactly
-	 * one lookup, so a manual check and a scheduled one can never be handed the same id and
-	 * neither can be billed twice. Deferred rather than awaited, like every meter event on a
-	 * response path — the visitor is waiting on a result this request already has, and
-	 * ingestion is best-effort and logs its own failures.
-	 */
-	waitUntil(
-		ingestPings(getServiceContainer().get(PolarClient), [
-			{
-				externalId: `ping:${resultId}`,
-				ownerId: ctx.team.owner_id,
-				teamId: ctx.team.id,
-				monitorId: monitor.id,
-				type: "dns",
-			},
-		]),
-	);
-
-	await notifyDnsResult(
-		db,
-		ctx.email,
-		monitor,
-		monitor.last_status as DnsCheckStatus | null,
-		checkResult,
-	);
-
-	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
-	return redirect(
-		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
-		{ status: redirect.Status.SeeOther },
-	);
+	return notImplemented("Not Implemented");
 });
+
+/**
+ * POST /actions/:team/review-dns-monitor — persists which discovered records are watched.
+ *
+ * Stubbed at `501` until the review screen exists (ADR-026 phase 2.5). A record the visitor
+ * declines is stored disabled rather than dropped, so this settles every record on the
+ * monitor at once and cannot be approximated by a partial write.
+ */
+export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, async () => {
+	return notImplemented("Not Implemented");
+});
+
+/**
+ * POST /actions/:team/toggle-dns-monitor-record — flips one stored record between watched
+ * and not.
+ *
+ * Stubbed at `501` until the record table is written and read (ADR-026 phase 1.3).
+ */
+export const toggleDnsMonitorRecord = createAction(
+	routes.actions.monitor.dns.toggleRecord,
+	async () => {
+		return notImplemented("Not Implemented");
+	},
+);
+
+/**
+ * POST /actions/:team/import-dns-monitor-zone-file — re-parses a freshly pasted zone file
+ * for an existing monitor.
+ *
+ * Stubbed at `501` until the parser exists (ADR-026 phase 1.1). The pasted text is never
+ * stored, so this is the only way names discovered by an earlier import can be refreshed.
+ */
+export const importDnsMonitorZoneFile = createAction(
+	routes.actions.monitor.dns.importZoneFile,
+	async () => {
+		return notImplemented("Not Implemented");
+	},
+);

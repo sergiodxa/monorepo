@@ -33,15 +33,7 @@ const RESULT_HISTORY_LIMIT = 50;
  * teams whose monitors it swept (ADR-007 §5), and the `RETURNING` projection is where that
  * denominator costs nothing.
  */
-const CLAIM_COLUMNS = [
-	"id",
-	"team_id",
-	"domain",
-	"record_type",
-	"expected_value",
-	"last_value",
-	"last_status",
-] as const;
+const CLAIM_COLUMNS = ["id", "team_id", "domain", "last_status"] as const;
 
 /** A DNS monitor claimed for a check, projected to the columns the check reads. */
 export type ClaimedDnsMonitor = Pick<SelectDnsMonitor, (typeof CLAIM_COLUMNS)[number]>;
@@ -128,8 +120,12 @@ export default class DnsMonitor {
 
 	/**
 	 * Records a check's outcome: inserts a history row and updates the monitor's cached
-	 * "last checked" fields (including `last_value`, which becomes the next check's
-	 * change-detection baseline) in one call.
+	 * "last checked" fields in one call.
+	 *
+	 * The per-record counters are left at their column defaults of zero, which is what this
+	 * caller actually knows: the sweep that counts changed, missing and new records is
+	 * ADR-026 phase 2.1, and writing anything but zero here would be a number nothing
+	 * measured.
 	 *
 	 * @returns The history row's id. It is the only thing about a completed check that is
 	 * unique and already persisted, which is what makes it the idempotency key the ping
@@ -151,7 +147,6 @@ export default class DnsMonitor {
 				id,
 				dns_monitor_id: monitorId,
 				status: result.status,
-				resolved_value: result.resolvedValue,
 				response_time_ms: result.responseTimeMs,
 				error_message: result.errorMessage ?? null,
 				checked_at: checkedAt,
@@ -162,11 +157,7 @@ export default class DnsMonitor {
 		await db.update(
 			dnsMonitors,
 			monitorId,
-			{
-				last_checked_at: checkedAt,
-				last_status: result.status,
-				last_value: result.resolvedValue,
-			},
+			{ last_checked_at: checkedAt, last_status: result.status },
 			{ touch: true },
 		);
 

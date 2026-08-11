@@ -30,8 +30,6 @@ async function createMonitor(overrides: Partial<InsertDnsMonitor> = {}) {
 	return await DnsMonitor.create(db, "team-1", {
 		name: "Example A record",
 		domain: "a.example.com",
-		record_type: "A",
-		expected_value: null,
 		...overrides,
 	});
 }
@@ -41,16 +39,13 @@ describe("DnsMonitor.create", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "Example A record",
 			domain: "example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		expect(monitor.id).toBeTruthy();
 		expect(monitor.team_id).toBe("team-1");
 		expect(monitor.name).toBe("Example A record");
 		expect(monitor.domain).toBe("example.com");
-		expect(monitor.record_type).toBe("A");
-		expect(monitor.interval_seconds).toBe(3600);
+		expect(monitor.interval_seconds).toBe(86_400);
 		expect(monitor.is_enabled).toBeTruthy();
 		expect(monitor.last_checked_at).toBeNull();
 		// Due immediately, so the first check runs on the next tick rather than a whole
@@ -65,16 +60,13 @@ describe("DnsMonitor.create", () => {
 		expect(monitor.next_due_at).toBeNull();
 	});
 
-	test("accepts an explicit expected value and interval", async () => {
+	test("accepts an explicit interval", async () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "MX check",
 			domain: "example.com",
-			record_type: "MX",
-			expected_value: "mail.example.com",
 			interval_seconds: 900,
 		});
 
-		expect(monitor.expected_value).toBe("mail.example.com");
 		expect(monitor.interval_seconds).toBe(900);
 	});
 });
@@ -84,20 +76,14 @@ describe("DnsMonitor.listByTeam", () => {
 		let first = await DnsMonitor.create(db, "team-1", {
 			name: "First",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		let second = await DnsMonitor.create(db, "team-1", {
 			name: "Second",
 			domain: "b.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		await DnsMonitor.create(db, "team-2", {
 			name: "Other team",
 			domain: "c.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		await DnsMonitor.updateById(db, first.id, { created_at: Date.now() - 60_000 });
@@ -112,20 +98,14 @@ describe("DnsMonitor.countByTeam", () => {
 		await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		await DnsMonitor.create(db, "team-1", {
 			name: "B",
 			domain: "b.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		await DnsMonitor.create(db, "team-2", {
 			name: "C",
 			domain: "c.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		expect(await DnsMonitor.countByTeam(db, "team-1")).toBe(2);
@@ -195,7 +175,7 @@ describe("DnsMonitor.claimDue", () => {
 	});
 
 	test("projects only the columns a check reads, plus the team that pays for it", async () => {
-		let monitor = await createMonitor({ expected_value: "1.2.3.4" });
+		let monitor = await createMonitor();
 
 		let [claimed] = await DnsMonitor.claimDue(db, Date.now() + 1000);
 
@@ -203,9 +183,6 @@ describe("DnsMonitor.claimDue", () => {
 			id: monitor.id,
 			team_id: monitor.team_id,
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: "1.2.3.4",
-			last_value: null,
 			last_status: null,
 		});
 	});
@@ -267,8 +244,6 @@ describe("DnsMonitor.findByIdForTeam", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		expect(await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id)).toEqual(monitor);
@@ -278,8 +253,6 @@ describe("DnsMonitor.findByIdForTeam", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		expect(await DnsMonitor.findByIdForTeam(db, "team-2", monitor.id)).toBeNull();
@@ -295,8 +268,6 @@ describe("DnsMonitor.updateById", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		let updated = await DnsMonitor.updateById(db, monitor.id, {
@@ -316,8 +287,6 @@ describe("DnsMonitor.deleteById", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "ok",
@@ -339,8 +308,6 @@ describe("DnsMonitor.listResults", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
@@ -365,14 +332,10 @@ describe("DnsMonitor.listResults", () => {
 		let monitorA = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		let monitorB = await DnsMonitor.create(db, "team-1", {
 			name: "B",
 			domain: "b.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 		await DnsMonitor.recordCheckResult(db, monitorB.id, {
 			status: "ok",
@@ -389,8 +352,6 @@ describe("DnsMonitor.recordCheckResult", () => {
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "A",
 			domain: "a.example.com",
-			record_type: "A",
-			expected_value: null,
 		});
 
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
@@ -407,7 +368,6 @@ describe("DnsMonitor.recordCheckResult", () => {
 
 		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
 		expect(updated?.last_status).toBe("error");
-		expect(updated?.last_value).toBeNull();
 		expect(typeof updated?.last_checked_at).toBe("number");
 	});
 });

@@ -1,0 +1,133 @@
+; ============================================================================
+; RECONSTRUCTED — this file was NOT produced by Cloudflare's "Export" button.
+; ============================================================================
+;
+; Provenance, stated so nobody mistakes this for a genuine export:
+;
+;   * The record DATA is real. Every RRset below was read back from Cloudflare's
+;     DoH JSON API on 2026-08-10 with
+;       curl -H 'accept: application/dns-json' \
+;         'https://cloudflare-dns.com/dns-query?name=<name>&type=<TYPE>'
+;     and the owner names are the ones the zone's own DNS dashboard lists.
+;
+;   * The FORMATTING is reconstructed from Cloudflare's public import/export
+;     documentation (fully-qualified owner with a trailing dot, an explicit
+;     numeric TTL where `1` means "automatic", an explicit `IN` class, one
+;     record per line, inline `;` comments appending record attributes). It has
+;     NOT been diffed against a byte-for-byte real export, so the BIND subset in
+;     ADR-026 §7 remains unverified against genuine Cloudflare output.
+;
+;   * Two records are SYNTHETIC and marked `; synthetic` inline: the split
+;     character-string DKIM TXT (real zones carry one; this zone's DKIM name is
+;     a CNAME to the ESP) and the `_sip._tcp` SRV. Both exist so the parser has
+;     something to bite on.
+;
+; The "unsupported constructs" section at the end is deliberate: every row of
+; ADR-026 §7's "not supported, and reported rather than ignored" table appears
+; there at least once, so a parser test can assert that each one comes back as a
+; reported line with a reason rather than being silently dropped.
+
+; --- apex -------------------------------------------------------------------
+
+sergiodxa.com.	1	IN	A	104.21.58.249
+sergiodxa.com.	1	IN	A	172.67.166.130
+sergiodxa.com.	1	IN	AAAA	2606:4700:3030::6815:3af9
+sergiodxa.com.	1	IN	AAAA	2606:4700:3037::ac43:a682
+sergiodxa.com.	1	IN	NS	dora.ns.cloudflare.com.
+sergiodxa.com.	1	IN	NS	will.ns.cloudflare.com.
+sergiodxa.com.	1	IN	MX	5 aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt1.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt2.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt3.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt4.aspmx.l.google.com.
+sergiodxa.com.	1	IN	TXT	"google-site-verification=9AkcEK4Ofz3GhKILelFPvJALYzt8KfvX8SqVyqeSL90"
+sergiodxa.com.	1	IN	TXT	"keybase-site-verification=eJkDHaBUaRYDAydnz5Bp1e3CrwSx49Xusap6naXQui4"
+sergiodxa.com.	1	IN	TXT	"openai-domain-verification=dv-ax3YOD1KBEcq9GiJ2e8AzOPM"
+sergiodxa.com.	1	IN	TXT	"pinterest-site-verification=b3e5c6e5ca09fc1efd0d8df3e57753cd"
+
+; An owner written as `@`, which resolves to the zone apex.
+@	1	IN	TXT	"v=spf1 include:_spf.google.com ~all"	; synthetic
+
+; A relative owner, resolved against the monitor's own domain. Cloudflare writes
+; owners fully qualified, so this line is here for hand-written pastes.
+www	1	IN	CNAME	sergiodxa.com.
+
+; --- mail and deliverability ------------------------------------------------
+
+_dmarc.sergiodxa.com.	1	IN	TXT	"v=DMARC1; p=none;"
+send.sergiodxa.com.	1	IN	MX	10 feedback-smtp.us-east-1.amazonses.com.
+send.sergiodxa.com.	1	IN	TXT	"v=spf1 include:amazonses.com ~all"
+send.uptime.sergiodxa.com.	1	IN	MX	10 feedback-smtp.us-east-1.amazonses.com.
+send.uptime.sergiodxa.com.	1	IN	TXT	"v=spf1 include:amazonses.com ~all"
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	13 route2.mx.cloudflare.net.
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	39 route3.mx.cloudflare.net.
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	61 route1.mx.cloudflare.net.
+cf-bounce.auth.sergiodxa.com.	1	IN	TXT	"v=spf1 include:_spf.mx.cloudflare.net ~all"
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	13 route2.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	39 route3.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	61 route1.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	TXT	"v=spf1 include:_spf.mx.cloudflare.net ~all"
+_amazonses.sergiodxa.com.	1	IN	TXT	"V4CeXnKGjuRFstK3s6JMjQXY7sXre1OAvo+wfq1OikI="
+cka._domainkey.sergiodxa.com.	1	IN	CNAME	dkim.dm-0m73q9wy.sg2.convertkit.com.
+ckespa.sergiodxa.com.	1	IN	CNAME	spf.dm-0m73q9wy.sg2.convertkit.com.
+
+; Several character-strings on one line: a TXT record longer than 255 bytes is
+; split at the protocol level and must be concatenated back, quotes removed,
+; with nothing inserted between the pieces.
+s1._domainkey.sergiodxa.com.	1	IN	TXT	"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCYbngrkZ33N4puFU2/M46Bj+GDpSnsTjdlhKazS41kMaXmQY0R/Grmp6yUnIH1bOVokR7CmkBLP71Q3Bj+c/djt1PeS3MTMl78t07BHrZhTkD40wiQ" "XxLTxjE0p3YuJydnoK+RHZUFahhiYud35w4k8yHxbpeH1rj3eolbWVMM/QIDAQAB"	; synthetic
+
+; --- identity and redirects -------------------------------------------------
+
+_atproto.sergiodxa.com.	1	IN	TXT	"did=did:plc:f4d5ka272oiyyyb7lty3tid7"
+gh.sergiodxa.com.	1	IN	A	104.21.58.249
+gh.sergiodxa.com.	1	IN	A	172.67.166.130
+gh.sergiodxa.com.	1	IN	AAAA	2606:4700:3030::6815:3af9
+gh.sergiodxa.com.	1	IN	AAAA	2606:4700:3037::ac43:a682
+go.sergiodxa.com.	1	IN	A	104.21.58.249
+go.sergiodxa.com.	1	IN	A	172.67.166.130
+go.sergiodxa.com.	1	IN	AAAA	2606:4700:3030::6815:3af9
+go.sergiodxa.com.	1	IN	AAAA	2606:4700:3037::ac43:a682
+_acme-challenge.books.sergiodxa.com.	1	IN	CNAME	books.sergiodxa.com.km23dr.flydns.net.
+
+; A TTL and a class may both be omitted; the owner and the type are the only
+; fields the parser needs.
+alias.sergiodxa.com.	CNAME	sergiodxa.com.
+
+; A `;` inside a quoted string is data, not a comment.
+_semicolon.sergiodxa.com.	1	IN	TXT	"v=spf1 a; mx; ~all"	; and this part is a comment
+
+; --- unsupported constructs, one per ADR-026 §7 row -------------------------
+;
+; None of the lines below may be silently dropped. Each must come back with its
+; line number, its text, and a reason.
+
+$ORIGIN sergiodxa.com.
+$TTL 3600
+$INCLUDE /etc/bind/sergiodxa.com.extra
+$GENERATE 1-16 host$ A 192.0.2.$
+
+; Multi-line parenthesised record (only SOA uses them in practice).
+sergiodxa.com.	1	IN	SOA	dora.ns.cloudflare.com. dns.cloudflare.com. (
+					2361787296	; serial
+					10000		; refresh
+					2400		; retry
+					604800		; expire
+					1800 )		; minimum
+
+; Blank-owner continuation: a line starting with whitespace inherits the
+; previous owner. Cloudflare always writes the owner, so this is not guessed at.
+	1	IN	TXT	"inherits the owner above"
+
+; A class other than IN.
+version.sergiodxa.com.	1	CH	TXT	"not the internet"
+
+; Types outside the six v1 sweep types.
+sergiodxa.com.	1	IN	CAA	0 issue "letsencrypt.org"
+sergiodxa.com.	1	IN	CAA	0 issuewild "digicert.com; cansignhttpexchanges=yes"
+_sip._tcp.sergiodxa.com.	1	IN	SRV	10 5 5060 sip.sergiodxa.com.	; synthetic
+249.58.21.104.in-addr.arpa.	1	IN	PTR	sergiodxa.com.
+sergiodxa.com.	1	IN	DS	2371 13 2 3e8f9a1c0b6d5e4f2a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b
+sergiodxa.com.	1	IN	HTTPS	1 . alpn="h3,h2" ipv4hint=104.21.58.249
+
+; A line that is not a record at all.
+this line is not a resource record

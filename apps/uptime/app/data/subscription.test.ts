@@ -185,7 +185,6 @@ describe("Subscription.applyEntitlement", () => {
 				team_id: team.id,
 				name: "Apex",
 				domain: "example.com",
-				record_type: "A",
 				next_due_at: Date.now(),
 			},
 			{ touch: true, returnRow: true },

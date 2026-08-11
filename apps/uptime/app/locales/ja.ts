@@ -1279,7 +1279,6 @@ export default {
 				responseStatus: "応答ステータス",
 				responseTime: "応答時間",
 				domain: "ドメイン",
-				resolvedValue: "解決された値",
 				endpoint: "エンドポイント",
 				schedule: "スケジュール",
 				lastPing: "最終Ping",
@@ -1294,7 +1293,6 @@ export default {
 				monitor: "{{name}}（{{type}}）",
 				responseStatus: "{{actual}}（期待値：{{expected}}）",
 				milliseconds: "{{value}}ms",
-				domain: "{{domain}}（{{recordType}}）",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}}（{{timezone}}）",
 			},
@@ -1801,6 +1799,39 @@ export default {
 			success: "{{name}} DNSモニターが削除されました。",
 		},
 
+		checkDnsMonitor: {
+			success: { checked: "「{{name}}」をチェックしました。" },
+		},
+
+		reviewDnsMonitor: {
+			errors: { generic: "監視するレコードを保存できませんでした。もう一度お試しください。" },
+			success: {
+				saved_one: "{{count}}件のレコードを監視しています。",
+				saved_other: "{{count}}件のレコードを監視しています。",
+			},
+		},
+
+		toggleDnsMonitorRecord: {
+			errors: { generic: "このレコードを変更できませんでした。もう一度お試しください。" },
+			success: {
+				enabled: "{{name}}の監視を開始しました。",
+				disabled: "{{name}}の監視を停止しました。",
+			},
+		},
+
+		importDnsMonitorZoneFile: {
+			errors: {
+				generic: "このゾーンファイルを読み取れませんでした。もう一度お試しください。",
+				tooLarge: "ゾーンファイルは{{limit}}以下である必要があります。",
+				tooManyNames:
+					"このゾーンには{{limit}}件を超える名前があり、1つのモニターでは処理しきれません。",
+			},
+			success: {
+				imported_one: "ゾーンファイルから{{count}}件の名前をインポートしました。",
+				imported_other: "ゾーンファイルから{{count}}件の名前をインポートしました。",
+			},
+		},
+
 		createTcpMonitor: {
 			errors: {
 				generic: "TCPモニターの作成中にエラーが発生しました。",
@@ -1946,6 +1977,8 @@ export default {
 				},
 				dnsMonitors: {
 					label: "DNSモニター",
+					/** One monitor is one domain, so this count is smaller than the work behind it. */
+					hint: "1つのモニターがドメイン全体と、そこで追跡しているすべてのレコードを対象とします。",
 					breakdown: {
 						ok: "{{ok}} 正常",
 						changed: "{{changed}} 変更",
@@ -3021,12 +3054,14 @@ export default {
 				columns: {
 					name: "名前",
 					domain: "ドメイン",
-					recordType: "タイプ",
+					records: "レコード",
 					status: "ステータス",
 					lastChecked: "最終チェック",
 					actions: "アクション",
 				},
 
+				records: "{{total}}件中{{enabled}}件を監視中",
+				noRecords: "まだありません",
 				disabled: "無効",
 				neverChecked: "未実行",
 				notChecked: "未確認",
@@ -3057,7 +3092,12 @@ export default {
 					},
 					checks: {
 						title: "チェック設定",
-						description: "解決するレコード、期待する応答、チェックの実行間隔です。",
+						description: "追跡中のすべての名前を解決する頻度です。",
+					},
+					zoneFile: {
+						title: "ゾーンファイル",
+						description:
+							"サブドメインを監視するには、ゾーンを貼り付けてください。貼り付けない場合、監視できるのはドメインのApexのみです。",
 					},
 				},
 
@@ -3074,21 +3114,16 @@ export default {
 						description: "DNSレコードを監視するドメイン。",
 					},
 
-					recordType: {
-						label: "レコードタイプ",
-						description: "チェックするDNSレコードのタイプ。",
-					},
-
-					expectedValue: {
-						label: "期待値",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "ゾーンファイル",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"任意。解決されたレコードにこれらの値のいずれかが含まれない場合に通知します。複数の値はカンマで区切ります。余分なレコードは許容されます。空欄にすると、あらゆる変更を追跡します。",
+							"任意。DNSプロバイダーからエクスポートしたBIND形式のゾーンファイルを貼り付けてください。内容は一度読み取るだけで保存されません。ゾーン内の名前を把握できる唯一の方法です。",
 					},
 
 					interval: {
 						label: "チェック間隔",
-						description: "DNSレコードをチェックする頻度。",
+						description: "追跡中のすべての名前を解決する頻度。",
 						options: {
 							"5m": "5分",
 							"15m": "15分",
@@ -3102,9 +3137,13 @@ export default {
 
 					isEnabled: {
 						label: "監視を有効化",
-						description: "このDNSレコードの監視を直ちに開始します。",
+						description: "このドメインの監視を直ちに開始します。",
 					},
 				},
+
+				/** ADR-026 §14: said on the setup screen, not only in the docs. */
+				apexOnlyNotice:
+					"DNSでは、ゾーン内のレコードを一覧表示することは誰にもできません。ゾーンファイルがない場合、監視できるのはドメインのApexのみで、サブドメインは監視できません。",
 
 				cta: "DNSモニターを作成",
 			},
@@ -3136,21 +3175,16 @@ export default {
 						description: "DNSレコードを監視するドメイン。",
 					},
 
-					recordType: {
-						label: "レコードタイプ",
-						description: "チェックするDNSレコードのタイプ。",
-					},
-
-					expectedValue: {
-						label: "期待値",
-						placeholder: "aspmx.l.google.com, alt1.aspmx.l.google.com",
+					zoneFile: {
+						label: "ゾーンファイル",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
-							"任意。解決されたレコードにこれらの値のいずれかが含まれない場合に通知します。複数の値はカンマで区切ります。余分なレコードは許容されます。空欄にすると、あらゆる変更を追跡します。",
+							"任意。DNSプロバイダーからエクスポートしたBIND形式のゾーンファイルを貼り付けてください。内容は一度読み取るだけで保存されません。ゾーン内の名前を把握できる唯一の方法です。",
 					},
 
 					interval: {
 						label: "チェック間隔",
-						description: "DNSレコードをチェックする頻度。",
+						description: "追跡中のすべての名前を解決する頻度。",
 						options: {
 							"5m": "5分",
 							"15m": "15分",
@@ -3164,7 +3198,7 @@ export default {
 
 					isEnabled: {
 						label: "監視を有効化",
-						description: "このDNSレコードを積極的に監視するかどうか。",
+						description: "このドメインを積極的に監視するかどうか。",
 					},
 				},
 
@@ -3172,10 +3206,20 @@ export default {
 				cta: "変更を保存",
 			},
 
+			zoneFileImport: {
+				title: "ゾーンファイル",
+				description:
+					"前回のインポート以降に追加された名前を取り込むには、ゾーンを再度貼り付けてください。テキストは一度読み取るだけで保存されないため、更新のたびにファイルをお願いしています。",
+				lastImported: "最終インポート：{{date}}。",
+				neverImported:
+					"ゾーンファイルはまだインポートされていません。このモニターはApexのみを対象としています。",
+				cta: "ゾーンファイルをインポート",
+			},
+
 			dangerZone: {
 				title: "危険な操作",
 				deleteMonitor: "モニターを削除",
-				deleteDescription: "チェック結果の履歴も削除されます。この操作は元に戻せません。",
+				deleteDescription: "レコードとチェック履歴も削除されます。この操作は元に戻せません。",
 				description: "ここでの操作は元に戻せません。",
 				warning: "このモニターを削除すると、DNS チェック、履歴、アラートが完全に失われます。",
 			},
@@ -3197,10 +3241,11 @@ export default {
 
 			info: {
 				domain: "ドメイン",
-				recordType: "レコードタイプ",
 				status: "ステータス",
-				expectedValue: "期待値",
-				currentValue: "現在の値",
+				recordsWatched: "監視中のレコード",
+				recordsWatchedValue: "{{total}}件中{{enabled}}件",
+				zoneFileImported: "ゾーンファイルのインポート",
+				zoneFileNeverImported: "なし — Apexのみ",
 			},
 
 			stats: {
@@ -3228,11 +3273,104 @@ export default {
 					columns: {
 						checkedAt: "チェック日時",
 						status: "ステータス",
-						value: "値",
-						responseTime: "応答時間",
+						findings: "検出結果",
+						responseTime: "最も遅いクエリ",
 					},
 				},
+
+				findings: "{{changed}}件変更 · {{missing}}件消失 · {{new}}件新規",
+				noFindings: "変更なし",
+				/** A failed query is never diffed, so a partial sweep must read as partial. */
+				queriesFailed_one: "{{count}}件のクエリが応答しませんでした",
+				queriesFailed_other: "{{count}}件のクエリが応答しませんでした",
 			},
+
+			records: {
+				title: "追跡中のレコード",
+				description:
+					"このドメインでこれまでに確認したすべてのレコードです。監視していないレコードも保持されるため、新規レコードとして再び検出されることはありません。",
+				empty: "追跡中のレコードはまだありません。",
+
+				table: {
+					columns: {
+						name: "名前",
+						type: "タイプ",
+						value: "値",
+						source: "取得元",
+						state: "状態",
+						watched: "監視",
+						actions: "アクション",
+					},
+				},
+
+				source: {
+					resolver: "解決結果",
+					zone_file: "ゾーンファイル",
+				},
+
+				state: {
+					ok: "正常",
+					changed: "変更",
+					missing: "消失",
+					new: "新規",
+					error: "エラー",
+				},
+
+				actions: {
+					menu: "アクションメニュー",
+					enable: "監視する",
+					disable: "監視を停止",
+				},
+			},
+		},
+
+		/**
+		 * The review step between creating a domain monitor and monitoring anything with it.
+		 * Its own page, so a reload lands back on the decision rather than on a detail page
+		 * that implies it was already made.
+		 */
+		dnsMonitorReview: {
+			header: {
+				title: "「{{name}}」のレコードを確認",
+				description:
+					"見つかったレコードは既定ですべて監視します。通知が不要なものはチェックを外してください。いずれの場合もレコードは保持されるため、除外したものが後から新規レコードとして現れることはありません。",
+			},
+
+			/** A line the parser could not use is reported, never silently dropped. */
+			unparsed: {
+				title_one: "{{count}}行はインポートされませんでした",
+				title_other: "{{count}}行はインポートされませんでした",
+				description:
+					"これらの行は読み取り対象の範囲に含まれません。そこで宣言されている内容は監視されません。",
+				line: "{{line}}行目：{{reason}}",
+			},
+
+			groups: {
+				resolving: {
+					title: "現在解決できるもの",
+					description:
+						"既知のすべての名前について、対応するすべてのレコードタイプを解決して見つかりました。",
+				},
+				declared: {
+					title: "宣言されているが解決できないもの",
+					description:
+						"ゾーンファイルには記載されていますが、現時点では応答がありません。指定がない限り監視しません。貼り付けたゾーンはその時点のスナップショットであり、時間とともに古くなるためです。",
+				},
+			},
+
+			table: {
+				columns: {
+					watched: "監視",
+					name: "名前",
+					type: "タイプ",
+					value: "値",
+				},
+			},
+
+			selectAll: "すべてのレコードを監視",
+			empty: "このドメインでは何も見つかりませんでした。",
+			cancel: "キャンセル",
+			cta: "レコードを保存",
 		},
 
 		maintenance: {

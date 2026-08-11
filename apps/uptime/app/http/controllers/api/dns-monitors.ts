@@ -23,21 +23,17 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
-
 /** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	return {
 		id: monitor.id,
 		name: monitor.name,
 		domain: monitor.domain,
-		recordType: monitor.record_type,
-		expectedValue: monitor.expected_value,
+		zoneFileImportedAt: monitor.zone_file_imported_at,
 		intervalSeconds: monitor.interval_seconds,
 		isEnabled: monitor.is_enabled,
 		lastCheckedAt: monitor.last_checked_at,
 		lastStatus: monitor.last_status,
-		lastValue: monitor.last_value,
 		createdAt: monitor.created_at,
 		updatedAt: monitor.updated_at,
 	};
@@ -46,8 +42,6 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 const CreateDnsMonitorSchema = s.object({
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	recordType: s.enum_(DNS_RECORD_TYPES),
-	expectedValue: s.optional(s.string().pipe(checks.maxLength(1024))),
 	intervalSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 3600),
 	isEnabled: s.defaulted(s.boolean(), true),
 });
@@ -87,8 +81,6 @@ export default createController(dnsMonitorsRoutes, {
 				let dnsMonitor = await DnsMonitor.create(db, ctx.apiTeam.id, {
 					name: result.data.name,
 					domain: result.data.domain,
-					record_type: result.data.recordType,
-					expected_value: result.data.expectedValue ?? null,
 					interval_seconds: result.data.intervalSeconds,
 					is_enabled: result.data.isEnabled,
 				});

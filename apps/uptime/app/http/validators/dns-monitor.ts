@@ -11,14 +11,15 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
-const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
-
-/** Field shape shared by the create and update DNS monitor forms. */
+/**
+ * Field shape shared by the create and update DNS monitor forms. A monitor covers a whole
+ * domain, so there is no record type and no transcribed expected value to validate: the
+ * expectation is imported, not typed. The zone-file paste and the 900-second interval floor
+ * of ADR-026 §2 land with the forms that carry them (phase 2.3).
+ */
 const dnsMonitorFields = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	domain: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	record_type: f.field(s.enum_(DNS_RECORD_TYPES)),
-	expected_value: f.field(s.optional(s.string())),
 	interval_seconds: f.field(
 		s.defaulted(coerce.number().pipe(checks.min(300), checks.max(86_400)), 3600),
 	),

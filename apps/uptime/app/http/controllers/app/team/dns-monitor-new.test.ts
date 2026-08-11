@@ -110,10 +110,8 @@ describe("dnsMonitorNew", () => {
 		let body = await response.text();
 		expect(body).toContain("Create DNS Monitor");
 		expect(body).toContain('name="domain"');
-		expect(body).toContain('name="record_type"');
 		expect(body).toContain("Domain");
-		// `<select>` has no `defaultValue` attribute, so each default is marked on its option.
-		expect(body).toContain('value="A" selected');
+		// `<select>` has no `defaultValue` attribute, so the default is marked on its option.
 		expect(body).toContain('value="3600" selected');
 		expect(body).not.toContain("defaultvalue");
 	});

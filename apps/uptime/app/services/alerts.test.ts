@@ -328,13 +328,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			monitorType: "dns",
 			monitorName: "Domain",
 			eventType: "down",
-			snapshot: {
-				type: "dns",
-				status: "error",
-				resolvedValue: null,
-				domain: "x.com",
-				recordType: "A",
-			},
+			snapshot: { type: "dns", status: "error", domain: "x.com" },
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
@@ -1305,14 +1299,12 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 		team_id: "team-1",
 		name: "Domain",
 		domain: "example.com",
-		record_type: "A",
-		expected_value: null,
 		interval_seconds: 3600,
 		next_due_at: null,
 		is_enabled: true,
 		last_checked_at: null,
 		last_status: null,
-		last_value: null,
+		zone_file_imported_at: null,
 		...overrides,
 	};
 }
@@ -1320,10 +1312,7 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 describe("notifyDnsResult", () => {
 	test("does not dispatch on the first-ever 'ok' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, {
-			status: "ok",
-			resolvedValue: "1.2.3.4",
-		});
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, { status: "ok" });
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
 	});
@@ -1333,10 +1322,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", {
-			status: "ok",
-			resolvedValue: "1.2.3.4",
-		});
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", { status: "ok" });
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("up");
@@ -1348,10 +1334,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", {
-			status: "error",
-			resolvedValue: null,
-		});
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", { status: "error" });
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("down");
@@ -1362,10 +1345,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", {
-			status: "changed",
-			resolvedValue: "9.9.9.9",
-		});
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", { status: "changed" });
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("degraded");

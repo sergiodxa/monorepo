@@ -121,11 +121,7 @@ async function seedMonitor(
 	}
 
 	if (type === "dns") {
-		await db.create(
-			dnsMonitors,
-			{ ...shared, domain: "example.com", record_type: "A", is_enabled: enabled },
-			write,
-		);
+		await db.create(dnsMonitors, { ...shared, domain: "example.com", is_enabled: enabled }, write);
 	}
 
 	if (type === "tcp") {

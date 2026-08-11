@@ -30,17 +30,13 @@ import { Database } from "remix/data-table";
 
 import type { ClaimedDnsMonitor } from "~/app/data/dns-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
-import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
 import type { BillablePing } from "~/app/services/ping-meter";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import Team from "~/app/data/team";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
-import { shouldNotifyDnsResult } from "~/app/services/alerts";
-import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
-import { checkDns } from "~/app/services/dns-check";
 import { ingestPings } from "~/app/services/ping-meter";
 
 /**
@@ -144,52 +140,26 @@ export class CheckDnsJob extends Job {
 	}
 
 	/**
-	 * Resolves one monitor and records its result, returning what the sweep needs from a
+	 * Sweeps one monitor and records its result, returning what the sweep needs from a
 	 * completed check: the notification its outcome warrants (`null` when it isn't
-	 * alert-worthy) and the result row's id. The previous status is read before the write,
-	 * since that's what makes a recovery detectable.
+	 * alert-worthy) and the result row's id.
 	 *
 	 * Throwing here is what marks a monitor as failed, so everything this returns describes
 	 * a check that finished — which is why the caller can bill for it unconditionally.
 	 */
-	private async check(db: Database, monitor: ClaimedDnsMonitor): Promise<CheckedMonitor> {
-		/** Both columns are declared as plain text enums, so their value sets are asserted here. */
-		let previousStatus = monitor.last_status as DnsCheckStatus | null;
-		let result = await checkDns(
-			monitor.domain,
-			monitor.record_type as DnsRecordType,
-			monitor.expected_value,
-			monitor.last_value,
-		);
-
-		let resultId = await DnsMonitor.recordCheckResult(db, monitor.id, result);
-
+	private async check(_db: Database, monitor: ClaimedDnsMonitor): Promise<CheckedMonitor> {
 		/**
-		 * DNS's own `ok`/`changed`/`error` vocabulary goes into the dataset as-is: nothing
-		 * reads a status without filtering to one ping type first, and remapping these onto
-		 * HTTP's up/degraded/down would record an outcome no lookup observed.
+		 * A domain monitor has no single record type to resolve any more, and the sweep that
+		 * replaces it — every supported type at every known name, bounded and batched — is
+		 * ADR-026 phase 2.1. Refusing loudly is the only honest option in between: resolving
+		 * the apex `A` alone and reporting `ok` would tell a customer their DNS is unchanged
+		 * on the strength of one query out of the set they asked us to watch.
+		 *
+		 * The claim above has already advanced `next_due_at`, so a monitor throwing here is
+		 * logged as failed and retried on its next interval rather than piling up.
 		 */
-		writePingResult({
-			monitorId: monitor.id,
-			teamId: monitor.team_id,
-			type: "dns",
-			status: result.status,
-			responseTimeMs: result.responseTimeMs,
-		});
-
-		if (!shouldNotifyDnsResult(previousStatus, result.status)) {
-			return { notification: null, resultId };
-		}
-
-		return {
-			notification: {
-				type: "notify",
-				monitorType: "dns",
-				monitorId: monitor.id,
-				previousStatus,
-				newStatus: result.status,
-			},
-			resultId,
-		};
+		throw new Error(
+			`Domain sweep not implemented for DNS monitor ${monitor.id} (${monitor.domain}).`,
+		);
 	}
 }

@@ -122,7 +122,6 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
-			record_type: "A",
 		},
 		{ touch: true, returnRow: true },
 	);

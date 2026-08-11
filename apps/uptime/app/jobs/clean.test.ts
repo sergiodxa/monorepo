@@ -63,7 +63,6 @@ describe("CleanJob.perform", () => {
 			id,
 			dns_monitor_id: "dns-monitor-1",
 			status: "ok",
-			resolved_value: "203.0.113.1",
 			response_time_ms: 12,
 			error_message: null,
 			checked_at: checkedAt,
