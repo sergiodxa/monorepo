@@ -1277,25 +1277,6 @@ export default {
 		cta: "Create Monitor",
 	},
 
-	toasts: {
-		refreshMonitor: {
-			pending: "Pinging {{name}}...",
-			success: "{{name}}'s ping ended.",
-			failure: "Oops! Something went wrong while running the monitor.",
-		},
-
-		deleteMonitor: {
-			success: "{{name}} was deleted.",
-			failure: "We couldn't delete {{name}}. Please try again.",
-		},
-
-		createMonitor: {
-			pending: "Creating monitor {{name}}...",
-			success: "{{name}} was created.",
-			failure: "We couldn't create {{name}}. Please try again.",
-		},
-	},
-
 	emails: {
 		accountDeleted: {
 			subject: "Your Uptime account has been deleted",
@@ -1613,6 +1594,7 @@ export default {
 		 * same reason and flash the same toast, so one key keeps them from drifting apart.
 		 */
 		checks: {
+			queued: 'Check queued for "{{name}}".',
 			subscriptionRequired: "An active subscription is required to run a check.",
 		},
 
@@ -1712,17 +1694,6 @@ export default {
 				notFound: "This monitor does not exist.",
 			},
 			success: "{{name}} monitor was deleted.",
-		},
-
-		playMonitor: {
-			errors: {
-				generic: "Oops! Something went wrong.",
-				notFound: "This monitor does not exist.",
-			},
-
-			pending: "Pinging {{name}}...",
-			success: "{{name}}'s ping ended.",
-			failure: "Oops! Something went wrong while running the monitor.",
 		},
 
 		removeAlert: {
@@ -1906,16 +1877,6 @@ export default {
 			},
 
 			success: "{{name}} DNS monitor was deleted.",
-		},
-
-		checkDnsMonitor: {
-			errors: {
-				generic: "Oops! Something went wrong.",
-				notFound: "This DNS monitor does not exist.",
-				forbidden: "You are not allowed to check this DNS monitor.",
-			},
-
-			success: "DNS check completed for {{name}}.",
 		},
 
 		createTcpMonitor: {
@@ -5052,7 +5013,6 @@ export default {
 					},
 					timezone: {
 						label: "Timezone",
-						placeholder: "Select timezone",
 						description: "The timezone for the cron schedule.",
 					},
 					alertOnLate: {
@@ -5129,7 +5089,6 @@ export default {
 					},
 					timezone: {
 						label: "Timezone",
-						placeholder: "Select timezone",
 						description: "The timezone for the cron schedule.",
 					},
 					alertOnLate: {

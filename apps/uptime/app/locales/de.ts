@@ -440,6 +440,8 @@ export default {
 					saas: "SaaS-Anwendungen",
 					ecommerce: "E-Commerce",
 					cronJobs: "Cron-Job-Überwachung",
+					microservices: "Microservices",
+					healthChecks: "Health Checks",
 				},
 				solutions: {
 					title: "Lösungen",
@@ -457,6 +459,17 @@ export default {
 					betterUptime: "vs Better Uptime",
 					healthchecks: "vs Healthchecks.io",
 					cronitor: "vs Cronitor",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
+				},
+				docs: {
+					title: "Dokumentation",
+					overview: "Überblick",
+					quickstart: "Schnellstart",
+					apiReference: "API-Referenz",
 				},
 				legal: {
 					title: "Rechtliches",
@@ -950,6 +963,16 @@ export default {
 		},
 	},
 
+	notFound: {
+		title: "Seite nicht gefunden",
+		description: "Die gesuchte Seite existiert nicht oder wurde möglicherweise verschoben.",
+		goBackHome: "Zurück zur Startseite",
+	},
+
+	errors: {
+		backHome: "Zur Startseite",
+	},
+
 	app: {
 		meta: {
 			title: "Uptime von Sergio Xalambrí",
@@ -1219,25 +1242,6 @@ export default {
 			},
 		},
 		cta: "Monitor erstellen",
-	},
-
-	toasts: {
-		refreshMonitor: {
-			pending: "Pinge {{name}}...",
-			success: "Ping von {{name}} beendet.",
-			failure: "Hoppla! Beim Ausführen des Monitors ist etwas schiefgelaufen.",
-		},
-
-		deleteMonitor: {
-			success: "{{name}} wurde gelöscht.",
-			failure: "Wir konnten {{name}} nicht löschen. Bitte versuchen Sie es erneut.",
-		},
-
-		createMonitor: {
-			pending: "Erstelle Monitor {{name}}...",
-			success: "{{name}} wurde erstellt.",
-			failure: "Wir konnten {{name}} nicht erstellen. Bitte versuchen Sie es erneut.",
-		},
 	},
 
 	emails: {
@@ -1557,6 +1561,7 @@ export default {
 
 	actions: {
 		checks: {
+			queued: "Prüfung für „{{name}}“ eingereiht.",
 			subscriptionRequired: "Für eine Prüfung ist ein aktives Abonnement erforderlich.",
 		},
 
@@ -1660,17 +1665,6 @@ export default {
 				notFound: "Dieser Monitor existiert nicht.",
 			},
 			success: "Monitor {{name}} wurde gelöscht.",
-		},
-
-		playMonitor: {
-			errors: {
-				generic: "Hoppla! Etwas ist schiefgelaufen.",
-				notFound: "Dieser Monitor existiert nicht.",
-			},
-
-			pending: "Pinge {{name}}...",
-			success: "Ping von {{name}} beendet.",
-			failure: "Hoppla! Beim Ausführen des Monitors ist etwas schiefgelaufen.",
 		},
 
 		removeAlert: {
@@ -1857,16 +1851,6 @@ export default {
 			},
 
 			success: "DNS-Monitor {{name}} wurde gelöscht.",
-		},
-
-		checkDnsMonitor: {
-			errors: {
-				generic: "Hoppla! Etwas ist schiefgelaufen.",
-				notFound: "Dieser DNS-Monitor existiert nicht.",
-				forbidden: "Sie sind nicht berechtigt, diesen DNS-Monitor zu prüfen.",
-			},
-
-			success: "DNS-Prüfung für {{name}} abgeschlossen.",
 		},
 
 		createTcpMonitor: {
@@ -4157,6 +4141,47 @@ export default {
 				},
 			},
 
+			teams: {
+				title: "Ihre Teams",
+				description: "Teams, in denen Sie Mitglied sind.",
+
+				actions: {
+					createTeam: "Team erstellen",
+				},
+
+				empty: {
+					title: "Noch keine Teams",
+					description: "Erstellen Sie ein Team, um Ihre Dienste zu überwachen.",
+					cta: "Team erstellen",
+				},
+
+				table: {
+					label: "Teams",
+					description: "Alle Teams, denen Sie angehören.",
+
+					columns: {
+						team: "Team",
+						role: "Rolle",
+						actions: "Aktionen",
+					},
+
+					role: {
+						member: "Mitglied",
+						admin: "Admin",
+						owner: "Eigentümer",
+					},
+
+					actions: {
+						menu: "Aktionsmenü",
+						leave: "Team verlassen",
+					},
+
+					confirmation: {
+						leaveTeam: "Möchten Sie {{name}} wirklich verlassen?",
+					},
+				},
+			},
+
 			dataExport: {
 				title: "Ihre Daten",
 				description: "Laden Sie alles herunter, was diese App über Sie gespeichert hat.",
@@ -5022,7 +5047,6 @@ export default {
 					},
 					timezone: {
 						label: "Zeitzone",
-						placeholder: "Zeitzone auswählen",
 						description: "Die Zeitzone für den Cron-Zeitplan.",
 					},
 					alertOnLate: {
@@ -5102,7 +5126,6 @@ export default {
 					},
 					timezone: {
 						label: "Zeitzone",
-						placeholder: "Zeitzone auswählen",
 						description: "Die Zeitzone für den Cron-Zeitplan.",
 					},
 					alertOnLate: {
@@ -5241,5 +5264,56 @@ export default {
 					"Sind Sie sicher, dass Sie {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
 			},
 		},
+	},
+
+	docs: {
+		meta: {
+			title: "Dokumentation – Uptime",
+			description:
+				"Dokumentation zum Überwachungsdienst Uptime. Erfahren Sie, wie Sie Monitore, Benachrichtigungen, Statusseiten und mehr einsetzen.",
+		},
+
+		header: {
+			cta: {
+				in: "Dashboard öffnen",
+				out: "Überwachung starten",
+			},
+		},
+
+		sidebar: {
+			title: "Dokumentation",
+			description: "Anleitungen und Referenz",
+			searchPlaceholder: "Suchen …",
+			openMenu: "Menü öffnen",
+			closeMenu: "Menü schließen",
+		},
+
+		nav: {
+			gettingStarted: "Erste Schritte",
+			overview: "Überblick",
+			quickstart: "Schnellstart",
+
+			api: "API-Referenz",
+			apiOverview: "API-Überblick",
+			authentication: "Authentifizierung",
+			errors: "Fehler",
+
+			resources: "Ressourcen",
+			monitors: "Monitore",
+			dnsMonitors: "DNS-Monitore",
+			tcpMonitors: "TCP-Monitore",
+			cronJobs: "Cron Jobs",
+			alerts: "Benachrichtigungen",
+			statusPages: "Statusseiten",
+		},
+
+		error: {
+			title: "Fehler in der Dokumentation",
+			description: "Beim Laden dieser Dokumentationsseite ist ein Fehler aufgetreten.",
+			notFoundTitle: "Seite nicht gefunden",
+			notFoundDescription: "Die gesuchte Dokumentationsseite existiert nicht.",
+		},
+
+		lastUpdated: "Zuletzt aktualisiert: {{date}}",
 	},
 };

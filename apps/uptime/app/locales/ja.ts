@@ -428,6 +428,8 @@ export default {
 					saas: "SaaSアプリケーション",
 					ecommerce: "Eコマース",
 					cronJobs: "Cronジョブ監視",
+					microservices: "マイクロサービス",
+					healthChecks: "ヘルスチェック",
 				},
 				solutions: {
 					title: "ソリューション",
@@ -445,6 +447,17 @@ export default {
 					betterUptime: "vs Better Uptime",
 					healthchecks: "vs Healthchecks.io",
 					cronitor: "vs Cronitor",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
+				},
+				docs: {
+					title: "ドキュメント",
+					overview: "概要",
+					quickstart: "クイックスタート",
+					apiReference: "APIリファレンス",
 				},
 				legal: {
 					title: "法的情報",
@@ -920,6 +933,16 @@ export default {
 		},
 	},
 
+	notFound: {
+		title: "ページが見つかりません",
+		description: "お探しのページは存在しないか、移動された可能性があります。",
+		goBackHome: "ホームに戻る",
+	},
+
+	errors: {
+		backHome: "ホームに戻る",
+	},
+
 	app: {
 		meta: {
 			title: "Uptime by Sergio Xalambrí",
@@ -1187,25 +1210,6 @@ export default {
 			},
 		},
 		cta: "モニターを作成",
-	},
-
-	toasts: {
-		refreshMonitor: {
-			pending: "{{name}}をpingしています...",
-			success: "{{name}}のpingが完了しました。",
-			failure: "モニターの実行中にエラーが発生しました。",
-		},
-
-		deleteMonitor: {
-			success: "{{name}}が削除されました。",
-			failure: "{{name}}を削除できませんでした。もう一度お試しください。",
-		},
-
-		createMonitor: {
-			pending: "モニター{{name}}を作成しています...",
-			success: "{{name}}が作成されました。",
-			failure: "{{name}}を作成できませんでした。もう一度お試しください。",
-		},
 	},
 
 	emails: {
@@ -1511,6 +1515,7 @@ export default {
 
 	actions: {
 		checks: {
+			queued: "「{{name}}」のチェックをキューに追加しました。",
 			subscriptionRequired: "チェックを実行するには有効なサブスクリプションが必要です。",
 		},
 
@@ -1609,17 +1614,6 @@ export default {
 				notFound: "このモニターは存在しません。",
 			},
 			success: "{{name}}モニターが削除されました。",
-		},
-
-		playMonitor: {
-			errors: {
-				generic: "エラーが発生しました。",
-				notFound: "このモニターは存在しません。",
-			},
-
-			pending: "{{name}}をpingしています...",
-			success: "{{name}}のpingが完了しました。",
-			failure: "モニターの実行中にエラーが発生しました。",
 		},
 
 		removeAlert: {
@@ -1805,16 +1799,6 @@ export default {
 			},
 
 			success: "{{name}} DNSモニターが削除されました。",
-		},
-
-		checkDnsMonitor: {
-			errors: {
-				generic: "エラーが発生しました。",
-				notFound: "このDNSモニターは存在しません。",
-				forbidden: "このDNSモニターをチェックする権限がありません。",
-			},
-
-			success: "{{name}}のDNSチェックが完了しました。",
 		},
 
 		createTcpMonitor: {
@@ -4055,6 +4039,47 @@ export default {
 				},
 			},
 
+			teams: {
+				title: "参加中のチーム",
+				description: "あなたがメンバーになっているチームです。",
+
+				actions: {
+					createTeam: "チームを作成",
+				},
+
+				empty: {
+					title: "チームがまだありません",
+					description: "チームを作成して、サービスの監視を始めましょう。",
+					cta: "チームを作成",
+				},
+
+				table: {
+					label: "チーム",
+					description: "あなたが所属しているすべてのチームです。",
+
+					columns: {
+						team: "チーム",
+						role: "ロール",
+						actions: "操作",
+					},
+
+					role: {
+						member: "メンバー",
+						admin: "管理者",
+						owner: "オーナー",
+					},
+
+					actions: {
+						menu: "アクションメニュー",
+						leave: "チームから脱退",
+					},
+
+					confirmation: {
+						leaveTeam: "{{name}}から脱退してもよろしいですか？",
+					},
+				},
+			},
+
 			dataExport: {
 				title: "あなたのデータ",
 				description: "このアプリが保持しているあなたに関するすべてをダウンロードできます。",
@@ -4890,7 +4915,6 @@ export default {
 					},
 					timezone: {
 						label: "タイムゾーン",
-						placeholder: "タイムゾーンを選択",
 						description: "Cronスケジュールのタイムゾーン。",
 					},
 					alertOnLate: {
@@ -4966,7 +4990,6 @@ export default {
 					},
 					timezone: {
 						label: "タイムゾーン",
-						placeholder: "タイムゾーンを選択",
 						description: "Cronスケジュールのタイムゾーン。",
 					},
 					alertOnLate: {
@@ -5100,5 +5123,56 @@ export default {
 				confirmation: "{{name}}を削除してもよろしいですか？この操作は取り消せません。",
 			},
 		},
+	},
+
+	docs: {
+		meta: {
+			title: "ドキュメント - Uptime",
+			description:
+				"監視サービス Uptime のドキュメントです。モニター、アラート、ステータスページなどの使い方をご紹介します。",
+		},
+
+		header: {
+			cta: {
+				in: "ダッシュボードを開く",
+				out: "監視を始める",
+			},
+		},
+
+		sidebar: {
+			title: "ドキュメント",
+			description: "ガイドとリファレンス",
+			searchPlaceholder: "検索...",
+			openMenu: "メニューを開く",
+			closeMenu: "メニューを閉じる",
+		},
+
+		nav: {
+			gettingStarted: "はじめかた",
+			overview: "概要",
+			quickstart: "クイックスタート",
+
+			api: "APIリファレンス",
+			apiOverview: "API概要",
+			authentication: "認証",
+			errors: "エラー",
+
+			resources: "リソース",
+			monitors: "モニター",
+			dnsMonitors: "DNSモニター",
+			tcpMonitors: "TCPモニター",
+			cronJobs: "Cronジョブ",
+			alerts: "アラート",
+			statusPages: "ステータスページ",
+		},
+
+		error: {
+			title: "ドキュメントの読み込みエラー",
+			description: "このドキュメントページの読み込み中にエラーが発生しました。",
+			notFoundTitle: "ページが見つかりません",
+			notFoundDescription: "お探しのドキュメントページは存在しません。",
+		},
+
+		lastUpdated: "最終更新: {{date}}",
 	},
 };

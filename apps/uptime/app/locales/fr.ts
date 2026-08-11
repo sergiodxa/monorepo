@@ -439,6 +439,8 @@ export default {
 					saas: "Applications SaaS",
 					ecommerce: "E-commerce",
 					cronJobs: "Surveillance Cron Jobs",
+					microservices: "Microservices",
+					healthChecks: "Health checks",
 				},
 				solutions: {
 					title: "Solutions",
@@ -456,6 +458,17 @@ export default {
 					betterUptime: "vs Better Uptime",
 					healthchecks: "vs Healthchecks.io",
 					cronitor: "vs Cronitor",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
+				},
+				docs: {
+					title: "Documentation",
+					overview: "Vue d'ensemble",
+					quickstart: "Démarrage rapide",
+					apiReference: "Référence de l'API",
 				},
 				legal: {
 					title: "Juridique",
@@ -959,6 +972,16 @@ export default {
 		},
 	},
 
+	notFound: {
+		title: "Page introuvable",
+		description: "La page que vous recherchez n'existe pas ou a peut-être été déplacée.",
+		goBackHome: "Revenir à l'accueil",
+	},
+
+	errors: {
+		backHome: "Retour à l'accueil",
+	},
+
 	app: {
 		meta: {
 			title: "Uptime par Sergio Xalambrí",
@@ -1226,25 +1249,6 @@ export default {
 			},
 		},
 		cta: "Créer le moniteur",
-	},
-
-	toasts: {
-		refreshMonitor: {
-			pending: "Ping de {{name}} en cours...",
-			success: "Le ping de {{name}} est terminé.",
-			failure: "Oups ! Une erreur s'est produite lors de l'exécution du moniteur.",
-		},
-
-		deleteMonitor: {
-			success: "{{name}} a été supprimé.",
-			failure: "Nous n'avons pas pu supprimer {{name}}. Veuillez réessayer.",
-		},
-
-		createMonitor: {
-			pending: "Création du moniteur {{name}}...",
-			success: "{{name}} a été créé.",
-			failure: "Nous n'avons pas pu créer {{name}}. Veuillez réessayer.",
-		},
 	},
 
 	emails: {
@@ -1566,6 +1570,7 @@ export default {
 
 	actions: {
 		checks: {
+			queued: "Vérification mise en file d'attente pour « {{name}} ».",
 			subscriptionRequired: "Un abonnement actif est nécessaire pour lancer une vérification.",
 		},
 
@@ -1668,17 +1673,6 @@ export default {
 				notFound: "Ce moniteur n'existe pas.",
 			},
 			success: "Le moniteur {{name}} a été supprimé.",
-		},
-
-		playMonitor: {
-			errors: {
-				generic: "Oups ! Une erreur s'est produite.",
-				notFound: "Ce moniteur n'existe pas.",
-			},
-
-			pending: "Ping de {{name}} en cours...",
-			success: "Le ping de {{name}} est terminé.",
-			failure: "Oups ! Une erreur s'est produite lors de l'exécution du moniteur.",
 		},
 
 		removeAlert: {
@@ -1865,16 +1859,6 @@ export default {
 			},
 
 			success: "Le moniteur DNS {{name}} a été supprimé.",
-		},
-
-		checkDnsMonitor: {
-			errors: {
-				generic: "Oups ! Une erreur s'est produite.",
-				notFound: "Ce moniteur DNS n'existe pas.",
-				forbidden: "Vous n'êtes pas autorisé à vérifier ce moniteur DNS.",
-			},
-
-			success: "La vérification DNS de {{name}} est terminée.",
 		},
 
 		createTcpMonitor: {
@@ -4157,6 +4141,47 @@ export default {
 				},
 			},
 
+			teams: {
+				title: "Vos équipes",
+				description: "Les équipes dont vous êtes membre.",
+
+				actions: {
+					createTeam: "Créer une équipe",
+				},
+
+				empty: {
+					title: "Aucune équipe pour l'instant",
+					description: "Créez une équipe pour commencer à surveiller vos services.",
+					cta: "Créer une équipe",
+				},
+
+				table: {
+					label: "Équipes",
+					description: "Toutes les équipes auxquelles vous appartenez.",
+
+					columns: {
+						team: "Équipe",
+						role: "Rôle",
+						actions: "Actions",
+					},
+
+					role: {
+						member: "Membre",
+						admin: "Administrateur",
+						owner: "Propriétaire",
+					},
+
+					actions: {
+						menu: "Menu d'actions",
+						leave: "Quitter l'équipe",
+					},
+
+					confirmation: {
+						leaveTeam: "Voulez-vous vraiment quitter {{name}} ?",
+					},
+				},
+			},
+
 			dataExport: {
 				title: "Vos données",
 				description: "Téléchargez tout ce que cette application détient à votre sujet.",
@@ -5011,7 +5036,6 @@ export default {
 					},
 					timezone: {
 						label: "Fuseau Horaire",
-						placeholder: "Sélectionner le fuseau horaire",
 						description: "Le fuseau horaire pour la planification cron.",
 					},
 					alertOnLate: {
@@ -5089,7 +5113,6 @@ export default {
 					},
 					timezone: {
 						label: "Fuseau Horaire",
-						placeholder: "Sélectionner le fuseau horaire",
 						description: "Le fuseau horaire pour la planification cron.",
 					},
 					alertOnLate: {
@@ -5226,5 +5249,56 @@ export default {
 					"Êtes-vous sûr de vouloir supprimer {{name}} ? Cette action est irréversible.",
 			},
 		},
+	},
+
+	docs: {
+		meta: {
+			title: "Documentation - Uptime",
+			description:
+				"Documentation du service de surveillance Uptime. Découvrez comment utiliser les moniteurs, les alertes, les pages de statut et plus encore.",
+		},
+
+		header: {
+			cta: {
+				in: "Ouvrir le tableau de bord",
+				out: "Commencer la surveillance",
+			},
+		},
+
+		sidebar: {
+			title: "Documentation",
+			description: "Guides et référence",
+			searchPlaceholder: "Rechercher…",
+			openMenu: "Ouvrir le menu",
+			closeMenu: "Fermer le menu",
+		},
+
+		nav: {
+			gettingStarted: "Premiers pas",
+			overview: "Vue d'ensemble",
+			quickstart: "Démarrage rapide",
+
+			api: "Référence de l'API",
+			apiOverview: "Vue d'ensemble de l'API",
+			authentication: "Authentification",
+			errors: "Erreurs",
+
+			resources: "Ressources",
+			monitors: "Moniteurs",
+			dnsMonitors: "Moniteurs DNS",
+			tcpMonitors: "Moniteurs TCP",
+			cronJobs: "Cron Jobs",
+			alerts: "Alertes",
+			statusPages: "Pages de statut",
+		},
+
+		error: {
+			title: "Erreur de documentation",
+			description: "Une erreur est survenue lors du chargement de cette page de documentation.",
+			notFoundTitle: "Page introuvable",
+			notFoundDescription: "La page de documentation que vous recherchez n'existe pas.",
+		},
+
+		lastUpdated: "Dernière mise à jour : {{date}}",
 	},
 };

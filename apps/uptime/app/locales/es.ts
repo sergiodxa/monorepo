@@ -438,6 +438,8 @@ export default {
 					saas: "Aplicaciones SaaS",
 					ecommerce: "E-commerce",
 					cronJobs: "Monitoreo de Cron Jobs",
+					microservices: "Microservicios",
+					healthChecks: "Health checks",
 				},
 				solutions: {
 					title: "Soluciones",
@@ -455,6 +457,17 @@ export default {
 					betterUptime: "vs Better Uptime",
 					healthchecks: "vs Healthchecks.io",
 					cronitor: "vs Cronitor",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
+				},
+				docs: {
+					title: "Documentación",
+					overview: "Introducción",
+					quickstart: "Inicio rápido",
+					apiReference: "Referencia de API",
 				},
 				legal: {
 					title: "Legal",
@@ -946,6 +959,16 @@ export default {
 		},
 	},
 
+	notFound: {
+		title: "Página no encontrada",
+		description: "La página que busca no existe o puede haberse movido.",
+		goBackHome: "Volver al inicio",
+	},
+
+	errors: {
+		backHome: "Volver al inicio",
+	},
+
 	app: {
 		meta: {
 			title: "Uptime por Sergio Xalambrí",
@@ -1214,25 +1237,6 @@ export default {
 			},
 		},
 		cta: "Crear Monitor",
-	},
-
-	toasts: {
-		refreshMonitor: {
-			pending: "Haciendo ping a {{name}}...",
-			success: "El ping de {{name}} ha terminado.",
-			failure: "¡Ups! Algo salió mal al ejecutar el monitor.",
-		},
-
-		deleteMonitor: {
-			success: "{{name}} fue eliminado.",
-			failure: "No pudimos eliminar {{name}}. Por favor, intente de nuevo.",
-		},
-
-		createMonitor: {
-			pending: "Creando monitor {{name}}...",
-			success: "{{name}} fue creado.",
-			failure: "No pudimos crear {{name}}. Por favor, intente de nuevo.",
-		},
 	},
 
 	emails: {
@@ -1553,6 +1557,7 @@ export default {
 
 	actions: {
 		checks: {
+			queued: "Comprobación en cola para «{{name}}».",
 			subscriptionRequired: "Se requiere una suscripción activa para ejecutar una comprobación.",
 		},
 
@@ -1653,17 +1658,6 @@ export default {
 				notFound: "Este monitor no existe.",
 			},
 			success: "El monitor {{name}} fue eliminado.",
-		},
-
-		playMonitor: {
-			errors: {
-				generic: "¡Ups! Algo salió mal.",
-				notFound: "Este monitor no existe.",
-			},
-
-			pending: "Haciendo ping a {{name}}...",
-			success: "El ping de {{name}} ha terminado.",
-			failure: "¡Ups! Algo salió mal al ejecutar el monitor.",
 		},
 
 		removeAlert: {
@@ -1849,16 +1843,6 @@ export default {
 			},
 
 			success: "El monitor DNS {{name}} fue eliminado.",
-		},
-
-		checkDnsMonitor: {
-			errors: {
-				generic: "¡Ups! Algo salió mal.",
-				notFound: "Este monitor DNS no existe.",
-				forbidden: "No tiene permiso para verificar este monitor DNS.",
-			},
-
-			success: "La verificación DNS se completó para {{name}}.",
 		},
 
 		createTcpMonitor: {
@@ -4137,6 +4121,47 @@ export default {
 				},
 			},
 
+			teams: {
+				title: "Sus equipos",
+				description: "Equipos de los que forma parte.",
+
+				actions: {
+					createTeam: "Crear equipo",
+				},
+
+				empty: {
+					title: "Todavía no tiene equipos",
+					description: "Cree un equipo para empezar a monitorear sus servicios.",
+					cta: "Crear equipo",
+				},
+
+				table: {
+					label: "Equipos",
+					description: "Todos los equipos a los que pertenece.",
+
+					columns: {
+						team: "Equipo",
+						role: "Rol",
+						actions: "Acciones",
+					},
+
+					role: {
+						member: "Miembro",
+						admin: "Administrador",
+						owner: "Propietario",
+					},
+
+					actions: {
+						menu: "Menú de acciones",
+						leave: "Salir del equipo",
+					},
+
+					confirmation: {
+						leaveTeam: "¿Seguro que quiere salir de {{name}}?",
+					},
+				},
+			},
+
 			dataExport: {
 				title: "Sus datos",
 				description: "Descargue todo lo que esta aplicación guarda sobre usted.",
@@ -4986,7 +5011,6 @@ export default {
 					},
 					timezone: {
 						label: "Zona Horaria",
-						placeholder: "Seleccionar zona horaria",
 						description: "La zona horaria para la programación cron.",
 					},
 					alertOnLate: {
@@ -5064,7 +5088,6 @@ export default {
 					},
 					timezone: {
 						label: "Zona Horaria",
-						placeholder: "Seleccionar zona horaria",
 						description: "La zona horaria para la programación cron.",
 					},
 					alertOnLate: {
