@@ -51,6 +51,9 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 		let { monitor, i18next, page } = handle.props;
 		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
+		let recordType = monitor?.record_type ?? "A";
+		let intervalSeconds = monitor?.interval_seconds ?? 3600;
+
 		return (
 			<>
 				<TextField
@@ -74,9 +77,15 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 				/>
 
 				<Field label={t("recordType.label")} description={t("recordType.description")}>
-					<Select name="record_type" defaultValue={monitor?.record_type ?? "A"}>
+					{/*
+					 * The saved record type is marked `selected` on its own `<option>`: `<select>`
+					 * has no `defaultValue` attribute, so spelling it on the host renders as inert
+					 * markup and leaves "A" — the first option — showing, which on the edit page
+					 * would silently rewrite an MX or TXT monitor into an A one on the next save.
+					 */}
+					<Select name="record_type">
 						{RECORD_TYPES.map((type) => (
-							<Select.Option key={type} value={type}>
+							<Select.Option key={type} value={type} selected={type === recordType}>
 								{type}
 							</Select.Option>
 						))}
@@ -93,9 +102,20 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 				/>
 
 				<Field label={t("interval.label")} description={t("interval.description")}>
-					<Select name="interval_seconds" defaultValue={monitor?.interval_seconds ?? 3600}>
+					{/*
+					 * Same as the record type above: `selected` goes on the option, never a
+					 * `defaultValue` on the host. The comparison is deliberately between numbers
+					 * — the saved column and the option value are both numeric, and only the
+					 * rendered attribute is a string — so an interval is never matched by
+					 * coercion.
+					 */}
+					<Select name="interval_seconds">
 						{INTERVAL_OPTIONS.map((option) => (
-							<Select.Option key={option.value} value={option.value}>
+							<Select.Option
+								key={option.value}
+								value={option.value}
+								selected={option.value === intervalSeconds}
+							>
 								{t(`interval.options.${option.key}`)}
 							</Select.Option>
 						))}

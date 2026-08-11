@@ -109,6 +109,27 @@ function isSwitchOn(body: string, email: OptionalEmail): boolean {
 	return /(?<!aria-)\bchecked\b/.test(switchTag(body, email));
 }
 
+/** The inner markup of one named `<select>`, so option assertions can't match another field's options. */
+function optionsOf(body: string, name: string): string {
+	let match = new RegExp(`<select[^>]*\\bname="${name}"[^>]*>([\\s\\S]*?)</select>`).exec(body);
+	if (match?.[1] === undefined) throw new Error(`The page rendered no <select name="${name}">`);
+	return match[1];
+}
+
+/**
+ * Every `value` whose `<option>` carries the bare `selected` attribute.
+ *
+ * Read off `selected` and nothing else: a `defaultValue` on the `<select>` host is not an
+ * HTML attribute, so markup that only names the value there leaves the browser on the
+ * first option — which is exactly how the saved language used to get overwritten.
+ */
+function selectedValues(body: string, name: string): string[] {
+	return [...optionsOf(body, name).matchAll(/<option\b[^>]*>/g)]
+		.map((match) => match[0])
+		.filter((tag) => /\sselected(?=[\s/>])/.test(tag))
+		.map((tag) => /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? "");
+}
+
 async function renderAccount(db: Database, team: SelectTeam, membership: SelectMembership) {
 	let router = createRouter({
 		middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
@@ -215,6 +236,37 @@ describe("account page", () => {
 		// leavable row renders the label twice — once in its row menu, once in its
 		// confirmation dialog's submit button.
 		expect(occurrences).toBe(2);
+	});
+});
+
+describe("account page — Language", () => {
+	test("selects Automatic for a viewer who has never chosen, and nothing else", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(selectedValues(body, "language")).toEqual(["auto"]);
+	});
+
+	/**
+	 * The data-losing case: the form posts every field, so a select showing the wrong
+	 * language writes that wrong language back the next time the viewer saves.
+	 */
+	test("selects the stored language, and only it", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			userPreferences,
+			{
+				id: crypto.randomUUID(),
+				subject_id: membership.subject_id,
+				preferred_language: "es",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await renderAccount(db, team, membership)).text();
+
+		expect(selectedValues(body, "language")).toEqual(["es"]);
 	});
 });
 

@@ -248,12 +248,23 @@ export default createAction(routes.app.team.account, {
 												"page.account.language.form.fields.language.description",
 											)}
 										>
-											<Select name="language" defaultValue={preferredLanguage ?? "auto"}>
-												<Select.Option value="auto">
+											{/*
+											 * The saved preference is marked `selected` on its own `<option>`:
+											 * `<select>` has no `defaultValue` attribute, so spelling it on the host
+											 * renders as inert markup and leaves "Automatic" — the first option —
+											 * showing, which a save would then write back over whichever language
+											 * the viewer had actually chosen.
+											 */}
+											<Select name="language">
+												<Select.Option value="auto" selected={preferredLanguage === null}>
 													{ctx.i18next.t("page.account.language.form.fields.language.options.auto")}
 												</Select.Option>
 												{supportedLanguages.map((code) => (
-													<Select.Option key={code} value={code}>
+													<Select.Option
+														key={code}
+														value={code}
+														selected={code === preferredLanguage}
+													>
 														{ctx.i18next.t(
 															`page.account.language.form.fields.language.options.${code}`,
 														)}

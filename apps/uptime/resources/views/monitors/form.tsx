@@ -178,9 +178,20 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 				</Field>
 
 				<Field label={t("region.label")} description={t("region.description")}>
-					<Select name="location_hint" required defaultValue={locationHint ?? ""}>
+					{/*
+					 * The saved region is marked `selected` on its own `<option>`: `<select>` has
+					 * no `defaultValue` attribute, so spelling it on the host renders as inert
+					 * markup and the browser just keeps the first option — which on the edit page
+					 * would move a monitor to another region on the next save.
+					 *
+					 * Exactly one option may claim `selected` — which of two claimants a browser
+					 * honours is not something the markup decides — so the placeholder ties its
+					 * own claim to the same "nothing saved yet" condition that renders it at all,
+					 * rather than asserting it unconditionally and racing the saved region.
+					 */}
+					<Select name="location_hint" required>
 						{!locationHint && (
-							<Select.Option value="" disabled selected>
+							<Select.Option value="" disabled selected={!locationHint}>
 								{t("region.placeholder")}
 							</Select.Option>
 						)}
