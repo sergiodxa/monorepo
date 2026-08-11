@@ -19,6 +19,12 @@
  * subtitle carries that same margin — the space between the lines too, so `n` rows and
  * `n` gaps come to the same sum either way.
  *
+ * A card whose breakdown is a row of badges stands in for it with a pill of a badge's own
+ * height rather than a line of text: a `Badge` is an `xs` line box plus its `0.5` block
+ * padding and its two borders, which is shorter than the `sm` line a subtitle draws, and
+ * these four cards each swap in on their own — a fallback off by those few pixels shifts
+ * the row three more times.
+ *
  * `@pkg/ui`'s `Skeleton` carries no animation of its own — the `pulse()` mixin
  * from `@pkg/ui/animations` supplies the breathing loop, matching the original
  * hand-rolled `@keyframes` shimmer.
@@ -29,6 +35,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { rounded } from "@pkg/u/effects";
 import { basis, flex, flexCol, gap, grow, items, shrink } from "@pkg/u/layout";
 import { bs } from "@pkg/u/size";
 import { fontSize, leading, text } from "@pkg/u/typography";
@@ -93,6 +100,12 @@ namespace StatCardSkeleton {
 		 * the same height and the row does not move when the frame swaps in.
 		 */
 		subtitleLines?: number;
+		/**
+		 * Draws the row under the value as a badge-height pill instead of a line of text,
+		 * for a card whose breakdown is a row of badges. Takes the place of
+		 * {@link StatCardSkeleton.Props.subtitleLines} rather than adding to it.
+		 */
+		badges?: boolean;
 	}
 }
 
@@ -100,6 +113,7 @@ namespace StatCardSkeleton {
 export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>) {
 	return () => {
 		let count = handle.props.count ?? 1;
+		let badges = handle.props.badges ?? false;
 		let subtitleLines = handle.props.subtitleLines ?? 1;
 
 		return (
@@ -115,9 +129,16 @@ export default function StatCardSkeleton(handle: Handle<StatCardSkeleton.Props>)
 							 */}
 							<div mix={[flex(), flexCol(), gap("0.25rem")]}>
 								<SkeletonLine size="2xl" width="45%" thickness="1.75rem" />
-								{Array.from({ length: subtitleLines }, (_, line) => (
-									<SkeletonLine key={line} size="sm" width="100%" thickness="0.625rem" />
-								))}
+								{badges ? (
+									<Skeleton
+										style={{ inlineSize: "70%", blockSize: "calc(0.75rem + 0.25rem + 2px)" }}
+										mix={[rounded("full"), pulse()]}
+									/>
+								) : (
+									Array.from({ length: subtitleLines }, (_, line) => (
+										<SkeletonLine key={line} size="sm" width="100%" thickness="0.625rem" />
+									))
+								)}
 							</div>
 						</Card.Header>
 					</Card>

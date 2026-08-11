@@ -2064,7 +2064,7 @@ export default {
 					create: "Nouveau moniteur HTTP",
 					breakdown: {
 						up: "{{up}} actifs",
-						down: "{{down}} hors service",
+						down: "{{down}} inactifs",
 					},
 				},
 				dnsMonitors: {
@@ -2083,7 +2083,7 @@ export default {
 					create: "Nouveau moniteur TCP",
 					breakdown: {
 						up: "{{up}} actifs",
-						down: "{{down}} hors service",
+						down: "{{down}} inactifs",
 					},
 				},
 				cronJobs: {
@@ -2091,7 +2091,7 @@ export default {
 					create: "Nouvelle tâche cron",
 					breakdown: {
 						healthy: "{{healthy}} saines",
-						late: "{{late}} en retard",
+						late: "{{late}} tardives",
 						missed: "{{missed}} manquées",
 					},
 				},

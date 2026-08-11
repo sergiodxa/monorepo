@@ -21,7 +21,9 @@
  * With the quick check gone from the content, the stat rows are two plain wrapping rows
  * rather than a grid: three overview figures, then one card per monitor type, each of
  * which carries the link to that type's own form. Those four links are what replaced the
- * single button, and they land on the specific form instead of a chooser.
+ * single button, and they land on the specific form instead of a chooser. Their skeletons
+ * reserve a badge-height pill rather than subtitle lines, matching the one-line breakdown
+ * those cards stream in with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,7 +41,6 @@ import { Frame } from "remix/ui";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
-import { COUNT_CARD_BREAKDOWN_LINES } from "~/app/http/controllers/app/team/dashboard-card-count";
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
@@ -141,7 +142,7 @@ export default createAction(routes.app.team.dashboard.index, {
 									team: ctx.team.slug,
 									resource: "http",
 								})}
-								fallback={<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />}
+								fallback={<StatCardSkeleton count={1} badges />}
 							/>
 							<Frame
 								name="dashboard-card-count-dns"
@@ -149,7 +150,7 @@ export default createAction(routes.app.team.dashboard.index, {
 									team: ctx.team.slug,
 									resource: "dns",
 								})}
-								fallback={<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />}
+								fallback={<StatCardSkeleton count={1} badges />}
 							/>
 							<Frame
 								name="dashboard-card-count-tcp"
@@ -157,7 +158,7 @@ export default createAction(routes.app.team.dashboard.index, {
 									team: ctx.team.slug,
 									resource: "tcp",
 								})}
-								fallback={<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />}
+								fallback={<StatCardSkeleton count={1} badges />}
 							/>
 							<Frame
 								name="dashboard-card-count-cron-jobs"
@@ -165,7 +166,7 @@ export default createAction(routes.app.team.dashboard.index, {
 									team: ctx.team.slug,
 									resource: "cron-jobs",
 								})}
-								fallback={<StatCardSkeleton count={1} subtitleLines={COUNT_CARD_BREAKDOWN_LINES} />}
+								fallback={<StatCardSkeleton count={1} badges />}
 							/>
 						</div>
 

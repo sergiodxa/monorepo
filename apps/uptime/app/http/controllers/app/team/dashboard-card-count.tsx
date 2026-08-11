@@ -10,11 +10,11 @@
  * link to that type's own form — which is the dashboard's only route to one now that the
  * header holds the quick check where a single "create monitor" button used to be.
  *
- * Each card's status breakdown is one line per state, and every line is its own
- * translation key rather than one interpolated sentence: a single string would have to
- * be cut apart on a separator to be stacked, and which separator a language uses — or
- * whether it uses one at all — is exactly the sort of thing a translation is free to
- * change.
+ * Each card's status breakdown is a row of badges, one per state that has something to
+ * report, and every badge is its own translation key rather than one interpolated
+ * sentence: a single string would have to be cut apart on a separator to be split into
+ * pills, and which separator a language uses — or whether it uses one at all — is exactly
+ * the sort of thing a translation is free to change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,13 +24,15 @@ import type { Handle } from "remix/ui";
 
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { flex, flexCol } from "@pkg/u/layout";
-import { minBs } from "@pkg/u/size";
-import { text } from "@pkg/u/typography";
+import { flex, flexWrap, gap, items } from "@pkg/u/layout";
+import { mbs } from "@pkg/u/size";
+import { Badge } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+
+import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -39,58 +41,48 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
+import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 const RESOURCES = ["http", "dns", "tcp", "cron-jobs"] as const;
 
-/**
- * How many breakdown lines every count card holds room for, whatever it has to say.
- * The four cards break down into either two states (http, tcp) or three (dns, cron
- * jobs), and they sit side by side in one wrapping row, so the taller shape sets
- * the row's height: a two-state card that only reserved its own two lines would be
- * shorter than its neighbours. The skeleton the dashboard shows while each card streams
- * in reads this same number, so the fallback and the card it becomes are the same
- * height and nothing moves when they swap.
- */
-export const COUNT_CARD_BREAKDOWN_LINES = 3;
-
 namespace Breakdown {
 	export interface Props {
-		/** One already-translated line per state, rendered in order. */
-		lines: string[];
+		/**
+		 * Every state the card tracks, in the order they read, each with the count that
+		 * decides whether it is drawn at all and the already-translated text naming it.
+		 */
+		states: Array<{ count: number; tone: BadgeTone; label: string }>;
 	}
 }
 
 /**
- * A count card's per-state breakdown: one muted line per state, stacked, in a box that
- * reserves {@link COUNT_CARD_BREAKDOWN_LINES} lines' worth of height even when there are
- * fewer lines to fill it — the leftover stays empty rather than being padded with a
- * state the card does not actually track.
+ * A count card's per-state breakdown: one badge per state, on one line, reading
+ * "<count> <state>".
  *
- * The reserved height is written in the subtitle's own line box (`1lh` under `text("sm")`,
- * the step `Subtitle` renders at) plus each line's 0.25rem top margin, so it follows the
- * type scale instead of freezing today's pixels. The box is a flex column because margins
- * do not collapse through a flex container: the first line's top margin keeps separating
- * the stack from the figure above it, exactly as a lone `Subtitle` did.
+ * Only a state with something in it gets a pill. A stack of one line per state — with
+ * room held open for the most any card has, so the row stayed level — meant every card
+ * was three lines tall to say things like "0 changed" and "0 error", which is a fact
+ * about nothing. Dropping the empty ones costs no alignment now: the cards share a flex
+ * row, so they stretch to whichever of them has the most to say.
  *
  * A `<span>` rather than a `<div>`, because this renders inside `StatCard`'s value span,
  * which only admits phrasing content; the flex display makes it a block box regardless.
+ * The leading margin is the one the stacked `Subtitle` carried, so the gap under the
+ * figure is unchanged. It wraps, because three badges do not fit the narrowest a card
+ * gets and a clipped or overflowing pill is worse than a second line.
  */
 function Breakdown(handle: Handle<Breakdown.Props>) {
 	return () => (
-		<span
-			mix={[
-				flex(),
-				flexCol(),
-				text("sm"),
-				minBs(`calc(${COUNT_CARD_BREAKDOWN_LINES} * (1lh + 0.25rem))`),
-			]}
-		>
-			{handle.props.lines.map((line, index) => (
-				<Subtitle key={index}>{line}</Subtitle>
-			))}
+		<span mix={[flex(), flexWrap(), items("center"), gap("6px"), mbs("0.25rem")]}>
+			{handle.props.states
+				.filter((state) => state.count > 0)
+				.map((state) => (
+					<Badge key={state.label} {...badgeVariant(state.tone)}>
+						{state.label}
+					</Badge>
+				))}
 		</span>
 	);
 }
@@ -122,16 +114,28 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 						<>
 							{dnsCounts.total}
 							<Breakdown
-								lines={[
-									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.ok", {
-										ok: dnsCounts.ok,
-									}),
-									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.changed", {
-										changed: dnsCounts.changed,
-									}),
-									ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.error", {
-										error: dnsCounts.error,
-									}),
+								states={[
+									{
+										count: dnsCounts.ok,
+										tone: "up",
+										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.ok", {
+											ok: dnsCounts.ok,
+										}),
+									},
+									{
+										count: dnsCounts.changed,
+										tone: "degraded",
+										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.changed", {
+											changed: dnsCounts.changed,
+										}),
+									},
+									{
+										count: dnsCounts.error,
+										tone: "down",
+										label: ctx.i18next.t("page.dashboard.stats.dnsMonitors.breakdown.error", {
+											error: dnsCounts.error,
+										}),
+									},
 								]}
 							/>
 						</>
@@ -161,13 +165,21 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 						<>
 							{tcpCounts.total}
 							<Breakdown
-								lines={[
-									ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.up", {
-										up: tcpCounts.up,
-									}),
-									ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
-										down: tcpCounts.down,
-									}),
+								states={[
+									{
+										count: tcpCounts.up,
+										tone: "up",
+										label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.up", {
+											up: tcpCounts.up,
+										}),
+									},
+									{
+										count: tcpCounts.down,
+										tone: "down",
+										label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
+											down: tcpCounts.down,
+										}),
+									},
 								]}
 							/>
 						</>
@@ -196,16 +208,28 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 						<>
 							{cronCounts.total}
 							<Breakdown
-								lines={[
-									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.healthy", {
-										healthy: cronCounts.healthy,
-									}),
-									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.late", {
-										late: cronCounts.late,
-									}),
-									ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.missed", {
-										missed: cronCounts.missed,
-									}),
+								states={[
+									{
+										count: cronCounts.healthy,
+										tone: "up",
+										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.healthy", {
+											healthy: cronCounts.healthy,
+										}),
+									},
+									{
+										count: cronCounts.late,
+										tone: "degraded",
+										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.late", {
+											late: cronCounts.late,
+										}),
+									},
+									{
+										count: cronCounts.missed,
+										tone: "down",
+										label: ctx.i18next.t("page.dashboard.stats.cronJobs.breakdown.missed", {
+											missed: cronCounts.missed,
+										}),
+									},
 								]}
 							/>
 						</>
@@ -240,13 +264,21 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 					<>
 						{httpCounts.total}
 						<Breakdown
-							lines={[
-								ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.up", {
-									up: httpCounts.up,
-								}),
-								ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.down", {
-									down: httpCounts.down,
-								}),
+							states={[
+								{
+									count: httpCounts.up,
+									tone: "up",
+									label: ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.up", {
+										up: httpCounts.up,
+									}),
+								},
+								{
+									count: httpCounts.down,
+									tone: "down",
+									label: ctx.i18next.t("page.dashboard.stats.httpMonitors.breakdown.down", {
+										down: httpCounts.down,
+									}),
+								},
 							]}
 						/>
 					</>

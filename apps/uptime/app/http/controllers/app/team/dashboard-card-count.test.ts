@@ -172,16 +172,34 @@ describe("dashboard-card-count", () => {
 		let body = await response.text();
 		expect(body).toContain("DNS Monitors");
 		expect(body).toContain("2");
-		// One line per state rather than one joined string, which is what keeps the
-		// breakdown readable and each part separately translatable.
+		// One badge per state rather than one joined string, which is what keeps each part
+		// separately translatable — and only for a state with something in it: "0 error" is a
+		// fact about nothing, and holding a line open for it made every card three lines tall.
 		expect(body).toContain(">1 ok</span>");
 		expect(body).toContain(">1 changed</span>");
-		expect(body).toContain(">0 error</span>");
+		expect(body).not.toContain("0 error");
+		// Colored by state, which is what the pills buy over the muted lines they replace.
+		expect(body).toContain('data-color="success"');
+		expect(body).toContain('data-color="warning"');
 		// Each card carries the link to its own type's form, which is what replaced the single
 		// "create monitor" button the header gave up to the quick check. It lands on the DNS
 		// form rather than on a chooser.
 		expect(body).toContain(`href="${routes.app.team.dnsMonitors.new.href({ team: team.slug })}"`);
 		expect(body).toContain(`aria-label="${en.page.dashboard.stats.dnsMonitors.create}"`);
+	});
+
+	test("resource=dns draws no badges at all for a team with nothing to report", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership, "dns")).text();
+
+		// Every state is zero, so the breakdown is empty rather than three pills saying so.
+		// The cards share a flex row and stretch to whichever has the most to say, so a card
+		// with nothing to report costs the row no alignment.
+		expect(body).toContain("DNS Monitors");
+		expect(body).not.toContain("0 ok");
+		expect(body).not.toContain("0 changed");
+		expect(body).not.toContain("0 error");
 	});
 
 	test("resource=http renders the HTTP monitor count and up/down breakdown", async () => {
@@ -222,7 +240,7 @@ describe("dashboard-card-count", () => {
 		let body = await response.text();
 		expect(body).toContain("HTTP Monitors");
 		expect(body).toContain(">1 up</span>");
-		expect(body).toContain(">0 down</span>");
+		expect(body).not.toContain("0 down");
 		expect(body).toContain(`href="${routes.app.team.monitors.new.href({ team: team.slug })}"`);
 		expect(body).toContain(`aria-label="${en.page.dashboard.stats.httpMonitors.create}"`);
 	});
