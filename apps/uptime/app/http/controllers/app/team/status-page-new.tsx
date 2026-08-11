@@ -19,7 +19,6 @@
 import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
 import {
 	Button,
@@ -46,7 +45,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -139,7 +138,6 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("name.placeholder")}
 											description={t("name.description")}
-											mix={mbe("28px")}
 										/>
 
 										<TextField
@@ -149,7 +147,6 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("slug.placeholder")}
 											description={t("slug.description")}
-											mix={mbe("28px")}
 										/>
 
 										<TextField
@@ -159,7 +156,6 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("title.placeholder")}
 											description={t("title.description")}
-											mix={mbe("28px")}
 										/>
 
 										<Field
@@ -180,7 +176,6 @@ export default createAction(routes.app.team.statusPages.new, {
 											placeholder={t("logoUrl.placeholder")}
 											description={t("logoUrl.description")}
 											defaultValue=""
-											mix={mbe("28px")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -195,19 +190,22 @@ export default createAction(routes.app.team.statusPages.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<div mix={[fieldStackLayout(), mbe("16px")]}>
-											<Switch name="is_public" value="true" defaultChecked>
-												{t("isPublic.label")}
-											</Switch>
-											<Description>{t("isPublic.description")}</Description>
-										</div>
+										{/* Both toggles answer "who sees this page", so they read as one group on
+										    the tighter within-group rhythm rather than as two separate fields. */}
+										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
+											<div mix={[fieldStackLayout()]}>
+												<Switch name="is_public" value="true" defaultChecked>
+													{t("isPublic.label")}
+												</Switch>
+												<Description>{t("isPublic.description")}</Description>
+											</div>
 
-										{/* The body draws no block-end padding, so the last control carries the trailing gap itself. */}
-										<div mix={[fieldStackLayout(), mbe("28px")]}>
-											<Switch name="show_overall_status" value="true" defaultChecked>
-												{t("showOverallStatus.label")}
-											</Switch>
-											<Description>{t("showOverallStatus.description")}</Description>
+											<div mix={[fieldStackLayout()]}>
+												<Switch name="show_overall_status" value="true" defaultChecked>
+													{t("showOverallStatus.label")}
+												</Switch>
+												<Description>{t("showOverallStatus.description")}</Description>
+											</div>
 										</div>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -223,7 +221,7 @@ export default createAction(routes.app.team.statusPages.new, {
 								<SettingsSection.Card>
 									<SettingsSection.Body>
 										{selectableMonitors.length > 0 && (
-											<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
+											<div mix={[vstack({ gap: "8px" })]}>
 												{/*
 												 * The group's caption reads as a heading over the list rather than as
 												 * another row in it, with its description directly beneath — the same
@@ -261,7 +259,7 @@ export default createAction(routes.app.team.statusPages.new, {
 										)}
 
 										{cronJobs.length > 0 && (
-											<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
+											<div mix={[vstack({ gap: "8px" })]}>
 												<div mix={[fieldStackLayout()]}>
 													<Label
 														id={CRON_JOBS_LABEL_ID}
@@ -288,7 +286,7 @@ export default createAction(routes.app.team.statusPages.new, {
 
 										{/* A team with nothing to list still gets the card, so the submit control keeps its place. */}
 										{!hasSomethingToList && (
-											<Description mix={[mbe("20px")]}>
+											<Description>
 												{ctx.i18next.t("page.createStatusPage.form.sections.services.empty")}
 											</Description>
 										)}

@@ -12,7 +12,6 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { mbe } from "@pkg/u/size";
 import { Switch, TextField } from "@pkg/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
@@ -46,7 +45,6 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					label={t("name.label")}
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
-					mix={[mbe("28px")]}
 				/>
 
 				<TextField
@@ -57,7 +55,6 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					label={t("host.label")}
 					placeholder={t("host.placeholder")}
 					description={t("host.description")}
-					mix={[mbe("28px")]}
 				/>
 
 				<StepperField

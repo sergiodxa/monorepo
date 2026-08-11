@@ -31,7 +31,6 @@
 
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { Button, Table, TextArea } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -104,8 +103,7 @@ export default createAction(routes.app.team.monitorsImport, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The body draws no block-end padding, so the report carries the trailing gap itself. */}
-											<div mix={[vstack({ gap: "12px" }), mbe(6)]}>
+											<div mix={[vstack({ gap: "12px" })]}>
 												{report.rejected.length > 0 && (
 													<Table.Container>
 														<Table

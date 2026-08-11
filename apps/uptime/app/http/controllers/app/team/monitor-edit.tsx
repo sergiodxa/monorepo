@@ -28,7 +28,7 @@ import { inject } from "@pkg/service-container";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, gap, items, vstack } from "@pkg/u/layout";
-import { m, mbe, p } from "@pkg/u/size";
+import { m, p } from "@pkg/u/size";
 import { font, fontSize } from "@pkg/u/typography";
 import { AlertDialog, Button, LinkButton, Select, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
@@ -201,8 +201,7 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 								/>
 							</Field>
 
-							{/* A toggle row carries no trailing margin of its own, so it states the card's field rhythm itself. */}
-							<label mix={[flex(), items("center"), gap("8px"), mbe("28px"), fontSize("0.875rem")]}>
+							<label mix={[flex(), items("center"), gap("8px"), fontSize("0.875rem")]}>
 								<input type="checkbox" name="case_sensitive" value="true" />
 								<span>{i18next.t("contentMonitoring.form.caseSensitive")}</span>
 							</label>
@@ -250,8 +249,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 
 						<SettingsSection.Body>
-							{/* A toggle row carries no trailing margin of its own, so it states the card's field rhythm itself. */}
-							<label mix={[flex(), items("center"), gap("8px"), mbe("28px"), fontSize("0.875rem")]}>
+							<label mix={[flex(), items("center"), gap("8px"), fontSize("0.875rem")]}>
 								<input
 									type="checkbox"
 									name="ssl_monitoring_enabled"
@@ -447,7 +445,7 @@ export default createAction(routes.app.team.monitors.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 											{ctx.i18next.t("page.editMonitor.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>

@@ -37,7 +37,6 @@
 import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
-import { mbe } from "@pkg/u/size";
 import { Select, TextField } from "@pkg/ui";
 
 import type { SelectMonitor } from "~/database/schema";
@@ -132,7 +131,6 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						required
 						defaultValue={monitor?.name}
 						placeholder={t("name.placeholder")}
-						mix={[mbe("28px")]}
 					/>
 
 					<TextField
@@ -143,7 +141,6 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						required
 						defaultValue={monitor?.url ?? defaultUrl}
 						placeholder={t("url.placeholder")}
-						mix={[mbe("28px")]}
 					/>
 				</>
 			);

@@ -147,4 +147,27 @@ describe("cronJobNew", () => {
 		expect(body).toContain('command="--step-up" commandfor="cron-job-grace-period-seconds"');
 		expect(body).toContain('command="--step-down" commandfor="cron-job-grace-period-seconds"');
 	});
+
+	test("offers the timezone as a grouped picker defaulting to UTC", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		let markup = /<select[^>]*\bname="timezone"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
+		expect(markup).not.toBe("");
+
+		// Exactly one option claims `selected` — a second claimant would leave which one
+		// the browser honours up to the browser rather than to the markup.
+		let selected = [...markup.matchAll(/<option\b[^>]*>/g)]
+			.map((match) => match[0])
+			.filter((tag) => /\sselected(?=[\s/>])/.test(tag))
+			.map((tag) => /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? "");
+		expect(selected).toEqual(["UTC"]);
+
+		// The zones are grouped by region rather than listed as one 400-entry run.
+		expect(markup).toContain('<optgroup label="Europe"');
+		expect(markup).toContain('<option value="Europe/Madrid"');
+		// A `<select>` has no `defaultValue` attribute; spelling one renders inert markup.
+		expect(/<select[^>]*defaultvalue=/i.test(body)).toBe(false);
+	});
 });

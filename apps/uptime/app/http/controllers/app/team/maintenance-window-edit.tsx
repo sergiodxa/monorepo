@@ -26,7 +26,7 @@ import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
+import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import { AlertDialog, Button, Input, Label, LinkButton, Select, Switch, TextField } from "@pkg/ui";
 import { fieldStackLayout } from "@pkg/ui/styles";
@@ -42,7 +42,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -117,7 +117,6 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 												name="name"
 												required
 												defaultValue={window.name}
-												mix={mbe("28px")}
 											/>
 
 											<Field label={fields("scope.label")}>
@@ -155,7 +154,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<div mix={[fieldStackLayout(), mbe("28px")]}>
+											<div mix={[fieldStackLayout()]}>
 												<Label htmlFor="maintenance-window-starts-at">
 													{fields("startsAt.label")}
 												</Label>
@@ -168,7 +167,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 												/>
 											</div>
 
-											<div mix={[fieldStackLayout(), mbe("28px")]}>
+											<div mix={[fieldStackLayout()]}>
 												<Label htmlFor="maintenance-window-ends-at">{fields("endsAt.label")}</Label>
 												<Input
 													id="maintenance-window-ends-at"
@@ -191,7 +190,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<div mix={[vstack({ gap: 4 }), mbe("28px")]}>
+											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 												<Switch
 													name="suppress_alerts"
 													value="true"
@@ -221,15 +220,13 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<div mix={[mbe("28px")]}>
-												<Switch
-													name="is_recurring"
-													value="true"
-													defaultChecked={window.is_recurring ?? false}
-												>
-													{fields("recurring.label")}
-												</Switch>
-											</div>
+											<Switch
+												name="is_recurring"
+												value="true"
+												defaultChecked={window.is_recurring ?? false}
+											>
+												{fields("recurring.label")}
+											</Switch>
 
 											<TextField
 												label={fields("recurringPattern.label")}
@@ -237,7 +234,6 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 												defaultValue={window.recurring_pattern ?? ""}
 												placeholder={fields("recurringPattern.placeholder")}
 												description={fields("recurringPattern.description")}
-												mix={mbe("28px")}
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
@@ -265,7 +261,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 										>
 											<input type="hidden" name="window_id" value={window.id} />
 											<SettingsSection.Body>
-												<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("neutral.muted")]}>
+												<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
 													{ctx.i18next.t("page.editMaintenance.endNow.warning")}
 												</p>
 											</SettingsSection.Body>
@@ -287,7 +283,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 											{ctx.i18next.t("page.editMaintenance.danger.warning")}
 										</p>
 									</SettingsSection.Body>

@@ -23,7 +23,7 @@ import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
+import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import { AlertDialog, Button, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
@@ -96,14 +96,11 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The run ends on a switch, which carries no trailing margin of its own, so the wrapper supplies the card's field rhythm before the action row. */}
-											<div mix={[mbe("28px")]}>
-												<DnsMonitorFormFields
-													monitor={monitor}
-													i18next={ctx.i18next}
-													page="editDnsMonitor"
-												/>
-											</div>
+											<DnsMonitorFormFields
+												monitor={monitor}
+												i18next={ctx.i18next}
+												page="editDnsMonitor"
+											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
 											<LinkButton variant="outline" href={showHref}>
@@ -123,7 +120,7 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 											{ctx.i18next.t("page.editDnsMonitor.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>

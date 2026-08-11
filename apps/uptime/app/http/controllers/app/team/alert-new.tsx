@@ -24,7 +24,6 @@
 
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { Button, Input, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -88,7 +87,7 @@ export default createAction(routes.app.team.alerts.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<TextField label={t("name.label")} name="name" required mix={[mbe("28px")]} />
+										<TextField label={t("name.label")} name="name" required />
 
 										<Field label={t("scope.label")}>
 											{/*
@@ -131,12 +130,9 @@ export default createAction(routes.app.team.alerts.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* The switch carries no trailing margin of its own, unlike every `Field` around it. */}
-										<div mix={[mbe("28px")]}>
-											<Switch name="notify_on_recovery" value="true" defaultChecked>
-												{t("notifyOnRecovery.label")}
-											</Switch>
-										</div>
+										<Switch name="notify_on_recovery" value="true" defaultChecked>
+											{t("notifyOnRecovery.label")}
+										</Switch>
 
 										<Field
 											label={t("cooldownMinutes.label")}

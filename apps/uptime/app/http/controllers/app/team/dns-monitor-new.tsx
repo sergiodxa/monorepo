@@ -17,7 +17,6 @@
  */
 
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { Button, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -99,7 +98,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											name="name"
 											required
 											placeholder={t("name.placeholder")}
-											mix={[mbe("28px")]}
 										/>
 
 										<TextField
@@ -108,7 +106,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											name="domain"
 											required
 											placeholder={t("domain.placeholder")}
-											mix={[mbe("28px")]}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -144,7 +141,6 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											name="expected_value"
 											defaultValue=""
 											placeholder={t("expectedValue.placeholder")}
-											mix={[mbe("28px")]}
 										/>
 
 										<Field label={t("interval.label")} description={t("interval.description")}>
@@ -162,12 +158,9 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 											</Select>
 										</Field>
 
-										{/* The body draws no block-end padding, so the last control carries the trailing gap itself. */}
-										<div mix={[mbe("28px")]}>
-											<Switch name="is_enabled" value="true" defaultChecked>
-												{t("isEnabled.label")}
-											</Switch>
-										</div>
+										<Switch name="is_enabled" value="true" defaultChecked>
+											{t("isEnabled.label")}
+										</Switch>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>
 										<Button type="submit">{ctx.i18next.t("page.createDnsMonitor.form.cta")}</Button>

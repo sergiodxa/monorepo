@@ -15,13 +15,16 @@
  * nesting rather than by `for`/`id`, which is why `Label` wraps `children`
  * directly instead of pairing with it through an `id`.
  *
+ * It deliberately ends in no trailing margin: the distance to the next field is the
+ * containing card body's `gap`, so this wrapper stays correct wherever it is placed
+ * and a container never has to know which of its children brought their own spacing.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { mbe } from "@pkg/u/size";
 import { Description, Label } from "@pkg/ui";
 import { fieldStackLayout } from "@pkg/ui/styles";
 
@@ -37,7 +40,7 @@ namespace Field {
 /** Wraps `children` (an input/select/textarea) with a label and optional description. */
 export default function Field(handle: Handle<Field.Props>) {
 	return () => (
-		<div mix={[fieldStackLayout(), mbe("28px")]}>
+		<div mix={[fieldStackLayout()]}>
 			<Label mix={[fieldStackLayout()]}>
 				<span>{handle.props.label}</span>
 				{handle.props.children}

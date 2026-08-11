@@ -28,7 +28,7 @@ import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
+import { m } from "@pkg/u/size";
 import { fontSize, weight } from "@pkg/u/typography";
 import {
 	AlertDialog,
@@ -58,7 +58,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -169,7 +169,6 @@ export default createAction(routes.app.team.statusPages.edit, {
 												placeholder={t("name.placeholder")}
 												description={t("name.description")}
 												defaultValue={page.name}
-												mix={mbe("28px")}
 											/>
 
 											<TextField
@@ -180,7 +179,6 @@ export default createAction(routes.app.team.statusPages.edit, {
 												placeholder={t("slug.placeholder")}
 												description={t("slug.description")}
 												defaultValue={page.slug}
-												mix={mbe("28px")}
 											/>
 
 											<TextField
@@ -191,10 +189,9 @@ export default createAction(routes.app.team.statusPages.edit, {
 												placeholder={t("title.placeholder")}
 												description={t("title.description")}
 												defaultValue={page.title}
-												mix={mbe("28px")}
 											/>
 
-											<div mix={[fieldStackLayout(), mbe("28px")]}>
+											<div mix={[fieldStackLayout()]}>
 												<Label htmlFor="status-page-description">{t("description.label")}</Label>
 												<TextArea
 													id="status-page-description"
@@ -212,7 +209,6 @@ export default createAction(routes.app.team.statusPages.edit, {
 												placeholder={t("logoUrl.placeholder")}
 												description={t("logoUrl.description")}
 												defaultValue={page.logo_url ?? ""}
-												mix={mbe("28px")}
 											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -227,23 +223,26 @@ export default createAction(routes.app.team.statusPages.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											<div mix={[fieldStackLayout(), mbe("16px")]}>
-												<Switch name="is_public" value="true" defaultChecked={page.is_public}>
-													{t("isPublic.label")}
-												</Switch>
-												<Description>{t("isPublic.description")}</Description>
-											</div>
+											{/* Both toggles answer "who sees this page", so they read as one group on
+											    the tighter within-group rhythm rather than as two separate fields. */}
+											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
+												<div mix={[fieldStackLayout()]}>
+													<Switch name="is_public" value="true" defaultChecked={page.is_public}>
+														{t("isPublic.label")}
+													</Switch>
+													<Description>{t("isPublic.description")}</Description>
+												</div>
 
-											{/* The body draws no block-end padding, so the last control carries the trailing gap itself. */}
-											<div mix={[fieldStackLayout(), mbe("28px")]}>
-												<Switch
-													name="show_overall_status"
-													value="true"
-													defaultChecked={page.show_overall_status}
-												>
-													{t("showOverallStatus.label")}
-												</Switch>
-												<Description>{t("showOverallStatus.description")}</Description>
+												<div mix={[fieldStackLayout()]}>
+													<Switch
+														name="show_overall_status"
+														value="true"
+														defaultChecked={page.show_overall_status}
+													>
+														{t("showOverallStatus.label")}
+													</Switch>
+													<Description>{t("showOverallStatus.description")}</Description>
+												</div>
 											</div>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -259,7 +258,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 									<SettingsSection.Card>
 										<SettingsSection.Body>
 											{selectableMonitors.length > 0 && (
-												<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
+												<div mix={[vstack({ gap: "8px" })]}>
 													{/*
 													 * The group's caption reads as a heading over the list rather than as
 													 * another row in it, with its description directly beneath — the same
@@ -298,7 +297,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 											)}
 
 											{cronJobs.length > 0 && (
-												<div mix={[vstack({ gap: "8px" }), mbe("20px")]}>
+												<div mix={[vstack({ gap: "8px" })]}>
 													<div mix={[fieldStackLayout()]}>
 														<Label
 															id={CRON_JOBS_LABEL_ID}
@@ -333,7 +332,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 											{/* The card still carries the form's action row, so it needs a body even with nothing to attach. */}
 											{selectableMonitors.length === 0 && cronJobs.length === 0 && (
-												<p mix={[m(0), mbe("20px"), fontSize("sm"), fg("neutral.muted")]}>
+												<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
 													{ctx.i18next.t("page.editStatusPage.form.sections.services.empty")}
 												</p>
 											)}
@@ -358,7 +357,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 											{ctx.i18next.t("page.editStatusPage.dangerZone.warning")}
 										</p>
 									</SettingsSection.Body>

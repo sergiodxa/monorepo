@@ -22,9 +22,9 @@ import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
+import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, LinkButton, Switch, TextField } from "@pkg/ui";
+import { AlertDialog, Button, LinkButton, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -34,8 +34,10 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { DEFAULT_TIMEZONE, groupedTimezones, isSupportedTimezone } from "~/app/lib/timezones";
+import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import StepperField from "~/resources/components/stepper-field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -61,6 +63,17 @@ export default createAction(routes.app.team.cronJobs.edit, {
 
 		let t = ctx.i18next.getFixedT(null, "translation", "page.editCronJob");
 		let fields = ctx.i18next.getFixedT(null, "translation", "page.editCronJob.form.fields");
+
+		/*
+		 * The picker offers the zones this runtime knows plus the job's own stored value
+		 * when that isn't among them. Without the second half an unrecognised stored zone
+		 * would match no option, the browser would fall back to the first one, and saving
+		 * any unrelated field would quietly move the job to a different wall clock — the
+		 * failure a `<select>` makes silent. Shown but unsaveable is the right trade: the
+		 * validator rejects it with a message instead of overwriting it without one.
+		 */
+		let timezone = monitor.timezone ?? DEFAULT_TIMEZONE;
+		let hasUnknownTimezone = !isSupportedTimezone(timezone);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${t("header.title")} ${monitor.name}`}>
@@ -113,7 +126,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												defaultValue={monitor.name}
 												placeholder={fields("name.placeholder")}
 												description={fields("name.description")}
-												mix={mbe("28px")}
 											/>
 
 											<TextField
@@ -123,7 +135,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												defaultValue={monitor.description ?? ""}
 												placeholder={fields("description.placeholder")}
 												description={fields("description.description")}
-												mix={mbe("28px")}
 											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -144,7 +155,6 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												defaultValue={monitor.cron_expression ?? ""}
 												placeholder={fields("cronExpression.placeholder")}
 												description={fields("cronExpression.description")}
-												mix={mbe("28px")}
 											/>
 
 											<StepperField
@@ -158,16 +168,42 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												defaultValue={monitor.grace_period_seconds ?? 300}
 											/>
 
-											<TextField
+											<Field
 												label={fields("timezone.label")}
-												type="text"
-												name="timezone"
-												required
-												defaultValue={monitor.timezone ?? "UTC"}
-												placeholder={fields("timezone.placeholder")}
 												description={fields("timezone.description")}
-												mix={mbe("28px")}
-											/>
+											>
+												{/*
+												 * The saved zone is marked `selected` on its own `<option>`: `<select>` has no
+												 * `defaultValue` attribute, so spelling it on the host renders as inert markup
+												 * and leaves the first option showing, which a save would then write back over
+												 * the zone the job actually runs in.
+												 *
+												 * UTC leads the list on its own because the IANA enumeration does not contain
+												 * it; see `app/lib/timezones.ts` for why that exception exists.
+												 */}
+												<Select name="timezone" required>
+													{hasUnknownTimezone && (
+														<Select.Option value={timezone} selected>
+															{timezone}
+														</Select.Option>
+													)}
+													<Select.Option
+														value={DEFAULT_TIMEZONE}
+														selected={timezone === DEFAULT_TIMEZONE}
+													>
+														{DEFAULT_TIMEZONE}
+													</Select.Option>
+													{groupedTimezones().map((group) => (
+														<Select.Group key={group.region} label={group.region}>
+															{group.zones.map((zone) => (
+																<Select.Option key={zone} value={zone} selected={zone === timezone}>
+																	{zone}
+																</Select.Option>
+															))}
+														</Select.Group>
+													))}
+												</Select>
+											</Field>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
 								</SettingsSection>
@@ -179,8 +215,8 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The two switches carry no trailing margin of their own, so the group wrapper supplies the card's field rhythm. */}
-											<div mix={[vstack({ gap: 4 }), mbe("28px")]}>
+											{/* The two switches read as one group, so they sit on the tighter within-group rhythm. */}
+											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 												<Switch
 													name="alert_on_late"
 													value="true"
@@ -222,9 +258,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
-											{t("danger.warning")}
-										</p>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>{t("danger.warning")}</p>
 									</SettingsSection.Body>
 									<SettingsSection.Footer tone="danger">
 										<Button

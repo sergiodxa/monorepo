@@ -209,4 +209,34 @@ describe("GET /app/:team/status-pages/new", () => {
 		// The control is an enhancement: it posts nothing, and the boxes keep their own name.
 		expect(body).toContain(`name="monitor_ids"`);
 	});
+
+	test("keeps two rhythms: fields from the card, grouped switches tighter", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let container = new ServiceContainer();
+		container.instance(Database, db);
+
+		let router = createRouter({
+			middleware: [asyncContext(), renderWith(createHtmlRenderer) as Middleware],
+		});
+		router.map(routes.app.team.statusPages.new, {
+			middleware: [seedTeam(team, membership)],
+			handler: statusPageNewModule.handler,
+		});
+
+		let request = new Request(
+			new URL(routes.app.team.statusPages.new.href({ team: team.slug }), "https://uptime.test"),
+		);
+		let body = await (await container.scope(() => router.fetch(request))).text();
+
+		// The card body states the field rhythm once, as a gap, in a single rule.
+		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
+		// And nothing inside restates it as its own trailing margin, which would
+		// leave that one field sitting on a doubled gap.
+		expect(body).not.toContain("margin-block-end: 28px");
+		// The body pads all four edges now that the last field ends flush with it.
+		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
+		// The two visibility switches still read as one group, on their own tighter gap.
+		expect(body).toContain("gap: calc(var(--ui-spacing, 0.25rem) * 4);");
+	});
 });

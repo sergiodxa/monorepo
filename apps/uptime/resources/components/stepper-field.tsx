@@ -18,7 +18,6 @@
 
 import type { Handle } from "remix/ui";
 
-import { mbe } from "@pkg/u/size";
 import { Description, Label, NumberField } from "@pkg/ui";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
@@ -67,7 +66,7 @@ export const StepperField = clientEntry(
 			} = handle.props;
 
 			return (
-				<NumberField mix={[mbe("28px")]}>
+				<NumberField>
 					<Label htmlFor={id}>{label}</Label>
 					<NumberField.Group mix={[stepper()]}>
 						<NumberField.DecrementButton

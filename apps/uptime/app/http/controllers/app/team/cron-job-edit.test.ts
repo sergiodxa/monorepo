@@ -107,6 +107,19 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
+/**
+ * The `value` of every `<option>` inside the timezone `<select>` that carries
+ * `selected`. Exactly one may, since a second claimant leaves which one the browser
+ * honours up to the browser rather than to the markup.
+ */
+function selectedTimezones(body: string): string[] {
+	let markup = /<select[^>]*\bname="timezone"[^>]*>([\s\S]*?)<\/select>/.exec(body)?.[1] ?? "";
+	return [...markup.matchAll(/<option\b[^>]*>/g)]
+		.map((match) => match[0])
+		.filter((tag) => /\sselected(?=[\s/>])/.test(tag))
+		.map((tag) => /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? "");
+}
+
 describe("cronJobEdit", () => {
 	test("responds 404 for a cron-job monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
@@ -145,5 +158,51 @@ describe("cronJobEdit", () => {
 		// renders the same markup either way, so the payload naming it is the proof.
 		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
 		expect(body).toContain('command="--step-up" commandfor="cron-job-grace-period-seconds"');
+	});
+
+	test("marks the stored timezone as the one selected option", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "Europe/Madrid",
+				grace_period_seconds: 300,
+				status: "new",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		// Exactly one option claims `selected`, and it is the zone the job runs in.
+		expect(selectedTimezones(body)).toEqual(["Europe/Madrid"]);
+	});
+
+	test("still selects UTC, which the IANA enumeration does not list", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 300,
+				status: "new",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		// UTC is offered as its own leading option, so the default keeps matching.
+		expect(selectedTimezones(body)).toEqual(["UTC"]);
 	});
 });

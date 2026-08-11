@@ -815,8 +815,11 @@ them first is what makes the rest parallelisable.
 
 **Phase 0 — settle, sequentially**
 
-- [ ] 0.1 Verify `SELECT count(*) FROM dns_monitors` and `dns_monitor_results` against
-      production is zero. If not, stop: this ADR needs a migration section it does not have.
+- [x] 0.1 ~~Verify `SELECT count(*) FROM dns_monitors` and `dns_monitor_results` against
+      production is zero.~~ **Done.** Queried production directly: `dns_monitors` 0,
+      `dns_monitor_results` 0, `tcp_monitors` 0 (`monitors` 7, `cron_job_monitors` 13). The
+      table-dropping and the undeprecated API break are safe, and get more expensive the
+      longer this waits.
 - [ ] 0.2 Obtain a real Cloudflare zone export and commit it as a parser fixture.
 - [ ] 0.3 `database/schema.ts` + the migration, SQL reviewed by hand for re-emitted
       `*_id_unique` indexes and for ADR-020's retention indexes.
@@ -836,27 +839,33 @@ them first is what makes the rest parallelisable.
 
 **Phase 2 — depends on Phase 1**
 
-- [ ] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency and a hard query budget (§9a), one ping per check with the
-      ordinal `externalId`, no diff applied for a failed query.
+- [ ] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency and a hard query budget
+      (§9a), **one ping per check keyed `ping:${resultId}`** — no ordinal, per §9 — and no diff
+      applied for a failed query.
 - [ ] 2.2 `app/services/alerts.ts` snapshot + findings, `app/emails/alert.tsx`,
       `app/jobs/notify.ts`, `app/lib/notify-queue.ts` — one agent, since a findings list has to
       survive the queue hop intact.
 - [ ] 2.3 API — create/update/show/index rewrite, validators, and the actions controller
       (including metering "Check now").
 - [ ] 2.4 API — the records sub-resource.
-- [ ] 2.5 Dashboard — new + review screens, including the unparsed-lines block and the cost
-      projection.
+- [ ] 2.5 Dashboard — new + review screens, including the unparsed-lines block and the
+      names-per-monitor cap enforced at import (§9a). No cost projection: per-check billing
+      removed the need for one.
 - [ ] 2.6 Dashboard — show / list / edit / results card / `dashboard-panel.tsx` DNS tab /
       `resources/views/dns-monitors/form.tsx`.
 - [ ] 2.7 `status-page.tsx` labelling and `app/services/account-export.ts`.
 
 **Phase 3 — copy and cleanup**
 
-- [ ] 3.1 `app/lib/pricing.ts` + the calculator copy that interpolates it.
+- [ ] 3.1 ~~`app/lib/pricing.ts` + the calculator copy that interpolates it.~~ **Dropped
+      from scope** — per-check billing (§9) leaves `monthlyPings`'s one-check-per-interval
+      assumption true, so the calculator needs no change.
 - [ ] 3.2 `resources/docs/concepts/dns-monitors.md`, `resources/docs/api/resources/dns-monitors.md`
       and `docs/dns-monitors.md`.
-- [ ] 3.3 `resources/content/marketing.ts`, checked line by line against §14 — including
-      deleting or earning the "propagation-aware" claim.
+- [ ] 3.3 `resources/content/marketing.ts`, checked line by line against §14. The
+      "propagation-aware" claim is already deleted (no grace period exists; the first non-ok
+      result notifies), as is "every record type in one monitor" — which this ADR would
+      finally make true and which may be worth reinstating once it ships.
 - [ ] 3.4 Delete dead code: `containsExpected`, the `hostOnly` MX path, and the record-type
       enum's import sites that no longer have a record type to validate.
 

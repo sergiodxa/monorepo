@@ -30,7 +30,7 @@ import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
-import { m, mbe } from "@pkg/u/size";
+import { m } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import { AlertDialog, Button, Input, LinkButton, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
@@ -113,7 +113,6 @@ export default createAction(routes.app.team.alerts.edit, {
 												name="name"
 												required
 												defaultValue={alert.name}
-												mix={[mbe("28px")]}
 											/>
 
 											<Field label={t("scope.label")}>
@@ -161,16 +160,13 @@ export default createAction(routes.app.team.alerts.edit, {
 								>
 									<SettingsSection.Card>
 										<SettingsSection.Body>
-											{/* The switch carries no trailing margin of its own, unlike every `Field` around it. */}
-											<div mix={[mbe("28px")]}>
-												<Switch
-													name="notify_on_recovery"
-													value="true"
-													defaultChecked={alert.notify_on_recovery}
-												>
-													{t("notifyOnRecovery.label")}
-												</Switch>
-											</div>
+											<Switch
+												name="notify_on_recovery"
+												value="true"
+												defaultChecked={alert.notify_on_recovery}
+											>
+												{t("notifyOnRecovery.label")}
+											</Switch>
 
 											<Field
 												label={t("cooldownMinutes.label")}
@@ -213,7 +209,7 @@ export default createAction(routes.app.team.alerts.edit, {
 							>
 								<SettingsSection.Card tone="danger">
 									<SettingsSection.Body>
-										<p mix={[m(0), mbe("28px"), fontSize("sm"), fg("danger")]}>
+										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
 											{ctx.i18next.t("page.editAlert.danger.warning")}
 										</p>
 									</SettingsSection.Body>

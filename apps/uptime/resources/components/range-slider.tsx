@@ -23,7 +23,6 @@ import type { Handle } from "remix/ui";
 
 import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
 import { Description, Label, Slider } from "@pkg/ui";
 import { on } from "remix/ui";
@@ -80,7 +79,7 @@ export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
 		let descriptionId = helperText ? `${name}-description` : undefined;
 
 		return (
-			<div mix={[flex(), flexCol(), gap("0.5rem"), mbe("28px")]}>
+			<div mix={[flex(), flexCol(), gap("0.5rem")]}>
 				<Slider min={min} max={max} defaultValue={defaultValue}>
 					<div
 						mix={[flex(), justify("between"), items("baseline"), fontSize("0.875rem"), weight(600)]}

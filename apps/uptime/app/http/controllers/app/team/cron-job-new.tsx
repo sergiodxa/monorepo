@@ -20,16 +20,17 @@
  */
 
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
-import { Button, Switch, TextField } from "@pkg/ui";
+import { Button, Select, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { DEFAULT_TIMEZONE, groupedTimezones } from "~/app/lib/timezones";
+import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import StepperField from "~/resources/components/stepper-field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -89,7 +90,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 											required
 											placeholder={fields("name.placeholder")}
 											description={fields("name.description")}
-											mix={mbe("28px")}
 										/>
 
 										<TextField
@@ -99,7 +99,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 											defaultValue=""
 											placeholder={fields("description.placeholder")}
 											description={fields("description.description")}
-											mix={mbe("28px")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -120,7 +119,6 @@ export default createAction(routes.app.team.cronJobs.new, {
 											defaultValue=""
 											placeholder={fields("cronExpression.placeholder")}
 											description={fields("cronExpression.description")}
-											mix={mbe("28px")}
 										/>
 
 										<StepperField
@@ -134,16 +132,34 @@ export default createAction(routes.app.team.cronJobs.new, {
 											defaultValue={300}
 										/>
 
-										<TextField
+										<Field
 											label={fields("timezone.label")}
-											type="text"
-											name="timezone"
-											required
-											defaultValue="UTC"
-											placeholder={fields("timezone.placeholder")}
 											description={fields("timezone.description")}
-											mix={mbe("28px")}
-										/>
+										>
+											{/*
+											 * The default is marked `selected` on its own `<option>`: `<select>` has
+											 * no `defaultValue` attribute, so spelling it on the host renders as
+											 * inert markup and the browser just keeps the first option — which here
+											 * would happen to be the same zone only by accident of sort order.
+											 *
+											 * UTC leads the list on its own because the IANA enumeration doesn't
+											 * contain it; see `app/lib/timezones.ts` for why that exception exists.
+											 */}
+											<Select name="timezone" required>
+												<Select.Option value={DEFAULT_TIMEZONE} selected>
+													{DEFAULT_TIMEZONE}
+												</Select.Option>
+												{groupedTimezones().map((group) => (
+													<Select.Group key={group.region} label={group.region}>
+														{group.zones.map((zone) => (
+															<Select.Option key={zone} value={zone}>
+																{zone}
+															</Select.Option>
+														))}
+													</Select.Group>
+												))}
+											</Select>
+										</Field>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
 							</SettingsSection>
@@ -155,8 +171,8 @@ export default createAction(routes.app.team.cronJobs.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* The two switches carry no trailing margin of their own, so the group wrapper supplies the card's field rhythm. */}
-										<div mix={[vstack({ gap: 4 }), mbe("28px")]}>
+										{/* The two switches read as one group, so they sit on the tighter within-group rhythm. */}
+										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<Switch name="alert_on_late" value="true" defaultChecked={false}>
 												{fields("alertOnLate.label")}
 											</Switch>

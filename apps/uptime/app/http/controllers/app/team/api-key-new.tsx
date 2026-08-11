@@ -22,7 +22,7 @@
 
 import { gap, grid, gridTemplate, repeat, vstack } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
-import { mbe, pis } from "@pkg/u/size";
+import { pis } from "@pkg/u/size";
 import { Button, Checkbox, CheckboxGroup, DateField, Description, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
@@ -107,14 +107,12 @@ export default createAction(routes.app.team.apiKeys.new, {
 											required
 											placeholder={ctx.i18next.t("page.apiKeys.form.fields.name.placeholder")}
 											description={ctx.i18next.t("page.apiKeys.form.fields.name.description")}
-											mix={mbe("28px")}
 										/>
 
 										<DateField
 											label={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.label")}
 											name="expires_at"
 											description={ctx.i18next.t("page.apiKeys.form.fields.expiresAt.description")}
-											mix={mbe("28px")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -132,7 +130,6 @@ export default createAction(routes.app.team.apiKeys.new, {
 									<SettingsSection.Body>
 										<CheckboxGroup
 											aria-label={ctx.i18next.t("page.apiKeys.form.fields.scopes.label")}
-											mix={[mbe("28px")]}
 										>
 											<div
 												mix={[

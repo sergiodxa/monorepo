@@ -57,6 +57,7 @@ import { optionalEmails, supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
 import Field from "~/resources/components/field";
 import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
+import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -232,16 +233,7 @@ export default createAction(routes.app.team.account, {
 										</p>
 									</div>
 
-									<div
-										mix={[
-											// `Field`'s own trailing margin already spaces its last
-											// instance from the footer below, so this region carries no
-											// bottom padding of its own — otherwise the two would stack
-											// into a gap far larger than every other card's footer rhythm.
-											p("24px", "24px", 0, "24px"),
-											vstack({ gap: "8px" }),
-										]}
-									>
+									<div mix={[p("24px"), vstack({ gap: SETTINGS_FIELD_GAP })]}>
 										<Field
 											label={ctx.i18next.t("page.account.language.form.fields.language.label")}
 											description={ctx.i18next.t(
@@ -407,7 +399,11 @@ export default createAction(routes.app.team.account, {
 								]}
 							>
 								<h3>{ctx.i18next.t("page.createTeam.header.title")}</h3>
-								<form method="post" action={routes.accountActions.createTeam.href()}>
+								<form
+									method="post"
+									action={routes.accountActions.createTeam.href()}
+									mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}
+								>
 									<Field label={ctx.i18next.t("page.createTeam.form.fields.name.label")}>
 										<input
 											type="text"

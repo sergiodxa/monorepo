@@ -18,7 +18,6 @@
 
 import { inject } from "@pkg/service-container";
 import { vstack } from "@pkg/u/layout";
-import { mbe } from "@pkg/u/size";
 import { Button, Input, Label, Select, Switch, TextField } from "@pkg/ui";
 import { fieldStackLayout } from "@pkg/ui/styles";
 import { getContext } from "remix/async-context-middleware";
@@ -31,7 +30,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -83,13 +82,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<TextField
-											label={t("name.label")}
-											type="text"
-											name="name"
-											required
-											mix={mbe("28px")}
-										/>
+										<TextField label={t("name.label")} type="text" name="name" required />
 
 										<Field label={t("scope.label")}>
 											{/* The default is marked on the option, since `<select>` carries no `defaultValue` attribute. */}
@@ -117,7 +110,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										<div mix={[fieldStackLayout(), mbe("28px")]}>
+										<div mix={[fieldStackLayout()]}>
 											<Label htmlFor="maintenance-window-starts-at">{t("startsAt.label")}</Label>
 											<Input
 												id="maintenance-window-starts-at"
@@ -127,7 +120,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 											/>
 										</div>
 
-										<div mix={[fieldStackLayout(), mbe("28px")]}>
+										<div mix={[fieldStackLayout()]}>
 											<Label htmlFor="maintenance-window-ends-at">{t("endsAt.label")}</Label>
 											<Input
 												id="maintenance-window-ends-at"
@@ -149,8 +142,8 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 							>
 								<SettingsSection.Card>
 									<SettingsSection.Body>
-										{/* The switches carry no trailing margin of their own, so the group wrapper supplies both the rhythm between the rows and the card's field rhythm before the pattern field below. */}
-										<div mix={[vstack({ gap: 4 }), mbe("28px")]}>
+										{/* The switches read as one group, so they sit on the tighter within-group rhythm. */}
+										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<Switch name="suppress_alerts" value="true" defaultChecked>
 												{t("suppressAlerts.label")}
 											</Switch>
@@ -170,7 +163,6 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 											defaultValue=""
 											placeholder={t("recurringPattern.placeholder")}
 											description={t("recurringPattern.description")}
-											mix={mbe("28px")}
 										/>
 									</SettingsSection.Body>
 									<SettingsSection.Footer>

@@ -141,4 +141,18 @@ describe("api-key-new form controller", () => {
 		expect(twoColumns).not.toBeNull();
 		expect(body).toContain("max-inline-size: 880px");
 	});
+
+	test("spaces the card's fields from the card alone, never twice", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await get(db, team, membership)).text();
+
+		// The card body states the field rhythm once, as a gap, in a single rule.
+		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
+		// And nothing inside restates it as its own trailing margin, which would
+		// leave that one field sitting on a doubled gap.
+		expect(body).not.toContain("margin-block-end: 28px");
+		// The body pads all four edges now that the last field ends flush with it.
+		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
+	});
 });

@@ -7,6 +7,12 @@
  * one undifferentiated column of inputs, without every such page re-deriving the
  * same geometry inline.
  *
+ * The field region owns the vertical rhythm between its children, as a `gap`. It used
+ * to be the other way round — every field ended in its own trailing margin and the body
+ * left its block-end padding off to compensate — which is a contract no markup can
+ * enforce, and it broke silently each time a control that ends in no margin was dropped
+ * into a card. Nothing placed in a body should carry a trailing margin.
+ *
  * `tone` is repeated on the card and its header/footer rather than inferred from
  * the section, because the border color has to be set on each element that draws
  * a border and there is no ambient channel to carry it: a destructive group needs
@@ -34,6 +40,23 @@ import { fontSize, weight } from "@pkg/u/typography";
  * below it the card would overflow the viewport and the page would scroll sideways.
  */
 const CARD_BLEED_FROM = "(min-width: 768px)";
+
+/**
+ * Vertical rhythm between two consecutive fields inside a card body.
+ *
+ * It is applied once, as a `gap` on the body itself, so a field never has to carry it:
+ * a control that ends in no trailing margin (or one whose `mix` reaches its inner input
+ * instead of its wrapper, as a switch's does) is spaced correctly by construction rather
+ * than by every call site remembering to add a margin the markup can't enforce.
+ *
+ * Exported so the few places that stack fields in their own container — a fieldset
+ * grouping one channel's inputs, say — space them on the same rhythm instead of
+ * re-picking a number.
+ */
+export const SETTINGS_FIELD_GAP = "28px";
+
+/** Rhythm between switches that read as one group, tighter than the between-fields rhythm. */
+export const SETTINGS_SWITCH_GAP = 4;
 
 namespace SettingsSection {
 	/** The semantic color a group's frame and divider lines are drawn in. */
@@ -136,13 +159,18 @@ SettingsSection.Header = function SettingsCardHeader(handle: Handle<SettingsSect
 };
 
 /**
- * A card's field region. It carries no block-end padding on purpose: every field
- * wrapper in this app already ends in its own trailing margin, so padding here too
- * would stack the two into a gap far larger than the footer rhythm every other card
- * follows.
+ * A card's field region: evenly padded, and stacking whatever it is given on the
+ * {@link SETTINGS_FIELD_GAP} rhythm.
+ *
+ * The rhythm lives here rather than on the fields because a trailing margin per field
+ * is a contract the markup cannot enforce — a control that ends in no margin, or one
+ * that forwards its `mix` to an inner input rather than to its own wrapper, breaks the
+ * spacing silently and only at that one call site. A `gap` spaces whatever it is handed,
+ * so nothing has to be remembered. Its corollary: a child must NOT carry a trailing
+ * margin of its own, or that field alone sits on a doubled gap.
  */
 SettingsSection.Body = function SettingsCardBody(handle: Handle<SettingsSection.BodyProps>) {
-	return () => <div mix={[p(6, 6, 0, 6)]}>{handle.props.children}</div>;
+	return () => <div mix={[p(6), vstack({ gap: SETTINGS_FIELD_GAP })]}>{handle.props.children}</div>;
 };
 
 /** A card's action row: the submit (and any cancel) control for the form that card holds. */
