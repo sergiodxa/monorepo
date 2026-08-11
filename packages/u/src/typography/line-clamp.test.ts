@@ -4,31 +4,36 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { lineClamp } from "./line-clamp";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("lineClamp", () => {
-	test("a numeric line count applies the -webkit-line-clamp trick", () => {
-		expect(styles(lineClamp(3))).toEqual({
-			display: "-webkit-box",
-			WebkitBoxOrient: "vertical",
-			WebkitLineClamp: 3,
-			overflow: "hidden",
-		});
+	test("a numeric line count applies the -webkit-line-clamp trick", async () => {
+		expect(await declarations(lineClamp(3))).toEqual([
+			"display: -webkit-box",
+			"-webkit-box-orient: vertical",
+			"-webkit-line-clamp: 3",
+			"overflow: hidden",
+		]);
 	});
 
-	test("emits WebkitBoxOrient and WebkitLineClamp with a capital W, not camelCase webkitBoxOrient", () => {
-		let result = styles(lineClamp(2));
+	test("the line count keeps no unit, so the declaration survives the serializer", async () => {
+		// Regression: the count used to be emitted as a bare number, and the
+		// serializer's px-appending turned it into `-webkit-line-clamp: 2px`,
+		// an invalid declaration browsers drop — nothing was ever clamped.
+		expect(await declarations(lineClamp(2))).toContain("-webkit-line-clamp: 2");
+		expect(await declarations(lineClamp(2))).not.toContain("-webkit-line-clamp: 2px");
+	});
 
-		expect(Object.keys(result)).toContain("WebkitBoxOrient");
-		expect(Object.keys(result)).toContain("WebkitLineClamp");
-		expect(Object.keys(result)).not.toContain("webkitBoxOrient");
-		expect(Object.keys(result)).not.toContain("webkitLineClamp");
+	test("the vendor prefix keeps its leading dash, which a camelCase key would lose", async () => {
+		// `webkitBoxOrient` would kebab-case to `webkit-box-orient`, a property
+		// no browser knows; only the capital-W spelling yields `-webkit-…`.
+		let css = await declarations(lineClamp(2));
+
+		expect(css.filter((line) => line.startsWith("-webkit"))).toEqual([
+			"-webkit-box-orient: vertical",
+			"-webkit-line-clamp: 2",
+		]);
 	});
 });

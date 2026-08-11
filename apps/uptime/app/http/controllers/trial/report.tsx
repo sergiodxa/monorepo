@@ -326,7 +326,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 													key={`day-${day}`}
 													title={t(segmentLabelKey(status))}
 													mix={[
-														raw({ flex: 1 }),
+														raw({ flex: "1" }),
 														minIs("2px"),
 														rounded("2px"),
 														segmentFill(status),

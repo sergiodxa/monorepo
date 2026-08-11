@@ -109,13 +109,13 @@ export default function UptimeBar(handle: Handle<UptimeBar.Props>) {
 			<div>
 				<div mix={[hstack({ align: "center", gap: "8px" }), mbe("6px")]}>
 					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.daysAgo}</span>
-					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
+					<div mix={[raw({ flex: "1" }), bs("1px"), bg("neutral.border")]} />
 					{uptime !== null && (
 						<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>
 							{formatUptime(uptime)}
 						</span>
 					)}
-					<div mix={[raw({ flex: 1 }), bs("1px"), bg("neutral.border")]} />
+					<div mix={[raw({ flex: "1" }), bs("1px"), bg("neutral.border")]} />
 					<span mix={[fontSize("0.75rem"), fg("neutral.muted"), nowrap()]}>{labels.today}</span>
 				</div>
 
@@ -131,7 +131,7 @@ export default function UptimeBar(handle: Handle<UptimeBar.Props>) {
 										: date
 								}
 								mix={[
-									raw({ flex: 1 }),
+									raw({ flex: "1" }),
 									minIs("2px"),
 									rounded("1px"),
 									day?.status === "up"

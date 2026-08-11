@@ -14,8 +14,15 @@ import { utility } from "../internal/descriptor";
  * matching `u.opacity()`'s convention rather than the CSS property's own 0-1
  * range; a string passes through unchanged.
  *
+ * The converted ratio is stringified rather than left a number: the CSS
+ * serializer appends `px` to any unitless number whose property isn't on its
+ * unitless allow-list, and `fill-opacity` isn't on it (`opacity` is, which is
+ * why `u.opacity()` can hand over a bare number and this can't).
+ * `fill-opacity: 0.5px` is invalid and gets dropped, leaving the shape fully
+ * opaque. Do not "simplify" the `String()` away.
+ *
  * @example u.fillOpacity(50)
- * @example css({ fillOpacity: 0.5 })
+ * @example css({ fillOpacity: "0.5" })
  * @example u.fillOpacity("var(--chart-fill-opacity)")
  * @example css({ fillOpacity: "var(--chart-fill-opacity)" })
  */
@@ -25,7 +32,7 @@ export function fillOpacity<Node extends Element = Element>(
 	return utility<Node>(
 		() =>
 			({
-				fillOpacity: typeof value === "number" ? value / 100 : value,
+				fillOpacity: typeof value === "number" ? String(value / 100) : value,
 			}) as CSSStyles,
 	);
 }

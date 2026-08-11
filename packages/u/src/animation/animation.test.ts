@@ -6,6 +6,8 @@ import { describe, expect, test } from "bun:test";
 
 import type { CSSMixinDescriptor } from "remix/ui";
 
+import { declarations } from "../internal/serialize";
+
 import { animation, animationHost } from "./animation";
 
 /** Unwraps a utility mixin back to the style tree it was built from. */
@@ -69,14 +71,18 @@ describe("animation", () => {
 			});
 		});
 
-		test("accepts a numeric iterationCount", () => {
+		test("accepts a numeric iterationCount and emits it without a unit", async () => {
+			// Regression: the count used to be emitted as a bare number, and the
+			// serializer's px-appending turned it into
+			// `animation-iteration-count: 2px`, an invalid declaration browsers
+			// drop — the animation silently ran once.
 			let mixin = animation("bounce", {
 				keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
 				duration: "300ms",
 				iterationCount: 2,
 			});
 
-			expect(styles(mixin).animationIterationCount).toBe(2);
+			expect(await declarations(mixin)).toContain("animation-iteration-count: 2");
 		});
 
 		test("omits iterationCount, direction, and fillMode entirely when not given", () => {

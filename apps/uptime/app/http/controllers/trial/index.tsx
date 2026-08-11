@@ -138,7 +138,6 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 import { Session } from "remix/session";
-import { css } from "remix/ui";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
@@ -191,12 +190,6 @@ const CONSENT_NOTE_ID = "trial-consent-note";
  * A tracking-stuffed URL is six lines of bold type on a phone, which buries the answer
  * under the question all over again. The clamp is visual only — the whole URL is still the
  * heading's text, so it is still announced, still selectable, and still copied whole.
- *
- * It is applied as `lineClamp()` plus a hand-written `-webkit-line-clamp`, because the
- * utility alone does not currently work: the style engine appends `px` to numeric values
- * for every property outside its unitless allowlist, `-webkit-line-clamp` is not on that
- * list, and `3px` is dropped by the CSSOM. Passing the count as a string skips that path.
- * Drop the second mixin once the allowlist covers it.
  */
 const TITLE_MAX_LINES = 3;
 
@@ -726,7 +719,6 @@ export function renderTrialPage(view: TrialPageView = {}) {
 												leading(1.3),
 												wordBreak("break-all"),
 												lineClamp(TITLE_MAX_LINES),
-												css({ WebkitLineClamp: `${TITLE_MAX_LINES}` }),
 												media("(min-width: 640px)", fontSize("xl")),
 											]}
 										>

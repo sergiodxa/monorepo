@@ -153,7 +153,15 @@ function hostDeclarations(name: string, config: AnimationConfig): CSSStyles {
 	};
 	if (config.easing) styles.animationTimingFunction = config.easing;
 	if (config.delay) styles.animationDelay = config.delay;
-	if (config.iterationCount !== undefined) styles.animationIterationCount = config.iterationCount;
+	// Stringified, not passed through as a number: the CSS serializer appends
+	// `px` to any unitless number whose property isn't on its unitless
+	// allow-list, and `animation-iteration-count` isn't on it. A numeric
+	// `iterationCount: 2` would emit `animation-iteration-count: 2px`, which is
+	// invalid and gets dropped, silently falling back to a single iteration.
+	// Do not "simplify" the `String()` away.
+	if (config.iterationCount !== undefined) {
+		styles.animationIterationCount = String(config.iterationCount);
+	}
 	if (config.direction) styles.animationDirection = config.direction;
 	if (config.fillMode) styles.animationFillMode = config.fillMode;
 	if (config.timeline) styles.animationTimeline = config.timeline;
