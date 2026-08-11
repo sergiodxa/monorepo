@@ -139,4 +139,19 @@ describe("tcpMonitorNew", () => {
 
 		expect(body).toContain('<section id="basics"');
 	});
+
+	/**
+	 * The numeric fields' +/- buttons only step once their island hydrates, and the
+	 * page renders the same markup either way — so the hydration payload naming the
+	 * island is the only thing on this page that tells a live stepper from an inert one.
+	 */
+	test("ships the numeric fields as hydrating steppers", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
+		expect(body).toContain('command="--step-up" commandfor="tcp-monitor-port"');
+		expect(body).toContain('command="--step-down" commandfor="tcp-monitor-timeout-ms"');
+	});
 });

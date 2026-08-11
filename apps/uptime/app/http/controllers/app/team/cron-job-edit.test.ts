@@ -141,5 +141,9 @@ describe("cronJobEdit", () => {
 		expect(body).toContain('value="0 0 * * *"');
 		expect(body).toContain(`action="${routes.actions.cronJob.update.href({ team: team.slug })}"`);
 		expect(body).toContain(`value="${monitor.id}"`);
+		// The grace period's +/- buttons only step once their island hydrates, and the page
+		// renders the same markup either way, so the payload naming it is the proof.
+		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
+		expect(body).toContain('command="--step-up" commandfor="cron-job-grace-period-seconds"');
 	});
 });

@@ -13,9 +13,11 @@ import type { getContext } from "remix/async-context-middleware";
 import type { Handle } from "remix/ui";
 
 import { mbe } from "@pkg/u/size";
-import { Description, Label, NumberField, Switch, TextField } from "@pkg/ui";
+import { Switch, TextField } from "@pkg/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
+
+import StepperField from "~/resources/components/stepper-field";
 
 namespace TcpMonitorFormFields {
 	export interface Props {
@@ -58,54 +60,42 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					mix={[mbe("28px")]}
 				/>
 
-				<NumberField mix={[mbe("28px")]}>
-					<Label htmlFor="tcp-monitor-port">{t("port.label")}</Label>
-					<NumberField.Group>
-						<NumberField.DecrementButton aria-label={t("port.decrement")} />
-						<NumberField.Input
-							id="tcp-monitor-port"
-							name="port"
-							required
-							min={1}
-							max={65_535}
-							defaultValue={monitor?.port ?? 80}
-						/>
-						<NumberField.IncrementButton aria-label={t("port.increment")} />
-					</NumberField.Group>
-					<Description>{t("port.description")}</Description>
-				</NumberField>
+				<StepperField
+					id="tcp-monitor-port"
+					name="port"
+					required
+					label={t("port.label")}
+					description={t("port.description")}
+					decrementLabel={t("port.decrement")}
+					incrementLabel={t("port.increment")}
+					min={1}
+					max={65_535}
+					defaultValue={monitor?.port ?? 80}
+				/>
 
-				<NumberField mix={[mbe("28px")]}>
-					<Label htmlFor="tcp-monitor-interval-seconds">{t("interval.label")}</Label>
-					<NumberField.Group>
-						<NumberField.DecrementButton aria-label={t("interval.decrement")} />
-						<NumberField.Input
-							id="tcp-monitor-interval-seconds"
-							name="interval_seconds"
-							min={60}
-							max={86_400}
-							defaultValue={monitor?.interval_seconds ?? 300}
-						/>
-						<NumberField.IncrementButton aria-label={t("interval.increment")} />
-					</NumberField.Group>
-					<Description>{t("interval.description")}</Description>
-				</NumberField>
+				<StepperField
+					id="tcp-monitor-interval-seconds"
+					name="interval_seconds"
+					label={t("interval.label")}
+					description={t("interval.description")}
+					decrementLabel={t("interval.decrement")}
+					incrementLabel={t("interval.increment")}
+					min={60}
+					max={86_400}
+					defaultValue={monitor?.interval_seconds ?? 300}
+				/>
 
-				<NumberField mix={[mbe("28px")]}>
-					<Label htmlFor="tcp-monitor-timeout-ms">{t("timeout.label")}</Label>
-					<NumberField.Group>
-						<NumberField.DecrementButton aria-label={t("timeout.decrement")} />
-						<NumberField.Input
-							id="tcp-monitor-timeout-ms"
-							name="timeout_ms"
-							min={100}
-							max={60_000}
-							defaultValue={monitor?.timeout_ms ?? 5000}
-						/>
-						<NumberField.IncrementButton aria-label={t("timeout.increment")} />
-					</NumberField.Group>
-					<Description>{t("timeout.description")}</Description>
-				</NumberField>
+				<StepperField
+					id="tcp-monitor-timeout-ms"
+					name="timeout_ms"
+					label={t("timeout.label")}
+					description={t("timeout.description")}
+					decrementLabel={t("timeout.decrement")}
+					incrementLabel={t("timeout.increment")}
+					min={100}
+					max={60_000}
+					defaultValue={monitor?.timeout_ms ?? 5000}
+				/>
 
 				{monitor && (
 					<Switch name="is_enabled" value="true" defaultChecked={monitor.is_enabled}>

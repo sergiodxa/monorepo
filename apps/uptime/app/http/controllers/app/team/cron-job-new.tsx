@@ -21,7 +21,7 @@
 
 import { vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
-import { Button, Label, NumberField, Switch, TextField } from "@pkg/ui";
+import { Button, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 
@@ -30,11 +30,12 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
+import StepperField from "~/resources/components/stepper-field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** Stable id linking the grace-period field's `Label` to its `NumberField.Input`. */
+/** Stable id linking the grace-period field's label to its number input. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
 /** GET /app/:team/cron-jobs/new — the new cron-job monitor form. */
@@ -122,22 +123,16 @@ export default createAction(routes.app.team.cronJobs.new, {
 											mix={mbe("28px")}
 										/>
 
-										<NumberField mix={mbe("28px")}>
-											<Label htmlFor={GRACE_PERIOD_INPUT_ID}>
-												{fields("gracePeriod.label")} ({fields("gracePeriod.unit.seconds")})
-											</Label>
-											<NumberField.Group>
-												<NumberField.DecrementButton aria-label={fields("gracePeriod.decrement")} />
-												<NumberField.Input
-													id={GRACE_PERIOD_INPUT_ID}
-													name="grace_period_seconds"
-													min={60}
-													max={86_400}
-													defaultValue={300}
-												/>
-												<NumberField.IncrementButton aria-label={fields("gracePeriod.increment")} />
-											</NumberField.Group>
-										</NumberField>
+										<StepperField
+											id={GRACE_PERIOD_INPUT_ID}
+											name="grace_period_seconds"
+											label={`${fields("gracePeriod.label")} (${fields("gracePeriod.unit.seconds")})`}
+											decrementLabel={fields("gracePeriod.decrement")}
+											incrementLabel={fields("gracePeriod.increment")}
+											min={60}
+											max={86_400}
+											defaultValue={300}
+										/>
 
 										<TextField
 											label={fields("timezone.label")}

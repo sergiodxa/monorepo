@@ -130,6 +130,10 @@ describe("tcpMonitorEdit", () => {
 		expect(body).toContain("Database");
 		expect(body).toContain('value="db.example.com"');
 		expect(body).toContain("Save Changes");
+		// The numeric fields' +/- buttons only step once their island hydrates, and the page
+		// renders the same markup either way, so the payload naming it is the proof.
+		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
+		expect(body).toContain('command="--step-up" commandfor="tcp-monitor-port"');
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

@@ -24,7 +24,7 @@ import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
-import { AlertDialog, Button, Label, LinkButton, NumberField, Switch, TextField } from "@pkg/ui";
+import { AlertDialog, Button, LinkButton, Switch, TextField } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -36,6 +36,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
+import StepperField from "~/resources/components/stepper-field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -43,7 +44,7 @@ import routes from "~/routes/web";
 /** Stable id for the delete-confirmation `AlertDialog`, wired to its trigger's `commandfor`. */
 const DELETE_DIALOG_ID = "delete-cron-job";
 
-/** Stable id linking the grace-period field's `Label` to its `NumberField.Input`. */
+/** Stable id linking the grace-period field's label to its number input. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
 /** GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form. */
@@ -146,26 +147,16 @@ export default createAction(routes.app.team.cronJobs.edit, {
 												mix={mbe("28px")}
 											/>
 
-											<NumberField mix={mbe("28px")}>
-												<Label htmlFor={GRACE_PERIOD_INPUT_ID}>
-													{fields("gracePeriod.label")} ({fields("gracePeriod.unit.seconds")})
-												</Label>
-												<NumberField.Group>
-													<NumberField.DecrementButton
-														aria-label={fields("gracePeriod.decrement")}
-													/>
-													<NumberField.Input
-														id={GRACE_PERIOD_INPUT_ID}
-														name="grace_period_seconds"
-														min={60}
-														max={86_400}
-														defaultValue={monitor.grace_period_seconds ?? 300}
-													/>
-													<NumberField.IncrementButton
-														aria-label={fields("gracePeriod.increment")}
-													/>
-												</NumberField.Group>
-											</NumberField>
+											<StepperField
+												id={GRACE_PERIOD_INPUT_ID}
+												name="grace_period_seconds"
+												label={`${fields("gracePeriod.label")} (${fields("gracePeriod.unit.seconds")})`}
+												decrementLabel={fields("gracePeriod.decrement")}
+												incrementLabel={fields("gracePeriod.increment")}
+												min={60}
+												max={86_400}
+												defaultValue={monitor.grace_period_seconds ?? 300}
+											/>
 
 											<TextField
 												label={fields("timezone.label")}
