@@ -1,8 +1,9 @@
 /**
  * Background job that dispatches the alerts for one monitor status transition, off the
  * sweep that detected it (ADR-008). The sweeps enqueue a `notify` message per transition
- * and move on; this job reloads the monitor, rebuilds the alert's snapshot from its
- * cached columns, and hands the transition to the same `notify*` policy every inline
+ * and move on; this job reloads the monitor, rebuilds the alert's snapshot from what the
+ * sweep persisted — cached columns for most types, the tracked records themselves for a
+ * domain monitor — and hands the transition to the same `notify*` policy every inline
  * caller uses.
  *
  * The queue delivers at least once and there is no commit point to short-circuit on, so
@@ -24,7 +25,9 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 
+import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import {
+	dnsAlertResultFromRecords,
 	notifyCronJobResult,
 	notifyDnsResult,
 	notifySslResult,
@@ -159,7 +162,23 @@ export class NotifyJob extends Job {
 				if (!monitor) return false;
 
 				let { previous, current } = parseStatuses(job, DNS_STATUSES);
-				await notifyDnsResult(db, mailer, monitor, previous, { status: current });
+
+				/**
+				 * The findings are reloaded from the record table, which is where the sweep
+				 * persisted them, rather than carried in the message. A status alone would leave
+				 * a redelivered email with a headline and no body, and a findings list copied
+				 * onto the queue would be replayed as fact however long the message sat there.
+				 * What the rows say is what is outstanding now, which is also what the repeat
+				 * notifications of an ongoing incident report.
+				 */
+				let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+				await notifyDnsResult(
+					db,
+					mailer,
+					monitor,
+					previous,
+					dnsAlertResultFromRecords(current, records),
+				);
 				return true;
 			}
 

@@ -28,7 +28,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { dnsMonitors, memberships, teams } from "~/database/schema";
+import { dnsMonitorRecords, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitors")).default as { handler: RequestHandler<any> };
@@ -133,5 +133,56 @@ describe("dnsMonitors", () => {
 		let body = await response.text();
 		expect(body).toContain("Production DNS");
 		expect(body).toContain("example.com");
+	});
+
+	/**
+	 * A monitor is a domain, so what a row has to say about size is how many records it
+	 * tracks and how many of those a deviation would alert on — the two numbers the old
+	 * record-type column stood in for.
+	 */
+	test("counts each monitor's records, and says so per monitor", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let watched = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+		await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Spare DNS", domain: "spare.test" },
+			{ touch: true },
+		);
+
+		for (let [value, isEnabled] of [
+			["192.0.2.1", true],
+			["192.0.2.2", true],
+			["192.0.2.3", false],
+		] as const) {
+			await db.create(
+				dnsMonitorRecords,
+				{
+					id: crypto.randomUUID(),
+					dns_monitor_id: watched.id,
+					name: "acme.test",
+					record_type: "A",
+					value,
+					source: "resolver",
+					is_enabled: isEnabled,
+					status: isEnabled ? "ok" : "new",
+					first_seen_at: 0,
+					last_seen_at: 0,
+					last_checked_at: 0,
+				},
+				{ touch: true, returnRow: true },
+			);
+		}
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain("2 of 3 watched");
+		// A monitor discovery has never run for reads as "none yet" rather than as a
+		// settled "0 of 0", which would claim we looked and found nothing.
+		expect(body).toContain("None yet");
 	});
 });

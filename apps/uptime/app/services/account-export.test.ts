@@ -20,10 +20,13 @@ import {
 	accountExportFilename,
 	ACCOUNT_EXPORT_FORMAT,
 	buildAccountExport,
+	MAX_EXPORTED_DNS_RECORDS_PER_TEAM,
 } from "~/app/services/account-export";
 import {
 	alerts,
 	apiKeys,
+	dnsMonitorRecords,
+	dnsMonitors,
 	invites,
 	memberships,
 	monitorContentChecks,
@@ -75,6 +78,50 @@ async function addAlert(db: Database, teamId: string, config: AlertConfig) {
 			notify_on_recovery: true,
 			cooldown_minutes: 60,
 			config,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Creates a DNS monitor for `teamId`, with the columns the export reads back. */
+async function addDnsMonitor(db: Database, teamId: string, name = "example.com") {
+	return await db.create(
+		dnsMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name,
+			domain: name,
+			zone_file_imported_at: Date.now(),
+			interval_seconds: 86_400,
+			next_due_at: null,
+			is_enabled: true,
+			last_checked_at: null,
+			last_status: null,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Adds one tracked record to a DNS monitor. */
+async function addDnsRecord(
+	db: Database,
+	monitorId: string,
+	overrides: { name: string; value: string },
+) {
+	return await db.create(
+		dnsMonitorRecords,
+		{
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitorId,
+			record_type: "A",
+			source: "zone_file",
+			is_enabled: true,
+			status: "ok",
+			first_seen_at: Date.now(),
+			last_seen_at: Date.now(),
+			last_checked_at: Date.now(),
+			...overrides,
 		},
 		{ touch: true, returnRow: true },
 	);
@@ -303,6 +350,54 @@ describe("buildAccountExport", () => {
 
 		expect(document.ownedTeams[0]?.statusPages).toHaveLength(1);
 		expect(exported.monitors).toHaveLength(1);
+	});
+
+	test("carries the records a DNS monitor tracks, which are its configuration", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		await addMember(db, team.id, SUBJECT.id);
+		let monitor = await addDnsMonitor(db, team.id);
+		await addDnsRecord(db, monitor.id, { name: "mail.example.com", value: "203.0.113.5" });
+		await addDnsRecord(db, monitor.id, { name: "example.com", value: "203.0.113.1" });
+
+		let document = await buildAccountExport(db, SUBJECT);
+		let exported = document.ownedTeams[0]?.dnsMonitors[0] as {
+			records: { name: string; value: string; dns_monitor_id?: string }[];
+		};
+
+		expect(exported.records).toHaveLength(2);
+		// Ordered by name, so two exports of an unchanged monitor are the same file.
+		expect(exported.records.map((record) => record.name)).toEqual([
+			"example.com",
+			"mail.example.com",
+		]);
+		// The join column is the monitor this array already sits under, as with content checks.
+		expect(exported.records[0]?.dns_monitor_id).toBeUndefined();
+		expect(JSON.stringify(document)).toContain("203.0.113.5");
+		expect(document.ownedTeams[0]?.dnsRecordsTruncated).toBe(false);
+	});
+
+	test("stops at the record cap and says so, rather than dropping rows quietly", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		await addMember(db, team.id, SUBJECT.id);
+		let monitor = await addDnsMonitor(db, team.id);
+
+		// One row past the cap: the smallest input that proves the cap is a cap and that the
+		// overshoot the reader uses to detect it never reaches the file.
+		for (let index = 0; index <= MAX_EXPORTED_DNS_RECORDS_PER_TEAM; index++) {
+			await addDnsRecord(db, monitor.id, {
+				name: `host-${index.toString().padStart(5, "0")}.example.com`,
+				value: "203.0.113.1",
+			});
+		}
+
+		let document = await buildAccountExport(db, SUBJECT);
+		let exported = document.ownedTeams[0]?.dnsMonitors[0] as { records: unknown[] };
+
+		expect(exported.records).toHaveLength(MAX_EXPORTED_DNS_RECORDS_PER_TEAM);
+		expect(document.ownedTeams[0]?.dnsRecordsTruncated).toBe(true);
+		expect(document.excluded.join(" ")).toContain("dnsRecordsTruncated");
 	});
 
 	test("says in the file itself what was left out, so an omission does not read as a bug", async () => {

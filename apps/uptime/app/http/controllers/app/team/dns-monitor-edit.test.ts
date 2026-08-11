@@ -131,6 +131,46 @@ describe("dnsMonitorEdit", () => {
 		expect(body).toContain("Save Changes");
 	});
 
+	/**
+	 * The pasted zone is never stored, so the box is always empty and re-importing is its
+	 * own submission rather than a field that rides along with a rename.
+	 */
+	test("offers a zone-file re-import as its own form, with nothing pre-filled", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain(routes.actions.monitor.dns.importZoneFile.href({ team: team.slug }));
+		expect(body).toContain("Import Zone File");
+		expect(body).toContain("This monitor covers the apex only.");
+		expect(/<textarea[^>]*\bname="zone_file"[^>]*>\s*<\/textarea>/.test(body)).toBe(true);
+	});
+
+	test("dates the last import when there has been one", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme DNS",
+				domain: "acme.test",
+				zone_file_imported_at: Date.UTC(2026, 0, 2, 3, 4),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Last imported");
+		expect(body).not.toContain("This monitor covers the apex only.");
+	});
+
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 

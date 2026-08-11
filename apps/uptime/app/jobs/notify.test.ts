@@ -23,6 +23,7 @@ import { Database } from "remix/data-table";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
+import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -156,7 +157,12 @@ describe("NotifyJob", () => {
 		expect(completed?.newStatus).toBe("down");
 	});
 
-	test("dispatches a DNS transition carrying only the status it was told", async () => {
+	/**
+	 * The message carries two statuses and no findings, so the body of the email it
+	 * produces exists only if this job reloads the records the sweep wrote. A transition
+	 * with a headline and no detail is the failure this covers.
+	 */
+	test("dispatches a DNS transition with the findings reloaded from the record table", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await DnsMonitor.create(db, "team-1", {
 			name: "Example domain",
@@ -164,6 +170,36 @@ describe("NotifyJob", () => {
 			is_enabled: true,
 			last_status: "changed",
 		});
+
+		await DnsMonitorRecord.importMany(db, monitor.id, [
+			{
+				name: "example.com",
+				record_type: "MX",
+				value: "10 mx1.example.com",
+				source: "resolver",
+				is_enabled: true,
+				status: "missing",
+				last_seen_at: null,
+			},
+			{
+				name: "example.com",
+				record_type: "MX",
+				value: "20 mx2.example.com",
+				source: "resolver",
+				is_enabled: false,
+				status: "new",
+				last_seen_at: Date.now(),
+			},
+			{
+				name: "example.com",
+				record_type: "A",
+				value: "1.1.1.1",
+				source: "resolver",
+				is_enabled: true,
+				status: "ok",
+				last_seen_at: Date.now(),
+			},
+		]);
 
 		await runJob(db, {
 			type: "notify",
@@ -179,7 +215,16 @@ describe("NotifyJob", () => {
 				monitorId: monitor.id,
 				monitorName: "Example domain",
 				previousStatus: null,
-				payload: { status: "changed" },
+				payload: {
+					status: "changed",
+					recordsMissing: 1,
+					recordsChanged: 0,
+					recordsNew: 1,
+					findings: [
+						{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+						{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+					],
+				},
 			},
 		]);
 	});

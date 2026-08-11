@@ -9,14 +9,21 @@
  * reduction over the same result rows: leaving them behind would mean the page paying
  * for the query it was restructured to avoid. Requires `requireUser` + `requireTeam`.
  *
+ * A result is one row per check of the whole domain, so what it carries is counters
+ * rather than a resolved value. The findings cell reads them as two separate claims: what
+ * moved, and how much of the sweep never answered — a check that lost queries is not a
+ * check that found nothing.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap } from "@pkg/u/layout";
+import { fg } from "@pkg/u/color";
+import { flex, flexWrap, gap, vstack } from "@pkg/u/layout";
 import { mbe } from "@pkg/u/size";
+import { fontSize } from "@pkg/u/typography";
 import { Badge, Empty, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -24,6 +31,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Fragment } from "remix/ui";
 
+import type { SelectDnsMonitorResult } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -38,6 +46,15 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	changed: "degraded",
 	error: "down",
 };
+
+/**
+ * How many records a check found something to say about. Deliberately excludes
+ * `queries_failed`, which is not a finding about a record but the count of records the
+ * check has nothing to say about at all.
+ */
+function findings(result: SelectDnsMonitorResult): number {
+	return result.records_changed + result.records_missing + result.records_new;
+}
 
 /** GET /app/:team/dns/:monitorId/cards/results — the monitor's result-derived stats and result table, fragment-only. */
 export default createAction(routes.app.team.dnsMonitors.cards.results, {
@@ -117,18 +134,38 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 												</Badge>
 											</Table.Cell>
 											<Table.Cell>
-												{result.error_message ? (
-													<code>{result.error_message}</code>
-												) : result.records_changed + result.records_missing + result.records_new ===
-												  0 ? (
-													ctx.i18next.t("page.dnsMonitorDetail.results.noFindings")
-												) : (
-													ctx.i18next.t("page.dnsMonitorDetail.results.findings", {
-														changed: result.records_changed,
-														missing: result.records_missing,
-														new: result.records_new,
-													})
-												)}
+												<div mix={[vstack({ gap: 1 })]}>
+													{result.error_message ? (
+														<code>{result.error_message}</code>
+													) : (
+														findings(result) !== 0 && (
+															<span>
+																{ctx.i18next.t("page.dnsMonitorDetail.results.findings", {
+																	changed: result.records_changed,
+																	missing: result.records_missing,
+																	new: result.records_new,
+																})}
+															</span>
+														)
+													)}
+													{/*
+													 * A query that did not answer is never diffed, so a sweep that lost
+													 * some of its queries knows less than a whole one did. Saying so is
+													 * the difference between "nothing moved" and "we did not find out
+													 * about part of your zone", and only the second is true here.
+													 */}
+													{result.queries_failed > 0 && (
+														<span mix={[fg("neutral.muted"), fontSize("sm")]}>
+															{ctx.i18next.t("page.dnsMonitorDetail.results.queriesFailed", {
+																count: result.queries_failed,
+															})}
+														</span>
+													)}
+													{result.error_message === null &&
+														findings(result) === 0 &&
+														result.queries_failed === 0 &&
+														ctx.i18next.t("page.dnsMonitorDetail.results.noFindings")}
+												</div>
 											</Table.Cell>
 											<Table.Cell>
 												{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}

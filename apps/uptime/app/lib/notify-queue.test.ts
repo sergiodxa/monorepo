@@ -54,6 +54,33 @@ describe("enqueueNotifications", () => {
 		]);
 	});
 
+	/**
+	 * A domain sweep's findings are durable in `dns_monitor_records` and the consumer reads
+	 * them from there, so the message stays two statuses and an id. A copy on the queue
+	 * would be replayed as fact by a redelivery that arrives long after it stopped being
+	 * true.
+	 */
+	test("puts nothing but the transition on the wire for a domain monitor", async () => {
+		let message: NotifyMessage = {
+			type: "notify",
+			monitorType: "dns",
+			monitorId: "dns-monitor-1",
+			previousStatus: "ok",
+			newStatus: "changed",
+		};
+
+		await enqueueNotifications([message]);
+
+		expect(sendBatchCalls[0]).toEqual([{ body: message, contentType: "json" }]);
+		expect(Object.keys(sendBatchCalls[0]![0]!.body)).toEqual([
+			"type",
+			"monitorType",
+			"monitorId",
+			"previousStatus",
+			"newStatus",
+		]);
+	});
+
 	test("sends nothing when the sweep produced no notifications", async () => {
 		await enqueueNotifications([]);
 

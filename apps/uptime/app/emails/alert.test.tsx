@@ -28,6 +28,36 @@ let httpSnapshot: AlertEventSnapshot = {
 	url: "https://example.com",
 };
 
+/** A domain sweep's snapshot, defaulting to a `changed` check with nothing to quote. */
+function makeDnsSnapshot(
+	overrides: Partial<Extract<AlertEventSnapshot, { type: "dns" }>> = {},
+): AlertEventSnapshot {
+	return {
+		type: "dns",
+		status: "changed",
+		domain: "example.com",
+		recordsChanged: 0,
+		recordsMissing: 0,
+		recordsNew: 0,
+		findings: [],
+		...overrides,
+	};
+}
+
+/**
+ * A translator that answers with the key it was asked for and remembers the question, so
+ * a test can state which keys the copy is made of and what is interpolated into them.
+ */
+function keyRecorder() {
+	let calls: { key: string; options: unknown }[] = [];
+	let t = ((key: string, options?: unknown) => {
+		calls.push({ key, options });
+		return key;
+	}) as unknown as TFunction;
+
+	return { calls, t };
+}
+
 /** Builds the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail(overrides: Partial<AlertEmail.Data> = {}) {
 	let { locale, t } = await emailTranslator();
@@ -105,16 +135,16 @@ describe("AlertEmail", () => {
 	 * it once they do.
 	 */
 	test("reports the incident totals on a recovery that held notifications back", async () => {
-		let asked: { key: string; options: unknown }[] = [];
-		let t = ((key: string, options?: unknown) => {
-			asked.push({ key, options });
-			return key;
-		}) as unknown as TFunction;
-		let email = await makeEmail({ eventType: "up", incident: { sent: 10, suppressed: 300 }, t });
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			eventType: "up",
+			incident: { sent: 10, suppressed: 300 },
+			t: asked.t,
+		});
 
 		await render(email.body());
 
-		expect(asked).toContainEqual({
+		expect(asked.calls).toContainEqual({
 			key: "emails.alert.incidentCooldown",
 			options: { sent: 10, suppressed: 300 },
 		});
@@ -131,13 +161,148 @@ describe("AlertEmail", () => {
 	test("reports a DNS check's own detail", async () => {
 		let email = await makeEmail({
 			monitorType: "dns",
-			snapshot: { type: "dns", status: "changed", domain: "example.com" },
+			snapshot: makeDnsSnapshot(),
 		});
 
 		let { text } = await render(email.body());
 
 		expect(text).toContain("Domain example.com");
 		expect(text).toContain("Status changed");
+	});
+
+	/**
+	 * Asserted as the keys the email asks for, with their interpolations, rather than as
+	 * rendered copy: these keys are the contract the locale files have to satisfy, and
+	 * stating it this way keeps stating it once they do.
+	 */
+	test("quotes each of a domain sweep's findings, with the counters behind them", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "dns",
+			t: asked.t,
+			snapshot: makeDnsSnapshot({
+				recordsMissing: 1,
+				recordsNew: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+					{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+				],
+			}),
+		});
+
+		await render(email.body());
+
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.dnsRecordCounts",
+			options: { missing: 1, changed: 0, new: 1 },
+		});
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.dnsFinding.missing",
+			options: { name: "example.com", type: "MX", value: "10 mx1.example.com" },
+		});
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.dnsFinding.new",
+			options: { name: "example.com", type: "MX", value: "20 mx2.example.com" },
+		});
+	});
+
+	/**
+	 * A value edited inside a record set holding several values is reported as one record
+	 * no longer resolving plus one new record, because DNS gives a record no identity of
+	 * its own. The email says so whenever that shape is present, or the truthful report
+	 * reads as a bug.
+	 */
+	test("explains an edited record set, and says a new record is not being watched yet", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "dns",
+			t: asked.t,
+			snapshot: makeDnsSnapshot({
+				recordsMissing: 1,
+				recordsNew: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+					{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+				],
+			}),
+		});
+
+		await render(email.body());
+
+		let keys = asked.calls.map((call) => call.key);
+		expect(keys).toContain("emails.alert.dns.recordSetEditNote");
+		expect(keys).toContain("emails.alert.dns.newRecordsNote");
+	});
+
+	test("says nothing about an edit when a record simply stopped resolving", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "dns",
+			t: asked.t,
+			snapshot: makeDnsSnapshot({
+				recordsMissing: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+				],
+			}),
+		});
+
+		await render(email.body());
+
+		let keys = asked.calls.map((call) => call.key);
+		expect(keys).not.toContain("emails.alert.dns.recordSetEditNote");
+		expect(keys).not.toContain("emails.alert.dns.newRecordsNote");
+	});
+
+	/** The counters are the totals; the findings are the capped sample quoted back. */
+	test("says how many findings it is not showing", async () => {
+		let asked = keyRecorder();
+		let email = await makeEmail({
+			monitorType: "dns",
+			t: asked.t,
+			snapshot: makeDnsSnapshot({
+				recordsMissing: 9,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+				],
+			}),
+		});
+
+		await render(email.body());
+
+		expect(asked.calls).toContainEqual({
+			key: "emails.alert.values.dnsMoreFindings",
+			options: { count: 8 },
+		});
+	});
+
+	test("renders every quoted finding on a line of its own", async () => {
+		let email = await makeEmail({
+			monitorType: "dns",
+			snapshot: makeDnsSnapshot({
+				recordsMissing: 1,
+				recordsNew: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+					{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+				],
+			}),
+		});
+
+		let { html, text } = await render(email.body());
+
+		expect(html).toContain("<br");
+		/**
+		 * Both findings survive into the text part rather than running together. Located by
+		 * the RDATA each one carries, which is what distinguishes the two halves of an
+		 * edited record set from each other.
+		 */
+		let lines = text.split("\n");
+		let missingLine = lines.findIndex((line) => line.includes("10 mx1.example.com"));
+		let newLine = lines.findIndex((line) => line.includes("20 mx2.example.com"));
+		expect(missingLine).toBeGreaterThanOrEqual(0);
+		expect(newLine).toBeGreaterThanOrEqual(0);
+		expect(newLine).not.toBe(missingLine);
 	});
 
 	test("reports a TCP check's own detail, with an em dash for a missing response time", async () => {

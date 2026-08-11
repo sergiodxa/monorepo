@@ -1,7 +1,11 @@
 /**
  * DNS monitors list controller. Renders every DNS monitor for the team with its
- * last-known status, or an empty state when there are none yet. Requires
- * `requireUser` + `requireTeam`.
+ * last-known status and how much of its domain it watches, or an empty state when there
+ * are none yet. Requires `requireUser` + `requireTeam`.
+ *
+ * A monitor is a domain rather than a record type, so the column that once named the one
+ * record type it covered is now the count of records it tracks and how many of those are
+ * watched — the only number on this page that says how much work a row stands for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +18,7 @@ import { hover } from "@pkg/u/state";
 import { textDecoration } from "@pkg/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
-import { Database } from "remix/data-table";
+import { Database, getTableName } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import type { BadgeTone } from "~/resources/components/badge";
@@ -23,6 +27,7 @@ import DnsMonitor from "~/app/data/dns-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { dnsMonitorRecords } from "~/database/schema";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -34,6 +39,48 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "down",
 };
 
+/** How many records a monitor tracks, and how many of those a deviation would alert on. */
+interface RecordCounts {
+	total: number;
+	watched: number;
+}
+
+/**
+ * Counts every listed monitor's records in one statement, keyed by monitor.
+ *
+ * One grouped read rather than a count per row: this page draws a whole team's monitors,
+ * and a per-monitor count would put a round trip behind each of them for a number that is
+ * a single `GROUP BY` away. The `IN` list is bounded by the per-team monitor cap, so it
+ * never needs chunking against the bound-parameter limit.
+ *
+ * @returns Counts for the monitors that have records. A monitor with none is absent, and
+ * the caller reads that as the zero it is.
+ */
+async function countRecords(
+	db: Database,
+	monitorIds: string[],
+): Promise<Map<string, RecordCounts>> {
+	if (monitorIds.length === 0) return new Map();
+
+	let result = await db.exec(
+		`SELECT dns_monitor_id, COUNT(*) AS total, SUM(is_enabled) AS watched
+		   FROM ${getTableName(dnsMonitorRecords)}
+		  WHERE dns_monitor_id IN (${monitorIds.map(() => "?").join(", ")})
+		  GROUP BY dns_monitor_id`,
+		monitorIds,
+	);
+
+	let rows = (result.rows ?? []) as unknown as {
+		dns_monitor_id: string;
+		total: number;
+		watched: number;
+	}[];
+
+	return new Map(
+		rows.map((row) => [row.dns_monitor_id, { total: row.total, watched: row.watched }]),
+	);
+}
+
 /** GET /app/:team/dns — the team's DNS monitors list. */
 export default createAction(routes.app.team.dnsMonitors.index, {
 	middleware: [requireUser, requireTeam],
@@ -43,6 +90,10 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let monitors = await DnsMonitor.listByTeam(db, ctx.team.id);
+		let counts = await countRecords(
+			db,
+			monitors.map((monitor) => monitor.id),
+		);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · DNS monitors`}>
@@ -95,48 +146,68 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 												{ctx.i18next.t("page.dnsMonitors.table.columns.domain")}
 											</Table.Column>
 											<Table.Column>
+												{ctx.i18next.t("page.dnsMonitors.table.columns.records")}
+											</Table.Column>
+											<Table.Column>
 												{ctx.i18next.t("page.dnsMonitors.table.columns.status")}
 											</Table.Column>
 										</Table.Row>
 									</Table.Header>
 									<Table.Body>
-										{monitors.map((monitor) => (
-											<Table.Row key={monitor.id}>
-												<Table.Cell>
-													<a
-														href={routes.app.team.dnsMonitors.show.href({
-															team: ctx.team.slug,
-															monitorId: monitor.id,
-														})}
-														mix={[
-															fg("brand"),
-															textDecoration("none"),
-															hover(textDecoration("underline")),
-														]}
-													>
-														{monitor.name}
-													</a>
-													{!monitor.is_enabled && (
-														<Badge {...badgeVariant("neutral")}>
-															{ctx.i18next.t("page.dnsMonitors.table.disabled")}
-														</Badge>
-													)}
-												</Table.Cell>
-												<Table.Cell>
-													<code>{monitor.domain}</code>
-												</Table.Cell>
-												<Table.Cell>
-													<Badge
-														{...badgeVariant(
-															STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral",
+										{monitors.map((monitor) => {
+											let count = counts.get(monitor.id);
+
+											return (
+												<Table.Row key={monitor.id}>
+													<Table.Cell>
+														<a
+															href={routes.app.team.dnsMonitors.show.href({
+																team: ctx.team.slug,
+																monitorId: monitor.id,
+															})}
+															mix={[
+																fg("brand"),
+																textDecoration("none"),
+																hover(textDecoration("underline")),
+															]}
+														>
+															{monitor.name}
+														</a>
+														{!monitor.is_enabled && (
+															<Badge {...badgeVariant("neutral")}>
+																{ctx.i18next.t("page.dnsMonitors.table.disabled")}
+															</Badge>
 														)}
-													>
-														{monitor.last_status ??
-															ctx.i18next.t("page.dnsMonitors.table.notChecked")}
-													</Badge>
-												</Table.Cell>
-											</Table.Row>
-										))}
+													</Table.Cell>
+													<Table.Cell>
+														<code>{monitor.domain}</code>
+													</Table.Cell>
+													{/*
+													 * A monitor with no records yet is not a monitor with nothing to
+													 * watch: discovery may simply not have run. "None yet" says that,
+													 * where a bare "0 of 0" would read as a settled answer.
+													 */}
+													<Table.Cell>
+														{count === undefined
+															? ctx.i18next.t("page.dnsMonitors.table.noRecords")
+															: ctx.i18next.t("page.dnsMonitors.table.records", {
+																	enabled: count.watched,
+																	total: count.total,
+																})}
+													</Table.Cell>
+													<Table.Cell>
+														<Badge
+															{...badgeVariant(
+																STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral",
+															)}
+														>
+															{monitor.last_status ??
+																ctx.i18next.t("page.dnsMonitors.table.notChecked")}
+														</Badge>
+													</Table.Cell>
+												</Table.Row>
+											);
+										})}
 									</Table.Body>
 								</Table>
 							</Table.Container>

@@ -1094,6 +1094,9 @@ export default {
 			description: "La página de estado que busca no existe o no es pública.",
 			goHome: "Ir al inicio",
 		},
+		dns: {
+			coverage: "Todos los registros DNS con seguimiento de este dominio",
+		},
 	},
 
 	contentMonitoring: {
@@ -1313,6 +1316,8 @@ export default {
 				nextExpected: "Próximo esperado",
 				hostname: "Nombre de host",
 				expiresAt: "Expira el",
+				records: "Registros",
+				findings: "Qué cambió",
 			},
 
 			values: {
@@ -1323,6 +1328,25 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+				dnsRecordCounts:
+					"{{missing}} ausentes, {{changed}} cambiados, {{new}} vistos por primera vez",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "Ya no resuelve: {{name}} {{type}} {{value}}",
+					changed: "Ahora resuelve a: {{name}} {{type}} {{value}}",
+					new: "Visto por primera vez: {{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "…y {{count}} más",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"Un conjunto de registros con varios valores no tiene identidad por registro en DNS, así que un valor editado dentro de él se informa como un registro que deja de resolver más un registro nuevo.",
+				newRecordsNote:
+					"Los registros vistos por primera vez todavía no se vigilan. Abra el monitor para aceptar los que esperaba, o corrija su DNS.",
 			},
 		},
 
@@ -3183,6 +3207,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Opcional. Pegue un archivo de zona BIND exportado desde su proveedor de DNS. Se lee una sola vez y nunca se almacena, y es la única forma en que podemos conocer los nombres de su zona.",
+						limits: "Hasta {{size}} de texto y {{limit}} nombres por monitor.",
 					},
 
 					interval: {
@@ -3367,7 +3392,6 @@ export default {
 						source: "Origen",
 						state: "Estado",
 						watched: "Vigilado",
-						actions: "Acciones",
 					},
 				},
 
@@ -3385,7 +3409,6 @@ export default {
 				},
 
 				actions: {
-					menu: "Menú de acciones",
 					enable: "Vigilar",
 					disable: "Dejar de vigilar",
 				},
@@ -3411,6 +3434,22 @@ export default {
 				description:
 					"Estas líneas no forman parte del subconjunto que leemos. Nada de lo que declaran se monitorea.",
 				line: "Línea {{line}}: {{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective:
+						"Cambia a qué zona pertenecen los nombres que vienen después, así que no podemos leerla con seguridad",
+					ttlDirective: "No hacemos seguimiento de los TTL",
+					includeDirective: "Nombra un archivo que no tenemos y que no vamos a descargar",
+					generateDirective: "Se expande en muchos nombres a la vez",
+					unsupportedDirective: "No es una directiva que leamos",
+					multiLineRecord: "Repartido en varias líneas con paréntesis",
+					blankOwnerContinuation: "Empieza con un espacio y hereda el nombre de la línea anterior",
+					nonInternetClass: "No es un registro de la clase internet",
+					unsupportedType: "No es ninguno de los seis tipos de registro que vigilamos",
+					outOfZone: "Pertenece a otro dominio",
+					malformed: "No pudimos leer esto como un registro",
+				},
 			},
 
 			groups: {
@@ -3419,23 +3458,40 @@ export default {
 					description:
 						"Encontrados al resolver todos los tipos de registro admitidos en cada nombre conocido.",
 				},
+				discovered: {
+					title: "Descubiertos recientemente",
+					description:
+						"Resuelven ahora, pero no estaban en la última revisión. Quedan sin vigilar hasta que los acepte, de modo que un registro que apareció sin su intervención nunca se convierte en una expectativa en su nombre.",
+				},
 				declared: {
 					title: "Declarados pero sin resolver",
 					description:
 						"Están en su archivo de zona, pero hoy nada responde por ellos. Quedan sin vigilar salvo que indique lo contrario: una zona pegada es una foto de un momento, y solo envejece.",
+					proxiedNote:
+						"Un registro tras un proxy no aparece en la exportación de su propia zona y responde con la dirección del proxy. En una zona con proxy esto es normal y esperable: no es señal de que algo esté fallando.",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "Vigilar",
-					name: "Nombre",
-					type: "Tipo",
-					value: "Valor",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one: "{{count}} línea declaraba un registro que otra línea ya declaraba",
+				title_other: "{{count}} líneas declaraban registros que otras líneas ya declaraban",
+				description:
+					"No se perdió nada. DNS responde una sola vez a un registro repetido, así que se importó desde la primera línea que lo declaraba.",
+				line: "Línea {{line}}: {{name}} {{type}} ya se había declarado en la línea {{firstLine}}.",
 			},
 
-			selectAll: "Vigilar todos los registros",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "Más nombres de los que un monitor puede vigilar",
+				description:
+					"Este monitor abarca ahora {{count}} nombres, y una comprobación puede recorrer {{limit}}. Reparta la zona entre varios monitores para que todos los nombres se sigan comprobando.",
+			},
+
 			empty: "No se encontró nada para este dominio.",
 			cancel: "Cancelar",
 			cta: "Guardar registros",

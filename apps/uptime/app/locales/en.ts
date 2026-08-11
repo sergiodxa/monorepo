@@ -1133,6 +1133,9 @@ export default {
 			description: "The status page you're looking for doesn't exist or is not public.",
 			goHome: "Go to homepage",
 		},
+		dns: {
+			coverage: "All tracked DNS records for this domain",
+		},
 	},
 
 	contentMonitoring: {
@@ -1349,6 +1352,8 @@ export default {
 				nextExpected: "Next expected",
 				hostname: "Hostname",
 				expiresAt: "Expires at",
+				records: "Records",
+				findings: "What changed",
 			},
 
 			values: {
@@ -1359,6 +1364,24 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+				dnsRecordCounts: "{{missing}} missing, {{changed}} changed, {{new}} newly seen",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "No longer resolving: {{name}} {{type}} {{value}}",
+					changed: "Now resolves to: {{name}} {{type}} {{value}}",
+					new: "Newly seen: {{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "…and {{count}} more",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"A record set holding several values has no per-record identity in DNS, so a value edited inside one is reported as one record no longer resolving plus one new record.",
+				newRecordsNote:
+					"Newly seen records are not being watched yet. Open the monitor to accept the ones you expected, or fix your DNS.",
 			},
 		},
 
@@ -3205,6 +3228,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
+						limits: "Up to {{size}} of text, and {{limit}} names per monitor.",
 					},
 
 					interval: {
@@ -3384,7 +3408,6 @@ export default {
 						source: "Source",
 						state: "State",
 						watched: "Watched",
-						actions: "Actions",
 					},
 				},
 
@@ -3402,7 +3425,6 @@ export default {
 				},
 
 				actions: {
-					menu: "Actions Menu",
 					enable: "Watch",
 					disable: "Stop watching",
 				},
@@ -3428,6 +3450,22 @@ export default {
 				description:
 					"These lines are not part of the subset we read. Anything they declare is not monitored.",
 				line: "Line {{line}}: {{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective:
+						"Changes which zone the names after it belong to, so we cannot read it safely",
+					ttlDirective: "We do not track TTLs",
+					includeDirective: "Names a file we do not have and will not fetch",
+					generateDirective: "Expands into many names at once",
+					unsupportedDirective: "Not a directive we read",
+					multiLineRecord: "Spread over several lines with parentheses",
+					blankOwnerContinuation: "Starts with a space, inheriting the previous line's name",
+					nonInternetClass: "Not an internet-class record",
+					unsupportedType: "Not one of the six record types we watch",
+					outOfZone: "Belongs to a different domain",
+					malformed: "We could not read this as a record",
+				},
 			},
 
 			groups: {
@@ -3435,23 +3473,40 @@ export default {
 					title: "Resolving now",
 					description: "Found by resolving every supported record type at every known name.",
 				},
+				discovered: {
+					title: "Newly discovered",
+					description:
+						"Resolving now, but not there at the last review. Left unwatched until you accept them, so a record that appeared without you is never turned into an expectation on your behalf.",
+				},
 				declared: {
 					title: "Declared but not resolving",
 					description:
 						"In your zone file, but nothing answers for them today. Left unwatched unless you say otherwise — a pasted zone is a snapshot, and it only gets older.",
+					proxiedNote:
+						"A proxied record does not appear in its own zone export, and answers as the proxy's address instead. On a proxied zone this is normal and expected — it is not a sign that anything is broken.",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "Watch",
-					name: "Name",
-					type: "Type",
-					value: "Value",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one: "{{count}} line declared a record another line already declared",
+				title_other: "{{count}} lines declared records other lines already declared",
+				description:
+					"Nothing was lost. DNS answers a repeated record once, so it was imported from the first line that declared it.",
+				line: "Line {{line}}: {{name}} {{type}} was already declared on line {{firstLine}}.",
 			},
 
-			selectAll: "Watch every record",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "More names than one monitor can watch",
+				description:
+					"This monitor now covers {{count}} names, and one check can sweep {{limit}}. Split the zone across more than one monitor so every name keeps being checked.",
+			},
+
 			empty: "Nothing was found for this domain.",
 			cancel: "Cancel",
 			cta: "Save Records",

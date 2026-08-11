@@ -2,8 +2,11 @@
  * Tests for the DNS monitor detail page controller. `~/app/data/dns-monitor` doesn't
  * import `cloudflare:workers`, so no module mock is needed here. `getViewer()`/
  * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The page's two
- * data fetches now live behind `Frame`s, so what it asserts is the frames themselves.
+ * standing in for the real `auth`/`requireUser`/`requireTeam` chain. The uptime bar and the
+ * check history live behind `Frame`s, so what is asserted of those is the frames themselves;
+ * the record list renders inline and is asserted in full, including the two readings the
+ * data makes non-obvious — an RRset edit arriving as a removal plus an addition, and a
+ * declared-but-unresolved record that is routine rather than broken.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,11 +26,11 @@ import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
 import type { Viewer } from "~/app/http/middleware/auth";
-import type { SelectMembership, SelectTeam } from "~/database/schema";
+import type { InsertDnsMonitorRecord, SelectMembership, SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { dnsMonitors, memberships, teams } from "~/database/schema";
+import { dnsMonitorRecords, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitor-show")).default as { handler: RequestHandler<any> };
@@ -48,6 +51,35 @@ async function createFixture() {
 	);
 
 	return { db, team, membership };
+}
+
+/** Inserts one tracked record, defaulting to a watched record that resolved. */
+async function seedRecord(
+	db: Database,
+	monitorId: string,
+	overrides: Partial<InsertDnsMonitorRecord> &
+		Pick<InsertDnsMonitorRecord, "name" | "record_type" | "value">,
+) {
+	return await db.create(
+		dnsMonitorRecords,
+		{
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitorId,
+			source: "resolver",
+			is_enabled: true,
+			status: "ok",
+			first_seen_at: 0,
+			last_seen_at: 0,
+			last_checked_at: 0,
+			...overrides,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** How many elements the page draws in the destructive tone, the signal "something is wrong". */
+function dangerCount(html: string): number {
+	return html.match(/data-color="danger"/g)?.length ?? 0;
 }
 
 /** Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams`/auth state, standing in for the real chain. */
@@ -135,6 +167,118 @@ describe("dnsMonitorShow", () => {
 		expect(body).toContain(
 			routes.app.team.dnsMonitors.cards.results.href({ team: team.slug, monitorId: monitor.id }),
 		);
+	});
+
+	test("lists every tracked record with its state and a control that says what watching it would do", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		await seedRecord(db, monitor.id, {
+			name: "acme.test",
+			record_type: "MX",
+			value: "10 mail.acme.test",
+			status: "ok",
+		});
+		await seedRecord(db, monitor.id, {
+			name: "acme.test",
+			record_type: "MX",
+			value: "20 mail.attacker.test",
+			source: "resolver",
+			is_enabled: false,
+			status: "new",
+		});
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("10 mail.acme.test");
+		expect(body).toContain("20 mail.attacker.test");
+		expect(body).toContain("New");
+		// One of two records is watched, and the discovered one offers the act of accepting
+		// it while the accepted one offers the reverse.
+		expect(body).toContain("1 of 2");
+		expect(body).toContain("Watch");
+		expect(body).toContain("Stop watching");
+		expect(body).toContain(routes.actions.monitor.dns.toggleRecord.href({ team: team.slug }));
+	});
+
+	/**
+	 * A record identified by `(name, type, value)` cannot express an edit inside an RRset
+	 * that holds more than one record: the old value stops resolving and the new one has no
+	 * row, so the page must show both, side by side, rather than claim a single change.
+	 */
+	test("shows an edit inside a multi-record RRset as the removal and the addition it is", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		await seedRecord(db, monitor.id, {
+			name: "acme.test",
+			record_type: "MX",
+			value: "10 old.acme.test",
+			status: "missing",
+		});
+		await seedRecord(db, monitor.id, {
+			name: "acme.test",
+			record_type: "MX",
+			value: "10 new.acme.test",
+			is_enabled: false,
+			status: "new",
+		});
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Missing");
+		expect(body).toContain("New");
+		expect(body).not.toContain("Changed");
+	});
+
+	/**
+	 * On a proxied zone a record the customer's own zone file declares routinely does not
+	 * resolve at all, so an unwatched `missing` record is the common case and must not be
+	 * drawn in the tone reserved for something being wrong.
+	 */
+	test("draws a declared but unresolved record neutrally, and a watched missing one as a failure", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		// The page draws destructively-toned controls of its own, so what is asserted is the
+		// change each record makes rather than the presence of the tone anywhere on it.
+		let baseline = dangerCount(await (await send(db, team, membership, monitor.id)).text());
+
+		await seedRecord(db, monitor.id, {
+			name: "proxied.acme.test",
+			record_type: "A",
+			value: "192.0.2.1",
+			source: "zone_file",
+			is_enabled: false,
+			status: "missing",
+			last_seen_at: null,
+		});
+
+		let declaredOnly = await (await send(db, team, membership, monitor.id)).text();
+		expect(declaredOnly).toContain("Zone file");
+		expect(dangerCount(declaredOnly)).toBe(baseline);
+
+		await seedRecord(db, monitor.id, {
+			name: "acme.test",
+			record_type: "A",
+			value: "192.0.2.9",
+			status: "missing",
+		});
+
+		let withWatched = await (await send(db, team, membership, monitor.id)).text();
+		expect(dangerCount(withWatched)).toBe(baseline + 1);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

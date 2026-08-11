@@ -10,12 +10,14 @@
 
 import type { TFunction } from "@pkg/i18n";
 import type { Address, EmailTableRow } from "@pkg/mail";
-import type { RemixElement } from "remix/ui";
+import type { Handle, RemixElement } from "remix/ui";
 
 import { formatDateTime } from "@pkg/dates";
 import { Email } from "@pkg/mail";
 
-import type { AlertEventSnapshot, SelectAlertEvent } from "~/database/schema";
+import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
+
+import { hasRecordSetEdit } from "~/app/lib/dns-findings";
 
 /**
  * Locale key holding the shouty word a transition is announced with. Written out per
@@ -27,6 +29,22 @@ function statusKey(eventType: SelectAlertEvent["event_type"]): string {
 	if (eventType === "up") return "emails.alert.status.up";
 	if (eventType === "degraded") return "emails.alert.status.degraded";
 	return "emails.alert.status.down";
+}
+
+/**
+ * Locale key holding the sentence one finding is reported with, written out per outcome
+ * for the same reason {@link statusKey} is: an interpolated key is a key no grep for the
+ * locale files will find.
+ *
+ * Each key is a whole sentence rather than a word slotted into a shared template, because
+ * the three outcomes are different claims — one record stopped resolving, one now answers
+ * with a different value, one appeared and is not being watched — and a translator needs
+ * to say each of them in its own language's word order.
+ */
+function findingKey(kind: DnsFinding["kind"]): string {
+	if (kind === "missing") return "emails.alert.values.dnsFinding.missing";
+	if (kind === "changed") return "emails.alert.values.dnsFinding.changed";
+	return "emails.alert.values.dnsFinding.new";
 }
 
 /** One row of the transition report, both sides already translated. */
@@ -58,6 +76,37 @@ function alertDateTime(date: Date, locale: string): string {
  */
 function snapshotDateTime(iso: string | null, locale: string, fallback: string): string {
 	return iso === null ? fallback : alertDateTime(new Date(iso), locale);
+}
+
+export namespace Lines {
+	/** Props accepted by {@link Lines}. */
+	export interface Props {
+		/** Already-translated lines, in reading order. */
+		lines: string[];
+	}
+}
+
+/**
+ * Several lines inside one table cell, separated by explicit breaks.
+ *
+ * `<br>` rather than a list or a nested table because it is the one break every mail
+ * client honours inside a cell, and because it is also the only inline element the
+ * plain-text derivation turns into a newline — so the text part reads as the same lines
+ * the HTML one shows.
+ *
+ * @example <Lines lines={["No longer resolving: example.com MX 10 mx.example.com"]} />
+ */
+export function Lines(handle: Handle<Lines.Props>) {
+	return () => (
+		<span>
+			{handle.props.lines.map((line, index) => (
+				<span key={line}>
+					{index > 0 ? <br /> : null}
+					{line}
+				</span>
+			))}
+		</span>
+	);
 }
 
 export namespace AlertEmail {
@@ -155,6 +204,11 @@ export class AlertEmail implements Email {
 			>
 				<Email.Heading>{headline}</Email.Heading>
 				<Email.Table rows={this.#fields()} />
+				{this.#notes().map((note) => (
+					<Email.Text key={note} muted>
+						{note}
+					</Email.Text>
+				))}
 				<Email.Button href={dashboardUrl}>{t("emails.alert.action")}</Email.Button>
 				{incident ? (
 					<Email.Text muted>
@@ -172,6 +226,26 @@ export class AlertEmail implements Email {
 				<Email.Footer>{t("emails.alert.footer")}</Email.Footer>
 			</Email.Layout>
 		);
+	}
+
+	/**
+	 * Sentences the reported fields need but cannot carry, in reading order.
+	 *
+	 * Both belong to a domain sweep, and both exist because the table alone would mislead.
+	 * A record set holding several values has no per-record identity in DNS, so a value
+	 * edited inside one is reported as one record no longer resolving plus one new record:
+	 * accurate, and read as a bug by anyone not told why. And a newly seen record is stored
+	 * disabled on purpose, so the email has to say that nothing is watching it yet and that
+	 * accepting or fixing it is the reader's move.
+	 */
+	#notes(): string[] {
+		let { t, snapshot } = this.#alert;
+		if (snapshot.type !== "dns") return [];
+
+		let notes: string[] = [];
+		if (hasRecordSetEdit(snapshot.findings)) notes.push(t("emails.alert.dns.recordSetEditNote"));
+		if (snapshot.recordsNew > 0) notes.push(t("emails.alert.dns.newRecordsNote"));
+		return notes;
 	}
 
 	/** The word this transition is announced with, shared by the subject and the body. */
@@ -220,11 +294,49 @@ export class AlertEmail implements Email {
 					},
 				];
 
-			case "dns":
-				return [
+			case "dns": {
+				let rows: AlertField[] = [
 					{ label: t("emails.alert.fields.domain"), value: snapshot.domain },
 					{ label: t("emails.alert.fields.status"), value: snapshot.status },
+					{
+						label: t("emails.alert.fields.records"),
+						value: t("emails.alert.values.dnsRecordCounts", {
+							missing: snapshot.recordsMissing,
+							changed: snapshot.recordsChanged,
+							new: snapshot.recordsNew,
+						}),
+					},
 				];
+
+				let lines = snapshot.findings.map((finding) =>
+					t(findingKey(finding.kind), {
+						name: finding.name,
+						type: finding.recordType,
+						value: finding.value,
+					}),
+				);
+
+				// The counters are the totals and the findings a capped sample of those same
+				// buckets, so the difference is exactly what this body is not listing.
+				let hidden =
+					snapshot.recordsMissing +
+					snapshot.recordsChanged +
+					snapshot.recordsNew -
+					snapshot.findings.length;
+				if (hidden > 0) lines.push(t("emails.alert.values.dnsMoreFindings", { count: hidden }));
+
+				/**
+				 * One row holding every finding rather than a row each: the table keys its rows
+				 * by their label, which two findings of the same kind would share, and reading
+				 * them as one block is what keeps the two halves of an edited record set
+				 * together.
+				 */
+				if (lines.length > 0) {
+					rows.push({ label: t("emails.alert.fields.findings"), value: <Lines lines={lines} /> });
+				}
+
+				return rows;
+			}
 
 			case "tcp":
 				return [

@@ -1068,6 +1068,9 @@ export default {
 			description: "お探しのステータスページは存在しないか、公開されていません。",
 			goHome: "ホームページへ",
 		},
+		dns: {
+			coverage: "このドメインで追跡中のすべての DNS レコード",
+		},
 	},
 
 	contentMonitoring: {
@@ -1285,6 +1288,8 @@ export default {
 				nextExpected: "次回予定",
 				hostname: "ホスト名",
 				expiresAt: "有効期限",
+				records: "レコード",
+				findings: "変更点",
 			},
 
 			values: {
@@ -1295,6 +1300,24 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}}（{{timezone}}）",
+				dnsRecordCounts: "消失 {{missing}} 件、変更 {{changed}} 件、新規 {{new}} 件",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "解決しなくなりました：{{name}} {{type}} {{value}}",
+					changed: "現在の解決先：{{name}} {{type}} {{value}}",
+					new: "新たに確認：{{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "…ほか {{count}} 件",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"複数の値を持つレコードセットには、DNS 上でレコードごとの識別子がありません。そのため、セット内の値を変更すると「解決しなくなったレコード 1 件」と「新規レコード 1 件」として報告されます。",
+				newRecordsNote:
+					"新たに確認されたレコードはまだ監視していません。想定どおりのものはモニターを開いて承認するか、DNS を修正してください。",
 			},
 		},
 
@@ -3119,6 +3142,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"任意。DNSプロバイダーからエクスポートしたBIND形式のゾーンファイルを貼り付けてください。内容は一度読み取るだけで保存されません。ゾーン内の名前を把握できる唯一の方法です。",
+						limits: "テキストは最大 {{size}}、モニターあたり {{limit}} 個の名前までです。",
 					},
 
 					interval: {
@@ -3299,7 +3323,6 @@ export default {
 						source: "取得元",
 						state: "状態",
 						watched: "監視",
-						actions: "アクション",
 					},
 				},
 
@@ -3317,7 +3340,6 @@ export default {
 				},
 
 				actions: {
-					menu: "アクションメニュー",
 					enable: "監視する",
 					disable: "監視を停止",
 				},
@@ -3343,6 +3365,21 @@ export default {
 				description:
 					"これらの行は読み取り対象の範囲に含まれません。そこで宣言されている内容は監視されません。",
 				line: "{{line}}行目：{{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective: "以降の名前がどのゾーンに属するかを変えるため、安全に読み取れません",
+					ttlDirective: "TTL は追跡していません",
+					includeDirective: "手元になく、取得もしないファイルを指しています",
+					generateDirective: "一度に多数の名前へ展開されます",
+					unsupportedDirective: "読み取り対象のディレクティブではありません",
+					multiLineRecord: "括弧で複数行に分かれています",
+					blankOwnerContinuation: "空白で始まり、前の行の名前を引き継いでいます",
+					nonInternetClass: "インターネットクラスのレコードではありません",
+					unsupportedType: "監視対象の 6 種類のレコードタイプに含まれません",
+					outOfZone: "別のドメインに属しています",
+					malformed: "レコードとして読み取れませんでした",
+				},
 			},
 
 			groups: {
@@ -3351,23 +3388,40 @@ export default {
 					description:
 						"既知のすべての名前について、対応するすべてのレコードタイプを解決して見つかりました。",
 				},
+				discovered: {
+					title: "新たに見つかったもの",
+					description:
+						"現在は解決できますが、前回の確認時にはありませんでした。承認されるまで監視しません。知らないうちに現れたレコードを、こちらの判断で期待値にすることはないためです。",
+				},
 				declared: {
 					title: "宣言されているが解決できないもの",
 					description:
 						"ゾーンファイルには記載されていますが、現時点では応答がありません。指定がない限り監視しません。貼り付けたゾーンはその時点のスナップショットであり、時間とともに古くなるためです。",
+					proxiedNote:
+						"プロキシ経由のレコードは自身のゾーンのエクスポートには現れず、代わりにプロキシのアドレスを返します。プロキシを使うゾーンではこれが通常の動作であり、何かが壊れている兆候ではありません。",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "監視",
-					name: "名前",
-					type: "タイプ",
-					value: "値",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one: "{{count}}行は、別の行がすでに宣言しているレコードを宣言していました",
+				title_other: "{{count}}行は、別の行がすでに宣言しているレコードを宣言していました",
+				description:
+					"失われたものはありません。DNS は重複したレコードにも一度だけ応答するため、最初に宣言した行から取り込まれています。",
+				line: "{{line}}行目：{{name}} {{type}} は{{firstLine}}行目ですでに宣言されています。",
 			},
 
-			selectAll: "すべてのレコードを監視",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "1 つのモニターで監視できる名前の数を超えています",
+				description:
+					"このモニターは現在 {{count}} 個の名前を対象としていますが、1 回のチェックで確認できるのは {{limit}} 個までです。すべての名前を引き続きチェックするには、ゾーンを複数のモニターに分けてください。",
+			},
+
 			empty: "このドメインでは何も見つかりませんでした。",
 			cancel: "キャンセル",
 			cta: "レコードを保存",

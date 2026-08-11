@@ -136,6 +136,49 @@ describe("monitorEdit", () => {
 		expect(body).toContain("Save Changes");
 	});
 
+	test("reflects the stored SSL monitoring decision in the checkbox", async () => {
+		let { db, team, membership } = await createFixture();
+
+		/**
+		 * Renders a monitor whose SSL monitoring flag is stored as `enabled` and returns the
+		 * response body, so both directions of the boolean go through the same render path.
+		 */
+		async function renderWithSsl(enabled: boolean) {
+			let monitor = await db.create(
+				monitors,
+				{
+					id: crypto.randomUUID(),
+					team_id: team.id,
+					author_id: membership.subject_id,
+					enabled_at: Date.now(),
+					name: "Homepage",
+					url: "https://example.com",
+					ssl_monitoring_enabled: enabled,
+				},
+				{ touch: true, returnRow: true },
+			);
+
+			let response = await send(db, team, membership, monitor.id);
+			expect(response.status).toBe(200);
+			return await response.text();
+		}
+
+		// Anchored to the attribute inside this input's own tag, never to the bare word
+		// `checked`: that word also shows up in the components' `input:checked` CSS
+		// selectors, so a substring check would pass no matter what the input renders.
+		let CHECKED_ATTRIBUTE = /<input[^>]*name="ssl_monitoring_enabled"[^>]*\schecked/;
+
+		// Control case: proves the regex can actually see a present `checked` attribute,
+		// so the negative assertion below is failing for the right reason.
+		expect(await renderWithSsl(true)).toMatch(CHECKED_ATTRIBUTE);
+
+		// SQLite stores booleans as 1/0. If a stored `false` came back as `0`,
+		// `defaultChecked={0}` would still emit the attribute, and an HTML boolean
+		// attribute is ON whenever it is merely present — so the switch would render
+		// ticked and re-saving would silently flip the user's stored decision.
+		expect(await renderWithSsl(false)).not.toMatch(CHECKED_ATTRIBUTE);
+	});
+
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 

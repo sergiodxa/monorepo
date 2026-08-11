@@ -112,8 +112,43 @@ describe("dnsMonitorNew", () => {
 		expect(body).toContain('name="domain"');
 		expect(body).toContain("Domain");
 		// `<select>` has no `defaultValue` attribute, so the default is marked on its option.
-		expect(body).toContain('value="3600" selected');
+		expect(body).toContain('value="86400" selected');
 		expect(body).not.toContain("defaultvalue");
+	});
+
+	test("offers no cadence below the domain-sweep floor", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		// A sweep is a query per type per name, and a record's own TTL floors detection
+		// latency anyway, so the 5-minute option the other monitor types offer is absent.
+		expect(body).not.toContain('value="300"');
+		expect(body).toContain('value="900"');
+	});
+
+	test("takes a zone file, and says what it cannot see without one", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain('name="zone_file"');
+		expect(body).toContain("<textarea");
+		// The apex-only limit belongs on the screen where the visitor decides whether to
+		// paste, not only in the docs: it is the gap between what "domain monitoring"
+		// sounds like and what it is.
+		expect(body).toContain('id="dns-apex-only-notice"');
+		expect(body).toContain("we can only watch your domain's apex");
+	});
+
+	test("states both bounds a paste is refused against", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await send(db, team, membership)).text();
+
+		// Asserted by its id: the copy interpolating the two numbers is a pending locale
+		// key, and the screen's contract is that it states them, not how it words them.
+		expect(body).toContain('id="dns-zone-file-limits"');
 	});
 
 	test("spaces the card's fields from the card alone, never twice", async () => {

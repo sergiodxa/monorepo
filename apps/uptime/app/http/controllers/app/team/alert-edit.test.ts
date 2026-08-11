@@ -148,6 +148,49 @@ describe("alertEdit", () => {
 		expect(body).toContain(`value="${alert.id}"`);
 	});
 
+	test("reflects the stored recovery-notification decision in the switch", async () => {
+		let { db, team, membership } = await createFixture();
+
+		/**
+		 * Renders an alert whose recovery-notification flag is stored as `notify` and returns
+		 * the response body, so both directions of the boolean go through the same render path.
+		 */
+		async function renderWithRecovery(notify: boolean) {
+			let alert = await db.create(
+				alerts,
+				{
+					id: crypto.randomUUID(),
+					team_id: team.id,
+					monitor_id: null,
+					name: "CTO Alert",
+					notify_on_recovery: notify,
+					cooldown_minutes: 30,
+					config: WEBHOOK_CONFIG,
+				},
+				{ touch: true, returnRow: true },
+			);
+
+			let response = await send(db, team, membership, alert.id);
+			expect(response.status).toBe(200);
+			return await response.text();
+		}
+
+		// Anchored to the attribute inside this input's own tag, never to the bare word
+		// `checked`: that word also shows up in the components' `input:checked` CSS
+		// selectors, so a substring check would pass no matter what the input renders.
+		let CHECKED_ATTRIBUTE = /<input[^>]*name="notify_on_recovery"[^>]*\schecked/;
+
+		// Control case: proves the regex can actually see a present `checked` attribute,
+		// so the negative assertion below is failing for the right reason.
+		expect(await renderWithRecovery(true)).toMatch(CHECKED_ATTRIBUTE);
+
+		// SQLite stores booleans as 1/0. If a stored `false` came back as `0`,
+		// `defaultChecked={0}` would still emit the attribute, and an HTML boolean
+		// attribute is ON whenever it is merely present — so the switch would render
+		// ticked and re-saving would silently flip the user's stored decision.
+		expect(await renderWithRecovery(false)).not.toMatch(CHECKED_ATTRIBUTE);
+	});
+
 	test("keeps the saved channel selected and switches the settings blocks in CSS", async () => {
 		let { db, team, membership } = await createFixture();
 		let alert = await db.create(

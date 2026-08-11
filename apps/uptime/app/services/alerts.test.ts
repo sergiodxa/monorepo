@@ -30,6 +30,7 @@ import type {
 	SelectAlert,
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
+	SelectDnsMonitorRecord,
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
@@ -96,6 +97,8 @@ let { alertEvents, teams, monitors, maintenanceWindows } = await import("~/datab
 let {
 	dashboardUrl,
 	dispatchAlerts,
+	dnsAlertResultFromDiff,
+	dnsAlertResultFromRecords,
 	notifyCronJobResult,
 	notifyDnsResult,
 	notifyHttpResult,
@@ -149,6 +152,22 @@ let httpSnapshot: AlertEventSnapshot = {
 	expectedStatus: 200,
 	url: "https://example.com",
 };
+
+/** A domain sweep's snapshot: counters plus the findings they count, unless overridden. */
+function makeDnsSnapshot(
+	overrides: Partial<Extract<AlertEventSnapshot, { type: "dns" }>> = {},
+): AlertEventSnapshot {
+	return {
+		type: "dns",
+		status: "error",
+		domain: "x.com",
+		recordsChanged: 0,
+		recordsMissing: 0,
+		recordsNew: 0,
+		findings: [],
+		...overrides,
+	};
+}
 
 beforeEach(() => {
 	listForHttpMonitorMock.mockClear();
@@ -328,7 +347,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			monitorType: "dns",
 			monitorName: "Domain",
 			eventType: "down",
-			snapshot: { type: "dns", status: "error", domain: "x.com" },
+			snapshot: makeDnsSnapshot(),
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
@@ -912,6 +931,107 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	});
 });
 
+/**
+ * The plain-text body every non-email channel puts on the wire, asserted on the Slack
+ * strategy because it sends that text verbatim. A DNS snapshot is the one whose body has
+ * to explain itself: the counters, the findings behind them, and the two sentences that
+ * keep a truthful report from reading as a bug.
+ */
+describe("dispatchAlerts — the DNS body", () => {
+	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [
+			makeAlert({
+				config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
+			}),
+		]);
+		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		await dispatchAlerts({
+			db,
+			mailer: makeMailer(),
+			teamId: "team-1",
+			monitorId: "dns-monitor-1",
+			monitorType: "dns",
+			monitorName: "Domain",
+			eventType: "degraded",
+			snapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
+
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		return (JSON.parse(init.body as string) as { text: string }).text;
+	}
+
+	test("lists the counters and quotes every finding", async () => {
+		let text = await slackText(
+			makeDnsSnapshot({
+				status: "changed",
+				domain: "example.com",
+				recordsMissing: 1,
+				recordsNew: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+					{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+				],
+			}),
+		);
+
+		expect(text).toContain("Domain: example.com");
+		expect(text).toContain("Records: 1 missing, 0 changed, 1 newly seen");
+		expect(text).toContain("- no longer resolving: example.com MX 10 mx1.example.com");
+		expect(text).toContain("- newly seen: example.com MX 20 mx2.example.com");
+	});
+
+	test("says in words why an edited record set is reported as two findings", async () => {
+		let text = await slackText(
+			makeDnsSnapshot({
+				status: "changed",
+				recordsMissing: 1,
+				recordsNew: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+					{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+				],
+			}),
+		);
+
+		expect(text).toContain("no per-record identity in DNS");
+		expect(text).toContain("Newly seen records are not being watched yet");
+	});
+
+	test("does not explain an edit when no record set was edited", async () => {
+		let text = await slackText(
+			makeDnsSnapshot({
+				status: "changed",
+				recordsMissing: 1,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+				],
+			}),
+		);
+
+		expect(text).not.toContain("no per-record identity in DNS");
+		expect(text).not.toContain("Newly seen records are not being watched yet");
+	});
+
+	/** The counters are the totals, so the difference is what the body is not listing. */
+	test("says how many findings it is not showing", async () => {
+		let text = await slackText(
+			makeDnsSnapshot({
+				status: "changed",
+				recordsMissing: 9,
+				findings: [
+					{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+				],
+			}),
+		);
+
+		expect(text).toContain("- and 8 more");
+	});
+});
+
 describe("dispatchAlerts — webhook delivery", () => {
 	async function computeHmacSha256Hex(secret: string, payload: string): Promise<string> {
 		let encoder = new TextEncoder();
@@ -1309,10 +1429,42 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 	};
 }
 
+/** A tracked record row; only the columns a finding is built from are meaningful. */
+function makeDnsRecord(overrides: Partial<SelectDnsMonitorRecord> = {}): SelectDnsMonitorRecord {
+	return {
+		id: crypto.randomUUID(),
+		created_at: Date.now(),
+		updated_at: Date.now(),
+		dns_monitor_id: "dns-monitor-1",
+		name: "example.com",
+		record_type: "MX",
+		value: "10 mx1.example.com",
+		source: "resolver",
+		is_enabled: true,
+		status: "ok",
+		first_seen_at: Date.now(),
+		last_seen_at: null,
+		last_checked_at: null,
+		...overrides,
+	};
+}
+
+/** A sweep result with no findings, for the cases that are about the transition only. */
+function dnsResult(status: "ok" | "changed" | "error") {
+	return dnsAlertResultFromDiff(status, {
+		ok: [],
+		missing: [],
+		changed: [],
+		created: [],
+		seen: [],
+		absent: [],
+	});
+}
+
 describe("notifyDnsResult", () => {
 	test("does not dispatch on the first-ever 'ok' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, { status: "ok" });
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, dnsResult("ok"));
 
 		expect(listTeamWideMock).not.toHaveBeenCalled();
 	});
@@ -1322,7 +1474,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", { status: "ok" });
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", dnsResult("ok"));
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("up");
@@ -1334,7 +1486,7 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", { status: "error" });
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("error"));
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("down");
@@ -1345,10 +1497,172 @@ describe("notifyDnsResult", () => {
 		let alert = makeAlert();
 		listTeamWideMock.mockImplementation(async () => [alert]);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", { status: "changed" });
+		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("changed"));
 
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
 		expect(call.event_type).toBe("degraded");
+	});
+
+	test("records the sweep's counters and findings in the snapshot", async () => {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyDnsResult(
+			db,
+			makeMailer(),
+			makeDnsMonitor(),
+			"ok",
+			dnsAlertResultFromDiff("changed", {
+				ok: [],
+				missing: [makeDnsRecord()],
+				changed: [],
+				created: [{ name: "example.com", record_type: "MX", value: "20 mx2.example.com" }],
+				seen: [],
+				absent: [],
+			}),
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.snapshot).toEqual({
+			type: "dns",
+			status: "changed",
+			domain: "example.com",
+			recordsChanged: 0,
+			recordsMissing: 1,
+			recordsNew: 1,
+			findings: [
+				{ kind: "missing", name: "example.com", recordType: "MX", value: "10 mx1.example.com" },
+				{ kind: "new", name: "example.com", recordType: "MX", value: "20 mx2.example.com" },
+			],
+		});
+	});
+
+	/**
+	 * The counters are what the reader is told happened; the findings are only the ones
+	 * quoted back. A capped list that also capped the counters would understate the event.
+	 */
+	test("caps the stored findings without capping the counters", async () => {
+		let { db } = createTestDatabase();
+		listTeamWideMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyDnsResult(
+			db,
+			makeMailer(),
+			makeDnsMonitor(),
+			"ok",
+			dnsAlertResultFromDiff("changed", {
+				ok: [],
+				missing: Array.from({ length: 9 }, (_value, index) =>
+					makeDnsRecord({ name: `host-${index}.example.com`, record_type: "A", value: "1.1.1.1" }),
+				),
+				changed: [],
+				created: [],
+				seen: [],
+				absent: [],
+			}),
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let snapshot = call.snapshot as Extract<AlertEventSnapshot, { type: "dns" }>;
+		expect(snapshot.recordsMissing).toBe(9);
+		expect(snapshot.findings).toHaveLength(5);
+	});
+});
+
+describe("dnsAlertResultFromDiff", () => {
+	test("reports the three finding buckets and counts each of them", () => {
+		let result = dnsAlertResultFromDiff("changed", {
+			ok: [makeDnsRecord({ value: "30 mx3.example.com" })],
+			missing: [makeDnsRecord({ name: "mail.example.com", record_type: "A", value: "1.1.1.1" })],
+			changed: [
+				{
+					record: makeDnsRecord({
+						name: "www.example.com",
+						record_type: "CNAME",
+						value: "old.cdn",
+					}),
+					value: "new.cdn",
+				},
+			],
+			created: [{ name: "example.com", record_type: "TXT", value: "v=spf1 -all" }],
+			seen: [makeDnsRecord({ is_enabled: false })],
+			absent: [makeDnsRecord({ is_enabled: false })],
+		});
+
+		expect(result).toEqual({
+			status: "changed",
+			recordsMissing: 1,
+			recordsChanged: 1,
+			recordsNew: 1,
+			findings: [
+				{ kind: "new", name: "example.com", recordType: "TXT", value: "v=spf1 -all" },
+				{ kind: "missing", name: "mail.example.com", recordType: "A", value: "1.1.1.1" },
+				{ kind: "changed", name: "www.example.com", recordType: "CNAME", value: "new.cdn" },
+			],
+		});
+	});
+
+	/**
+	 * A value edited inside a record set with several values is one `missing` plus one
+	 * `new`, and the two have to arrive next to each other or the report reads as two
+	 * unrelated events.
+	 */
+	test("keeps the two halves of an edited record set adjacent", () => {
+		let result = dnsAlertResultFromDiff("changed", {
+			ok: [],
+			missing: [makeDnsRecord()],
+			changed: [],
+			created: [
+				{ name: "zzz.example.com", record_type: "A", value: "1.1.1.1" },
+				{ name: "example.com", record_type: "MX", value: "20 mx2.example.com" },
+			],
+			seen: [],
+			absent: [],
+		});
+
+		expect(result.findings.map((finding) => `${finding.kind} ${finding.name}`)).toEqual([
+			"missing example.com",
+			"new example.com",
+			"new zzz.example.com",
+		]);
+	});
+});
+
+describe("dnsAlertResultFromRecords", () => {
+	test("reports what is outstanding, ignoring records that are resolving", () => {
+		let result = dnsAlertResultFromRecords("changed", [
+			makeDnsRecord({ status: "ok" }),
+			makeDnsRecord({ name: "a.example.com", record_type: "A", status: "missing" }),
+			makeDnsRecord({
+				name: "b.example.com",
+				record_type: "CNAME",
+				value: "cdn.example.net",
+				status: "changed",
+			}),
+		]);
+
+		expect(result.recordsMissing).toBe(1);
+		expect(result.recordsChanged).toBe(1);
+		expect(result.findings.map((finding) => finding.kind)).toEqual(["missing", "changed"]);
+	});
+
+	/**
+	 * A newly discovered record is stored disabled by construction, so `is_enabled` cannot
+	 * be the test for whether it is news — it is precisely the thing waiting to be accepted
+	 * or fixed. A record the user declined and that later stops resolving is not news at
+	 * all: that is what declining it meant.
+	 */
+	test("keeps a disabled new record and drops a disabled missing one", () => {
+		let result = dnsAlertResultFromRecords("changed", [
+			makeDnsRecord({ name: "new.example.com", is_enabled: false, status: "new" }),
+			makeDnsRecord({ name: "old.example.com", is_enabled: false, status: "missing" }),
+		]);
+
+		expect(result.recordsNew).toBe(1);
+		expect(result.recordsMissing).toBe(0);
+		expect(result.findings).toEqual([
+			{ kind: "new", name: "new.example.com", recordType: "MX", value: "10 mx1.example.com" },
+		]);
 	});
 });
 

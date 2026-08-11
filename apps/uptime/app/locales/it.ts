@@ -1099,6 +1099,9 @@ export default {
 			description: "La pagina di stato che sta cercando non esiste o non è pubblica.",
 			goHome: "Vai alla homepage",
 		},
+		dns: {
+			coverage: "Tutti i record DNS tracciati per questo dominio",
+		},
 	},
 
 	contentMonitoring: {
@@ -1317,6 +1320,8 @@ export default {
 				nextExpected: "Prossimo previsto",
 				hostname: "Hostname",
 				expiresAt: "Scade il",
+				records: "Record",
+				findings: "Che cosa è cambiato",
 			},
 
 			values: {
@@ -1327,6 +1332,25 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+				dnsRecordCounts:
+					"{{missing}} mancanti, {{changed}} cambiati, {{new}} visti per la prima volta",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "Non risolve più: {{name}} {{type}} {{value}}",
+					changed: "Ora risolve a: {{name}} {{type}} {{value}}",
+					new: "Visto per la prima volta: {{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "…e altri {{count}}",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"Un insieme di record che contiene più valori non ha un'identità per singolo record nel DNS, quindi un valore modificato al suo interno viene segnalato come un record che non risolve più e un record nuovo.",
+				newRecordsNote:
+					"I record visti per la prima volta non sono ancora monitorati. Apra il monitor per accettare quelli che si aspettava, oppure corregga il suo DNS.",
 			},
 		},
 
@@ -3188,6 +3212,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Opzionale. Incolli un file di zona BIND esportato dal suo provider DNS. Viene letto una sola volta e mai memorizzato, ed è l'unico modo con cui possiamo conoscere i nomi presenti nella sua zona.",
+						limits: "Fino a {{size}} di testo e {{limit}} nomi per monitor.",
 					},
 
 					interval: {
@@ -3369,7 +3394,6 @@ export default {
 						source: "Origine",
 						state: "Stato",
 						watched: "Monitorato",
-						actions: "Azioni",
 					},
 				},
 
@@ -3387,7 +3411,6 @@ export default {
 				},
 
 				actions: {
-					menu: "Menu Azioni",
 					enable: "Monitora",
 					disable: "Smetti di monitorare",
 				},
@@ -3413,6 +3436,22 @@ export default {
 				description:
 					"Queste righe non fanno parte del sottoinsieme che leggiamo. Tutto ciò che dichiarano non viene monitorato.",
 				line: "Riga {{line}}: {{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective:
+						"Cambia a quale zona appartengono i nomi che seguono, quindi non possiamo leggerla in sicurezza",
+					ttlDirective: "Non teniamo traccia dei TTL",
+					includeDirective: "Indica un file che non abbiamo e che non andremo a recuperare",
+					generateDirective: "Si espande in molti nomi in una volta sola",
+					unsupportedDirective: "Non è una direttiva che leggiamo",
+					multiLineRecord: "Distribuito su più righe con le parentesi",
+					blankOwnerContinuation: "Inizia con uno spazio ed eredita il nome della riga precedente",
+					nonInternetClass: "Non è un record di classe internet",
+					unsupportedType: "Non è uno dei sei tipi di record che monitoriamo",
+					outOfZone: "Appartiene a un altro dominio",
+					malformed: "Non siamo riusciti a leggerlo come record",
+				},
 			},
 
 			groups: {
@@ -3420,23 +3459,40 @@ export default {
 					title: "Risolvono ora",
 					description: "Trovati risolvendo ogni tipo di record supportato su ogni nome conosciuto.",
 				},
+				discovered: {
+					title: "Scoperti di recente",
+					description:
+						"Si risolvono ora, ma non erano presenti all'ultima revisione. Restano non monitorati finché non li accetta, così un record comparso a sua insaputa non diventa mai un'aspettativa a suo nome.",
+				},
 				declared: {
 					title: "Dichiarati ma non risolvono",
 					description:
 						"Presenti nel suo file di zona, ma oggi nessuno risponde per loro. Restano non monitorati salvo sua diversa indicazione — una zona incollata è un'istantanea, e col tempo non fa che invecchiare.",
+					proxiedNote:
+						"Un record dietro proxy non compare nell'esportazione della propria zona e risponde invece con l'indirizzo del proxy. In una zona con proxy questo è normale e atteso: non è il segno che qualcosa non funzioni.",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "Monitora",
-					name: "Nome",
-					type: "Tipo",
-					value: "Valore",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one: "{{count}} riga dichiarava un record già dichiarato da un'altra riga",
+				title_other: "{{count}} righe dichiaravano record già dichiarati da altre righe",
+				description:
+					"Non è andato perso nulla. Il DNS risponde una sola volta a un record ripetuto, quindi è stato importato dalla prima riga che lo dichiarava.",
+				line: "Riga {{line}}: {{name}} {{type}} era già dichiarato alla riga {{firstLine}}.",
 			},
 
-			selectAll: "Monitora tutti i record",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "Più nomi di quanti un monitor possa monitorarne",
+				description:
+					"Questo monitor copre ora {{count}} nomi, mentre un controllo ne può percorrere {{limit}}. Divida la zona su più monitor affinché ogni nome continui a essere controllato.",
+			},
+
 			empty: "Non è stato trovato nulla per questo dominio.",
 			cancel: "Annulla",
 			cta: "Salva Record",

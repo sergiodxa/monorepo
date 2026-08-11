@@ -1,21 +1,23 @@
 /**
- * Tests the DNS monitor create/update/delete/check-now actions: successful
- * create/update/delete mutate `dns_monitors` and redirect to the monitor (or list);
- * the manual "check now" action resolves DNS, records the result, and dispatches
- * alerts; validation failure and the team-scoped not-found guard leave the table
- * untouched. *
- * `checkDnsMonitor` resolves DNS over Cloudflare's DNS-over-HTTPS JSON API via the
- * global `fetch` (see `app/services/dns-check.ts`) — there's no binding to mock, so
- * `globalThis.fetch` is swapped out for the duration of those tests instead. It also
- * dispatches alerts through `ctx.email`, so the mail middleware is registered over a
- * recording transport: nothing leaves the process, and no provider SDK is mocked.
+ * Tests the DNS monitor actions: create (which discovers, and lands on the review screen),
+ * update, delete, the manual check, the review submission, a single record toggle and a
+ * zone-file re-import. Successful mutations write `dns_monitors`/`dns_monitor_records` and
+ * redirect; validation failure and the team-scoped not-found guard leave both tables
+ * untouched.
+ *
+ * The DoH endpoint every one of these paths resolves through is stubbed with MSW, so the
+ * sweep runs its real code against real-shaped answers and a test can count exactly how many
+ * queries a request sent — which is how "resolved nothing" is asserted rather than assumed.
+ * Alerts dispatch through `ctx.email`, so the mail middleware is registered over a recording
+ * transport: nothing leaves the process, and no provider SDK is mocked.
  *
  * `cloudflare:workers` is stubbed because the meter event an on-demand check produces is
  * handed to `waitUntil`: the double collects that work instead of dropping it, so a test
  * can await what the response deliberately doesn't. What is pinned there is which requests
- * are billable — a check that resolved DNS is exactly one `ping` event keyed on the history
- * row it wrote, and every request that returned without resolving anything (rejected form,
- * another team's monitor, an owner without an active subscription) is none.
+ * are billable — a check that swept is exactly one `ping` event keyed on the history row it
+ * wrote, whatever the sweep cost in queries, and every request that returned without
+ * sweeping (rejected form, another team's monitor, an owner without an active subscription)
+ * is none.
  *
  * The same stub carries a `PING_RESULTS` double, which pins the other half of that: a check
  * that ran writes exactly one Analytics Engine point with the same dimensions the scheduled
@@ -26,7 +28,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { IngestEvent } from "@pkg/polar";
 
@@ -34,17 +46,21 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter, type Middleware } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 
+import type { DnsRecordType } from "~/app/data/dns-monitor-record";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
+	dnsMonitorRecords,
 	dnsMonitorResults,
 	dnsMonitors,
 	memberships,
@@ -80,9 +96,52 @@ mock.module("cloudflare:workers", () => ({
 	},
 }));
 
-let { createDnsMonitor, updateDnsMonitor, deleteDnsMonitor, checkDnsMonitor } =
-	await import("./dns-monitors");
+let {
+	createDnsMonitor,
+	updateDnsMonitor,
+	deleteDnsMonitor,
+	checkDnsMonitor,
+	reviewDnsMonitor,
+	toggleDnsMonitorRecord,
+	importDnsMonitorZoneFile,
+} = await import("./dns-monitors");
 let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/data/dns-monitor");
+
+const DOH_URL = "https://cloudflare-dns.com/dns-query";
+
+let server = setupServer();
+
+/** How many DoH queries the request under test sent — zero is the assertion that matters. */
+let queries = 0;
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** The DoH JSON envelope, in the shape a handler needs to answer one query. */
+interface DohBody {
+	Status?: number;
+	Answer?: { name: string; type: number; TTL: number; data: string }[];
+}
+
+/**
+ * Answers the sweep: one `A` record at every name, nothing of any other type. Every answer
+ * is counted, so a test can prove a refused request resolved nothing at all.
+ */
+function stubResolver(bodies: Record<string, DohBody> = {}) {
+	let answers: Record<string, DohBody> = {
+		A: { Status: 0, Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }] },
+		...bodies,
+	};
+
+	server.use(
+		http.get(DOH_URL, ({ request }) => {
+			queries++;
+			let type = new URL(request.url).searchParams.get("type") ?? "";
+			return HttpResponse.json(answers[type] ?? { Status: 0 });
+		}),
+	);
+}
 
 /**
  * The billing client the container hands the action, with the one call `ingestPings` makes
@@ -97,6 +156,7 @@ beforeEach(() => {
 	ingestEventsSafeMock.mockImplementation(async () => true);
 	writeDataPointMock.mockClear();
 	deferred = [];
+	queries = 0;
 });
 
 /** Every event the action handed Polar, once the work it deferred has settled. */
@@ -121,7 +181,7 @@ async function postDnsMonitorAction(
 	team: SelectTeam,
 	membership: SelectMembership,
 	db: ReturnType<typeof createTestDatabase>["db"],
-	body: Record<string, string>,
+	body: Record<string, string> | URLSearchParams,
 	headers: Record<string, string> = {},
 ) {
 	let container = new ServiceContainer();
@@ -148,7 +208,7 @@ async function postDnsMonitorAction(
 	/** `del(...)` routes (e.g. `delete-dns-monitor`) only match a real HTTP `DELETE` request. */
 	let request = new Request(`https://uptime.test${route.href({ team: team.slug })}`, {
 		method: route.method,
-		body: new URLSearchParams(body),
+		body: body instanceof URLSearchParams ? body : new URLSearchParams(body),
 		headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 	});
 
@@ -180,19 +240,95 @@ async function createMembershipRow(
 	);
 }
 
+/** Seeds a monitor owned by `teamId`, which is what every record-level action needs to exist. */
+async function createMonitorRow(
+	db: ReturnType<typeof createTestDatabase>["db"],
+	teamId: string,
+	overrides: Record<string, unknown> = {},
+) {
+	return await db.create(
+		dnsMonitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name: "Example domain",
+			domain: "example.com",
+			zone_file_imported_at: null,
+			interval_seconds: 86_400,
+			is_enabled: true,
+			last_checked_at: null,
+			last_status: null,
+			...overrides,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Seeds one tracked record, which is the baseline a check diffs its answers against. */
+async function createRecordRow(
+	db: ReturnType<typeof createTestDatabase>["db"],
+	monitorId: string,
+	overrides: {
+		name?: string;
+		record_type?: DnsRecordType;
+		value?: string;
+		is_enabled?: boolean;
+	} = {},
+) {
+	return await db.create(
+		dnsMonitorRecords,
+		{
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitorId,
+			name: overrides.name ?? "example.com",
+			record_type: overrides.record_type ?? "A",
+			value: overrides.value ?? "1.2.3.4",
+			source: "resolver",
+			is_enabled: overrides.is_enabled ?? true,
+			status: "ok",
+			first_seen_at: Date.now(),
+			last_seen_at: Date.now(),
+			last_checked_at: null,
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
+/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
+async function createLapsedSubscription(
+	db: ReturnType<typeof createTestDatabase>["db"],
+	ownerId: string,
+) {
+	await db.create(
+		subscriptions,
+		{
+			id: crypto.randomUUID(),
+			external_customer_id: ownerId,
+			polar_subscription_id: crypto.randomUUID(),
+			polar_product_id: "product-1",
+			status: "canceled",
+			current_period_end: null,
+			revoked_at: Date.now(),
+			polar_modified_at: Date.now(),
+		},
+		{ touch: true, returnRow: true },
+	);
+}
+
 /** Minimal well-formed DNS monitor form body. */
 function dnsMonitorBody(overrides: Record<string, string> = {}): Record<string, string> {
 	return {
-		name: "Example A record",
+		name: "Example domain",
 		domain: "example.com",
-		interval_seconds: "3600",
+		interval_seconds: "86400",
 		is_enabled: "true",
 		...overrides,
 	};
 }
 
 describe("POST /actions/:team/create-dns-monitor", () => {
-	test("creates a DNS monitor and redirects to it", async () => {
+	test("creates a DNS monitor, discovers its apex records, and redirects to the review screen", async () => {
+		stubResolver();
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -207,13 +343,86 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		);
 
 		let created = await db.findOne(dnsMonitors, { where: { team_id: team.id } });
-		expect(created?.name).toBe("Example A record");
+		expect(created?.name).toBe("Example domain");
 		expect(created?.domain).toBe("example.com");
+		// Nothing was pasted, so the monitor covers its apex and says so.
+		expect(created?.zone_file_imported_at).toBeNull();
+
+		let records = await db.findMany(dnsMonitorRecords, {
+			where: { dns_monitor_id: created!.id },
+		});
+		expect(records).toHaveLength(1);
+		expect(records[0]?.value).toBe("1.2.3.4");
+		expect(records[0]?.source).toBe("resolver");
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: created!.id }),
+			routes.app.team.dnsMonitors.review.href({ team: team.slug, monitorId: created!.id }),
 		);
+	});
+
+	test("imports the names a pasted zone file declares, and keeps a declared-but-unresolved record unwatched", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postDnsMonitorAction(
+			createDnsMonitor,
+			routes.actions.monitor.dns.create,
+			team,
+			membership,
+			db,
+			dnsMonitorBody({ zone_file: "www\t1\tIN\tA\t5.6.7.8 ; secret-comment" }),
+		);
+
+		expect(response.status).toBe(303);
+		let created = await db.findOne(dnsMonitors, { where: { team_id: team.id } });
+		expect(created?.zone_file_imported_at).not.toBeNull();
+
+		let records = await db.findMany(dnsMonitorRecords, {
+			where: { dns_monitor_id: created!.id },
+		});
+		let declared = records.find((record) => record.value === "5.6.7.8");
+		expect(declared?.name).toBe("www.example.com");
+		expect(declared?.source).toBe("zone_file");
+		// It did not resolve, so it is a finding at review — never a standing alert.
+		expect(declared?.is_enabled).toBeFalsy();
+		expect(declared?.status).toBe("missing");
+
+		// The name the file contributed is swept too, so what does resolve there is watched.
+		let resolved = records.find(
+			(record) => record.name === "www.example.com" && record.source === "resolver",
+		);
+		expect(resolved?.is_enabled).toBeTruthy();
+	});
+
+	/**
+	 * The paste is a map of somebody's infrastructure. It is parsed and dropped, so no column
+	 * anywhere may hold a byte of it that is not a record we now monitor — a comment is the
+	 * clearest probe for that, since nothing legitimate would ever store one.
+	 */
+	test("stores no trace of the pasted zone file itself", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postDnsMonitorAction(
+			createDnsMonitor,
+			routes.actions.monitor.dns.create,
+			team,
+			membership,
+			db,
+			dnsMonitorBody({ zone_file: "www\t1\tIN\tA\t5.6.7.8 ; secret-comment" }),
+		);
+
+		let created = await db.findOne(dnsMonitors, { where: { team_id: team.id } });
+		let records = await db.findMany(dnsMonitorRecords, {
+			where: { dns_monitor_id: created!.id },
+		});
+
+		expect(JSON.stringify({ created, records })).not.toContain("secret-comment");
 	});
 
 	test("rejects a blank name and redirects to the new-monitor form without creating a row", async () => {
@@ -235,6 +444,8 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 			routes.app.team.dnsMonitors.new.href({ team: team.slug }),
 		);
 		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(0);
+		// A rejected form resolves nothing: the sweep is the expensive half of a create.
+		expect(queries).toBe(0);
 	});
 
 	test("returns 422 once the team is at the per-team DNS-monitor cap, without creating a row", async () => {
@@ -243,20 +454,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		let membership = await createMembershipRow(db, team.id);
 
 		for (let i = 0; i < MAX_DNS_MONITORS_PER_TEAM; i++) {
-			await db.create(
-				dnsMonitors,
-				{
-					id: crypto.randomUUID(),
-					team_id: team.id,
-					name: `Monitor ${i}`,
-					domain: `example${i}.com`,
-					interval_seconds: 3600,
-					is_enabled: true,
-					last_checked_at: null,
-					last_status: null,
-				},
-				{ touch: true, returnRow: true },
-			);
+			await createMonitorRow(db, team.id, { name: `Monitor ${i}`, domain: `example${i}.com` });
 		}
 
 		let response = await postDnsMonitorAction(
@@ -272,6 +470,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(
 			MAX_DNS_MONITORS_PER_TEAM,
 		);
+		expect(queries).toBe(0);
 	});
 });
 
@@ -280,20 +479,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				name: "Old name",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, team.id, { name: "Old name" });
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
@@ -317,20 +503,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let otherTeam = await createTeamRow(db);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: otherTeam.id,
-				name: "Someone else's",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, otherTeam.id, { name: "Someone else's" });
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
@@ -350,20 +523,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				name: "Original",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, team.id, { name: "Original" });
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
@@ -387,20 +547,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				name: "To delete",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, team.id, { name: "To delete" });
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
@@ -423,20 +570,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let otherTeam = await createTeamRow(db);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: otherTeam.id,
-				name: "Not yours",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, otherTeam.id, { name: "Not yours" });
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
@@ -455,20 +589,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
-		let monitor = await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: team.id,
-				name: "Still here",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
-		);
+		let monitor = await createMonitorRow(db, team.id, { name: "Still here" });
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
@@ -487,305 +608,263 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 	});
 });
 
-// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
-// resolving one record type, so nothing below describes behaviour that still exists. When the
-// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
-// which it never did under the old shape, and which these blocks are where that gets proven.
-describe.skip("POST /actions/:team/check-dns-monitor", () => {
-	test("resolves DNS, records the result, and redirects to the monitor", async () => {
-		let originalFetch = globalThis.fetch;
-		try {
-			globalThis.fetch = mock(async () =>
-				Response.json({
-					Status: 0,
-					Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }],
-				}),
-			) as unknown as typeof fetch;
+describe("POST /actions/:team/check-dns-monitor", () => {
+	test("sweeps every tracked name, records the result, and redirects to the monitor", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id);
 
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let monitor = await db.create(
-				dnsMonitors,
-				{
-					id: crypto.randomUUID(),
-					team_id: team.id,
-					name: "Example A record",
-					domain: "example.com",
-					interval_seconds: 3600,
-					is_enabled: true,
-					last_checked_at: null,
-					last_status: null,
-				},
-				{ touch: true, returnRow: true },
-			);
+		let response = await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			let response = await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
+		);
 
-			expect(response.status).toBe(303);
-			expect(response.headers.get("Location")).toBe(
-				routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
-			);
+		let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(checked?.last_status).toBe("ok");
+		expect(checked?.last_checked_at).not.toBeNull();
 
-			let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
-			expect(checked?.last_status).toBe("ok");
-			expect(checked?.last_checked_at).not.toBeNull();
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
+		expect(stored?.records_checked).toBe(1);
+		expect(stored?.queries_failed).toBe(0);
+		// One name, every supported type: a domain monitor is not one query.
+		expect(queries).toBe(6);
 	});
 
-	test("404s when the monitor doesn't belong to the team, without resolving DNS", async () => {
-		let originalFetch = globalThis.fetch;
-		let fetchSpy = mock(async () => Response.json({ Status: 0 }));
-		try {
-			globalThis.fetch = fetchSpy as unknown as typeof fetch;
+	/**
+	 * The addition that the old containment matching let through: a record appearing beside
+	 * the ones we already track is a finding, and it is imported unwatched so that accepting
+	 * it is something the user does rather than something that happens by not reading.
+	 */
+	test("reports a record nobody configured as new, and stores it unwatched", async () => {
+		stubResolver({
+			A: {
+				Status: 0,
+				Answer: [
+					{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" },
+					{ name: "example.com", type: 1, TTL: 60, data: "6.6.6.6" },
+				],
+			},
+		});
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id);
 
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let otherTeam = await createTeamRow(db);
-			let monitor = await db.create(
-				dnsMonitors,
-				{
-					id: crypto.randomUUID(),
-					team_id: otherTeam.id,
-					name: "Not yours",
-					domain: "example.com",
-					interval_seconds: 3600,
-					is_enabled: true,
-					last_checked_at: null,
-					last_status: null,
-				},
-				{ touch: true, returnRow: true },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			let response = await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(checked?.last_status).toBe("changed");
 
-			expect(response.status).toBe(404);
-			expect(fetchSpy).not.toHaveBeenCalled();
-			let unchanged = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
-			expect(unchanged?.last_checked_at).toBeNull();
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
+		expect(stored?.records_new).toBe(1);
+
+		let discovered = await db.findOne(dnsMonitorRecords, {
+			where: { dns_monitor_id: monitor.id, value: "6.6.6.6" },
+		});
+		expect(discovered?.is_enabled).toBeFalsy();
+		expect(discovered?.status).toBe("new");
 	});
 
-	test("rejects a missing monitor_id and redirects without resolving DNS", async () => {
-		let originalFetch = globalThis.fetch;
-		let fetchSpy = mock(async () => Response.json({ Status: 0 }));
-		try {
-			globalThis.fetch = fetchSpy as unknown as typeof fetch;
+	/**
+	 * A resolver having a bad minute must never be read as "every record at this name
+	 * vanished": the check reports `error` and the record it could not ask about keeps the
+	 * state it had.
+	 */
+	test("records a failed query as an error without marking anything missing", async () => {
+		server.use(
+			http.get(DOH_URL, () => {
+				queries++;
+				return new HttpResponse(null, { status: 500 });
+			}),
+		);
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
 
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			let response = await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ unrelated: "value" },
-			);
+		let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(checked?.last_status).toBe("error");
 
-			expect(response.status).toBe(303);
-			expect(response.headers.get("Location")).toBe(
-				routes.app.team.dnsMonitors.index.href({ team: team.slug }),
-			);
-			expect(fetchSpy).not.toHaveBeenCalled();
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
+		expect(stored?.queries_failed).toBe(6);
+		expect(stored?.records_missing).toBe(0);
+
+		let untouched = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
+		expect(untouched?.status).toBe("ok");
+	});
+
+	test("404s when the monitor doesn't belong to the team, without resolving anything", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let otherTeam = await createTeamRow(db);
+		let monitor = await createMonitorRow(db, otherTeam.id, { name: "Not yours" });
+
+		let response = await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
+
+		expect(response.status).toBe(404);
+		expect(queries).toBe(0);
+		let unchanged = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(unchanged?.last_checked_at).toBeNull();
+	});
+
+	test("rejects a missing monitor_id and redirects without resolving anything", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ unrelated: "value" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.dnsMonitors.index.href({ team: team.slug }),
+		);
+		expect(queries).toBe(0);
 	});
 });
 
-// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
-// resolving one record type, so nothing below describes behaviour that still exists. When the
-// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
-// which it never did under the old shape, and which these blocks are where that gets proven.
-describe.skip("POST /actions/:team/check-dns-monitor billing", () => {
-	/** Resolves every lookup to one A record, so a check that runs always completes. */
-	function stubResolver() {
-		let original = globalThis.fetch;
-		globalThis.fetch = mock(async () =>
-			Response.json({
-				Status: 0,
-				Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }],
-			}),
-		) as unknown as typeof fetch;
-		return () => {
-			globalThis.fetch = original;
-		};
-	}
+describe("POST /actions/:team/check-dns-monitor billing", () => {
+	test("bills exactly one ping for the whole sweep, keyed on the result row", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id);
 
-	/** Seeds a monitor owned by `teamId`, which is what an on-demand check needs to exist. */
-	async function createMonitorRow(db: ReturnType<typeof createTestDatabase>["db"], teamId: string) {
-		return await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: teamId,
-				name: "Example A record",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-			},
-			{ touch: true, returnRow: true },
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
 		);
-	}
 
-	/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
-	async function createLapsedSubscription(
-		db: ReturnType<typeof createTestDatabase>["db"],
-		ownerId: string,
-	) {
-		await db.create(
-			subscriptions,
+		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
+
+		/**
+		 * Six queries, one ping. What a domain monitor sells is one monitored domain, and the
+		 * public resolver costs us nothing per query, so billing the sweep as N would charge
+		 * for a cost we never incur. The key is the history row's id, which is what makes this
+		 * event impossible to collide with the scheduled sweep's: no two checks share a row.
+		 */
+		expect(queries).toBe(6);
+		expect(await ingestedEvents()).toEqual([
 			{
-				id: crypto.randomUUID(),
-				external_customer_id: ownerId,
-				polar_subscription_id: crypto.randomUUID(),
-				polar_product_id: "product-1",
-				status: "canceled",
-				current_period_end: null,
-				revoked_at: Date.now(),
-				polar_modified_at: Date.now(),
+				name: "ping",
+				externalCustomerId: team.owner_id,
+				externalId: `ping:${stored?.id}`,
+				metadata: { teamId: team.id, type: "dns", monitorId: monitor.id },
 			},
-			{ touch: true, returnRow: true },
-		);
-	}
-
-	test("bills exactly one ping, keyed on the result row and attributed to team and monitor", async () => {
-		let restore = stubResolver();
-		try {
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let monitor = await createMonitorRow(db, team.id);
-
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
-
-			let [stored] = await db.findMany(dnsMonitorResults, {
-				where: { dns_monitor_id: monitor.id },
-			});
-
-			/**
-			 * The key is the history row's id, which is what makes this event impossible to
-			 * collide with the scheduled sweep's: the sweep bills its own checks under the rows
-			 * *it* wrote, and no two checks ever share a row.
-			 */
-			expect(await ingestedEvents()).toEqual([
-				{
-					name: "ping",
-					externalCustomerId: team.owner_id,
-					externalId: `ping:${stored?.id}`,
-					metadata: { teamId: team.id, type: "dns", monitorId: monitor.id },
-				},
-			]);
-		} finally {
-			restore();
-		}
+		]);
 	});
 
 	test("bills nothing when the owner has no active subscription, and resolves nothing", async () => {
-		let originalFetch = globalThis.fetch;
-		let fetchSpy = mock(async () => Response.json({ Status: 0 }));
-		try {
-			globalThis.fetch = fetchSpy as unknown as typeof fetch;
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createLapsedSubscription(db, team.owner_id);
 
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let monitor = await createMonitorRow(db, team.id);
-			await createLapsedSubscription(db, team.owner_id);
+		let response = await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			let response = await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
-
-			expect(response.status).toBe(303);
-			// Refused before the lookup, so there is no work to charge for.
-			expect(fetchSpy).not.toHaveBeenCalled();
-			expect(await ingestedEvents()).toEqual([]);
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+		expect(response.status).toBe(303);
+		// Refused before the sweep, so there is no work to charge for.
+		expect(queries).toBe(0);
+		expect(await ingestedEvents()).toEqual([]);
 	});
 
 	test("bills nothing for a monitor the team doesn't own", async () => {
-		let restore = stubResolver();
-		try {
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let otherTeam = await createTeamRow(db);
-			let monitor = await createMonitorRow(db, otherTeam.id);
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let otherTeam = await createTeamRow(db);
+		let monitor = await createMonitorRow(db, otherTeam.id);
 
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			expect(await ingestedEvents()).toEqual([]);
-		} finally {
-			restore();
-		}
+		expect(await ingestedEvents()).toEqual([]);
 	});
 
 	test("bills nothing when the submitted form is rejected", async () => {
-		let restore = stubResolver();
-		try {
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
 
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ unrelated: "value" },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ unrelated: "value" },
+		);
 
-			expect(await ingestedEvents()).toEqual([]);
-		} finally {
-			restore();
-		}
+		expect(await ingestedEvents()).toEqual([]);
 	});
 });
 
@@ -794,146 +873,311 @@ describe.skip("POST /actions/:team/check-dns-monitor billing", () => {
  * dimensions, same vocabulary, one point per check. A check the action never ran writes
  * nothing, so a refused request leaves no trace to inflate a chart with.
  */
-// ADR-026 phase 2.1/2.3 restore these: the "Check now" action now refuses rather than
-// resolving one record type, so nothing below describes behaviour that still exists. When the
-// domain sweep lands, the action must also meter one ping keyed on the result row it writes —
-// which it never did under the old shape, and which these blocks are where that gets proven.
-describe.skip("POST /actions/:team/check-dns-monitor analytics", () => {
-	/** Resolves every lookup to one A record, so a check that runs always completes. */
-	function stubResolver() {
-		let original = globalThis.fetch;
-		globalThis.fetch = mock(async () =>
-			Response.json({
-				Status: 0,
-				Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }],
-			}),
-		) as unknown as typeof fetch;
-		return () => {
-			globalThis.fetch = original;
-		};
-	}
-
-	/** Seeds a monitor owned by `teamId`, which is what an on-demand check needs to exist. */
-	async function createMonitorRow(
-		db: ReturnType<typeof createTestDatabase>["db"],
-		teamId: string,
-		overrides: { expected_value?: string | null; last_value?: string | null } = {},
-	) {
-		return await db.create(
-			dnsMonitors,
-			{
-				id: crypto.randomUUID(),
-				team_id: teamId,
-				name: "Example A record",
-				domain: "example.com",
-				interval_seconds: 3600,
-				is_enabled: true,
-				last_checked_at: null,
-				last_status: null,
-				...overrides,
-			},
-			{ touch: true, returnRow: true },
-		);
-	}
-
+describe("POST /actions/:team/check-dns-monitor analytics", () => {
 	test("writes exactly one data point carrying DNS's own status and the team index", async () => {
-		let restore = stubResolver();
-		try {
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let monitor = await createMonitorRow(db, team.id);
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id);
 
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
 
-			let [point] = writeDataPointMock.mock.calls[0]!;
-			expect(point.blobs).toEqual([monitor.id, "dns", "ok"]);
-			expect(point.indexes).toEqual([team.id]);
-			/**
-			 * The lookup's latency is measured, not stubbed, so only its shape is pinned. The
-			 * three that follow are fixed: one row means one check, and DNS has no notion of an
-			 * HTTP status to report or to expect.
-			 */
-			expect(point.doubles).toHaveLength(4);
-			expect(point.doubles[0]).toBeGreaterThanOrEqual(0);
-			expect(point.doubles.slice(1)).toEqual([1, 0, 0]);
-		} finally {
-			restore();
-		}
+		let [point] = writeDataPointMock.mock.calls[0]!;
+		expect(point.blobs).toEqual([monitor.id, "dns", "ok"]);
+		expect(point.indexes).toEqual([team.id]);
+		/**
+		 * The sweep's latency is measured, not stubbed, so only its shape is pinned. The
+		 * three that follow are fixed: one row means one check, and DNS has no notion of an
+		 * HTTP status to report or to expect.
+		 */
+		expect(point.doubles).toHaveLength(4);
+		expect(point.doubles[0]).toBeGreaterThanOrEqual(0);
+		expect(point.doubles.slice(1)).toEqual([1, 0, 0]);
 	});
 
 	test("records `changed` as-is rather than remapping it onto HTTP's vocabulary", async () => {
-		let restore = stubResolver();
-		try {
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			// An expectation the stubbed resolver's answer doesn't satisfy, so the check classifies
-			// as `changed` — a status HTTP has no equivalent for.
-			let monitor = await createMonitorRow(db, team.id, { expected_value: "9.9.9.9" });
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		// The one attributable edit: a single stored record, a single resolved value, differing.
+		await createRecordRow(db, monitor.id, { value: "9.9.9.9" });
 
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			expect(writeDataPointMock).toHaveBeenCalledTimes(1);
-			expect(writeDataPointMock.mock.calls[0]![0].blobs).toEqual([monitor.id, "dns", "changed"]);
-		} finally {
-			restore();
-		}
+		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(writeDataPointMock.mock.calls[0]![0].blobs).toEqual([monitor.id, "dns", "changed"]);
 	});
 
 	test("writes no data point when the owner has no active subscription", async () => {
-		let originalFetch = globalThis.fetch;
-		try {
-			globalThis.fetch = mock(async () => Response.json({ Status: 0 })) as unknown as typeof fetch;
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createLapsedSubscription(db, team.owner_id);
 
-			let { db } = createTestDatabase();
-			let team = await createTeamRow(db);
-			let membership = await createMembershipRow(db, team.id);
-			let monitor = await createMonitorRow(db, team.id);
-			await db.create(
-				subscriptions,
-				{
-					id: crypto.randomUUID(),
-					external_customer_id: team.owner_id,
-					polar_subscription_id: crypto.randomUUID(),
-					polar_product_id: "product-1",
-					status: "canceled",
-					current_period_end: null,
-					revoked_at: Date.now(),
-					polar_modified_at: Date.now(),
-				},
-				{ touch: true, returnRow: true },
-			);
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
 
-			await postDnsMonitorAction(
-				checkDnsMonitor,
-				routes.actions.monitor.dns.check,
-				team,
-				membership,
-				db,
-				{ monitor_id: monitor.id },
-			);
+		// No sweep ran, so there is no result to report.
+		expect(writeDataPointMock).not.toHaveBeenCalled();
+	});
+});
 
-			// No lookup ran, so there is no result to report.
-			expect(writeDataPointMock).not.toHaveBeenCalled();
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+describe("POST /actions/:team/review-dns-monitor", () => {
+	test("watches the checked records and stores the rest disabled rather than deleting them", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let kept = await createRecordRow(db, monitor.id, { value: "1.2.3.4" });
+		let declined = await createRecordRow(db, monitor.id, { value: "5.6.7.8" });
+
+		let body = new URLSearchParams({ monitor_id: monitor.id });
+		body.append("record_ids", kept.id);
+
+		let response = await postDnsMonitorAction(
+			reviewDnsMonitor,
+			routes.actions.monitor.dns.review,
+			team,
+			membership,
+			db,
+			body,
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
+		);
+
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: kept.id } }))?.is_enabled,
+		).toBeTruthy();
+		/**
+		 * Still there, and that is the invariant the whole diff rests on: a dropped record
+		 * would be rediscovered as new on the very next check and alert forever.
+		 */
+		let stored = await db.findOne(dnsMonitorRecords, { where: { id: declined.id } });
+		expect(stored).not.toBeNull();
+		expect(stored?.is_enabled).toBeFalsy();
+	});
+
+	test("404s when the monitor doesn't belong to the team", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let otherTeam = await createTeamRow(db);
+		let monitor = await createMonitorRow(db, otherTeam.id);
+		let record = await createRecordRow(db, monitor.id, { is_enabled: false });
+
+		let body = new URLSearchParams({ monitor_id: monitor.id });
+		body.append("record_ids", record.id);
+
+		let response = await postDnsMonitorAction(
+			reviewDnsMonitor,
+			routes.actions.monitor.dns.review,
+			team,
+			membership,
+			db,
+			body,
+		);
+
+		expect(response.status).toBe(404);
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: record.id } }))?.is_enabled,
+		).toBeFalsy();
+	});
+});
+
+describe("POST /actions/:team/toggle-dns-monitor-record", () => {
+	test("stops watching a record when the flag is absent", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id);
+
+		let response = await postDnsMonitorAction(
+			toggleDnsMonitorRecord,
+			routes.actions.monitor.dns.toggleRecord,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, record_id: record.id },
+		);
+
+		expect(response.status).toBe(303);
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: record.id } }))?.is_enabled,
+		).toBeFalsy();
+	});
+
+	test("starts watching a record, settling a newly discovered one", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let record = await createRecordRow(db, monitor.id, { is_enabled: false });
+
+		await postDnsMonitorAction(
+			toggleDnsMonitorRecord,
+			routes.actions.monitor.dns.toggleRecord,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, record_id: record.id, is_enabled: "true" },
+		);
+
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: record.id } }))?.is_enabled,
+		).toBeTruthy();
+	});
+
+	test("404s for a record that belongs to another monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let otherMonitor = await createMonitorRow(db, team.id, { name: "Other" });
+		let record = await createRecordRow(db, otherMonitor.id);
+
+		let response = await postDnsMonitorAction(
+			toggleDnsMonitorRecord,
+			routes.actions.monitor.dns.toggleRecord,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, record_id: record.id },
+		);
+
+		expect(response.status).toBe(404);
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: record.id } }))?.is_enabled,
+		).toBeTruthy();
+	});
+});
+
+describe("POST /actions/:team/import-dns-monitor-zone-file", () => {
+	test("adds the names a fresh paste declares and records that an import happened", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await postDnsMonitorAction(
+			importDnsMonitorZoneFile,
+			routes.actions.monitor.dns.importZoneFile,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, zone_file: "www\t1\tIN\tA\t5.6.7.8" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.dnsMonitors.review.href({ team: team.slug, monitorId: monitor.id }),
+		);
+
+		let updated = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(updated?.zone_file_imported_at).not.toBeNull();
+
+		let names = await db.findMany(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } });
+		expect(names.map((record) => record.name)).toContain("www.example.com");
+	});
+
+	/**
+	 * A re-import must not undo a decision: a record the visitor declined stays declined,
+	 * or "I chose not to watch this" becomes a setting that expires.
+	 */
+	test("leaves an already-declined record declined", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let declined = await createRecordRow(db, monitor.id, { is_enabled: false });
+
+		await postDnsMonitorAction(
+			importDnsMonitorZoneFile,
+			routes.actions.monitor.dns.importZoneFile,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, zone_file: "@\t1\tIN\tA\t1.2.3.4" },
+		);
+
+		expect(
+			(await db.findOne(dnsMonitorRecords, { where: { id: declined.id } }))?.is_enabled,
+		).toBeFalsy();
+	});
+
+	test("404s when the monitor doesn't belong to the team, without resolving anything", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let otherTeam = await createTeamRow(db);
+		let monitor = await createMonitorRow(db, otherTeam.id);
+
+		let response = await postDnsMonitorAction(
+			importDnsMonitorZoneFile,
+			routes.actions.monitor.dns.importZoneFile,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, zone_file: "www\t1\tIN\tA\t5.6.7.8" },
+		);
+
+		expect(response.status).toBe(404);
+		expect(queries).toBe(0);
+		expect(await db.count(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } })).toBe(0);
+	});
+
+	test("rejects an empty paste without importing anything", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+
+		let response = await postDnsMonitorAction(
+			importDnsMonitorZoneFile,
+			routes.actions.monitor.dns.importZoneFile,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, zone_file: "" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(queries).toBe(0);
+		expect(await db.count(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } })).toBe(0);
 	});
 });

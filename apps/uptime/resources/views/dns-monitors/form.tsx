@@ -1,16 +1,22 @@
 /**
- * Shared DNS monitor form fields, used by both the new-monitor and edit-monitor views.
- * Reads its copy from `page.<page>.form.fields.*` through `i18next.getFixedT`, the same
- * convention `resources/views/monitors/form.tsx` establishes, so the two pages don't
- * duplicate the field markup or hardcode English strings. Fields are composed from
- * `@pkg/ui`'s `TextField`/`Select` directly, wrapping `Select` in this app's own
- * `Field` for its label/description since `Select`, unlike `TextField`, doesn't bundle
- * one; "Enabled" goes through `@pkg/ui`'s `Switch` directly, with an explicit
- * `value="true"` since a native checkbox otherwise submits `"on"`.
+ * The DNS monitor fields that describe the monitor itself — its name, its domain, how often
+ * it is swept, and whether it runs. Reads its copy from `page.<page>.form.fields.*` through
+ * `i18next.getFixedT`, so a page rendering them doesn't duplicate the field markup or
+ * hardcode English strings. Fields are composed from `@pkg/ui`'s `TextField`/`Select`
+ * directly, wrapping `Select` in this app's own `Field` for its label/description since
+ * `Select`, unlike `TextField`, doesn't bundle one; "Enabled" goes through `@pkg/ui`'s
+ * `Switch` directly, with an explicit `value="true"` since a native checkbox otherwise
+ * submits `"on"`.
  *
  * A monitor covers a whole domain, so there is no record type to pick and no expected value
- * to transcribe: the expectation is imported from the zone and reviewed. The zone-file
- * textarea that replaces them lands with the create and review screens (ADR-026 phase 2.5).
+ * to transcribe: the expectation is imported from the zone and reviewed.
+ *
+ * **The zone-file paste is deliberately not one of these fields.** It is not a setting the
+ * monitor holds — the pasted text is read once and never stored — so it is submitted with
+ * the monitor on creation and re-submitted on its own afterwards, to a different action,
+ * under different copy, with no value to pre-fill. Sharing markup between those two would
+ * mean a field whose meaning changes with its host, which is what this module exists to
+ * avoid.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +31,16 @@ import type { SelectDnsMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
 
+/**
+ * How often every tracked name is resolved, in seconds, paired with the locale key naming
+ * each span.
+ *
+ * The list floors at 900 rather than at the 300 the other monitor types offer: a domain
+ * monitor sweeps every supported type at every known name, so a faster cadence buys
+ * detection latency the records' own TTLs put a floor under anyway, and it is not a bound a
+ * form should put one click away.
+ */
 const INTERVAL_OPTIONS = [
-	{ value: 300, key: "5m" },
 	{ value: 900, key: "15m" },
 	{ value: 1800, key: "30m" },
 	{ value: 3600, key: "1h" },
@@ -52,7 +66,8 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 		let { monitor, i18next, page } = handle.props;
 		let t = i18next.getFixedT(null, "translation", `page.${page}.form.fields`);
 
-		let intervalSeconds = monitor?.interval_seconds ?? 3600;
+		// Daily, because DNS changes are human-caused and human-paced.
+		let intervalSeconds = monitor?.interval_seconds ?? 86_400;
 
 		return (
 			<>

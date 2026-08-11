@@ -183,6 +183,41 @@ describe("cronJobEdit", () => {
 		expect(selectedTimezones(body)).toEqual(["Europe/Madrid"]);
 	});
 
+	test("only marks the alert-on-late switch checked when the stored value is true", async () => {
+		let { db, team, membership } = await createFixture();
+
+		async function renderWith(alertOnLate: boolean) {
+			let monitor = await db.create(
+				cronJobMonitors,
+				{
+					id: crypto.randomUUID(),
+					team_id: team.id,
+					name: "Nightly Backup",
+					cron_expression: "0 0 * * *",
+					timezone: "UTC",
+					grace_period_seconds: 300,
+					status: "new",
+					alert_on_late: alertOnLate,
+					enabled_at: Date.now(),
+				},
+				{ touch: true, returnRow: true },
+			);
+			return await (await send(db, team, membership, monitor.id)).text();
+		}
+
+		/*
+		 * Anchored to the attribute inside the switch's own tag rather than to the bare
+		 * word, which also appears in the component's `~ input:checked` CSS. `checked` is
+		 * an HTML boolean attribute: present at all — even as `checked="0"` for a `false`
+		 * that came back from SQLite as the integer 0 — means the switch renders ON, and
+		 * re-saving would flip the stored decision.
+		 */
+		let checkedInput = /<input[^>]*\bname="alert_on_late"[^>]*\schecked/;
+
+		expect(await renderWith(true)).toMatch(checkedInput);
+		expect(await renderWith(false)).not.toMatch(checkedInput);
+	});
+
 	test("still selects UTC, which the IANA enumeration does not list", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(

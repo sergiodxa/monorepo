@@ -1098,6 +1098,9 @@ export default {
 			description: "Die gesuchte Statusseite existiert nicht oder ist nicht öffentlich.",
 			goHome: "Zur Startseite",
 		},
+		dns: {
+			coverage: "Alle erfassten DNS-Einträge dieser Domain",
+		},
 	},
 
 	contentMonitoring: {
@@ -1317,6 +1320,8 @@ export default {
 				nextExpected: "Nächster erwarteter Ping",
 				hostname: "Hostname",
 				expiresAt: "Läuft ab am",
+				records: "Einträge",
+				findings: "Was sich geändert hat",
 			},
 
 			values: {
@@ -1327,6 +1332,24 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+				dnsRecordCounts: "{{missing}} fehlen, {{changed}} geändert, {{new}} neu gesehen",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "Löst nicht mehr auf: {{name}} {{type}} {{value}}",
+					changed: "Löst jetzt auf zu: {{name}} {{type}} {{value}}",
+					new: "Neu gesehen: {{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "… und {{count}} weitere",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"Ein Eintragssatz mit mehreren Werten hat in DNS keine Identität je Eintrag. Ein darin geänderter Wert wird deshalb als ein Eintrag, der nicht mehr auflöst, plus ein neuer Eintrag gemeldet.",
+				newRecordsNote:
+					"Neu gesehene Einträge werden noch nicht überwacht. Öffnen Sie den Monitor, um die erwarteten anzunehmen, oder korrigieren Sie Ihr DNS.",
 			},
 		},
 
@@ -3206,6 +3229,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Optional. Fügen Sie eine BIND-Zonendatei aus Ihrem DNS-Anbieter ein. Sie wird einmal gelesen und nie gespeichert, und sie ist der einzige Weg, auf dem wir die Namen in Ihrer Zone erfahren können.",
+						limits: "Bis zu {{size}} Text und {{limit}} Namen pro Monitor.",
 					},
 
 					interval: {
@@ -3388,7 +3412,6 @@ export default {
 						source: "Quelle",
 						state: "Zustand",
 						watched: "Überwacht",
-						actions: "Aktionen",
 					},
 				},
 
@@ -3406,7 +3429,6 @@ export default {
 				},
 
 				actions: {
-					menu: "Aktionsmenü",
 					enable: "Überwachen",
 					disable: "Nicht mehr überwachen",
 				},
@@ -3432,6 +3454,23 @@ export default {
 				description:
 					"Diese Zeilen gehören nicht zu dem Teil, den wir lesen. Was darin deklariert wird, wird nicht überwacht.",
 				line: "Zeile {{line}}: {{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective:
+						"Ändert, zu welcher Zone die nachfolgenden Namen gehören, deshalb können wir sie nicht sicher lesen",
+					ttlDirective: "Wir verfolgen keine TTLs",
+					includeDirective: "Nennt eine Datei, die wir nicht haben und nicht abrufen",
+					generateDirective: "Erzeugt auf einmal viele Namen",
+					unsupportedDirective: "Keine Direktive, die wir lesen",
+					multiLineRecord: "Über mehrere Zeilen mit Klammern verteilt",
+					blankOwnerContinuation:
+						"Beginnt mit einem Leerzeichen und übernimmt den Namen der vorherigen Zeile",
+					nonInternetClass: "Kein Eintrag der Klasse Internet",
+					unsupportedType: "Keiner der sechs Eintragstypen, die wir überwachen",
+					outOfZone: "Gehört zu einer anderen Domain",
+					malformed: "Wir konnten dies nicht als Eintrag lesen",
+				},
 			},
 
 			groups: {
@@ -3440,23 +3479,42 @@ export default {
 					description:
 						"Gefunden, indem jeder unterstützte Eintragstyp für jeden bekannten Namen aufgelöst wurde.",
 				},
+				discovered: {
+					title: "Neu entdeckt",
+					description:
+						"Lösen jetzt auf, waren bei der letzten Prüfung aber nicht dabei. Sie bleiben unüberwacht, bis Sie sie annehmen – so wird ein Eintrag, der ohne Ihr Zutun aufgetaucht ist, nie in Ihrem Namen zur Erwartung.",
+				},
 				declared: {
 					title: "Deklariert, löst aber nicht auf",
 					description:
 						"In Ihrer Zonendatei enthalten, aber heute antwortet nichts darauf. Bleibt unüberwacht, sofern Sie nichts anderes bestimmen – eine eingefügte Zone ist eine Momentaufnahme, und sie wird nur älter.",
+					proxiedNote:
+						"Ein Eintrag hinter einem Proxy erscheint nicht im Export seiner eigenen Zone und antwortet stattdessen mit der Adresse des Proxys. In einer Zone mit Proxy ist das normal und zu erwarten – es ist kein Zeichen dafür, dass etwas kaputt ist.",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "Überwachen",
-					name: "Name",
-					type: "Typ",
-					value: "Wert",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one:
+					"{{count}} Zeile deklarierte einen Eintrag, den eine andere Zeile bereits deklariert hat",
+				title_other:
+					"{{count}} Zeilen deklarierten Einträge, die andere Zeilen bereits deklariert haben",
+				description:
+					"Es ging nichts verloren. DNS beantwortet einen wiederholten Eintrag nur einmal, deshalb wurde er aus der ersten Zeile übernommen, die ihn deklariert hat.",
+				line: "Zeile {{line}}: {{name}} {{type}} wurde bereits in Zeile {{firstLine}} deklariert.",
 			},
 
-			selectAll: "Alle Einträge überwachen",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "Mehr Namen, als ein Monitor überwachen kann",
+				description:
+					"Dieser Monitor umfasst jetzt {{count}} Namen, eine Prüfung schafft {{limit}}. Verteilen Sie die Zone auf mehrere Monitore, damit jeder Name weiterhin geprüft wird.",
+			},
+
 			empty: "Für diese Domain wurde nichts gefunden.",
 			cancel: "Abbrechen",
 			cta: "Einträge speichern",

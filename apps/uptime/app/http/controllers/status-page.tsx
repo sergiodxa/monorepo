@@ -8,6 +8,14 @@
  * the one page whose traffic spikes exactly when the origin is least able to absorb
  * it: an incident is when everybody reloads a status page at once.
  *
+ * Every card here shows a name, a status and a history bar, and never the thing being
+ * monitored: an HTTP card omits its URL and a TCP card omits its host and port, because
+ * the page is world-readable and its owner published a service's availability, not their
+ * configuration. A DNS monitor covers a whole domain across every record type it tracks,
+ * so its card says exactly that in words and shows neither the domain nor a single
+ * record — a record list is a map of the owner's infrastructure, and the one thing a
+ * viewer of a status page needs from it is whether the domain resolves as it should.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -336,6 +344,16 @@ export default createAction(
 											{statusLabel[service.status]}
 										</Badge>
 									</div>
+									{service.kind === "dns" && (
+										// The card's own name is whatever the owner called the monitor, which
+										// under the old per-record-type model was often a record type. This
+										// line is what makes the unit truthful — one domain, every record it
+										// tracks — while staying the same sentence for every domain, so it
+										// discloses nothing a viewer did not already know from the page.
+										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.i18next.t("statusPage.dns.coverage")}
+										</p>
+									)}
 									<UptimeBar
 										days={service.days}
 										labels={uptimeBarLabels}

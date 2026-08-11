@@ -5,13 +5,21 @@
  * missing/garbage auth, missing scope, and that a list never leaks another team's
  * monitors.
  *
+ * A create discovers, so the DoH endpoint is stubbed with MSW and the sweep runs its real
+ * code against real-shaped answers. What that pins is the decision an API create makes with
+ * no reviewer standing there: everything discovered is imported **and watched**, which is the
+ * opposite of what the review screen's newly-seen records get, and the records sub-resource
+ * is the only way a script narrows it afterwards.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
@@ -20,9 +28,47 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
+import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { teams } from "~/database/schema";
+import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
+import { dnsMonitorRecords, teams } from "~/database/schema";
 import routes from "~/routes/web";
+
+const DOH_URL = "https://cloudflare-dns.com/dns-query";
+
+let server = setupServer();
+
+/** How many DoH queries the request under test sent — zero is the assertion that matters. */
+let queries = 0;
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+beforeEach(() => {
+	queries = 0;
+});
+
+/** The DoH JSON envelope, in the shape a handler needs to answer one query. */
+interface DohBody {
+	Status?: number;
+	Answer?: { name: string; type: number; TTL: number; data: string }[];
+}
+
+/** Answers a sweep with one `A` record at every name and nothing of any other type. */
+function stubResolver(bodies: Record<string, DohBody> = {}) {
+	let answers: Record<string, DohBody> = {
+		A: { Status: 0, Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }] },
+		...bodies,
+	};
+
+	server.use(
+		http.get(DOH_URL, ({ request }) => {
+			queries++;
+			let type = new URL(request.url).searchParams.get("type") ?? "";
+			return HttpResponse.json(answers[type] ?? { Status: 0 });
+		}),
+	);
+}
 
 let { default: dnsMonitorsController, dnsMonitorsRoutes } = await import("./dns-monitors");
 
@@ -143,6 +189,7 @@ describe("GET /api/v1/dns-monitors", () => {
 
 describe("POST /api/v1/dns-monitors", () => {
 	test("creates a DNS monitor and returns 201 with the created row", async () => {
+		stubResolver();
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
@@ -169,6 +216,168 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.dnsMonitor.zoneFileImportedAt).toBeNull();
 
 		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+	});
+
+	/**
+	 * ADR-026 §13: there is no reviewer on an API call, so everything discovered is watched.
+	 * The safer default would be the opposite, and this test is where that choice is visible
+	 * if it is ever revisited.
+	 */
+	test("imports every discovered record already watched, since no review step exists", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
+		);
+
+		let body = (await response.json()) as {
+			data: {
+				dnsMonitor: { id: string };
+				discovery: { names: number; recordsImported: number; queriesFailed: number };
+			};
+		};
+
+		expect(body.data.discovery).toMatchObject({ names: 1, recordsImported: 1, queriesFailed: 0 });
+		// One name, every supported type: a domain monitor is not one query.
+		expect(queries).toBe(6);
+
+		let records = await db.findMany(dnsMonitorRecords, {
+			where: { dns_monitor_id: body.data.dnsMonitor.id },
+		});
+		expect(records).toHaveLength(1);
+		expect(records[0]?.value).toBe("1.2.3.4");
+		expect(records[0]?.is_enabled).toBeTruthy();
+		expect(records[0]?.status).toBe("ok");
+	});
+
+	test("imports the names a pasted zone file declares and reports the lines it could not use", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest(
+				validDnsMonitorBody({
+					zoneFile: ["$ORIGIN example.com.", "www\t1\tIN\tA\t5.6.7.8"].join("\n"),
+				}),
+				{ Authorization: `Bearer ${key}` },
+			),
+		);
+
+		expect(response.status).toBe(201);
+		let body = (await response.json()) as {
+			data: {
+				dnsMonitor: { id: string; zoneFileImportedAt: number | null };
+				discovery: { names: number; rejectedLines: { line: number; reason: string }[] };
+			};
+		};
+
+		expect(body.data.dnsMonitor.zoneFileImportedAt).not.toBeNull();
+		expect(body.data.discovery.names).toBe(2);
+		/**
+		 * `$ORIGIN` is the dangerous one to ignore — every relative name after it would resolve
+		 * into the wrong zone — so a script is told about it rather than left to assume its
+		 * whole file was read.
+		 */
+		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "originDirective" }]);
+
+		expect(await DnsMonitorRecord.countByMonitor(db, body.data.dnsMonitor.id)).toBeGreaterThan(1);
+	});
+
+	/**
+	 * The paste is a map of somebody's infrastructure: it is parsed and dropped, and neither
+	 * the monitor row nor the response may carry a byte of it that is not a record we monitor.
+	 */
+	test("stores and returns no trace of the pasted zone file itself", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody({ zoneFile: "www\t1\tIN\tA\t5.6.7.8 ; secret-comment" }), {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+
+		let text = await response.text();
+		expect(text).not.toContain("secret-comment");
+
+		let monitor = (await DnsMonitor.listByTeam(db, team.id))[0]!;
+		let records = await db.findMany(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } });
+		expect(JSON.stringify({ monitor, records })).not.toContain("secret-comment");
+	});
+
+	test("returns 400 for a zone file declaring more names than one monitor can sweep", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let lines = Array.from(
+			{ length: MAX_TRACKED_NAMES_PER_MONITOR + 1 },
+			(_unused, index) => `name${index}\t1\tIN\tA\t1.2.3.4`,
+		);
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody({ zoneFile: lines.join("\n") }), {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		// Refused before the monitor row exists, and before a single query is sent.
+		expect(queries).toBe(0);
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
+	});
+
+	/**
+	 * The floor moved to 900 for both channels at once: 60 was legal here until now, and a
+	 * six-type sweep at a minute is a quarter of a million queries a month from one monitor.
+	 */
+	test("rejects the 60-second interval the old API allowed, and accepts the 900-second floor", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let refused = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody({ intervalSeconds: 60 }), {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+		expect(refused.status).toBe(400);
+
+		let accepted = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody({ intervalSeconds: 900 }), {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+		expect(accepted.status).toBe(201);
+	});
+
+	test("defaults an omitted interval to once a day", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
+		);
+
+		let body = (await response.json()) as { data: { dnsMonitor: { intervalSeconds: number } } };
+		expect(body.data.dnsMonitor.intervalSeconds).toBe(86_400);
 	});
 
 	test("returns 400 for a validation failure (blank domain)", async () => {

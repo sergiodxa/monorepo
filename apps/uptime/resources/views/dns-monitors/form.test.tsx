@@ -1,9 +1,10 @@
 /**
  * Tests for the shared DNS monitor form fields, asserted over the server-rendered
  * markup. The bug these cover rendered a perfectly valid page: a `defaultValue` on the
- * `<select>` host is not an HTML attribute, so the browser kept the first option and an
- * MX monitor re-saved itself as an A one. The assertions therefore read the `selected`
- * attribute off the individual `<option>`s, and check that exactly one claims it.
+ * `<select>` host is not an HTML attribute, so the browser kept the first option and a
+ * daily monitor re-saved itself onto the fastest cadence in the list. The assertions
+ * therefore read the `selected` attribute off the individual `<option>`s, and check that
+ * exactly one claims it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,12 +70,29 @@ describe("DnsMonitorFormFields", () => {
 		expect(selectedValues(html, "interval_seconds")).toEqual(["900"]);
 	});
 
-	test("falls back to one hour when creating", async () => {
+	test("falls back to a daily sweep with no monitor to read one from", async () => {
 		let html = await renderToString(
 			<DnsMonitorFormFields i18next={i18next} page="createDnsMonitor" />,
 		);
 
-		expect(selectedValues(html, "interval_seconds")).toEqual(["3600"]);
+		expect(selectedValues(html, "interval_seconds")).toEqual(["86400"]);
+	});
+
+	/**
+	 * A domain monitor sweeps every supported type at every known name, so the 300-second
+	 * cadence the other monitor types offer is not a bound this form puts one click away.
+	 */
+	test("offers no interval below the domain-monitor floor", async () => {
+		let html = await renderToString(
+			<DnsMonitorFormFields monitor={monitor()} i18next={i18next} page="editDnsMonitor" />,
+		);
+
+		let values = [...optionsOf(html, "interval_seconds").matchAll(/\bvalue="(\d+)"/g)].map(
+			(match) => Number(match[1]),
+		);
+
+		expect(values.length).toBeGreaterThan(0);
+		expect(Math.min(...values)).toBe(900);
 	});
 
 	/**

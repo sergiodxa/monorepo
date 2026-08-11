@@ -9,10 +9,13 @@
  * The document answers "what do you hold about me, and what have I built here". So it carries
  * the subject's own identity and preferences, one entry per membership with the team's name and
  * their role in it, and — for owned teams only — the monitors of all four kinds, their content
- * checks, alerts, maintenance windows, status pages and the services attached to them, and the
- * team's verified domains. Owned teams get the configuration because the owner is the person
- * who would need it to rebuild the setup elsewhere; a team they merely joined is somebody
- * else's configuration and appears as the membership only.
+ * checks and, for DNS monitors, the records they track, alerts, maintenance windows, status
+ * pages and the services attached to them, and the team's verified domains. The DNS records
+ * matter twice over: a domain monitor's configuration *is* its record list, and the zone file
+ * those records were imported from is never stored, so this file is the only way back to it.
+ * Owned teams get the configuration because the owner is the person who would need it to
+ * rebuild the setup elsewhere; a team they merely joined is somebody else's configuration and
+ * appears as the membership only.
  *
  * ## What is deliberately left out
  *
@@ -57,6 +60,7 @@ import UserPreferences from "~/app/data/user-preferences";
 import {
 	alerts,
 	cronJobMonitors,
+	dnsMonitorRecords,
 	dnsMonitors,
 	maintenanceWindows,
 	monitorContentChecks,
@@ -78,6 +82,21 @@ export const ACCOUNT_EXPORT_FORMAT = "uptime.account-export";
 
 /** Current version of {@link ACCOUNT_EXPORT_FORMAT}. */
 export const ACCOUNT_EXPORT_VERSION = 1;
+
+/**
+ * How many tracked DNS records one team may contribute before the export stops reading them.
+ *
+ * Everything else in this document is bounded by something a person typed one at a time —
+ * monitors, alerts, status pages — while a DNS monitor's records come from a pasted zone,
+ * so one team's records can outnumber the rest of the file by orders of magnitude. This is
+ * the only cap in the export, and it is disclosed rather than silent: the team object
+ * carries {@link ExportedOwnedTeam.dnsRecordsTruncated} when it was reached, because a
+ * subject-access export that quietly drops rows is worse than one that says it stopped.
+ *
+ * The figure is deliberately far above a real zone's six-record-type footprint, so reaching
+ * it means something pathological rather than a large customer.
+ */
+export const MAX_EXPORTED_DNS_RECORDS_PER_TEAM = 5_000;
 
 /** Who the export is about, taken from the ID token on the request rather than from a table. */
 export interface ExportSubject {
@@ -121,7 +140,13 @@ export interface ExportedOwnedTeam {
 	slug: string;
 	domains: { hostname: string; verified: boolean }[];
 	httpMonitors: unknown[];
+	/** Each monitor with the records it tracks nested under it, as `records`. */
 	dnsMonitors: unknown[];
+	/**
+	 * Whether {@link MAX_EXPORTED_DNS_RECORDS_PER_TEAM} cut the record list short. Always
+	 * present, so a reader can tell "no records" from "records the file stopped listing".
+	 */
+	dnsRecordsTruncated: boolean;
 	tcpMonitors: unknown[];
 	cronJobMonitors: unknown[];
 	alerts: ExportedAlert[];
@@ -158,6 +183,8 @@ const EXCLUSIONS = [
 	"Other people: no other member's identity, no invitee addresses, and no per-member email stamps. Teams report a member count instead.",
 	"Session and sign-in data: nothing from the session store and no identity token. Your sign-in identity itself is held by the identity provider that signs you in, not by this app.",
 	"Check history: individual monitor results, cron-job pings and daily roll-ups are not included. They are produced by the configuration above rather than supplied by you, and the authoritative stream is an append-only analytics dataset.",
+	`DNS records beyond ${MAX_EXPORTED_DNS_RECORDS_PER_TEAM} per team: the records a DNS monitor tracks are the one part of this file whose size you do not type by hand, so the export stops there and says so on the team as "dnsRecordsTruncated".`,
+	"Zone files: the text pasted to import DNS records is never stored anywhere, so there is no copy of it to give back. The records it produced are listed above.",
 ] as const;
 
 /**
@@ -255,6 +282,31 @@ async function exportOwnedTeam(
 					),
 				});
 
+	// One read for the whole team rather than one per monitor, ordered so that a truncated
+	// export is still the same rows in the same places every time it is taken. Reading one
+	// row past the cap is how truncation is detected without a second counting query.
+	let dnsRecords =
+		dns.length === 0
+			? []
+			: await db.findMany(dnsMonitorRecords, {
+					where: inList(
+						"dns_monitor_id",
+						dns.map((monitor) => monitor.id),
+					),
+					orderBy: [
+						["dns_monitor_id", "asc"],
+						["name", "asc"],
+						["record_type", "asc"],
+						["value", "asc"],
+					],
+					limit: MAX_EXPORTED_DNS_RECORDS_PER_TEAM + 1,
+				});
+
+	let dnsRecordsTruncated = dnsRecords.length > MAX_EXPORTED_DNS_RECORDS_PER_TEAM;
+	let exportedDnsRecords = dnsRecordsTruncated
+		? dnsRecords.slice(0, MAX_EXPORTED_DNS_RECORDS_PER_TEAM)
+		: dnsRecords;
+
 	return {
 		teamId,
 		name,
@@ -272,7 +324,15 @@ async function exportOwnedTeam(
 				.filter((check) => check.monitor_id === monitor.id)
 				.map(({ monitor_id: _monitor, ...check }) => check),
 		})),
-		dnsMonitors: dns.map(({ team_id: _team, ...monitor }) => monitor),
+		// A monitor without its records would describe a domain being watched and never say
+		// what is watched at it, which is precisely the configuration the owner built.
+		dnsMonitors: dns.map(({ team_id: _team, ...monitor }) => ({
+			...monitor,
+			records: exportedDnsRecords
+				.filter((record) => record.dns_monitor_id === monitor.id)
+				.map(({ dns_monitor_id: _monitor, ...record }) => record),
+		})),
+		dnsRecordsTruncated,
 		tcpMonitors: tcp.map(({ team_id: _team, ...monitor }) => monitor),
 		cronJobMonitors: cron.map(({ team_id: _team, ...monitor }) => monitor),
 		alerts: alertRows.map((alert) => ({

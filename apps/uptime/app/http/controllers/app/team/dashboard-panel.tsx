@@ -137,6 +137,7 @@ namespace DashboardPanel {
 						emptyCta: string;
 						tableLabel: string;
 						columns: { name: string; domain: string; status: string };
+						notChecked: string;
 					};
 			  }
 			| {
@@ -357,10 +358,17 @@ namespace DnsTable {
 			emptyCta: string;
 			tableLabel: string;
 			columns: { name: string; domain: string; status: string };
+			notChecked: string;
 		};
 	}
 }
 
+/**
+ * A DNS monitor is a whole domain, so a row here names the domain and its last outcome and
+ * stops there: how many records that domain carries, and which of them are watched, is a
+ * count this fragment would have to buy a second query for on a tab meant to be glanced at.
+ * The list page owns that number, and the monitor's own page owns the records themselves.
+ */
 function DnsTable(handle: Handle<DnsTable.Props>) {
 	return () => {
 		let { team, monitors, copy } = handle.props;
@@ -414,7 +422,7 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 									<Badge
 										{...badgeVariant(DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
 									>
-										{monitor.last_status ?? "not checked"}
+										{monitor.last_status ?? copy.notChecked}
 									</Badge>
 								</Table.Cell>
 							</Table.Row>
@@ -635,6 +643,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 							domain: ctx.i18next.t("page.dnsMonitors.table.columns.domain"),
 							status: ctx.i18next.t("page.dnsMonitors.table.columns.status"),
 						},
+						notChecked: ctx.i18next.t("page.dnsMonitors.table.notChecked"),
 					}}
 				/>,
 				{ headers },

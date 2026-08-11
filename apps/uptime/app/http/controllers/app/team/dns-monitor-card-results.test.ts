@@ -26,7 +26,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { dnsMonitors, memberships, teams } from "~/database/schema";
+import { dnsMonitorResults, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitor-card-results")).default as {
@@ -125,6 +125,61 @@ describe("dns-monitor-card-results", () => {
 		let body = await response.text();
 		expect(body).toContain("Check History");
 		expect(body).toContain("No checks have been performed yet.");
+	});
+
+	/**
+	 * A query that did not answer is never diffed, so a check that lost some of its queries
+	 * knows less about the domain than a whole one does. Reporting it as "no changes" would
+	 * turn the part we never looked at into a clean bill of health.
+	 */
+	test("reports a partial sweep as partial rather than as a clean check", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		await db.create(dnsMonitorResults, {
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitor.id,
+			status: "ok",
+			records_checked: 12,
+			queries_failed: 2,
+			response_time_ms: 40,
+			error_message: null,
+			checked_at: Date.now(),
+		});
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("2 queries did not answer");
+		expect(body).not.toContain("No changes");
+	});
+
+	test("says nothing moved only when the whole sweep answered", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true, returnRow: true },
+		);
+
+		await db.create(dnsMonitorResults, {
+			id: crypto.randomUUID(),
+			dns_monitor_id: monitor.id,
+			status: "ok",
+			records_checked: 12,
+			queries_failed: 0,
+			response_time_ms: 40,
+			error_message: null,
+			checked_at: Date.now(),
+		});
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("No changes");
+		expect(body).not.toContain("did not answer");
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

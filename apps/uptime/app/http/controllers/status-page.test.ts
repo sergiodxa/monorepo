@@ -36,7 +36,15 @@ import { renderToStream } from "remix/ui/server";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
+import {
+	dnsMonitorRecords,
+	dnsMonitors,
+	monitors,
+	statusPageDnsMonitors,
+	statusPageMonitors,
+	statusPages,
+	teams,
+} from "~/database/schema";
 import routes from "~/routes/web";
 
 let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
@@ -228,6 +236,92 @@ describe("GET /status/:slug", () => {
 		expect(body).toContain(monitor.name);
 		expect(body).toContain("Operational");
 		expect(body).toContain("All Systems Operational");
+	});
+
+	test("labels a DNS monitor by its domain-wide coverage, and leaks no record of it", async () => {
+		let { db, team } = await createFixture();
+
+		let dnsMonitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Corporate DNS",
+				domain: "internal-zone.example",
+				zone_file_imported_at: Date.now(),
+				interval_seconds: 86_400,
+				next_due_at: null,
+				is_enabled: true,
+				last_checked_at: Date.now(),
+				last_status: "ok",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		// A record of the kind the monitor now holds by the hundred. None of it is the
+		// public page's business, and the assertions below are what keeps it that way.
+		await db.create(
+			dnsMonitorRecords,
+			{
+				id: crypto.randomUUID(),
+				dns_monitor_id: dnsMonitor.id,
+				name: "vpn.internal-zone.example",
+				record_type: "A",
+				value: "203.0.113.10",
+				source: "zone_file",
+				is_enabled: true,
+				status: "ok",
+				first_seen_at: Date.now(),
+				last_seen_at: Date.now(),
+				last_checked_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme Status",
+				slug: "acme-dns",
+				title: "Acme Status",
+				description: null,
+				logo_url: null,
+				custom_domain: null,
+				is_public: true,
+				show_overall_status: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		await db.create(statusPageDnsMonitors, {
+			id: crypto.randomUUID(),
+			status_page_id: page.id,
+			dns_monitor_id: dnsMonitor.id,
+			display_name: null,
+			order: 0,
+		});
+
+		globalThis.fetch = mock(async () => {
+			return new Response(JSON.stringify({ data: [] }));
+		}) as unknown as typeof fetch;
+
+		let response = await get(db, page.slug);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Corporate DNS");
+		// The card says what the monitor covers — a whole domain, not one record type. Read
+		// through the same translator the controller uses, so the assertion holds whether the
+		// locale file carries the key yet or i18next is still echoing it back.
+		expect(body).toContain(i18nextInstance.t("statusPage.dns.coverage"));
+		expect(body).toContain("Operational");
+		// A status page is world-readable, so the domain, the names under it and the values
+		// they resolve to stay out of it: that list is the owner's infrastructure map.
+		expect(body).not.toContain("internal-zone.example");
+		expect(body).not.toContain("vpn.internal-zone.example");
+		expect(body).not.toContain("203.0.113.10");
 	});
 
 	test("emits the canonical URL and the page's own description in <head>", async () => {

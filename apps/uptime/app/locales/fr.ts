@@ -1107,6 +1107,9 @@ export default {
 			description: "La page de statut que vous recherchez n'existe pas ou n'est pas publique.",
 			goHome: "Retourner à l'accueil",
 		},
+		dns: {
+			coverage: "Tous les enregistrements DNS suivis pour ce domaine",
+		},
 	},
 
 	contentMonitoring: {
@@ -1325,6 +1328,8 @@ export default {
 				nextExpected: "Prochain attendu",
 				hostname: "Nom d'hôte",
 				expiresAt: "Expire le",
+				records: "Enregistrements",
+				findings: "Ce qui a changé",
 			},
 
 			values: {
@@ -1335,6 +1340,24 @@ export default {
 				milliseconds: "{{value}}ms",
 				endpoint: "{{host}}:{{port}}",
 				schedule: "{{expression}} ({{timezone}})",
+				dnsRecordCounts: "{{missing}} manquants, {{changed}} modifiés, {{new}} nouveaux",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "Ne résout plus : {{name}} {{type}} {{value}}",
+					changed: "Résout désormais vers : {{name}} {{type}} {{value}}",
+					new: "Vu pour la première fois : {{name}} {{type}} {{value}}",
+				},
+
+				dnsMoreFindings: "… et {{count}} de plus",
+			},
+
+			/** Said only where it applies: what a DNS diff means, not what it found. */
+			dns: {
+				recordSetEditNote:
+					"Un ensemble d'enregistrements contenant plusieurs valeurs n'a pas d'identité par enregistrement dans le DNS : une valeur modifiée à l'intérieur est donc signalée comme un enregistrement qui ne résout plus, plus un nouvel enregistrement.",
+				newRecordsNote:
+					"Les enregistrements vus pour la première fois ne sont pas encore surveillés. Ouvrez le moniteur pour accepter ceux que vous attendiez, ou corrigez votre DNS.",
 			},
 		},
 
@@ -3206,6 +3229,7 @@ export default {
 						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
 						description:
 							"Facultatif. Collez un fichier de zone BIND exporté depuis votre fournisseur DNS. Il est lu une seule fois et jamais conservé, et c'est le seul moyen pour nous de connaître les noms de votre zone.",
+						limits: "Jusqu'à {{size}} de texte, et {{limit}} noms par moniteur.",
 					},
 
 					interval: {
@@ -3387,7 +3411,6 @@ export default {
 						source: "Source",
 						state: "État",
 						watched: "Surveillé",
-						actions: "Actions",
 					},
 				},
 
@@ -3405,7 +3428,6 @@ export default {
 				},
 
 				actions: {
-					menu: "Menu d'actions",
 					enable: "Surveiller",
 					disable: "Ne plus surveiller",
 				},
@@ -3431,6 +3453,23 @@ export default {
 				description:
 					"Ces lignes ne font pas partie du sous-ensemble que nous lisons. Ce qu'elles déclarent n'est pas surveillé.",
 				line: "Ligne {{line}} : {{reason}}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					originDirective:
+						"Change la zone à laquelle appartiennent les noms qui suivent, nous ne pouvons donc pas la lire sans risque",
+					ttlDirective: "Nous ne suivons pas les TTL",
+					includeDirective:
+						"Désigne un fichier que nous n'avons pas et que nous n'irons pas chercher",
+					generateDirective: "Se développe en de nombreux noms d'un coup",
+					unsupportedDirective: "Ce n'est pas une directive que nous lisons",
+					multiLineRecord: "Réparti sur plusieurs lignes avec des parenthèses",
+					blankOwnerContinuation: "Commence par une espace et hérite du nom de la ligne précédente",
+					nonInternetClass: "Ce n'est pas un enregistrement de classe internet",
+					unsupportedType: "Ce n'est pas l'un des six types d'enregistrement que nous surveillons",
+					outOfZone: "Appartient à un autre domaine",
+					malformed: "Nous n'avons pas pu lire ceci comme un enregistrement",
+				},
 			},
 
 			groups: {
@@ -3439,23 +3478,41 @@ export default {
 					description:
 						"Trouvés en résolvant chaque type d'enregistrement pris en charge sur chaque nom connu.",
 				},
+				discovered: {
+					title: "Nouvellement découverts",
+					description:
+						"Résolus actuellement, mais absents de la dernière vérification. Laissés non surveillés jusqu'à ce que vous les acceptiez, afin qu'un enregistrement apparu sans vous ne devienne jamais une attente en votre nom.",
+				},
 				declared: {
 					title: "Déclarés mais non résolus",
 					description:
 						"Présents dans votre fichier de zone, mais rien ne répond pour eux aujourd'hui. Laissés non surveillés sauf indication contraire — une zone collée est un instantané, et il ne fait que vieillir.",
+					proxiedNote:
+						"Un enregistrement derrière un proxy n'apparaît pas dans l'export de sa propre zone et répond à la place avec l'adresse du proxy. Sur une zone proxifiée, c'est normal et attendu — ce n'est pas le signe que quelque chose est cassé.",
 				},
 			},
 
-			table: {
-				columns: {
-					watched: "Surveiller",
-					name: "Nom",
-					type: "Type",
-					value: "Valeur",
-				},
+			/**
+			 * A line repeating a record an earlier line declared. Reported apart from the
+			 * rejections: nothing was lost, so calling it "not imported" would describe a
+			 * complete import as a partial one.
+			 */
+			duplicates: {
+				title_one: "{{count}} ligne déclarait un enregistrement déjà déclaré par une autre ligne",
+				title_other:
+					"{{count}} lignes déclaraient des enregistrements déjà déclarés par d'autres lignes",
+				description:
+					"Rien n'a été perdu. Le DNS ne répond qu'une fois pour un enregistrement répété, il a donc été importé depuis la première ligne qui le déclarait.",
+				line: "Ligne {{line}} : {{name}} {{type}} était déjà déclaré à la ligne {{firstLine}}.",
 			},
 
-			selectAll: "Surveiller tous les enregistrements",
+			/** Said at review, where the cap is enforced, rather than at check time. */
+			namesCap: {
+				title: "Plus de noms qu'un moniteur ne peut en surveiller",
+				description:
+					"Ce moniteur couvre désormais {{count}} noms, et une vérification peut en parcourir {{limit}}. Répartissez la zone sur plusieurs moniteurs pour que chaque nom continue d'être vérifié.",
+			},
+
 			empty: "Rien n'a été trouvé pour ce domaine.",
 			cancel: "Annuler",
 			cta: "Enregistrer les enregistrements",

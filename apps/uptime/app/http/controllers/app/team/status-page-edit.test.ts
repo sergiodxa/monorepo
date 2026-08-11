@@ -168,6 +168,41 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		expect(body).toContain(page.name);
 	});
 
+	test("renders stored false switches unticked, and stored true ones ticked", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme Status",
+				slug: "acme-status",
+				title: "Acme Status",
+				description: null,
+				logo_url: null,
+				custom_domain: null,
+				is_public: false,
+				show_overall_status: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await get(db, team, membership, page.id);
+		let body = await response.text();
+
+		// Matched as an attribute, not as a substring: the word `checked` also appears in
+		// the switch's own `:has(~ input:checked)` CSS, so `toContain("checked")` would
+		// pass no matter what the input renders. An HTML boolean attribute is on whenever
+		// it is merely present, so a stored `false` reaching the DOM as the number `0`
+		// would render `checked="0"` — a ticked switch that re-saving flips to true.
+		expect(body).not.toMatch(/name="is_public"[^>]*\schecked/);
+
+		// The control case: the same regex against a stored `true` must match, or the
+		// negative assertion above would be satisfied by a regex that can never fire.
+		expect(body).toMatch(/name="show_overall_status"[^>]*\schecked/);
+	});
+
 	test("responds 404 for a status page id that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 

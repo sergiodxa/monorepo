@@ -192,6 +192,51 @@ describe("maintenanceWindowEdit", () => {
 		expect(body).not.toContain("defaultvalue");
 	});
 
+	test("only marks the behaviour switches checked when their stored values are true", async () => {
+		let { db, team, membership } = await createFixture();
+
+		async function renderWith(flags: boolean) {
+			let now = Date.now();
+			let window = await db.create(
+				maintenanceWindows,
+				{
+					id: crypto.randomUUID(),
+					team_id: team.id,
+					monitor_id: null,
+					name: "Database upgrade",
+					starts_at: now + 3_600_000,
+					ends_at: now + 7_200_000,
+					suppress_alerts: flags,
+					show_on_status_page: flags,
+					is_recurring: flags,
+				},
+				{ touch: true, returnRow: true },
+			);
+			return await (await send(db, team, membership, window.id)).text();
+		}
+
+		/*
+		 * Anchored to the attribute inside each switch's own tag rather than to the bare
+		 * word, which also appears in the component's `~ input:checked` CSS. `checked` is
+		 * an HTML boolean attribute: present at all — even as `checked="0"` for a `false`
+		 * that came back from SQLite as the integer 0 — means the switch renders ON, and
+		 * re-saving would flip the stored decision.
+		 */
+		let checkedInputs = [
+			/<input[^>]*\bname="suppress_alerts"[^>]*\schecked/,
+			/<input[^>]*\bname="show_on_status_page"[^>]*\schecked/,
+			/<input[^>]*\bname="is_recurring"[^>]*\schecked/,
+		];
+
+		let checkedBody = await renderWith(true);
+		let uncheckedBody = await renderWith(false);
+
+		for (let pattern of checkedInputs) {
+			expect(checkedBody).toMatch(pattern);
+			expect(uncheckedBody).not.toMatch(pattern);
+		}
+	});
+
 	test("shows the end-early button for a window that's currently active", async () => {
 		let { db, team, membership } = await createFixture();
 		let now = Date.now();

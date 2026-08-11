@@ -29,6 +29,12 @@ export type NotifyMonitorType = "dns" | "tcp" | "cron" | "ssl";
  *
  * `previousStatus` is always the value the monitor held *before* the sweep wrote its
  * new one, because that's what decides whether a transition is a recovery.
+ *
+ * A domain monitor's `dns` message is the same two statuses and nothing more, even though
+ * the alert it produces reports per-record findings. The findings are already durable in
+ * `dns_monitor_records`, and putting a copy on the queue would mean a message that can
+ * outlive its own truth — redelivered an hour later, it would announce records that have
+ * since been accepted or restored. The consumer reads the rows instead.
  */
 export type NotifyMessage =
 	| {

@@ -31,7 +31,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, monitors, teams } from "~/database/schema";
+import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
@@ -202,5 +202,20 @@ describe("app/team/dashboard-panel", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain(en.page.dnsMonitors.empty.title);
+	});
+
+	/** An unchecked monitor's cell is copy like any other, and belongs in the locale file. */
+	test("dns tab reads its never-checked label from the locale", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
+			{ touch: true },
+		);
+
+		let body = await (await fetchPanel(db, team, membership, "dns")).text();
+
+		expect(body).toContain(en.page.dnsMonitors.table.notChecked);
+		expect(body).not.toContain("not checked");
 	});
 });

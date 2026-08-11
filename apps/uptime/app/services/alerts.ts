@@ -21,17 +21,20 @@ import type { Database } from "remix/data-table";
 
 import { isFailure, wrap } from "@pkg/result";
 
+import type { DnsRecordDiff } from "~/app/data/dns-monitor-record";
 import type { MaintenanceMonitorKind } from "~/app/data/maintenance-window";
-import type { DnsCheckResult, DnsCheckStatus } from "~/app/services/dns-check";
+import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
 import type {
 	AlertEventSnapshot,
 	CronJobStatus,
+	DnsFinding,
 	SelectAlert,
 	SelectAlertEvent,
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
+	SelectDnsMonitorRecord,
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
@@ -42,6 +45,7 @@ import MaintenanceWindow from "~/app/data/maintenance-window";
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
 import { repeatCooldownMinutes } from "~/app/lib/alert-policy";
+import { hasRecordSetEdit, sortDnsFindings } from "~/app/lib/dns-findings";
 import { absoluteUrl } from "~/app/lib/origin";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
@@ -275,6 +279,32 @@ function statusWord(eventType: AlertEventType): string {
 	return "DOWN";
 }
 
+/**
+ * How each finding is named in the plain-text body.
+ *
+ * The word for a `missing` record says what was observed — it stopped resolving — rather
+ * than that it was deleted, because a sweep sees an absence and cannot see the act that
+ * caused it, and a record can vanish from an answer for reasons nobody performed.
+ *
+ * These are not translated, like every other line this function builds: the text part is
+ * what the webhook, Slack and Discord strategies put on the wire, and a webhook has no
+ * reader whose language could be looked up. The email renders the same findings from the
+ * snapshot in the recipient's language instead.
+ */
+const DNS_FINDING_WORDS: Record<DnsFinding["kind"], string> = {
+	missing: "no longer resolving",
+	changed: "changed to",
+	new: "newly seen",
+};
+
+/** See {@link hasRecordSetEdit} — said in words wherever the shape appears. */
+const RECORD_SET_EDIT_NOTE =
+	"Note: a record set holding several values has no per-record identity in DNS, so a value edited inside one is reported as one record no longer resolving plus one new record.";
+
+/** Newly seen records are imported disabled, so the alert has to say what to do with them. */
+const NEW_RECORDS_NOTE =
+	"Newly seen records are not being watched yet. Open the dashboard to accept the ones you expected, or fix your DNS.";
+
 function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 	switch (snapshot.type) {
 		case "http":
@@ -283,8 +313,31 @@ function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 				`Response status: ${snapshot.responseStatus} (expected ${snapshot.expectedStatus})`,
 				`Response time: ${snapshot.responseTimeMs}ms`,
 			];
-		case "dns":
-			return [`Domain: ${snapshot.domain}`, `Status: ${snapshot.status}`];
+		case "dns": {
+			let lines = [
+				`Domain: ${snapshot.domain}`,
+				`Status: ${snapshot.status}`,
+				`Records: ${snapshot.recordsMissing} missing, ${snapshot.recordsChanged} changed, ${snapshot.recordsNew} newly seen`,
+				...snapshot.findings.map(
+					(finding) =>
+						`- ${DNS_FINDING_WORDS[finding.kind]}: ${finding.name} ${finding.recordType} ${finding.value}`,
+				),
+			];
+
+			// The counters are the totals and the findings a capped sample of those same
+			// buckets, so the difference is exactly what this body is not listing.
+			let hidden =
+				snapshot.recordsMissing +
+				snapshot.recordsChanged +
+				snapshot.recordsNew -
+				snapshot.findings.length;
+			if (hidden > 0) lines.push(`- and ${hidden} more`);
+
+			if (hasRecordSetEdit(snapshot.findings)) lines.push(RECORD_SET_EDIT_NOTE);
+			if (snapshot.recordsNew > 0) lines.push(NEW_RECORDS_NOTE);
+
+			return lines;
+		}
 		case "tcp":
 			return [
 				`Endpoint: ${snapshot.host}:${snapshot.port}`,
@@ -551,18 +604,135 @@ export async function notifyHttpResult(
 }
 
 /**
+ * How many findings one snapshot quotes.
+ *
+ * `alert_events.snapshot` is stored JSON, written once per alert per event, and the number
+ * of findings a sweep can produce is set by the customer's zone rather than by us — a
+ * nameserver change makes every record at every tracked name a finding at once. Five is
+ * as many as a body can list before it stops being a notification and becomes a report,
+ * and the counters beside them carry the totals, so capping the list loses the sixth
+ * record's identity and nothing else.
+ */
+const MAX_SNAPSHOT_FINDINGS = 5;
+
+/**
+ * What a domain sweep found, as the alert pipeline needs it.
+ *
+ * The counters are totals over the whole sweep and `findings` holds every one of them
+ * before {@link notifyDnsResult} caps the stored list, so
+ * `recordsMissing + recordsChanged + recordsNew === findings.length` always holds here.
+ * Both constructors below maintain it, and the email relies on it to say how many
+ * findings it is not showing.
+ */
+export interface DnsAlertResult {
+	status: DnsCheckStatus;
+	recordsChanged: number;
+	recordsMissing: number;
+	recordsNew: number;
+	findings: DnsFinding[];
+}
+
+/**
+ * The alert's view of one check, from the diff that check produced.
+ *
+ * This is the payload the sweep hands over: it knows exactly what changed at the moment
+ * of the transition, which is more precise than anything reconstructed afterwards. The
+ * `seen`, `absent` and `ok` buckets are deliberately not findings — a declined record
+ * that stopped resolving is the user's own decision playing out, not news.
+ */
+export function dnsAlertResultFromDiff(
+	status: DnsCheckStatus,
+	diff: DnsRecordDiff,
+): DnsAlertResult {
+	let findings: DnsFinding[] = [
+		...diff.missing.map((record) =>
+			toFinding("missing", record.name, record.record_type, record.value),
+		),
+		...diff.changed.map((change) =>
+			toFinding("changed", change.record.name, change.record.record_type, change.value),
+		),
+		...diff.created.map((record) =>
+			toFinding("new", record.name, record.record_type, record.value),
+		),
+	];
+
+	return {
+		status,
+		recordsMissing: diff.missing.length,
+		recordsChanged: diff.changed.length,
+		recordsNew: diff.created.length,
+		findings: sortDnsFindings(findings),
+	};
+}
+
+/**
+ * The same view, rebuilt from the records themselves — what the `notify` queue consumer
+ * has, since the diff was computed in another invocation and was never put on the queue.
+ *
+ * It reports what is outstanding *now* rather than replaying the sweep, which is the only
+ * honest thing a message redelivered an hour later can say, and is what the repeat
+ * notifications of an ongoing incident report anyway (ADR-026 §11).
+ *
+ * A record's status is a state of the record and not of a check, so this reads it
+ * directly. Disabled records are excluded with one exception: a newly discovered record
+ * is imported disabled by construction, and it is precisely the thing waiting to be
+ * accepted or fixed. A record the user declined and that later stops resolving is not a
+ * finding at all — that is what declining it meant.
+ */
+export function dnsAlertResultFromRecords(
+	status: DnsCheckStatus,
+	records: readonly SelectDnsMonitorRecord[],
+): DnsAlertResult {
+	let findings: DnsFinding[] = [];
+
+	for (let record of records) {
+		if (record.status === "new") {
+			findings.push(toFinding("new", record.name, record.record_type, record.value));
+			continue;
+		}
+
+		if (!record.is_enabled) continue;
+		if (record.status === "missing") {
+			findings.push(toFinding("missing", record.name, record.record_type, record.value));
+		} else if (record.status === "changed") {
+			findings.push(toFinding("changed", record.name, record.record_type, record.value));
+		}
+	}
+
+	return {
+		status,
+		recordsMissing: findings.filter((finding) => finding.kind === "missing").length,
+		recordsChanged: findings.filter((finding) => finding.kind === "changed").length,
+		recordsNew: findings.filter((finding) => finding.kind === "new").length,
+		findings: sortDnsFindings(findings),
+	};
+}
+
+/** One finding, from the column names a record row uses to the ones a snapshot uses. */
+function toFinding(
+	kind: DnsFinding["kind"],
+	name: string,
+	recordType: string,
+	value: string,
+): DnsFinding {
+	return { kind, name, recordType, value };
+}
+
+/**
  * See {@link notifyHttpResult}; `ok` is the DNS-equivalent healthy state.
  *
- * `result` is narrowed to the fields an alert actually reads, so a caller that
- * reconstructs it from the monitor's cached columns (the `notify` queue consumer) isn't
- * forced to invent a response time nothing renders.
+ * A domain monitor's detail is the sweep's findings, so `result` carries them rather than
+ * a resolved value: a monitor covers every record at every tracked name, and "the domain
+ * changed" without saying which record is a notification a reader cannot act on. Build it
+ * with {@link dnsAlertResultFromDiff} or {@link dnsAlertResultFromRecords} instead of by
+ * hand, so the counters and the findings can never describe different events.
  */
 export async function notifyDnsResult(
 	db: Database,
 	mailer: Mailer,
 	monitor: SelectDnsMonitor,
 	previousStatus: DnsCheckStatus | null,
-	result: Pick<DnsCheckResult, "status">,
+	result: DnsAlertResult,
 ): Promise<void> {
 	if (!shouldNotifyDnsResult(previousStatus, result.status)) return;
 	/** Only reachable with an `ok` status when the policy above found a recovery. */
@@ -576,7 +746,15 @@ export async function notifyDnsResult(
 		monitorType: "dns",
 		monitorName: monitor.name,
 		eventType: isRecovery ? "up" : result.status === "error" ? "down" : "degraded",
-		snapshot: { type: "dns", status: result.status, domain: monitor.domain },
+		snapshot: {
+			type: "dns",
+			status: result.status,
+			domain: monitor.domain,
+			recordsChanged: result.recordsChanged,
+			recordsMissing: result.recordsMissing,
+			recordsNew: result.recordsNew,
+			findings: result.findings.slice(0, MAX_SNAPSHOT_FINDINGS),
+		},
 		dashboardUrl: dashboardUrl(
 			routes.app.team.dnsMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),

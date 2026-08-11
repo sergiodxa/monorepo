@@ -619,6 +619,28 @@ export const alerts = table({
 export type SelectAlert = TableRow<typeof alerts>;
 export type InsertAlert = InsertRow<typeof alerts>;
 
+/**
+ * One record-level observation a domain sweep made, as the alert reports it.
+ *
+ * `kind` is the diff's own vocabulary rather than a summary of it, because the three
+ * outcomes want different reactions: a watched record that stopped resolving is a
+ * failure, a newly seen one is waiting to be accepted or fixed, and a `changed` one is
+ * the single edit DNS lets us attribute to a record. The three fields after it are the
+ * record's whole identity, which is what makes a finding quotable back to the zone.
+ *
+ * `recordType` is a plain string, like every `status` in this union: a snapshot is
+ * stored JSON that outlives the code that wrote it, and a stored row must stay readable
+ * after the supported type set grows.
+ */
+export interface DnsFinding {
+	kind: "missing" | "new" | "changed";
+	/** Absolute owner name the record sits at. */
+	name: string;
+	recordType: string;
+	/** Normalized RDATA — for a `changed` record, the value it now resolves to. */
+	value: string;
+}
+
 export type AlertEventSnapshot =
 	| {
 			type: "http";
@@ -628,14 +650,25 @@ export type AlertEventSnapshot =
 			url: string;
 	  }
 	/**
-	 * A DNS monitor watches a domain rather than one record type, so `recordType` and
-	 * `resolvedValue` — a type the monitor no longer has and a single joined blob that
-	 * cannot describe a per-record finding — are gone. The per-record counters and the
-	 * findings list that replace them are added with the diff that produces them
-	 * (ADR-026 phase 2.2); until then this variant is the part of the snapshot that has a
-	 * source, which is why it is a subtraction rather than a placeholder.
+	 * A DNS monitor watches a domain rather than one record type, so the counters and the
+	 * findings describe a sweep of every tracked record instead of one resolved value.
+	 *
+	 * The counters are the totals; `findings` is a capped sample of the very same three
+	 * buckets, so `recordsMissing + recordsChanged + recordsNew` is always the number of
+	 * findings there were before the cap, and the difference is what a reader is not being
+	 * shown. Both are needed: a bounded snapshot cannot hold a large zone's every finding,
+	 * and a body that only quoted five of them would understate the event.
 	 */
-	| { type: "dns"; status: string; domain: string }
+	| {
+			type: "dns";
+			status: string;
+			domain: string;
+			recordsChanged: number;
+			recordsMissing: number;
+			recordsNew: number;
+			/** A capped sample — see `MAX_SNAPSHOT_FINDINGS` in `app/services/alerts.ts`. */
+			findings: DnsFinding[];
+	  }
 	| { type: "tcp"; status: string; responseTimeMs: number | null; host: string; port: number }
 	| {
 			type: "cron";

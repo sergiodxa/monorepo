@@ -206,6 +206,31 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		expect(unchanged?.interval_seconds).toBe(3600);
 	});
 
+	/**
+	 * The floor moved to 900 for both channels at once. 60 was legal through this endpoint
+	 * until now — a six-type sweep at that interval is a quarter of a million queries a month
+	 * from one monitor — so a body that used to be accepted must now be refused.
+	 */
+	test("rejects the 60-second interval the old API allowed, and accepts the 900-second floor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let refused = await dispatch(
+			db,
+			updateRequest(monitor.id, { intervalSeconds: 60 }, { Authorization: `Bearer ${key}` }),
+		);
+		expect(refused.status).toBe(400);
+
+		let accepted = await dispatch(
+			db,
+			updateRequest(monitor.id, { intervalSeconds: 900 }, { Authorization: `Bearer ${key}` }),
+		);
+		expect(accepted.status).toBe(200);
+		expect((await DnsMonitor.findByIdForTeam(db, team.id, monitor.id))?.interval_seconds).toBe(900);
+	});
+
 	test("returns 401 when the Authorization header is missing", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

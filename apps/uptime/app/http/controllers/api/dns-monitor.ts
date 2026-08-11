@@ -20,6 +20,10 @@ import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import {
+	MAX_DNS_INTERVAL_SECONDS,
+	MIN_DNS_INTERVAL_SECONDS,
+} from "~/app/http/validators/dns-monitor";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -41,10 +45,18 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	};
 }
 
+/**
+ * No `zoneFile`: the text is never stored, so re-importing one is its own act rather than a
+ * field carried along by every rename. `intervalSeconds` reads the same floor the create body
+ * and the web form read, so a monitor cannot be edited below a limit it could not be created
+ * below.
+ */
 const UpdateDnsMonitorSchema = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
+	intervalSeconds: s.optional(
+		s.number().pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS)),
+	),
 	isEnabled: s.optional(s.boolean()),
 });
 
