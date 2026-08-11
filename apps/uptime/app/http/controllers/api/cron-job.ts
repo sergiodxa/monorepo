@@ -22,6 +22,7 @@ import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/sche
 
 import CronJobMonitor from "~/app/data/cron-job";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -51,7 +52,8 @@ const UpdateCronJobSchema = s.object({
 	description: s.optional(s.string().pipe(checks.maxLength(500))),
 	cronExpression: s.optional(s.string().pipe(checks.minLength(1))),
 	gracePeriodSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
-	timezone: s.optional(s.string()),
+	// Checked against the runtime's IANA list — see the create schema for why.
+	timezone: s.optional(s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE)),
 	alertOnLate: s.optional(s.boolean()),
 	enabled: s.optional(s.boolean()),
 });

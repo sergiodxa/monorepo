@@ -240,6 +240,41 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		expect(response.status).toBe(400);
 	});
 
+	test("returns 400, not 500, for a timezone the IANA database doesn't know", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			updateRequest(
+				cronJob.id,
+				{ timezone: "Mars/Olympus_Mons" },
+				{ Authorization: `Bearer ${key}` },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string; message: string } };
+		expect(body.error.code).toBe("VALIDATION_ERROR");
+		expect(body.error.message).toContain("Expected a valid IANA time zone");
+	});
+
+	test("keeps accepting UTC, so re-saving an existing job never fails on its own value", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let cronJob = await createCronJobRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			updateRequest(cronJob.id, { timezone: "UTC" }, { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(200);
+	});
+
 	test("returns 401 when the Authorization header is missing", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

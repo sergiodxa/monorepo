@@ -23,6 +23,11 @@ import type { SelectCronJobMonitor } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import {
+	DEFAULT_TIMEZONE,
+	isSupportedTimezone,
+	UNKNOWN_TIMEZONE_MESSAGE,
+} from "~/app/lib/timezones";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -50,7 +55,13 @@ const CreateCronJobSchema = s.object({
 	description: s.optional(s.string().pipe(checks.maxLength(500))),
 	cronExpression: s.string().pipe(checks.minLength(1)),
 	gracePeriodSeconds: s.defaulted(s.number().pipe(checks.min(60), checks.max(86_400)), 300),
-	timezone: s.defaulted(s.string(), "UTC"),
+	// Checked against the runtime's IANA list, not taken as free text: the zone decides
+	// when a job counts as late, so a value that never matches a real zone would
+	// schedule it against the wrong wall clock.
+	timezone: s.defaulted(
+		s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE),
+		DEFAULT_TIMEZONE,
+	),
 	alertOnLate: s.defaulted(s.boolean(), false),
 	enabled: s.defaulted(s.boolean(), true),
 });

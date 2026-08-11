@@ -121,15 +121,15 @@ Creates a new cron job monitor.
 
 ### Request Body
 
-| Field                | Type    | Required | Description                                                 |
-| -------------------- | ------- | -------- | ----------------------------------------------------------- |
-| `name`               | string  | Yes      | Display name (1-100 characters)                             |
-| `cronExpression`     | string  | Yes      | Valid cron expression (e.g., `0 * * * *`)                   |
-| `description`        | string  | No       | Optional description (max 500 characters)                   |
-| `gracePeriodSeconds` | integer | No       | Seconds to wait before marking late (60-86400, default 300) |
-| `timezone`           | string  | No       | IANA timezone (default `UTC`)                               |
-| `alertOnLate`        | boolean | No       | Send alerts when job is late (default `false`)              |
-| `enabled`            | boolean | No       | Whether the monitor is active (default `true`)              |
+| Field                | Type    | Required | Description                                                                                   |
+| -------------------- | ------- | -------- | --------------------------------------------------------------------------------------------- |
+| `name`               | string  | Yes      | Display name (1-100 characters)                                                               |
+| `cronExpression`     | string  | Yes      | Valid cron expression (e.g., `0 * * * *`)                                                     |
+| `description`        | string  | No       | Optional description (max 500 characters)                                                     |
+| `gracePeriodSeconds` | integer | No       | Seconds to wait before marking late (60-86400, default 300)                                   |
+| `timezone`           | string  | No       | IANA timezone, or `UTC` (default `UTC`). Any other value is rejected with `VALIDATION_ERROR`. |
+| `alertOnLate`        | boolean | No       | Send alerts when job is late (default `false`)                                                |
+| `enabled`            | boolean | No       | Whether the monitor is active (default `true`)                                                |
 
 ### Example Request
 
@@ -358,15 +358,15 @@ Updates an existing cron job monitor.
 
 All fields are optional. Only provided fields will be updated.
 
-| Field                | Type    | Description                                    |
-| -------------------- | ------- | ---------------------------------------------- |
-| `name`               | string  | Display name (1-100 characters)                |
-| `cronExpression`     | string  | Valid cron expression                          |
-| `description`        | string  | Optional description (max 500 characters)      |
-| `gracePeriodSeconds` | integer | Seconds to wait before marking late (60-86400) |
-| `timezone`           | string  | IANA timezone                                  |
-| `alertOnLate`        | boolean | Send alerts when job is late                   |
-| `enabled`            | boolean | Whether the monitor is active                  |
+| Field                | Type    | Description                                                                   |
+| -------------------- | ------- | ----------------------------------------------------------------------------- |
+| `name`               | string  | Display name (1-100 characters)                                               |
+| `cronExpression`     | string  | Valid cron expression                                                         |
+| `description`        | string  | Optional description (max 500 characters)                                     |
+| `gracePeriodSeconds` | integer | Seconds to wait before marking late (60-86400)                                |
+| `timezone`           | string  | IANA timezone, or `UTC`. Any other value is rejected with `VALIDATION_ERROR`. |
+| `alertOnLate`        | boolean | Send alerts when job is late                                                  |
+| `enabled`            | boolean | Whether the monitor is active                                                 |
 
 ### Example Request
 
