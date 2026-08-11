@@ -176,7 +176,7 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 		"toast",
 		queued
 			? { intent: "success", message: `Check queued for "${monitor.name}".` }
-			: { intent: "error", message: "An active subscription is required to run a check." },
+			: { intent: "error", message: ctx.i18next.t("actions.checks.subscriptionRequired") },
 	);
 	return redirect(
 		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),

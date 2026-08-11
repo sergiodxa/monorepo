@@ -4,17 +4,27 @@
  * on-demand check can run under `bun test`; the other three actions don't reach that
  * code path but still transitively import it, so the stub applies to the whole file.
  *
+ * `cloudflare:workers` is stubbed for the same reason and one more: the meter event an
+ * on-demand check produces is handed to `waitUntil`, so the double collects that work
+ * instead of dropping it and a test can await what the response deliberately doesn't. What
+ * is pinned here is which requests are billable — a check that opened a connection is
+ * exactly one `ping` event keyed on the history row it wrote, and every request that
+ * returned without checking (rejected form, another team's monitor, an owner without an
+ * active subscription) is none.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -25,7 +35,13 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
+import {
+	memberships,
+	subscriptions,
+	tcpMonitorResults,
+	tcpMonitors,
+	teams,
+} from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -39,6 +55,58 @@ mock.module("cloudflare:sockets", () => ({
 		close: mock(async () => {}),
 	})),
 }));
+
+/**
+ * Work the check action deferred past its response. Held rather than dropped so a test can
+ * await the meter event the visitor is deliberately not made to wait for.
+ */
+let deferred: Promise<unknown>[] = [];
+
+/** No binding is read on these paths, so only `waitUntil` needs to behave. */
+mock.module("cloudflare:workers", () => ({
+	env: {},
+	waitUntil: (promise: Promise<unknown>) => {
+		deferred.push(promise);
+	},
+}));
+
+/**
+ * The billing client the container hands the action, with the one call `ingestPings` makes
+ * spied on. The client is real — only the request is intercepted — so the events asserted
+ * below are the ones the action actually built.
+ */
+let polar = new PolarClient({ accessToken: "polar_at_test" });
+let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+
+beforeEach(() => {
+	ingestEventsSafeMock.mockClear();
+	ingestEventsSafeMock.mockImplementation(async () => true);
+	deferred = [];
+});
+
+/** Every event the action handed Polar, once the work it deferred has settled. */
+async function ingestedEvents(): Promise<IngestEvent[]> {
+	await Promise.all(deferred.splice(0));
+	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+}
+
+/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
+async function createLapsedSubscription(db: Database, ownerId: string) {
+	await db.create(
+		subscriptions,
+		{
+			id: crypto.randomUUID(),
+			external_customer_id: ownerId,
+			polar_subscription_id: crypto.randomUUID(),
+			polar_product_id: "product-1",
+			status: "canceled",
+			current_period_end: null,
+			revoked_at: Date.now(),
+			polar_modified_at: Date.now(),
+		},
+		{ touch: true, returnRow: true },
+	);
+}
 
 /**
  * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
@@ -94,6 +162,7 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
+	container.instance(PolarClient, polar);
 
 	let router = createRouter({
 		middleware: [
@@ -325,5 +394,110 @@ describe("checkTcpMonitor", () => {
 		);
 
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("checkTcpMonitor billing", () => {
+	/** Seeds a monitor this team owns, which is what an on-demand check needs to exist. */
+	async function createMonitor(db: Database, teamId: string) {
+		return await db.create(
+			tcpMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: teamId,
+				name: "Redis",
+				host: "redis.internal",
+				port: 6379,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("bills exactly one ping, keyed on the result row and attributed to team and monitor", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await createMonitor(db, team.id);
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		let [stored] = await db.findMany(tcpMonitorResults, {
+			where: { tcp_monitor_id: monitor.id },
+		});
+
+		/**
+		 * The key is the history row's id, which is what makes this event impossible to
+		 * collide with the scheduled sweep's: the sweep bills its own checks under the rows
+		 * *it* wrote, and no two checks ever share a row.
+		 */
+		expect(await ingestedEvents()).toEqual([
+			{
+				name: "ping",
+				externalCustomerId: team.owner_id,
+				externalId: `ping:${stored?.id}`,
+				metadata: { teamId: team.id, type: "tcp", monitorId: monitor.id },
+			},
+		]);
+	});
+
+	test("bills nothing when the owner has no active subscription, and runs no check", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await createMonitor(db, team.id);
+		await createLapsedSubscription(db, team.owner_id);
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		expect(response.status).toBe(303);
+		// Refused before the connection was attempted, so there is no work to charge for.
+		expect(
+			await db.findMany(tcpMonitorResults, { where: { tcp_monitor_id: monitor.id } }),
+		).toHaveLength(0);
+		expect(await ingestedEvents()).toEqual([]);
+	});
+
+	test("bills nothing for a monitor the team doesn't own", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: crypto.randomUUID() },
+		);
+
+		expect(await ingestedEvents()).toEqual([]);
+	});
+
+	test("bills nothing when the submitted form is rejected", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.check,
+			checkTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ unrelated: "value" },
+		);
+
+		expect(await ingestedEvents()).toEqual([]);
 	});
 });

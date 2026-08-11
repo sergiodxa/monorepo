@@ -10,12 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
 import { BatchedLogger } from "@pkg/logger";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
@@ -51,6 +52,20 @@ mock.module("cloudflare:workers", () => ({
  * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
  */
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
+
+/**
+ * The billing client the container hands the actions, with the one call `ingestPings`
+ * would make spied on. Registered so that "this request billed nothing" is asserted
+ * against a client that was available to be used, rather than passing because resolving
+ * one would have thrown.
+ */
+let polar = new PolarClient({ accessToken: "polar_at_test" });
+let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+
+beforeEach(() => {
+	ingestEventsSafeMock.mockClear();
+	ingestEventsSafeMock.mockImplementation(async () => true);
+});
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
 async function createFixture() {
@@ -114,6 +129,7 @@ async function send(
 ): Promise<Response> {
 	let container = new ServiceContainer();
 	container.instance(Database, db);
+	container.instance(PolarClient, polar);
 
 	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
 	router.map(route, {
@@ -410,6 +426,76 @@ describe("playMonitor", () => {
 
 		expect(response.status).toBe(404);
 		expect(queueSend).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Where an on-demand HTTP check is billed, which is not here. `playMonitor` enqueues and
+ * returns; the check itself happens later in `CheckHttpJob`, and that job is what bills it,
+ * keyed on the job id the message carries. Billing at enqueue too would charge twice for
+ * one check — and would charge for a message the job may legitimately drop — so what is
+ * pinned here is that this request ingests nothing at all, whatever it did with the queue.
+ */
+describe("playMonitor billing", () => {
+	test("bills nothing at enqueue, leaving the check the job performs to bill itself", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+		queueSend.mockClear();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.play,
+			playMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
+	});
+
+	test("bills nothing when the owner is unsubscribed and no check is queued", async () => {
+		let { db, team, membership } = await createFixture();
+		await createRevokedSubscription(db, team.owner_id);
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+		queueSend.mockClear();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.play,
+			playMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+		);
+
+		expect(queueSend).not.toHaveBeenCalled();
+		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});
 });
 

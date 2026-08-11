@@ -10,14 +10,24 @@
  * dispatches alerts through `ctx.email`, so the mail middleware is registered over a
  * recording transport: nothing leaves the process, and no provider SDK is mocked.
  *
+ * `cloudflare:workers` is stubbed because the meter event an on-demand check produces is
+ * handed to `waitUntil`: the double collects that work instead of dropping it, so a test
+ * can await what the response deliberately doesn't. What is pinned there is which requests
+ * are billable — a check that resolved DNS is exactly one `ping` event keyed on the history
+ * row it wrote, and every request that returned without resolving anything (rejected form,
+ * another team's monitor, an owner without an active subscription) is none.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+
+import type { IngestEvent } from "@pkg/polar";
 
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -28,12 +38,52 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { dnsMonitors, memberships, teams } from "~/database/schema";
+import {
+	dnsMonitorResults,
+	dnsMonitors,
+	memberships,
+	subscriptions,
+	teams,
+} from "~/database/schema";
 import routes from "~/routes/web";
+
+/**
+ * Work the check action deferred past its response. Held rather than dropped so a test can
+ * await the meter event the visitor is deliberately not made to wait for.
+ */
+let deferred: Promise<unknown>[] = [];
+
+/** No binding is read on these paths, so only `waitUntil` needs to behave. */
+mock.module("cloudflare:workers", () => ({
+	env: {},
+	waitUntil: (promise: Promise<unknown>) => {
+		deferred.push(promise);
+	},
+}));
 
 let { createDnsMonitor, updateDnsMonitor, deleteDnsMonitor, checkDnsMonitor } =
 	await import("./dns-monitors");
 let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/data/dns-monitor");
+
+/**
+ * The billing client the container hands the action, with the one call `ingestPings` makes
+ * spied on. The client is real — only the request is intercepted — so the events asserted
+ * below are the ones the action actually built.
+ */
+let polar = new PolarClient({ accessToken: "polar_at_test" });
+let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+
+beforeEach(() => {
+	ingestEventsSafeMock.mockClear();
+	ingestEventsSafeMock.mockImplementation(async () => true);
+	deferred = [];
+});
+
+/** Every event the action handed Polar, once the work it deferred has settled. */
+async function ingestedEvents(): Promise<IngestEvent[]> {
+	await Promise.all(deferred.splice(0));
+	return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
+}
 
 /** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
@@ -56,6 +106,7 @@ async function postDnsMonitorAction(
 ) {
 	let container = new ServiceContainer();
 	container.singleton(Database, () => db);
+	container.singleton(PolarClient, () => polar);
 
 	let router = createRouter({
 		middleware: [
@@ -565,6 +616,179 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 			expect(fetchSpy).not.toHaveBeenCalled();
 		} finally {
 			globalThis.fetch = originalFetch;
+		}
+	});
+});
+
+describe("POST /actions/:team/check-dns-monitor billing", () => {
+	/** Resolves every lookup to one A record, so a check that runs always completes. */
+	function stubResolver() {
+		let original = globalThis.fetch;
+		globalThis.fetch = mock(async () =>
+			Response.json({
+				Status: 0,
+				Answer: [{ name: "example.com", type: 1, TTL: 60, data: "1.2.3.4" }],
+			}),
+		) as unknown as typeof fetch;
+		return () => {
+			globalThis.fetch = original;
+		};
+	}
+
+	/** Seeds a monitor owned by `teamId`, which is what an on-demand check needs to exist. */
+	async function createMonitorRow(db: ReturnType<typeof createTestDatabase>["db"], teamId: string) {
+		return await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: teamId,
+				name: "Example A record",
+				domain: "example.com",
+				record_type: "A",
+				expected_value: "1.2.3.4",
+				interval_seconds: 3600,
+				is_enabled: true,
+				last_checked_at: null,
+				last_status: null,
+				last_value: null,
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	/** Records an owner as having lapsed, which is what the entitlement gate refuses on. */
+	async function createLapsedSubscription(
+		db: ReturnType<typeof createTestDatabase>["db"],
+		ownerId: string,
+	) {
+		await db.create(
+			subscriptions,
+			{
+				id: crypto.randomUUID(),
+				external_customer_id: ownerId,
+				polar_subscription_id: crypto.randomUUID(),
+				polar_product_id: "product-1",
+				status: "canceled",
+				current_period_end: null,
+				revoked_at: Date.now(),
+				polar_modified_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
+
+	test("bills exactly one ping, keyed on the result row and attributed to team and monitor", async () => {
+		let restore = stubResolver();
+		try {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			let monitor = await createMonitorRow(db, team.id);
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			let [stored] = await db.findMany(dnsMonitorResults, {
+				where: { dns_monitor_id: monitor.id },
+			});
+
+			/**
+			 * The key is the history row's id, which is what makes this event impossible to
+			 * collide with the scheduled sweep's: the sweep bills its own checks under the rows
+			 * *it* wrote, and no two checks ever share a row.
+			 */
+			expect(await ingestedEvents()).toEqual([
+				{
+					name: "ping",
+					externalCustomerId: team.owner_id,
+					externalId: `ping:${stored?.id}`,
+					metadata: { teamId: team.id, type: "dns", monitorId: monitor.id },
+				},
+			]);
+		} finally {
+			restore();
+		}
+	});
+
+	test("bills nothing when the owner has no active subscription, and resolves nothing", async () => {
+		let originalFetch = globalThis.fetch;
+		let fetchSpy = mock(async () => Response.json({ Status: 0 }));
+		try {
+			globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			let monitor = await createMonitorRow(db, team.id);
+			await createLapsedSubscription(db, team.owner_id);
+
+			let response = await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			expect(response.status).toBe(303);
+			// Refused before the lookup, so there is no work to charge for.
+			expect(fetchSpy).not.toHaveBeenCalled();
+			expect(await ingestedEvents()).toEqual([]);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("bills nothing for a monitor the team doesn't own", async () => {
+		let restore = stubResolver();
+		try {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+			let otherTeam = await createTeamRow(db);
+			let monitor = await createMonitorRow(db, otherTeam.id);
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ monitor_id: monitor.id },
+			);
+
+			expect(await ingestedEvents()).toEqual([]);
+		} finally {
+			restore();
+		}
+	});
+
+	test("bills nothing when the submitted form is rejected", async () => {
+		let restore = stubResolver();
+		try {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let membership = await createMembershipRow(db, team.id);
+
+			await postDnsMonitorAction(
+				checkDnsMonitor,
+				routes.actions.monitor.dns.check,
+				team,
+				membership,
+				db,
+				{ unrelated: "value" },
+			);
+
+			expect(await ingestedEvents()).toEqual([]);
+		} finally {
+			restore();
 		}
 	});
 });

@@ -383,6 +383,27 @@ describe("Monitor.ping", () => {
 		);
 	});
 
+	/**
+	 * The job id is what the check is billed under, so a manual id colliding with a
+	 * scheduled one would make one of the two checks free: the second delivery would
+	 * short-circuit on the `monitor_results` primary key and never reach the meter.
+	 */
+	test("gives an on-demand check an id no scheduled check can be given", async () => {
+		queueSend.mockClear();
+		let monitorId = crypto.randomUUID();
+		let scheduledAt = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
+
+		let { db } = createTestDatabase();
+		await createActiveSubscription(db, "owner-1");
+		await Monitor.ping(db, monitorId, "owner-1");
+
+		let manualId = queueSend.mock.calls[0]?.[0]?.id;
+		expect(manualId).not.toBe(Monitor.scheduledJobId(monitorId, scheduledAt));
+		// The segment a scheduled id cannot contain, since its second segment is a number.
+		expect(manualId).toContain(":manual:");
+		expect(Monitor.scheduledJobId(monitorId, scheduledAt)).not.toContain(":manual:");
+	});
+
 	test("gives each on-demand check its own job id", async () => {
 		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
