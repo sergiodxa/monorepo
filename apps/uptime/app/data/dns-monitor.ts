@@ -5,6 +5,9 @@
  * `recordCheckResult` write path both the scheduled job and the manual "Check now"
  * action use, so a check's history-insert and cached-fields-update never drift apart.
  *
+ * A monitor watches a domain rather than a record type: what it tracks lives in
+ * `dns_monitor_records`, which is why deleting one has to reach into that table too.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -13,9 +16,9 @@ import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@pkg/uuid";
 
-import type { DnsCheckResult } from "~/app/services/dns-check";
-import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
+import type { InsertDnsMonitor, SelectDnsMonitor, SelectDnsMonitorResult } from "~/database/schema";
 
+import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { dnsMonitorResults, dnsMonitors } from "~/database/schema";
 
@@ -32,11 +35,54 @@ const RESULT_HISTORY_LIMIT = 50;
  * `team_id` is not read by the check itself: the sweep apportions its own cost across the
  * teams whose monitors it swept (ADR-007 §5), and the `RETURNING` projection is where that
  * denominator costs nothing.
+ *
+ * `name` is here because a sweep's findings identify the monitor by name in the alert body,
+ * and `zone_file_imported_at` because it is the only monitor-level fact left about how the
+ * tracked names were discovered: a sweep that finds no tracked names must tell "no zone file
+ * was ever imported, so this monitor covers the apex alone" apart from "an import ran and
+ * produced nothing", and those two deserve different reports. Both would otherwise be a
+ * second read per claimed monitor for columns the claim already had in hand.
+ *
+ * Only non-boolean columns belong here — `claimDue` returns values as the database holds
+ * them, so `is_enabled` would arrive as 0/1 despite its declared type.
  */
-const CLAIM_COLUMNS = ["id", "team_id", "domain", "last_status"] as const;
+const CLAIM_COLUMNS = [
+	"id",
+	"team_id",
+	"name",
+	"domain",
+	"zone_file_imported_at",
+	"last_status",
+] as const;
 
 /** A DNS monitor claimed for a check, projected to the columns the check reads. */
 export type ClaimedDnsMonitor = Pick<SelectDnsMonitor, (typeof CLAIM_COLUMNS)[number]>;
+
+/**
+ * What a completed check reports to this table: one status for the monitor, the slowest
+ * query's latency, and the per-record counters the sweep counted.
+ *
+ * Declared here rather than imported from whichever service performed the check, because it
+ * is this table's write contract and not that service's return type. The two are free to
+ * differ — a sweep carries findings, values and per-query timings that no column stores —
+ * and pinning the column list to a service's shape would make every change to what a check
+ * computes a change to what a result row means.
+ *
+ * The counters are optional so a caller with nothing to report writes zeros rather than
+ * inventing numbers, per the columns' own defaults.
+ */
+export interface DnsCheckOutcome {
+	status: SelectDnsMonitorResult["status"];
+	/** The slowest single query, not the sum: this feeds a latency chart, not a cost one. */
+	responseTimeMs: number | null;
+	errorMessage?: string | null;
+	recordsChecked?: number;
+	recordsChanged?: number;
+	recordsMissing?: number;
+	recordsNew?: number;
+	/** Queries that did not answer, and whose records were therefore not diffed at all. */
+	queriesFailed?: number;
+}
 
 export default class DnsMonitor {
 	/**
@@ -102,10 +148,17 @@ export default class DnsMonitor {
 		return await db.update(dnsMonitors, monitorId, { ...changes, ...patch }, { touch: true });
 	}
 
-	/** Deletes a DNS monitor and its check-result history. */
+	/**
+	 * Deletes a DNS monitor, its check-result history and its tracked records.
+	 *
+	 * All three, because nothing else ever will: `dns_monitor_records` is configuration
+	 * rather than history, so the retention sweep does not visit it, and a row left behind
+	 * would be a record belonging to a monitor that no longer exists — invisible, undeletable,
+	 * and counted by anything that counts records.
+	 */
 	static async deleteById(db: Database, monitorId: string) {
-		let results = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitorId } });
-		for (let result of results) await db.delete(dnsMonitorResults, result.id);
+		await DnsMonitorRecord.deleteByMonitor(db, monitorId);
+		await db.deleteMany(dnsMonitorResults, { where: { dns_monitor_id: monitorId } });
 		return await db.delete(dnsMonitors, monitorId);
 	}
 
@@ -122,10 +175,8 @@ export default class DnsMonitor {
 	 * Records a check's outcome: inserts a history row and updates the monitor's cached
 	 * "last checked" fields in one call.
 	 *
-	 * The per-record counters are left at their column defaults of zero, which is what this
-	 * caller actually knows: the sweep that counts changed, missing and new records is
-	 * ADR-026 phase 2.1, and writing anything but zero here would be a number nothing
-	 * measured.
+	 * Counters a caller omits stay at the column default of zero, which is a truthful "this
+	 * check measured none of that" rather than a missing value.
 	 *
 	 * @returns The history row's id. It is the only thing about a completed check that is
 	 * unique and already persisted, which is what makes it the idempotency key the ping
@@ -136,7 +187,7 @@ export default class DnsMonitor {
 	static async recordCheckResult(
 		db: Database,
 		monitorId: string,
-		result: DnsCheckResult,
+		result: DnsCheckOutcome,
 	): Promise<string> {
 		let checkedAt = Date.now();
 		let id = generateUUID();
@@ -147,6 +198,11 @@ export default class DnsMonitor {
 				id,
 				dns_monitor_id: monitorId,
 				status: result.status,
+				records_checked: result.recordsChecked ?? 0,
+				records_changed: result.recordsChanged ?? 0,
+				records_missing: result.recordsMissing ?? 0,
+				records_new: result.recordsNew ?? 0,
+				queries_failed: result.queriesFailed ?? 0,
 				response_time_ms: result.responseTimeMs,
 				error_message: result.errorMessage ?? null,
 				checked_at: checkedAt,

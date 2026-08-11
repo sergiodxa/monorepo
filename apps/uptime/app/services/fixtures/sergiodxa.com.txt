@@ -1,0 +1,81 @@
+;;
+;; Domain:     sergiodxa.com.
+;; Exported:   2026-08-11 05:30:36
+;;
+;; This file is intended for use for informational and archival
+;; purposes ONLY and MUST be edited before use on a production
+;; DNS server.  In particular, you must:
+;;   -- update the SOA record with the correct authoritative name server
+;;   -- update the SOA record with the contact e-mail address information
+;;   -- update the NS record(s) with the authoritative name servers for this domain.
+;;
+;; For further information, please consult the BIND documentation
+;; located on the following website:
+;;
+;; http://www.isc.org/
+;;
+;; And RFC 1035:
+;;
+;; http://www.ietf.org/rfc/rfc1035.txt
+;;
+;; Please note that we do NOT offer technical support for any use
+;; of this zone data, the BIND name server, or any other third-party
+;; DNS software.
+;;
+;; Use at your own risk.
+;; SOA Record
+sergiodxa.com	3600	IN	SOA	dora.ns.cloudflare.com. dns.cloudflare.com. 2053809283 10000 2400 604800 3600
+
+;; NS Records
+sergiodxa.com.	86400	IN	NS	dora.ns.cloudflare.com.
+sergiodxa.com.	86400	IN	NS	will.ns.cloudflare.com.
+
+;; CAA Records
+sergiodxa.com.	1	IN	CAA	0 issue "letsencrypt.org"
+
+;; CNAME Records
+_acme-challenge.books.sergiodxa.com.	1	IN	CNAME	books.sergiodxa.com.km23dr.flydns.net. ; Fly Domain Ownership Verification cf_tags=cf-proxied:false
+cka._domainkey.sergiodxa.com.	1	IN	CNAME	dkim.dm-0m73q9wy.sg2.convertkit.com. ; Convertkit cf_tags=cf-proxied:false
+ckespa.sergiodxa.com.	1	IN	CNAME	spf.dm-0m73q9wy.sg2.convertkit.com. ; Convertkit cf_tags=cf-proxied:false
+gh.sergiodxa.com.	1	IN	CNAME	gh-ds9.pages.dev. ; cf_tags=cf-proxied:true
+go.sergiodxa.com.	1	IN	CNAME	cname.dub.co. ; Dub.co Short Links cf_tags=cf-proxied:true
+
+;; MX Records
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	39 route3.mx.cloudflare.net.
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	13 route2.mx.cloudflare.net.
+cf-bounce.auth.sergiodxa.com.	1	IN	MX	61 route1.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	39 route3.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	13 route2.mx.cloudflare.net.
+cf-bounce.uptime.sergiodxa.com.	1	IN	MX	61 route1.mx.cloudflare.net.
+send.sergiodxa.com.	1	IN	MX	10 feedback-smtp.us-east-1.amazonses.com. ; Resend
+send.uptime.sergiodxa.com.	3600	IN	MX	10 feedback-smtp.us-east-1.amazonses.com.
+sergiodxa.com.	1	IN	MX	5 aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt4.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt3.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt2.aspmx.l.google.com.
+sergiodxa.com.	1	IN	MX	5 alt1.aspmx.l.google.com.
+
+;; TXT Records
+_amazonses.sergiodxa.com.	1	IN	TXT	"V4CeXnKGjuRFstK3s6JMjQXY7sXre1OAvo+wfq1OikI="
+_atproto.sergiodxa.com.	1	IN	TXT	"did=did:plc:f4d5ka272oiyyyb7lty3tid7" ; Used by Bluesky to use my domain as user handle.
+cf-bounce.auth.sergiodxa.com.	1	IN	TXT	"v=spf1 include:_spf.mx.cloudflare.net ~all"
+cf-bounce._domainkey.auth.sergiodxa.com.	1	IN	TXT	"v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiweykoi+o48IOGuP7GR3X0MOExCUDY/BCRHoWBnh3rChl7WhdyCxW3jgq1daEjPPqoi7sJvdg5hEQVsgVRQP4DcnQDVjGMbASQtrY4WmB1VebF+RPJB2ECPsEDTpeiI5ZyUAwJaVX7r6bznU67g7LvFq35yIo4sdlmtZGV+i0H4cpYH9+3JJ78k" "m4KXwaf9xUJCWF6nxeD+qG6Fyruw1Qlbds2r85U9dkNDVAS3gioCvELryh1TxKGiVTkg4wqHTyHfWsp7KD3WQHYJn0RyfJJu6YEmL77zonn7p2SRMvTMP3ZEXibnC9gz3nnhR6wcYL8Q7zXypKTMD58bTixDSJwIDAQAB"
+cf-bounce._domainkey.uptime.sergiodxa.com.	1	IN	TXT	"v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiweykoi+o48IOGuP7GR3X0MOExCUDY/BCRHoWBnh3rChl7WhdyCxW3jgq1daEjPPqoi7sJvdg5hEQVsgVRQP4DcnQDVjGMbASQtrY4WmB1VebF+RPJB2ECPsEDTpeiI5ZyUAwJaVX7r6bznU67g7LvFq35yIo4sdlmtZGV+i0H4cpYH9+3JJ78k" "m4KXwaf9xUJCWF6nxeD+qG6Fyruw1Qlbds2r85U9dkNDVAS3gioCvELryh1TxKGiVTkg4wqHTyHfWsp7KD3WQHYJn0RyfJJu6YEmL77zonn7p2SRMvTMP3ZEXibnC9gz3nnhR6wcYL8Q7zXypKTMD58bTixDSJwIDAQAB"
+cf-bounce.uptime.sergiodxa.com.	1	IN	TXT	"v=spf1 include:_spf.mx.cloudflare.net ~all"
+_discord.sergiodxa.com.	1	IN	TXT	"dh=7c7694b978e02d7ff17768798c9a3c7d1b26e1aa" ; Discord domain ownership verification
+_dmarc.auth.sergiodxa.com.	1	IN	TXT	"v=DMARC1; p=reject;"
+_dmarc.sergiodxa.com.	1	IN	TXT	"v=DMARC1; p=none;" ; DMARC Record for Resend
+_dmarc.sergiodxa.com.	1	IN	TXT	"v=DMARC1; p=none;" ; Resend
+_dmarc.sergiodxa.com.	1	IN	TXT	"v=DMARC1;  p=none; rua=mailto:99a61f40ca6c42b994009fbaa7695167@dmarc-reports.cloudflare.net"
+_dmarc.uptime.sergiodxa.com.	1	IN	TXT	"v=DMARC1; p=reject;"
+_github-pages-challenge-sergiodxa.docs.sergiodxa.com.	1	IN	TXT	"244cdcfdfae3f86e0fd1004d6b8418" ; GitHub Pages
+_ping-verification.sergiodxa.com.	1	IN	TXT	"ping_1672b085-4706-4f3a-975f-1b115a6109cb" ; Local Ping
+_ping-verification.sergiodxa.com.	1	IN	TXT	"ping_e257c7df-cdb7-42f3-ba72-034c37795547"
+resend._domainkey.sergiodxa.com.	1	IN	TXT	"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDszoNnzUX7lSbJAIsVjdr+4gccdigHRrJlhxylDozrfQ3ybkDfRHmJt73xxHOxcAomqmSYFH+mPTQn8l0mLxi6ns9sVgZj+z0O4VMZZ3WBKssIee2Qj782bdW3LII7PPee9itgl4JpGMxqZr7x5jUw0KwBss7S7ul1GnoCt60j9wIDAQAB" ; Resend
+resend._domainkey.uptime.sergiodxa.com.	3600	IN	TXT	"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCgqdeXQM2X0SLsOk+6qmoitHke3DZMassyjoSyWyMIZDU0OGI2ZZ+/QtZjPbTb/McL7YTX2YOWHNsJFQl2tXsyPb9p3UJ2qgxgRHoXVIrMb28ZSXqIL0eMMBw03bAbmEZmYCFZ3aHjjGEZKWb5o8Pbv4KTybgaAYg6tOZYtINRVQIDAQAB"
+send.sergiodxa.com.	1	IN	TXT	"v=spf1 include:amazonses.com ~all" ; Resend
+send.uptime.sergiodxa.com.	3600	IN	TXT	"v=spf1 include:amazonses.com ~all"
+sergiodxa.com.	1	IN	TXT	"pinterest-site-verification=b3e5c6e5ca09fc1efd0d8df3e57753cd" ; Pinterest
+sergiodxa.com.	1	IN	TXT	"openai-domain-verification=dv-ax3YOD1KBEcq9GiJ2e8AzOPM" ; OpenAI domain ownership verification
+sergiodxa.com.	1	IN	TXT	"google-site-verification=9AkcEK4Ofz3GhKILelFPvJALYzt8KfvX8SqVyqeSL90" ; Google Search Console ownership
+sergiodxa.com.	1	IN	TXT	"keybase-site-verification=eJkDHaBUaRYDAydnz5Bp1e3CrwSx49Xusap6naXQui4"

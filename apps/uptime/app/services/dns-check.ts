@@ -1,9 +1,9 @@
 /**
- * DNS lookup and status-classification logic for DNS monitors, shared by the scheduled
- * `CheckDnsJob` and the manual "Check now" action. Resolves records via Cloudflare's
- * DNS-over-HTTPS JSON API rather than a platform DNS module (Workers have no raw DNS
- * socket access). See `resources/docs/concepts/dns-monitors.md` for the product rules this
- * implements.
+ * DNS resolution for domain monitors: sweeping every supported record type at a name so a
+ * check sees the whole of what a name publishes, and the single-record probe the ad-hoc ping
+ * endpoint still asks for. Records resolve over Cloudflare's DNS-over-HTTPS JSON API because
+ * Workers have no raw DNS socket. See `resources/docs/concepts/dns-monitors.md` for the
+ * product rules this implements.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,10 +11,26 @@
 
 import * as s from "remix/data-schema";
 
+import type { DnsRecordType } from "~/app/lib/dns-record-value";
+
+import {
+	DNS_RECORD_TYPES,
+	normalizeDnsName,
+	normalizeDnsRecordValue,
+} from "~/app/lib/dns-record-value";
+
 const DOH_URL = new URL("https://cloudflare-dns.com/dns-query");
 
-export type DnsRecordType = "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "NS";
+export type { DnsRecordType };
+
 export type DnsCheckStatus = "ok" | "changed" | "error";
+
+/**
+ * How many outbound queries one swept name costs. Exported because the per-check query
+ * budget of the sweep job is counted in names, and this is the multiplier that turns a name
+ * count into a subrequest count against the platform's per-invocation ceiling.
+ */
+export const QUERIES_PER_NAME = DNS_RECORD_TYPES.length;
 
 const RECORD_TYPE_CODES: Record<DnsRecordType, number> = {
 	A: 1,
@@ -24,6 +40,9 @@ const RECORD_TYPE_CODES: Record<DnsRecordType, number> = {
 	TXT: 16,
 	NS: 2,
 };
+
+/** `NXDOMAIN`: the name does not exist. Not a failure — see {@link queryDnsRecords}. */
+const NXDOMAIN = 3;
 
 const DnsAnswerSchema = s.object({
 	name: s.string(),
@@ -44,29 +63,67 @@ export interface DnsCheckResult {
 	errorMessage?: string;
 }
 
-/** Resolves `domain`'s `recordType` records via Cloudflare's DoH JSON API. */
+/** What one `(name, type)` query found, or why it found nothing out. */
+export interface DnsQueryOutcome {
+	name: string;
+	recordType: DnsRecordType;
+	/**
+	 * The full RRset, normalized. Empty means the name publishes no records of this type —
+	 * which is a fact, not a failure, and only trustworthy when `errorMessage` is `null`.
+	 */
+	values: string[];
+	responseTimeMs: number;
+	/**
+	 * `null` when the query answered. Otherwise the reason it did not, and the caller MUST
+	 * apply no diff for this `(name, type)`: a resolver having a bad minute must never be
+	 * read as "every record at this name vanished".
+	 */
+	errorMessage: string | null;
+	/** Whether address answers were dropped because a CNAME owns the name — see below. */
+	suppressedByCname: boolean;
+}
+
+/** Everything one name publishes across the supported types, as of one check. */
+export interface DnsNameSweep {
+	name: string;
+	outcomes: DnsQueryOutcome[];
+	/** Queries that did not answer; `dns_monitor_results.queries_failed` is the sum of these. */
+	queriesFailed: number;
+	/**
+	 * The slowest single query, not the sum. The column it feeds means "how long did DNS take
+	 * to answer", and summing would quietly turn a latency chart into a cost chart.
+	 */
+	responseTimeMs: number;
+}
+
+/**
+ * Resolves `domain`'s `recordType` records via Cloudflare's DoH JSON API, throwing on any
+ * answer that is not a clean `NOERROR`.
+ *
+ * Deliberately unlike {@link queryDnsRecords}: this is the resolve-and-verify step of the
+ * public probe's SSRF and DNS-rebinding defence, where a name that does not resolve and a
+ * resolver that could not be reached must both refuse the probe, and where the address
+ * reached by following a CNAME is exactly the address that must be inspected. Answers are
+ * returned as the resolver wrote them, unnormalized, for the same reason.
+ */
 export async function resolveDns(
 	domain: string,
 	recordType: DnsRecordType,
 ): Promise<{ values: string[]; responseTimeMs: number }> {
-	let url = new URL(DOH_URL);
-	url.searchParams.set("name", domain);
-	url.searchParams.set("type", recordType);
-
-	let startedAt = performance.now();
-	let response = await fetch(url, { headers: { accept: "application/dns-json" } });
-	let responseTimeMs = Math.round(performance.now() - startedAt);
-
-	if (!response.ok) throw new Error(`DNS query failed with status ${response.status}`);
-
-	let body = s.parse(DnsResponseSchema, await response.json());
-	if (body.Status !== 0) throw new Error(`DNS query returned status code ${body.Status}`);
+	let { status, answers, responseTimeMs } = await queryDoh(domain, recordType);
+	if (status !== 0) throw new Error(`DNS query returned status code ${status}`);
 
 	let typeCode = RECORD_TYPE_CODES[recordType];
-	let values = (body.Answer ?? [])
+	let values = answers
 		.filter((record) => record.type === typeCode)
 		.map((record) => {
 			let data = record.data;
+			/**
+			 * The outermost quote pair only. Correct normalization lives in
+			 * `normalizeDnsRecordValue` and is not applied here on purpose — this function
+			 * answers to the probe fence, which inspects addresses and must see the resolver's
+			 * own bytes.
+			 */
 			if (recordType === "TXT" && data.startsWith('"') && data.endsWith('"')) {
 				return data.slice(1, -1);
 			}
@@ -76,47 +133,157 @@ export async function resolveDns(
 	return { values, responseTimeMs };
 }
 
-/** Normalizes a possibly multi-value DNS answer for stable storage and display: sorted, joined. */
-function normalize(values: string[]): string | null {
-	return values.length > 0 ? [...values].sort().join(", ") : null;
-}
+/**
+ * Resolves one `(name, type)` for the sweep, distinguishing "no records of this type here"
+ * from "we did not find out". It never throws: a failure is a value the caller diffs around.
+ *
+ * Three rules a sweep needs that a single-record check does not:
+ *
+ * 1. `NXDOMAIN` and `NOERROR` with no answers both mean *none*. A zone-file name that has
+ *    been retired, or a name with addresses but no mail, hits one of them on every check, so
+ *    treating either as an error would park every domain monitor in `error` forever. Only
+ *    `SERVFAIL` and the other response codes, a transport failure, or a non-2xx response are
+ *    errors.
+ * 2. A CNAME **in the answer** suppresses A/AAAA tracking at that name.
+ *    `?name=www.github.com&type=A` answers with the CNAME *and* `github.com`'s address, and
+ *    filtering by type keeps the latter — an address that exists in nobody's zone as
+ *    `www.github.com`. Storing it would alert the customer every time an unrelated third
+ *    party rotated an address. The CNAME itself is tracked; where it points is the target's
+ *    business.
+ *
+ *    The trigger is the CNAME answer, not the shape of the customer's zone, and the two
+ *    come apart: a name a CDN proxies is a CNAME in the zone file and plain A records at
+ *    the edge in DNS, with no CNAME in the answer at all. Nothing is suppressed there and
+ *    nothing should be — the edge addresses are the authoritative answer, and the fact that
+ *    they do not match the zone file is a true observation this reports rather than hides.
+ * 3. Answers are filtered to the queried type code, which matters precisely because a CNAME
+ *    answer rides along in an address query.
+ */
+export async function queryDnsRecords(
+	name: string,
+	recordType: DnsRecordType,
+): Promise<DnsQueryOutcome> {
+	let owner = normalizeDnsName(name);
 
-/** Drops the root label's trailing dot so `example.com.` and `example.com` compare equal. */
-function stripTrailingDot(value: string): string {
-	return value.endsWith(".") ? value.slice(0, -1) : value;
+	try {
+		let { status, answers, responseTimeMs } = await queryDoh(owner, recordType);
+
+		if (status === NXDOMAIN) {
+			return {
+				name: owner,
+				recordType,
+				values: [],
+				responseTimeMs,
+				errorMessage: null,
+				suppressedByCname: false,
+			};
+		}
+		if (status !== 0) {
+			return {
+				name: owner,
+				recordType,
+				values: [],
+				responseTimeMs,
+				errorMessage: `DNS query returned status code ${status}`,
+				suppressedByCname: false,
+			};
+		}
+
+		let isAddressQuery = recordType === "A" || recordType === "AAAA";
+		let suppressedByCname =
+			isAddressQuery && answers.some((record) => record.type === RECORD_TYPE_CODES.CNAME);
+
+		let typeCode = RECORD_TYPE_CODES[recordType];
+		let values = suppressedByCname
+			? []
+			: answers
+					.filter((record) => record.type === typeCode)
+					.map((record) => normalizeDnsRecordValue(recordType, record.data));
+
+		return {
+			name: owner,
+			recordType,
+			values,
+			responseTimeMs,
+			errorMessage: null,
+			suppressedByCname,
+		};
+	} catch (error) {
+		return {
+			name: owner,
+			recordType,
+			values: [],
+			responseTimeMs: 0,
+			errorMessage: error instanceof Error ? error.message : String(error),
+			suppressedByCname: false,
+		};
+	}
 }
 
 /**
- * Comparison key for one record. Hostname-shaped records (CNAME, NS, and the host half
- * of MX) are case-insensitive and root-dot-insensitive per DNS itself, so both sides are
- * lowercased and un-dotted. A/AAAA/TXT keep byte-exact comparison: TXT payloads such as
- * DKIM keys and SPF strings are case- and whitespace-significant, and address literals
- * gain nothing from folding.
+ * Sweeps every supported record type at one name, which is what makes a name's coverage
+ * complete: a DNS answer carries the full RRset, so an addition inside a tracked name shows
+ * up beside the records already stored.
  *
- * MX answers arrive as `"<preference> <host>"`. `hostOnly` asks for just the host half,
- * which is how an expected token without a space is matched — the user typed a mail host
- * and does not care which preference it carries. A token *with* a space is read as
- * `preference host` and compared against the full record, pinning the preference too.
+ * The types run together — {@link QUERIES_PER_NAME} subrequests, a fixed and small number.
+ * Fanning out across *names* is the caller's job, because the per-invocation subrequest
+ * budget is spent in names and only the caller knows how many it has left.
+ */
+export async function sweepDnsName(name: string): Promise<DnsNameSweep> {
+	let owner = normalizeDnsName(name);
+	let outcomes = await Promise.all(
+		DNS_RECORD_TYPES.map((recordType) => queryDnsRecords(owner, recordType)),
+	);
+
+	return {
+		name: owner,
+		outcomes,
+		queriesFailed: outcomes.filter((outcome) => outcome.errorMessage !== null).length,
+		responseTimeMs: outcomes.reduce(
+			(slowest, outcome) => Math.max(slowest, outcome.responseTimeMs),
+			0,
+		),
+	};
+}
+
+/** Performs the DoH round trip and validates its envelope. Throws on a non-2xx response. */
+async function queryDoh(
+	name: string,
+	recordType: DnsRecordType,
+): Promise<{
+	status: number;
+	answers: s.InferOutput<typeof DnsAnswerSchema>[];
+	responseTimeMs: number;
+}> {
+	let url = new URL(DOH_URL);
+	url.searchParams.set("name", name);
+	url.searchParams.set("type", recordType);
+
+	let startedAt = performance.now();
+	let response = await fetch(url, { headers: { accept: "application/dns-json" } });
+	let responseTimeMs = Math.round(performance.now() - startedAt);
+
+	if (!response.ok) throw new Error(`DNS query failed with status ${response.status}`);
+
+	let body = s.parse(DnsResponseSchema, await response.json());
+	return { status: body.Status, answers: body.Answer ?? [], responseTimeMs };
+}
+
+/** Renders a possibly multi-value answer as one stable string: sorted, comma-joined. */
+function joinValues(values: string[]): string | null {
+	return values.length > 0 ? [...values].sort().join(", ") : null;
+}
+
+/**
+ * Comparison key for the ad-hoc probe's expected-value matching. Values reaching it are
+ * already normalized, so the only folding left is the MX `hostOnly` affordance: an expected
+ * token without a space is a mail host the caller does not want pinned to a preference,
+ * while a token with one is read as `preference host` and pins it.
  */
 function comparisonKey(value: string, recordType: DnsRecordType, hostOnly: boolean): string {
-	if (recordType === "CNAME" || recordType === "NS") {
-		return stripTrailingDot(value.toLowerCase());
-	}
-
-	if (recordType === "MX") {
-		let separator = value.indexOf(" ");
-		if (separator === -1) return stripTrailingDot(value.toLowerCase());
-		let preference = value.slice(0, separator);
-		let host = stripTrailingDot(
-			value
-				.slice(separator + 1)
-				.trim()
-				.toLowerCase(),
-		);
-		return hostOnly ? host : `${preference} ${host}`;
-	}
-
-	return value;
+	if (recordType !== "MX" || !hostOnly) return value;
+	let separator = value.indexOf(" ");
+	return separator === -1 ? value : value.slice(separator + 1);
 }
 
 /**
@@ -126,11 +293,10 @@ function comparisonKey(value: string, recordType: DnsRecordType, hostOnly: boole
  * must not be considered found because `alt1.aspmx.l.google.com.` was resolved.
  *
  * SECURITY TRADEOFF, deliberate: because extra resolved records are tolerated, an attacker
- * who ADDS a hostile record (say a rogue MX that outranks the legitimate ones) while leaving
- * the configured ones in place will NOT be flagged. Exact set-equality caught that, at the
- * price of forcing users to transcribe every record verbatim. Users who need the stricter
- * guarantee should list the full record set and rely on the no-expected-value baseline mode,
- * which still reports any deviation from the previously resolved set.
+ * who ADDS a hostile record while leaving the configured ones in place is not flagged. This
+ * survives only for the stateless ad-hoc probe, which has one record type and one expected
+ * value and no history to diff against. A domain monitor closes that hole by construction —
+ * an added record is not stored, so the sweep reports it as new.
  *
  * An empty token list requires nothing and therefore always matches.
  */
@@ -145,18 +311,20 @@ function containsExpected(
 		.filter(Boolean);
 
 	return tokens.every((token) => {
-		let hostOnly = !token.includes(" ");
-		let key = comparisonKey(token, recordType, hostOnly);
+		let hostOnly = recordType === "MX" && !token.includes(" ");
+		let key = comparisonKey(normalizeDnsRecordValue(recordType, token), recordType, hostOnly);
 		return values.some((value) => comparisonKey(value, recordType, hostOnly) === key);
 	});
 }
 
 /**
- * Resolves and classifies one DNS check: `changed` when a configured expected value is not
- * contained in the resolved records, or when no expected value is configured, when the
- * resolved set differs from the previously resolved one (change detection).
- * The very first check has no previous value, so it classifies as `ok` and its result
- * becomes the baseline for every later comparison once the caller persists it.
+ * Resolves and classifies one single-record probe: `changed` when a configured expected value
+ * is not contained in the resolved records, or — with no expected value — when the resolved
+ * set differs from the previously resolved one. The first check has no previous value, so it
+ * classifies as `ok` and becomes the baseline once the caller persists it.
+ *
+ * This is the shape the ad-hoc ping endpoint asks for. A stored domain monitor does not use
+ * it: its expectation is a table of records, not a transcribed string.
  */
 export async function checkDns(
 	domain: string,
@@ -165,17 +333,30 @@ export async function checkDns(
 	previousValue: string | null,
 ): Promise<DnsCheckResult> {
 	try {
-		let { values, responseTimeMs } = await resolveDns(domain, recordType);
-		let resolvedValue = normalize(values);
+		/**
+		 * Deliberately not routed through `resolveDns`: that function's legacy outermost-quote
+		 * strip runs before normalization can see the value, which turns a chunked TXT record
+		 * into a different string than either channel would produce for it.
+		 */
+		let answer = await queryDoh(domain, recordType);
+		if (answer.status !== 0) {
+			throw new Error(`DNS query returned status code ${answer.status}`);
+		}
+
+		let typeCode = RECORD_TYPE_CODES[recordType];
+		let normalized = answer.answers
+			.filter((record) => record.type === typeCode)
+			.map((record) => normalizeDnsRecordValue(recordType, record.data));
+		let resolvedValue = joinValues(normalized);
 		let status: DnsCheckStatus = "ok";
 
 		if (expectedValue !== null) {
-			if (!containsExpected(values, expectedValue, recordType)) status = "changed";
+			if (!containsExpected(normalized, expectedValue, recordType)) status = "changed";
 		} else if (previousValue !== null && resolvedValue !== previousValue) {
 			status = "changed";
 		}
 
-		return { status, resolvedValue, responseTimeMs };
+		return { status, resolvedValue, responseTimeMs: answer.responseTimeMs };
 	} catch (error) {
 		return {
 			status: "error",
@@ -183,19 +364,5 @@ export async function checkDns(
 			responseTimeMs: 0,
 			errorMessage: error instanceof Error ? error.message : String(error),
 		};
-	}
-}
-
-/** Human-readable label for a DNS monitor's status badge. */
-export function getDnsStatusText(status: DnsCheckStatus | null): string {
-	switch (status) {
-		case "ok":
-			return "OK";
-		case "changed":
-			return "Changed";
-		case "error":
-			return "Error";
-		default:
-			return "Not checked";
 	}
 }

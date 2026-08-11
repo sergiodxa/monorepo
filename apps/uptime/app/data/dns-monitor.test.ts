@@ -16,6 +16,7 @@ import type { Database } from "remix/data-table";
 import type { InsertDnsMonitor } from "~/database/schema";
 
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
+import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitorResults, dnsMonitors } from "~/database/schema";
 
@@ -179,10 +180,15 @@ describe("DnsMonitor.claimDue", () => {
 
 		let [claimed] = await DnsMonitor.claimDue(db, Date.now() + 1000);
 
+		// The sweep reads the tracked names from `dns_monitor_records`, so what it needs from
+		// the monitor itself is the domain, the name its findings are reported under, and
+		// whether a zone file was ever imported — the one monitor-level fact about discovery.
 		expect(claimed).toEqual({
 			id: monitor.id,
 			team_id: monitor.team_id,
+			name: "Example A record",
 			domain: "a.example.com",
+			zone_file_imported_at: null,
 			last_status: null,
 		});
 	});
@@ -290,7 +296,6 @@ describe("DnsMonitor.deleteById", () => {
 		});
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "ok",
-			resolvedValue: "1.2.3.4",
 			responseTimeMs: 42,
 		});
 
@@ -300,6 +305,49 @@ describe("DnsMonitor.deleteById", () => {
 		expect(await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } })).toEqual(
 			[],
 		);
+	});
+
+	/**
+	 * Regression: the records survived their monitor. Nothing sweeps `dns_monitor_records` —
+	 * it is configuration, not history — so a row left behind here is orphaned forever.
+	 */
+	test("deletes the records the monitor tracked", async () => {
+		let monitor = await DnsMonitor.create(db, "team-1", {
+			name: "A",
+			domain: "a.example.com",
+		});
+		let other = await DnsMonitor.create(db, "team-1", {
+			name: "B",
+			domain: "b.example.com",
+		});
+		await DnsMonitorRecord.importMany(db, monitor.id, [
+			{
+				name: "a.example.com",
+				record_type: "A",
+				value: "1.2.3.4",
+				source: "resolver",
+				is_enabled: true,
+				status: "ok",
+				last_seen_at: Date.now(),
+			},
+		]);
+		await DnsMonitorRecord.importMany(db, other.id, [
+			{
+				name: "b.example.com",
+				record_type: "A",
+				value: "5.6.7.8",
+				source: "resolver",
+				is_enabled: true,
+				status: "ok",
+				last_seen_at: Date.now(),
+			},
+		]);
+
+		await DnsMonitor.deleteById(db, monitor.id);
+
+		expect(await DnsMonitorRecord.listByMonitor(db, monitor.id)).toEqual([]);
+		// The other monitor's records are its own and stay where they are.
+		expect(await DnsMonitorRecord.countByMonitor(db, other.id)).toBe(1);
 	});
 });
 
@@ -312,14 +360,14 @@ describe("DnsMonitor.listResults", () => {
 
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "ok",
-			resolvedValue: "1.2.3.4",
 			responseTimeMs: 10,
 		});
 		await new Promise((resolve) => setTimeout(resolve, 2));
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "changed",
-			resolvedValue: "5.6.7.8",
 			responseTimeMs: 20,
+			recordsChecked: 3,
+			recordsChanged: 1,
 		});
 
 		let results = await DnsMonitor.listResults(db, monitor.id);
@@ -339,7 +387,6 @@ describe("DnsMonitor.listResults", () => {
 		});
 		await DnsMonitor.recordCheckResult(db, monitorB.id, {
 			status: "ok",
-			resolvedValue: "1.2.3.4",
 			responseTimeMs: 10,
 		});
 
@@ -356,7 +403,6 @@ describe("DnsMonitor.recordCheckResult", () => {
 
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "error",
-			resolvedValue: null,
 			responseTimeMs: 500,
 			errorMessage: "timed out",
 		});
@@ -369,5 +415,43 @@ describe("DnsMonitor.recordCheckResult", () => {
 		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
 		expect(updated?.last_status).toBe("error");
 		expect(typeof updated?.last_checked_at).toBe("number");
+	});
+
+	test("stores the per-record counters a sweep counted", async () => {
+		let monitor = await DnsMonitor.create(db, "team-1", {
+			name: "A",
+			domain: "a.example.com",
+		});
+
+		await DnsMonitor.recordCheckResult(db, monitor.id, {
+			status: "changed",
+			responseTimeMs: 31,
+			recordsChecked: 12,
+			recordsChanged: 1,
+			recordsMissing: 2,
+			recordsNew: 3,
+			queriesFailed: 1,
+		});
+
+		let [result] = await DnsMonitor.listResults(db, monitor.id);
+		expect(result?.records_checked).toBe(12);
+		expect(result?.records_changed).toBe(1);
+		expect(result?.records_missing).toBe(2);
+		expect(result?.records_new).toBe(3);
+		expect(result?.queries_failed).toBe(1);
+	});
+
+	test("writes zeros for the counters a caller measured nothing for", async () => {
+		let monitor = await DnsMonitor.create(db, "team-1", {
+			name: "A",
+			domain: "a.example.com",
+		});
+
+		await DnsMonitor.recordCheckResult(db, monitor.id, { status: "error", responseTimeMs: null });
+
+		let [result] = await DnsMonitor.listResults(db, monitor.id);
+		expect(result?.records_checked).toBe(0);
+		expect(result?.queries_failed).toBe(0);
+		expect(result?.response_time_ms).toBeNull();
 	});
 });

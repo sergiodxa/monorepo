@@ -885,8 +885,11 @@ them first is what makes the rest parallelisable.
       "propagation-aware" claim is already deleted (no grace period exists; the first non-ok
       result notifies), as is "every record type in one monitor" — which this ADR would
       finally make true and which may be worth reinstating once it ships.
-- [ ] 3.4 Delete dead code: `containsExpected`, the `hostOnly` MX path, and the record-type
-      enum's import sites that no longer have a record type to validate.
+- [ ] 3.4 Delete dead code: the record-type enum's import sites that no longer have a record
+      type to validate. **Amended:** this originally also listed `containsExpected` and the
+      `hostOnly` MX path, which contradicts §6 — that section keeps the ad-hoc probe's `dns`
+      variant, and those two are its mechanism. Both are retained, rescoped and re-documented
+      as belonging to the stateless probe alone. Follow this amendment, not the original line.
 
 ---
 
@@ -947,9 +950,15 @@ Each of these is the owner's call, and none is invented here.
    have created the monitor. The safer default is the opposite.
 4. **Storing the pasted zone file.** [§7](#7-the-zone-file-the-smallest-parser-that-is-honest-about-what-it-skipped)
    says no, on data-sensitivity grounds. It costs a re-paste whenever discovery needs to re-run.
-5. **A verbatim Cloudflare export sample could not be obtained** from public documentation —
-   only import examples and the 256 KiB limit. Task 0.2 exists because of this, and the §7
-   subset is provisional until it is done.
+5. ~~**A verbatim Cloudflare export sample could not be obtained.**~~ **Resolved.** The owner
+   exported a real zone (`app/services/fixtures/sergiodxa.com.txt`); §7's subset parses it to
+   42 records, 2 rejected (SOA and CAA, both correctly outside the v1 type set) and 1
+   duplicate. It corrected four assumptions: Cloudflare emits no `$ORIGIN`/`$TTL` and
+   fully-qualifies every owner, its SOA line's owner is missing the trailing dot every other
+   line has, inline comments carry `cf_tags=` metadata, and a zone file can contain the same
+   `(name, type, value)` twice — DNS dedupes it at resolution, so the import path must too.
+   The reconstructed fixture is retained: it is the only source of the unsupported-syntax
+   rows, and the only one containing A/AAAA at all.
 6. **UI naming.** The schema stays `dns`. Whether the product calls these "DNS monitors" or
    "domain monitors" in copy, navigation and the docs is unresolved, and mixing the two would
    be worse than either.
@@ -958,15 +967,25 @@ Each of these is the owner's call, and none is invented here.
    policy question adjacent to ADR-025's.
 8. **CAA timing.** Named as v1.1 here. If the domain-hijack story is the headline, it may
    belong in v1 and this ADR should be re-scoped rather than followed.
-9. **`MAX_DNS_MONITORS_PER_TEAM` stays at 20.** Under the old shape that was three or four
-   domains' worth; under this one it is twenty domains, each of which may carry hundreds of
-   records. Whether the cap belongs on monitors, on tracked records, or on projected queries
-   per month is a commercial question this ADR does not answer.
-10. **Per-monitor DNS alerts.** `alerts` has no `monitor_type` column, so DNS results only
+9. **What a domain monitor promises about proxied records.** Discovered while parsing a real
+   export, and it is a product question rather than a parser one. A Cloudflare-proxied record
+   does not appear in the zone export at all, and resolves as the proxy's own address: the
+   owner's zone exports zero A/AAAA records while its apex resolves to two Cloudflare edge
+   addresses, and `gh.sergiodxa.com` exports as a `CNAME` while DoH answers with A records and
+   no CNAME. Neither channel is wrong — the customer's record genuinely is not in public DNS.
+   The consequence is that on a proxied zone, [§8](#8-a-record-in-the-zone-file-that-does-not-resolve-is-a-finding--at-review-only)'s
+   "declared but not resolving" group is the **common** case, not the exceptional one, and the
+   review screen must not imply something is broken. Neither the parser nor the resolver
+   special-cases it; both report what they observe.
+10. **`MAX_DNS_MONITORS_PER_TEAM` stays at 20.** Under the old shape that was three or four
+    domains' worth; under this one it is twenty domains, each of which may carry hundreds of
+    records. Whether the cap belongs on monitors, on tracked records, or on projected queries
+    per month is a commercial question this ADR does not answer.
+11. **Per-monitor DNS alerts.** `alerts` has no `monitor_type` column, so DNS results only
     reach team-wide alerts ([§11](#11-alerting-reuses-the-existing-event-types)). A domain
     monitor is noisier than the thing it replaces, so this may become the blocking gap rather
     than an inherited quirk — but fixing it is a change to the alert model, not to DNS.
-11. **Does the "propagation-aware" claim get deleted or built?** Deleting it is one line.
+12. **Does the "propagation-aware" claim get deleted or built?** Deleting it is one line.
     Building it means a confirming re-check before a `changed` classification, which is a
     second query, a second ping, and a detection-latency change across the whole feature.
 

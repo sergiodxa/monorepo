@@ -313,7 +313,6 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 
 		await DnsMonitor.recordCheckResult(db, monitor.id, {
 			status: "ok",
-			resolvedValue: "1.2.3.4",
 			responseTimeMs: 42,
 		});
 
