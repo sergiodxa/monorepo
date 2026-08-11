@@ -17,9 +17,9 @@ import { failure, isFailure, success } from "@pkg/result";
 
 import type { SpecError } from "../errors";
 import type { ExecutionContext } from "../executor";
-import type { LoadedSuite } from "../loader";
 import type { Grants, PermissionSet } from "../permissions";
 import type { Plugin, ToolContext } from "../plugin";
+import type { LoadedSuite } from "../sources";
 import type { ToolArg, Value } from "../values";
 import type { Workspace } from "../workspace";
 

@@ -3,9 +3,13 @@
 ## Status
 
 **Proposed** — 2026-08-11. Adds a sixth monitor type whose configuration is a `.spec` file
-written by the customer, executed server-side against a hosted browser. Depends on
-`@pkg/spec` gaining a Workers-safe entry point ([§9](#9-what-pkgspec-has-to-grow)) and on
-the rate card gaining a browser resource ([§7](#7-cost)).
+written by the customer, executed server-side against a hosted browser.
+
+The `@pkg/spec` side of it is **in place** as of 2026-08-11: the package now runs a suite in a
+V8-isolate runtime, loads specs from strings instead of a directory, and lets a host choose
+which capabilities exist at all ([§9](#9-what-pkgspec-has-to-grow)). What remains before a
+flow monitor can run is the Browser Run plugin, the schema, and the metering — the rate card
+still has no browser resource ([§7](#7-cost)).
 
 Nothing here is a migration of existing rows: there is no monitor type being replaced. The
 five existing types (`http`, `dns`, `tcp`, `ssl`, `cron`) are untouched.
@@ -89,6 +93,10 @@ reimplementation.
 
 `import { SQL } from "bun"` in `plugins/db` is the one hard build failure, which is why this
 needs a separate entry point rather than tree-shaking ([§9](#9-what-pkgspec-has-to-grow)).
+
+This table records what the package looked like when the question was asked. The four rows it
+calls out have since been addressed — see [§9](#9-what-pkgspec-has-to-grow) for what exists
+now — and it is kept because it is the survey the decision rests on.
 
 ### 3. `agent-browser` cannot come with us
 
@@ -452,24 +460,42 @@ noted in [Open Questions](#open-questions).
 
 ### 9. What `@pkg/spec` has to grow
 
-Four changes, all additive, none of which alter CLI behaviour:
+Four changes, all additive, none of which alter CLI behaviour. **The first three are
+done**; they are the difference between this app embedding `@pkg/spec` and vendoring it.
 
-1. **`runSuite` takes an optional workspace factory.** Today it hard-imports
-   `createWorkspace`. Injecting it is what keeps the server-side runner from being a fork
-   that drifts from the CLI's semantics.
-2. **A `@pkg/spec/workers` entry point** exporting the pure core plus `http`, `url`, `jwt`
-   and the new browser plugin. Required, not an optimisation: `plugins/db`'s
-   `import { SQL } from "bun"` is a build failure in a Worker, and tree-shaking does not
-   remove a failed resolution.
-3. **`loadSuite` gains a from-sources variant.** The current one is
-   `readdir` + `readFile`; the Worker has `{ path, text }` pairs out of D1. The parse,
-   registration and duplicate-name checks are identical and must not be duplicated.
-4. **A browser plugin backed by Browser Run**, alongside the `agent-browser` one rather than
-   replacing it — the CLI's local-browser story is still the right one for a developer
-   running specs on their machine. Same tool descriptors, different backend.
+1. **The run is fully injectable — `runTests`.** ✅ `runSuite` hard-imported `createWorkspace`
+   and all eight built-in plugins, so it could only ever run in a process. The lifecycle glue
+   moved to `runTests`, which takes the suite, the plugin set, the grants and the workspace
+   factory as arguments; `runSuite` is now the host convenience that supplies the usual
+   answers. One implementation of the semantics, two sets of assumptions about the host.
+2. **A `@pkg/spec/workers` entry point.** ✅ Exports the language core plus `http`, `url` and
+   `jwt`, `loadSources`, `runTests` and `createNoFilesystemWorkspace`. Required, not an
+   optimisation, and it is worth being precise about why: `plugins/db` does
+   `import { SQL } from "bun"`, and bundling the default entry for a non-Bun target fails on
+   that line — tree-shaking never runs, because resolution fails first. The new entry bundles
+   clean, with `node:fs` and `node:path` as its only externals (both reached solely through
+   the host-filesystem grant, so `nodejs_compat` covers them). A test walks the entry's import
+   graph and fails on any `bun` specifier or `Bun` global, so the property is enforced rather
+   than remembered.
+3. **Loading without a filesystem — `loadSources`.** ✅ The parse-and-register pass moved to
+   its own module and takes `{ path, text }` pairs, which is what a spec out of D1 already is;
+   `loadSuite` is now the directory walk plus a call to it, so the duplicate-name and
+   parse-error behaviour cannot drift between the two.
 
-The last one is the only one with real surface area. Items 1–3 are the difference between
-uptime embedding `@pkg/spec` and uptime vendoring it.
+   Alongside it, **which capabilities exist is now a choice**: `builtins` on `runSuite`, and
+   `createBuiltinPlugins(only?)` for callers assembling a set by hand. This is distinct from
+   granting — a denied capability still exists and its denial names the flag that would allow
+   it, whereas a namespace left unregistered fails as an unknown name. That is the correct
+   shape for `fs`, `cli` and `db` here, where no grant could ever lift them.
+
+4. **A browser plugin backed by Browser Run** — _outstanding_. Alongside the `agent-browser`
+   one rather than replacing it: the CLI's local-browser story is still the right one for a
+   developer running specs on their machine. Same tool descriptors, different backend. It
+   lives outside `@pkg/spec` on purpose — which remote browser service drives the tools is the
+   host's decision, not the language's, and the package stays free of that dependency.
+
+Item 4 is the only one with real surface area left, and [§5](#5-two-phases-stateless-first)
+is its plan.
 
 ### 10. Honest limits, stated in the docs
 

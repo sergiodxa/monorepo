@@ -756,6 +756,80 @@ supporting types from `@pkg/spec`; every fallible export returns a
 [`@pkg/result`](/packages/result) `Result`, so parse errors, permission denials,
 and tool failures are values you branch on, never thrown exceptions.
 
+### Choosing which capabilities exist
+
+`runSuite` registers all eight built-in namespaces. Pass `builtins` to register
+only some:
+
+```ts
+import { runSuite } from "@pkg/spec";
+
+let run = await runSuite({ root: "spec", grants, builtins: ["http", "url", "jwt"] });
+```
+
+This is **not** a permission decision, and the difference matters. A denied
+capability still exists — the denial names the flag that would allow it. A
+namespace left out of `builtins` does not exist: a spec calling `fs.write` fails
+with an unknown name, because there is no flag that would ever lift it. Use
+grants to say "not now", and `builtins` to say "not here".
+
+`createBuiltinPlugins(only?)` builds the same list on its own, for callers that
+assemble a plugin set by hand.
+
+### Running without a filesystem or a process
+
+`runSuite` assumes a Bun or Node process: it reads the suite off a disk, gives
+each test a temp directory, and can spawn `cli`, `browser` and `db`. Underneath
+it is `runTests`, which assumes nothing — the suite, the plugin set, the grants,
+and the workspace factory all arrive as arguments:
+
+```ts
+import { isFailure } from "@pkg/result";
+import {
+	createHttpPlugin,
+	createJwtPlugin,
+	createNoFilesystemWorkspace,
+	createUrlPlugin,
+	loadSources,
+	parseGrants,
+	runTests,
+} from "@pkg/spec/workers";
+
+let loaded = loadSources([{ path: "flow.spec", text: source }]);
+if (isFailure(loaded)) return loaded;
+
+let grants = parseGrants(["--allow-net=app.example.com"]);
+if (isFailure(grants)) return grants;
+
+let outcome = await runTests({
+	suite: loaded.data,
+	plugins: [createHttpPlugin(), createUrlPlugin(), createJwtPlugin()],
+	grants: grants.data,
+	createWorkspace: createNoFilesystemWorkspace,
+});
+```
+
+`loadSources` is the half of loading that has no filesystem in it: hand it
+`{ path, text }` pairs from wherever the specs live — a database row, an HTTP
+body, a bundled string — and it parses and registers them exactly as
+`loadSuite` does after its directory walk. `createNoFilesystemWorkspace` refuses
+every path, which a run without `fs` and `cli` never asks it to resolve.
+
+The `@pkg/spec/workers` entry point exists because of what a module may
+**import**, not what a run may do: `db` imports Bun's SQL client, and `cli`,
+`browser` and the stdio plugin transport reach for the `Bun` global, so a module
+importing them cannot load in a V8-isolate runtime however carefully the run is
+permissioned. That entry point exports the language core plus the three
+capabilities that are already pure — `http`, `url`, `jwt` — and a test in the
+package walks its import graph to keep it that way. It still needs Node
+compatibility enabled for `node:path` and `node:fs`, which the permission set
+reaches only through a host-filesystem grant.
+
+There is no browser capability there, deliberately. Driving a browser without a
+local binary means calling a remote service over HTTP, and which service that is
+belongs to the host, not to this package: implement the same tool surface as a
+[plugin](./docs/writing-plugins.md) and pass it to `runTests` beside the others.
+
 ## Related packages
 
 - [`@pkg/result`](/packages/result) — the `Result` type every fallible export

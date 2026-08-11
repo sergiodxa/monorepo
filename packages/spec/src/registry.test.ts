@@ -12,9 +12,9 @@ import { describe, expect, test } from "bun:test";
 import { isFailure, isSuccess, success } from "@pkg/result";
 
 import type { BlockNode, CommandNode, FixtureNode } from "./ast";
-import type { LoadedSuite } from "./loader";
 import type { Plugin } from "./plugin";
 import type { Span } from "./source";
+import type { LoadedSuite } from "./sources";
 
 import { ResolutionError } from "./errors";
 import { createRegistry } from "./registry";

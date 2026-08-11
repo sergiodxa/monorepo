@@ -17,9 +17,9 @@ import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
 
-import type { LoadedSuite } from "./loader";
 import type { ConfigPermissionEntry } from "./permissions";
 import type { Plugin } from "./plugin";
+import type { LoadedSuite } from "./sources";
 
 import { LoadError, SpecError, ToolError } from "./errors";
 import { connectStdioPlugin } from "./transport-stdio";

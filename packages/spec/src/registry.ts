@@ -13,8 +13,8 @@ import type { Result } from "@pkg/result";
 import { failure, isSuccess, success } from "@pkg/result";
 
 import type { CommandNode, FixtureNode } from "./ast";
-import type { LoadedSuite } from "./loader";
 import type { Plugin, ToolDescriptor } from "./plugin";
+import type { LoadedSuite } from "./sources";
 
 import { ResolutionError } from "./errors";
 

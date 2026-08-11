@@ -8,7 +8,8 @@
 	},
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./workers": "./src/workers.ts"
 	},
 	"scripts": {
 		"build": "bun build ./src/cli.ts --compile --outfile bin/spec",

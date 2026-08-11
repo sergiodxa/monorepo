@@ -1,8 +1,9 @@
 /**
- * Suite loading: discovers every `.spec` file under a root directory, parses
- * them in lexicographic relative-path order, then registers suite-global
- * definitions in a second pass — so name resolution never depends on file
- * order and duplicates surface before any test runs.
+ * Suite loading from a directory: discovers every `.spec` file under a root,
+ * reads each one, and hands the texts to `loadSources` for parsing and
+ * registration. Everything here is the filesystem half — the walk, the reads,
+ * and the lexicographic order they impose; the language half lives in
+ * `sources.ts` and is reachable without a disk.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,30 +14,17 @@ import { join } from "node:path";
 
 import type { Result } from "@pkg/result";
 
-import { failure, isFailure, success } from "@pkg/result";
+import { failure } from "@pkg/result";
 
-import type { CommandNode, FixtureNode, SpecFileNode } from "./ast";
 import type { SpecError } from "./errors";
+import type { LoadedSuite, SpecSource } from "./sources";
 
-import { LoadError, ParseError } from "./errors";
-import { parse } from "./parser";
-
-/** A fully loaded suite: every parsed file plus its global definition maps. */
-export interface LoadedSuite {
-	/** Every parsed `.spec` file, in lexicographic relative-path order. */
-	files: SpecFileNode[];
-	/** Suite-global commands by name, registered across every file. */
-	commands: Map<string, CommandNode>;
-	/** Suite-global fixtures by name, registered across every file. */
-	fixtures: Map<string, FixtureNode>;
-}
+import { LoadError } from "./errors";
+import { loadSources } from "./sources";
 
 /**
- * Load a suite from a directory: find `*.spec` files recursively, parse each
- * one (the first parse failure aborts the load, its message prefixed with the
- * file's path), then register every definition suite-globally. Two
- * definitions sharing a name — regardless of kind — are a
- * `duplicate-definition` load error naming both files.
+ * Load a suite from a directory: find `*.spec` files recursively, read them in
+ * lexicographic relative-path order, then parse and register them.
  *
  * @param root - The suite directory, conventionally `spec/`.
  * @returns The loaded suite, or the load/parse error that prevented it.
@@ -58,51 +46,19 @@ export async function loadSuite(root: string): Promise<Result<LoadedSuite, SpecE
 	}
 	relativePaths.sort();
 
-	let files: SpecFileNode[] = [];
+	let sources: SpecSource[] = [];
 	for (let relativePath of relativePaths) {
 		let path = join(root, relativePath);
-		let text: string;
 		try {
-			text = await readFile(path, "utf8");
+			sources.push({ path, text: await readFile(path, "utf8") });
 		} catch (cause) {
 			return failure(
 				new LoadError("load-error", `Could not read ${path}: ${describeCause(cause)}`),
 			);
 		}
-		let parsed: Result<SpecFileNode, ParseError> = parse({ path, text });
-		if (isFailure(parsed)) {
-			return failure(
-				new ParseError(
-					`${path}: ${parsed.error.message}`,
-					parsed.error.file ?? path,
-					parsed.error.span,
-				),
-			);
-		}
-		files.push(parsed.data);
 	}
 
-	let commands = new Map<string, CommandNode>();
-	let fixtures = new Map<string, FixtureNode>();
-	let origins = new Map<string, { kind: "command" | "fixture"; file: string }>();
-	for (let file of files) {
-		for (let definition of file.definitions) {
-			let previous = origins.get(definition.name);
-			if (previous) {
-				return failure(
-					new LoadError(
-						"duplicate-definition",
-						`Duplicate definition "${definition.name}": ${previous.kind} in ${previous.file} and ${definition.kind} in ${file.path}.`,
-					),
-				);
-			}
-			origins.set(definition.name, { kind: definition.kind, file: file.path });
-			if (definition.kind === "command") commands.set(definition.name, definition);
-			else fixtures.set(definition.name, definition);
-		}
-	}
-
-	return success({ files, commands, fixtures });
+	return loadSources(sources);
 }
 
 /**
