@@ -488,58 +488,77 @@ by construction.
 
 So: shown once, when it is true, with a checkbox for the user who wants it watched.
 
-### 9. A swept domain costs one ping per query
+### 9. A swept domain costs one ping per check
 
-This is the revenue-affecting decision and it is stated rather than left implicit.
+This is the revenue-affecting decision and it is stated rather than left implicit. **It was
+settled by asking whether we pay per query, and we do not.**
 
-`app/lib/pricing.ts` prices usage in pings: 100,000 included in the $5 base, then $1 per
-indivisible 10,000-ping block. `monthlyPings` encodes the model's one assumption in its
-docblock — *"one check per interval per monitor"*. `app/services/ping-meter.ts` bills one
-`BillablePing` per event, and `CheckDnsJob` currently pushes exactly one per monitor per
-check, keyed `ping:${resultId}`.
+`cloudflare-dns.com` is the free public resolver: unauthenticated, not associated with our
+account, no per-query fee. `app/lib/cost-rates.ts` is the evidence — fifteen rate-card line
+items and not one of them prices an outbound subrequest, because Cloudflare does not charge
+for one. The only resource an extra DNS query consumes is `workerCpuMs` at $0.02 per million
+ms, and a DNS lookup is almost entirely I/O wait, which Workers does not bill: it charges CPU
+time, not wall time. Sweeping six record types instead of one costs us very close to nothing.
 
-**Decision: one ping per DoH query.** Not per monitor, not per record.
+**Decision: one ping per check, per domain monitor.** The rule the owner set is that we
+charge the way we are charged — per request if we pay per request, per job run if we do not —
+and we do not. Billing a sweep as N pings would charge a customer for a cost we never incur.
 
-Per monitor is indefensible. A domain with 40 names × 6 types is 240 outbound queries per
-check — 240 subrequests, 240 units of the thing we resolve on behalf of a customer — billed
-as the same single ping as one `A` lookup. Any customer who noticed would move their entire
-DNS monitoring onto domain monitors and pay $5 for it, and they would be right to.
+An earlier draft of this ADR argued for per-query billing on the grounds that 240 queries
+billed as one ping was indefensible. That argument assumed the queries cost us something.
+They do not, so it collapses: what a domain monitor sells is *one monitored domain*, and that
+is the unit to price.
 
-Per record is wrong in the other direction: ten CAA records at one name cost one query. The
-query is the unit of work, the unit of cost, and the unit the customer controls by choosing
-how many names to import.
+The consequences are all simplifying:
 
-Mechanically: `dns_monitor_results` still gets one row per check
-([§10](#10-results-stay-per-check)), and the sweep emits one `BillablePing` per query with
-`externalId: ping:${resultId}:${queryOrdinal}`. The ordinal is derived from the sorted
-`(name, type)` list, so it is stable across a re-run and Polar's deduplication still protects
-against a redelivered queue message. Every ping keeps `monitorId`, so the per-monitor usage
-card stays attributable.
+- `app/services/ping-meter.ts` needs no change. `CheckDnsJob` keeps pushing exactly one
+  `BillablePing` per monitor per check, keyed `ping:${resultId}` — no ordinal, no new
+  dedup surface.
+- **`app/lib/pricing.ts` needs no change either.** `monthlyPings`'s docblock assumption —
+  *"one check per interval per monitor"* — stays true for domain monitors, so no
+  `queriesPerCheck` factor and no DNS special case. A domain monitor prices exactly like
+  every other monitor.
+- No cost-projection screen on the review step. It existed only to soften a per-query
+  charge; with per-check pricing there is nothing to warn about, and a 40-name zone at 15
+  minutes is 2,688 pings a month rather than 645,120 — comfortably inside the base
+  subscription.
+- "One monitor per domain, every record type" stays a clean sentence in the UI and in
+  `resources/content/marketing.ts`, with no asterisk about query multipliers.
 
-**The "Check now" action must start metering.** `app/http/controllers/actions/dns-monitors.ts`
-runs a check inline and — unlike the sweep — ingests no ping at all. Under the old shape that
-was one unbilled `A` lookup per button press, small enough to have gone unnoticed. Under this
-one it is an unbilled 240-query sweep behind a button anybody can hold down, which is a
-denial-of-wallet surface against our own DoH budget before it is a revenue leak. The action
-meters exactly as the sweep does, keyed on the result row it writes.
+**The "Check now" action must still start metering**, and that is now the only billing change
+this ADR carries. `app/http/controllers/actions/dns-monitors.ts` runs a check inline and
+ingests no ping at all. Under the old shape that was one unbilled `A` lookup per press. Under
+this one it is an unbilled full sweep behind a button anybody can hold down — a
+denial-of-wallet surface against our own resolver budget before it is a revenue leak. It
+meters one ping per press, keyed on the result row it writes, exactly as a scheduled check
+does.
 
-**`pricing.ts` must change with this, not after it.** `monthlyPings({ monitors,
-intervalMinutes })` cannot express a DNS domain monitor, so the calculator either grows a
-`queriesPerCheck` factor or excludes DNS explicitly. What it must not do is keep projecting
-one-ping-per-check while we bill N — a pricing calculator that understates by a factor of six
-is worse than no calculator.
+### 9a. The subrequest ceiling is a limit, not a cost — and batching is required on day one
 
-For scale, at 6 types:
+Removing the pricing pressure does not remove the engineering constraint, and this one is a
+hard failure rather than a gradual one.
 
-| Setup        | Interval | Pings/month (28-day) | Cost                     |
-| ------------ | -------- | -------------------- | ------------------------ |
-| apex only    | daily    | 168                  | inside base              |
-| apex only    | 15 min   | 16,128               | inside base              |
-| 40-name zone | daily    | 6,720                | inside base              |
-| 40-name zone | 15 min   | 645,120              | $5 + 55 blocks = **$60** |
+Workers caps outbound subrequests per invocation (1,000 on the paid plan). A pasted zone is
+attacker-shaped input in the sense that matters here: its size is chosen by the customer, not
+by us. Forty names across six types is 240 queries — fine. A large zone at the 256 KiB paste
+cap is not, and the failure mode is the whole sweep throwing partway through, which under
+[§10](#10-results-stay-per-check) writes one `error` result for a domain whose records are
+almost all fine.
 
-The daily default is what keeps the ordinary case inside the base subscription, which is the
-other reason it is the default.
+**A bounded, batched sweep is therefore a day-one requirement, not a follow-up.** It must:
+
+- run queries with a fixed concurrency ceiling and a hard per-check query budget, both
+  named constants with the ceiling documented against the platform limit;
+- chunk work across invocations when a zone exceeds one invocation's budget, rather than
+  discovering the ceiling in production;
+- record a partial sweep as partial — `queries_failed` exists for this — and never let a
+  budget cut-off read as "these records are missing", which would alert a customer that
+  their DNS broke when in fact we stopped looking;
+- cap the number of importable names per monitor at review time, with the limit stated in
+  the UI, so a zone that cannot be swept is refused at import rather than at check time.
+
+This supersedes `MAX_DNS_MONITORS_PER_TEAM = 20` as the governing limit for DNS work: the
+meaningful bound is now names-per-monitor and queries-per-check, not monitors-per-team.
 
 ### 10. Results stay per check
 
@@ -784,7 +803,7 @@ reads only `id`, `name`, `team_id`.
 | `resources/docs/api/resources/dns-monitors.md` | the five endpoints' bodies and samples, plus the new records sub-resource                                                                                                                                                              |
 | `docs/dns-monitors.md`                         | the internal spec — configurable fields and the "How It Works" steps are both now wrong                                                                                                                                                |
 | `resources/content/marketing.ts`               | the `features.dns` record; every claim checked against §14, including the propagation line                                                                                                                                             |
-| `app/lib/pricing.ts`                           | `queriesPerCheck`, or an explicit DNS exclusion, plus the copy that interpolates it                                                                                                                                                    |
+| `app/lib/pricing.ts`                           | unchanged — per-check billing keeps `monthlyPings`'s one-check-per-interval assumption true for domain monitors                                                                                                                        |
 
 ---
 
@@ -817,7 +836,7 @@ them first is what makes the rest parallelisable.
 
 **Phase 2 — depends on Phase 1**
 
-- [ ] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency, one ping per query with the
+- [ ] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency and a hard query budget (§9a), one ping per check with the
       ordinal `externalId`, no diff applied for a failed query.
 - [ ] 2.2 `app/services/alerts.ts` snapshot + findings, `app/emails/alert.tsx`,
       `app/jobs/notify.ts`, `app/lib/notify-queue.ts` — one agent, since a findings list has to
@@ -855,16 +874,19 @@ them first is what makes the rest parallelisable.
 - **Additions are detected.** The documented hole in containment matching, where a hostile
   record added alongside the legitimate ones passed, is closed by construction.
 - **Subdomains are reachable** for the first time, via the zone file.
-- **The unit of billing matches the unit of work**, which is what makes domain monitors safe
-  to offer at all.
+- **The unit of billing matches the unit of work**: one monitored domain, one ping per check.
+  It costs us nothing extra to sweep every record type, so it costs the customer nothing
+  extra, and the pricing calculator needs no special case for DNS.
 
 ### Negative
 
 - **A public API breaks with no deprecation window**, on the sole justification that nobody
   uses it.
-- **A domain monitor can be expensive**, and the user's exposure is set by how many names they
-  paste. The review screen's cost projection is the only thing standing between a customer and
-  a surprising invoice, which makes it a required feature rather than a nicety.
+- **A large pasted zone can exceed one invocation's subrequest budget**, and the exposure is
+  set by how many names the customer pastes. Per-check billing means this is a reliability
+  problem rather than an invoice problem, but it fails harder: the batching, the query budget
+  and the names-per-monitor cap in [§9a](#9a-the-subrequest-ceiling-is-a-limit-not-a-cost--and-batching-is-required-on-day-one)
+  are required on day one, not deferrable.
 - **CAA is absent from the version that markets domain-hijack detection**
   ([§12](#12-caa-is-out-of-scope-for-v1)).
 - **A value edit reads as a removal plus an addition** for any RRset with more than one record.
