@@ -1,29 +1,23 @@
 /**
- * Unit tests for `mbe()`'s `margin-block-end` declaration, including
- * `"auto"` for block-axis centering.
+ * Unit tests for `mbe()`'s `margin-block-end` declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { mbe } from "./mbe";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("mbe", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(mbe(4))).toEqual({
-			marginBlockEnd: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(mbe(4))).toEqual([
+			"margin-block-end: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("passes 'auto' through unchanged", () => {
-		expect(styles(mbe("auto"))).toEqual({ marginBlockEnd: "auto" });
+	test("passes 'auto' through unchanged", async () => {
+		expect(await declarations(mbe("auto"))).toEqual(["margin-block-end: auto"]);
 	});
 });

@@ -6,21 +6,18 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { interpolateSize } from "./interpolate-size";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("interpolateSize", () => {
-	test("defaults to allow-keywords", () => {
-		expect(styles(interpolateSize())).toEqual({ interpolateSize: "allow-keywords" });
+	test("defaults to allow-keywords", async () => {
+		expect(await declarations(interpolateSize())).toEqual(["interpolate-size: allow-keywords"]);
 	});
 
-	test("accepts an explicit value", () => {
-		expect(styles(interpolateSize("numeric-only"))).toEqual({ interpolateSize: "numeric-only" });
+	test("accepts an explicit value", async () => {
+		expect(await declarations(interpolateSize("numeric-only"))).toEqual([
+			"interpolate-size: numeric-only",
+		]);
 	});
 });

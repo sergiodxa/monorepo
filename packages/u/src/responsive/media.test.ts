@@ -6,21 +6,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { border } from "../color/border";
+import { declarations, serialize } from "../internal/serialize";
 
 import { media } from "./media";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("media", () => {
-	test("nests the wrapped utility's styles under '@media <query>'", () => {
-		expect(styles(media("(prefers-contrast: more)", border("brand.strong")))).toEqual({
-			"@media (prefers-contrast: more)": { borderColor: "var(--ui-brand-border-strong)" },
-		});
+	test("nests the wrapped utility's styles under '@media <query>'", async () => {
+		let mixin = media("(prefers-contrast: more)", border("brand.strong"));
+
+		expect(await serialize(mixin)).toContain("@media (prefers-contrast: more) {");
+		expect(await declarations(mixin)).toEqual(["border-color: var(--ui-brand-border-strong)"]);
+	});
+
+	test("the wrapped declarations land inside the at-rule block, not beside it", async () => {
+		expect(await serialize(media("(prefers-contrast: more)", border("brand.strong")))).toMatch(
+			/@media \(prefers-contrast: more\) \{[\s\S]*border-color: var\(--ui-brand-border-strong\)[\s\S]*\}/,
+		);
 	});
 });

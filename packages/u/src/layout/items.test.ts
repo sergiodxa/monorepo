@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { items } from "./items";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("items", () => {
-	test("defaults to stretch", () => {
-		expect(styles(items())).toEqual({ alignItems: "stretch" });
+	test("defaults to stretch", async () => {
+		expect(await declarations(items())).toEqual(["align-items: stretch"]);
 	});
 
-	test("accepts center", () => {
-		expect(styles(items("center"))).toEqual({ alignItems: "center" });
+	test("accepts center", async () => {
+		expect(await declarations(items("center"))).toEqual(["align-items: center"]);
 	});
 
-	test("accepts baseline", () => {
-		expect(styles(items("baseline"))).toEqual({ alignItems: "baseline" });
+	test("accepts baseline", async () => {
+		expect(await declarations(items("baseline"))).toEqual(["align-items: baseline"]);
 	});
 });

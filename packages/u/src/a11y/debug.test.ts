@@ -11,14 +11,9 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations, serialize } from "../internal/serialize";
 
 import { debug } from "./debug";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
 
 let originalDev: string | undefined;
 
@@ -33,12 +28,12 @@ afterEach(() => {
 
 describe("debug", () => {
 	describe("outside development", () => {
-		test("resolves to an empty style tree regardless of mode", () => {
+		test("emits no declarations at all regardless of mode", async () => {
 			delete process.env.DEV;
 
-			expect(styles(debug())).toEqual({});
-			expect(styles(debug(true))).toEqual({});
-			expect(styles(debug("nested"))).toEqual({});
+			expect(await declarations(debug())).toEqual([]);
+			expect(await declarations(debug(true))).toEqual([]);
+			expect(await declarations(debug("nested"))).toEqual([]);
 		});
 	});
 
@@ -47,26 +42,29 @@ describe("debug", () => {
 			process.env.DEV = "1";
 		});
 
-		test("the bare/true form outlines only the host", () => {
-			expect(styles(debug())).toEqual({
-				outline: "2px solid red",
-				outlineOffset: "-2px",
-			});
-			expect(styles(debug(true))).toEqual({
-				outline: "2px solid red",
-				outlineOffset: "-2px",
-			});
+		test("the bare/true form outlines only the host", async () => {
+			expect(await declarations(debug())).toEqual([
+				"outline: 2px solid red",
+				"outline-offset: -2px",
+			]);
+			expect(await declarations(debug(true))).toEqual([
+				"outline: 2px solid red",
+				"outline-offset: -2px",
+			]);
+			expect(await serialize(debug())).not.toContain("& *");
 		});
 
-		test('the "nested" form outlines the host plus every descendant through "& *"', () => {
-			expect(styles(debug("nested"))).toEqual({
-				outline: "2px solid red",
-				outlineOffset: "-2px",
-				"& *": {
-					outline: "2px solid red",
-					outlineOffset: "-2px",
-				},
-			});
+		test('the "nested" form outlines the host plus every descendant through "& *"', async () => {
+			let css = await serialize(debug("nested"));
+
+			expect(css).toContain("& *");
+			// Twice over: once on the host block, once inside the `& *` block.
+			expect(await declarations(debug("nested"))).toEqual([
+				"outline: 2px solid red",
+				"outline-offset: -2px",
+				"outline: 2px solid red",
+				"outline-offset: -2px",
+			]);
 		});
 	});
 });

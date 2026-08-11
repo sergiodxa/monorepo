@@ -4,40 +4,34 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations, serialize } from "../internal/serialize";
 
 import { ring } from "./ring";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("ring", () => {
-	test("no-arg resolves the system default, nested under &:focus-visible", () => {
-		expect(styles(ring())).toEqual({
-			"&:focus-visible": {
-				outlineWidth: "2px",
-				outlineStyle: "solid",
-				outlineOffset: "2px",
-				outlineColor: "var(--ui-ring, Highlight)",
-			},
-		});
+	test("no-arg resolves the system default, nested under &:focus-visible", async () => {
+		expect(await serialize(ring())).toContain("&:focus-visible");
+		expect(await declarations(ring())).toEqual([
+			"outline-width: 2px",
+			"outline-style: solid",
+			"outline-offset: 2px",
+			"outline-color: var(--ui-ring, Highlight)",
+		]);
 	});
 
-	test("never nests under plain :focus", () => {
-		expect(styles(ring())).not.toHaveProperty(":focus");
-		expect(styles(ring())).not.toHaveProperty("&:focus");
+	test("never nests under plain :focus", async () => {
+		// `:focus` fires on mouse clicks too, so the ring would follow the pointer;
+		// only the `-visible` variant is keyboard-scoped.
+		expect(await serialize(ring())).not.toMatch(/:focus\s*\{/);
 	});
 
-	test("an explicit tone, still nested under &:focus-visible", () => {
-		expect(styles(ring("danger"))).toEqual({
-			"&:focus-visible": {
-				outlineWidth: "2px",
-				outlineStyle: "solid",
-				outlineOffset: "2px",
-				outlineColor: "var(--ui-danger-ring)",
-			},
-		});
+	test("an explicit tone, still nested under &:focus-visible", async () => {
+		expect(await serialize(ring("danger"))).toContain("&:focus-visible");
+		expect(await declarations(ring("danger"))).toEqual([
+			"outline-width: 2px",
+			"outline-style: solid",
+			"outline-offset: 2px",
+			"outline-color: var(--ui-danger-ring)",
+		]);
 	});
 });

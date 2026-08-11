@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { truncate } from "./truncate";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("truncate", () => {
-	test("applies the fixed single-line ellipsis overflow declaration", () => {
-		expect(styles(truncate())).toEqual({
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
-		});
+	test("applies the fixed single-line ellipsis overflow declaration", async () => {
+		expect(await declarations(truncate())).toEqual([
+			"overflow: hidden",
+			"white-space: nowrap",
+			"text-overflow: ellipsis",
+		]);
 	});
 });

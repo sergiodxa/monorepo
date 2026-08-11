@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { declarations, serialize } from "../internal/serialize";
 
 import { hover } from "./hover";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("hover", () => {
-	test("nests the wrapped utility's styles under '&:hover'", () => {
-		expect(styles(hover(bg("brand.tint")))).toEqual({
-			"&:hover": { backgroundColor: "var(--ui-brand-bg-tint)" },
-		});
+	test("emits an '&:hover' block around the wrapped utility's declarations", async () => {
+		expect(await serialize(hover(bg("brand.tint")))).toContain("&:hover {");
+		expect(await declarations(hover(bg("brand.tint")))).toEqual([
+			"background-color: var(--ui-brand-bg-tint)",
+		]);
 	});
 });

@@ -6,14 +6,8 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations } from "./serialize";
 import { angle, COMPOSITE_TRANSFORM, scaleFactor, transformFunction } from "./transform";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
 
 describe("angle", () => {
 	test("treats a bare number as degrees", () => {
@@ -36,19 +30,22 @@ describe("scaleFactor", () => {
 });
 
 describe("transformFunction", () => {
-	test("sets the given custom properties plus the shared composite transform value", () => {
-		expect(styles(transformFunction({ rotate: "45deg" }))).toEqual({
-			"--ui-rotate": "45deg",
-			transform: COMPOSITE_TRANSFORM,
-		});
+	test("sets the given custom properties plus the shared composite transform value", async () => {
+		expect(await declarations(transformFunction({ rotate: "45deg" }))).toEqual([
+			"--ui-rotate: 45deg",
+			`transform: ${COMPOSITE_TRANSFORM}`,
+		]);
 	});
 
-	test("sets multiple custom properties in one call", () => {
-		expect(styles(transformFunction({ scaleX: "1.5", scaleY: "1.5" }))).toEqual({
-			"--ui-scale-x": "1.5",
-			"--ui-scale-y": "1.5",
-			transform: COMPOSITE_TRANSFORM,
-		});
+	test("sets multiple custom properties in one call", async () => {
+		// `angle()` and `scaleFactor()` stringify before this point on purpose:
+		// a bare number here would serialize with a `px` suffix, which is wrong
+		// for both an angle and a unitless scale factor.
+		expect(await declarations(transformFunction({ scaleX: "1.5", scaleY: "1.5" }))).toEqual([
+			"--ui-scale-x: 1.5",
+			"--ui-scale-y: 1.5",
+			`transform: ${COMPOSITE_TRANSFORM}`,
+		]);
 	});
 
 	test("every transform function's variable appears in the composite with an identity fallback", () => {

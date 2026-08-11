@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { flexRow } from "./flex-row";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("flexRow", () => {
-	test("sets flex-direction: row", () => {
-		expect(styles(flexRow())).toEqual({ flexDirection: "row" });
+	test("sets flex-direction: row", async () => {
+		expect(await declarations(flexRow())).toEqual(["flex-direction: row"]);
 	});
 });

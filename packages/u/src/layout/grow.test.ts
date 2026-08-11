@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { grow } from "./grow";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("grow", () => {
-	test("no-arg defaults to 1", () => {
-		expect(styles(grow())).toEqual({ flexGrow: "1" });
+	test("no-arg defaults to 1", async () => {
+		expect(await declarations(grow())).toEqual(["flex-grow: 1"]);
 	});
 
-	test("an explicit number", () => {
-		expect(styles(grow(0))).toEqual({ flexGrow: "0" });
+	test("an explicit number", async () => {
+		expect(await declarations(grow(0))).toEqual(["flex-grow: 0"]);
 	});
 });

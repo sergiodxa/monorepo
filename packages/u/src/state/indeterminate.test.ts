@@ -6,23 +6,18 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { declarations, serialize } from "../internal/serialize";
 
 import { indeterminate } from "./indeterminate";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("indeterminate", () => {
-	test("nests the wrapped utility's styles under '&:indeterminate, &[aria-checked=\"mixed\"]'", () => {
-		expect(styles(indeterminate(bg("brand.solid")))).toEqual({
-			'&:indeterminate, &[aria-checked="mixed"]': {
-				backgroundColor: "var(--ui-brand-bg-solid)",
-			},
-		});
+	test("emits both the native and the ARIA selector in one block", async () => {
+		expect(await serialize(indeterminate(bg("brand.solid")))).toContain(
+			'&:indeterminate, &[aria-checked="mixed"] {',
+		);
+		expect(await declarations(indeterminate(bg("brand.solid")))).toEqual([
+			"background-color: var(--ui-brand-bg-solid)",
+		]);
 	});
 });

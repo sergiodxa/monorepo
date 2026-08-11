@@ -4,33 +4,30 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { mixBlendMode } from "./mix-blend-mode";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("mixBlendMode", () => {
-	test("no-arg defaults to multiply", () => {
-		expect(styles(mixBlendMode())).toEqual({ mixBlendMode: "multiply" });
+	test("no-arg defaults to multiply", async () => {
+		expect(await declarations(mixBlendMode())).toEqual(["mix-blend-mode: multiply"]);
 	});
 
-	test("an explicit separable blend mode", () => {
-		expect(styles(mixBlendMode("screen"))).toEqual({ mixBlendMode: "screen" });
+	test("an explicit separable blend mode", async () => {
+		expect(await declarations(mixBlendMode("screen"))).toEqual(["mix-blend-mode: screen"]);
 	});
 
-	test("a non-separable blend mode", () => {
-		expect(styles(mixBlendMode("luminosity"))).toEqual({ mixBlendMode: "luminosity" });
+	test("a non-separable blend mode", async () => {
+		expect(await declarations(mixBlendMode("luminosity"))).toEqual(["mix-blend-mode: luminosity"]);
 	});
 
-	test("a plus-* compositing mode", () => {
-		expect(styles(mixBlendMode("plus-lighter"))).toEqual({ mixBlendMode: "plus-lighter" });
+	test("a plus-* compositing mode", async () => {
+		expect(await declarations(mixBlendMode("plus-lighter"))).toEqual([
+			"mix-blend-mode: plus-lighter",
+		]);
 	});
 
-	test("normal, the value that opts back out of blending", () => {
-		expect(styles(mixBlendMode("normal"))).toEqual({ mixBlendMode: "normal" });
+	test("normal, the value that opts back out of blending", async () => {
+		expect(await declarations(mixBlendMode("normal"))).toEqual(["mix-blend-mode: normal"]);
 	});
 });

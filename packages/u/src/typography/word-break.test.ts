@@ -4,29 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { wordBreak } from "./word-break";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("wordBreak", () => {
-	test("no-arg defaults to normal", () => {
-		expect(styles(wordBreak())).toEqual({ wordBreak: "normal" });
+	test("no-arg defaults to normal", async () => {
+		expect(await declarations(wordBreak())).toEqual(["word-break: normal"]);
 	});
 
-	test("break-all", () => {
-		expect(styles(wordBreak("break-all"))).toEqual({ wordBreak: "break-all" });
+	test("break-all", async () => {
+		expect(await declarations(wordBreak("break-all"))).toEqual(["word-break: break-all"]);
 	});
 
-	test("keep-all", () => {
-		expect(styles(wordBreak("keep-all"))).toEqual({ wordBreak: "keep-all" });
+	test("keep-all", async () => {
+		expect(await declarations(wordBreak("keep-all"))).toEqual(["word-break: keep-all"]);
 	});
 
-	test("break-word", () => {
-		expect(styles(wordBreak("break-word"))).toEqual({ wordBreak: "break-word" });
+	test("break-word", async () => {
+		expect(await declarations(wordBreak("break-word"))).toEqual(["word-break: break-word"]);
 	});
 });

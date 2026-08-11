@@ -6,31 +6,32 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations, serialize } from "../internal/serialize";
 
 import { corner } from "./corner";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("corner", () => {
-	test("nests 'squircle' under an @supports block for that shape", () => {
-		expect(styles(corner("squircle"))).toEqual({
-			"@supports (corner-shape: squircle)": { cornerShape: "squircle" },
-		});
+	test("nests 'squircle' under an @supports block for that shape", async () => {
+		expect(await serialize(corner("squircle"))).toContain("@supports (corner-shape: squircle)");
+		expect(await declarations(corner("squircle"))).toEqual(["corner-shape: squircle"]);
 	});
 
-	test("nests 'bevel' under an @supports block for that shape", () => {
-		expect(styles(corner("bevel"))).toEqual({
-			"@supports (corner-shape: bevel)": { cornerShape: "bevel" },
-		});
+	test("nests 'bevel' under an @supports block for that shape", async () => {
+		expect(await serialize(corner("bevel"))).toContain("@supports (corner-shape: bevel)");
+		expect(await declarations(corner("bevel"))).toEqual(["corner-shape: bevel"]);
 	});
 
-	test("nests 'notch' under an @supports block for that shape", () => {
-		expect(styles(corner("notch"))).toEqual({
-			"@supports (corner-shape: notch)": { cornerShape: "notch" },
-		});
+	test("nests 'notch' under an @supports block for that shape", async () => {
+		expect(await serialize(corner("notch"))).toContain("@supports (corner-shape: notch)");
+		expect(await declarations(corner("notch"))).toEqual(["corner-shape: notch"]);
+	});
+
+	test("the declaration lives inside the @supports block, never beside it", async () => {
+		// The whole point of the gate is that an unsupported browser sees no
+		// `corner-shape` at all; a declaration emitted at the top level of the
+		// rule would apply everywhere and defeat the progressive enhancement.
+		let css = await serialize(corner("squircle"));
+
+		expect(css.indexOf("@supports")).toBeLessThan(css.indexOf("corner-shape:"));
 	});
 });

@@ -6,29 +6,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { insTop } from "./ins-top";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("insTop", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(insTop(4))).toEqual({ top: "calc(var(--ui-spacing, 0.25rem) * 4)" });
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(insTop(4))).toEqual(["top: calc(var(--ui-spacing, 0.25rem) * 4)"]);
 	});
 
-	test("accepts 'auto'", () => {
-		expect(styles(insTop("auto"))).toEqual({ top: "auto" });
+	test("accepts 'auto'", async () => {
+		expect(await declarations(insTop("auto"))).toEqual(["top: auto"]);
 	});
 
-	test("accepts 'full'", () => {
-		expect(styles(insTop("full"))).toEqual({ top: "100%" });
+	test("accepts 'full'", async () => {
+		expect(await declarations(insTop("full"))).toEqual(["top: 100%"]);
 	});
 
-	test("passes a raw CSS length string through unchanged", () => {
-		expect(styles(insTop("13px"))).toEqual({ top: "13px" });
+	test("passes a raw CSS length string through unchanged", async () => {
+		expect(await declarations(insTop("13px"))).toEqual(["top: 13px"]);
 	});
 });

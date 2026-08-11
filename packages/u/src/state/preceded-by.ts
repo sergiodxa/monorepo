@@ -7,7 +7,7 @@ import type { UtilityInput, UtilityMixin } from "../internal/descriptor";
 import { when } from "./when";
 
 /**
- * Sugar over `when("{selector} ~ &", input)`. The mirror of `hasSibling()`:
+ * Sugar over `when(":is({selector}) ~ &", input)`. The mirror of `hasSibling()`:
  * both style an element from a sibling's state, and which one you need is
  * decided purely by source order. `hasSibling()` looks *forward* — the styled
  * element comes first — while this looks *backward*, so the element matching
@@ -26,16 +26,23 @@ import { when } from "./when";
  * register at runtime.
  *
  * `~` matches any preceding sibling, not only the immediately preceding one.
- * For the adjacent-only form, reach for `when("{selector} + &", input)`.
+ * For the adjacent-only form, reach for `when(":is({selector}) + &", input)`.
+ *
+ * The `:is()` wrapper is load-bearing, not cosmetic: the style serializer only
+ * recognizes a key as a nested selector when it starts with `&`, `@`, `:`, `[`
+ * or `.`, so a bare `input:checked ~ &` would be emitted as a declaration
+ * instead of a rule and the styles would never reach the browser. `:is()` adds
+ * no specificity of its own beyond its argument, so the selector matches
+ * exactly what the caller asked for.
  *
  * @example u.precededBy("input:checked", u.border("brand.solid"))
- * @example css({ "input:checked ~ &": { borderColor: "var(--ui-brand-bg-solid)" } })
+ * @example css({ ":is(input:checked) ~ &": { borderColor: "var(--ui-brand-bg-solid)" } })
  * @example u.precededBy("input:focus-visible", u.outline({ color: "brand", offset: 2 }))
- * @example css({ "input:focus-visible ~ &": { outlineColor: "...", outlineOffset: "2px" } })
+ * @example css({ ":is(input:focus-visible) ~ &": { outlineColor: "...", outlineOffset: "2px" } })
  */
 export function precededBy<Node extends Element = Element>(
 	selector: string,
 	input: UtilityInput<Node>,
 ): UtilityMixin<Node> {
-	return when<Node>(`${selector} ~ &`, input);
+	return when<Node>(`:is(${selector}) ~ &`, input);
 }

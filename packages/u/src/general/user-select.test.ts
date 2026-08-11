@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { userSelect } from "./user-select";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("userSelect", () => {
-	test("no-arg defaults to 'none'", () => {
-		expect(styles(userSelect())).toEqual({ userSelect: "none" });
+	test("no-arg defaults to 'none'", async () => {
+		expect(await declarations(userSelect())).toEqual(["user-select: none"]);
 	});
 
-	test("an explicit value", () => {
-		expect(styles(userSelect("text"))).toEqual({ userSelect: "text" });
+	test("an explicit value", async () => {
+		expect(await declarations(userSelect("text"))).toEqual(["user-select: text"]);
 	});
 });

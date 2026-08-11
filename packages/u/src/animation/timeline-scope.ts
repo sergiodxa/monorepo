@@ -31,11 +31,17 @@ import { utility } from "../internal/descriptor";
  * `u.vars()` and `u.var()` already use for custom properties, and matching the
  * declaring utilities on the other side.
  *
+ * Called with no names it emits `none`, the property's initial value — an
+ * empty value would serialize to the invalid `timeline-scope: ;`, which
+ * browsers drop while still counting as a declaration in the emitted CSS.
+ *
  * @example u.timelineScope("page-scroll")
  * @example css({ timelineScope: "--page-scroll" })
  * @example u.timelineScope("page-scroll", "hero-reveal")
  * @example css({ timelineScope: "--page-scroll, --hero-reveal" })
  */
 export function timelineScope<Node extends Element = Element>(...names: string[]) {
-	return utility<Node>(() => ({ timelineScope: names.map((name) => `--${name}`).join(", ") }));
+	return utility<Node>(() => ({
+		timelineScope: names.length === 0 ? "none" : names.map((name) => `--${name}`).join(", "),
+	}));
 }

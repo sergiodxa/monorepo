@@ -6,39 +6,36 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { backdropFilterFunction, COMPOSITE_BACKDROP_FILTER } from "./backdrop-filter";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
+import { declarations } from "./serialize";
 
 describe("backdropFilterFunction", () => {
-	test("sets the given custom property plus the shared composite backdropFilter value, on both the standard and Webkit-prefixed properties", () => {
-		expect(styles(backdropFilterFunction({ blur: "12px" }))).toEqual({
-			"--ui-backdrop-blur": "12px",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("sets the given custom property plus the shared composite backdropFilter value, on both the standard and Webkit-prefixed properties", async () => {
+		// The prefixed key only reaches Safari as `-webkit-backdrop-filter` if
+		// it keeps its leading dash; a lowercase `webkit…` spelling would
+		// kebab-case to a property no browser knows.
+		expect(await declarations(backdropFilterFunction({ blur: "12px" }))).toEqual([
+			"--ui-backdrop-blur: 12px",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
-	test("sets multiple custom properties in one call", () => {
-		expect(styles(backdropFilterFunction({ blur: "12px", saturate: "1.4" }))).toEqual({
-			"--ui-backdrop-blur": "12px",
-			"--ui-backdrop-saturate": "1.4",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("sets multiple custom properties in one call", async () => {
+		expect(await declarations(backdropFilterFunction({ blur: "12px", saturate: "1.4" }))).toEqual([
+			"--ui-backdrop-blur: 12px",
+			"--ui-backdrop-saturate: 1.4",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
-	test("the hue-rotate function reads a dash-cased variable from its camel-cased key", () => {
-		expect(styles(backdropFilterFunction({ hueRotate: "90deg" }))).toEqual({
-			"--ui-backdrop-hue-rotate": "90deg",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("the hue-rotate function reads a dash-cased variable from its camel-cased key", async () => {
+		expect(await declarations(backdropFilterFunction({ hueRotate: "90deg" }))).toEqual([
+			"--ui-backdrop-hue-rotate: 90deg",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
 	test("every backdrop-filter function's variable appears in the composite with an identity fallback", () => {
@@ -73,10 +70,12 @@ describe("backdropFilterFunction", () => {
 		);
 	});
 
-	test("the composite's function order is fixed, so composition is order-independent at the call site", () => {
-		let blurFirst = styles(backdropFilterFunction({ blur: "4px", sepia: "1" })).backdropFilter;
-		let sepiaFirst = styles(backdropFilterFunction({ sepia: "1", blur: "4px" })).backdropFilter;
+	test("the composite's function order is fixed, so composition is order-independent at the call site", async () => {
+		let blurFirst = await declarations(backdropFilterFunction({ blur: "4px", sepia: "1" }));
+		let sepiaFirst = await declarations(backdropFilterFunction({ sepia: "1", blur: "4px" }));
 
-		expect(blurFirst).toBe(sepiaFirst);
+		expect(blurFirst.filter((line) => line.startsWith("backdrop-filter:"))).toEqual(
+			sepiaFirst.filter((line) => line.startsWith("backdrop-filter:")),
+		);
 	});
 });

@@ -6,21 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { border } from "../color/border";
+import { declarations, serialize } from "../internal/serialize";
 
 import { invalid } from "./invalid";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("invalid", () => {
-	test("nests the wrapped utility's styles under '&:user-invalid, &[aria-invalid=\"true\"]'", () => {
-		expect(styles(invalid(border("danger")))).toEqual({
-			'&:user-invalid, &[aria-invalid="true"]': { borderColor: "var(--ui-danger-border)" },
-		});
+	test("emits ':user-invalid' — not ':invalid' — alongside the ARIA selector", async () => {
+		// `:invalid` fires before the user has typed anything; `:user-invalid`
+		// waits for interaction, so the distinction is user-visible.
+		expect(await serialize(invalid(border("danger")))).toContain(
+			'&:user-invalid, &[aria-invalid="true"] {',
+		);
+		expect(await declarations(invalid(border("danger")))).toEqual([
+			"border-color: var(--ui-danger-border)",
+		]);
 	});
 });

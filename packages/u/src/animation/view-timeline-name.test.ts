@@ -4,25 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { viewTimelineName } from "./view-timeline-name";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("viewTimelineName", () => {
-	test("prefixes the name with --", () => {
-		expect(styles(viewTimelineName("reveal"))).toEqual({ viewTimelineName: "--reveal" });
+	test("prefixes the name with --", async () => {
+		expect(await declarations(viewTimelineName("reveal"))).toEqual([
+			"view-timeline-name: --reveal",
+		]);
 	});
 
-	test("prefixes a multi-word name the same way", () => {
-		expect(styles(viewTimelineName("hero-image"))).toEqual({ viewTimelineName: "--hero-image" });
+	test("prefixes a multi-word name the same way", async () => {
+		expect(await declarations(viewTimelineName("hero-image"))).toEqual([
+			"view-timeline-name: --hero-image",
+		]);
 	});
 
-	test("emits only viewTimelineName", () => {
-		expect(Object.keys(styles(viewTimelineName("reveal")))).toEqual(["viewTimelineName"]);
+	test("emits only viewTimelineName", async () => {
+		expect(await declarations(viewTimelineName("reveal"))).toHaveLength(1);
 	});
 });

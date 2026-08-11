@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { center } from "./center";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("center", () => {
-	test("sets display: flex with both axes centered", () => {
-		expect(styles(center())).toEqual({
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-		});
+	test("sets display: flex with both axes centered", async () => {
+		expect(await declarations(center())).toEqual([
+			"display: flex",
+			"align-items: center",
+			"justify-content: center",
+		]);
 	});
 });

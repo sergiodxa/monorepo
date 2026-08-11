@@ -6,20 +6,15 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { thinScrollbar } from "./thin-scrollbar";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("thinScrollbar", () => {
-	test("requests a thin, layout-stable scrollbar", () => {
-		expect(styles(thinScrollbar())).toEqual({
-			scrollbarWidth: "thin",
-			scrollbarGutter: "stable",
-		});
+	test("requests a thin, layout-stable scrollbar", async () => {
+		expect(await declarations(thinScrollbar())).toEqual([
+			"scrollbar-width: thin",
+			"scrollbar-gutter: stable",
+		]);
 	});
 });

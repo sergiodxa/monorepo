@@ -10,8 +10,6 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
 import { border } from "../color/border";
 import { at } from "../responsive/at";
@@ -19,11 +17,7 @@ import { p } from "../size/p";
 import { hover } from "../state/hover";
 
 import { merge } from "./descriptor";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
+import { declarations, serialize } from "./serialize";
 
 describe("merge", () => {
 	test("a later tree's declaration overwrites an earlier tree's same key", () => {
@@ -41,39 +35,41 @@ describe("merge", () => {
 });
 
 describe("nested wrappers", () => {
-	test("u.at('md', [u.p(4), u.hover(u.p(6))]) nests a container query around a plain declaration and a merged &:hover block", () => {
+	test("u.at('md', [u.p(4), u.hover(u.p(6))]) nests a container query around a plain declaration and a merged &:hover block", async () => {
 		let mixin = at("md", [p(4), hover(p(6))]);
+		let css = await serialize(mixin);
 
-		expect(styles(mixin)).toEqual({
-			"@container (min-width: 36rem)": {
-				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
-				"&:hover": { padding: "calc(var(--ui-spacing, 0.25rem) * 6)" },
-			},
-		});
+		expect(css).toContain("@container (min-width: 36rem)");
+		expect(css).toContain("&:hover");
+		expect(await declarations(mixin)).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+			"padding: calc(var(--ui-spacing, 0.25rem) * 6)",
+		]);
 	});
 
-	test("u.hover([u.bg(...), u.border(...)]) merges both utilities under one &:hover block", () => {
+	test("u.hover([u.bg(...), u.border(...)]) merges both utilities under one &:hover block", async () => {
 		let mixin = hover([bg("brand.tint"), border("brand")]);
+		let css = await serialize(mixin);
 
-		expect(styles(mixin)).toEqual({
-			"&:hover": {
-				backgroundColor: "var(--ui-brand-bg-tint)",
-				borderColor: "var(--ui-brand-border)",
-			},
-		});
+		// One block, not two: a second `&:hover` would mean the wrapper replaced
+		// rather than merged.
+		expect(css.match(/&:hover/g)).toHaveLength(1);
+		expect(await declarations(mixin)).toEqual([
+			"background-color: var(--ui-brand-bg-tint)",
+			"border-color: var(--ui-brand-border)",
+		]);
 	});
 
-	test("falsy entries in a wrapper's input array are dropped", () => {
+	test("falsy entries in a wrapper's input array are dropped", async () => {
 		let mixin = hover([p(4), false, null, undefined]);
 
-		expect(styles(mixin)).toEqual({
-			"&:hover": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+		expect(await serialize(mixin)).toContain("&:hover");
+		expect(await declarations(mixin)).toEqual(["padding: calc(var(--ui-spacing, 0.25rem) * 4)"]);
 	});
 });
 
 describe("dedupe", () => {
-	test("identical atomic utility calls produce structurally equal style trees for css() to dedupe", () => {
-		expect(styles(p(4))).toEqual(styles(p(4)));
+	test("identical atomic utility calls produce the identical generated class", async () => {
+		expect(await serialize(p(4))).toEqual(await serialize(p(4)));
 	});
 });

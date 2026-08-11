@@ -4,25 +4,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { touchAction } from "./touch-action";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("touchAction", () => {
-	test("no-arg defaults to 'none'", () => {
-		expect(styles(touchAction())).toEqual({ touchAction: "none" });
+	test("no-arg defaults to 'none'", async () => {
+		expect(await declarations(touchAction())).toEqual(["touch-action: none"]);
 	});
 
-	test("an explicit value", () => {
-		expect(styles(touchAction("manipulation"))).toEqual({ touchAction: "manipulation" });
+	test("an explicit value", async () => {
+		expect(await declarations(touchAction("manipulation"))).toEqual(["touch-action: manipulation"]);
 	});
 
-	test("an arbitrary combination of pan values", () => {
-		expect(styles(touchAction("pan-x pan-y"))).toEqual({ touchAction: "pan-x pan-y" });
+	test("an arbitrary combination of pan values", async () => {
+		expect(await declarations(touchAction("pan-x pan-y"))).toEqual(["touch-action: pan-x pan-y"]);
 	});
 });

@@ -4,27 +4,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { transitionDelay } from "./transition-delay";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("transitionDelay", () => {
-	test("no-arg defaults to 0s", () => {
-		expect(styles(transitionDelay())).toEqual({ transitionDelay: "0s" });
+	test("no-arg defaults to 0s", async () => {
+		expect(await declarations(transitionDelay())).toEqual(["transition-delay: 0s"]);
 	});
 
-	test("sets only transition-delay", () => {
-		expect(styles(transitionDelay("120ms"))).toEqual({ transitionDelay: "120ms" });
+	test("sets only transition-delay", async () => {
+		expect(await declarations(transitionDelay("120ms"))).toEqual(["transition-delay: 120ms"]);
 	});
 
-	test("passes through an arbitrary delay string unchanged", () => {
-		expect(styles(transitionDelay("calc(var(--index) * 40ms)"))).toEqual({
-			transitionDelay: "calc(var(--index) * 40ms)",
-		});
+	test("passes through an arbitrary delay string unchanged", async () => {
+		expect(await declarations(transitionDelay("calc(var(--index) * 40ms)"))).toEqual([
+			"transition-delay: calc(var(--index) * 40ms)",
+		]);
 	});
 });

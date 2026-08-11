@@ -4,33 +4,28 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { font } from "./font";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("font", () => {
-	test("a named family resolves fontFamily", () => {
-		expect(styles(font("serif"))).toEqual({
-			fontFamily: "var(--ui-font-serif, ui-serif, Georgia, serif)",
-		});
+	test("a named family resolves fontFamily", async () => {
+		expect(await declarations(font("serif"))).toEqual([
+			"font-family: var(--ui-font-serif, ui-serif, Georgia, serif)",
+		]);
 	});
 
-	test("another named family resolves its own fallback stack", () => {
-		expect(styles(font("mono"))).toEqual({
-			fontFamily: "var(--ui-font-mono, ui-monospace, SFMono-Regular, monospace)",
-		});
+	test("another named family resolves its own fallback stack", async () => {
+		expect(await declarations(font("mono"))).toEqual([
+			"font-family: var(--ui-font-mono, ui-monospace, SFMono-Regular, monospace)",
+		]);
 	});
 
-	test("'inherit' passes through unchanged instead of being var()-wrapped", () => {
-		expect(styles(font("inherit"))).toEqual({ fontFamily: "inherit" });
+	test("'inherit' passes through unchanged instead of being var()-wrapped", async () => {
+		expect(await declarations(font("inherit"))).toEqual(["font-family: inherit"]);
 	});
 
-	test("'unset' passes through unchanged instead of being var()-wrapped", () => {
-		expect(styles(font("unset"))).toEqual({ fontFamily: "unset" });
+	test("'unset' passes through unchanged instead of being var()-wrapped", async () => {
+		expect(await declarations(font("unset"))).toEqual(["font-family: unset"]);
 	});
 });

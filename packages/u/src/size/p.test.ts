@@ -6,35 +6,28 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { p } from "./p";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("p", () => {
-	test("one value applies uniformly", () => {
-		expect(styles(p(4))).toEqual({
-			padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("one value applies uniformly", async () => {
+		expect(await declarations(p(4))).toEqual(["padding: calc(var(--ui-spacing, 0.25rem) * 4)"]);
 	});
 
-	test("two values map to block then inline", () => {
-		expect(styles(p(1, 2))).toEqual({
-			paddingBlock: "calc(var(--ui-spacing, 0.25rem) * 1)",
-			paddingInline: "calc(var(--ui-spacing, 0.25rem) * 2)",
-		});
+	test("two values map to block then inline", async () => {
+		expect(await declarations(p(1, 2))).toEqual([
+			"padding-block: calc(var(--ui-spacing, 0.25rem) * 1)",
+			"padding-inline: calc(var(--ui-spacing, 0.25rem) * 2)",
+		]);
 	});
 
-	test("four values map to block-start, inline-end, block-end, inline-start", () => {
-		expect(styles(p(1, 2, 3, 4))).toEqual({
-			paddingBlockStart: "calc(var(--ui-spacing, 0.25rem) * 1)",
-			paddingInlineEnd: "calc(var(--ui-spacing, 0.25rem) * 2)",
-			paddingBlockEnd: "calc(var(--ui-spacing, 0.25rem) * 3)",
-			paddingInlineStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("four values map to block-start, inline-end, block-end, inline-start", async () => {
+		expect(await declarations(p(1, 2, 3, 4))).toEqual([
+			"padding-block-start: calc(var(--ui-spacing, 0.25rem) * 1)",
+			"padding-inline-end: calc(var(--ui-spacing, 0.25rem) * 2)",
+			"padding-block-end: calc(var(--ui-spacing, 0.25rem) * 3)",
+			"padding-inline-start: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

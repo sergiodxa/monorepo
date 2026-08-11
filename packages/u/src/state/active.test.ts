@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { declarations, serialize } from "../internal/serialize";
 
 import { active } from "./active";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("active", () => {
-	test("nests the wrapped utility's styles under '&:active'", () => {
-		expect(styles(active(bg("brand.solid")))).toEqual({
-			"&:active": { backgroundColor: "var(--ui-brand-bg-solid)" },
-		});
+	test("emits an '&:active' block around the wrapped utility's declarations", async () => {
+		expect(await serialize(active(bg("brand.solid")))).toContain("&:active {");
+		expect(await declarations(active(bg("brand.solid")))).toEqual([
+			"background-color: var(--ui-brand-bg-solid)",
+		]);
 	});
 });

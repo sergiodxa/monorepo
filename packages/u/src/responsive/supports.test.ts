@@ -6,23 +6,15 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { supports } from "./supports";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("supports", () => {
-	test("nests the wrapped utility's styles under '@supports <query>'", () => {
-		expect(styles(supports("(corner-shape: squircle)", p(4)))).toEqual({
-			"@supports (corner-shape: squircle)": {
-				padding: "calc(var(--ui-spacing, 0.25rem) * 4)",
-			},
-		});
+	test("nests the wrapped utility's styles under '@supports <query>'", async () => {
+		expect(await serialize(supports("(corner-shape: squircle)", p(4)))).toMatch(
+			/@supports \(corner-shape: squircle\) \{[\s\S]*padding: calc\(var\(--ui-spacing, 0\.25rem\) \* 4\)/,
+		);
 	});
 });

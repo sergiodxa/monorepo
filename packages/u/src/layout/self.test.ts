@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { self } from "./self";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("self", () => {
-	test("defaults to auto", () => {
-		expect(styles(self())).toEqual({ alignSelf: "auto" });
+	test("defaults to auto", async () => {
+		expect(await declarations(self())).toEqual(["align-self: auto"]);
 	});
 
-	test("accepts center", () => {
-		expect(styles(self("center"))).toEqual({ alignSelf: "center" });
+	test("accepts center", async () => {
+		expect(await declarations(self("center"))).toEqual(["align-self: center"]);
 	});
 
-	test("accepts stretch", () => {
-		expect(styles(self("stretch"))).toEqual({ alignSelf: "stretch" });
+	test("accepts stretch", async () => {
+		expect(await declarations(self("stretch"))).toEqual(["align-self: stretch"]);
 	});
 });

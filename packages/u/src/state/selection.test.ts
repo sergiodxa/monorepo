@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { declarations, serialize } from "../internal/serialize";
 
 import { selection } from "./selection";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("selection", () => {
-	test("nests the input's styles under '&::selection'", () => {
-		expect(styles(selection(bg("brand.solid")))).toEqual({
-			"&::selection": { backgroundColor: "var(--ui-brand-bg-solid)" },
-		});
+	test("emits an '&::selection' block around the input's declarations", async () => {
+		expect(await serialize(selection(bg("brand.solid")))).toContain("&::selection {");
+		expect(await declarations(selection(bg("brand.solid")))).toEqual([
+			"background-color: var(--ui-brand-bg-solid)",
+		]);
 	});
 });

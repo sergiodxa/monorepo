@@ -4,35 +4,30 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { animationDelay } from "./animation-delay";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("animationDelay", () => {
-	test("passes the given time value through unchanged", () => {
-		expect(styles(animationDelay("150ms"))).toEqual({ animationDelay: "150ms" });
+	test("passes the given time value through unchanged", async () => {
+		expect(await declarations(animationDelay("150ms"))).toEqual(["animation-delay: 150ms"]);
 	});
 
-	test("defaults to 0s when no value is given", () => {
-		expect(styles(animationDelay())).toEqual({ animationDelay: "0s" });
+	test("defaults to 0s when no value is given", async () => {
+		expect(await declarations(animationDelay())).toEqual(["animation-delay: 0s"]);
 	});
 
-	test("keeps a negative delay, which seeks into the animation instead of waiting", () => {
-		expect(styles(animationDelay("-500ms"))).toEqual({ animationDelay: "-500ms" });
+	test("keeps a negative delay, which seeks into the animation instead of waiting", async () => {
+		expect(await declarations(animationDelay("-500ms"))).toEqual(["animation-delay: -500ms"]);
 	});
 
-	test("accepts a computed per-item delay for staggering", () => {
-		expect(styles(animationDelay(`${2 * 60}ms`))).toEqual({ animationDelay: "120ms" });
+	test("accepts a computed per-item delay for staggering", async () => {
+		expect(await declarations(animationDelay(`${2 * 60}ms`))).toEqual(["animation-delay: 120ms"]);
 	});
 
-	test("emits only animationDelay, never animationName or animationDuration", () => {
-		let result = styles(animationDelay("150ms"));
-
-		expect(Object.keys(result)).toEqual(["animationDelay"]);
+	test("emits only animationDelay, never animationName or animationDuration", async () => {
+		// The string-only signature is what keeps the unit: a bare `120` would
+		// serialize to `120px`, not `120ms`, and the delay would be dropped.
+		expect(await declarations(animationDelay("150ms"))).toEqual(["animation-delay: 150ms"]);
 	});
 });

@@ -7,29 +7,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { gap } from "./gap";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("gap", () => {
-	test("one value applies to both row and column gap", () => {
-		expect(styles(gap(4))).toEqual({
-			gap: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("one value applies to both row and column gap", async () => {
+		expect(await declarations(gap(4))).toEqual(["gap: calc(var(--ui-spacing, 0.25rem) * 4)"]);
 	});
 
-	test("two values are read as row then column", () => {
-		expect(styles(gap(2, 4))).toEqual({
-			gap: "calc(var(--ui-spacing, 0.25rem) * 2) calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("two values are read as row then column", async () => {
+		expect(await declarations(gap(2, 4))).toEqual([
+			"gap: calc(var(--ui-spacing, 0.25rem) * 2) calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("throws for an unsupported value count", () => {
+	test("throws for an unsupported value count", async () => {
 		expect(() => gap()).toThrow();
 		expect(() => gap(1, 2, 3)).toThrow();
 	});

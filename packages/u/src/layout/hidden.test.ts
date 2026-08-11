@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { hidden } from "./hidden";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("hidden", () => {
-	test("sets display: none", () => {
-		expect(styles(hidden())).toEqual({ display: "none" });
+	test("sets display: none", async () => {
+		expect(await declarations(hidden())).toEqual(["display: none"]);
 	});
 });

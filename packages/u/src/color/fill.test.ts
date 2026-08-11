@@ -4,29 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { fill } from "./fill";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("fill", () => {
-	test("no-arg resolves the system default", () => {
-		expect(styles(fill())).toEqual({ fill: "var(--ui-fg, CanvasText)" });
+	test("no-arg resolves the system default", async () => {
+		expect(await declarations(fill())).toEqual(["fill: var(--ui-fg, CanvasText)"]);
 	});
 
-	test("a bare tone defaults to that tone's plain fg weight", () => {
-		expect(styles(fill("brand"))).toEqual({ fill: "var(--ui-brand-fg)" });
+	test("a bare tone defaults to that tone's plain fg weight", async () => {
+		expect(await declarations(fill("brand"))).toEqual(["fill: var(--ui-brand-fg)"]);
 	});
 
-	test("an explicit tint suffix aliases to the bg-tint property", () => {
-		expect(styles(fill("neutral.tint"))).toEqual({ fill: "var(--ui-neutral-bg-tint)" });
+	test("an explicit tint suffix aliases to the bg-tint property", async () => {
+		expect(await declarations(fill("neutral.tint"))).toEqual(["fill: var(--ui-neutral-bg-tint)"]);
 	});
 
-	test("'none' passes through literally instead of resolving as a tone name", () => {
-		expect(styles(fill("none"))).toEqual({ fill: "none" });
+	test("'none' passes through literally instead of resolving as a tone name", async () => {
+		expect(await declarations(fill("none"))).toEqual(["fill: none"]);
 	});
 });

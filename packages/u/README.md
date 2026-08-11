@@ -13224,7 +13224,9 @@ The float-label composition — the wrapper's own `& > span` styles are the floa
 
 #### `precededBy(selector: string, input: UtilityInput): UtilityMixin`
 
-The mirror of `u.hasSibling()`. Both style an element from a _sibling's_ state, and which one you need is decided purely by source order: `hasSibling()` looks forward, so the styled element comes first, while this looks backward, so the element matching `selector` comes first and the styled element follows it. Sugar over `when("{selector} ~ &", input)`.
+The mirror of `u.hasSibling()`. Both style an element from a _sibling's_ state, and which one you need is decided purely by source order: `hasSibling()` looks forward, so the styled element comes first, while this looks backward, so the element matching `selector` comes first and the styled element follows it. Sugar over `when(":is({selector}) ~ &", input)`.
+
+The `:is()` wrapper is load-bearing rather than cosmetic, and removing it breaks the rule silently: the style serializer only recognizes a key as a nested selector when it starts with `&`, `@`, `:`, `[` or `.`, so a bare `input:checked ~ &` is emitted as a declaration and dropped by the browser. `:is()` takes the specificity of its argument, so the selector matches and weighs exactly what you asked for.
 
 The backward direction is usually the one a compound control wants, because it is the accessible source order — the real `<input>` first, then the element painting the visible indicator. Two smaller reasons to prefer it where either would work: it has no `:has()` dependency, since a plain `~` combinator has been supported far longer, and it keeps specificity flat, where `:has()` takes the specificity of its most specific argument.
 
@@ -13232,7 +13234,7 @@ Note that no marker class or attribute goes on the sibling. Some utility-CSS fra
 
 **Parameters:**
 
-- `selector`: The preceding sibling's selector, used verbatim on the left of a `~` combinator. Any selector works — `"input:checked"`, `"input:focus-visible"`, `"*:hover"`, `"[data-slot='trigger'][aria-expanded='true']"`. `~` matches _any_ preceding sibling, not only the immediately preceding one; for the adjacent-only form reach for `when("{selector} + &", input)`.
+- `selector`: The preceding sibling's selector, used verbatim on the left of a `~` combinator. Any selector works — `"input:checked"`, `"input:focus-visible"`, `"*:hover"`, `"[data-slot='trigger'][aria-expanded='true']"`. `~` matches _any_ preceding sibling, not only the immediately preceding one; for the adjacent-only form reach for `when(":is({selector}) + &", input)`.
 - `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
 
 **Returns:**
@@ -13244,7 +13246,7 @@ Note that no marker class or attribute goes on the sibling. Some utility-CSS fra
 ```css
 /* u.precededBy("input:checked", u.border("brand.solid")) */
 .host {
-	input:checked ~ & {
+	:is(input:checked) ~ & {
 		border-color: var(--ui-brand-bg-solid);
 	}
 }
@@ -13454,6 +13456,10 @@ The primitive selector wrapper. It flattens `input`, merges the flattened utilit
 
 Because it nests under a _selector_, an `@keyframes` rule must never be passed through it: keyframes only hoist to the stylesheet root from a mixin's own top level or from inside `u.media()`/`u.supports()`. Use `u.keyframes()` at the top level with `u.animationHost()` inside the wrapper instead.
 
+`selector` must start with `&`, `@`, `:`, `[` or `.`, and `when()` throws when it doesn't. The style serializer decides whether a key is a nested selector or a CSS property from that first character alone, so a selector leading with an element name — `"input:checked ~ &"` — would be serialized as a _declaration_ and emitted as `input:checked ~ &: [object Object];`, which every browser discards. Nothing would warn; the rule would simply never apply. Lead with `:is(...)` instead — `":is(input:checked) ~ &"` — which is recognized and, since `:is()` takes the specificity of its argument, matches and weighs exactly the same. For the common preceding-sibling case, `u.precededBy()` already does this for you.
+
+`when()` cannot repair such a selector on your behalf, which is why it throws rather than rewriting: wrapping the whole selector as `:is(input:checked ~ &)` is equivalent for most inputs, but `:is()` may not contain a pseudo-element, so `"input:checked ~ &::after"` would turn into invalid CSS. Only the caller knows which part names the reference element.
+
 **Parameters:**
 
 - `selector`: The CSS selector to nest the merged styles under. `&` refers to the host, and CSS nesting rules apply, so `&` can appear anywhere in the selector:
@@ -13461,6 +13467,7 @@ Because it nests under a _selector_, an `@keyframes` rule must never be passed t
   - a relational test — `"&:has(input:checked)"`, `"&:has(> img)"`
   - a sibling or child combinator — `"& > li"`, `"& + &"`, `"&:has(~ input:checked)"`
   - an ancestor condition, with `&` on the right — `".dark &"`, `"[dir='rtl'] &"`
+  - a preceding-sibling condition, with the sibling wrapped so the selector still leads with `:` — `":is(input:checked) ~ &"`, `":is(*:hover) ~ &"`
   - a pseudo-element — `"&::marker"`, `"&::selection"`, `"&::-webkit-scrollbar-thumb"`
 - `input`: One utility mixin, or a (possibly nested) array of them, falsy values dropped
 

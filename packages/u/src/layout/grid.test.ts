@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { grid } from "./grid";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("grid", () => {
-	test("sets display: grid", () => {
-		expect(styles(grid())).toEqual({ display: "grid" });
+	test("sets display: grid", async () => {
+		expect(await declarations(grid())).toEqual(["display: grid"]);
 	});
 });

@@ -4,43 +4,40 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { tracking } from "./tracking";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("tracking", () => {
-	test("every named scale value resolves through the tracking variable with its fallback", () => {
-		expect(styles(tracking("tighter"))).toEqual({
-			letterSpacing: "var(--ui-tracking-tighter, -0.05em)",
-		});
-		expect(styles(tracking("tight"))).toEqual({
-			letterSpacing: "var(--ui-tracking-tight, -0.025em)",
-		});
-		expect(styles(tracking("normal"))).toEqual({
-			letterSpacing: "var(--ui-tracking-normal, 0em)",
-		});
-		expect(styles(tracking("wide"))).toEqual({
-			letterSpacing: "var(--ui-tracking-wide, 0.025em)",
-		});
-		expect(styles(tracking("wider"))).toEqual({
-			letterSpacing: "var(--ui-tracking-wider, 0.05em)",
-		});
-		expect(styles(tracking("widest"))).toEqual({
-			letterSpacing: "var(--ui-tracking-widest, 0.1em)",
-		});
+	test("every named scale value resolves through the tracking variable with its fallback", async () => {
+		expect(await declarations(tracking("tighter"))).toEqual([
+			"letter-spacing: var(--ui-tracking-tighter, -0.05em)",
+		]);
+		expect(await declarations(tracking("tight"))).toEqual([
+			"letter-spacing: var(--ui-tracking-tight, -0.025em)",
+		]);
+		expect(await declarations(tracking("normal"))).toEqual([
+			"letter-spacing: var(--ui-tracking-normal, 0em)",
+		]);
+		expect(await declarations(tracking("wide"))).toEqual([
+			"letter-spacing: var(--ui-tracking-wide, 0.025em)",
+		]);
+		expect(await declarations(tracking("wider"))).toEqual([
+			"letter-spacing: var(--ui-tracking-wider, 0.05em)",
+		]);
+		expect(await declarations(tracking("widest"))).toEqual([
+			"letter-spacing: var(--ui-tracking-widest, 0.1em)",
+		]);
 	});
 
-	test("no-arg defaults to normal", () => {
-		expect(styles(tracking())).toEqual({ letterSpacing: "var(--ui-tracking-normal, 0em)" });
+	test("no-arg defaults to normal", async () => {
+		expect(await declarations(tracking())).toEqual([
+			"letter-spacing: var(--ui-tracking-normal, 0em)",
+		]);
 	});
 
-	test("a raw letter-spacing string passes through unchanged", () => {
-		expect(styles(tracking("0.18em"))).toEqual({ letterSpacing: "0.18em" });
-		expect(styles(tracking("-0.04em"))).toEqual({ letterSpacing: "-0.04em" });
+	test("a raw letter-spacing string passes through unchanged", async () => {
+		expect(await declarations(tracking("0.18em"))).toEqual(["letter-spacing: 0.18em"]);
+		expect(await declarations(tracking("-0.04em"))).toEqual(["letter-spacing: -0.04em"]);
 	});
 });

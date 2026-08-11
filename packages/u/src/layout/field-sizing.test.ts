@@ -4,25 +4,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { fieldSizing } from "./field-sizing";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("fieldSizing", () => {
-	test("defaults to content", () => {
-		expect(styles(fieldSizing())).toEqual({ fieldSizing: "content" });
+	test("defaults to content", async () => {
+		expect(await declarations(fieldSizing())).toEqual(["field-sizing: content"]);
 	});
 
-	test("'content'", () => {
-		expect(styles(fieldSizing("content"))).toEqual({ fieldSizing: "content" });
+	test("'content'", async () => {
+		expect(await declarations(fieldSizing("content"))).toEqual(["field-sizing: content"]);
 	});
 
-	test("'fixed'", () => {
-		expect(styles(fieldSizing("fixed"))).toEqual({ fieldSizing: "fixed" });
+	test("'fixed'", async () => {
+		expect(await declarations(fieldSizing("fixed"))).toEqual(["field-sizing: fixed"]);
 	});
 });

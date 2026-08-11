@@ -4,33 +4,30 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { gridAutoFlow } from "./grid-auto-flow";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("gridAutoFlow", () => {
-	test("defaults to row", () => {
-		expect(styles(gridAutoFlow())).toEqual({ gridAutoFlow: "row" });
+	test("defaults to row", async () => {
+		expect(await declarations(gridAutoFlow())).toEqual(["grid-auto-flow: row"]);
 	});
 
-	test("'column'", () => {
-		expect(styles(gridAutoFlow("column"))).toEqual({ gridAutoFlow: "column" });
+	test("'column'", async () => {
+		expect(await declarations(gridAutoFlow("column"))).toEqual(["grid-auto-flow: column"]);
 	});
 
-	test("'dense'", () => {
-		expect(styles(gridAutoFlow("dense"))).toEqual({ gridAutoFlow: "dense" });
+	test("'dense'", async () => {
+		expect(await declarations(gridAutoFlow("dense"))).toEqual(["grid-auto-flow: dense"]);
 	});
 
-	test("'row dense'", () => {
-		expect(styles(gridAutoFlow("row dense"))).toEqual({ gridAutoFlow: "row dense" });
+	test("'row dense'", async () => {
+		expect(await declarations(gridAutoFlow("row dense"))).toEqual(["grid-auto-flow: row dense"]);
 	});
 
-	test("'column dense'", () => {
-		expect(styles(gridAutoFlow("column dense"))).toEqual({ gridAutoFlow: "column dense" });
+	test("'column dense'", async () => {
+		expect(await declarations(gridAutoFlow("column dense"))).toEqual([
+			"grid-auto-flow: column dense",
+		]);
 	});
 });

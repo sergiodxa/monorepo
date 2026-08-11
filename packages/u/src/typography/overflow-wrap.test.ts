@@ -4,25 +4,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { overflowWrap } from "./overflow-wrap";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("overflowWrap", () => {
-	test("no-arg defaults to break-word", () => {
-		expect(styles(overflowWrap())).toEqual({ overflowWrap: "break-word" });
+	test("no-arg defaults to break-word", async () => {
+		expect(await declarations(overflowWrap())).toEqual(["overflow-wrap: break-word"]);
 	});
 
-	test("normal", () => {
-		expect(styles(overflowWrap("normal"))).toEqual({ overflowWrap: "normal" });
+	test("normal", async () => {
+		expect(await declarations(overflowWrap("normal"))).toEqual(["overflow-wrap: normal"]);
 	});
 
-	test("anywhere", () => {
-		expect(styles(overflowWrap("anywhere"))).toEqual({ overflowWrap: "anywhere" });
+	test("anywhere", async () => {
+		expect(await declarations(overflowWrap("anywhere"))).toEqual(["overflow-wrap: anywhere"]);
 	});
 });

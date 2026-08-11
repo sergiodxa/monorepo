@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { mb } from "./mb";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("mb", () => {
-	test("one value applies both block edges", () => {
-		expect(styles(mb(4))).toEqual({
-			marginBlock: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("one value applies both block edges", async () => {
+		expect(await declarations(mb(4))).toEqual([
+			"margin-block: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("two values map to block-start then block-end, accepting 'auto'", () => {
-		expect(styles(mb(4, "auto"))).toEqual({
-			marginBlock: "calc(var(--ui-spacing, 0.25rem) * 4) auto",
-		});
+	test("two values map to block-start then block-end, accepting 'auto'", async () => {
+		expect(await declarations(mb(4, "auto"))).toEqual([
+			"margin-block: calc(var(--ui-spacing, 0.25rem) * 4) auto",
+		]);
 	});
 });

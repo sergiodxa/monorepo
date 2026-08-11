@@ -4,73 +4,74 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { fontVariantNumeric } from "./font-variant-numeric";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("fontVariantNumeric", () => {
-	test("no-arg defaults to tabular-nums", () => {
-		expect(styles(fontVariantNumeric())).toEqual({ fontVariantNumeric: "tabular-nums" });
+	test("no-arg defaults to tabular-nums", async () => {
+		expect(await declarations(fontVariantNumeric())).toEqual([
+			"font-variant-numeric: tabular-nums",
+		]);
 	});
 
-	test("normal", () => {
-		expect(styles(fontVariantNumeric("normal"))).toEqual({ fontVariantNumeric: "normal" });
+	test("normal", async () => {
+		expect(await declarations(fontVariantNumeric("normal"))).toEqual([
+			"font-variant-numeric: normal",
+		]);
 	});
 
-	test("ordinal", () => {
-		expect(styles(fontVariantNumeric("ordinal"))).toEqual({ fontVariantNumeric: "ordinal" });
+	test("ordinal", async () => {
+		expect(await declarations(fontVariantNumeric("ordinal"))).toEqual([
+			"font-variant-numeric: ordinal",
+		]);
 	});
 
-	test("slashed-zero", () => {
-		expect(styles(fontVariantNumeric("slashed-zero"))).toEqual({
-			fontVariantNumeric: "slashed-zero",
-		});
+	test("slashed-zero", async () => {
+		expect(await declarations(fontVariantNumeric("slashed-zero"))).toEqual([
+			"font-variant-numeric: slashed-zero",
+		]);
 	});
 
-	test("lining-nums", () => {
-		expect(styles(fontVariantNumeric("lining-nums"))).toEqual({
-			fontVariantNumeric: "lining-nums",
-		});
+	test("lining-nums", async () => {
+		expect(await declarations(fontVariantNumeric("lining-nums"))).toEqual([
+			"font-variant-numeric: lining-nums",
+		]);
 	});
 
-	test("oldstyle-nums", () => {
-		expect(styles(fontVariantNumeric("oldstyle-nums"))).toEqual({
-			fontVariantNumeric: "oldstyle-nums",
-		});
+	test("oldstyle-nums", async () => {
+		expect(await declarations(fontVariantNumeric("oldstyle-nums"))).toEqual([
+			"font-variant-numeric: oldstyle-nums",
+		]);
 	});
 
-	test("proportional-nums", () => {
-		expect(styles(fontVariantNumeric("proportional-nums"))).toEqual({
-			fontVariantNumeric: "proportional-nums",
-		});
+	test("proportional-nums", async () => {
+		expect(await declarations(fontVariantNumeric("proportional-nums"))).toEqual([
+			"font-variant-numeric: proportional-nums",
+		]);
 	});
 
-	test("tabular-nums", () => {
-		expect(styles(fontVariantNumeric("tabular-nums"))).toEqual({
-			fontVariantNumeric: "tabular-nums",
-		});
+	test("tabular-nums", async () => {
+		expect(await declarations(fontVariantNumeric("tabular-nums"))).toEqual([
+			"font-variant-numeric: tabular-nums",
+		]);
 	});
 
-	test("diagonal-fractions", () => {
-		expect(styles(fontVariantNumeric("diagonal-fractions"))).toEqual({
-			fontVariantNumeric: "diagonal-fractions",
-		});
+	test("diagonal-fractions", async () => {
+		expect(await declarations(fontVariantNumeric("diagonal-fractions"))).toEqual([
+			"font-variant-numeric: diagonal-fractions",
+		]);
 	});
 
-	test("stacked-fractions", () => {
-		expect(styles(fontVariantNumeric("stacked-fractions"))).toEqual({
-			fontVariantNumeric: "stacked-fractions",
-		});
+	test("stacked-fractions", async () => {
+		expect(await declarations(fontVariantNumeric("stacked-fractions"))).toEqual([
+			"font-variant-numeric: stacked-fractions",
+		]);
 	});
 
-	test("raw string passes a space-separated combination through", () => {
-		expect(styles(fontVariantNumeric("tabular-nums slashed-zero"))).toEqual({
-			fontVariantNumeric: "tabular-nums slashed-zero",
-		});
+	test("raw string passes a space-separated combination through", async () => {
+		expect(await declarations(fontVariantNumeric("tabular-nums slashed-zero"))).toEqual([
+			"font-variant-numeric: tabular-nums slashed-zero",
+		]);
 	});
 });

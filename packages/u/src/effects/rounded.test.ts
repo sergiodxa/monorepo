@@ -4,25 +4,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { rounded } from "./rounded";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("rounded", () => {
-	test("no-arg defaults to the md radius", () => {
-		expect(styles(rounded())).toEqual({ borderRadius: "var(--ui-radius-md, 0.375rem)" });
+	test("no-arg defaults to the md radius", async () => {
+		expect(await declarations(rounded())).toEqual(["border-radius: var(--ui-radius-md, 0.375rem)"]);
 	});
 
-	test("an explicit named radius", () => {
-		expect(styles(rounded("lg"))).toEqual({ borderRadius: "var(--ui-radius-lg, 0.5rem)" });
+	test("an explicit named radius", async () => {
+		expect(await declarations(rounded("lg"))).toEqual([
+			"border-radius: var(--ui-radius-lg, 0.5rem)",
+		]);
 	});
 
-	test("the inherit keyword bypasses token resolution", () => {
-		expect(styles(rounded("inherit"))).toEqual({ borderRadius: "inherit" });
+	test("the inherit keyword bypasses token resolution", async () => {
+		expect(await declarations(rounded("inherit"))).toEqual(["border-radius: inherit"]);
 	});
 });

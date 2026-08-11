@@ -4,27 +4,26 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { counterIncrement } from "./counter-increment";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("counterIncrement", () => {
-	test("no value falls back to CSS's own default", () => {
-		expect(styles(counterIncrement("section"))).toEqual({ counterIncrement: "section" });
+	test("no value falls back to CSS's own default", async () => {
+		expect(await declarations(counterIncrement("section"))).toEqual(["counter-increment: section"]);
 	});
 
-	test("an explicit increment value", () => {
-		expect(styles(counterIncrement("section", 2))).toEqual({ counterIncrement: "section 2" });
+	test("an explicit increment value", async () => {
+		// The value is folded into the string here rather than left as a number,
+		// which is what keeps the serializer from emitting `section 2px`.
+		expect(await declarations(counterIncrement("section", 2))).toEqual([
+			"counter-increment: section 2",
+		]);
 	});
 
-	test("a negative increment value", () => {
-		expect(styles(counterIncrement("countdown", -1))).toEqual({
-			counterIncrement: "countdown -1",
-		});
+	test("a negative increment value", async () => {
+		expect(await declarations(counterIncrement("countdown", -1))).toEqual([
+			"counter-increment: countdown -1",
+		]);
 	});
 });

@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { border } from "../color/border";
+import { declarations, serialize } from "../internal/serialize";
 
 import { focusVisible } from "./focus-visible";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("focusVisible", () => {
-	test("nests the wrapped utility's styles under '&:focus-visible'", () => {
-		expect(styles(focusVisible(border("brand")))).toEqual({
-			"&:focus-visible": { borderColor: "var(--ui-brand-border)" },
-		});
+	test("emits an '&:focus-visible' block around the wrapped utility's declarations", async () => {
+		expect(await serialize(focusVisible(border("brand")))).toContain("&:focus-visible {");
+		expect(await declarations(focusVisible(border("brand")))).toEqual([
+			"border-color: var(--ui-brand-border)",
+		]);
 	});
 });

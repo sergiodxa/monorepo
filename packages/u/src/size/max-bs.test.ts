@@ -6,27 +6,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { maxBs } from "./max-bs";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("maxBs", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(maxBs(4))).toEqual({
-			maxBlockSize: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(maxBs(4))).toEqual([
+			"max-block-size: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("resolves 'full' to 100%", () => {
-		expect(styles(maxBs("full"))).toEqual({ maxBlockSize: "100%" });
+	test("resolves 'full' to 100%", async () => {
+		expect(await declarations(maxBs("full"))).toEqual(["max-block-size: 100%"]);
 	});
 
-	test("passes a raw CSS length string through unchanged", () => {
-		expect(styles(maxBs("60ch"))).toEqual({ maxBlockSize: "60ch" });
+	test("passes a raw CSS length string through unchanged", async () => {
+		expect(await declarations(maxBs("60ch"))).toEqual(["max-block-size: 60ch"]);
 	});
 });

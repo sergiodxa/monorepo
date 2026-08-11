@@ -4,35 +4,42 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { leading } from "./leading";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("leading", () => {
-	test("every named scale value resolves through the leading variable with its fallback", () => {
-		expect(styles(leading("none"))).toEqual({ lineHeight: "var(--ui-leading-none, 1)" });
-		expect(styles(leading("tight"))).toEqual({ lineHeight: "var(--ui-leading-tight, 1.25)" });
-		expect(styles(leading("snug"))).toEqual({ lineHeight: "var(--ui-leading-snug, 1.375)" });
-		expect(styles(leading("normal"))).toEqual({ lineHeight: "var(--ui-leading-normal, 1.5)" });
-		expect(styles(leading("relaxed"))).toEqual({ lineHeight: "var(--ui-leading-relaxed, 1.625)" });
-		expect(styles(leading("loose"))).toEqual({ lineHeight: "var(--ui-leading-loose, 2)" });
+	test("every named scale value resolves through the leading variable with its fallback", async () => {
+		expect(await declarations(leading("none"))).toEqual(["line-height: var(--ui-leading-none, 1)"]);
+		expect(await declarations(leading("tight"))).toEqual([
+			"line-height: var(--ui-leading-tight, 1.25)",
+		]);
+		expect(await declarations(leading("snug"))).toEqual([
+			"line-height: var(--ui-leading-snug, 1.375)",
+		]);
+		expect(await declarations(leading("normal"))).toEqual([
+			"line-height: var(--ui-leading-normal, 1.5)",
+		]);
+		expect(await declarations(leading("relaxed"))).toEqual([
+			"line-height: var(--ui-leading-relaxed, 1.625)",
+		]);
+		expect(await declarations(leading("loose"))).toEqual([
+			"line-height: var(--ui-leading-loose, 2)",
+		]);
 	});
 
-	test("a raw number passes through unchanged as a unitless multiplier", () => {
-		expect(styles(leading(1.8))).toEqual({ lineHeight: 1.8 });
+	test("a raw number passes through unchanged as a unitless multiplier", async () => {
+		// `line-height` is one of the properties the serializer leaves unitless, so
+		// a bare number survives as the ratio it was meant to be, not as `1.8px`.
+		expect(await declarations(leading(1.8))).toEqual(["line-height: 1.8"]);
 	});
 
-	test("no-arg defaults to normal", () => {
-		expect(styles(leading())).toEqual({ lineHeight: "var(--ui-leading-normal, 1.5)" });
+	test("no-arg defaults to normal", async () => {
+		expect(await declarations(leading())).toEqual(["line-height: var(--ui-leading-normal, 1.5)"]);
 	});
 
-	test("a raw CSS length passes through unchanged as a literal line-height", () => {
-		expect(styles(leading("16px"))).toEqual({ lineHeight: "16px" });
-		expect(styles(leading("2rem"))).toEqual({ lineHeight: "2rem" });
+	test("a raw CSS length passes through unchanged as a literal line-height", async () => {
+		expect(await declarations(leading("16px"))).toEqual(["line-height: 16px"]);
+		expect(await declarations(leading("2rem"))).toEqual(["line-height: 2rem"]);
 	});
 });

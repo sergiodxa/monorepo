@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { fit } from "./fit";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("fit", () => {
-	test("defaults to 'cover'", () => {
-		expect(styles(fit())).toEqual({ objectFit: "cover" });
+	test("defaults to 'cover'", async () => {
+		expect(await declarations(fit())).toEqual(["object-fit: cover"]);
 	});
 
-	test("applies an explicit value", () => {
-		expect(styles(fit("contain"))).toEqual({ objectFit: "contain" });
+	test("applies an explicit value", async () => {
+		expect(await declarations(fit("contain"))).toEqual(["object-fit: contain"]);
 	});
 });

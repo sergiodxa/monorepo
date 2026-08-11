@@ -6,19 +6,14 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { pbs } from "./pbs";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("pbs", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(pbs(4))).toEqual({
-			paddingBlockStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(pbs(4))).toEqual([
+			"padding-block-start: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

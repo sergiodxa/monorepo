@@ -6,29 +6,25 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { serialize } from "../internal/serialize";
 
 import { dark } from "./dark";
 import { scheme } from "./scheme";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("dark", () => {
-	test("produces the identical shape scheme('dark', input) would", () => {
-		expect(styles(dark(bg("neutral.solid")))).toEqual(styles(scheme("dark", bg("neutral.solid"))));
+	test("produces the identical stylesheet scheme('dark', input) would", async () => {
+		expect(await serialize(dark(bg("neutral.solid")))).toBe(
+			await serialize(scheme("dark", bg("neutral.solid"))),
+		);
 	});
 
-	test("nests the forced-class key and the system-preference key with the same styles", () => {
-		expect(styles(dark(bg("neutral.solid")))).toEqual({
-			".dark &": { backgroundColor: "var(--ui-neutral-bg-solid)" },
-			"@media (prefers-color-scheme: dark)": {
-				".system &": { backgroundColor: "var(--ui-neutral-bg-solid)" },
-			},
-		});
+	test("nests the forced-class block and the system-preference at-rule with the same styles", async () => {
+		let css = await serialize(dark(bg("neutral.solid")));
+
+		expect(css).toMatch(/\.dark & \{\s*background-color: var\(--ui-neutral-bg-solid\);/);
+		expect(css).toMatch(
+			/@media \(prefers-color-scheme: dark\) \{[\s\S]*\.system & \{\s*background-color: var\(--ui-neutral-bg-solid\);/,
+		);
 	});
 });

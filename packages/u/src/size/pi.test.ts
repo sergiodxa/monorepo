@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { pi } from "./pi";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("pi", () => {
-	test("one value applies both inline edges", () => {
-		expect(styles(pi(4))).toEqual({
-			paddingInline: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("one value applies both inline edges", async () => {
+		expect(await declarations(pi(4))).toEqual([
+			"padding-inline: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("two values map to inline-start then inline-end", () => {
-		expect(styles(pi(1, 2))).toEqual({
-			paddingInline: "calc(var(--ui-spacing, 0.25rem) * 1) calc(var(--ui-spacing, 0.25rem) * 2)",
-		});
+	test("two values map to inline-start then inline-end", async () => {
+		expect(await declarations(pi(1, 2))).toEqual([
+			"padding-inline: calc(var(--ui-spacing, 0.25rem) * 1) calc(var(--ui-spacing, 0.25rem) * 2)",
+		]);
 	});
 });

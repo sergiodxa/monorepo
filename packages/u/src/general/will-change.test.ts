@@ -4,17 +4,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { willChange } from "./will-change";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("willChange", () => {
-	test("a single property", () => {
-		expect(styles(willChange("transform"))).toEqual({ willChange: "transform" });
+	test("a single property", async () => {
+		expect(await declarations(willChange("transform"))).toEqual(["will-change: transform"]);
 	});
 });

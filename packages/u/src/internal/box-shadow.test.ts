@@ -6,31 +6,27 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { boxShadowSlot, COMPOSITE_BOX_SHADOW } from "./box-shadow";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
+import { declarations } from "./serialize";
 
 describe("boxShadowSlot", () => {
-	test("sets the given slot's custom property plus the shared composite boxShadow value", () => {
-		expect(styles(boxShadowSlot({ elevation: "0 1px 2px rgb(0 0 0 / 0.1)" }))).toEqual({
-			"--ui-box-shadow-elevation": "0 1px 2px rgb(0 0 0 / 0.1)",
-			boxShadow: COMPOSITE_BOX_SHADOW,
-		});
+	test("sets the given slot's custom property plus the shared composite boxShadow value", async () => {
+		expect(await declarations(boxShadowSlot({ elevation: "0 1px 2px rgb(0 0 0 / 0.1)" }))).toEqual([
+			"--ui-box-shadow-elevation: 0 1px 2px rgb(0 0 0 / 0.1)",
+			`box-shadow: ${COMPOSITE_BOX_SHADOW}`,
+		]);
 	});
 
-	test("sets multiple slots in one call", () => {
+	test("sets multiple slots in one call", async () => {
 		expect(
-			styles(boxShadowSlot({ ring: "0 0 0 2px red", elevation: "0 1px 2px rgb(0 0 0 / 0.1)" })),
-		).toEqual({
-			"--ui-box-shadow-ring": "0 0 0 2px red",
-			"--ui-box-shadow-elevation": "0 1px 2px rgb(0 0 0 / 0.1)",
-			boxShadow: COMPOSITE_BOX_SHADOW,
-		});
+			await declarations(
+				boxShadowSlot({ ring: "0 0 0 2px red", elevation: "0 1px 2px rgb(0 0 0 / 0.1)" }),
+			),
+		).toEqual([
+			"--ui-box-shadow-ring: 0 0 0 2px red",
+			"--ui-box-shadow-elevation: 0 1px 2px rgb(0 0 0 / 0.1)",
+			`box-shadow: ${COMPOSITE_BOX_SHADOW}`,
+		]);
 	});
 
 	test("every slot's variable appears in the composite with a paints-nothing identity fallback", () => {
@@ -44,12 +40,14 @@ describe("boxShadowSlot", () => {
 		);
 	});
 
-	test("the ring slot paints before the elevation slot regardless of the call's key order", () => {
-		let ringFirst = styles(boxShadowSlot({ ring: "0 0 0 2px red", elevation: "none" })).boxShadow;
-		let elevationFirst = styles(
+	test("the ring slot paints before the elevation slot regardless of the call's key order", async () => {
+		let ringFirst = await declarations(boxShadowSlot({ ring: "0 0 0 2px red", elevation: "none" }));
+		let elevationFirst = await declarations(
 			boxShadowSlot({ elevation: "none", ring: "0 0 0 2px red" }),
-		).boxShadow;
+		);
 
-		expect(ringFirst).toBe(elevationFirst);
+		expect(ringFirst.filter((line) => line.startsWith("box-shadow:"))).toEqual(
+			elevationFirst.filter((line) => line.startsWith("box-shadow:")),
+		);
 	});
 });

@@ -6,21 +6,18 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { open } from "./open";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("open", () => {
-	test("nests the wrapped utility's styles under '&[open], &:popover-open'", () => {
-		expect(styles(open(p(4)))).toEqual({
-			"&[open], &:popover-open": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("emits both the '[open]' attribute and the ':popover-open' selector", async () => {
+		// `<details>`/`<dialog>` expose openness as an attribute, popovers only
+		// as a pseudo-class, so both spellings have to reach the stylesheet.
+		expect(await serialize(open(p(4)))).toContain("&[open], &:popover-open {");
+		expect(await declarations(open(p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

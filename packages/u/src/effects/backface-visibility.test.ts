@@ -6,21 +6,18 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { backfaceVisibility } from "./backface-visibility";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("backfaceVisibility", () => {
-	test("defaults to hidden", () => {
-		expect(styles(backfaceVisibility())).toEqual({ backfaceVisibility: "hidden" });
+	test("defaults to hidden", async () => {
+		expect(await declarations(backfaceVisibility())).toEqual(["backface-visibility: hidden"]);
 	});
 
-	test("accepts an explicit value", () => {
-		expect(styles(backfaceVisibility("visible"))).toEqual({ backfaceVisibility: "visible" });
+	test("accepts an explicit value", async () => {
+		expect(await declarations(backfaceVisibility("visible"))).toEqual([
+			"backface-visibility: visible",
+		]);
 	});
 });

@@ -4,29 +4,26 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { stroke } from "./stroke";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("stroke", () => {
-	test("no-arg resolves the system default", () => {
-		expect(styles(stroke())).toEqual({ stroke: "var(--ui-fg, CanvasText)" });
+	test("no-arg resolves the system default", async () => {
+		expect(await declarations(stroke())).toEqual(["stroke: var(--ui-fg, CanvasText)"]);
 	});
 
-	test("a bare tone defaults to that tone's plain fg weight", () => {
-		expect(styles(stroke("brand"))).toEqual({ stroke: "var(--ui-brand-fg)" });
+	test("a bare tone defaults to that tone's plain fg weight", async () => {
+		expect(await declarations(stroke("brand"))).toEqual(["stroke: var(--ui-brand-fg)"]);
 	});
 
-	test("an explicit tint suffix aliases to the bg-tint property", () => {
-		expect(styles(stroke("neutral.tint"))).toEqual({ stroke: "var(--ui-neutral-bg-tint)" });
+	test("an explicit tint suffix aliases to the bg-tint property", async () => {
+		expect(await declarations(stroke("neutral.tint"))).toEqual([
+			"stroke: var(--ui-neutral-bg-tint)",
+		]);
 	});
 
-	test("'none' passes through literally instead of resolving as a tone name", () => {
-		expect(styles(stroke("none"))).toEqual({ stroke: "none" });
+	test("'none' passes through literally instead of resolving as a tone name", async () => {
+		expect(await declarations(stroke("none"))).toEqual(["stroke: none"]);
 	});
 });

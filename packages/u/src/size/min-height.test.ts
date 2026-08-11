@@ -6,29 +6,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { minHeight } from "./min-height";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("minHeight", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(minHeight(4))).toEqual({
-			minHeight: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(minHeight(4))).toEqual([
+			"min-height: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("resolves 'full' to 100%", () => {
-		expect(styles(minHeight("full"))).toEqual({ minHeight: "100%" });
+	test("resolves 'full' to 100%", async () => {
+		expect(await declarations(minHeight("full"))).toEqual(["min-height: 100%"]);
 	});
 
-	test("passes 'fit-content' through unchanged", () => {
-		expect(styles(minHeight("fit-content"))).toEqual({
-			minHeight: "fit-content",
-		});
+	test("passes 'fit-content' through unchanged", async () => {
+		expect(await declarations(minHeight("fit-content"))).toEqual(["min-height: fit-content"]);
 	});
 });

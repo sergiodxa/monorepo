@@ -6,21 +6,18 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
+import { declarations, serialize } from "../internal/serialize";
 
 import { readOnly } from "./read-only";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("readOnly", () => {
-	test("nests the wrapped utility's styles under '&:read-only, &[aria-readonly=\"true\"]'", () => {
-		expect(styles(readOnly(bg("brand.tint")))).toEqual({
-			'&:read-only, &[aria-readonly="true"]': { backgroundColor: "var(--ui-brand-bg-tint)" },
-		});
+	test("emits both the native and the ARIA selector in one block", async () => {
+		expect(await serialize(readOnly(bg("brand.tint")))).toContain(
+			'&:read-only, &[aria-readonly="true"] {',
+		);
+		expect(await declarations(readOnly(bg("brand.tint")))).toEqual([
+			"background-color: var(--ui-brand-bg-tint)",
+		]);
 	});
 });

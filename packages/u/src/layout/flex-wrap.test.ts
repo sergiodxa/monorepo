@@ -6,29 +6,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { flexWrap } from "./flex-wrap";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("flexWrap", () => {
-	test("defaults to wrap", () => {
-		expect(styles(flexWrap())).toEqual({ flexWrap: "wrap" });
+	test("defaults to wrap", async () => {
+		expect(await declarations(flexWrap())).toEqual(["flex-wrap: wrap"]);
 	});
 
-	test("accepts wrap explicitly", () => {
-		expect(styles(flexWrap("wrap"))).toEqual({ flexWrap: "wrap" });
+	test("accepts wrap explicitly", async () => {
+		expect(await declarations(flexWrap("wrap"))).toEqual(["flex-wrap: wrap"]);
 	});
 
-	test("accepts nowrap", () => {
-		expect(styles(flexWrap("nowrap"))).toEqual({ flexWrap: "nowrap" });
+	test("accepts nowrap", async () => {
+		expect(await declarations(flexWrap("nowrap"))).toEqual(["flex-wrap: nowrap"]);
 	});
 
-	test("accepts wrap-reverse", () => {
-		expect(styles(flexWrap("wrap-reverse"))).toEqual({ flexWrap: "wrap-reverse" });
+	test("accepts wrap-reverse", async () => {
+		expect(await declarations(flexWrap("wrap-reverse"))).toEqual(["flex-wrap: wrap-reverse"]);
 	});
 });

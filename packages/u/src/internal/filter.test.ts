@@ -6,50 +6,46 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { COMPOSITE_FILTER, filterFunction } from "./filter";
-
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
+import { declarations } from "./serialize";
 
 describe("filterFunction", () => {
-	test("sets the given custom property plus the shared composite filter value", () => {
-		expect(styles(filterFunction({ blur: "12px" }))).toEqual({
-			"--ui-filter-blur": "12px",
-			filter: COMPOSITE_FILTER,
-		});
+	test("sets the given custom property plus the shared composite filter value", async () => {
+		expect(await declarations(filterFunction({ blur: "12px" }))).toEqual([
+			"--ui-filter-blur: 12px",
+			`filter: ${COMPOSITE_FILTER}`,
+		]);
 	});
 
-	test("sets multiple custom properties in one call", () => {
-		expect(styles(filterFunction({ blur: "12px", grayscale: "1" }))).toEqual({
-			"--ui-filter-blur": "12px",
-			"--ui-filter-grayscale": "1",
-			filter: COMPOSITE_FILTER,
-		});
+	test("sets multiple custom properties in one call", async () => {
+		expect(await declarations(filterFunction({ blur: "12px", grayscale: "1" }))).toEqual([
+			"--ui-filter-blur: 12px",
+			"--ui-filter-grayscale: 1",
+			`filter: ${COMPOSITE_FILTER}`,
+		]);
 	});
 
-	test("the drop-shadow function reads a dash-cased variable from its camel-cased key", () => {
-		expect(styles(filterFunction({ dropShadow: "0 1px 2px rgb(0 0 0 / 0.15)" }))).toEqual({
-			"--ui-filter-drop-shadow": "0 1px 2px rgb(0 0 0 / 0.15)",
-			filter: COMPOSITE_FILTER,
-		});
+	test("the drop-shadow function reads a dash-cased variable from its camel-cased key", async () => {
+		expect(
+			await declarations(filterFunction({ dropShadow: "0 1px 2px rgb(0 0 0 / 0.15)" })),
+		).toEqual([
+			"--ui-filter-drop-shadow: 0 1px 2px rgb(0 0 0 / 0.15)",
+			`filter: ${COMPOSITE_FILTER}`,
+		]);
 	});
 
-	test("the hue-rotate function reads a dash-cased variable from its camel-cased key", () => {
-		expect(styles(filterFunction({ hueRotate: "90deg" }))).toEqual({
-			"--ui-filter-hue-rotate": "90deg",
-			filter: COMPOSITE_FILTER,
-		});
+	test("the hue-rotate function reads a dash-cased variable from its camel-cased key", async () => {
+		expect(await declarations(filterFunction({ hueRotate: "90deg" }))).toEqual([
+			"--ui-filter-hue-rotate: 90deg",
+			`filter: ${COMPOSITE_FILTER}`,
+		]);
 	});
 
-	test("the opacity filter function writes its own variable, not the opacity property", () => {
-		let result = styles(filterFunction({ opacity: "0.5" }));
+	test("the opacity filter function writes its own variable, not the opacity property", async () => {
+		let result = await declarations(filterFunction({ opacity: "0.5" }));
 
-		expect(result).toEqual({ "--ui-filter-opacity": "0.5", filter: COMPOSITE_FILTER });
-		expect(result.opacity).toBeUndefined();
+		expect(result).toEqual(["--ui-filter-opacity: 0.5", `filter: ${COMPOSITE_FILTER}`]);
+		expect(result).not.toContain("opacity: 0.5");
 	});
 
 	test("every filter function's variable appears in the composite with an identity fallback", () => {
@@ -84,10 +80,12 @@ describe("filterFunction", () => {
 		);
 	});
 
-	test("the composite's function order is fixed, so composition is order-independent at the call site", () => {
-		let blurFirst = styles(filterFunction({ blur: "4px", grayscale: "1" })).filter;
-		let grayscaleFirst = styles(filterFunction({ grayscale: "1", blur: "4px" })).filter;
+	test("the composite's function order is fixed, so composition is order-independent at the call site", async () => {
+		let blurFirst = await declarations(filterFunction({ blur: "4px", grayscale: "1" }));
+		let grayscaleFirst = await declarations(filterFunction({ grayscale: "1", blur: "4px" }));
 
-		expect(blurFirst).toBe(grayscaleFirst);
+		expect(blurFirst.filter((line) => line.startsWith("filter:"))).toEqual(
+			grayscaleFirst.filter((line) => line.startsWith("filter:")),
+		);
 	});
 });

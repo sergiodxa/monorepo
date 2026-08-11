@@ -4,27 +4,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { scrollbarGutter } from "./scrollbar-gutter";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("scrollbarGutter", () => {
-	test("no-arg defaults to stable", () => {
-		expect(styles(scrollbarGutter())).toEqual({ scrollbarGutter: "stable" });
+	test("no-arg defaults to stable", async () => {
+		expect(await declarations(scrollbarGutter())).toEqual(["scrollbar-gutter: stable"]);
 	});
 
-	test("stable both-edges", () => {
-		expect(styles(scrollbarGutter("stable both-edges"))).toEqual({
-			scrollbarGutter: "stable both-edges",
-		});
+	test("stable both-edges", async () => {
+		expect(await declarations(scrollbarGutter("stable both-edges"))).toEqual([
+			"scrollbar-gutter: stable both-edges",
+		]);
 	});
 
-	test("auto", () => {
-		expect(styles(scrollbarGutter("auto"))).toEqual({ scrollbarGutter: "auto" });
+	test("auto", async () => {
+		expect(await declarations(scrollbarGutter("auto"))).toEqual(["scrollbar-gutter: auto"]);
 	});
 });

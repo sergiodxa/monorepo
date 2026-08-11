@@ -4,37 +4,34 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { gridAutoColumns } from "./grid-auto-columns";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("gridAutoColumns", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(gridAutoColumns(40))).toEqual({
-			gridAutoColumns: "calc(var(--ui-spacing, 0.25rem) * 40)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(gridAutoColumns(40))).toEqual([
+			"grid-auto-columns: calc(var(--ui-spacing, 0.25rem) * 40)",
+		]);
 	});
 
-	test("resolves 'full' to 100%", () => {
-		expect(styles(gridAutoColumns("full"))).toEqual({ gridAutoColumns: "100%" });
+	test("resolves 'full' to 100%", async () => {
+		expect(await declarations(gridAutoColumns("full"))).toEqual(["grid-auto-columns: 100%"]);
 	});
 
-	test("passes a raw CSS length string through unchanged", () => {
-		expect(styles(gridAutoColumns("10rem"))).toEqual({ gridAutoColumns: "10rem" });
+	test("passes a raw CSS length string through unchanged", async () => {
+		expect(await declarations(gridAutoColumns("10rem"))).toEqual(["grid-auto-columns: 10rem"]);
 	});
 
-	test("passes an intrinsic keyword through unchanged", () => {
-		expect(styles(gridAutoColumns("max-content"))).toEqual({ gridAutoColumns: "max-content" });
+	test("passes an intrinsic keyword through unchanged", async () => {
+		expect(await declarations(gridAutoColumns("max-content"))).toEqual([
+			"grid-auto-columns: max-content",
+		]);
 	});
 
-	test("passes a minmax() clause through unchanged", () => {
-		expect(styles(gridAutoColumns("minmax(10rem, 1fr)"))).toEqual({
-			gridAutoColumns: "minmax(10rem, 1fr)",
-		});
+	test("passes a minmax() clause through unchanged", async () => {
+		expect(await declarations(gridAutoColumns("minmax(10rem, 1fr)"))).toEqual([
+			"grid-auto-columns: minmax(10rem, 1fr)",
+		]);
 	});
 });

@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { overflow } from "../overflow/overflow";
 import { bs } from "../size/bs";
 
 import { detailsContent } from "./details-content";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("detailsContent", () => {
-	test("nests the merged input under &::details-content", () => {
-		expect(styles(detailsContent([overflow("clip"), bs(0)]))).toEqual({
-			"&::details-content": {
-				overflow: "clip",
-				blockSize: "calc(var(--ui-spacing, 0.25rem) * 0)",
-			},
-		});
+	test("emits an '&::details-content' block holding the merged input", async () => {
+		expect(await serialize(detailsContent([overflow("clip"), bs(0)]))).toContain(
+			"&::details-content {",
+		);
+		expect(await declarations(detailsContent([overflow("clip"), bs(0)]))).toEqual([
+			"overflow: clip",
+			"block-size: calc(var(--ui-spacing, 0.25rem) * 0)",
+		]);
 	});
 });

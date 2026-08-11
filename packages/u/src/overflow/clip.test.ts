@@ -4,17 +4,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { clip } from "./clip";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("clip", () => {
-	test("sets overflow: clip", () => {
-		expect(styles(clip())).toEqual({ overflow: "clip" });
+	test("sets overflow: clip", async () => {
+		expect(await declarations(clip())).toEqual(["overflow: clip"]);
 	});
 });

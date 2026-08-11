@@ -6,29 +6,31 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { transformStyle } from "./transform-style";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("transformStyle", () => {
-	test("defaults to preserve-3d", () => {
-		expect(styles(transformStyle())).toEqual({ transformStyle: "preserve-3d" });
+	test("defaults to preserve-3d", async () => {
+		expect(await declarations(transformStyle())).toEqual(["transform-style: preserve-3d"]);
 	});
 
-	test("accepts preserve-3d explicitly", () => {
-		expect(styles(transformStyle("preserve-3d"))).toEqual({ transformStyle: "preserve-3d" });
+	test("accepts preserve-3d explicitly", async () => {
+		expect(await declarations(transformStyle("preserve-3d"))).toEqual([
+			"transform-style: preserve-3d",
+		]);
 	});
 
-	test("accepts flat", () => {
-		expect(styles(transformStyle("flat"))).toEqual({ transformStyle: "flat" });
+	test("accepts flat", async () => {
+		expect(await declarations(transformStyle("flat"))).toEqual(["transform-style: flat"]);
 	});
 
-	test("never emits a composite transform declaration", () => {
-		expect(styles(transformStyle())).not.toHaveProperty("transform");
+	test("never emits a composite transform declaration", async () => {
+		// `transform-style` is its own property; emitting the shared composite
+		// `transform` alongside it would create a stacking/containing-block
+		// context the caller never asked for.
+		let css = await declarations(transformStyle());
+
+		expect(css.some((line) => line.startsWith("transform:"))).toBe(false);
 	});
 });

@@ -4,29 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { type } from "./type";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("type", () => {
-	test("combines text()'s font-size/line-height with the base sans font family", () => {
-		expect(styles(type("lg"))).toEqual({
-			fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
-			fontSize: "var(--ui-text-lg, 1.125rem)",
-			lineHeight: "var(--ui-leading-lg, calc(1.75 / 1.125))",
-		});
+	test("combines text()'s font-size/line-height with the base sans font family", async () => {
+		expect(await declarations(type("lg"))).toEqual([
+			"font-family: var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
+			"font-size: var(--ui-text-lg, 1.125rem)",
+			"line-height: var(--ui-leading-lg, calc(1.75 / 1.125))",
+		]);
 	});
 
-	test("always opinionates the family to sans regardless of the text size requested", () => {
-		expect(styles(type("3xl"))).toEqual({
-			fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
-			fontSize: "var(--ui-text-3xl, 1.875rem)",
-			lineHeight: "var(--ui-leading-3xl, 1.2)",
-		});
+	test("always opinionates the family to sans regardless of the text size requested", async () => {
+		expect(await declarations(type("3xl"))).toEqual([
+			"font-family: var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)",
+			"font-size: var(--ui-text-3xl, 1.875rem)",
+			"line-height: var(--ui-leading-3xl, 1.2)",
+		]);
 	});
 });

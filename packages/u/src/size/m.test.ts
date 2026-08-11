@@ -7,42 +7,35 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { m } from "./m";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("m", () => {
-	test("one value applies uniformly", () => {
-		expect(styles(m(4))).toEqual({
-			margin: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("one value applies uniformly", async () => {
+		expect(await declarations(m(4))).toEqual(["margin: calc(var(--ui-spacing, 0.25rem) * 4)"]);
 	});
 
-	test("two values map to block then inline", () => {
-		expect(styles(m(1, 2))).toEqual({
-			marginBlock: "calc(var(--ui-spacing, 0.25rem) * 1)",
-			marginInline: "calc(var(--ui-spacing, 0.25rem) * 2)",
-		});
+	test("two values map to block then inline", async () => {
+		expect(await declarations(m(1, 2))).toEqual([
+			"margin-block: calc(var(--ui-spacing, 0.25rem) * 1)",
+			"margin-inline: calc(var(--ui-spacing, 0.25rem) * 2)",
+		]);
 	});
 
-	test("four values map to block-start, inline-end, block-end, inline-start", () => {
-		expect(styles(m(1, 2, 3, 4))).toEqual({
-			marginBlockStart: "calc(var(--ui-spacing, 0.25rem) * 1)",
-			marginInlineEnd: "calc(var(--ui-spacing, 0.25rem) * 2)",
-			marginBlockEnd: "calc(var(--ui-spacing, 0.25rem) * 3)",
-			marginInlineStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("four values map to block-start, inline-end, block-end, inline-start", async () => {
+		expect(await declarations(m(1, 2, 3, 4))).toEqual([
+			"margin-block-start: calc(var(--ui-spacing, 0.25rem) * 1)",
+			"margin-inline-end: calc(var(--ui-spacing, 0.25rem) * 2)",
+			"margin-block-end: calc(var(--ui-spacing, 0.25rem) * 3)",
+			"margin-inline-start: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("accepts 'auto' anywhere in the 1/2/4-value forms", () => {
-		expect(styles(m(4, "auto"))).toEqual({
-			marginBlock: "calc(var(--ui-spacing, 0.25rem) * 4)",
-			marginInline: "auto",
-		});
+	test("accepts 'auto' anywhere in the 1/2/4-value forms", async () => {
+		expect(await declarations(m(4, "auto"))).toEqual([
+			"margin-block: calc(var(--ui-spacing, 0.25rem) * 4)",
+			"margin-inline: auto",
+		]);
 	});
 });

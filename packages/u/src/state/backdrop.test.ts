@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { backdrop } from "./backdrop";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("backdrop", () => {
-	test("nests the input's styles under '&::backdrop'", () => {
-		expect(styles(backdrop(p(4)))).toEqual({
-			"&::backdrop": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("emits an '&::backdrop' block around the input's declarations", async () => {
+		expect(await serialize(backdrop(p(4)))).toContain("&::backdrop {");
+		expect(await declarations(backdrop(p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

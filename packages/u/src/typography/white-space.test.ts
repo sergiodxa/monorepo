@@ -4,41 +4,36 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { whiteSpace } from "./white-space";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("whiteSpace", () => {
-	test("no-arg defaults to pre-wrap", () => {
-		expect(styles(whiteSpace())).toEqual({ whiteSpace: "pre-wrap" });
+	test("no-arg defaults to pre-wrap", async () => {
+		expect(await declarations(whiteSpace())).toEqual(["white-space: pre-wrap"]);
 	});
 
-	test("normal", () => {
-		expect(styles(whiteSpace("normal"))).toEqual({ whiteSpace: "normal" });
+	test("normal", async () => {
+		expect(await declarations(whiteSpace("normal"))).toEqual(["white-space: normal"]);
 	});
 
-	test("nowrap", () => {
-		expect(styles(whiteSpace("nowrap"))).toEqual({ whiteSpace: "nowrap" });
+	test("nowrap", async () => {
+		expect(await declarations(whiteSpace("nowrap"))).toEqual(["white-space: nowrap"]);
 	});
 
-	test("pre", () => {
-		expect(styles(whiteSpace("pre"))).toEqual({ whiteSpace: "pre" });
+	test("pre", async () => {
+		expect(await declarations(whiteSpace("pre"))).toEqual(["white-space: pre"]);
 	});
 
-	test("pre-wrap", () => {
-		expect(styles(whiteSpace("pre-wrap"))).toEqual({ whiteSpace: "pre-wrap" });
+	test("pre-wrap", async () => {
+		expect(await declarations(whiteSpace("pre-wrap"))).toEqual(["white-space: pre-wrap"]);
 	});
 
-	test("pre-line", () => {
-		expect(styles(whiteSpace("pre-line"))).toEqual({ whiteSpace: "pre-line" });
+	test("pre-line", async () => {
+		expect(await declarations(whiteSpace("pre-line"))).toEqual(["white-space: pre-line"]);
 	});
 
-	test("break-spaces", () => {
-		expect(styles(whiteSpace("break-spaces"))).toEqual({ whiteSpace: "break-spaces" });
+	test("break-spaces", async () => {
+		expect(await declarations(whiteSpace("break-spaces"))).toEqual(["white-space: break-spaces"]);
 	});
 });

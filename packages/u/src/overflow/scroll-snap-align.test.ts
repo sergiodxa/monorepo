@@ -4,29 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { scrollSnapAlign } from "./scroll-snap-align";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("scrollSnapAlign", () => {
-	test("no-arg defaults to start", () => {
-		expect(styles(scrollSnapAlign())).toEqual({ scrollSnapAlign: "start" });
+	test("no-arg defaults to start", async () => {
+		expect(await declarations(scrollSnapAlign())).toEqual(["scroll-snap-align: start"]);
 	});
 
-	test("center", () => {
-		expect(styles(scrollSnapAlign("center"))).toEqual({ scrollSnapAlign: "center" });
+	test("center", async () => {
+		expect(await declarations(scrollSnapAlign("center"))).toEqual(["scroll-snap-align: center"]);
 	});
 
-	test("end", () => {
-		expect(styles(scrollSnapAlign("end"))).toEqual({ scrollSnapAlign: "end" });
+	test("end", async () => {
+		expect(await declarations(scrollSnapAlign("end"))).toEqual(["scroll-snap-align: end"]);
 	});
 
-	test("none", () => {
-		expect(styles(scrollSnapAlign("none"))).toEqual({ scrollSnapAlign: "none" });
+	test("none", async () => {
+		expect(await declarations(scrollSnapAlign("none"))).toEqual(["scroll-snap-align: none"]);
 	});
 });

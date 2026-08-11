@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { flexCol } from "./flex-col";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("flexCol", () => {
-	test("sets flex-direction: column", () => {
-		expect(styles(flexCol())).toEqual({ flexDirection: "column" });
+	test("sets flex-direction: column", async () => {
+		expect(await declarations(flexCol())).toEqual(["flex-direction: column"]);
 	});
 });

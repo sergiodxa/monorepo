@@ -4,37 +4,36 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { vectorEffect } from "./vector-effect";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("vectorEffect", () => {
-	test("sets the vector effect", () => {
-		expect(styles(vectorEffect("non-scaling-stroke"))).toEqual({
-			vectorEffect: "non-scaling-stroke",
-		});
+	test("sets the vector effect", async () => {
+		expect(await declarations(vectorEffect("non-scaling-stroke"))).toEqual([
+			"vector-effect: non-scaling-stroke",
+		]);
 	});
 
-	test("accepts none", () => {
-		expect(styles(vectorEffect("none"))).toEqual({ vectorEffect: "none" });
+	test("accepts none", async () => {
+		expect(await declarations(vectorEffect("none"))).toEqual(["vector-effect: none"]);
 	});
 
-	test("accepts non-scaling-size", () => {
-		expect(styles(vectorEffect("non-scaling-size"))).toEqual({
-			vectorEffect: "non-scaling-size",
-		});
+	test("accepts non-scaling-size", async () => {
+		expect(await declarations(vectorEffect("non-scaling-size"))).toEqual([
+			"vector-effect: non-scaling-size",
+		]);
 	});
 
-	test("accepts non-rotation", () => {
-		expect(styles(vectorEffect("non-rotation"))).toEqual({ vectorEffect: "non-rotation" });
+	test("accepts non-rotation", async () => {
+		expect(await declarations(vectorEffect("non-rotation"))).toEqual([
+			"vector-effect: non-rotation",
+		]);
 	});
 
-	test("accepts fixed-position", () => {
-		expect(styles(vectorEffect("fixed-position"))).toEqual({ vectorEffect: "fixed-position" });
+	test("accepts fixed-position", async () => {
+		expect(await declarations(vectorEffect("fixed-position"))).toEqual([
+			"vector-effect: fixed-position",
+		]);
 	});
 });

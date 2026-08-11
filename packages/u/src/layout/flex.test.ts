@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { flex } from "./flex";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("flex", () => {
-	test("sets display: flex", () => {
-		expect(styles(flex())).toEqual({ display: "flex" });
+	test("sets display: flex", async () => {
+		expect(await declarations(flex())).toEqual(["display: flex"]);
 	});
 });

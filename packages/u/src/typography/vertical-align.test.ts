@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { verticalAlign } from "./vertical-align";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("verticalAlign", () => {
-	test("sets a known keyword", () => {
-		expect(styles(verticalAlign("middle"))).toEqual({ verticalAlign: "middle" });
+	test("sets a known keyword", async () => {
+		expect(await declarations(verticalAlign("middle"))).toEqual(["vertical-align: middle"]);
 	});
 
-	test("passes through an arbitrary value unchanged", () => {
-		expect(styles(verticalAlign("15%"))).toEqual({ verticalAlign: "15%" });
+	test("passes through an arbitrary value unchanged", async () => {
+		expect(await declarations(verticalAlign("15%"))).toEqual(["vertical-align: 15%"]);
 	});
 });

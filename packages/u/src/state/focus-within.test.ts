@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { border } from "../color/border";
+import { declarations, serialize } from "../internal/serialize";
 
 import { focusWithin } from "./focus-within";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("focusWithin", () => {
-	test("nests the wrapped utility's styles under '&:focus-within'", () => {
-		expect(styles(focusWithin(border("brand")))).toEqual({
-			"&:focus-within": { borderColor: "var(--ui-brand-border)" },
-		});
+	test("emits an '&:focus-within' block around the wrapped utility's declarations", async () => {
+		expect(await serialize(focusWithin(border("brand")))).toContain("&:focus-within {");
+		expect(await declarations(focusWithin(border("brand")))).toEqual([
+			"border-color: var(--ui-brand-border)",
+		]);
 	});
 });

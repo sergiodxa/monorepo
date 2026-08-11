@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { scrollSnapStop } from "./scroll-snap-stop";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("scrollSnapStop", () => {
-	test("no-arg defaults to always", () => {
-		expect(styles(scrollSnapStop())).toEqual({ scrollSnapStop: "always" });
+	test("no-arg defaults to always", async () => {
+		expect(await declarations(scrollSnapStop())).toEqual(["scroll-snap-stop: always"]);
 	});
 
-	test("normal", () => {
-		expect(styles(scrollSnapStop("normal"))).toEqual({ scrollSnapStop: "normal" });
+	test("normal", async () => {
+		expect(await declarations(scrollSnapStop("normal"))).toEqual(["scroll-snap-stop: normal"]);
 	});
 });

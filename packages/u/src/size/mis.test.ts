@@ -1,29 +1,23 @@
 /**
- * Unit tests for `mis()`'s `margin-inline-start` declaration, including
- * `"auto"` for centering against the trailing edge.
+ * Unit tests for `mis()`'s `margin-inline-start` declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { mis } from "./mis";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("mis", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(mis(4))).toEqual({
-			marginInlineStart: "calc(var(--ui-spacing, 0.25rem) * 4)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(mis(4))).toEqual([
+			"margin-inline-start: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("passes 'auto' through unchanged", () => {
-		expect(styles(mis("auto"))).toEqual({ marginInlineStart: "auto" });
+	test("passes 'auto' through unchanged", async () => {
+		expect(await declarations(mis("auto"))).toEqual(["margin-inline-start: auto"]);
 	});
 });

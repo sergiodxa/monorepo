@@ -4,68 +4,57 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
-import type { CSSStyles } from "../internal/css-styles";
-
 import { COMPOSITE_BACKDROP_FILTER } from "../internal/backdrop-filter";
-import { merge } from "../internal/descriptor";
+import { compose } from "../internal/descriptor";
+import { declarations, serialize } from "../internal/serialize";
 
 import { backdropBrightness } from "./backdrop-brightness";
 import { backdropGrayscale } from "./backdrop-grayscale";
 import { backdropHueRotate } from "./backdrop-hue-rotate";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): CSSStyles {
-	return descriptor.args[0] as CSSStyles;
-}
-
 describe("backdropBrightness", () => {
-	test("no-arg defaults to 1.1", () => {
-		expect(styles(backdropBrightness())).toEqual({
-			"--ui-backdrop-brightness": "1.1",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("no-arg defaults to 1.1", async () => {
+		expect(await declarations(backdropBrightness())).toEqual([
+			"--ui-backdrop-brightness: 1.1",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
-	test("an explicit numeric factor", () => {
-		expect(styles(backdropBrightness(0.8))).toEqual({
-			"--ui-backdrop-brightness": "0.8",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("an explicit numeric factor", async () => {
+		expect(await declarations(backdropBrightness(0.8))).toEqual([
+			"--ui-backdrop-brightness: 0.8",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
-	test("an explicit string factor passes through unchanged", () => {
-		expect(styles(backdropBrightness("80%"))).toEqual({
-			"--ui-backdrop-brightness": "80%",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+	test("an explicit string factor passes through unchanged", async () => {
+		expect(await declarations(backdropBrightness("80%"))).toEqual([
+			"--ui-backdrop-brightness: 80%",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+		]);
 	});
 
-	test("applies unconditionally, with no prefers-reduced-transparency gating", () => {
-		expect(Object.keys(styles(backdropBrightness())).sort()).toEqual(
-			["--ui-backdrop-brightness", "backdropFilter", "WebkitBackdropFilter"].sort(),
-		);
+	test("applies unconditionally, with no prefers-reduced-transparency gating", async () => {
+		expect(await serialize(backdropBrightness())).not.toContain("prefers-reduced-transparency");
 	});
 });
 
 describe("composability with other backdrop utilities", () => {
-	test("composing three backdrop utilities together sets all three variables under one composite backdropFilter", () => {
-		let merged = merge(
-			styles(backdropBrightness()),
-			styles(backdropGrayscale()),
-			styles(backdropHueRotate()),
+	test("composing three backdrop utilities together sets all three variables under one composite backdrop-filter", async () => {
+		let merged = compose(
+			[backdropBrightness(), backdropGrayscale(), backdropHueRotate()],
+			(styles) => styles,
 		);
 
-		expect(merged).toEqual({
-			"--ui-backdrop-brightness": "1.1",
-			"--ui-backdrop-grayscale": "1",
-			"--ui-backdrop-hue-rotate": "90deg",
-			backdropFilter: COMPOSITE_BACKDROP_FILTER,
-			WebkitBackdropFilter: COMPOSITE_BACKDROP_FILTER,
-		});
+		expect(await declarations(merged)).toEqual([
+			"--ui-backdrop-brightness: 1.1",
+			`backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			`-webkit-backdrop-filter: ${COMPOSITE_BACKDROP_FILTER}`,
+			"--ui-backdrop-grayscale: 1",
+			"--ui-backdrop-hue-rotate: 90deg",
+		]);
 	});
 });

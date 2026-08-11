@@ -4,29 +4,24 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { hyphens } from "./hyphens";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("hyphens", () => {
-	test("no-arg defaults to auto", () => {
-		expect(styles(hyphens())).toEqual({ hyphens: "auto" });
+	test("no-arg defaults to auto", async () => {
+		expect(await declarations(hyphens())).toEqual(["hyphens: auto"]);
 	});
 
-	test("none", () => {
-		expect(styles(hyphens("none"))).toEqual({ hyphens: "none" });
+	test("none", async () => {
+		expect(await declarations(hyphens("none"))).toEqual(["hyphens: none"]);
 	});
 
-	test("manual", () => {
-		expect(styles(hyphens("manual"))).toEqual({ hyphens: "manual" });
+	test("manual", async () => {
+		expect(await declarations(hyphens("manual"))).toEqual(["hyphens: manual"]);
 	});
 
-	test("auto", () => {
-		expect(styles(hyphens("auto"))).toEqual({ hyphens: "auto" });
+	test("auto", async () => {
+		expect(await declarations(hyphens("auto"))).toEqual(["hyphens: auto"]);
 	});
 });

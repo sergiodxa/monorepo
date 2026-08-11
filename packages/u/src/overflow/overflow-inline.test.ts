@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { overflowInline } from "./overflow-inline";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("overflowInline", () => {
-	test("defaults to hidden", () => {
-		expect(styles(overflowInline())).toEqual({ overflowInline: "hidden" });
+	test("defaults to hidden", async () => {
+		expect(await declarations(overflowInline())).toEqual(["overflow-inline: hidden"]);
 	});
 
-	test("accepts an explicit value", () => {
-		expect(styles(overflowInline("auto"))).toEqual({ overflowInline: "auto" });
+	test("accepts an explicit value", async () => {
+		expect(await declarations(overflowInline("auto"))).toEqual(["overflow-inline: auto"]);
 	});
 });

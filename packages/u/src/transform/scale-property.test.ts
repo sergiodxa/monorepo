@@ -6,33 +6,31 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { scaleProperty } from "./scale-property";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("scaleProperty", () => {
-	test("passes a raw string value through unchanged", () => {
-		expect(styles(scaleProperty("1"))).toEqual({ scale: "1" });
+	test("passes a raw string value through unchanged", async () => {
+		expect(await declarations(scaleProperty("1"))).toEqual(["scale: 1"]);
 	});
 
-	test("passes the none keyword through unchanged", () => {
-		expect(styles(scaleProperty("none"))).toEqual({ scale: "none" });
+	test("passes the none keyword through unchanged", async () => {
+		expect(await declarations(scaleProperty("none"))).toEqual(["scale: none"]);
 	});
 
-	test("passes a fractional string value through unchanged", () => {
-		expect(styles(scaleProperty("0.95"))).toEqual({ scale: "0.95" });
+	test("passes a fractional string value through unchanged", async () => {
+		expect(await declarations(scaleProperty("0.95"))).toEqual(["scale: 0.95"]);
 	});
 
-	test("passes another fractional string value through unchanged", () => {
-		expect(styles(scaleProperty("0.98"))).toEqual({ scale: "0.98" });
+	test("passes another fractional string value through unchanged", async () => {
+		expect(await declarations(scaleProperty("0.98"))).toEqual(["scale: 0.98"]);
 	});
 
-	test("stringifies a bare number", () => {
-		expect(styles(scaleProperty(0.95))).toEqual({ scale: "0.95" });
+	test("stringifies a bare number", async () => {
+		// `scale` is not a length, so the string conversion in the utility is
+		// what keeps the serializer from turning `0.95` into `0.95px` — an
+		// invalid value browsers drop, leaving the element unscaled.
+		expect(await declarations(scaleProperty(0.95))).toEqual(["scale: 0.95"]);
 	});
 });

@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { relative } from "./relative";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("relative", () => {
-	test("sets position: relative", () => {
-		expect(styles(relative())).toEqual({ position: "relative" });
+	test("sets position: relative", async () => {
+		expect(await declarations(relative())).toEqual(["position: relative"]);
 	});
 });

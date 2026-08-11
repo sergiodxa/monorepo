@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { not } from "./not";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("not", () => {
-	test("wraps the selector in ':not(...)' and nests the input's styles there", () => {
-		expect(styles(not(":disabled", p(4)))).toEqual({
-			"&:not(:disabled)": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("emits an '&:not(selector)' block around the input's declarations", async () => {
+		expect(await serialize(not(":disabled", p(4)))).toContain("&:not(:disabled) {");
+		expect(await declarations(not(":disabled", p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

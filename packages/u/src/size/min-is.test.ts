@@ -6,27 +6,22 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { minIs } from "./min-is";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("minIs", () => {
-	test("resolves a spacing-scale number", () => {
-		expect(styles(minIs(0))).toEqual({
-			minInlineSize: "calc(var(--ui-spacing, 0.25rem) * 0)",
-		});
+	test("resolves a spacing-scale number", async () => {
+		expect(await declarations(minIs(0))).toEqual([
+			"min-inline-size: calc(var(--ui-spacing, 0.25rem) * 0)",
+		]);
 	});
 
-	test("resolves 'full' to 100%", () => {
-		expect(styles(minIs("full"))).toEqual({ minInlineSize: "100%" });
+	test("resolves 'full' to 100%", async () => {
+		expect(await declarations(minIs("full"))).toEqual(["min-inline-size: 100%"]);
 	});
 
-	test("passes a raw CSS length string through unchanged", () => {
-		expect(styles(minIs("60ch"))).toEqual({ minInlineSize: "60ch" });
+	test("passes a raw CSS length string through unchanged", async () => {
+		expect(await declarations(minIs("60ch"))).toEqual(["min-inline-size: 60ch"]);
 	});
 });

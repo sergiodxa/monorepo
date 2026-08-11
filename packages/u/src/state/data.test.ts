@@ -6,33 +6,29 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { data } from "./data";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("data", () => {
-	test("with no value, targets the bare attribute selector", () => {
-		expect(styles(data("disabled", p(4)))).toEqual({
-			"&[data-disabled]": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("with no value, emits the bare attribute selector", async () => {
+		expect(await serialize(data("disabled", p(4)))).toContain("&[data-disabled] {");
+		expect(await declarations(data("disabled", p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("with a value, targets the attribute=value selector", () => {
-		expect(styles(data("orientation", "vertical", p(4)))).toEqual({
-			'&[data-orientation="vertical"]': { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("with a value, emits the attribute=value selector with the quotes intact", async () => {
+		expect(await serialize(data("orientation", "vertical", p(4)))).toContain(
+			'&[data-orientation="vertical"] {',
+		);
+		expect(await declarations(data("orientation", "vertical", p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("a numeric value is interpolated the same way", () => {
-		expect(styles(data("count", 3, p(4)))).toEqual({
-			'&[data-count="3"]': { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("a numeric value reaches the selector quoted, as an attribute value must be", async () => {
+		expect(await serialize(data("count", 3, p(4)))).toContain('&[data-count="3"] {');
 	});
 });

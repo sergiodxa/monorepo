@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { overflowAnchor } from "./overflow-anchor";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("overflowAnchor", () => {
-	test("no-arg defaults to none, opting out of scroll anchoring", () => {
-		expect(styles(overflowAnchor())).toEqual({ overflowAnchor: "none" });
+	test("no-arg defaults to none, opting out of scroll anchoring", async () => {
+		expect(await declarations(overflowAnchor())).toEqual(["overflow-anchor: none"]);
 	});
 
-	test("auto restores the browser default", () => {
-		expect(styles(overflowAnchor("auto"))).toEqual({ overflowAnchor: "auto" });
+	test("auto restores the browser default", async () => {
+		expect(await declarations(overflowAnchor("auto"))).toEqual(["overflow-anchor: auto"]);
 	});
 });

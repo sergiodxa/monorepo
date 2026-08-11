@@ -4,27 +4,27 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { timelineScope } from "./timeline-scope";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("timelineScope", () => {
-	test("prefixes a single name with --", () => {
-		expect(styles(timelineScope("page-scroll"))).toEqual({ timelineScope: "--page-scroll" });
+	test("prefixes a single name with --", async () => {
+		expect(await declarations(timelineScope("page-scroll"))).toEqual([
+			"timeline-scope: --page-scroll",
+		]);
 	});
 
-	test("prefixes every name and joins them with a comma", () => {
-		expect(styles(timelineScope("page-scroll", "hero-reveal"))).toEqual({
-			timelineScope: "--page-scroll, --hero-reveal",
-		});
+	test("prefixes every name and joins them with a comma", async () => {
+		expect(await declarations(timelineScope("page-scroll", "hero-reveal"))).toEqual([
+			"timeline-scope: --page-scroll, --hero-reveal",
+		]);
 	});
 
-	test("emits an empty value when called with no names", () => {
-		expect(styles(timelineScope())).toEqual({ timelineScope: "" });
+	test("emits the initial value when called with no names", async () => {
+		// Regression: an empty value used to serialize to `timeline-scope: ;`,
+		// an invalid declaration. `none` is the property's initial value, so it
+		// says the same thing in CSS a browser accepts.
+		expect(await declarations(timelineScope())).toEqual(["timeline-scope: none"]);
 	});
 });

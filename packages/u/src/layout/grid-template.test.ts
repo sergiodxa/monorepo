@@ -4,58 +4,53 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { gridTemplate } from "./grid-template";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("gridTemplate", () => {
-	test("no-arg sets nothing", () => {
-		expect(styles(gridTemplate())).toEqual({});
+	test("no-arg sets nothing", async () => {
+		expect(await declarations(gridTemplate())).toEqual([]);
 	});
 
-	test("columns alone", () => {
-		expect(styles(gridTemplate({ columns: "1fr 2fr" }))).toEqual({
-			gridTemplateColumns: "1fr 2fr",
-		});
+	test("columns alone", async () => {
+		expect(await declarations(gridTemplate({ columns: "1fr 2fr" }))).toEqual([
+			"grid-template-columns: 1fr 2fr",
+		]);
 	});
 
-	test("rows alone", () => {
-		expect(styles(gridTemplate({ rows: "auto 1fr" }))).toEqual({
-			gridTemplateRows: "auto 1fr",
-		});
+	test("rows alone", async () => {
+		expect(await declarations(gridTemplate({ rows: "auto 1fr" }))).toEqual([
+			"grid-template-rows: auto 1fr",
+		]);
 	});
 
-	test("areas alone", () => {
-		expect(styles(gridTemplate({ areas: '"header header" "sidebar main"' }))).toEqual({
-			gridTemplateAreas: '"header header" "sidebar main"',
-		});
+	test("areas alone", async () => {
+		expect(await declarations(gridTemplate({ areas: '"header header" "sidebar main"' }))).toEqual([
+			'grid-template-areas: "header header" "sidebar main"',
+		]);
 	});
 
-	test("columns and rows together", () => {
-		expect(styles(gridTemplate({ columns: "1fr 2fr", rows: "auto 1fr" }))).toEqual({
-			gridTemplateColumns: "1fr 2fr",
-			gridTemplateRows: "auto 1fr",
-		});
+	test("columns and rows together", async () => {
+		expect(await declarations(gridTemplate({ columns: "1fr 2fr", rows: "auto 1fr" }))).toEqual([
+			"grid-template-columns: 1fr 2fr",
+			"grid-template-rows: auto 1fr",
+		]);
 	});
 
-	test("all three keys together", () => {
+	test("all three keys together", async () => {
 		expect(
-			styles(
+			await declarations(
 				gridTemplate({
 					columns: "1fr 1fr",
 					rows: "auto",
 					areas: '"a b"',
 				}),
 			),
-		).toEqual({
-			gridTemplateColumns: "1fr 1fr",
-			gridTemplateRows: "auto",
-			gridTemplateAreas: '"a b"',
-		});
+		).toEqual([
+			"grid-template-columns: 1fr 1fr",
+			"grid-template-rows: auto",
+			'grid-template-areas: "a b"',
+		]);
 	});
 });

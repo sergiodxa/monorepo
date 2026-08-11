@@ -4,31 +4,27 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { outlineColor } from "./outline-color";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("outlineColor", () => {
-	test("no-arg resolves the system default ring color", () => {
-		expect(styles(outlineColor())).toEqual({
-			outlineColor: "var(--ui-ring, Highlight)",
-		});
+	test("no-arg resolves the system default ring color", async () => {
+		expect(await declarations(outlineColor())).toEqual([
+			"outline-color: var(--ui-ring, Highlight)",
+		]);
 	});
 
-	test("a tone resolves to its ring variable", () => {
-		expect(styles(outlineColor("danger"))).toEqual({
-			outlineColor: "var(--ui-danger-ring)",
-		});
+	test("a tone resolves to its ring variable", async () => {
+		expect(await declarations(outlineColor("danger"))).toEqual([
+			"outline-color: var(--ui-danger-ring)",
+		]);
 	});
 
-	test("sets only outlineColor, no width or style", () => {
-		let result = styles(outlineColor("danger"));
-		expect(result.outlineWidth).toBeUndefined();
-		expect(result.outlineStyle).toBeUndefined();
+	test("sets only outlineColor, no width or style", async () => {
+		let css = await declarations(outlineColor("danger"));
+
+		expect(css.some((line) => line.startsWith("outline-width"))).toBe(false);
+		expect(css.some((line) => line.startsWith("outline-style"))).toBe(false);
 	});
 });

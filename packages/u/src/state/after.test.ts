@@ -6,21 +6,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { after } from "./after";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("after", () => {
-	test("nests the input's styles under '&::after'", () => {
-		expect(styles(after(p(4)))).toEqual({
-			"&::after": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("emits an '&::after' block around the input's declarations", async () => {
+		expect(await serialize(after(p(4)))).toContain("&::after {");
+		expect(await declarations(after(p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 });

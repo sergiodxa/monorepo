@@ -4,21 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { boxSizing } from "./box-sizing";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("boxSizing", () => {
-	test("'border-box'", () => {
-		expect(styles(boxSizing("border-box"))).toEqual({ boxSizing: "border-box" });
+	test("'border-box'", async () => {
+		expect(await declarations(boxSizing("border-box"))).toEqual(["box-sizing: border-box"]);
 	});
 
-	test("'content-box'", () => {
-		expect(styles(boxSizing("content-box"))).toEqual({ boxSizing: "content-box" });
+	test("'content-box'", async () => {
+		expect(await declarations(boxSizing("content-box"))).toEqual(["box-sizing: content-box"]);
 	});
 });

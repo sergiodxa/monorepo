@@ -6,25 +6,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { bleed } from "./bleed";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("bleed", () => {
-	test("defaults to 4 on the spacing scale", () => {
-		expect(styles(bleed())).toEqual({
-			marginInline: "calc(-1 * calc(var(--ui-spacing, 0.25rem) * 4))",
-		});
+	test("defaults to 4 on the spacing scale", async () => {
+		expect(await declarations(bleed())).toEqual([
+			"margin-inline: calc(-1 * calc(var(--ui-spacing, 0.25rem) * 4))",
+		]);
 	});
 
-	test("wraps an explicit value in the negative calc()", () => {
-		expect(styles(bleed(8))).toEqual({
-			marginInline: "calc(-1 * calc(var(--ui-spacing, 0.25rem) * 8))",
-		});
+	test("wraps an explicit value in the negative calc()", async () => {
+		expect(await declarations(bleed(8))).toEqual([
+			"margin-inline: calc(-1 * calc(var(--ui-spacing, 0.25rem) * 8))",
+		]);
 	});
 });

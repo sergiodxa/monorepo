@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { inlineFlex } from "./inline-flex";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("inlineFlex", () => {
-	test("sets display: inline-flex", () => {
-		expect(styles(inlineFlex())).toEqual({ display: "inline-flex" });
+	test("sets display: inline-flex", async () => {
+		expect(await declarations(inlineFlex())).toEqual(["display: inline-flex"]);
 	});
 });

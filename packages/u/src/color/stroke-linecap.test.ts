@@ -4,25 +4,20 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { strokeLinecap } from "./stroke-linecap";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("strokeLinecap", () => {
-	test("sets the stroke linecap", () => {
-		expect(styles(strokeLinecap("round"))).toEqual({ strokeLinecap: "round" });
+	test("sets the stroke linecap", async () => {
+		expect(await declarations(strokeLinecap("round"))).toEqual(["stroke-linecap: round"]);
 	});
 
-	test("accepts butt", () => {
-		expect(styles(strokeLinecap("butt"))).toEqual({ strokeLinecap: "butt" });
+	test("accepts butt", async () => {
+		expect(await declarations(strokeLinecap("butt"))).toEqual(["stroke-linecap: butt"]);
 	});
 
-	test("accepts square", () => {
-		expect(styles(strokeLinecap("square"))).toEqual({ strokeLinecap: "square" });
+	test("accepts square", async () => {
+		expect(await declarations(strokeLinecap("square"))).toEqual(["stroke-linecap: square"]);
 	});
 });

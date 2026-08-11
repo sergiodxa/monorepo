@@ -8,33 +8,28 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { content } from "./content";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("content", () => {
-	test("defaults to start", () => {
-		expect(styles(content())).toEqual({ alignContent: "start" });
+	test("defaults to start", async () => {
+		expect(await declarations(content())).toEqual(["align-content: start"]);
 	});
 
-	test("passes a plain keyword through unchanged", () => {
-		expect(styles(content("center"))).toEqual({ alignContent: "center" });
+	test("passes a plain keyword through unchanged", async () => {
+		expect(await declarations(content("center"))).toEqual(["align-content: center"]);
 	});
 
-	test("aliases between to space-between", () => {
-		expect(styles(content("between"))).toEqual({ alignContent: "space-between" });
+	test("aliases between to space-between", async () => {
+		expect(await declarations(content("between"))).toEqual(["align-content: space-between"]);
 	});
 
-	test("aliases around to space-around", () => {
-		expect(styles(content("around"))).toEqual({ alignContent: "space-around" });
+	test("aliases around to space-around", async () => {
+		expect(await declarations(content("around"))).toEqual(["align-content: space-around"]);
 	});
 
-	test("aliases evenly to space-evenly", () => {
-		expect(styles(content("evenly"))).toEqual({ alignContent: "space-evenly" });
+	test("aliases evenly to space-evenly", async () => {
+		expect(await declarations(content("evenly"))).toEqual(["align-content: space-evenly"]);
 	});
 });

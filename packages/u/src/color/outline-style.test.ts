@@ -4,23 +4,19 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { outlineStyle } from "./outline-style";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("outlineStyle", () => {
-	test("sets the outline style", () => {
-		expect(styles(outlineStyle("dashed"))).toEqual({ outlineStyle: "dashed" });
+	test("sets the outline style", async () => {
+		expect(await declarations(outlineStyle("dashed"))).toEqual(["outline-style: dashed"]);
 	});
 
-	test("sets only outlineStyle, no color or width", () => {
-		let result = styles(outlineStyle("dotted"));
-		expect(result.outlineColor).toBeUndefined();
-		expect(result.outlineWidth).toBeUndefined();
+	test("sets only outlineStyle, no color or width", async () => {
+		let css = await declarations(outlineStyle("dotted"));
+
+		expect(css.some((line) => line.startsWith("outline-color"))).toBe(false);
+		expect(css.some((line) => line.startsWith("outline-width"))).toBe(false);
 	});
 });

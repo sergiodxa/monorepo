@@ -6,17 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { sticky } from "./sticky";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("sticky", () => {
-	test("sets position: sticky", () => {
-		expect(styles(sticky())).toEqual({ position: "sticky" });
+	test("sets position: sticky", async () => {
+		expect(await declarations(sticky())).toEqual(["position: sticky"]);
 	});
 });

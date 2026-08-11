@@ -4,29 +4,28 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { contentVisibility } from "./content-visibility";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("contentVisibility", () => {
-	test("defaults to auto", () => {
-		expect(styles(contentVisibility())).toEqual({ contentVisibility: "auto" });
+	test("defaults to auto", async () => {
+		expect(await declarations(contentVisibility())).toEqual(["content-visibility: auto"]);
 	});
 
-	test("'visible'", () => {
-		expect(styles(contentVisibility("visible"))).toEqual({ contentVisibility: "visible" });
+	test("'visible'", async () => {
+		expect(await declarations(contentVisibility("visible"))).toEqual([
+			"content-visibility: visible",
+		]);
 	});
 
-	test("'hidden'", () => {
-		expect(styles(contentVisibility("hidden"))).toEqual({ contentVisibility: "hidden" });
+	test("'hidden'", async () => {
+		expect(await declarations(contentVisibility("hidden"))).toEqual(["content-visibility: hidden"]);
 	});
 
-	test("does not reserve a placeholder size the way virtualize() does", () => {
-		expect(styles(contentVisibility("auto"))).not.toHaveProperty("containIntrinsicSize");
+	test("does not reserve a placeholder size the way virtualize() does", async () => {
+		let css = await declarations(contentVisibility("auto"));
+
+		expect(css.some((line) => line.startsWith("contain-intrinsic-size:"))).toBe(false);
 	});
 });

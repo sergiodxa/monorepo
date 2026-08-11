@@ -4,32 +4,28 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import { declarations } from "../internal/serialize";
 
 import { tabSize } from "./tab-size";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("tabSize", () => {
-	test("no-arg defaults to 2", () => {
-		expect(styles(tabSize())).toEqual({ tabSize: "2" });
+	test("no-arg defaults to 2", async () => {
+		expect(await declarations(tabSize())).toEqual(["tab-size: 2"]);
 	});
 
 	/* Stringified, not left as a number: a number reaches the style serializer as
 	a length and comes out `2px`, which sizes the tab in pixels rather than in
 	characters. */
-	test("a number is emitted unitless", () => {
-		expect(styles(tabSize(4))).toEqual({ tabSize: "4" });
+	test("a number is emitted unitless", async () => {
+		expect(await declarations(tabSize(4))).toEqual(["tab-size: 4"]);
+		expect(await declarations(tabSize(4))).not.toContain("tab-size: 4px");
 	});
 
-	test("zero", () => {
-		expect(styles(tabSize(0))).toEqual({ tabSize: "0" });
+	test("zero", async () => {
+		expect(await declarations(tabSize(0))).toEqual(["tab-size: 0"]);
 	});
 
-	test("a length string passes through", () => {
-		expect(styles(tabSize("4ch"))).toEqual({ tabSize: "4ch" });
+	test("a length string passes through", async () => {
+		expect(await declarations(tabSize("4ch"))).toEqual(["tab-size: 4ch"]);
 	});
 });

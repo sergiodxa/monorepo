@@ -6,42 +6,38 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import type { CSSMixinDescriptor } from "remix/ui";
-
 import { bg } from "../color/bg";
 import { border } from "../color/border";
+import { declarations, serialize } from "../internal/serialize";
 import { p } from "../size/p";
 
 import { where } from "./where";
 
-/** Unwraps a utility mixin back to the style tree it was built from. */
-function styles(descriptor: CSSMixinDescriptor): Record<string, unknown> {
-	return descriptor.args[0] as Record<string, unknown>;
-}
-
 describe("where", () => {
-	test("nests the input's styles under '& :where(selector)', space included", () => {
-		expect(styles(where("pre", p(4)))).toEqual({
-			"& :where(pre)": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("emits '& :where(selector)', keeping the descendant space", async () => {
+		// Without the space the rule would target the element itself rather
+		// than its descendants — a one-character difference in the output.
+		expect(await serialize(where("pre", p(4)))).toContain("& :where(pre) {");
+		expect(await declarations(where("pre", p(4)))).toEqual([
+			"padding: calc(var(--ui-spacing, 0.25rem) * 4)",
+		]);
 	});
 
-	test("passes a comma-separated selector list through untouched", () => {
-		expect(styles(where("th, td", p(4)))).toEqual({
-			"& :where(th, td)": { padding: "calc(var(--ui-spacing, 0.25rem) * 4)" },
-		});
+	test("a comma-separated selector list stays inside the one :where()", async () => {
+		expect(await serialize(where("th, td", p(4)))).toContain("& :where(th, td) {");
 	});
 
-	test("merges an array of utilities into one nested block", () => {
-		expect(styles(where("a", [bg("brand.tint"), border("brand")]))).toEqual({
-			"& :where(a)": {
-				backgroundColor: "var(--ui-brand-bg-tint)",
-				borderColor: "var(--ui-brand-border)",
-			},
-		});
+	test("an array of utilities merges into one nested block", async () => {
+		expect(await serialize(where("a", [bg("brand.tint"), border("brand")]))).toContain(
+			"& :where(a) {",
+		);
+		expect(await declarations(where("a", [bg("brand.tint"), border("brand")]))).toEqual([
+			"background-color: var(--ui-brand-bg-tint)",
+			"border-color: var(--ui-brand-border)",
+		]);
 	});
 
-	test("drops a falsy input, leaving an empty nested block", () => {
-		expect(styles(where("a", false))).toEqual({ "& :where(a)": {} });
+	test("a falsy input emits no CSS at all, not an empty rule", async () => {
+		expect(await serialize(where("a", false))).toBe("");
 	});
 });
