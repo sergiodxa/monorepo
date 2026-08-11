@@ -17,6 +17,7 @@ import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
+import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
@@ -152,8 +153,13 @@ export default function createApplication(env: App.Env) {
 	return router;
 }
 
-/** Creates the request-scoped renderer used by controllers via `ctx.render`. */
-function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
+/**
+ * Creates the request-scoped renderer used by controllers via `ctx.render`.
+ *
+ * Exported so the doctype and content type it guarantees can be asserted without
+ * standing up the whole router.
+ */
+export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 	return async function render(ViewComponent, viewModel, options?: RenderOptions) {
 		let renderView = ViewComponent();
 		let stream = renderToStream(renderView({ model: viewModel }), {
@@ -165,7 +171,13 @@ function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 		let headers = new Headers(options?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 
-		return new Response(stream, {
+		// `createHtmlResponse` rather than `new Response`, because it prepends
+		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
+		// can go, since JSX escapes text and the renderer exposes no option for it.
+		// Without it every page parses in quirks mode. Fragment responses get one
+		// too, which is harmless: `remix/ui` strips any doctype out of frame content
+		// before inserting it, on the server and in the browser alike.
+		return createHtmlResponse(stream, {
 			status: options?.status ?? 200,
 			headers,
 		});

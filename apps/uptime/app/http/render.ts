@@ -17,6 +17,7 @@ import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { logger } from "@pkg/logger";
+import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
 
 /** How many redirects a frame's sub-request may follow before it is treated as a loop. */
@@ -44,7 +45,13 @@ export function createHtmlRenderer(ctx: RequestContext) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 
-		return new Response(stream, { ...init, headers });
+		// `createHtmlResponse` rather than `new Response`, because it prepends
+		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
+		// can go, since JSX escapes text and the renderer exposes no option for it.
+		// Without it every page parses in quirks mode. Fragment responses get one
+		// too, which is harmless: `remix/ui` strips any doctype out of frame content
+		// before inserting it, on the server and in the browser alike.
+		return createHtmlResponse(stream, { ...init, headers });
 	};
 }
 

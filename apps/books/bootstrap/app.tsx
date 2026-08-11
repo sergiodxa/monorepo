@@ -19,6 +19,7 @@ import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { renderWith } from "remix/render-middleware";
+import { createHtmlResponse } from "remix/response/html";
 import { renderToStream } from "remix/ui/server";
 
 import checkout from "~/app/http/controllers/checkout";
@@ -88,6 +89,10 @@ function createHtmlRenderer(_ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		return new Response(renderToStream(node), { ...init, headers });
+		// `createHtmlResponse` rather than `new Response`, because it prepends
+		// `<!DOCTYPE html>` to the stream's first chunk — the only place the doctype
+		// can go, since JSX escapes text and the renderer exposes no option for it.
+		// Without it every page parses in quirks mode.
+		return createHtmlResponse(renderToStream(node), { ...init, headers });
 	};
 }

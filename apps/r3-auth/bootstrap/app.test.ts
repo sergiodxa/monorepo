@@ -255,6 +255,16 @@ describe("the remaining routes", () => {
 		expect(body).toContain("The page you are looking for does not exist.");
 	});
 
+	test("an HTML document starts with the doctype, so the page parses in standards mode", async () => {
+		let response = await app.fetch(new Request(`${ORIGIN}/nowhere-at-all`));
+		let body = await response.text();
+
+		// The doctype is not part of the JSX tree — the renderer prepends it to the
+		// response body — so only a test that reads the whole response can see it.
+		expect(body.startsWith("<!DOCTYPE html>")).toBe(true);
+		expect(body.indexOf("<html")).toBe("<!DOCTYPE html>".length);
+	});
+
 	test("a signed-in session survives across requests", async () => {
 		await signIn(app, fixtures);
 

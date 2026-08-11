@@ -26,6 +26,15 @@ describe("GET /", () => {
 		expect(body).toContain("required");
 	});
 
+	test("starts the document with the doctype, so the page parses in standards mode", async () => {
+		let body = await fetchApp("/").then((response) => response.text());
+
+		// The doctype is not part of the JSX tree — the renderer prepends it to the
+		// response body — so only a test that reads the whole response can see it.
+		expect(body.startsWith("<!DOCTYPE html>")).toBe(true);
+		expect(body.indexOf("<html")).toBe("<!DOCTYPE html>".length);
+	});
+
 	test("advertises one canonical URL regardless of the host that served the request", async () => {
 		let body = await fetchApp("/").then((response) => response.text());
 
