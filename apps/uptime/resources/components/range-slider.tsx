@@ -1,19 +1,21 @@
 /**
- * A single-value range control matching the visual language of `Field` (bold
- * label, muted description): `@pkg/ui`'s `Slider` for the track/thumb, paired
- * with a live numeric readout (an `<output>` kept in sync as the user drags) plus
- * low/high range labels and optional helper text.
+ * Client island: a single-value range control matching the visual language of
+ * `Field` (bold label, muted description). `@pkg/ui`'s `Slider` draws the
+ * track/thumb, paired with a numeric readout (an `<output>`), low/high range
+ * labels, and optional helper text.
  *
- * `Slider.Thumb`/`Slider.Output` only render the value that was current at
- * render time — there's no mixin for a *live*, in-progress readout as the
- * thumb drags: the one mixin whose name suggests it (`range-preview.ts`) is
- * built around a `CalendarModel` and calendar day cells for a `RangeCalendar`
- * grid's hover/focus preview of a pending date range, an unrelated behavior
- * with no applicability to a plain single-thumb slider. So this component
- * keeps a small, local `on("input", ...)` listener on the thumb — the same
- * primitive every such mixin is itself built from — to write the scaled,
- * unit-suffixed value into the paired `<output>` on every drag, replacing the
- * previous injected `<script>` with a delegated document-wide listener.
+ * This needs JS: `Slider` renders the value it was given — its `<output>` reports
+ * that number and its track's fill bar is sized from it — so a drag moves the
+ * native thumb while the readout and the colored fill stay wherever the server
+ * left them. Holding the current value in the island and re-rendering on each
+ * `input` event is what keeps all three in agreement, and it keeps the readout
+ * and the fill following one value instead of a DOM listener patching each of
+ * them on its own.
+ *
+ * No-JS baseline: the control still renders as a native `<input type="range">`,
+ * keyboard-operable and posting `name`'s value with the surrounding form; only
+ * the readout and the fill bar stay at the initial value until the island's
+ * module lands.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,87 +27,86 @@ import { fg } from "@pkg/u/color";
 import { flex, flexCol, gap, items, justify } from "@pkg/u/layout";
 import { fontSize, tabularNums, weight } from "@pkg/u/typography";
 import { Description, Label, Slider } from "@pkg/ui";
-import { on } from "remix/ui";
+import { clientEntry, on } from "remix/ui";
 
-namespace RangeSlider {
-	export interface Props {
-		label: string;
-		/** Muted helper text rendered below the range labels. */
-		description?: string;
-		name: string;
-		min: number;
-		max: number;
-		step?: number;
-		defaultValue: number;
-		/** Divides the raw (submitted) value before display, e.g. `60` to show seconds as minutes. */
-		scale?: number;
-		/** Suffix appended to the displayed number, e.g. `"m"`. */
-		unit?: string;
-		/** Labels under the track's low/high ends, e.g. `["1m", "60m"]`. */
-		rangeLabels: readonly [low: string, high: string];
-	}
-}
-
-/**
- * Writes the thumb's scaled, unit-suffixed value into its paired `<output>` on
- * every `input` event — the paired output is found by its `for` attribute
- * matching the thumb's own `id`, the same native association
- * `Slider.Output`/`Slider.Thumb` already carry.
- */
-function syncOutput(scale: number, unit: string) {
-	return on<HTMLInputElement, "input">("input", (event) => {
-		let input = event.currentTarget;
-		let out = document.querySelector<HTMLOutputElement>(`output[for="${input.id}"]`);
-		if (!out) return;
-		out.textContent = `${Math.round(input.valueAsNumber / scale)}${unit}`;
-	});
-}
+/** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
+type RangeSliderProps = {
+	label: string;
+	/** Muted helper text rendered below the range labels. */
+	description?: string;
+	name: string;
+	min: number;
+	max: number;
+	step?: number;
+	defaultValue: number;
+	/** Divides the raw (submitted) value before display, e.g. `60` to show seconds as minutes. */
+	scale?: number;
+	/** Suffix appended to the displayed number, e.g. `"m"`. */
+	unit?: string;
+	/** Labels under the track's low/high ends, e.g. `["1m", "60m"]`. */
+	rangeLabels: [low: string, high: string];
+};
 
 /** Slider + live readout + low/high range labels + optional helper text. */
-export default function RangeSlider(handle: Handle<RangeSlider.Props>) {
-	return () => {
-		let {
-			label,
-			description: helperText,
-			name,
-			min,
-			max,
-			step = 1,
-			defaultValue,
-			scale = 1,
-			unit = "",
-			rangeLabels: [low, high],
-		} = handle.props;
-		let descriptionId = helperText ? `${name}-description` : undefined;
+export const RangeSlider = clientEntry(
+	"/resources/components/range-slider.tsx#RangeSlider",
+	function RangeSlider(handle: Handle<RangeSliderProps>) {
+		let value = handle.props.defaultValue;
 
-		return (
-			<div mix={[flex(), flexCol(), gap("0.5rem")]}>
-				<Slider min={min} max={max} defaultValue={defaultValue}>
-					<div
-						mix={[flex(), justify("between"), items("baseline"), fontSize("0.875rem"), weight(600)]}
-					>
-						<Label htmlFor={name}>{label}</Label>
-						<Slider.Output htmlFor={name} mix={[fg("brand"), tabularNums()]}>
-							{Math.round(defaultValue / scale)}
-							{unit}
-						</Slider.Output>
-					</div>
-					<Slider.Track>
-						<Slider.Thumb
-							id={name}
-							name={name}
-							step={step}
-							aria-describedby={descriptionId}
-							mix={[syncOutput(scale, unit)]}
-						/>
-					</Slider.Track>
-					<div mix={[flex(), justify("between"), fontSize("0.75rem"), fg("neutral.muted")]}>
-						<span>{low}</span>
-						<span>{high}</span>
-					</div>
-				</Slider>
-				{helperText && <Description id={descriptionId}>{helperText}</Description>}
-			</div>
-		);
-	};
-}
+		return () => {
+			let {
+				label,
+				description: helperText,
+				name,
+				min,
+				max,
+				step = 1,
+				scale = 1,
+				unit = "",
+				rangeLabels: [low, high],
+			} = handle.props;
+			let descriptionId = helperText ? `${name}-description` : undefined;
+
+			return (
+				<div mix={[flex(), flexCol(), gap("0.5rem")]}>
+					<Slider min={min} max={max} value={value}>
+						<div
+							mix={[
+								flex(),
+								justify("between"),
+								items("baseline"),
+								fontSize("0.875rem"),
+								weight(600),
+							]}
+						>
+							<Label htmlFor={name}>{label}</Label>
+							<Slider.Output htmlFor={name} mix={[fg("brand"), tabularNums()]}>
+								{Math.round(value / scale)}
+								{unit}
+							</Slider.Output>
+						</div>
+						<Slider.Track>
+							<Slider.Thumb
+								id={name}
+								name={name}
+								step={step}
+								aria-describedby={descriptionId}
+								mix={[
+									on<HTMLInputElement, "input">("input", (event) => {
+										value = event.currentTarget.valueAsNumber;
+										handle.update();
+									}),
+								]}
+							/>
+						</Slider.Track>
+						<div mix={[flex(), justify("between"), fontSize("0.75rem"), fg("neutral.muted")]}>
+							<span>{low}</span>
+							<span>{high}</span>
+						</div>
+					</Slider>
+					{helperText && <Description id={descriptionId}>{helperText}</Description>}
+				</div>
+			);
+		};
+	},
+);

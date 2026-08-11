@@ -42,7 +42,7 @@ import { Select, TextField } from "@pkg/ui";
 import type { SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import RangeSlider from "~/resources/components/range-slider";
+import { RangeSlider } from "~/resources/components/range-slider";
 
 /** Cloudflare Durable Object location hints this app offers as monitoring regions. */
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;

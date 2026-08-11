@@ -45,7 +45,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import { IMPORT_INTERVAL, MAX_IMPORT_LINES } from "~/app/http/validators/monitor-import";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
-import RangeSlider from "~/resources/components/range-slider";
+import { RangeSlider } from "~/resources/components/range-slider";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
