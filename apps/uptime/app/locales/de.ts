@@ -3515,6 +3515,19 @@ export default {
 					"Dieser Monitor umfasst jetzt {{count}} Namen, eine Prüfung schafft {{limit}}. Verteilen Sie die Zone auf mehrere Monitore, damit jeder Name weiterhin geprüft wird.",
 			},
 
+			/** Column headings match the monitor's own record list, so both screens read alike. */
+			table: {
+				columns: {
+					watched: "Überwacht",
+					name: "Name",
+					type: "Typ",
+					value: "Wert",
+				},
+
+				/** Each box names the record it decides, since the column heading is not read per row. */
+				watchRecord: "{{name}} {{type}} überwachen",
+			},
+
 			empty: "Für diese Domain wurde nichts gefunden.",
 			cancel: "Abbrechen",
 			cta: "Einträge speichern",

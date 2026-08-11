@@ -3493,6 +3493,19 @@ export default {
 					"Questo monitor copre ora {{count}} nomi, mentre un controllo ne può percorrere {{limit}}. Divida la zona su più monitor affinché ogni nome continui a essere controllato.",
 			},
 
+			/** Column headings match the monitor's own record list, so both screens read alike. */
+			table: {
+				columns: {
+					watched: "Monitorato",
+					name: "Nome",
+					type: "Tipo",
+					value: "Valore",
+				},
+
+				/** Each box names the record it decides, since the column heading is not read per row. */
+				watchRecord: "Monitora {{name}} {{type}}",
+			},
+
 			empty: "Non è stato trovato nulla per questo dominio.",
 			cancel: "Annulla",
 			cta: "Salva Record",

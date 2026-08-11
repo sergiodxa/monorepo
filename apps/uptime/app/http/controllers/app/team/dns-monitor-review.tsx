@@ -26,10 +26,13 @@ import type { Handle } from "remix/ui";
 import { notFound } from "@pkg/http/response/html";
 import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
+import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
-import { hstack, vstack } from "@pkg/u/layout";
-import { fontSize, overflowWrap, weight } from "@pkg/u/typography";
-import { Alert, Button, Checkbox, CheckboxGroup, Description, LinkButton } from "@pkg/ui";
+import { block, hstack, vstack } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { maxBs, maxIs } from "@pkg/u/size";
+import { fontSize, overflowWrap } from "@pkg/u/typography";
+import { Alert, Button, Checkbox, Description, LinkButton, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
@@ -92,7 +95,8 @@ namespace RecordGroupSection {
 
 /**
  * One group of reviewable records: its heading, a select-all control over its own boxes,
- * and a checkbox per record.
+ * and a table of one row per record — a checkbox, then the name, type and value in aligned
+ * columns, which is the only way a zone's worth of records can be scanned at all.
  *
  * Each box starts where the record itself stands rather than at a fixed default, so the
  * screen never offers a choice the database does not already hold: discovery stores what it
@@ -132,24 +136,72 @@ function RecordGroupSection(handle: Handle<RecordGroupSection.Props>) {
 							<CheckboxGroupSelectAll groupId={groupId} />
 						</IntlProvider>
 
-						<CheckboxGroup id={groupId} aria-label={t(`groups.${kind}.title`)}>
-							{records.map((record) => (
-								<Checkbox
-									key={record.id}
-									name="record_ids"
-									value={record.id}
-									defaultChecked={record.is_enabled}
-								>
-									<span mix={[hstack({ gap: 2, align: "baseline" })]}>
-										<span mix={[weight("medium")]}>{record.name}</span>
-										<span mix={[fontSize("sm"), fg("neutral.muted")]}>{record.record_type}</span>
-										{/* The value is the record's identity, and a DKIM key is longer than
-										    the column: it wraps mid-token rather than pushing the page sideways. */}
-										<code mix={[fontSize("sm"), overflowWrap("anywhere")]}>{record.value}</code>
-									</span>
-								</Checkbox>
-							))}
-						</CheckboxGroup>
+						{/*
+						 * A table, and the same Name · Type · Value shape the monitor's own record
+						 * list uses: the decision being asked for is "which of these do I want to
+						 * hear about", which is read by scanning one column at a time. The id sits
+						 * here because the select-all island drives every checkbox descending from
+						 * it, and every one of them is a row of this table.
+						 */}
+						<Table.Container>
+							<Table id={groupId} aria-label={t(`groups.${kind}.title`)}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>
+											{/* The column holds only checkboxes, which name themselves; the
+											    heading exists so the column is announced at all. */}
+											<span mix={[visuallyHidden()]}>{t("table.columns.watched")}</span>
+										</Table.Column>
+										<Table.Column>{t("table.columns.name")}</Table.Column>
+										<Table.Column>{t("table.columns.type")}</Table.Column>
+										<Table.Column>{t("table.columns.value")}</Table.Column>
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{records.map((record) => (
+										<Table.Row key={record.id}>
+											<Table.Cell>
+												<Checkbox
+													name="record_ids"
+													value={record.id}
+													defaultChecked={record.is_enabled}
+													aria-label={t("table.watchRecord", {
+														name: record.name,
+														type: record.record_type,
+													})}
+												/>
+											</Table.Cell>
+											<Table.Cell>
+												<code mix={[overflowWrap("anywhere")]}>{record.name}</code>
+											</Table.Cell>
+											<Table.Cell>{record.record_type}</Table.Cell>
+											{/*
+											 * A DKIM key is ~400 unbroken characters, and one left to itself sets
+											 * the height of every row around it. So the value gets a bounded box
+											 * that scrolls its own overflow: the row height is capped whatever the
+											 * value holds, and unlike a truncation the whole key stays present —
+											 * the only real use for it is copying it out and comparing it against
+											 * what the provider says it should be.
+											 */}
+											<Table.Cell>
+												<code
+													mix={[
+														block(),
+														fontSize("sm"),
+														maxIs("32rem"),
+														maxBs("3lh"),
+														overflow("auto"),
+														overflowWrap("anywhere"),
+													]}
+												>
+													{record.value}
+												</code>
+											</Table.Cell>
+										</Table.Row>
+									))}
+								</Table.Body>
+							</Table>
+						</Table.Container>
 					</SettingsSection.Body>
 				</SettingsSection.Card>
 			</SettingsSection>
@@ -237,7 +289,15 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 						},
 					]}
 				>
-					<FormPage>
+					{/*
+					 * Full width rather than the default reading column. Every other form here
+					 * is a stack of labelled fields, where a narrow measure helps; this page is
+					 * a table of a customer's whole zone, and a record's value can be a
+					 * 400-character key. Constraining it to 640px spends the screen on empty
+					 * margins and buys nothing back — the shell's own padding is the only inset
+					 * this page wants.
+					 */}
+					<FormPage maxWidth="full">
 						<div mix={[vstack({ gap: 12 })]}>
 							<p mix={[fg("neutral.muted")]}>{t("header.description")}</p>
 

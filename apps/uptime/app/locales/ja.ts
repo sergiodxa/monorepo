@@ -3422,6 +3422,19 @@ export default {
 					"このモニターは現在 {{count}} 個の名前を対象としていますが、1 回のチェックで確認できるのは {{limit}} 個までです。すべての名前を引き続きチェックするには、ゾーンを複数のモニターに分けてください。",
 			},
 
+			/** Column headings match the monitor's own record list, so both screens read alike. */
+			table: {
+				columns: {
+					watched: "監視",
+					name: "名前",
+					type: "タイプ",
+					value: "値",
+				},
+
+				/** Each box names the record it decides, since the column heading is not read per row. */
+				watchRecord: "{{name}} の {{type}} レコードを監視します",
+			},
+
 			empty: "このドメインでは何も見つかりませんでした。",
 			cancel: "キャンセル",
 			cta: "レコードを保存",

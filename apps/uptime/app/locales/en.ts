@@ -3507,6 +3507,19 @@ export default {
 					"This monitor now covers {{count}} names, and one check can sweep {{limit}}. Split the zone across more than one monitor so every name keeps being checked.",
 			},
 
+			/** Column headings match the monitor's own record list, so both screens read alike. */
+			table: {
+				columns: {
+					watched: "Watched",
+					name: "Name",
+					type: "Type",
+					value: "Value",
+				},
+
+				/** Each box names the record it decides, since the column heading is not read per row. */
+				watchRecord: "Watch {{name}} {{type}}",
+			},
+
 			empty: "Nothing was found for this domain.",
 			cancel: "Cancel",
 			cta: "Save Records",

@@ -15,7 +15,7 @@ import { visuallyHidden } from "@pkg/u/a11y";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor } from "@pkg/u/general";
-import { block, center, hidden, hstack, relative } from "@pkg/u/layout";
+import { block, center, hidden, hstack, relative, shrink } from "@pkg/u/layout";
 import { bs, is } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 
@@ -132,6 +132,13 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 						center(),
 						is("1.25rem"),
 						bs("1.25rem"),
+						/*
+						 * The row is a flex container, and a flex item with a declared size still
+						 * gives that size up when a sibling does not fit — so a long label squashed
+						 * the box into a sliver instead of wrapping. A checkbox is only legible while
+						 * it stays square, so it never participates in that negotiation.
+						 */
+						shrink(0),
 						rounded("sm"),
 						border({ width: 2, color: "neutral.strong" }),
 						bg("neutral.tint"),

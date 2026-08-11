@@ -224,6 +224,32 @@ describe("dnsMonitorReview", () => {
 		expect(body).toContain(`value="${monitor.id}"`);
 	});
 
+	test("lays the records out as a table with its own columns", async () => {
+		let { db, team, membership, monitor } = await createFixture();
+		await db.create(
+			dnsMonitorRecords,
+			record(monitor.id, {
+				name: "dkim._domainkey.example.com",
+				record_type: "TXT",
+				value: `v=DKIM1; k=rsa; p=${"A".repeat(400)}`,
+			}),
+			{ touch: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("<table");
+		expect(body).toContain(en.page.dnsMonitorReview.table.columns.name);
+		expect(body).toContain(en.page.dnsMonitorReview.table.columns.type);
+		expect(body).toContain(en.page.dnsMonitorReview.table.columns.value);
+		expect(body).toContain(en.page.dnsMonitorReview.table.columns.watched);
+		// A 400-character DKIM key gets a bounded box that scrolls its own overflow rather
+		// than setting the height of every row around it — and the whole value is still
+		// there, because comparing it against the provider's is the only use it has.
+		expect(body).toContain("max-block-size: 3lh;");
+		expect(body).toContain(`v=DKIM1; k=rsa; p=${"A".repeat(400)}`);
+	});
+
 	test("keeps a newly appeared record in its own group, unticked", async () => {
 		let { db, team, membership, monitor } = await createFixture();
 		await db.create(
