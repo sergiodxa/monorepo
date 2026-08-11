@@ -26,7 +26,7 @@ import { createController } from "remix/fetch-router";
 import type { ZoneFileImport } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
 
-import DnsMonitor from "~/app/data/dns-monitor";
+import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
 	DEFAULT_DNS_INTERVAL_SECONDS,
@@ -119,10 +119,27 @@ export default createController(dnsMonitorsRoutes, {
 			},
 		},
 
-		/** POST /api/v1/dns-monitors — creates a DNS monitor for the team. */
+		/** POST /api/v1/dns-monitors — creates a DNS monitor for the team, up to {@link MAX_DNS_MONITORS_PER_TEAM}. */
 		dnsMonitorsCreate: {
 			middleware: [requireApiKey("dns-monitors:write")],
 			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+
+				/**
+				 * Checked before anything is parsed or resolved: one check sweeps every tracked
+				 * name of every monitor a team owns, so an unbounded collection is a cost and
+				 * platform-limit problem rather than an untidy one. Same cap the web create flow
+				 * applies, so a key cannot be used to walk around it.
+				 */
+				let existingCount = await DnsMonitor.countByTeam(db, ctx.apiTeam.id);
+				if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
+					return apiError(
+						"LIMIT_EXCEEDED",
+						`Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
+						BadRequest,
+					);
+				}
+
 				let result = await validate(ctx.request, CreateDnsMonitorSchema);
 				if (isFailure(result)) {
 					return apiError(
@@ -162,7 +179,6 @@ export default createController(dnsMonitorsRoutes, {
 					);
 				}
 
-				let db = getServiceContainer().get(Database);
 				let dnsMonitor = await DnsMonitor.create(db, ctx.apiTeam.id, {
 					name: result.data.name,
 					domain: result.data.domain,

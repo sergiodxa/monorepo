@@ -164,6 +164,8 @@ Creates a domain monitor and runs discovery immediately: every supported record 
 
 **Everything the resolver answered with is imported and watched.** There is no review step on an API call — the dashboard's exists because a human is standing there — so a script that wants something left alone turns it off through the records sub-resource afterwards. The one exception is a record the zone file declares that the resolver does not answer for: it is imported unwatched, for the reason given below.
 
+A team may hold **20 DNS monitors**. Past that the create is refused with `400` and code `LIMIT_EXCEEDED`, before the monitor row is written and before a single query is sent — one domain monitor sweeps every supported type at every tracked name, so the ceiling is what keeps a team's checks inside the platform's per-invocation budget. Delete a monitor to make room.
+
 The response is `201 Created`.
 
 ```
@@ -235,6 +237,7 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 | Status | Code             | Description                                                                          |
 | ------ | ---------------- | ------------------------------------------------------------------------------------ |
 | 400    | VALIDATION_ERROR | Invalid body, a zone file over 262144 bytes, or a zone declaring more than 100 names |
+| 400    | LIMIT_EXCEEDED   | The team already has 20 DNS monitors                                                 |
 | 401    | UNAUTHORIZED     | Missing or invalid API key                                                           |
 | 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope                                             |
 

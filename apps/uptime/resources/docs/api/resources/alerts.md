@@ -274,7 +274,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
 | 400    | VALIDATION_ERROR | Invalid request body or missing required fields |
 | 401    | UNAUTHORIZED     | Missing or invalid API key                      |
 | 403    | FORBIDDEN        | API key doesn't have `alerts:write` scope       |
-| 409    | LIMIT_EXCEEDED   | Team already has 10 alerts                      |
+| 400    | LIMIT_EXCEEDED   | Team already has 10 alerts                      |
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 

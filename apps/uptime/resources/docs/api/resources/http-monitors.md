@@ -190,12 +190,11 @@ curl https://uptime.sergiodxa.com/api/v1/monitors \
 
 ### Errors
 
-| Status | Code             | Description                            |
-| ------ | ---------------- | -------------------------------------- |
-| 400    | VALIDATION_ERROR | Invalid request body                   |
-| 400    | LIMIT_EXCEEDED   | Maximum monitors reached for your plan |
-| 401    | UNAUTHORIZED     | Missing or invalid API key             |
-| 403    | FORBIDDEN        | API key doesn't have `monitors:write`  |
+| Status | Code             | Description                           |
+| ------ | ---------------- | ------------------------------------- |
+| 400    | VALIDATION_ERROR | Invalid request body                  |
+| 401    | UNAUTHORIZED     | Missing or invalid API key            |
+| 403    | FORBIDDEN        | API key doesn't have `monitors:write` |
 
 ### Request Body Schema
 

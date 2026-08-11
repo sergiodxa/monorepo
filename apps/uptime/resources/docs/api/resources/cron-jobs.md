@@ -176,7 +176,6 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/cron-jobs \
 | Status | Code             | Description                                  |
 | ------ | ---------------- | -------------------------------------------- |
 | 400    | VALIDATION_ERROR | Invalid request body or cron expression      |
-| 400    | LIMIT_EXCEEDED   | Maximum number of cron jobs reached          |
 | 401    | UNAUTHORIZED     | Missing or invalid API key                   |
 | 403    | FORBIDDEN        | API key doesn't have `cron-jobs:write` scope |
 | 429    | RATE_LIMITED     | Too many requests                            |

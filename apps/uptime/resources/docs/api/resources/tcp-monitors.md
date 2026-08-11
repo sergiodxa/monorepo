@@ -216,7 +216,6 @@ curl https://uptime.sergiodxa.com/api/v1/tcp-monitors \
 | Status | Code             | Description                                |
 | ------ | ---------------- | ------------------------------------------ |
 | 400    | VALIDATION_ERROR | Invalid request body                       |
-| 400    | LIMIT_EXCEEDED   | Maximum number of TCP monitors reached     |
 | 401    | UNAUTHORIZED     | Missing or invalid API key                 |
 | 403    | FORBIDDEN        | API key missing `tcp-monitors:write` scope |
 

@@ -27,7 +27,7 @@ import { createRouter } from "remix/fetch-router";
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
-import DnsMonitor from "~/app/data/dns-monitor";
+import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
@@ -409,6 +409,66 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(400);
+	});
+
+	/**
+	 * The cap the web flow has always applied, now applied here too: a `dns-monitors:write`
+	 * key used to create without bound, and one domain monitor sweeps hundreds of queries per
+	 * check, so the ceiling is what keeps a team's checks inside the platform's budget.
+	 */
+	test("creates the monitor that fills the per-team cap", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		for (let index = 0; index < MAX_DNS_MONITORS_PER_TEAM - 1; index++) {
+			await DnsMonitor.create(db, team.id, {
+				name: `Monitor ${index}`,
+				domain: `example-${index}.com`,
+				interval_seconds: 86_400,
+				is_enabled: true,
+			});
+		}
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(201);
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
+	});
+
+	test("returns 400 once the team is at the per-team DNS monitor cap", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		for (let index = 0; index < MAX_DNS_MONITORS_PER_TEAM; index++) {
+			await DnsMonitor.create(db, team.id, {
+				name: `Monitor ${index}`,
+				domain: `example-${index}.com`,
+				interval_seconds: 86_400,
+				is_enabled: true,
+			});
+		}
+
+		let response = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(400);
+		let body = (await response.json()) as { error: { code: string; message: string } };
+		expect(body.error.code).toBe("LIMIT_EXCEEDED");
+		expect(body.error.message).toBe(
+			`Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
+		);
+
+		// Refused before the row is written, and before a single query is sent.
+		expect(queries).toBe(0);
+		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
