@@ -148,6 +148,18 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 	};
 }
 
+/**
+ * The label a service is published under: the team's own public name for it when they set
+ * one, and the monitor's internal name otherwise.
+ *
+ * An empty string counts as unset rather than as a name. A team that cleared the field
+ * wants the default back, and rendering the blank would leave a nameless row on a page
+ * whose entire job is telling a stranger which service is which.
+ */
+function publicName(displayName: string | null, fallback: string): string {
+	return displayName?.trim() || fallback;
+}
+
 /** GET /status/:slug — the public view of a status page. */
 export default createAction(
 	routes.statusPage,
@@ -184,12 +196,14 @@ export default createAction(
 
 		let httpServices = await Promise.all(
 			attachments.monitors
-				.map((row) => monitorsById.get(row.monitor_id))
-				.filter((monitor): monitor is NonNullable<typeof monitor> => monitor != null)
-				.map(async (monitor) => ({
+				.flatMap((row) => {
+					let monitor = monitorsById.get(row.monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
 					kind: "http" as const,
 					id: monitor.id,
-					name: monitor.name,
+					name: publicName(displayName, monitor.name),
 					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
 					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "http"),
 				})),
@@ -197,12 +211,14 @@ export default createAction(
 
 		let dnsServices = await Promise.all(
 			attachments.dnsMonitors
-				.map((row) => dnsMonitorsById.get(row.dns_monitor_id))
-				.filter((monitor): monitor is NonNullable<typeof monitor> => monitor != null)
-				.map(async (monitor) => ({
+				.flatMap((row) => {
+					let monitor = dnsMonitorsById.get(row.dns_monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
 					kind: "dns" as const,
 					id: monitor.id,
-					name: monitor.name,
+					name: publicName(displayName, monitor.name),
 					status: deriveDnsStatus(monitor.last_status),
 					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "dns"),
 				})),
@@ -210,24 +226,28 @@ export default createAction(
 
 		let tcpServices = await Promise.all(
 			attachments.tcpMonitors
-				.map((row) => tcpMonitorsById.get(row.tcp_monitor_id))
-				.filter((monitor): monitor is NonNullable<typeof monitor> => monitor != null)
-				.map(async (monitor) => ({
+				.flatMap((row) => {
+					let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
+					return monitor ? [{ displayName: row.display_name, monitor }] : [];
+				})
+				.map(async ({ displayName, monitor }) => ({
 					kind: "tcp" as const,
 					id: monitor.id,
-					name: monitor.name,
+					name: publicName(displayName, monitor.name),
 					status: deriveTcpStatus(monitor.last_status),
 					days: await MonitorDailyStats.listRecentDays(db, monitor.id, "tcp"),
 				})),
 		);
 
 		let cronServices = attachments.cronJobs
-			.map((row) => cronJobsById.get(row.cron_job_monitor_id))
-			.filter((monitor): monitor is NonNullable<typeof monitor> => monitor != null)
-			.map((monitor) => ({
+			.flatMap((row) => {
+				let monitor = cronJobsById.get(row.cron_job_monitor_id);
+				return monitor ? [{ displayName: row.display_name, monitor }] : [];
+			})
+			.map(({ displayName, monitor }) => ({
 				kind: "cron" as const,
 				id: monitor.id,
-				name: monitor.name,
+				name: publicName(displayName, monitor.name),
 				cronExpression: monitor.cron_expression,
 				lastPingAt: monitor.last_ping_at,
 				status: deriveCronStatus(monitor.status),

@@ -238,6 +238,102 @@ describe("GET /status/:slug", () => {
 		expect(body).toContain("All Systems Operational");
 	});
 
+	test("publishes a team's own label for a service when they set one", async () => {
+		let { db, team } = await createFixture();
+
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: "member-1",
+				enabled_at: Date.now(),
+				name: "prod-web-01",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme Status",
+				slug: "labelled-status",
+				title: "Acme Status",
+				description: null,
+				logo_url: null,
+				custom_domain: null,
+				is_public: true,
+				show_overall_status: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		await db.create(statusPageMonitors, {
+			status_page_id: page.id,
+			monitor_id: monitor.id,
+			display_name: "Website",
+			order: 0,
+		});
+
+		let body = await (await get(db, page.slug)).text();
+
+		// The chosen label is what a stranger reads; the internal name is an operational
+		// detail they were never meant to see, and publishing it would also undo the
+		// deliberate withholding of every other target detail on this page.
+		expect(body).toContain("Website");
+		expect(body).not.toContain("prod-web-01");
+	});
+
+	test("falls back to the monitor's own name when the label is blank rather than unset", async () => {
+		let { db, team } = await createFixture();
+
+		let monitor = await db.create(
+			monitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				author_id: "member-1",
+				enabled_at: Date.now(),
+				name: "Checkout",
+				url: "https://example.com",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let page = await db.create(
+			statusPages,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme Status",
+				slug: "blank-label-status",
+				title: "Acme Status",
+				description: null,
+				logo_url: null,
+				custom_domain: null,
+				is_public: true,
+				show_overall_status: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		// A cleared field arrives as whitespace rather than null, and rendering it would
+		// leave a nameless row on a page whose only job is saying which service is which.
+		await db.create(statusPageMonitors, {
+			status_page_id: page.id,
+			monitor_id: monitor.id,
+			display_name: "   ",
+			order: 0,
+		});
+
+		let body = await (await get(db, page.slug)).text();
+
+		expect(body).toContain("Checkout");
+	});
+
 	test("labels a DNS monitor by its domain-wide coverage, and leaks no record of it", async () => {
 		let { db, team } = await createFixture();
 

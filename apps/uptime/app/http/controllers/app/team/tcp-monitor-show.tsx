@@ -19,8 +19,7 @@ import { notFound } from "@pkg/http/response/html";
 import { PencilIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, items } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
-import { mbe } from "@pkg/u/size";
+import { m, mbe, mbs } from "@pkg/u/size";
 import { Badge, Button, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -135,23 +134,45 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 							/>
 						</div>
 
+						{/*
+						 * `StatCardSkeleton` renders bare cards with no row of its own, so several
+						 * frames can share one row a caller lays out. Neither frame here shares a
+						 * row with anything, so each supplies the row its own placeholders sit in —
+						 * otherwise the cards stack flush while the page loads, which is not the
+						 * shape either fragment resolves to. The gap matches the stat row above.
+						 */}
 						<Frame
 							name="tcp-monitor-card-uptime-history"
 							src={routes.app.team.tcpMonitors.cards.uptimeHistory.href({
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}
-							fallback={<StatCardSkeleton count={1} />}
+							fallback={
+								<div mix={[flex(), flexWrap(), gap("16px")]}>
+									<StatCardSkeleton count={1} />
+								</div>
+							}
 						/>
 
-						<Frame
-							name="tcp-monitor-card-results"
-							src={routes.app.team.tcpMonitors.cards.results.href({
-								team: ctx.team.slug,
-								monitorId: monitor.id,
-							})}
-							fallback={<StatCardSkeleton count={3} />}
-						/>
+						{/*
+						 * A `Frame` is a region rather than an element, so the space between the two
+						 * belongs to a wrapper here — and it has to survive the swap, since the
+						 * resolved sections need it just as much as the skeletons do.
+						 */}
+						<div mix={[mbs("24px")]}>
+							<Frame
+								name="tcp-monitor-card-results"
+								src={routes.app.team.tcpMonitors.cards.results.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={
+									<div mix={[flex(), flexWrap(), gap("16px")]}>
+										<StatCardSkeleton count={3} />
+									</div>
+								}
+							/>
+						</div>
 					</div>
 				</AppShell>
 			</DocumentLayout>,
