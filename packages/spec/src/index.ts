@@ -32,6 +32,7 @@ export type { Plugin, ToolContext, ToolDescriptor, ToolParam } from "./plugin";
 export { createBrowserPlugin } from "./plugins/browser";
 export { createCliPlugin } from "./plugins/cli";
 export { createDbPlugin } from "./plugins/db";
+export { createEnvPlugin } from "./plugins/env";
 export { createFsPlugin } from "./plugins/fs";
 export { createHttpPlugin } from "./plugins/http";
 export { createJwtPlugin } from "./plugins/jwt";

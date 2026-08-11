@@ -36,6 +36,23 @@ const FILL_WORDS = ["with"];
 /** The word `browser.checkbox` requires as its state assertion. */
 const CHECKBOX_WORDS = ["checked"];
 
+/** The word `browser.cookie` requires before the URL it scopes a cookie to. */
+const COOKIE_WORDS = ["for"];
+
+/** The word `browser.heading` requires before a heading level. */
+const LEVEL_WORDS = ["level"];
+
+/**
+ * One line of an accessibility snapshot naming a heading, its accessible name,
+ * and its level: `- heading "Reports" [level=3, ref=e2]`. The level lives in
+ * the snapshot text rather than in the `refs` map, so matching by level reads
+ * the text.
+ */
+const HEADING_LINE = /^\s*-\s*heading\s+"((?:[^"\\]|\\.)*)"\s*\[([^\]]*)\]/;
+
+/** The `level=N` attribute inside a snapshot line's bracketed attribute list. */
+const LEVEL_ATTRIBUTE = /\blevel=(\d+)\b/;
+
 /** Descriptors of every tool the `browser` namespace exposes. */
 const BROWSER_TOOLS: ToolDescriptor[] = [
 	{
@@ -63,6 +80,47 @@ const BROWSER_TOOLS: ToolDescriptor[] = [
 				kind: "value",
 				required: true,
 				summary: "Absolute URL to navigate to; must be absolute, like `open`.",
+			},
+		],
+	},
+	{
+		name: "cookie",
+		summary: 'Set a cookie on the session: `cookie "session" token for "https://app.test"`.',
+		kind: "action",
+		requires: "net",
+		params: [
+			{ name: "name", kind: "value", required: true, summary: "Name of the cookie to set." },
+			{
+				name: "value",
+				kind: "value",
+				required: true,
+				summary: "Value of the cookie, typically read from the environment with `env.get`.",
+			},
+			{
+				name: "for",
+				kind: "word",
+				required: false,
+				summary: "The literal word `for`, introducing the URL the cookie belongs to.",
+			},
+			{
+				name: "url",
+				kind: "value",
+				required: false,
+				summary: "Absolute URL the cookie is scoped to; defaults to the page already open.",
+			},
+		],
+	},
+	{
+		name: "ua",
+		summary: "Send a custom User-Agent header, so the app can recognize the spec run.",
+		kind: "action",
+		requires: "net",
+		params: [
+			{
+				name: "value",
+				kind: "value",
+				required: true,
+				summary: 'The User-Agent to send, e.g. "spec-runner/1.0".',
 			},
 		],
 	},
@@ -168,11 +226,23 @@ const BROWSER_TOOLS: ToolDescriptor[] = [
 	},
 	{
 		name: "heading",
-		summary: "Observe that a heading with the given accessible name is present.",
+		summary: 'Observe a heading by accessible name, optionally at a level: `heading "x" level 3`.',
 		kind: "observable",
 		requires: "net",
 		params: [
 			{ name: "name", kind: "value", required: true, summary: "Accessible name of the heading." },
+			{
+				name: "level",
+				kind: "word",
+				required: false,
+				summary: "The literal word `level`, introducing the heading level to demand.",
+			},
+			{
+				name: "number",
+				kind: "value",
+				required: false,
+				summary: "The level: 3 matches an `<h3>` or a `role=heading` with `aria-level=3`.",
+			},
 		],
 	},
 	{
@@ -236,6 +306,20 @@ const BROWSER_TOOLS: ToolDescriptor[] = [
 			},
 		],
 	},
+	{
+		name: "title",
+		summary: "Observe the page's title, or assert it equals an expected title.",
+		kind: "observable",
+		requires: "net",
+		params: [
+			{
+				name: "expected",
+				kind: "value",
+				required: false,
+				summary: "When given, the title the document must have.",
+			},
+		],
+	},
 ];
 
 /**
@@ -268,6 +352,10 @@ export function createBrowserPlugin(): Plugin {
 				case "open":
 				case "navigate":
 					return await navigate(tool, args, context, session);
+				case "cookie":
+					return await cookie(args, context, session);
+				case "ua":
+					return await userAgent(args, session);
 				case "click":
 					return await click(args, session);
 				case "fill":
@@ -279,6 +367,8 @@ export function createBrowserPlugin(): Plugin {
 				case "click_selector":
 					return await clickSelector(args, session);
 				case "heading":
+					if (args.length > 1) return await headingAtLevel(args, session);
+					return await roleObservable(tool, args, session);
 				case "link":
 				case "button":
 					return await roleObservable(tool, args, session);
@@ -288,6 +378,8 @@ export function createBrowserPlugin(): Plugin {
 					return await checkbox(args, session);
 				case "url":
 					return await url(args, session);
+				case "title":
+					return await title(args, session);
 				default: {
 					let names = BROWSER_TOOLS.map((descriptor) => descriptor.name).join(", ");
 					return failure(new ToolError(`browser has no tool named "${tool}"; tools: ${names}`));
@@ -317,11 +409,90 @@ async function navigate(
 	context: ToolContext,
 	session: string,
 ): Promise<Result<Value, SpecError>> {
-	let target = readUrl(tool, args);
+	let target = readUrl(tool, args, 0);
 	if (isFailure(target)) return target;
 	let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
 	if (isFailure(allowed)) return allowed;
 	let response = await runBrowser(["open", target.data.href], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/**
+ * `browser.cookie name value [for url]` — seed the session's cookie jar, so a
+ * spec can arrive already authenticated instead of driving a sign-in form for
+ * every test. The value belongs in the environment, not in the document: the
+ * intended shape is `let token = env.get "SESSION_COOKIE"` and a boxed
+ * reference to it here (ADR-007 §6).
+ *
+ * The `for` clause names the URL the cookie is scoped to, which is what lets
+ * the cookie be set _before_ the first navigation — the whole point of seeding
+ * a session. Its host is `net`-checked exactly like `open`'s. Without the
+ * clause the cookie lands on the page already open, and an unopened session is
+ * a tool error naming the `for` form rather than a cookie set on `about:blank`.
+ */
+async function cookie(
+	args: ToolArg[],
+	context: ToolContext,
+	session: string,
+): Promise<Result<Value, SpecError>> {
+	if (args.length !== 2 && args.length !== 4) {
+		return failure(
+			new ToolError(
+				'browser.cookie takes a name and a value, optionally followed by `for "<url>"`',
+			),
+		);
+	}
+	let name = stringArg(args, 0, "cookie", "name");
+	if (isFailure(name)) return name;
+	let value = stringArg(args, 1, "cookie", "value");
+	if (isFailure(value)) return value;
+	let scope: string;
+	if (args.length === 4) {
+		let separator = wordArg(args, 2, "cookie", COOKIE_WORDS);
+		if (isFailure(separator)) return separator;
+		let target = readUrl("cookie", args, 3);
+		if (isFailure(target)) return target;
+		let allowed = context.permissions.checkNet(target.data.hostname, portOf(target.data));
+		if (isFailure(allowed)) return allowed;
+		scope = target.data.href;
+	} else {
+		// The page the session is already on authorized itself at `open` time,
+		// so no second net check: this is the same host the spec just reached.
+		let current = await currentUrl(session);
+		if (isFailure(current)) return current;
+		if (!current.data.startsWith("http:") && !current.data.startsWith("https:")) {
+			return failure(
+				new ToolError(
+					'browser.cookie has no page to scope the cookie to; open one first, or name the URL: browser.cookie "session" token for "https://app.example.com"',
+				),
+			);
+		}
+		scope = current.data;
+	}
+	let response = await runBrowser(
+		["cookies", "set", name.data, value.data, "--url", scope],
+		session,
+	);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/**
+ * `browser.ua value` — send a custom `User-Agent` on every request the session
+ * makes from here on, so an app can tell a spec run apart from a real visitor
+ * (skip its rate limiter, tag its analytics). Set it before `open`: the header
+ * applies to requests made after it, not to a page already fetched.
+ *
+ * This sets the request header only; `navigator.userAgent` inside the page
+ * still reports the real browser, because the header is applied to the session
+ * rather than to the emulated browser identity.
+ */
+async function userAgent(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let value = stringArg(args, 0, "ua", "value");
+	if (isFailure(value)) return value;
+	let headers = JSON.stringify({ "User-Agent": value.data });
+	let response = await runBrowser(["set", "headers", headers], session);
 	if (isFailure(response)) return response;
 	return success(null);
 }
@@ -411,6 +582,78 @@ async function roleObservable(
 	return success(true);
 }
 
+/**
+ * `browser.heading name level N` — assert a heading with that accessible name
+ * is present *at that level*, so a spec can say which rung of the document
+ * outline it means: level 3 matches an `<h3>` and equally a `role=heading`
+ * carrying `aria-level=3`, because both reach the accessibility tree the same
+ * way. A heading of the right name at the wrong level fails with the levels it
+ * did find, since that is usually the bug being caught.
+ */
+async function headingAtLevel(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	if (args.length !== 3) {
+		return failure(
+			new ToolError("browser.heading takes an accessible name, optionally followed by `level <n>`"),
+		);
+	}
+	let name = stringArg(args, 0, "heading", "name");
+	if (isFailure(name)) return name;
+	let separator = wordArg(args, 1, "heading", LEVEL_WORDS);
+	if (isFailure(separator)) return separator;
+	let level = levelArg(args, 2);
+	if (isFailure(level)) return level;
+	let response = await runBrowser(["snapshot"], session);
+	if (isFailure(response)) return response;
+	let text = typeof response.data.snapshot === "string" ? response.data.snapshot : "";
+	let wanted = normalizeName(name.data);
+	let found: number[] = [];
+	for (let line of text.split("\n")) {
+		let heading = HEADING_LINE.exec(line);
+		if (heading === null) continue;
+		let [, quoted = "", attributes = ""] = heading;
+		if (normalizeName(unescapeName(quoted)) !== wanted) continue;
+		let attribute = LEVEL_ATTRIBUTE.exec(attributes);
+		if (attribute === null) continue;
+		let observed = Number(attribute[1]);
+		if (observed === level.data) return success(true);
+		found.push(observed);
+	}
+	let observed = found.length === 0 ? null : found.join(", ");
+	return failure(
+		new ExpectationError(
+			found.length === 0
+				? `no heading named ${formatValue(name.data)} is present`
+				: `the heading named ${formatValue(name.data)} is not at level ${level.data}`,
+			level.data,
+			observed,
+		),
+	);
+}
+
+/** Read a heading level: a positive whole number, nothing else. */
+function levelArg(args: ToolArg[], index: number): Result<number, ToolError> {
+	let arg = args[index];
+	if (
+		arg === undefined ||
+		arg.kind !== "value" ||
+		typeof arg.value !== "number" ||
+		!Number.isInteger(arg.value) ||
+		arg.value < 1
+	) {
+		return failure(
+			new ToolError(
+				`browser.heading expects a whole heading level of 1 or more for argument ${index + 1}`,
+			),
+		);
+	}
+	return success(arg.value);
+}
+
+/** Undo the escaping an accessibility snapshot applies inside a quoted name. */
+function unescapeName(quoted: string): string {
+	return quoted.replace(/\\(.)/g, "$1");
+}
+
 /** `browser.text substring` — assert the substring is in the page's visible text. */
 async function text(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let substring = stringArg(args, 0, "text", "substring");
@@ -467,20 +710,52 @@ async function url(args: ToolArg[], session: string): Promise<Result<Value, Spec
 	if (args.length > 1) {
 		return failure(new ToolError("browser.url takes at most one argument: an expected URL"));
 	}
-	let response = await runBrowser(["get", "url"], session);
-	if (isFailure(response)) return response;
-	let current = typeof response.data.url === "string" ? response.data.url : "";
-	if (args.length === 0) return success(current);
+	let current = await currentUrl(session);
+	if (isFailure(current)) return current;
+	if (args.length === 0) return success(current.data);
 	let expected = stringArg(args, 0, "url", "expected");
 	if (isFailure(expected)) return expected;
-	if (current === expected.data) return success(true);
+	if (current.data === expected.data) return success(true);
 	return failure(
 		new ExpectationError(
 			`the current URL is not ${formatValue(expected.data)}`,
 			expected.data,
+			current.data,
+		),
+	);
+}
+
+/**
+ * `browser.title [expected]` — with no argument, observe the document's title;
+ * with an argument, assert it equals that title exactly. Titles are what the
+ * user reads in the tab, so this compares them whole rather than by substring —
+ * `browser.text` is the tool for "somewhere on the page".
+ */
+async function title(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	if (args.length > 1) {
+		return failure(new ToolError("browser.title takes at most one argument: an expected title"));
+	}
+	let response = await runBrowser(["get", "title"], session);
+	if (isFailure(response)) return response;
+	let current = typeof response.data.title === "string" ? response.data.title : "";
+	if (args.length === 0) return success(current);
+	let expected = stringArg(args, 0, "title", "expected");
+	if (isFailure(expected)) return expected;
+	if (current === expected.data) return success(true);
+	return failure(
+		new ExpectationError(
+			`the page title is not ${formatValue(expected.data)}`,
+			expected.data,
 			current,
 		),
 	);
+}
+
+/** The session's current location, or the empty string when it has none. */
+async function currentUrl(session: string): Promise<Result<string, SpecError>> {
+	let response = await runBrowser(["get", "url"], session);
+	if (isFailure(response)) return response;
+	return success(typeof response.data.url === "string" ? response.data.url : "");
 }
 
 /** A role and accessible name naming one element to act on or observe. */
@@ -650,9 +925,9 @@ function sessionFor(workspace: Workspace): string {
 	return basename(workspace.root);
 }
 
-/** The absolute http(s) URL of an `open`/`navigate` call, or a tool error. */
-function readUrl(tool: string, args: ToolArg[]): Result<URL, SpecError> {
-	let raw = stringArg(args, 0, tool, "url");
+/** The absolute http(s) URL at `index`, or a tool error explaining why not. */
+function readUrl(tool: string, args: ToolArg[], index: number): Result<URL, SpecError> {
+	let raw = stringArg(args, index, tool, "url");
 	if (isFailure(raw)) return raw;
 	let parsed: URL;
 	try {

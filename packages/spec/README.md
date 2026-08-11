@@ -399,10 +399,10 @@ as before.
 
 Drive a browser through its **accessibility tree**, not DOM internals: address
 elements by role (a bare word) and accessible name (a string). Actions include
-`open`, `navigate`, `click`, `fill … with …`, `check`, `press`; observables
-include `heading`, `link`, `button`, `text`, `checkbox`, `url`. Reaching the
-page is the privileged act, so each tool needs `--allow-net` for the target
-host. It's backed by a globally installed `agent-browser` CLI, loaded lazily —
+`open`, `navigate`, `cookie`, `ua`, `click`, `fill … with …`, `check`, `press`;
+observables include `heading`, `link`, `button`, `text`, `checkbox`, `url`,
+`title`. Reaching the page is the privileged act, so each tool needs
+`--allow-net` for the target host. It's backed by a globally installed `agent-browser` CLI, loaded lazily —
 a suite that never touches `browser.*` needs neither the grant nor the binary.
 
 ```
@@ -417,6 +417,7 @@ test "the sign-in form authenticates" {
 	}
 	then {
 		expect browser.heading "Welcome back"
+		expect browser.title "My App"
 		expect browser.url "http://localhost:3000/home"
 	}
 }
@@ -424,6 +425,48 @@ test "the sign-in form authenticates" {
 
 ```sh
 spec run spec --allow-net=localhost:3000
+```
+
+`browser.heading` also takes a level, for when the rung of the document outline
+is part of the behavior: `level 3` matches an `<h3>` and equally a
+`role="heading"` with `aria-level="3"`, because both reach the accessibility
+tree the same way. A heading of that name at another level fails with the levels
+it did find.
+
+```
+then {
+	expect browser.heading "Billing" level 2
+}
+```
+
+Like `browser.url`, `browser.title` reads as a value too — `let name =
+browser.title` with no argument binds the current title instead of asserting one.
+
+`browser.cookie` seeds the session's cookie jar, so a test that isn't about
+signing in can arrive already signed in. The `for` clause names the URL the
+cookie belongs to, which is what lets it be set _before_ the first navigation;
+drop the clause to set it on the page already open. Pair it with
+[`env.get`](#env--read-a-granted-variable----allow-env) — the token belongs in
+the environment, not in the document.
+
+```
+given {
+	let token = env.get "SESSION_COOKIE"
+	let jar = { session: token }
+	browser.cookie "session" jar.session for "http://localhost:3000/app"
+}
+```
+
+`browser.ua` sets the `User-Agent` the session sends, so the app can recognize
+its own spec run — skip a rate limiter, tag analytics, take a test-only branch.
+Set it before `open`; it applies to requests made after it. It changes the
+request header only: `navigator.userAgent` inside the page still reports the
+real browser.
+
+```
+given {
+	browser.ua "spec-runner/1.0"
+}
 ```
 
 `browser.url` also reads as a value: `let current = browser.url` binds the
@@ -464,6 +507,39 @@ test "an INSERT reports exactly one affected row" {
 
 ```sh
 DATABASE_URL=postgres://localhost/test spec run spec --allow-env=DATABASE_URL
+```
+
+### `env` — read a granted variable · `--allow-env`
+
+`env.get NAME` reads one environment variable, and only one the caller granted
+by name. It is how a spec names a secret without containing one: the document
+says _which_ variable holds the session token, the environment says what it is,
+and the same spec runs against local, staging, and CI. An unset variable is an
+error unless you give `env.get` a fallback — its optional second argument — which
+covers an absent value, never an absent grant.
+
+```
+use env
+use browser
+
+test "the dashboard renders for a signed-in session" {
+	given {
+		let token = env.get "SESSION_COOKIE"
+		let jar = { session: token }
+		browser.cookie "session" jar.session for "http://localhost:3000/app"
+	}
+	when {
+		browser.open "http://localhost:3000/app"
+	}
+	then {
+		# Without the cookie, this would have redirected to /login.
+		expect browser.url "http://localhost:3000/app"
+	}
+}
+```
+
+```sh
+SESSION_COOKIE=… spec run spec --allow-env=SESSION_COOKIE --allow-net=localhost:3000
 ```
 
 ### `url` — parse a URL · no grant
@@ -634,7 +710,8 @@ Declaring a plugin is **not** permission to run it — launching one executes co
 the project ships, so it's deny-by-default too. `spec run` starts a declared
 plugin only with `--allow-plugins` (all) or `--allow-plugins=greet` (named); a
 suite that imports an unauthorized plugin is refused before any test runs. The
-built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`, `url`, `jwt`) are
+built-in namespaces (`fs`, `cli`, `http`, `browser`, `db`, `env`, `url`, `jwt`)
+are
 never affected.
 
 ## Custom and third-party plugins

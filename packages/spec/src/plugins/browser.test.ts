@@ -29,6 +29,7 @@ import { parse } from "../parser";
 import { createRegistry } from "../registry";
 
 import { createBrowserPlugin } from "./browser";
+import { createEnvPlugin } from "./env";
 import { createUrlPlugin } from "./url";
 
 /** Whether the real `agent-browser` CLI is installed; gates the e2e suite. */
@@ -40,6 +41,8 @@ const PAGE_HTML = `<!doctype html>
 	<head><title>Login</title></head>
 	<body>
 		<h1>Sign in</h1>
+		<h3>Details</h3>
+		<div role="heading" aria-level="4">Aria section</div>
 		<form>
 			<label for="email">Email</label>
 			<input id="email" type="text" name="email" />
@@ -128,6 +131,8 @@ describe(createBrowserPlugin.name, () => {
 		expect(tools.map((tool) => tool.name)).toEqual([
 			"open",
 			"navigate",
+			"cookie",
+			"ua",
 			"click",
 			"fill",
 			"check",
@@ -139,16 +144,27 @@ describe(createBrowserPlugin.name, () => {
 			"text",
 			"checkbox",
 			"url",
+			"title",
 		]);
 		for (let tool of tools) expect(tool.requires).toBe("net");
 	});
 
 	test("open, navigate and the interactions are actions; the observers are observable", () => {
 		let byName = new Map(plugin.describe().map((tool) => [tool.name, tool.kind]));
-		for (let action of ["open", "navigate", "click", "fill", "check", "press", "click_selector"]) {
+		for (let action of [
+			"open",
+			"navigate",
+			"cookie",
+			"ua",
+			"click",
+			"fill",
+			"check",
+			"press",
+			"click_selector",
+		]) {
 			expect(byName.get(action)).toBe("action");
 		}
-		for (let observable of ["heading", "link", "button", "text", "checkbox", "url"]) {
+		for (let observable of ["heading", "link", "button", "text", "checkbox", "url", "title"]) {
 			expect(byName.get(observable)).toBe("observable");
 		}
 	});
@@ -170,6 +186,13 @@ describe(createBrowserPlugin.name, () => {
 			["state", "word"],
 		]);
 		expect(tools.get("url")?.params.map((param) => param.required)).toEqual([false]);
+		expect(
+			tools.get("heading")?.params.map((param) => [param.name, param.kind, param.required]),
+		).toEqual([
+			["name", "value", true],
+			["level", "word", false],
+			["number", "value", false],
+		]);
 	});
 
 	test("a denied net grant fails browser.open before agent-browser is spawned", async () => {
@@ -231,6 +254,102 @@ describe(createBrowserPlugin.name, () => {
 		expect(error.code).toBe("tool-error");
 		expect(error.message).toContain('does not understand the word "unchecked"');
 		expect(error.message).toContain("checked");
+	});
+
+	test("cookie declares an optional `for <url>` clause", () => {
+		let tools = new Map(plugin.describe().map((tool) => [tool.name, tool]));
+		expect(
+			tools.get("cookie")?.params.map((param) => [param.name, param.kind, param.required]),
+		).toEqual([
+			["name", "value", true],
+			["value", "value", true],
+			["for", "word", false],
+			["url", "value", false],
+		]);
+	});
+
+	test("a denied net grant fails browser.cookie's `for` URL before any spawn", async () => {
+		let calls: { host: string; port: number | undefined }[] = [];
+		let result = await plugin.call(
+			"cookie",
+			[value("session"), value("abc123"), word("for"), value("https://app.example.com/")],
+			buildContext(denyNet(calls)),
+		);
+		let error = unwrapError(result);
+		expect(error).toBeInstanceOf(PermissionDeniedError);
+		expect(calls).toEqual([{ host: "app.example.com", port: 443 }]);
+	});
+
+	test("cookie rejects a partial `for` clause", async () => {
+		let error = unwrapError(
+			await plugin.call("cookie", [value("session"), value("abc"), word("for")], buildContext()),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("`for");
+	});
+
+	test("cookie rejects a wrong clause word", async () => {
+		let error = unwrapError(
+			await plugin.call(
+				"cookie",
+				[value("session"), value("abc"), word("on"), value("https://app.example.com/")],
+				buildContext(),
+			),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain('does not understand the word "on"');
+		expect(error.message).toContain("for");
+	});
+
+	test("cookie rejects a relative `for` URL", async () => {
+		let error = unwrapError(
+			await plugin.call(
+				"cookie",
+				[value("session"), value("abc"), word("for"), value("/app")],
+				buildContext(),
+			),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("absolute");
+	});
+
+	test("ua rejects a bare word where the User-Agent goes", async () => {
+		let error = unwrapError(await plugin.call("ua", [word("spec")], buildContext()));
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("string");
+	});
+
+	test("heading rejects a wrong level word", async () => {
+		let error = unwrapError(
+			await plugin.call("heading", [value("Reports"), word("rank"), value(3)], buildContext()),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain('does not understand the word "rank"');
+		expect(error.message).toContain("level");
+	});
+
+	test("heading rejects a level that is not a whole number", async () => {
+		for (let bad of [value("3"), value(0), value(2.5)]) {
+			let error = unwrapError(
+				await plugin.call("heading", [value("Reports"), word("level"), bad], buildContext()),
+			);
+			expect(error.code).toBe("tool-error");
+			expect(error.message).toContain("whole heading level");
+		}
+	});
+
+	test("heading rejects a dangling `level` clause", async () => {
+		let error = unwrapError(
+			await plugin.call("heading", [value("Reports"), word("level")], buildContext()),
+		);
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("`level");
+	});
+
+	test("title refuses more than one argument", async () => {
+		let error = unwrapError(await plugin.call("title", [value("a"), value("b")], buildContext()));
+		expect(error.code).toBe("tool-error");
+		expect(error.message).toContain("at most one argument");
 	});
 
 	test("url refuses more than one argument", async () => {
@@ -319,6 +438,43 @@ describe("browser end to end", () => {
 		).toBe(true);
 	});
 
+	test.skipIf(!AVAILABLE)("matches a heading by level, HTML or aria", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+		expect(
+			expectSuccess(
+				await plugin.call("heading", [value("Details"), word("level"), value(3)], context),
+			),
+		).toBe(true);
+		// role=heading + aria-level reaches the tree the same way an <h4> does.
+		expect(
+			expectSuccess(
+				await plugin.call("heading", [value("Aria section"), word("level"), value(4)], context),
+			),
+		).toBe(true);
+
+		// The right name at the wrong level fails, reporting the level it found.
+		let wrongLevel = unwrapError(
+			await plugin.call("heading", [value("Details"), word("level"), value(2)], context),
+		);
+		expect(wrongLevel).toBeInstanceOf(ExpectationError);
+		expect(wrongLevel.message).toContain("not at level 2");
+
+		let absent = unwrapError(
+			await plugin.call("heading", [value("Nowhere"), word("level"), value(3)], context),
+		);
+		expect(absent).toBeInstanceOf(ExpectationError);
+		expect(absent.message).toContain("no heading named");
+	});
+
+	test.skipIf(!AVAILABLE)("observes and asserts the page title", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+		expect(expectSuccess(await plugin.call("title", [], context))).toBe("Login");
+		expect(expectSuccess(await plugin.call("title", [value("Login")], context))).toBe(true);
+		let mismatch = unwrapError(await plugin.call("title", [value("Dashboard")], context));
+		expect(mismatch).toBeInstanceOf(ExpectationError);
+		expect(mismatch.code).toBe("expectation-failed");
+	});
+
 	test.skipIf(!AVAILABLE)("observes and asserts the current URL", async () => {
 		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
 		expect(expectSuccess(await plugin.call("url", [], context))).toBe(baseUrl);
@@ -333,8 +489,9 @@ describe("browser end to end", () => {
  * Parse a single-test `.spec` source, build a registry over the given plugins,
  * and execute the test — the real runtime path, so a bare-path `let`/`return`
  * right-hand side goes through the same zero-arg-tool resolution production code
- * uses. Net is granted so the coarse gate lets the browser tools through; the
- * permission set allows every scoped check for the loopback host.
+ * uses. Net and env are granted so the coarse gate lets the browser and env
+ * tools through; the permission set allows every scoped check for the loopback
+ * host and every variable name.
  */
 async function runSpec(
 	source: string,
@@ -351,7 +508,7 @@ async function runSpec(
 	let grants: Grants = {
 		run: { mode: "denied" },
 		net: { mode: "all" },
-		env: { mode: "denied" },
+		env: { mode: "all" },
 		hostFs: { mode: "denied" },
 	};
 	let context: ExecutionContext = {
@@ -364,6 +521,147 @@ async function runSpec(
 	};
 	return executeTest(test0, context);
 }
+
+// Session setup, end to end: a cookie or User-Agent set before the first
+// navigation must reach the server on the very next request, which is the only
+// reason those tools exist (arrive authenticated, arrive identifiable).
+describe("browser session setup against a real browser", () => {
+	let plugin: Plugin;
+	let server: ReturnType<typeof Bun.serve> | undefined;
+	let baseUrl = "";
+	let context: ToolContext;
+
+	beforeAll(() => {
+		plugin = createBrowserPlugin();
+		// The page reports what the request carried, so every assertion reads the
+		// server's view of the session, not the browser's.
+		server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch: (request) => {
+				let cookie = /session=([^;]*)/.exec(request.headers.get("cookie") ?? "");
+				let seen = cookie?.[1] ?? "none";
+				let agent = request.headers.get("user-agent") ?? "none";
+				return new Response(
+					`<!doctype html><html><body><p>Session: ${seen}</p><p>Agent: ${agent}</p></body></html>`,
+					{ headers: { "content-type": "text/html" } },
+				);
+			},
+		});
+		baseUrl = `http://${server.hostname}:${server.port}/`;
+		context = buildContext(allowAll(), "/tmp/spec-browser-cookie-session");
+	});
+
+	afterAll(async () => {
+		if (plugin.dispose !== undefined) await plugin.dispose();
+		server?.stop(true);
+	});
+
+	test.skipIf(!AVAILABLE)("a cookie set with `for` reaches the first request", async () => {
+		expectSuccess(
+			await plugin.call(
+				"cookie",
+				[value("session"), value("seeded-token"), word("for"), value(baseUrl)],
+				context,
+			),
+		);
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+		expect(
+			expectSuccess(await plugin.call("text", [value("Session: seeded-token")], context)),
+		).toBe(true);
+	});
+
+	test.skipIf(!AVAILABLE)("browser.ua sends the User-Agent the spec asked for", async () => {
+		expectSuccess(await plugin.call("ua", [value("spec-runner/1.0")], context));
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+		expect(
+			expectSuccess(await plugin.call("text", [value("Agent: spec-runner/1.0")], context)),
+		).toBe(true);
+	});
+
+	test.skipIf(!AVAILABLE)("without `for`, the cookie lands on the open page", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+		expectSuccess(await plugin.call("cookie", [value("session"), value("later-token")], context));
+		expectSuccess(await plugin.call("navigate", [value(baseUrl)], context));
+		expect(expectSuccess(await plugin.call("text", [value("Session: later-token")], context))).toBe(
+			true,
+		);
+	});
+});
+
+// The motivating workflow, written the way a suite writes it: the session
+// token lives in the environment, `env.get` names it, and `browser.cookie`
+// seeds it before the first navigation — so the protected page renders instead
+// of redirecting. Skipped wholesale without `agent-browser`.
+describe("a session seeded from the environment", () => {
+	let browserPlugin: Plugin;
+	let envPlugin: Plugin;
+	let server: ReturnType<typeof Bun.serve> | undefined;
+	let baseUrl = "";
+
+	beforeAll(() => {
+		browserPlugin = createBrowserPlugin();
+		envPlugin = createEnvPlugin();
+		// A minimal protected app: `/app` renders only for the right session
+		// cookie, and redirects to `/login` without it.
+		server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch: (request) => {
+				let path = new URL(request.url).pathname;
+				let cookie = /session=([^;]*)/.exec(request.headers.get("cookie") ?? "");
+				if (path === "/app" && cookie?.[1] !== "s3cret") {
+					return new Response(null, { status: 302, headers: { location: "/login" } });
+				}
+				let heading = path === "/app" ? "Dashboard" : "Sign in";
+				return new Response(`<!doctype html><html><body><h1>${heading}</h1></body></html>`, {
+					headers: { "content-type": "text/html" },
+				});
+			},
+		});
+		baseUrl = `http://127.0.0.1:${server.port}`;
+		process.env.SPEC_E2E_SESSION = "s3cret";
+	});
+
+	afterAll(async () => {
+		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
+		server?.stop(true);
+		delete process.env.SPEC_E2E_SESSION;
+	});
+
+	test.skipIf(!AVAILABLE)("the seeded cookie keeps the browser on /app", async () => {
+		// The token reaches `browser.cookie` through a boxed reference: a bare
+		// binding in tool-argument position is a symbolic word (ADR-002), so it
+		// is wrapped in an object first — the same pattern `browser.url` uses.
+		let source = [
+			"use browser",
+			"use env",
+			"",
+			'test "the session cookie admits the app" {',
+			"	given {",
+			'		let token = env.get "SPEC_E2E_SESSION"',
+			"		let jar = { session: token }",
+			`		browser.cookie "session" jar.session for "${baseUrl}/app"`,
+			"	}",
+			"	when {",
+			`		browser.open "${baseUrl}/app"`,
+			"	}",
+			"	then {",
+			"		# Without the cookie this would have redirected to /login.",
+			`		expect browser.url "${baseUrl}/app"`,
+			'		expect browser.heading "Dashboard"',
+			"	}",
+			"}",
+			"",
+		].join("\n");
+		let outcome = await runSpec(
+			source,
+			[browserPlugin, envPlugin],
+			"/tmp/spec-browser-cookie-env-session",
+		);
+		if (isFailure(outcome)) throw new Error(`expected the spec to pass: ${outcome.error.message}`);
+	});
+});
 
 // End to end through the executor: `let current = browser.url` must capture the
 // current URL as a value, so the authorization_code chain (land on ?code=…,

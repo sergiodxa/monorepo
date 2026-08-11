@@ -493,9 +493,22 @@ test "beta three fails" {
 		let packageDir = resolve(import.meta.dir, "..");
 		let binDir = resolve(packageDir, "..", "..", "node_modules", ".bin");
 		let child = Bun.spawn({
-			cmd: [join(binDir, "spec"), "run", "spec", "--allow-run=spec,echo", "--concurrency=8"],
+			cmd: [
+				join(binDir, "spec"),
+				"run",
+				"spec",
+				"--allow-run=spec,echo",
+				// spec/env.spec reads one real variable, which `cli.run` forwards to
+				// its children only when it is granted by name here.
+				"--allow-env=SPEC_ENV_FIXTURE",
+				"--concurrency=8",
+			],
 			cwd: packageDir,
-			env: { ...process.env, PATH: `${binDir}:${process.env.PATH ?? ""}` },
+			env: {
+				...process.env,
+				PATH: `${binDir}:${process.env.PATH ?? ""}`,
+				SPEC_ENV_FIXTURE: "fixture-value",
+			},
 			stdin: "ignore",
 			stdout: "pipe",
 			stderr: "pipe",

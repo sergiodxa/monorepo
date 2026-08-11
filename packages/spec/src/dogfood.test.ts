@@ -50,9 +50,22 @@ test(
 		symlinkSync(BINARY_PATH, join(pathDir, "spec"));
 		try {
 			let child = Bun.spawn({
-				cmd: [BINARY_PATH, "run", "spec", "--allow-run=spec,echo"],
+				cmd: [
+					BINARY_PATH,
+					"run",
+					"spec",
+					"--allow-run=spec,echo",
+					// spec/env.spec reads one real variable through `env.get`, and
+					// `cli.run` forwards only granted names into its children — so the
+					// value has to be both defined here and granted by name here.
+					"--allow-env=SPEC_ENV_FIXTURE",
+				],
 				cwd: PACKAGE_DIR,
-				env: { ...process.env, PATH: `${pathDir}:${process.env.PATH ?? ""}` },
+				env: {
+					...process.env,
+					PATH: `${pathDir}:${process.env.PATH ?? ""}`,
+					SPEC_ENV_FIXTURE: "fixture-value",
+				},
 				stdin: "ignore",
 				stdout: "pipe",
 				stderr: "pipe",

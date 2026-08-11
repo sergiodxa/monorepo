@@ -9,11 +9,21 @@
  * unnoticed. This file imports `~/app/http/render` instead of restating it, so the code
  * under test is the code that runs in production.
  *
- * The last case is the failure mode itself. A frame's content reaches the client as a
- * `<template>` streamed after the document; when frame resolution rejects rather than
- * answering, no template is streamed, the client waits for one forever, and the fallback
- * skeleton becomes permanent with nothing said anywhere about why. A failed frame must
- * report itself in the page.
+ * A frame's content reaches the client as a `<template>` streamed after the document, and
+ * that template is the only thing that ends the skeleton — so every case here asserts it
+ * arrived, closed, under the id the document's own placeholder carries. Asserting on the
+ * fragment's markup alone does not: a fragment can render perfectly and still never be
+ * emitted, which is precisely how a page with two permanent skeletons passed its tests.
+ *
+ * The last two cases are the failure mode itself, once for each side of it. A fragment
+ * response's headers exist before its HTML does, so a fragment can fail either before the
+ * response — a handler that threw — or after it, while its body renders. Both used to end
+ * the same way: no template, no error, a skeleton the visitor keeps forever.
+ *
+ * The record list is seeded rather than left empty, so the table the page renders inline
+ * above both frames is actually emitted and can be checked for the markup a browser would
+ * foster-parent out of it — which would relocate everything after it, frame placeholders
+ * included.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,6 +48,7 @@ import { createHtmlRenderer } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import {
+	dnsMonitorRecords,
 	dnsMonitorResults,
 	dnsMonitors,
 	memberships,
@@ -79,6 +90,79 @@ function declarationsFor(html: string, classAttribute: string): string {
 		.split(/\s+/)
 		.map((name) => rules.get(name) ?? "")
 		.join("");
+}
+
+/**
+ * Every frame placeholder in the document that no template ever answered — which is the
+ * page's permanent-skeleton list, since the placeholder is a region the client keeps
+ * showing its fallback in until a closed `<template>` of the same id arrives.
+ *
+ * Only closed templates count. A template whose fragment died halfway through its body is
+ * never terminated, the browser cannot use it, and matching on the opening tag alone would
+ * report it as present.
+ */
+function unresolvedFrameIds(html: string): string[] {
+	let streamed = new Set(
+		[...html.matchAll(/<template id="([^"]+)">[\s\S]*?<\/template>/g)].map(
+			(match) => match[1] ?? "",
+		),
+	);
+
+	return [...html.matchAll(/<!-- rmx:f:(\S+) -->/g)]
+		.map((match) => match[1] ?? "")
+		.filter((id) => !streamed.has(id));
+}
+
+/** Elements the HTML parser accepts as a direct child of each table-structure element. */
+const ALLOWED_TABLE_CHILDREN: Record<string, readonly string[]> = {
+	table: ["caption", "colgroup", "thead", "tbody", "tfoot", "tr", "script", "template", "style"],
+	thead: ["tr", "script", "template", "style"],
+	tbody: ["tr", "script", "template", "style"],
+	tfoot: ["tr", "script", "template", "style"],
+	tr: ["td", "th", "script", "template", "style"],
+};
+
+/**
+ * Everything the browser's parser would foster-parent out of a table: an element, or text,
+ * sitting directly inside `<table>`/`<tbody>`/`<tr>` rather than inside a cell.
+ *
+ * Worth checking rather than trusting, because the server's output can be a perfectly
+ * balanced string and still parse into a different tree than it reads as. Hoisted content
+ * is moved to just before the table, taking whatever follows it out of position — which on
+ * this page would mean the frame placeholders themselves.
+ */
+function fosterParentedContent(html: string): string[] {
+	let offenders: string[] = [];
+	let stack: string[] = [];
+
+	for (let match of html.matchAll(/<!--[\s\S]*?-->|<(\/?)([a-zA-Z][^\s/>]*)[^>]*?(\/?)>|[^<]+/g)) {
+		let [token, closing, tag, selfClosing] = match;
+		if (token.startsWith("<!--")) continue;
+
+		let parent = stack.at(-1);
+		let allowed = parent === undefined ? undefined : ALLOWED_TABLE_CHILDREN[parent];
+
+		if (tag === undefined) {
+			if (allowed && token.trim() !== "") offenders.push(`text in <${parent}>: ${token.trim()}`);
+			continue;
+		}
+
+		let name = tag.toLowerCase();
+
+		if (closing === "/") {
+			let index = stack.lastIndexOf(name);
+			if (index !== -1) stack.length = index;
+			continue;
+		}
+
+		if (allowed && !allowed.includes(name)) offenders.push(`<${name}> in <${parent}>`);
+		// Only table structure needs tracking: anything nested inside a cell is the cell's
+		// business, and a `<td>` on the stack is what makes its own children legal.
+		if (selfClosing !== "/" && name in ALLOWED_TABLE_CHILDREN) stack.push(name);
+		if (name === "td" || name === "th") stack.push(name);
+	}
+
+	return offenders;
 }
 
 /** Seeds `ctx.team`/`ctx.membership`/`ctx.teams`/auth state, standing in for the real sign-in. */
@@ -125,6 +209,34 @@ async function createHarness(options: createHarness.Options = {}) {
 		{ id: crypto.randomUUID(), team_id: team.id, name: "Production DNS", domain: "example.com" },
 		{ touch: true, returnRow: true },
 	);
+
+	// One record per state the row can be drawn in, so the inline table above both frames is
+	// rendered with every branch its cells have — including the watch toggle's own form.
+	for (let record of [
+		{ record_type: "A", value: "1.2.3.4", status: "ok", is_enabled: true },
+		{ record_type: "MX", value: "10 mx.example.com", status: "new", is_enabled: false },
+		{ record_type: "TXT", value: "v=spf1 include:_spf.example.com ~all", status: "changed" },
+		{ record_type: "CNAME", value: "example.com", status: "missing", is_enabled: false },
+		{ record_type: "NS", value: "ns1.example.com", status: "error", is_enabled: true },
+	] as const) {
+		await db.create(
+			dnsMonitorRecords,
+			{
+				id: crypto.randomUUID(),
+				dns_monitor_id: monitor.id,
+				name: "example.com",
+				record_type: record.record_type,
+				value: record.value,
+				source: "resolver",
+				is_enabled: "is_enabled" in record ? record.is_enabled : true,
+				status: record.status,
+				first_seen_at: Date.now(),
+				last_seen_at: Date.now(),
+				last_checked_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+	}
 
 	// Mirrors production: the renderer and the language resolver are global middleware, so
 	// a frame sub-request is rendered by the same request-scoped renderer the document is.
@@ -189,6 +301,10 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		expect(body).not.toContain("Frame error:");
+		// The template is what ends the skeleton, so it is what gets asserted: a fragment can
+		// render its whole tree and still never be streamed, and then this page looks exactly
+		// as broken as one whose fragment never ran.
+		expect(unresolvedFrameIds(body)).toEqual([]);
 		// Markup only the fragment route renders: with frame resolution stubbed out, every
 		// assertion below would be run against an empty string.
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.successRate.label);
@@ -223,6 +339,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		expect(body).not.toContain("Frame error:");
+		expect(unresolvedFrameIds(body)).toEqual([]);
 		expect(body).toContain(en.page.dnsMonitorDetail.uptimeHistory);
 		expect(body).toContain(en.statusPage.uptimeBar.legend.full);
 	});
@@ -233,8 +350,24 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		expect(body).not.toContain("Frame error:");
+		expect(unresolvedFrameIds(body)).toEqual([]);
 		expect(body).toContain(en.page.dnsMonitorDetail.results.empty);
 		expect(body).toContain(en.page.dnsMonitorDetail.uptimeHistory);
+	});
+
+	/**
+	 * The record table is rendered inline, above both frames, and a browser hoists content
+	 * it finds directly inside a table out of it — carrying everything that follows along.
+	 * The frame placeholders follow, so a stray element in a row would move the very regions
+	 * the client is waiting to fill.
+	 */
+	test("emits the record table with nothing a browser would hoist out of it", async () => {
+		let harness = await createHarness();
+
+		let body = await (await harness.visit()).text();
+
+		expect(body).toContain(en.page.dnsMonitorDetail.records.actions.disable);
+		expect(fosterParentedContent(body)).toEqual([]);
 	});
 
 	/**
@@ -259,12 +392,12 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * The regression the page shipped with: a fragment that throws rejects frame
-	 * resolution, and a rejection streams no `<template>` at all — so the client's frame
-	 * never resolves and the skeleton is what the visitor keeps. A failure has to become
-	 * content, and the surviving frame has to arrive regardless.
+	 * A fragment that throws before it has a response at all. Frame resolution rejects, and a
+	 * rejection streams no `<template>` — so the client's frame never resolves and the
+	 * skeleton is what the visitor keeps. A failure has to become content, and the surviving
+	 * frame has to arrive regardless.
 	 */
-	test("renders a failing fragment as an error rather than an unresolvable skeleton", async () => {
+	test("renders a fragment that throws as an error rather than an unresolvable skeleton", async () => {
 		let harness = await createHarness({
 			results: {
 				handler() {
@@ -276,7 +409,39 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let body = await (await harness.visit()).text();
 
 		expect(body).toContain("Frame error: fragment blew up");
+		expect(unresolvedFrameIds(body)).toEqual([]);
 		// The failure is contained: the other frame still resolves.
+		expect(body).toContain(en.page.dnsMonitorDetail.uptimeHistory);
+	});
+
+	/**
+	 * The half the first fix missed, and the one every real fragment failure takes. A
+	 * fragment's response exists before its HTML does — `ctx.render` returns the moment its
+	 * stream is created — so a component that throws, or a query that rejects part-way
+	 * through the tree, fails *after* the response has been handed back. Left as a stream,
+	 * that failure lands inside the renderer, which drops the template and says nothing; the
+	 * page then looks precisely like one whose fragment was never requested.
+	 */
+	test("renders a fragment that fails while its body streams, not a silent skeleton", async () => {
+		let harness = await createHarness({
+			results: {
+				handler() {
+					return new Response(
+						new ReadableStream({
+							start(controller) {
+								controller.error(new Error("body blew up"));
+							},
+						}),
+						{ headers: { "content-type": "text/html; charset=utf-8" } },
+					);
+				},
+			},
+		});
+
+		let body = await (await harness.visit()).text();
+
+		expect(body).toContain("Frame error:");
+		expect(unresolvedFrameIds(body)).toEqual([]);
 		expect(body).toContain(en.page.dnsMonitorDetail.uptimeHistory);
 	});
 });

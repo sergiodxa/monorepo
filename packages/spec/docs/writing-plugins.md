@@ -176,7 +176,8 @@ configuration, not specification — the same specs run against a different
 machine's `config.jsonc` unchanged.
 
 A declared namespace may not shadow a built-in (`fs`, `cli`, `http`, `browser`,
-`db`); built-ins are always available and need no config entry.
+`db`, `env`, `url`, `jwt`); built-ins are always available and need no config
+entry.
 
 ## Third-party plugins
 

@@ -16,6 +16,7 @@ import type { RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { logger } from "@pkg/logger";
 import { renderToStream } from "remix/ui/server";
 
 /** How many redirects a frame's sub-request may follow before it is treated as a loop. */
@@ -29,6 +30,15 @@ export function createHtmlRenderer(ctx: RequestContext) {
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);
 			},
+			// The renderer's default hook writes to the console, which a Worker drops on the
+			// floor. Whatever still reaches here has already cost the visitor a piece of the
+			// page, so it has to leave a record somewhere someone will read.
+			onError(error) {
+				logger.error("render.stream_failed", {
+					url: ctx.request.url,
+					error: error instanceof Error ? error.message : String(error),
+				});
+			},
 		});
 
 		let headers = new Headers(init?.headers);
@@ -41,14 +51,24 @@ export function createHtmlRenderer(ctx: RequestContext) {
 /**
  * Fetches frame HTML through the current router so SSR frames share request context.
  *
- * Never rejects, and that is the whole contract. `remix/ui` streams a non-blocking
- * frame's content as a `<template>` the client swaps over the fallback; when this
- * promise rejects instead of answering, the renderer swallows the error into its
- * `onError` hook, no template is ever streamed, and the client waits for one forever —
- * so the visitor is left staring at a skeleton with nothing written down anywhere about
- * why. A frame that fails has to *say so* in the page. Every failure — a handler that
- * threw, a redirect loop, an aborted request — comes back as the same visible marker a
- * non-ok response does.
+ * Never fails, and that is the whole contract. `remix/ui` streams a non-blocking frame's
+ * content as a `<template>` the client swaps over the fallback; when a frame fails to
+ * produce that content, the renderer swallows the error into its `onError` hook, no
+ * template is ever streamed, and the client waits for one forever — so the visitor is
+ * left staring at a skeleton with nothing written down anywhere about why. A frame that
+ * fails has to *say so* in the page. Every failure — a handler that threw, a redirect
+ * loop, an aborted request — comes back as the same visible marker a non-ok response
+ * does.
+ *
+ * Which is why the body is read to a string here rather than handed back as
+ * `res.body`. A fragment response's headers exist long before its HTML does: `ctx.render`
+ * returns as soon as its stream is created, and the JSX is rendered into that stream
+ * afterwards. Returning the stream would move every failure that happens during that
+ * render — a component that throws, a query that rejects mid-tree — outside this
+ * function, where the catch below can no longer see it and the renderer drops the
+ * template instead. Awaiting the text pulls those failures back in. A card fragment is
+ * small enough that giving up its incremental delivery costs nothing next to a frame
+ * that can silently never arrive.
  */
 export async function resolveFrame(
 	router: Router,
@@ -77,7 +97,7 @@ export async function resolveFrame(
 		// though it were the fragment's own content.
 		if (!res.ok) return frameError(`${res.status} ${res.statusText}`);
 
-		return res.body ?? (await res.text());
+		return await res.text();
 	} catch (error) {
 		return frameError(error instanceof Error ? error.message : String(error));
 	}

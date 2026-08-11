@@ -52,6 +52,7 @@ const BUILT_IN_NAMESPACES: ReadonlySet<string> = new Set([
 	"db",
 	"url",
 	"jwt",
+	"env",
 ]);
 
 /**
