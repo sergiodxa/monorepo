@@ -6,9 +6,12 @@
  * records it tracks: the shell reads the monitor row and that record list, and the two
  * things that cost a query each — the 90-day uptime bar and the result history — load
  * into their own named `Frame`s over a skeleton fallback, so neither delays the page nor
- * the other. The record list is rendered inline instead, above both, because it is what
- * the visitor came for and because a record awaiting a decision must not arrive after
- * the history that does not mention it.
+ * the other.
+ *
+ * The order reads outward from the domain: what it is, how it has behaved, then the
+ * records themselves. The record table is last because it is the longest thing here — a
+ * real zone runs to dozens of rows — and burying a one-line summary underneath it would
+ * mean scrolling past everything to learn whether anything is wrong.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -172,7 +175,55 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							/>
 						</div>
 
-						<section mix={[vstack({ gap: 3 }), mbe("24px")]}>
+						{/*
+						 * `StatCardSkeleton` renders bare cards with no row of its own, so that
+						 * several frames can share one row a caller lays out. Neither frame here
+						 * shares a row with anything, so each supplies the row its own placeholders
+						 * sit in — otherwise the four cards stack flush against each other while
+						 * the page is loading, which is not the shape either fragment resolves to.
+						 * The gap matches the stat row above.
+						 */}
+						<Frame
+							name="dns-monitor-card-uptime-history"
+							src={routes.app.team.dnsMonitors.cards.uptimeHistory.href({
+								team: ctx.team.slug,
+								monitorId: monitor.id,
+							})}
+							fallback={
+								<div mix={[flex(), flexWrap(), gap("16px")]}>
+									<StatCardSkeleton count={1} />
+								</div>
+							}
+						/>
+
+						{/*
+						 * The two fragments are separate blocks, and a `Frame` is a region rather
+						 * than an element — so the space between them belongs to a wrapper here, and
+						 * it has to survive the swap: the resolved history section and result table
+						 * need it just as much as the skeletons do.
+						 */}
+						<div mix={[mbs("24px")]}>
+							<Frame
+								name="dns-monitor-card-results"
+								src={routes.app.team.dnsMonitors.cards.results.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								fallback={
+									<div mix={[flex(), flexWrap(), gap("16px")]}>
+										<StatCardSkeleton count={3} />
+									</div>
+								}
+							/>
+						</div>
+
+						{/*
+						 * The frames above end on a `Frame`, which is a region rather than an
+						 * element, so the space between them and this table has to live on
+						 * something that survives the swap — here, rather than as a trailing
+						 * margin on a fragment this page does not own.
+						 */}
+						<section mix={[vstack({ gap: 3 }), mbs("24px")]}>
 							<div mix={[vstack({ gap: 1 })]}>
 								<h2 mix={[m(0)]}>{ctx.i18next.t("page.dnsMonitorDetail.records.title")}</h2>
 								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
@@ -281,48 +332,6 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								</Table.Container>
 							)}
 						</section>
-
-						{/*
-						 * `StatCardSkeleton` renders bare cards with no row of its own, so that
-						 * several frames can share one row a caller lays out. Neither frame here
-						 * shares a row with anything, so each supplies the row its own placeholders
-						 * sit in — otherwise the four cards stack flush against each other while
-						 * the page is loading, which is not the shape either fragment resolves to.
-						 * The gap matches the stat row above.
-						 */}
-						<Frame
-							name="dns-monitor-card-uptime-history"
-							src={routes.app.team.dnsMonitors.cards.uptimeHistory.href({
-								team: ctx.team.slug,
-								monitorId: monitor.id,
-							})}
-							fallback={
-								<div mix={[flex(), flexWrap(), gap("16px")]}>
-									<StatCardSkeleton count={1} />
-								</div>
-							}
-						/>
-
-						{/*
-						 * The two fragments are separate blocks, and a `Frame` is a region rather
-						 * than an element — so the space between them belongs to a wrapper here, and
-						 * it has to survive the swap: the resolved history section and result table
-						 * need it just as much as the skeletons do.
-						 */}
-						<div mix={[mbs("24px")]}>
-							<Frame
-								name="dns-monitor-card-results"
-								src={routes.app.team.dnsMonitors.cards.results.href({
-									team: ctx.team.slug,
-									monitorId: monitor.id,
-								})}
-								fallback={
-									<div mix={[flex(), flexWrap(), gap("16px")]}>
-										<StatCardSkeleton count={3} />
-									</div>
-								}
-							/>
-						</div>
 					</div>
 				</AppShell>
 			</DocumentLayout>,
