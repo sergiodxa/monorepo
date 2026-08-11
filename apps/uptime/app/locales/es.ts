@@ -1507,6 +1507,11 @@ export default {
 			label: "Copiar",
 			copied: "¡Copiado!",
 		},
+
+		selectAll: {
+			select: "Seleccionar todo",
+			clear: "Borrar todo",
+		},
 	},
 
 	cron: {
@@ -1547,6 +1552,10 @@ export default {
 	},
 
 	actions: {
+		checks: {
+			subscriptionRequired: "Se requiere una suscripción activa para ejecutar una comprobación.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "¡Ups! Algo salió mal.",
@@ -2975,6 +2984,18 @@ export default {
 			header: { title: "Importar Monitores" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "Qué importar",
+						description: "Pegue las direcciones que quiere vigilar, una por línea.",
+					},
+					schedule: {
+						title: "Cada cuánto comprobar",
+						description:
+							"Se aplica a todos los monitores que cree esta importación. Puede cambiar cualquiera de ellos después.",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "URL a monitorear",
@@ -2997,6 +3018,7 @@ export default {
 			 * una fallida.
 			 */
 			report: {
+				section: { title: "Última importación" },
 				title_one: "Se creó 1 monitor. Estas líneas no:",
 				title_other: "Se crearon {{count}} monitores. Estas líneas no:",
 				overflow_one:
@@ -3020,6 +3042,7 @@ export default {
 				title: "Monitores HTTP",
 				action: {
 					create: "Crear Monitor",
+					import: "Importar",
 				},
 			},
 			empty: {
@@ -4731,6 +4754,14 @@ export default {
 			form: {
 				title: "Crear nueva clave API",
 				description: "Las claves API permiten acceso programático a sus monitores y alertas.",
+
+				sections: {
+					details: {
+						title: "Detalles de la clave",
+						description:
+							"Póngale un nombre para reconocerla más adelante y decida cuándo debe dejar de funcionar.",
+					},
+				},
 
 				fields: {
 					name: {

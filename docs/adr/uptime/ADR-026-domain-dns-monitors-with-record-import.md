@@ -506,7 +506,7 @@ and we do not. Billing a sweep as N pings would charge a customer for a cost we 
 
 An earlier draft of this ADR argued for per-query billing on the grounds that 240 queries
 billed as one ping was indefensible. That argument assumed the queries cost us something.
-They do not, so it collapses: what a domain monitor sells is *one monitored domain*, and that
+They do not, so it collapses: what a domain monitor sells is _one monitored domain_, and that
 is the unit to price.
 
 The consequences are all simplifying:
@@ -515,7 +515,7 @@ The consequences are all simplifying:
   `BillablePing` per monitor per check, keyed `ping:${resultId}` — no ordinal, no new
   dedup surface.
 - **`app/lib/pricing.ts` needs no change either.** `monthlyPings`'s docblock assumption —
-  *"one check per interval per monitor"* — stays true for domain monitors, so no
+  _"one check per interval per monitor"_ — stays true for domain monitors, so no
   `queriesPerCheck` factor and no DNS special case. A domain monitor prices exactly like
   every other monitor.
 - No cost-projection screen on the review step. It existed only to soften a per-query

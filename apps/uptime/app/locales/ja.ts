@@ -1468,6 +1468,11 @@ export default {
 			label: "コピー",
 			copied: "コピーしました！",
 		},
+
+		selectAll: {
+			select: "すべて選択",
+			clear: "選択を解除",
+		},
 	},
 
 	cron: {
@@ -1505,6 +1510,10 @@ export default {
 	},
 
 	actions: {
+		checks: {
+			subscriptionRequired: "チェックを実行するには有効なサブスクリプションが必要です。",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "エラーが発生しました。",
@@ -2914,6 +2923,18 @@ export default {
 			header: { title: "モニターをインポート" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "インポートする対象",
+						description: "監視したいアドレスを 1 行に 1 つずつ貼り付けてください。",
+					},
+					schedule: {
+						title: "チェックの頻度",
+						description:
+							"このインポートで作成されるすべてのモニターに適用されます。あとから個別に変更できます。",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "監視する URL",
@@ -2934,6 +2955,7 @@ export default {
 			 * *was* created, so a partial import does not read as a failed one.
 			 */
 			report: {
+				section: { title: "前回のインポート" },
 				title_other: "{{count}}件のモニターが作成されました。次の行は作成されていません：",
 				overflow_other:
 					"さらに {{count}} 行が対象外になりました。1 回のインポートで扱えるのは {{limit}} 行までです。残りを貼り付けてインポートしてください。",
@@ -2954,6 +2976,7 @@ export default {
 				title: "HTTPモニター",
 				action: {
 					create: "モニターを作成",
+					import: "インポート",
 				},
 			},
 			empty: {
@@ -4639,6 +4662,14 @@ export default {
 			form: {
 				title: "新しいAPIキーを作成",
 				description: "APIキーを使用すると、モニターとアラートにプログラムでアクセスできます。",
+
+				sections: {
+					details: {
+						title: "キーの詳細",
+						description:
+							"あとで見分けられるようにキーに名前を付け、いつ使えなくなるかを決めてください。",
+					},
+				},
 
 				fields: {
 					name: {

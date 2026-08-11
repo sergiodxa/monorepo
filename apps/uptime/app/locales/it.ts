@@ -1512,6 +1512,11 @@ export default {
 			label: "Copia",
 			copied: "Copiato!",
 		},
+
+		selectAll: {
+			select: "Seleziona tutto",
+			clear: "Deseleziona tutto",
+		},
 	},
 
 	cron: {
@@ -1552,6 +1557,10 @@ export default {
 	},
 
 	actions: {
+		checks: {
+			subscriptionRequired: "È richiesto un abbonamento attivo per eseguire un controllo.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Ops! Qualcosa è andato storto.",
@@ -2979,6 +2988,18 @@ export default {
 			header: { title: "Importa Monitor" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "Cosa importare",
+						description: "Incolli gli indirizzi da tenere sotto controllo, uno per riga.",
+					},
+					schedule: {
+						title: "Ogni quanto controllare",
+						description:
+							"Applicato a ogni monitor creato da questa importazione. Può cambiarlo per ciascuno in seguito.",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "URL da monitorare",
@@ -3000,6 +3021,7 @@ export default {
 			 * ciò che *è* stato creato, così un'importazione parziale non si legge come un errore.
 			 */
 			report: {
+				section: { title: "Ultima importazione" },
 				title_one: "1 monitor è stato creato. Queste righe no:",
 				title_other: "{{count}} monitor sono stati creati. Queste righe no:",
 				overflow_one:
@@ -3023,6 +3045,7 @@ export default {
 				title: "Monitor HTTP",
 				action: {
 					create: "Crea Monitor",
+					import: "Importa",
 				},
 			},
 			empty: {
@@ -4734,6 +4757,14 @@ export default {
 			form: {
 				title: "Crea Nuova Chiave API",
 				description: "Le chiavi API consentono l'accesso programmatico ai suoi monitor e avvisi.",
+
+				sections: {
+					details: {
+						title: "Dettagli della chiave",
+						description:
+							"Dia un nome alla chiave per riconoscerla in seguito e decida quando deve smettere di funzionare.",
+					},
+				},
 
 				fields: {
 					name: {

@@ -1511,6 +1511,11 @@ export default {
 			label: "Kopieren",
 			copied: "Kopiert!",
 		},
+
+		selectAll: {
+			select: "Alle auswählen",
+			clear: "Auswahl aufheben",
+		},
 	},
 
 	cron: {
@@ -1551,6 +1556,10 @@ export default {
 	},
 
 	actions: {
+		checks: {
+			subscriptionRequired: "Für eine Prüfung ist ein aktives Abonnement erforderlich.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
@@ -2990,6 +2999,19 @@ export default {
 			header: { title: "Monitore importieren" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "Was importiert wird",
+						description:
+							"Fügen Sie die Adressen ein, die überwacht werden sollen — eine pro Zeile.",
+					},
+					schedule: {
+						title: "Wie oft geprüft wird",
+						description:
+							"Gilt für jeden Monitor, den dieser Import erstellt. Sie können jeden davon später ändern.",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "Zu überwachende URLs",
@@ -3012,6 +3034,7 @@ export default {
 			 * fehlgeschlagener klingt.
 			 */
 			report: {
+				section: { title: "Letzter Import" },
 				title_one: "1 Monitor wurde erstellt. Diese Zeilen nicht:",
 				title_other: "{{count}} Monitore wurden erstellt. Diese Zeilen nicht:",
 				overflow_one:
@@ -3035,6 +3058,7 @@ export default {
 				title: "HTTP-Monitore",
 				action: {
 					create: "Monitor erstellen",
+					import: "Importieren",
 				},
 			},
 			empty: {
@@ -4763,6 +4787,14 @@ export default {
 				title: "Neuen API-Schlüssel erstellen",
 				description:
 					"API-Schlüssel ermöglichen programmgesteuerten Zugriff auf Ihre Monitore und Benachrichtigungen.",
+
+				sections: {
+					details: {
+						title: "Angaben zum Schlüssel",
+						description:
+							"Geben Sie dem Schlüssel einen Namen, an dem Sie ihn später wiedererkennen, und legen Sie fest, wann er ungültig werden soll.",
+					},
+				},
 
 				fields: {
 					name: {

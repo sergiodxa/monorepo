@@ -1520,6 +1520,11 @@ export default {
 			label: "Copier",
 			copied: "Copié !",
 		},
+
+		selectAll: {
+			select: "Tout sélectionner",
+			clear: "Tout désélectionner",
+		},
 	},
 
 	cron: {
@@ -1560,6 +1565,10 @@ export default {
 	},
 
 	actions: {
+		checks: {
+			subscriptionRequired: "Un abonnement actif est nécessaire pour lancer une vérification.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Oups ! Une erreur s'est produite.",
@@ -2994,6 +3003,18 @@ export default {
 			header: { title: "Importer des moniteurs" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "Ce qu'il faut importer",
+						description: "Collez les adresses à surveiller, une par ligne.",
+					},
+					schedule: {
+						title: "Fréquence des vérifications",
+						description:
+							"Appliqué à chaque moniteur créé par cet import. Vous pourrez modifier n'importe lequel ensuite.",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "URL à surveiller",
@@ -3015,6 +3036,7 @@ export default {
 			 * qui *a* été créé, pour qu'un import partiel ne se lise pas comme un échec.
 			 */
 			report: {
+				section: { title: "Dernier import" },
 				title_one: "1 moniteur a été créé. Ces lignes non :",
 				title_other: "{{count}} moniteurs ont été créés. Ces lignes non :",
 				overflow_one:
@@ -3038,6 +3060,7 @@ export default {
 				title: "Moniteurs HTTP",
 				action: {
 					create: "Créer un Moniteur",
+					import: "Importer",
 				},
 			},
 			empty: {
@@ -4754,6 +4777,14 @@ export default {
 			form: {
 				title: "Créer une nouvelle clé API",
 				description: "Les clés API permettent un accès programmatique à vos moniteurs et alertes.",
+
+				sections: {
+					details: {
+						title: "Détails de la clé",
+						description:
+							"Nommez la clé pour la reconnaître plus tard, et décidez quand elle doit cesser de fonctionner.",
+					},
+				},
 
 				fields: {
 					name: {

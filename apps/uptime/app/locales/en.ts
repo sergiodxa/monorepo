@@ -1563,6 +1563,11 @@ export default {
 			label: "Copy",
 			copied: "Copied!",
 		},
+
+		selectAll: {
+			select: "Select all",
+			clear: "Clear all",
+		},
 	},
 
 	cron: {
@@ -1603,6 +1608,14 @@ export default {
 	},
 
 	actions: {
+		/**
+		 * Shared by every on-demand check action (HTTP, DNS, TCP): the three refuse for the
+		 * same reason and flash the same toast, so one key keeps them from drifting apart.
+		 */
+		checks: {
+			subscriptionRequired: "An active subscription is required to run a check.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Oops! Something went wrong.",
@@ -3018,6 +3031,18 @@ export default {
 			header: { title: "Import Monitors" },
 
 			form: {
+				sections: {
+					urls: {
+						title: "What to import",
+						description: "Paste the addresses you want watched, one per line.",
+					},
+					schedule: {
+						title: "How often to check",
+						description:
+							"Applied to every monitor this import creates. You can change any of them afterwards.",
+					},
+				},
+
 				fields: {
 					urls: {
 						label: "URLs to monitor",
@@ -3039,6 +3064,7 @@ export default {
 			 * *was* created, so a partial import does not read as a failed one.
 			 */
 			report: {
+				section: { title: "Last import" },
 				title_one: "1 monitor was created. These lines weren't:",
 				title_other: "{{count}} monitors were created. These lines weren't:",
 				overflow_one:
@@ -3062,6 +3088,7 @@ export default {
 				title: "HTTP Monitors",
 				action: {
 					create: "Create Monitor",
+					import: "Import",
 				},
 			},
 			empty: {
@@ -4795,6 +4822,14 @@ export default {
 				title: "Create New API Key",
 				description:
 					"Create an API key to access the Uptime API. See the <link>documentation</link> for usage examples.",
+
+				sections: {
+					details: {
+						title: "Key details",
+						description:
+							"Name the key so you can recognize it later, and decide when it should stop working.",
+					},
+				},
 
 				fields: {
 					name: {
