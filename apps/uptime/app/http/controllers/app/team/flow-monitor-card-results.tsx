@@ -25,7 +25,7 @@ import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
 import { flex, flexWrap, gap, grid, gridTemplate } from "@pkg/u/layout";
 import { m, mbe, p } from "@pkg/u/size";
-import { font, fontSize, weight, whiteSpace } from "@pkg/u/typography";
+import { font, fontSize, overflowWrap, weight, whiteSpace } from "@pkg/u/typography";
 import { Badge, Empty, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -117,6 +117,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 								fontSize("sm"),
 								fg("danger"),
 								whiteSpace("pre-wrap"),
+								overflowWrap("anywhere"),
 							]}
 						>
 							{last.failure_detail ?? last.error_message}
@@ -217,6 +218,11 @@ namespace SourceListing {
  * that is part of the text gets selected and copied along with it — pasting a flow back into the
  * editor would carry a column of digits with it. The marked line is toned and also carries a `›` in
  * the gutter, since colour alone is not a signal everybody receives.
+ *
+ * The code column is `minmax(0, 1fr)` and breaks anywhere, which is what keeps this from widening
+ * the page on a narrow screen. A bare `1fr` floors at its content's min-content width, and a spec
+ * line's longest unbreakable token is a URL — so one absolute URL in a flow was enough to push the
+ * whole document into horizontal scrolling on a phone.
  */
 function SourceListing(handle: Handle<SourceListing.Props>) {
 	return () => {
@@ -228,7 +234,7 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 			<div
 				mix={[
 					grid(),
-					gridTemplate({ columns: "auto 1fr" }),
+					gridTemplate({ columns: "auto minmax(0, 1fr)" }),
 					gap("0 12px"),
 					p("12px"),
 					rounded("md"),
@@ -250,7 +256,13 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 								{failed ? "›" : " "}
 								{String(number).padStart(gutterWidth, " ")}
 							</span>
-							<span mix={[whiteSpace("pre-wrap"), ...(failed ? [fg("danger"), weight(600)] : [])]}>
+							<span
+								mix={[
+									whiteSpace("pre-wrap"),
+									overflowWrap("anywhere"),
+									...(failed ? [fg("danger"), weight(600)] : []),
+								]}
+							>
 								{line === "" ? " " : line}
 							</span>
 						</Fragment>
