@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/ui";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded } from "@pkg/u/effects";
 import { cursor, pointerEvents, userSelect } from "@pkg/u/general";
-import { gap, inlineFlex, items, justify } from "@pkg/u/layout";
+import { gap, inlineFlex, items, justify, shrink } from "@pkg/u/layout";
 import { pb, pi } from "@pkg/u/size";
 import { active, data, hover, when } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
@@ -119,6 +119,12 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					items("center"),
 					justify("center"),
 					gap(2),
+					/**
+					 * An icon inside a link button never shrinks — the same rule `Button` states, for the
+					 * same reason: squeeze the row and the default `flex-shrink: 1` compresses the glyph
+					 * rather than the words, and a squashed icon reads as a rendering fault.
+					 */
+					when("& > svg", shrink()),
 					rounded("md"),
 					weight("medium"),
 					pi(4),

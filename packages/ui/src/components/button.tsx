@@ -15,7 +15,17 @@ import { LoaderCircleIcon } from "@pkg/lucide-remix";
 import { bg, border, fg, outline } from "@pkg/u/color";
 import { opacity, rounded, visibility } from "@pkg/u/effects";
 import { cursor, userSelect } from "@pkg/u/general";
-import { absolute, flex, gap, inlineFlex, inset, items, justify, relative } from "@pkg/u/layout";
+import {
+	absolute,
+	flex,
+	gap,
+	inlineFlex,
+	inset,
+	items,
+	justify,
+	relative,
+	shrink,
+} from "@pkg/u/layout";
 import { bs, is, pb, pi } from "@pkg/u/size";
 import { when } from "@pkg/u/state";
 import { text, weight } from "@pkg/u/typography";
@@ -185,6 +195,14 @@ export function Button(handle: Handle<Button.Props>) {
 					items("center"),
 					justify("center"),
 					gap(2),
+					/**
+					 * An icon inside a button never shrinks. It is a flex item beside a text label, so
+					 * when the row is squeezed — a narrow header, a long label — the default
+					 * `flex-shrink: 1` lets the browser compress the glyph rather than the words, and a
+					 * squashed icon reads as a rendering fault. The label is what may wrap or ellipsize;
+					 * the glyph keeps the size it was asked for.
+					 */
+					when("& > svg", shrink()),
 					rounded("md"),
 					weight("medium"),
 					cursor("default"),
