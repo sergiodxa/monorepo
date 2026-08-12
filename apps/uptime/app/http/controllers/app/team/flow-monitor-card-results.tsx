@@ -23,9 +23,11 @@ import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { bg, fg } from "@pkg/u/color";
 import { rounded } from "@pkg/u/effects";
-import { flex, flexWrap, gap, grid, gridTemplate } from "@pkg/u/layout";
-import { m, mbe, p } from "@pkg/u/size";
-import { font, fontSize, overflowWrap, weight, whiteSpace } from "@pkg/u/typography";
+import { raw } from "@pkg/u/general";
+import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@pkg/u/layout";
+import { overflow } from "@pkg/u/overflow";
+import { m, mbe, p, pie } from "@pkg/u/size";
+import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@pkg/u/typography";
 import { Badge, Empty, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -170,6 +172,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 														locale: ctx.locale,
 														timeZone: "UTC",
 													})}
+													mix={[nowrap()]}
 												>
 													{formatRelative(new Date(result.checked_at), { locale: ctx.locale })}
 												</time>
@@ -219,10 +222,15 @@ namespace SourceListing {
  * editor would carry a column of digits with it. The marked line is toned and also carries a `›` in
  * the gutter, since colour alone is not a signal everybody receives.
  *
- * The code column is `minmax(0, 1fr)` and breaks anywhere, which is what keeps this from widening
- * the page on a narrow screen. A bare `1fr` floors at its content's min-content width, and a spec
- * line's longest unbreakable token is a URL — so one absolute URL in a flow was enough to push the
- * whole document into horizontal scrolling on a phone.
+ * Long lines **scroll** rather than wrap. Wrapping was the first attempt and it was wrong for code:
+ * a wrapped line reads as several lines with one number, so the gutter stops meaning anything at
+ * exactly the moment it matters — when a failure names a line. The listing therefore sizes to its
+ * longest line (`max-content`) inside a container that scrolls, which is also what keeps it from
+ * widening the page: the overflow ends at the container instead of at the document.
+ *
+ * The gutter is `sticky` at the scrollport's inline start and carries the block's own background, so
+ * the numbers stay put while the code slides under them. Its trailing space is padding rather than a
+ * column gap, because a gap would let the code show through the strip the numbers sit on.
  */
 function SourceListing(handle: Handle<SourceListing.Props>) {
 	return () => {
@@ -234,13 +242,13 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 			<div
 				mix={[
 					grid(),
-					gridTemplate({ columns: "auto minmax(0, 1fr)" }),
-					gap("0 12px"),
+					gridTemplate({ columns: "auto max-content" }),
 					p("12px"),
 					rounded("md"),
 					bg("neutral.tint"),
 					font("mono"),
 					fontSize("sm"),
+					overflow("auto"),
 				]}
 			>
 				{lines.map((line, index) => {
@@ -251,18 +259,19 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 						<Fragment key={number}>
 							<span
 								aria-hidden="true"
-								mix={[fg(failed ? "danger" : "neutral.muted"), whiteSpace("pre")]}
+								mix={[
+									sticky(),
+									raw({ insetInlineStart: 0 }),
+									bg("neutral.tint"),
+									pie("12px"),
+									fg(failed ? "danger" : "neutral.muted"),
+									whiteSpace("pre"),
+								]}
 							>
 								{failed ? "›" : " "}
 								{String(number).padStart(gutterWidth, " ")}
 							</span>
-							<span
-								mix={[
-									whiteSpace("pre-wrap"),
-									overflowWrap("anywhere"),
-									...(failed ? [fg("danger"), weight(600)] : []),
-								]}
-							>
+							<span mix={[whiteSpace("pre"), ...(failed ? [fg("danger"), weight(600)] : [])]}>
 								{line === "" ? " " : line}
 							</span>
 						</Fragment>

@@ -18,7 +18,8 @@ import { notFound } from "@pkg/http/response/html";
 import { IntlProvider } from "@pkg/i18n/ui";
 import { PencilIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
-import { flex, flexWrap, gap, items } from "@pkg/u/layout";
+import { flex, flexWrap, gap, hidden, items } from "@pkg/u/layout";
+import { media } from "@pkg/u/responsive";
 import { mbe } from "@pkg/u/size";
 import { Badge, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
@@ -102,15 +103,22 @@ export default createAction(routes.app.team.flowMonitors.show, {
 									name={monitor.name}
 								/>
 							</IntlProvider>
-							<LinkButton
-								href={routes.app.team.flowMonitors.edit.href({
-									team: ctx.team.slug,
-									monitorId: monitor.id,
-								})}
-							>
-								<PencilIcon size={16} strokeWidth={1.5} />
-								{ctx.i18next.t("page.flowMonitorDetail.header.action.edit")}
-							</LinkButton>
+							{/*
+							 * Hidden on a phone, where the header has room for one action and "Run now" is
+							 * the one somebody came for. Editing is still a tap away through the list's row
+							 * menu, so nothing becomes unreachable — the button is redundant, not essential.
+							 */}
+							<div mix={[hidden(), media("(min-width: 640px)", flex())]}>
+								<LinkButton
+									href={routes.app.team.flowMonitors.edit.href({
+										team: ctx.team.slug,
+										monitorId: monitor.id,
+									})}
+								>
+									<PencilIcon size={16} strokeWidth={1.5} />
+									{ctx.i18next.t("page.flowMonitorDetail.header.action.edit")}
+								</LinkButton>
+							</div>
 						</div>
 					}
 				>

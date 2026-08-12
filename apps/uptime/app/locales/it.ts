@@ -4780,7 +4780,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Monitor di flusso",
-				action: { create: "Crea monitor di flusso" },
+				action: { create: "Crea monitor" },
 			},
 
 			empty: {
@@ -4808,9 +4808,9 @@ export default {
 				},
 				actions: {
 					menu: "Menu azioni",
-					view: "Vedi monitor di flusso",
-					edit: "Modifica monitor di flusso",
-					delete: "Elimina monitor di flusso",
+					view: "Vedi",
+					edit: "Modifica",
+					delete: "Elimina",
 					confirmation: {
 						delete:
 							"Vuoi davvero eliminare il monitor di flusso {{name}}? L'azione non può essere annullata.",

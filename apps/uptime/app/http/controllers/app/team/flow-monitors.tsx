@@ -19,7 +19,7 @@ import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
 import { hover } from "@pkg/u/state";
-import { textDecoration } from "@pkg/u/typography";
+import { nowrap, textDecoration } from "@pkg/u/typography";
 import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -153,7 +153,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 															</Badge>
 														)}
 													</Table.Cell>
-													<Table.Cell>
+													<Table.Cell mix={[nowrap()]}>
 														{ctx.i18next.t(
 															`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
 														)}
@@ -179,6 +179,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																	locale: ctx.locale,
 																	timeZone: "UTC",
 																})}
+																mix={[nowrap()]}
 															>
 																{formatRelative(new Date(monitor.last_checked_at), {
 																	locale: ctx.locale,

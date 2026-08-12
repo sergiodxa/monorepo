@@ -4779,7 +4779,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Flow Monitors",
-				action: { create: "Create Flow Monitor" },
+				action: { create: "Create monitor" },
 			},
 
 			empty: {
@@ -4807,9 +4807,9 @@ export default {
 				},
 				actions: {
 					menu: "Actions menu",
-					view: "View flow monitor",
-					edit: "Edit flow monitor",
-					delete: "Delete flow monitor",
+					view: "View",
+					edit: "Edit",
+					delete: "Delete",
 					confirmation: {
 						delete:
 							"Are you sure you want to delete the flow monitor {{name}}? This action cannot be undone.",

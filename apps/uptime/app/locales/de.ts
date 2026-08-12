@@ -4809,7 +4809,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Flow-Monitore",
-				action: { create: "Flow-Monitor erstellen" },
+				action: { create: "Monitor erstellen" },
 			},
 
 			empty: {
@@ -4837,9 +4837,9 @@ export default {
 				},
 				actions: {
 					menu: "Aktionsmenü",
-					view: "Flow-Monitor ansehen",
-					edit: "Flow-Monitor bearbeiten",
-					delete: "Flow-Monitor löschen",
+					view: "Ansehen",
+					edit: "Bearbeiten",
+					delete: "Löschen",
 					confirmation: {
 						delete:
 							"Soll der Flow-Monitor {{name}} wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.",
