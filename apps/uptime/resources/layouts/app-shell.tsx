@@ -175,6 +175,17 @@ const header = combine([
 	media("(min-width: 768px)", gridArea("header")),
 ]);
 
+/**
+ * The breadcrumb trail above the heading.
+ *
+ * Truncates on one line, like the heading below it does. Without this the trail wrapped: the
+ * heading column is `min-inline-size: 0` so it can shrink, but a wrapping trail grows *taller*
+ * instead of narrower, and at a phone's width "Dashboard › Flow Monitors" became two lines above
+ * a third — three lines of text inside a header fixed at 64px. One line that ends in an ellipsis
+ * is the same compromise the heading already makes.
+ */
+const breadcrumbTrail = combine([truncate(), minIs(0)]);
+
 /** The current page/section name, replacing what used to be each page's own `<h1>`. */
 const breadcrumbText = combine([
 	truncate(),
@@ -607,7 +618,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						</button>
 						<div mix={[headingColumn]}>
 							{breadcrumbs && breadcrumbs.length > 0 && (
-								<Breadcrumbs aria-label={t("breadcrumbs.label")}>
+								<Breadcrumbs aria-label={t("breadcrumbs.label")} mix={[breadcrumbTrail]}>
 									<Breadcrumbs.List>
 										{breadcrumbs.map((crumb, index) => (
 											<Breadcrumbs.Item key={`${crumb.label}-${index}`}>

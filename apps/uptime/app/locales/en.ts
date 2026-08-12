@@ -4779,7 +4779,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Flow Monitors",
-				action: { create: "Create monitor" },
+				action: { create: "Create" },
 			},
 
 			empty: {

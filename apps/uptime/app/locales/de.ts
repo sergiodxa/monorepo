@@ -4809,7 +4809,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Flow-Monitore",
-				action: { create: "Monitor erstellen" },
+				action: { create: "Erstellen" },
 			},
 
 			empty: {

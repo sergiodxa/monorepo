@@ -4780,7 +4780,7 @@ export default {
 		flowMonitors: {
 			header: {
 				title: "Monitor di flusso",
-				action: { create: "Crea monitor" },
+				action: { create: "Crea" },
 			},
 
 			empty: {

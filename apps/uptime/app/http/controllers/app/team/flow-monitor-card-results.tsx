@@ -26,7 +26,7 @@ import { rounded } from "@pkg/u/effects";
 import { raw } from "@pkg/u/general";
 import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
-import { m, mbe, p, pie } from "@pkg/u/size";
+import { m, mbe, p, pb, pie, pis } from "@pkg/u/size";
 import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@pkg/u/typography";
 import { Badge, Empty, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
@@ -229,8 +229,10 @@ namespace SourceListing {
  * widening the page: the overflow ends at the container instead of at the document.
  *
  * The gutter is `sticky` at the scrollport's inline start and carries the block's own background, so
- * the numbers stay put while the code slides under them. Its trailing space is padding rather than a
- * column gap, because a gap would let the code show through the strip the numbers sit on.
+ * the numbers stay put while the code slides under them. Both of its inline paddings are its own,
+ * and the block has none — a sticky child sticks to the *padding* edge, so inline padding on the
+ * scroll container leaves a strip the gutter cannot cover and the code slides visibly through it.
+ * Same reason there is no column gap: a gap is another such strip.
  */
 function SourceListing(handle: Handle<SourceListing.Props>) {
 	return () => {
@@ -243,7 +245,7 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 				mix={[
 					grid(),
 					gridTemplate({ columns: "auto max-content" }),
-					p("12px"),
+					pb("12px"),
 					rounded("md"),
 					bg("neutral.tint"),
 					font("mono"),
@@ -263,6 +265,7 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 									sticky(),
 									raw({ insetInlineStart: 0 }),
 									bg("neutral.tint"),
+									pis("12px"),
 									pie("12px"),
 									fg(failed ? "danger" : "neutral.muted"),
 									whiteSpace("pre"),
@@ -271,7 +274,13 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 								{failed ? "›" : " "}
 								{String(number).padStart(gutterWidth, " ")}
 							</span>
-							<span mix={[whiteSpace("pre"), ...(failed ? [fg("danger"), weight(600)] : [])]}>
+							<span
+								mix={[
+									whiteSpace("pre"),
+									pie("12px"),
+									...(failed ? [fg("danger"), weight(600)] : []),
+								]}
+							>
 								{line === "" ? " " : line}
 							</span>
 						</Fragment>

@@ -21,6 +21,7 @@ import { inject } from "@pkg/service-container";
 import { flex, flexWrap, gap, hidden, items } from "@pkg/u/layout";
 import { media } from "@pkg/u/responsive";
 import { mbe } from "@pkg/u/size";
+import { nowrap } from "@pkg/u/typography";
 import { Badge, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -82,7 +83,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 						},
 					]}
 					actions={
-						<div mix={[flex(), items("center"), gap("12px")]}>
+						<div mix={[flex(), items("center"), gap("12px"), nowrap()]}>
 							{/*
 							 * RunFlowButton is a `clientEntry` island whose render function runs both
 							 * server-side (the no-JS baseline markup) and client-side (after hydration).

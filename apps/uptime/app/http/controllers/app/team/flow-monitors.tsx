@@ -18,6 +18,7 @@ import { EyeIcon, PencilIcon, PlusIcon, TrashIcon, WorkflowIcon } from "@pkg/luc
 import { inject } from "@pkg/service-container";
 import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
+import { flex, items } from "@pkg/u/layout";
 import { hover } from "@pkg/u/state";
 import { nowrap, textDecoration } from "@pkg/u/typography";
 import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
@@ -76,10 +77,13 @@ export default createAction(routes.app.team.flowMonitors.index, {
 						},
 					]}
 					actions={
-						<LinkButton href={newHref}>
-							<PlusIcon size={16} strokeWidth={1.5} />
-							{ctx.i18next.t("page.flowMonitors.header.action.create")}
-						</LinkButton>
+						/* One short label, held on one line: a button that breaks mid-phrase reads as broken. */
+						<div mix={[flex(), items("center"), nowrap()]}>
+							<LinkButton href={newHref}>
+								<PlusIcon size={16} strokeWidth={1.5} />
+								{ctx.i18next.t("page.flowMonitors.header.action.create")}
+							</LinkButton>
+						</div>
 					}
 				>
 					<div>
