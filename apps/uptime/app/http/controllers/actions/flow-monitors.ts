@@ -80,9 +80,10 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 		intent: "success",
 		message: `Flow monitor "${monitor.name}" created.`,
 	});
-	return redirect(routes.app.team.flowMonitors.index.href({ team: ctx.team.slug }), {
-		status: redirect.Status.SeeOther,
-	});
+	return redirect(
+		routes.app.team.flowMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		{ status: redirect.Status.SeeOther },
+	);
 });
 
 /** POST /actions/:team/update-flow-monitor */
@@ -107,6 +108,10 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 	let existing = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
+	let showHref = routes.app.team.flowMonitors.show.href({
+		team: ctx.team.slug,
+		monitorId: monitor_id,
+	});
 	let editHref = routes.app.team.flowMonitors.edit.href({
 		team: ctx.team.slug,
 		monitorId: monitor_id,
@@ -125,7 +130,7 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 	});
 
 	session?.flash("toast", { intent: "success", message: "Flow monitor updated." });
-	return redirect(editHref, { status: redirect.Status.SeeOther });
+	return redirect(showHref, { status: redirect.Status.SeeOther });
 });
 
 /** DELETE /actions/:team/delete-flow-monitor */
@@ -181,7 +186,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	let editHref = routes.app.team.flowMonitors.edit.href({
+	let showHref = routes.app.team.flowMonitors.show.href({
 		team: ctx.team.slug,
 		monitorId: monitor.id,
 	});
@@ -209,7 +214,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 			intent: "error",
 			message: ctx.i18next.t("actions.checks.subscriptionRequired"),
 		});
-		return redirect(editHref, { status: redirect.Status.SeeOther });
+		return redirect(showHref, { status: redirect.Status.SeeOther });
 	}
 
 	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
@@ -272,7 +277,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 		intent: checkResult.status === "up" ? "success" : "error",
 		message: `Ran "${monitor.name}": ${checkResult.testsPassed}/${checkResult.testsTotal} passed.`,
 	});
-	return redirect(editHref, { status: redirect.Status.SeeOther });
+	return redirect(showHref, { status: redirect.Status.SeeOther });
 });
 
 /**

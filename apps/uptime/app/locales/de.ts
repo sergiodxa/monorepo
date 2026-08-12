@@ -2103,6 +2103,16 @@ export default {
 						error: "{{error}} Fehler",
 					},
 				},
+				flowMonitors: {
+					label: "Flow-Monitore",
+					create: "Neuer Flow-Monitor",
+					breakdown: {
+						up: "{{up}} erfolgreich",
+						down: "{{down}} fehlgeschlagen",
+						error: "{{error}} nicht ausführbar",
+					},
+				},
+
 				tcpMonitors: {
 					label: "TCP-Monitore",
 					create: "Neuer TCP-Monitor",
@@ -4756,6 +4766,46 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Flow-Monitore" },
+				action: { edit: "Bearbeiten" },
+			},
+
+			info: {
+				status: "Status",
+				interval: "Läuft alle",
+				lastChecked: "Zuletzt geprüft",
+				enabled: "Aktiv",
+			},
+
+			stats: {
+				passRate: { label: "Erfolgsquote" },
+				avgDuration: { label: "Ø Dauer" },
+				totalRuns: { label: "Läufe insgesamt" },
+			},
+
+			failure: {
+				title: "Letzter Fehler",
+				failedTest: "{{test}} ist in Zeile {{line}} fehlgeschlagen.",
+			},
+
+			source: { title: "Flow" },
+
+			results: {
+				title: "Läufe",
+				empty: "Noch keine Läufe.",
+				label: "Flow-Läufe",
+				columns: {
+					time: "Zeit",
+					status: "Status",
+					tests: "Tests",
+					requests: "Anfragen",
+					duration: "Dauer",
+				},
+			},
+		},
+
 		flowMonitors: {
 			header: {
 				title: "Flow-Monitore",
@@ -4776,6 +4826,7 @@ export default {
 					interval: "Alle",
 					status: "Status",
 					lastChecked: "Zuletzt geprüft",
+					actions: "Aktionen",
 				},
 				status: {
 					pending: "Noch nicht geprüft",
@@ -4785,6 +4836,9 @@ export default {
 					disabled: "Deaktiviert",
 				},
 				actions: {
+					menu: "Aktionsmenü",
+					view: "Flow-Monitor ansehen",
+					edit: "Flow-Monitor bearbeiten",
 					delete: "Flow-Monitor löschen",
 					confirmation: {
 						delete:
@@ -4805,9 +4859,6 @@ export default {
 					failedTest: "Fehlgeschlagen: {{test}} (Zeile {{line}}).",
 				},
 			},
-
-			footnote:
-				"Ein Flow erreicht nur Domains, die dieses Team verifiziert hat, und jede Anfrage zählt als eine Prüfung auf dein Kontingent.",
 		},
 
 		createFlowMonitor: {

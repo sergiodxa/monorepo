@@ -2123,6 +2123,16 @@ export default {
 					},
 				},
 
+				flowMonitors: {
+					label: "Flow Monitors",
+					create: "New flow monitor",
+					breakdown: {
+						up: "{{up}} passing",
+						down: "{{down}} failing",
+						error: "{{error}} cannot run",
+					},
+				},
+
 				tcpMonitors: {
 					label: "TCP Monitors",
 					create: "New TCP monitor",
@@ -4726,6 +4736,46 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+				action: { edit: "Edit" },
+			},
+
+			info: {
+				status: "Status",
+				interval: "Runs every",
+				lastChecked: "Last checked",
+				enabled: "Enabled",
+			},
+
+			stats: {
+				passRate: { label: "Pass rate" },
+				avgDuration: { label: "Avg. Duration" },
+				totalRuns: { label: "Total Runs" },
+			},
+
+			failure: {
+				title: "Last failure",
+				failedTest: "{{test}} failed on line {{line}}.",
+			},
+
+			source: { title: "Flow" },
+
+			results: {
+				title: "Runs",
+				empty: "No runs yet.",
+				label: "Flow runs",
+				columns: {
+					time: "Time",
+					status: "Status",
+					tests: "Tests",
+					requests: "Requests",
+					duration: "Duration",
+				},
+			},
+		},
+
 		flowMonitors: {
 			header: {
 				title: "Flow Monitors",
@@ -4746,6 +4796,7 @@ export default {
 					interval: "Every",
 					status: "Status",
 					lastChecked: "Last checked",
+					actions: "Actions",
 				},
 				status: {
 					pending: "Not checked yet",
@@ -4755,6 +4806,9 @@ export default {
 					disabled: "Disabled",
 				},
 				actions: {
+					menu: "Actions menu",
+					view: "View flow monitor",
+					edit: "Edit flow monitor",
 					delete: "Delete flow monitor",
 					confirmation: {
 						delete:
@@ -4774,9 +4828,6 @@ export default {
 					failedTest: "Failed: {{test}} (line {{line}}).",
 				},
 			},
-
-			footnote:
-				"A flow may only reach domains this team has verified, and each request it makes counts as one check against your allowance.",
 		},
 
 		createFlowMonitor: {

@@ -161,6 +161,14 @@ export default createAction(routes.app.team.dashboard.index, {
 								fallback={<StatCardSkeleton count={1} badges />}
 							/>
 							<Frame
+								name="dashboard-card-count-flow"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "flow",
+								})}
+								fallback={<StatCardSkeleton count={1} badges />}
+							/>
+							<Frame
 								name="dashboard-card-count-cron-jobs"
 								src={routes.app.team.dashboard.cards.count.href({
 									team: ctx.team.slug,

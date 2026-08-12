@@ -2090,6 +2090,16 @@ export default {
 						error: "{{error}} errore",
 					},
 				},
+				flowMonitors: {
+					label: "Monitor di flusso",
+					create: "Nuovo monitor di flusso",
+					breakdown: {
+						up: "{{up}} superati",
+						down: "{{down}} non superati",
+						error: "{{error}} non eseguibili",
+					},
+				},
+
 				tcpMonitors: {
 					label: "Monitor TCP",
 					create: "Nuovo monitor TCP",
@@ -4727,6 +4737,46 @@ export default {
 			},
 		},
 
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Monitor di flusso" },
+				action: { edit: "Modifica" },
+			},
+
+			info: {
+				status: "Stato",
+				interval: "Eseguito ogni",
+				lastChecked: "Ultimo controllo",
+				enabled: "Attivo",
+			},
+
+			stats: {
+				passRate: { label: "Tasso di successo" },
+				avgDuration: { label: "Durata media" },
+				totalRuns: { label: "Esecuzioni totali" },
+			},
+
+			failure: {
+				title: "Ultimo errore",
+				failedTest: "{{test}} è fallito alla riga {{line}}.",
+			},
+
+			source: { title: "Flusso" },
+
+			results: {
+				title: "Esecuzioni",
+				empty: "Nessuna esecuzione.",
+				label: "Esecuzioni del flusso",
+				columns: {
+					time: "Ora",
+					status: "Stato",
+					tests: "Test",
+					requests: "Richieste",
+					duration: "Durata",
+				},
+			},
+		},
+
 		flowMonitors: {
 			header: {
 				title: "Monitor di flusso",
@@ -4747,6 +4797,7 @@ export default {
 					interval: "Ogni",
 					status: "Stato",
 					lastChecked: "Ultimo controllo",
+					actions: "Azioni",
 				},
 				status: {
 					pending: "Non ancora controllato",
@@ -4756,6 +4807,9 @@ export default {
 					disabled: "Disattivato",
 				},
 				actions: {
+					menu: "Menu azioni",
+					view: "Vedi monitor di flusso",
+					edit: "Modifica monitor di flusso",
 					delete: "Elimina monitor di flusso",
 					confirmation: {
 						delete:
@@ -4775,9 +4829,6 @@ export default {
 					failedTest: "Fallito: {{test}} (riga {{line}}).",
 				},
 			},
-
-			footnote:
-				"Un flusso può raggiungere solo i domini che questo team ha verificato, e ogni richiesta che esegue conta come un controllo sul tuo piano.",
 		},
 
 		createFlowMonitor: {

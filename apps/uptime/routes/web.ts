@@ -219,15 +219,16 @@ export default route({
 					results: get("/app/:team/tcp/:monitorId/cards/results"),
 				},
 			},
-			/**
-			 * Flow monitors have no `show` route: a flow's history is its last result and the
-			 * assertion that broke, both of which fit on the list and the edit form, so a detail
-			 * page would be a third place to render the same two facts (ADR-027).
-			 */
-			flowMonitors: resources("/app/:team/flows", {
-				param: "monitorId",
-				only: ["index", "new", "edit"],
-			}),
+			flowMonitors: {
+				...resources("/app/:team/flows", {
+					param: "monitorId",
+					only: ["index", "new", "show", "edit"],
+				}),
+				/** Fragment routes, same rationale as `dnsMonitors.cards` above. */
+				cards: {
+					results: get("/app/:team/flows/:monitorId/cards/results"),
+				},
+			},
 			cronJobs: resources("/app/:team/cron-jobs", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],

@@ -14,8 +14,8 @@ answer ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
 
 Landed as of 2026-08-11: the `@pkg/spec` Workers seam ([§9](#9-what-pkgspec-has-to-grow)),
 `flow_monitors` and `flow_monitor_results`, the check service, the sweep, retention,
-per-request metering, and the app surface — list, create, edit, delete, and a manual run whose
-result arrives as a toast rather than as a navigation held open for half a minute. Not yet
+per-request metering, and the app surface — list, detail, create, edit, delete, and a manual run
+whose result arrives as a toast rather than as a navigation held open for half a minute. Not yet
 built: alerting, the public API, and everything browser ([§5](#5-two-phases-stateless-first)),
 whose prices in [§7](#7-cost) stay unspent until then.
 
@@ -493,7 +493,7 @@ When the browser plugin arrives, its runs are the ones [§7](#7-cost) prices, an
 coexist: a monitor's engine decides which it is billed by. That is also why `browserSecond`
 is not on the rate card yet — there is nothing to record against it.
 
-### 8. The result is the spec's own output
+### 8. The result is the spec's own output, shown against the line it came from
 
 A `SuiteResult` carries per-test `title`, `file`, `status`, `durationMs` and a structured
 `SpecError` with spans, expected and observed values, and remedies — never a pre-rendered
@@ -508,6 +508,14 @@ string. That is a strictly better incident artifact than `HTTP 500`:
 Turning a span into `line:column` needs the source text, which we hold in the monitor row —
 `positionAt` is pure, so no filesystem is involved. The stored failure is the formatted
 first failure plus the test title and position; the alert email quotes it verbatim.
+
+**A line number is only useful beside the line**, which is what the detail page is for: it
+renders the source as numbered rows and marks the one the last failure names. This is also the
+correction to an earlier decision here. The first cut of the app surface had no detail page, on
+the reasoning that a flow's outcome is one assertion and one line and could therefore ride on the
+edit form. That was wrong three ways — it broke the pattern every other monitor type follows, it
+left a guessable URL 404ing, and the run **history** had nowhere to live at all, since the edit
+form only ever showed the latest result. A list plus a form is not a monitor page.
 
 What is **not** stored is a screenshot. It is tempting and it is a different feature: it
 needs R2, a retention policy of its own (ADR-020), a redaction story for a page that by

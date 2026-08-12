@@ -221,8 +221,9 @@ describe("createFlowMonitor", () => {
 		let created = await db.findOne(flowMonitors, { where: { team_id: team.id } });
 		expect(created?.name).toBe("Sign in");
 		expect(created?.interval_seconds).toBe(900);
+		// The detail page, not the list: it is where somebody wants to be having just made one.
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.flowMonitors.index.href({ team: team.slug }),
+			routes.app.team.flowMonitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 	});
 
@@ -566,7 +567,7 @@ describe("checkFlowMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.flowMonitors.edit.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.flowMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 	});
 

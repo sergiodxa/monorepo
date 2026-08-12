@@ -3,24 +3,24 @@
  * status and what its last run concluded, or an empty state when there are none yet. Requires
  * `requireUser` + `requireTeam`.
  *
- * The status column carries the failure rather than only its colour, because a flow's failure is
- * legible in a way an HTTP monitor's is not: "the sign-in form authenticates" failing on line 9
- * is the incident, and hiding it behind a click would waste the one thing this monitor type
- * knows that the others do not (ADR-027 §8). There is no detail page for the same reason —
- * a third place to render two facts.
+ * Each row's kebab-icon actions menu is the shared `RowMenu` — view, edit, delete — and its delete
+ * confirmation is `@pkg/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
+ * wrapper, since the confirming control is a real `<form method="post">` submit button rather than
+ * a `command="close"` action. The same composition the HTTP monitors' list uses, so the two tables
+ * draw the same row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PlusIcon, WorkflowIcon } from "@pkg/lucide-remix";
+import { formatDateTime, formatRelative } from "@pkg/dates";
+import { EyeIcon, PencilIcon, PlusIcon, TrashIcon, WorkflowIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
+import { visuallyHidden } from "@pkg/u/a11y";
 import { fg } from "@pkg/u/color";
-import { vstack } from "@pkg/u/layout";
-import { m } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
-import { fontSize, textDecoration } from "@pkg/u/typography";
-import { Badge, Empty, LinkButton, Table } from "@pkg/ui";
+import { textDecoration } from "@pkg/u/typography";
+import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -32,6 +32,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
+import RowMenu from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -115,38 +116,49 @@ export default createAction(routes.app.team.flowMonitors.index, {
 											<Table.Column>
 												{ctx.i18next.t("page.flowMonitors.table.columns.lastChecked")}
 											</Table.Column>
+											<Table.Column align="end">
+												<span mix={[visuallyHidden()]}>
+													{ctx.i18next.t("page.flowMonitors.table.columns.actions")}
+												</span>
+											</Table.Column>
 										</Table.Row>
 									</Table.Header>
 									<Table.Body>
-										{monitors.map((monitor) => (
-											<Table.Row key={monitor.id}>
-												<Table.Cell>
-													<a
-														href={routes.app.team.flowMonitors.edit.href({
-															team: ctx.team.slug,
-															monitorId: monitor.id,
-														})}
-														mix={[
-															fg("brand"),
-															textDecoration("none"),
-															hover(textDecoration("underline")),
-														]}
-													>
-														{monitor.name}
-													</a>
-													{!monitor.is_enabled && (
-														<Badge {...badgeVariant("neutral")}>
-															{ctx.i18next.t("page.flowMonitors.table.status.disabled")}
-														</Badge>
-													)}
-												</Table.Cell>
-												<Table.Cell>
-													{ctx.i18next.t(
-														`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
-													)}
-												</Table.Cell>
-												<Table.Cell>
-													<div mix={[vstack({ gap: 4 })]}>
+										{monitors.map((monitor) => {
+											let showHref = routes.app.team.flowMonitors.show.href({
+												team: ctx.team.slug,
+												monitorId: monitor.id,
+											});
+											let deleteDialogId = `delete-flow-monitor-${monitor.id}`;
+											let titleId = `${deleteDialogId}-title`;
+											let descriptionId = `${deleteDialogId}-description`;
+											let menuId = `row-menu-${deleteDialogId}`;
+
+											return (
+												<Table.Row key={monitor.id}>
+													<Table.Cell>
+														<a
+															href={showHref}
+															mix={[
+																fg("brand"),
+																textDecoration("none"),
+																hover(textDecoration("underline")),
+															]}
+														>
+															{monitor.name}
+														</a>
+														{!monitor.is_enabled && (
+															<Badge {...badgeVariant("neutral")}>
+																{ctx.i18next.t("page.flowMonitors.table.status.disabled")}
+															</Badge>
+														)}
+													</Table.Cell>
+													<Table.Cell>
+														{ctx.i18next.t(
+															`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
+														)}
+													</Table.Cell>
+													<Table.Cell>
 														<Badge
 															{...badgeVariant(
 																STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral",
@@ -156,32 +168,94 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																`page.flowMonitors.table.status.${monitor.last_status ?? "pending"}`,
 															)}
 														</Badge>
-													</div>
-												</Table.Cell>
-												<Table.Cell>
-													{monitor.last_checked_at === null ? (
-														"—"
-													) : (
-														<time
-															datetime={new Date(monitor.last_checked_at).toISOString()}
-															mix={[fontSize("sm")]}
+													</Table.Cell>
+													<Table.Cell>
+														{monitor.last_checked_at === null ? (
+															"—"
+														) : (
+															<time
+																datetime={new Date(monitor.last_checked_at).toISOString()}
+																title={formatDateTime(new Date(monitor.last_checked_at), {
+																	locale: ctx.locale,
+																	timeZone: "UTC",
+																})}
+															>
+																{formatRelative(new Date(monitor.last_checked_at), {
+																	locale: ctx.locale,
+																})}
+															</time>
+														)}
+													</Table.Cell>
+													<Table.Cell>
+														<RowMenu
+															id={menuId}
+															label={ctx.i18next.t("page.flowMonitors.table.actions.menu")}
 														>
-															{new Date(monitor.last_checked_at).toISOString()}
-														</time>
-													)}
-												</Table.Cell>
-											</Table.Row>
-										))}
+															<Menu.Item href={showHref}>
+																<EyeIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.flowMonitors.table.actions.view")}
+															</Menu.Item>
+															<Menu.Item
+																href={routes.app.team.flowMonitors.edit.href({
+																	team: ctx.team.slug,
+																	monitorId: monitor.id,
+																})}
+															>
+																<PencilIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.flowMonitors.table.actions.edit")}
+															</Menu.Item>
+															<Menu.Separator />
+															<Menu.Item danger commandfor={deleteDialogId} command="show-modal">
+																<TrashIcon size={16} strokeWidth={1.5} />
+																{ctx.i18next.t("page.flowMonitors.table.actions.delete")}
+															</Menu.Item>
+														</RowMenu>
+
+														<AlertDialog
+															id={deleteDialogId}
+															aria-labelledby={titleId}
+															aria-describedby={descriptionId}
+														>
+															<AlertDialog.Header>
+																<AlertDialog.Title id={titleId}>
+																	{ctx.i18next.t(
+																		"page.flowMonitors.table.actions.confirmation.delete",
+																		{
+																			name: monitor.name,
+																		},
+																	)}
+																</AlertDialog.Title>
+																<AlertDialog.Description id={descriptionId}>
+																	{ctx.i18next.t("page.editFlowMonitor.danger.description")}
+																</AlertDialog.Description>
+															</AlertDialog.Header>
+															<form
+																method="post"
+																action={routes.actions.monitor.flow.delete.href({
+																	team: ctx.team.slug,
+																})}
+															>
+																<input type="hidden" name="_method" value="DELETE" />
+																<input type="hidden" name="monitor_id" value={monitor.id} />
+																<AlertDialog.Footer>
+																	<AlertDialog.Cancel type="button" commandfor={deleteDialogId}>
+																		{ctx.i18next.t("page.editFlowMonitor.form.cancel")}
+																	</AlertDialog.Cancel>
+																	<Button type="submit" color="danger">
+																		{ctx.i18next.t("page.flowMonitors.table.actions.delete")}
+																	</Button>
+																</AlertDialog.Footer>
+															</form>
+														</AlertDialog>
+													</Table.Cell>
+												</Table.Row>
+											);
+										})}
 									</Table.Body>
 								</Table>
 							</Table.Container>
 						)}
 					</div>
-					{monitors.length > 0 && (
-						<p mix={[m(0), fontSize("sm"), fg("muted")]}>
-							{ctx.i18next.t("page.flowMonitors.footnote")}
-						</p>
-					)}
 				</AppShell>
 			</DocumentLayout>,
 		);

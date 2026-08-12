@@ -17,28 +17,23 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
-import { IntlProvider } from "@pkg/i18n/ui";
 import { inject } from "@pkg/service-container";
 import { fg } from "@pkg/u/color";
 import { vstack } from "@pkg/u/layout";
 import { m } from "@pkg/u/size";
-import { font, fontSize, whiteSpace } from "@pkg/u/typography";
-import { AlertDialog, Badge, Button, LinkButton } from "@pkg/ui";
+import { fontSize } from "@pkg/u/typography";
+import { AlertDialog, Button, LinkButton } from "@pkg/ui";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-
-import type { BadgeTone } from "~/resources/components/badge";
 
 import FlowMonitor from "~/app/data/flow-monitor";
 import TeamDomain from "~/app/data/team-domain";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { badgeVariant } from "~/resources/components/badge";
 import FormPage from "~/resources/components/form-page";
-import RunFlowButton from "~/resources/components/run-flow-button";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -47,13 +42,6 @@ import routes from "~/routes/web";
 
 /** `id` shared between the danger-zone trigger and its confirmation `AlertDialog`. */
 const DELETE_DIALOG_ID = "delete-flow-monitor";
-
-/** See the list controller: `error` is neutral because it is our failure, not an outage. */
-const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
-	up: "up",
-	down: "down",
-	error: "neutral",
-};
 
 /** GET /app/:team/flows/:monitorId/edit — a flow monitor's edit form. */
 export default createAction(routes.app.team.flowMonitors.edit, {
@@ -67,12 +55,12 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 		let monitor = await FlowMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let [verifiedDomains, results] = await Promise.all([
-			TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id),
-			FlowMonitor.listResults(db, monitor.id, 1),
-		]);
-		let last = results[0];
+		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, ctx.team.id);
 		let listHref = routes.app.team.flowMonitors.index.href({ team: ctx.team.slug });
+		let showHref = routes.app.team.flowMonitors.show.href({
+			team: ctx.team.slug,
+			monitorId: monitor.id,
+		});
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
@@ -93,79 +81,11 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 							label: ctx.i18next.t("page.editFlowMonitor.header.breadcrumb.flowMonitors"),
 							href: listHref,
 						},
-						{ label: monitor.name, href: listHref },
+						{ label: monitor.name, href: showHref },
 					]}
-					actions={
-						/*
-						 * RunFlowButton is a `clientEntry` island: its render function runs both
-						 * server-side (for the no-JS baseline markup) and client-side (after hydration).
-						 * Client-side, `intl(handle)` falls back to the module-scoped default
-						 * `bootstrap/browser.ts` registers via `setIntl()` — but that default is never set
-						 * server-side (a module-scoped instance would leak across concurrent requests in a
-						 * Workers isolate), so the SSR pass needs this request-scoped `IntlProvider`
-						 * ancestor for `intl(handle)` to resolve at all.
-						 */
-						<IntlProvider i18n={ctx.i18next}>
-							<RunFlowButton
-								action={routes.actions.monitor.flow.check.href({ team: ctx.team.slug })}
-								monitorId={monitor.id}
-								name={monitor.name}
-							/>
-						</IntlProvider>
-					}
 				>
 					<FormPage>
 						<div mix={[vstack({ gap: 12 })]}>
-							{last !== undefined && (
-								<SettingsSection
-									id="last-run"
-									title={ctx.i18next.t("page.editFlowMonitor.lastRun.title")}
-									description={ctx.i18next.t("page.editFlowMonitor.lastRun.description")}
-								>
-									<SettingsSection.Card>
-										<SettingsSection.Body>
-											<div mix={[vstack({ gap: 8 })]}>
-												<Badge {...badgeVariant(STATUS_BADGE_TONE[last.status] ?? "neutral")}>
-													{ctx.i18next.t(`page.flowMonitors.table.status.${last.status}`)}
-												</Badge>
-
-												<p mix={[m(0), fontSize("sm"), fg("muted")]}>
-													{ctx.i18next.t("page.editFlowMonitor.lastRun.summary", {
-														passed: last.tests_passed,
-														total: last.tests_total,
-														requests: last.requests_made,
-														duration: last.duration_ms ?? 0,
-													})}
-												</p>
-
-												{last.failed_test !== null && (
-													<p mix={[m(0), fontSize("sm")]}>
-														{ctx.i18next.t("page.editFlowMonitor.lastRun.failedTest", {
-															test: last.failed_test,
-															line: last.failed_at_line ?? 0,
-														})}
-													</p>
-												)}
-
-												{(last.failure_detail ?? last.error_message) !== null && (
-													<pre
-														mix={[
-															m(0),
-															font("mono"),
-															fontSize("sm"),
-															fg("danger"),
-															whiteSpace("pre-wrap"),
-														]}
-													>
-														{last.failure_detail ?? last.error_message}
-													</pre>
-												)}
-											</div>
-										</SettingsSection.Body>
-									</SettingsSection.Card>
-								</SettingsSection>
-							)}
-
 							<form
 								method="post"
 								action={routes.actions.monitor.flow.update.href({ team: ctx.team.slug })}
@@ -189,7 +109,7 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>
-											<LinkButton variant="outline" href={listHref}>
+											<LinkButton variant="outline" href={showHref}>
 												{ctx.i18next.t("page.editFlowMonitor.form.cancel")}
 											</LinkButton>
 											<Button type="submit">

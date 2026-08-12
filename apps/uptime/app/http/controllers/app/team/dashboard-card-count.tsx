@@ -1,12 +1,12 @@
 /**
  * Dashboard per-monitor-type count stat-card fragment controller. GET
  * /app/:team/dashboard/cards/count/:resource — loads only the one monitor table
- * named by `:resource` (http, dns, tcp, or cron-jobs) and renders its `StatCard`
- * directly, with no document shell, so each of the dashboard's four count `Frame`s
+ * named by `:resource` (http, dns, tcp, flow, or cron-jobs) and renders its `StatCard`
+ * directly, with no document shell, so each of the dashboard's count `Frame`s
  * (one per resource, all pointed at this same parameterized route) can swap in
  * independently over its own skeleton fallback. Requires `requireUser` + `requireTeam`.
  *
- * Every one of the four counts something a visitor can create, so every card carries the
+ * Every one of them counts something a visitor can create, so every card carries the
  * link to that type's own form — which is the dashboard's only route to one now that the
  * header holds the quick check where a single "create monitor" button used to be.
  *
@@ -36,6 +36,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
+import FlowMonitor from "~/app/data/flow-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
@@ -45,7 +46,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
-const RESOURCES = ["http", "dns", "tcp", "cron-jobs"] as const;
+const RESOURCES = ["http", "dns", "tcp", "flow", "cron-jobs"] as const;
 
 namespace Breakdown {
 	export interface Props {
@@ -178,6 +179,62 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 										tone: "down",
 										label: ctx.i18next.t("page.dashboard.stats.tcpMonitors.breakdown.down", {
 											down: tcpCounts.down,
+										}),
+									},
+								]}
+							/>
+						</>
+					}
+				/>,
+			);
+		}
+
+		if (resource === "flow") {
+			let flowMonitors = await FlowMonitor.listByTeam(db, ctx.team.id);
+			let flowCounts = {
+				total: flowMonitors.length,
+				up: flowMonitors.filter((monitor) => monitor.last_status === "up").length,
+				down: flowMonitors.filter((monitor) => monitor.last_status === "down").length,
+				/**
+				 * Its own pill rather than folded into `down`, and `degraded`-toned rather than
+				 * `down`-toned: a flow that could not run is this app failing to find out, not the
+				 * customer's flow being broken (ADR-027 §8). Counting it as down would put our own
+				 * misconfiguration in the number somebody reads as their outage count.
+				 */
+				error: flowMonitors.filter((monitor) => monitor.last_status === "error").length,
+			};
+
+			return ctx.render(
+				<StatCard
+					label={ctx.i18next.t("page.dashboard.stats.flowMonitors.label")}
+					create={{
+						href: routes.app.team.flowMonitors.new.href({ team: ctx.team.slug }),
+						label: ctx.i18next.t("page.dashboard.stats.flowMonitors.create"),
+					}}
+					value={
+						<>
+							{flowCounts.total}
+							<Breakdown
+								states={[
+									{
+										count: flowCounts.up,
+										tone: "up",
+										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.up", {
+											up: flowCounts.up,
+										}),
+									},
+									{
+										count: flowCounts.down,
+										tone: "down",
+										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.down", {
+											down: flowCounts.down,
+										}),
+									},
+									{
+										count: flowCounts.error,
+										tone: "degraded",
+										label: ctx.i18next.t("page.dashboard.stats.flowMonitors.breakdown.error", {
+											error: flowCounts.error,
 										}),
 									},
 								]}
