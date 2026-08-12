@@ -995,6 +995,7 @@ export default {
 						statusPages: "Statusseiten",
 						tcpMonitors: "TCP-Monitore",
 						dnsMonitors: "DNS-Monitore",
+						flowMonitors: "Flow-Monitore",
 						cronJobs: "Cron Jobs",
 						settings: "Einstellungen",
 						billing: "Abrechnung",
@@ -4755,6 +4756,173 @@ export default {
 			},
 		},
 
+		flowMonitors: {
+			header: {
+				title: "Flow-Monitore",
+				action: { create: "Flow-Monitor erstellen" },
+			},
+
+			empty: {
+				title: "Noch keine Flow-Monitore",
+				description:
+					"Ein Flow-Monitor führt mehrere Anfragen in Reihe aus und prüft die Antworten — anmelden, Token lesen, den damit autorisierten Endpunkt aufrufen. Er beantwortet die Frage, die eine einzelne Anfrage nicht stellen kann.",
+				cta: "Ersten Flow-Monitor erstellen",
+			},
+
+			table: {
+				label: "Flow-Monitore",
+				columns: {
+					name: "Name",
+					interval: "Alle",
+					status: "Status",
+					lastChecked: "Zuletzt geprüft",
+				},
+				status: {
+					pending: "Noch nicht geprüft",
+					up: "Erfolgreich",
+					down: "Fehlgeschlagen",
+					error: "Nicht ausführbar",
+					disabled: "Deaktiviert",
+				},
+				actions: {
+					delete: "Flow-Monitor löschen",
+					confirmation: {
+						delete:
+							"Soll der Flow-Monitor {{name}} wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Jetzt ausführen",
+				toast: {
+					up: "{{name}} erfolgreich",
+					down: "{{name}} fehlgeschlagen",
+					error: "{{name}} konnte nicht ausgeführt werden",
+					refused: "{{name}} wurde nicht ausgeführt",
+					summary:
+						"{{passed}} von {{total}} Tests erfolgreich, {{requests}} Anfragen, {{duration}}ms.",
+					failedTest: "Fehlgeschlagen: {{test}} (Zeile {{line}}).",
+				},
+			},
+
+			footnote:
+				"Ein Flow erreicht nur Domains, die dieses Team verifiziert hat, und jede Anfrage zählt als eine Prüfung auf dein Kontingent.",
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Flow-Monitor erstellen",
+				breadcrumb: { flowMonitors: "Flow-Monitore" },
+			},
+
+			form: {
+				cta: "Flow-Monitor erstellen",
+				sections: {
+					basics: {
+						title: "Flow",
+						description: "Was dieser Flow tut und wie oft er ausgeführt wird.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Anmelden und Dashboard laden",
+						description: "Ein beschreibender Name für diesen Flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "ein Mitglied kann sich anmelden" { when { … } then { … } }',
+						description:
+							"Die Anfragen und die Zusicherungen dazwischen. Jede URL muss hier stehen, damit sie gegen die verifizierten Domains geprüft werden kann.",
+						verifiedDomains: "Dieser Flow darf erreichen: {{domains}} — und deren Subdomains.",
+						noVerifiedDomains:
+							"Dieses Team hat keine verifizierten Domains, daher kann noch kein Flow laufen. Verifiziere zuerst eine Domain in den Team-Einstellungen.",
+					},
+					interval: {
+						label: "Ausführen alle",
+						description:
+							"Wie oft dieser Flow läuft. Jeder Lauf berechnet eine Prüfung pro Anfrage, ein kürzeres Intervall kostet also mehr.",
+						options: {
+							"900": "15 Minuten",
+							"1800": "30 Minuten",
+							"3600": "1 Stunde",
+							"10800": "3 Stunden",
+							"21600": "6 Stunden",
+							"43200": "12 Stunden",
+							"86400": "1 Tag",
+						},
+					},
+					isEnabled: { label: "Aktiv" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Flow-Monitor bearbeiten",
+				breadcrumb: { flowMonitors: "Flow-Monitore" },
+			},
+
+			lastRun: {
+				title: "Letzter Lauf",
+				description: "Was dieser Flow beim letzten Lauf ergeben hat.",
+				summary:
+					"{{passed}} von {{total}} Tests erfolgreich, {{requests}} Anfragen, {{duration}}ms.",
+				failedTest: "Fehlgeschlagen: {{test}} (Zeile {{line}}).",
+			},
+
+			form: {
+				cta: "Änderungen speichern",
+				cancel: "Abbrechen",
+				sections: {
+					settings: {
+						title: "Flow",
+						description: "Was dieser Flow tut und wie oft er ausgeführt wird.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Anmelden und Dashboard laden",
+						description: "Ein beschreibender Name für diesen Flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "ein Mitglied kann sich anmelden" { when { … } then { … } }',
+						description:
+							"Die Anfragen und die Zusicherungen dazwischen. Jede URL muss hier stehen, damit sie gegen die verifizierten Domains geprüft werden kann.",
+						verifiedDomains: "Dieser Flow darf erreichen: {{domains}} — und deren Subdomains.",
+						noVerifiedDomains:
+							"Dieses Team hat keine verifizierten Domains, daher kann noch kein Flow laufen. Verifiziere zuerst eine Domain in den Team-Einstellungen.",
+					},
+					interval: {
+						label: "Ausführen alle",
+						description:
+							"Wie oft dieser Flow läuft. Jeder Lauf berechnet eine Prüfung pro Anfrage, ein kürzeres Intervall kostet also mehr.",
+						options: {
+							"900": "15 Minuten",
+							"1800": "30 Minuten",
+							"3600": "1 Stunde",
+							"10800": "3 Stunden",
+							"21600": "6 Stunden",
+							"43200": "12 Stunden",
+							"86400": "1 Tag",
+						},
+					},
+					isEnabled: { label: "Aktiv" },
+				},
+			},
+
+			danger: {
+				title: "Gefahrenbereich",
+				sectionDescription: "Nicht umkehrbare Aktionen für diesen Flow-Monitor.",
+				warning:
+					"Beim Löschen dieses Flow-Monitors werden auch alle aufgezeichneten Ergebnisse gelöscht.",
+				description: "Diese Aktion kann nicht rückgängig gemacht werden.",
+				cta: "Flow-Monitor löschen",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "TCP-Monitore",

@@ -996,6 +996,7 @@ export default {
 						statusPages: "Pagine di Stato",
 						tcpMonitors: "Monitor TCP",
 						dnsMonitors: "Monitor DNS",
+						flowMonitors: "Monitor di flusso",
 						cronJobs: "Cron Jobs",
 						settings: "Impostazioni",
 						billing: "Fatturazione",
@@ -4726,6 +4727,171 @@ export default {
 			},
 		},
 
+		flowMonitors: {
+			header: {
+				title: "Monitor di flusso",
+				action: { create: "Crea monitor di flusso" },
+			},
+
+			empty: {
+				title: "Nessun monitor di flusso",
+				description:
+					"Un monitor di flusso esegue più richieste in ordine e verifica le risposte — accedi, leggi il token, chiama l'endpoint che autorizza. Risponde alla domanda che una singola richiesta non può porre.",
+				cta: "Crea il tuo primo monitor di flusso",
+			},
+
+			table: {
+				label: "Monitor di flusso",
+				columns: {
+					name: "Nome",
+					interval: "Ogni",
+					status: "Stato",
+					lastChecked: "Ultimo controllo",
+				},
+				status: {
+					pending: "Non ancora controllato",
+					up: "Superato",
+					down: "Non superato",
+					error: "Impossibile eseguire",
+					disabled: "Disattivato",
+				},
+				actions: {
+					delete: "Elimina monitor di flusso",
+					confirmation: {
+						delete:
+							"Vuoi davvero eliminare il monitor di flusso {{name}}? L'azione non può essere annullata.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Esegui ora",
+				toast: {
+					up: "{{name}} superato",
+					down: "{{name}} non superato",
+					error: "{{name}} non è stato eseguito",
+					refused: "{{name}} non è stato avviato",
+					summary: "{{passed}} test su {{total}} superati, {{requests}} richieste, {{duration}}ms.",
+					failedTest: "Fallito: {{test}} (riga {{line}}).",
+				},
+			},
+
+			footnote:
+				"Un flusso può raggiungere solo i domini che questo team ha verificato, e ogni richiesta che esegue conta come un controllo sul tuo piano.",
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Crea monitor di flusso",
+				breadcrumb: { flowMonitors: "Monitor di flusso" },
+			},
+
+			form: {
+				cta: "Crea monitor di flusso",
+				sections: {
+					basics: {
+						title: "Flusso",
+						description: "Cosa fa questo flusso e con quale frequenza viene eseguito.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nome del monitor",
+						placeholder: "Accesso e caricamento della dashboard",
+						description: "Un nome descrittivo per questo flusso.",
+					},
+					source: {
+						label: "Flusso",
+						placeholder: 'test "un membro può accedere" { when { … } then { … } }',
+						description:
+							"Le richieste e le asserzioni tra di esse. Ogni URL va scritto qui per poter essere verificato contro i tuoi domini verificati.",
+						verifiedDomains: "Questo flusso può raggiungere: {{domains}} — e i loro sottodomini.",
+						noVerifiedDomains:
+							"Questo team non ha domini verificati, quindi nessun flusso può ancora essere eseguito. Verifica prima un dominio nelle impostazioni del team.",
+					},
+					interval: {
+						label: "Esegui ogni",
+						description:
+							"Con quale frequenza viene eseguito questo flusso. Ogni esecuzione addebita un controllo per richiesta, quindi un intervallo più breve costa di più.",
+						options: {
+							"900": "15 minuti",
+							"1800": "30 minuti",
+							"3600": "1 ora",
+							"10800": "3 ore",
+							"21600": "6 ore",
+							"43200": "12 ore",
+							"86400": "1 giorno",
+						},
+					},
+					isEnabled: { label: "Attivo" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Modifica monitor di flusso",
+				breadcrumb: { flowMonitors: "Monitor di flusso" },
+			},
+
+			lastRun: {
+				title: "Ultima esecuzione",
+				description: "Cosa ha concluso questo flusso l'ultima volta che è stato eseguito.",
+				summary: "{{passed}} test su {{total}} superati, {{requests}} richieste, {{duration}}ms.",
+				failedTest: "Fallito: {{test}} (riga {{line}}).",
+			},
+
+			form: {
+				cta: "Salva modifiche",
+				cancel: "Annulla",
+				sections: {
+					settings: {
+						title: "Flusso",
+						description: "Cosa fa questo flusso e con quale frequenza viene eseguito.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Nome del monitor",
+						placeholder: "Accesso e caricamento della dashboard",
+						description: "Un nome descrittivo per questo flusso.",
+					},
+					source: {
+						label: "Flusso",
+						placeholder: 'test "un membro può accedere" { when { … } then { … } }',
+						description:
+							"Le richieste e le asserzioni tra di esse. Ogni URL va scritto qui per poter essere verificato contro i tuoi domini verificati.",
+						verifiedDomains: "Questo flusso può raggiungere: {{domains}} — e i loro sottodomini.",
+						noVerifiedDomains:
+							"Questo team non ha domini verificati, quindi nessun flusso può ancora essere eseguito. Verifica prima un dominio nelle impostazioni del team.",
+					},
+					interval: {
+						label: "Esegui ogni",
+						description:
+							"Con quale frequenza viene eseguito questo flusso. Ogni esecuzione addebita un controllo per richiesta, quindi un intervallo più breve costa di più.",
+						options: {
+							"900": "15 minuti",
+							"1800": "30 minuti",
+							"3600": "1 ora",
+							"10800": "3 ore",
+							"21600": "6 ore",
+							"43200": "12 ore",
+							"86400": "1 giorno",
+						},
+					},
+					isEnabled: { label: "Attivo" },
+				},
+			},
+
+			danger: {
+				title: "Zona di pericolo",
+				sectionDescription: "Azioni irreversibili per questo monitor di flusso.",
+				warning:
+					"Eliminando questo monitor di flusso vengono eliminati anche tutti i risultati registrati.",
+				description: "L'azione non può essere annullata.",
+				cta: "Elimina monitor di flusso",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "Monitor TCP",

@@ -1030,6 +1030,7 @@ export default {
 						statusPages: "Status Pages",
 						tcpMonitors: "TCP Monitors",
 						dnsMonitors: "DNS Monitors",
+						flowMonitors: "Flow Monitors",
 						cronJobs: "Cron Jobs",
 						settings: "Settings",
 						billing: "Billing",
@@ -4725,6 +4726,170 @@ export default {
 			},
 		},
 
+		flowMonitors: {
+			header: {
+				title: "Flow Monitors",
+				action: { create: "Create Flow Monitor" },
+			},
+
+			empty: {
+				title: "No flow monitors yet",
+				description:
+					"A flow monitor runs several requests in order and checks what comes back — sign in, read the token, call the endpoint it authorises. It answers the question a single request cannot.",
+				cta: "Create your first flow monitor",
+			},
+
+			table: {
+				label: "Flow monitors",
+				columns: {
+					name: "Name",
+					interval: "Every",
+					status: "Status",
+					lastChecked: "Last checked",
+				},
+				status: {
+					pending: "Not checked yet",
+					up: "Passing",
+					down: "Failing",
+					error: "Cannot run",
+					disabled: "Disabled",
+				},
+				actions: {
+					delete: "Delete flow monitor",
+					confirmation: {
+						delete:
+							"Are you sure you want to delete the flow monitor {{name}}? This action cannot be undone.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Run now",
+				toast: {
+					up: "{{name}} passed",
+					down: "{{name}} failed",
+					error: "{{name}} could not run",
+					refused: "{{name}} was not run",
+					summary: "{{passed}} of {{total}} tests passed, {{requests}} requests, {{duration}}ms.",
+					failedTest: "Failed: {{test}} (line {{line}}).",
+				},
+			},
+
+			footnote:
+				"A flow may only reach domains this team has verified, and each request it makes counts as one check against your allowance.",
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Create Flow Monitor",
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+			},
+
+			form: {
+				cta: "Create flow monitor",
+				sections: {
+					basics: {
+						title: "Flow",
+						description: "What this flow does, and how often it runs.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor name",
+						placeholder: "Sign in and load the dashboard",
+						description: "A descriptive name for this flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "a member can sign in" { when { … } then { … } }',
+						description:
+							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
+						verifiedDomains: "This flow may reach: {{domains}} — and their subdomains.",
+						noVerifiedDomains:
+							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
+					},
+					interval: {
+						label: "Run every",
+						description:
+							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 hour",
+							"10800": "3 hours",
+							"21600": "6 hours",
+							"43200": "12 hours",
+							"86400": "1 day",
+						},
+					},
+					isEnabled: { label: "Enabled" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Edit Flow Monitor",
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+			},
+
+			lastRun: {
+				title: "Last run",
+				description: "What this flow concluded the last time it ran.",
+				summary: "{{passed}} of {{total}} tests passed, {{requests}} requests, {{duration}}ms.",
+				failedTest: "Failed: {{test}} (line {{line}}).",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+				sections: {
+					settings: {
+						title: "Flow",
+						description: "What this flow does, and how often it runs.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor name",
+						placeholder: "Sign in and load the dashboard",
+						description: "A descriptive name for this flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "a member can sign in" { when { … } then { … } }',
+						description:
+							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
+						verifiedDomains: "This flow may reach: {{domains}} — and their subdomains.",
+						noVerifiedDomains:
+							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
+					},
+					interval: {
+						label: "Run every",
+						description:
+							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 hour",
+							"10800": "3 hours",
+							"21600": "6 hours",
+							"43200": "12 hours",
+							"86400": "1 day",
+						},
+					},
+					isEnabled: { label: "Enabled" },
+				},
+			},
+
+			danger: {
+				title: "Danger zone",
+				sectionDescription: "Irreversible actions for this flow monitor.",
+				warning: "Deleting this flow monitor also deletes every result it has recorded.",
+				description: "This action cannot be undone.",
+				cta: "Delete flow monitor",
+			},
+		},
 		tcpMonitors: {
 			header: {
 				title: "TCP Monitors",

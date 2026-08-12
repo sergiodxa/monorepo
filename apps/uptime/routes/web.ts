@@ -219,6 +219,15 @@ export default route({
 					results: get("/app/:team/tcp/:monitorId/cards/results"),
 				},
 			},
+			/**
+			 * Flow monitors have no `show` route: a flow's history is its last result and the
+			 * assertion that broke, both of which fit on the list and the edit form, so a detail
+			 * page would be a third place to render the same two facts (ADR-027).
+			 */
+			flowMonitors: resources("/app/:team/flows", {
+				param: "monitorId",
+				only: ["index", "new", "edit"],
+			}),
 			cronJobs: resources("/app/:team/cron-jobs", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],
@@ -302,6 +311,13 @@ export default route({
 				update: post("/actions/:team/update-tcp-monitor"),
 				delete: del("/actions/:team/delete-tcp-monitor"),
 				check: post("/actions/:team/check-tcp-monitor"),
+			},
+			flow: {
+				create: post("/actions/:team/create-flow-monitor"),
+				update: post("/actions/:team/update-flow-monitor"),
+				delete: del("/actions/:team/delete-flow-monitor"),
+				/** Runs the flow now, inline. Billable work, so entitlement-gated and metered. */
+				check: post("/actions/:team/check-flow-monitor"),
 			},
 		},
 		cronJob: {

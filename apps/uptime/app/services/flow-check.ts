@@ -106,37 +106,13 @@ export interface FlowCheckInput {
  * broken.
  */
 export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResult> {
+	let inspection = inspectFlowSource(input.source, input.verifiedDomains);
+	if (!inspection.ok) return errorResult(inspection.message);
+
 	let loaded = loadSources([{ path: SOURCE_PATH, text: input.source }]);
 	if (isFailure(loaded)) return errorResult(loaded.error.message);
 
-	let hosts = specHosts(input.source);
-	let resolved = resolveAllowedHosts(hosts, input.verifiedDomains);
-
-	/**
-	 * Refused up front rather than left to the grant to deny mid-run, so the reason names the
-	 * host and the domain policy instead of a `--allow-net` flag no customer can pass. A spec
-	 * that reaches somewhere the team has not verified is a monitor to fix, and nothing about
-	 * it should be attempted first.
-	 */
-	if (resolved.refused.length > 0) {
-		return errorResult(
-			`This flow reaches ${resolved.refused.join(", ")}, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified.`,
-		);
-	}
-
-	/**
-	 * No hosts at all: either the spec makes no requests, or every URL it uses is computed at
-	 * run time and therefore unverifiable. Both are configuration errors reported once rather
-	 * than runs that fail every request. `parseGrants` would read `--allow-net=` as a
-	 * malformed scope list, which is a true but unhelpful way to say the same thing.
-	 */
-	if (resolved.allowed === "") {
-		return errorResult(
-			"This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains.",
-		);
-	}
-
-	let grants = parseGrants([`--allow-net=${resolved.allowed}`]);
+	let grants = parseGrants([`--allow-net=${inspection.allowed}`]);
 	if (isFailure(grants)) return errorResult(grants.error.message);
 
 	let budget = createRequestBudget({
@@ -228,6 +204,76 @@ export function specHosts(source: string): string[] {
 	}
 
 	return [...hosts].sort();
+}
+
+/** Whether a source can be run at all, and what it would be allowed to reach. */
+export type FlowSourceInspection =
+	| {
+			ok: true;
+			/** The `--allow-net` scope list a run of this source would get. */
+			allowed: string;
+			/** The hosts it names, all of them covered by a verified domain. */
+			hosts: string[];
+	  }
+	| {
+			ok: false;
+			/** Why it cannot run, phrased for whoever wrote the spec. */
+			message: string;
+			/** Which of its hosts no verified domain covers; empty for the other reasons. */
+			refused: string[];
+	  };
+
+/**
+ * Can this source be run by this team, and what would it reach?
+ *
+ * The one place the three rules about a source live — it has to parse, it has to name at
+ * least one host, and every host it names has to be covered by a verified domain — so the
+ * form that refuses a bad monitor at save time and the sweep that refuses one at check time
+ * cannot disagree about what "bad" means. A monitor the form accepted and the sweep then
+ * rejected every hour would be the worst version of this feature.
+ *
+ * @param source - The spec text.
+ * @param verifiedDomains - The team's verified hostnames.
+ */
+export function inspectFlowSource(
+	source: string,
+	verifiedDomains: readonly string[],
+): FlowSourceInspection {
+	let loaded = loadSources([{ path: SOURCE_PATH, text: source }]);
+	if (isFailure(loaded)) return { ok: false, message: loaded.error.message, refused: [] };
+
+	let resolved = resolveAllowedHosts(specHosts(source), verifiedDomains);
+
+	/**
+	 * Refused up front rather than left to the grant to deny mid-run, so the reason names the
+	 * host and the domain policy instead of a `--allow-net` flag no customer can pass. A spec
+	 * that reaches somewhere the team has not verified is a monitor to fix, and nothing about it
+	 * should be attempted first.
+	 */
+	if (resolved.refused.length > 0) {
+		return {
+			ok: false,
+			message: `This flow reaches ${resolved.refused.join(", ")}, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified.`,
+			refused: resolved.refused,
+		};
+	}
+
+	/**
+	 * No hosts at all: either the spec makes no requests, or every URL it uses is computed at
+	 * run time and therefore unverifiable. Both are configuration errors reported once rather
+	 * than runs that fail every request. `parseGrants` would read `--allow-net=` as a malformed
+	 * scope list, which is a true but unhelpful way to say the same thing.
+	 */
+	if (resolved.allowed === "") {
+		return {
+			ok: false,
+			message:
+				"This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains.",
+			refused: [],
+		};
+	}
+
+	return { ok: true, allowed: resolved.allowed, hosts: resolved.allowed.split(",") };
 }
 
 /** Which of a spec's hosts a team may actually reach, and which it may not. */

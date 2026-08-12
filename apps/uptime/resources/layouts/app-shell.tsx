@@ -69,6 +69,7 @@ import {
 	NetworkIcon,
 	PanelLeftIcon,
 	SettingsIcon,
+	WorkflowIcon,
 	WrenchIcon,
 } from "@pkg/lucide-remix";
 import { bg, border, borderEdge, fg } from "@pkg/u/color";
@@ -440,6 +441,11 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				href: routes.app.team.tcpMonitors.index.href({ team: team.slug }),
 				label: t("sidebar.navigation.items.tcpMonitors"),
 				icon: <NetworkIcon size={16} strokeWidth={1.5} />,
+			},
+			{
+				href: routes.app.team.flowMonitors.index.href({ team: team.slug }),
+				label: t("sidebar.navigation.items.flowMonitors"),
+				icon: <WorkflowIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.cronJobs.index.href({ team: team.slug }),

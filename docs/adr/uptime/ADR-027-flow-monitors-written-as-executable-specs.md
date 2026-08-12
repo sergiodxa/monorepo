@@ -13,10 +13,11 @@ carries none of the browser's cost, none of its beta dependency, and a different
 answer ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
 
 Landed as of 2026-08-11: the `@pkg/spec` Workers seam ([§9](#9-what-pkgspec-has-to-grow)),
-`flow_monitors` and `flow_monitor_results`, the check service, the sweep, retention, and
-per-request metering. Not yet built: alerting and any UI — a notification needs a dashboard
-URL to link to and flow monitors have no pages — the API surface, and everything browser
-([§5](#5-two-phases-stateless-first)), whose prices in [§7](#7-cost) stay unspent until then.
+`flow_monitors` and `flow_monitor_results`, the check service, the sweep, retention,
+per-request metering, and the app surface — list, create, edit, delete, and a manual run whose
+result arrives as a toast rather than as a navigation held open for half a minute. Not yet
+built: alerting, the public API, and everything browser ([§5](#5-two-phases-stateless-first)),
+whose prices in [§7](#7-cost) stay unspent until then.
 
 Nothing here is a migration of existing rows: there is no monitor type being replaced. The
 five existing types (`http`, `dns`, `tcp`, `ssl`, `cron`) are untouched.

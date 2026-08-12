@@ -59,6 +59,12 @@ import {
 	toggleDnsMonitorRecord,
 	updateDnsMonitor,
 } from "~/app/http/controllers/actions/dns-monitors";
+import {
+	checkFlowMonitor,
+	createFlowMonitor,
+	deleteFlowMonitor,
+	updateFlowMonitor,
+} from "~/app/http/controllers/actions/flow-monitors";
 import { createInvite, revokeInvite } from "~/app/http/controllers/actions/invites";
 import {
 	createMaintenanceWindow,
@@ -158,6 +164,9 @@ import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
 import dnsMonitorReview from "~/app/http/controllers/app/team/dns-monitor-review";
 import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
 import dnsMonitors from "~/app/http/controllers/app/team/dns-monitors";
+import flowMonitorEdit from "~/app/http/controllers/app/team/flow-monitor-edit";
+import flowMonitorNew from "~/app/http/controllers/app/team/flow-monitor-new";
+import flowMonitors from "~/app/http/controllers/app/team/flow-monitors";
 import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
 import teamIndex from "~/app/http/controllers/app/team/index";
 import maintenanceWindowEdit from "~/app/http/controllers/app/team/maintenance-window-edit";
@@ -375,6 +384,9 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dnsMonitors.cards.uptimeHistory, dnsMonitorCardUptimeHistory);
 	router.map(routes.app.team.dnsMonitors.cards.results, dnsMonitorCardResults);
 	router.map(routes.app.team.dnsMonitors.cards.checkHistory, dnsMonitorCardCheckHistory);
+	router.map(routes.app.team.flowMonitors.index, flowMonitors);
+	router.map(routes.app.team.flowMonitors.new, flowMonitorNew);
+	router.map(routes.app.team.flowMonitors.edit, flowMonitorEdit);
 	router.map(routes.app.team.tcpMonitors.index, tcpMonitors);
 	router.map(routes.app.team.tcpMonitors.new, tcpMonitorNew);
 	router.map(routes.app.team.tcpMonitors.show, tcpMonitorShow);
@@ -450,6 +462,18 @@ export default function application(options: application.Options) {
 				update: updateTcpMonitor,
 				delete: deleteTcpMonitor,
 				check: checkTcpMonitor,
+			},
+		}),
+	);
+	router.map(
+		routes.actions.monitor.flow,
+		createController(routes.actions.monitor.flow, {
+			middleware: [requireUser, requireTeam],
+			actions: {
+				create: createFlowMonitor,
+				update: updateFlowMonitor,
+				delete: deleteFlowMonitor,
+				check: checkFlowMonitor,
 			},
 		}),
 	);
