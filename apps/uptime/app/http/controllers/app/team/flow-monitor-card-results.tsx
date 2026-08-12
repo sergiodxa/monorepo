@@ -222,6 +222,12 @@ namespace SourceListing {
  * editor would carry a column of digits with it. The marked line is toned and also carries a `›` in
  * the gutter, since colour alone is not a signal everybody receives.
  *
+ * The gutter column is content-sized and the code column takes the rest. `auto max-content` looked
+ * right at a phone's width and wrong at a desktop's: an `auto` track absorbs the grid's free space,
+ * so on a wide screen the *gutter* stretched and pushed the code halfway across the block. `1fr`
+ * moves that free space to the code column, where growing is harmless — and its `auto` minimum is
+ * the longest line, so the grid is still at least that wide and the container still scrolls.
+ *
  * Long lines **scroll** rather than wrap. Wrapping was the first attempt and it was wrong for code:
  * a wrapped line reads as several lines with one number, so the gutter stops meaning anything at
  * exactly the moment it matters — when a failure names a line. The listing therefore sizes to its
@@ -244,7 +250,7 @@ function SourceListing(handle: Handle<SourceListing.Props>) {
 			<div
 				mix={[
 					grid(),
-					gridTemplate({ columns: "auto max-content" }),
+					gridTemplate({ columns: "auto 1fr" }),
 					pb("12px"),
 					rounded("md"),
 					bg("neutral.tint"),
