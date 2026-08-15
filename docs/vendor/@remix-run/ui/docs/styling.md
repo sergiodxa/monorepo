@@ -6,22 +6,22 @@ The `css(...)` mixin provides inline styling with support for pseudo-selectors, 
 
 ```tsx
 function Button() {
-	return () => (
-		<button
-			mix={[
-				css({
-					color: "white",
-					backgroundColor: "blue",
-					padding: "12px 24px",
-					borderRadius: "4px",
-					border: "none",
-					cursor: "pointer",
-				}),
-			]}
-		>
-			Click me
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+        }),
+      ]}
+    >
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -32,40 +32,40 @@ The `css(...)` mixin produces static styles that are inserted into the document 
 ```tsx
 // ❌ Avoid: Using css(...) for dynamic styles
 function ProgressBar(handle: Handle) {
-	let progress = 0;
+  let progress = 0
 
-	return () => (
-		<div
-			mix={[
-				css({
-					width: `${progress}%`, // Creates new CSS rule on every update
-					backgroundColor: "blue",
-				}),
-			]}
-		>
-			{progress}%
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          width: `${progress}%`, // Creates new CSS rule on every update
+          backgroundColor: 'blue',
+        }),
+      ]}
+    >
+      {progress}%
+    </div>
+  )
 }
 
 // ✅ Prefer: Using style prop for dynamic styles
 function ProgressBar(handle: Handle) {
-	let progress = 0;
+  let progress = 0
 
-	return () => (
-		<div
-			mix={[
-				css({
-					backgroundColor: "blue", // Static styles in css(...)
-				}),
-			]}
-			style={{
-				width: `${progress}%`, // Dynamic styles in style prop
-			}}
-		>
-			{progress}%
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          backgroundColor: 'blue', // Static styles in css(...)
+        }),
+      ]}
+      style={{
+        width: `${progress}%`, // Dynamic styles in style prop
+      }}
+    >
+      {progress}%
+    </div>
+  )
 }
 ```
 
@@ -92,29 +92,29 @@ No extra layer setup is needed unless the app adds layers that should sit before
 @layer base, rmx;
 
 @layer base {
-	h1,
-	h2,
-	h3,
-	h4,
-	h5,
-	h6 {
-		font-size: inherit;
-		font-weight: inherit;
-	}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
 
-	button,
-	input,
-	select,
-	textarea {
-		font: inherit;
-		margin: 0;
-		padding: 0;
-	}
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
 
-	code,
-	pre {
-		font-size: 1em;
-	}
+  code,
+  pre {
+    font-size: 1em;
+  }
 }
 ```
 
@@ -124,9 +124,9 @@ Put layers that should override Remix UI after `rmx`:
 @layer base, rmx, app;
 
 @layer app {
-	.marketing-heading {
-		font-size: clamp(2rem, 6vw, 4rem);
-	}
+  .marketing-heading {
+    font-size: clamp(2rem, 6vw, 4rem);
+  }
 }
 ```
 
@@ -134,7 +134,7 @@ For imported styles, use an import layer when your build supports it:
 
 ```css
 @layer base, rmx;
-@import "./base.css" layer(base);
+@import './base.css' layer(base);
 ```
 
 ## Pseudo-Selectors
@@ -143,38 +143,38 @@ Use `&` to reference the current element in pseudo-selectors:
 
 ```tsx
 function Button() {
-	return () => (
-		<button
-			mix={[
-				css({
-					color: "white",
-					backgroundColor: "blue",
-					padding: "12px 24px",
-					borderRadius: "4px",
-					border: "none",
-					cursor: "pointer",
-					"&:hover": {
-						backgroundColor: "darkblue",
-						transform: "translateY(-1px)",
-					},
-					"&:active": {
-						backgroundColor: "navy",
-						transform: "translateY(0)",
-					},
-					"&:focus": {
-						outline: "2px solid yellow",
-						outlineOffset: "2px",
-					},
-					"&:disabled": {
-						opacity: 0.5,
-						cursor: "not-allowed",
-					},
-				}),
-			]}
-		>
-			Click me
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        css({
+          color: 'white',
+          backgroundColor: 'blue',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'darkblue',
+            transform: 'translateY(-1px)',
+          },
+          '&:active': {
+            backgroundColor: 'navy',
+            transform: 'translateY(0)',
+          },
+          '&:focus': {
+            outline: '2px solid yellow',
+            outlineOffset: '2px',
+          },
+          '&:disabled': {
+            opacity: 0.5,
+            cursor: 'not-allowed',
+          },
+        }),
+      ]}
+    >
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -184,28 +184,28 @@ Use `&::before` and `&::after` for pseudo-elements:
 
 ```tsx
 function Badge(handle: Handle<{ count: number }>) {
-	return () => (
-		<div
-			mix={[
-				css({
-					position: "relative",
-					display: "inline-block",
-					"&::before": {
-						content: '""',
-						position: "absolute",
-						top: "-4px",
-						right: "-4px",
-						width: "8px",
-						height: "8px",
-						backgroundColor: "red",
-						borderRadius: "50%",
-					},
-				}),
-			]}
-		>
-			{handle.props.count > 0 && <span>{handle.props.count}</span>}
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          position: 'relative',
+          display: 'inline-block',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '-4px',
+            right: '-4px',
+            width: '8px',
+            height: '8px',
+            backgroundColor: 'red',
+            borderRadius: '50%',
+          },
+        }),
+      ]}
+    >
+      {handle.props.count > 0 && <span>{handle.props.count}</span>}
+    </div>
+  )
 }
 ```
 
@@ -215,25 +215,25 @@ Use `&[attribute]` for attribute selectors:
 
 ```tsx
 function Input(handle: Handle<{ required?: boolean }>) {
-	return () => (
-		<input
-			required={handle.props.required}
-			mix={[
-				css({
-					padding: "8px",
-					border: "1px solid #ccc",
-					borderRadius: "4px",
-					"&[required]": {
-						borderColor: "red",
-					},
-					'&[aria-invalid="true"]': {
-						borderColor: "red",
-						outline: "2px solid red",
-					},
-				}),
-			]}
-		/>
-	);
+  return () => (
+    <input
+      required={handle.props.required}
+      mix={[
+        css({
+          padding: '8px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          '&[required]': {
+            borderColor: 'red',
+          },
+          '&[aria-invalid="true"]': {
+            borderColor: 'red',
+            outline: '2px solid red',
+          },
+        }),
+      ]}
+    />
+  )
 }
 ```
 
@@ -243,39 +243,39 @@ Use class names or element selectors directly for descendant selectors:
 
 ```tsx
 function Card(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<div
-			mix={[
-				css({
-					padding: "20px",
-					border: "1px solid #ddd",
-					borderRadius: "8px",
-					backgroundColor: "white",
-					boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-					// Style descendants
-					"& h2": {
-						marginTop: 0,
-						fontSize: "24px",
-						fontWeight: "bold",
-					},
-					"& p": {
-						color: "#666",
-						lineHeight: 1.6,
-					},
-					"& .icon": {
-						width: "24px",
-						height: "24px",
-						marginRight: "8px",
-					},
-					"& button": {
-						marginTop: "16px",
-					},
-				}),
-			]}
-		>
-			{handle.props.children}
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          padding: '20px',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          // Style descendants
+          '& h2': {
+            marginTop: 0,
+            fontSize: '24px',
+            fontWeight: 'bold',
+          },
+          '& p': {
+            color: '#666',
+            lineHeight: 1.6,
+          },
+          '& .icon': {
+            width: '24px',
+            height: '24px',
+            marginRight: '8px',
+          },
+          '& button': {
+            marginTop: '16px',
+          },
+        }),
+      ]}
+    >
+      {handle.props.children}
+    </div>
+  )
 }
 ```
 
@@ -300,67 +300,67 @@ Use nested selectors when **parent state affects children**. Don't nest when you
 ```tsx
 // ❌ Avoid: Managing hover state in JavaScript
 function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
-	let isHovered = false;
+  let isHovered = false
 
-	return () => (
-		<div
-			mix={[
-				on("mouseenter", () => {
-					isHovered = true;
-					handle.update();
-				}),
-				on("mouseleave", () => {
-					isHovered = false;
-					handle.update();
-				}),
-				css({
-					border: `1px solid ${isHovered ? "blue" : "#ddd"}`,
-					// ... more conditional styling based on isHovered
-				}),
-			]}
-		>
-			<div className="title" mix={[css({ color: isHovered ? "blue" : "#333" })]}>
-				Title
-			</div>
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        on('mouseenter', () => {
+          isHovered = true
+          handle.update()
+        }),
+        on('mouseleave', () => {
+          isHovered = false
+          handle.update()
+        }),
+        css({
+          border: `1px solid ${isHovered ? 'blue' : '#ddd'}`,
+          // ... more conditional styling based on isHovered
+        }),
+      ]}
+    >
+      <div class="title" mix={[css({ color: isHovered ? 'blue' : '#333' })]}>
+        Title
+      </div>
+    </div>
+  )
 }
 
 // ✅ Prefer: CSS nested selectors handle state declaratively
 function Card(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<div
-			mix={[
-				css({
-					border: "1px solid #ddd",
-					borderRadius: "8px",
-					padding: "20px",
-					// Parent hover affects children - use nested selector
-					"&:hover": {
-						borderColor: "blue",
-						// Child text changes color on parent hover
-						"& .title": {
-							color: "blue",
-						},
-						"& .description": {
-							opacity: 1,
-						},
-					},
-					"& .title": {
-						fontSize: "20px",
-						fontWeight: "bold",
-						color: "#333",
-					},
-					"& .description": {
-						opacity: 0.7,
-						marginTop: "8px",
-					},
-				}),
-			]}
-		>
-			<div className="title">Title</div>
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          padding: '20px',
+          // Parent hover affects children - use nested selector
+          '&:hover': {
+            borderColor: 'blue',
+            // Child text changes color on parent hover
+            '& .title': {
+              color: 'blue',
+            },
+            '& .description': {
+              opacity: 1,
+            },
+          },
+          '& .title': {
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: '#333',
+          },
+          '& .description': {
+            opacity: 0.7,
+            marginTop: '8px',
+          },
+        }),
+      ]}
+    >
+      <div class="title">Title</div>
+    </div>
+  )
 }
 ```
 
@@ -368,29 +368,29 @@ function Card(handle: Handle<{ children: RemixNode }>) {
 
 ```tsx
 function Button() {
-	return () => (
-		<button
-			mix={[
-				css({
-					backgroundColor: "blue",
-					color: "white",
-					padding: "12px 24px",
-					borderRadius: "4px",
-					border: "none",
-					cursor: "pointer",
-					// Element's own hover - style directly, no nesting needed
-					"&:hover": {
-						backgroundColor: "darkblue",
-					},
-					"&:active": {
-						transform: "scale(0.98)",
-					},
-				}),
-			]}
-		>
-			Click me
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        css({
+          backgroundColor: 'blue',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '4px',
+          border: 'none',
+          cursor: 'pointer',
+          // Element's own hover - style directly, no nesting needed
+          '&:hover': {
+            backgroundColor: 'darkblue',
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
+        }),
+      ]}
+    >
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -398,36 +398,36 @@ function Button() {
 
 ```tsx
 function Navigation() {
-	return () => (
-		<nav
-			mix={[
-				css({
-					display: "flex",
-					gap: "16px",
-					// Styling descendant links - appropriate use of nesting
-					"& a": {
-						color: "blue",
-						textDecoration: "none",
-						padding: "8px 16px",
-						borderRadius: "4px",
-						// Link's own hover state - this is fine nested under '& a'
-						"&:hover": {
-							backgroundColor: "#f0f0f0",
-							color: "darkblue",
-						},
-						'&[aria-current="page"]': {
-							backgroundColor: "blue",
-							color: "white",
-						},
-					},
-				}),
-			]}
-		>
-			<a href="/">Home</a>
-			<a href="/about">About</a>
-			<a href="/contact">Contact</a>
-		</nav>
-	);
+  return () => (
+    <nav
+      mix={[
+        css({
+          display: 'flex',
+          gap: '16px',
+          // Styling descendant links - appropriate use of nesting
+          '& a': {
+            color: 'blue',
+            textDecoration: 'none',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            // Link's own hover state - this is fine nested under '& a'
+            '&:hover': {
+              backgroundColor: '#f0f0f0',
+              color: 'darkblue',
+            },
+            '&[aria-current="page"]': {
+              backgroundColor: 'blue',
+              color: 'white',
+            },
+          },
+        }),
+      ]}
+    >
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+  )
 }
 ```
 
@@ -437,25 +437,25 @@ Use `@media` for responsive design:
 
 ```tsx
 function ResponsiveGrid(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<div
-			mix={[
-				css({
-					display: "grid",
-					gap: "16px",
-					gridTemplateColumns: "1fr",
-					"@media (min-width: 768px)": {
-						gridTemplateColumns: "repeat(2, 1fr)",
-					},
-					"@media (min-width: 1024px)": {
-						gridTemplateColumns: "repeat(3, 1fr)",
-					},
-				}),
-			]}
-		>
-			{handle.props.children}
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          display: 'grid',
+          gap: '16px',
+          gridTemplateColumns: '1fr',
+          '@media (min-width: 768px)': {
+            gridTemplateColumns: 'repeat(2, 1fr)',
+          },
+          '@media (min-width: 1024px)': {
+            gridTemplateColumns: 'repeat(3, 1fr)',
+          },
+        }),
+      ]}
+    >
+      {handle.props.children}
+    </div>
+  )
 }
 ```
 
@@ -465,107 +465,107 @@ Here's a comprehensive example demonstrating parent-state-affecting-children and
 
 ```tsx
 function ProductCard(handle: Handle<{ title: string; price: number; image: string }>) {
-	return () => (
-		<div
-			mix={[
-				css({
-					border: "1px solid #ddd",
-					borderRadius: "8px",
-					overflow: "hidden",
-					transition: "transform 0.2s, box-shadow 0.2s",
-					// Parent hover affects the card itself
-					"&:hover": {
-						transform: "translateY(-4px)",
-						boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-						// Parent hover affects children - appropriate use of nesting
-						"& .title": {
-							color: "blue",
-						},
-						"& button": {
-							backgroundColor: "darkblue",
-						},
-					},
-					"@media (max-width: 768px)": {
-						"&:hover": {
-							transform: "translateY(-2px)",
-						},
-					},
-				}),
-			]}
-		>
-			<img
-				src={handle.props.image}
-				alt={handle.props.title}
-				mix={[
-					css({
-						width: "100%",
-						height: "200px",
-						objectFit: "cover",
-						"@media (max-width: 768px)": {
-							height: "150px",
-						},
-					}),
-				]}
-			/>
-			<div
-				className="content"
-				mix={[
-					css({
-						padding: "16px",
-						"@media (max-width: 768px)": {
-							padding: "12px",
-						},
-					}),
-				]}
-			>
-				<h3
-					className="title"
-					mix={[
-						css({
-							fontSize: "18px",
-							fontWeight: "bold",
-							marginTop: 0,
-							marginBottom: "8px",
-							transition: "color 0.2s",
-						}),
-					]}
-				>
-					{handle.props.title}
-				</h3>
-				<div
-					className="price"
-					mix={[
-						css({
-							fontSize: "20px",
-							color: "green",
-							fontWeight: "bold",
-						}),
-					]}
-				>
-					${handle.props.price}
-				</div>
-				<button
-					mix={[
-						css({
-							width: "100%",
-							padding: "12px",
-							backgroundColor: "blue",
-							color: "white",
-							border: "none",
-							borderRadius: "4px",
-							cursor: "pointer",
-							transition: "background-color 0.2s",
-							"&:active": {
-								transform: "scale(0.98)",
-							},
-						}),
-					]}
-				>
-					Add to Cart
-				</button>
-			</div>
-		</div>
-	);
+  return () => (
+    <div
+      mix={[
+        css({
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          // Parent hover affects the card itself
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            // Parent hover affects children - appropriate use of nesting
+            '& .title': {
+              color: 'blue',
+            },
+            '& button': {
+              backgroundColor: 'darkblue',
+            },
+          },
+          '@media (max-width: 768px)': {
+            '&:hover': {
+              transform: 'translateY(-2px)',
+            },
+          },
+        }),
+      ]}
+    >
+      <img
+        src={handle.props.image}
+        alt={handle.props.title}
+        mix={[
+          css({
+            width: '100%',
+            height: '200px',
+            objectFit: 'cover',
+            '@media (max-width: 768px)': {
+              height: '150px',
+            },
+          }),
+        ]}
+      />
+      <div
+        class="content"
+        mix={[
+          css({
+            padding: '16px',
+            '@media (max-width: 768px)': {
+              padding: '12px',
+            },
+          }),
+        ]}
+      >
+        <h3
+          class="title"
+          mix={[
+            css({
+              fontSize: '18px',
+              fontWeight: 'bold',
+              marginTop: 0,
+              marginBottom: '8px',
+              transition: 'color 0.2s',
+            }),
+          ]}
+        >
+          {handle.props.title}
+        </h3>
+        <div
+          class="price"
+          mix={[
+            css({
+              fontSize: '20px',
+              color: 'green',
+              fontWeight: 'bold',
+            }),
+          ]}
+        >
+          ${handle.props.price}
+        </div>
+        <button
+          mix={[
+            css({
+              width: '100%',
+              padding: '12px',
+              backgroundColor: 'blue',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+              '&:active': {
+                transform: 'scale(0.98)',
+              },
+            }),
+          ]}
+        >
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  )
 }
 ```
 

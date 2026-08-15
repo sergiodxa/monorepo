@@ -7,37 +7,37 @@ Context enables components to communicate without direct prop passing.
 Use `handle.context.set()` to provide values and `handle.context.get()` to consume them:
 
 ```tsx
-function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: "light" | "dark" }>) {
-	let theme: "light" | "dark" = "light";
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>) {
+  let theme: 'light' | 'dark' = 'light'
 
-	handle.context.set({ theme });
+  handle.context.set({ theme })
 
-	return () => (
-		<div>
-			<button
-				mix={[
-					on("click", () => {
-						theme = theme === "light" ? "dark" : "light";
-						handle.context.set({ theme });
-						handle.update();
-					}),
-				]}
-			>
-				Toggle Theme
-			</button>
-			{handle.props.children}
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on('click', () => {
+            theme = theme === 'light' ? 'dark' : 'light'
+            handle.context.set({ theme })
+            handle.update()
+          }),
+        ]}
+      >
+        Toggle Theme
+      </button>
+      {handle.props.children}
+    </div>
+  )
 }
 
 function ThemedContent(handle: Handle) {
-	let { theme } = handle.context.get(ThemeProvider);
+  let { theme } = handle.context.get(ThemeProvider)
 
-	return () => (
-		<div mix={[css({ backgroundColor: theme === "dark" ? "#000" : "#fff" })]}>
-			Current theme: {theme}
-		</div>
-	);
+  return () => (
+    <div mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>
+      Current theme: {theme}
+    </div>
+  )
 }
 ```
 
@@ -53,25 +53,25 @@ When multiple public components should provide the same logical scope, create a 
 
 ```tsx
 type MenuScopeValue = {
-	id: string;
-};
+  id: string
+}
 
 function MenuScope(handle: Handle<{ children?: RemixNode }, MenuScopeValue>) {
-	handle.context.set({ id: handle.id });
-	return () => handle.props.children;
+  handle.context.set({ id: handle.id })
+  return () => handle.props.children
 }
 
 function MenuRoot(handle: Handle<{ children?: RemixNode }>) {
-	return () => <MenuScope>{handle.props.children}</MenuScope>;
+  return () => <MenuScope>{handle.props.children}</MenuScope>
 }
 
 function MenuGroup(handle: Handle<{ children?: RemixNode }>) {
-	return () => <MenuScope>{handle.props.children}</MenuScope>;
+  return () => <MenuScope>{handle.props.children}</MenuScope>
 }
 
 function MenuTrigger(handle: Handle) {
-	let scope = handle.context.get(MenuScope);
-	return () => <button aria-controls={scope.id}>Open</button>;
+  let scope = handle.context.get(MenuScope)
+  return () => <button aria-controls={scope.id}>Open</button>
 }
 ```
 
@@ -80,57 +80,57 @@ function MenuTrigger(handle: Handle) {
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree. This allows descendants to subscribe to specific changes rather than re-rendering on every parent update:
 
 ```tsx
-import { TypedEventTarget } from "remix/ui";
+import { TypedEventTarget } from 'remix/ui'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
-	#value: "light" | "dark" = "light";
+  #value: 'light' | 'dark' = 'light'
 
-	get value() {
-		return this.#value;
-	}
+  get value() {
+    return this.#value
+  }
 
-	setValue(value: "light" | "dark") {
-		this.#value = value;
-		this.dispatchEvent(new Event("change"));
-	}
+  setValue(value: 'light' | 'dark') {
+    this.#value = value
+    this.dispatchEvent(new Event('change'))
+  }
 }
 
 function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
-	let theme = new Theme();
-	handle.context.set(theme);
+  let theme = new Theme()
+  handle.context.set(theme)
 
-	return () => (
-		<div>
-			<button
-				mix={[
-					on("click", () => {
-						// No update needed - consumers subscribe to changes
-						theme.setValue(theme.value === "light" ? "dark" : "light");
-					}),
-				]}
-			>
-				Toggle Theme
-			</button>
-			{handle.props.children}
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on('click', () => {
+            // No update needed - consumers subscribe to changes
+            theme.setValue(theme.value === 'light' ? 'dark' : 'light')
+          }),
+        ]}
+      >
+        Toggle Theme
+      </button>
+      {handle.props.children}
+    </div>
+  )
 }
 
 function ThemedContent(handle: Handle) {
-	let theme = handle.context.get(ThemeProvider);
+  let theme = handle.context.get(ThemeProvider)
 
-	// Subscribe to granular updates
-	addEventListeners(theme, handle.signal, {
-		change() {
-			handle.update();
-		},
-	});
+  // Subscribe to granular updates
+  addEventListeners(theme, handle.signal, {
+    change() {
+      handle.update()
+    },
+  })
 
-	return () => (
-		<div mix={[css({ backgroundColor: theme.value === "dark" ? "#000" : "#fff" })]}>
-			Current theme: {theme.value}
-		</div>
-	);
+  return () => (
+    <div mix={[css({ backgroundColor: theme.value === 'dark' ? '#000' : '#fff' })]}>
+      Current theme: {theme.value}
+    </div>
+  )
 }
 ```
 
@@ -146,46 +146,46 @@ Provide multiple related values through context:
 
 ```tsx
 class AppContext extends TypedEventTarget<{ userChange: Event; settingsChange: Event }> {
-	#user: User | null = null;
-	#settings: Settings = defaultSettings;
+  #user: User | null = null
+  #settings: Settings = defaultSettings
 
-	get user() {
-		return this.#user;
-	}
+  get user() {
+    return this.#user
+  }
 
-	get settings() {
-		return this.#settings;
-	}
+  get settings() {
+    return this.#settings
+  }
 
-	setUser(user: User | null) {
-		this.#user = user;
-		this.dispatchEvent(new Event("userChange"));
-	}
+  setUser(user: User | null) {
+    this.#user = user
+    this.dispatchEvent(new Event('userChange'))
+  }
 
-	setSettings(settings: Settings) {
-		this.#settings = settings;
-		this.dispatchEvent(new Event("settingsChange"));
-	}
+  setSettings(settings: Settings) {
+    this.#settings = settings
+    this.dispatchEvent(new Event('settingsChange'))
+  }
 }
 
 function AppProvider(handle: Handle<{ children?: RemixNode }, AppContext>) {
-	let context = new AppContext();
-	handle.context.set(context);
+  let context = new AppContext()
+  handle.context.set(context)
 
-	return () => handle.props.children;
+  return () => handle.props.children
 }
 
 // Components can subscribe to only the events they care about
 function UserDisplay(handle: Handle) {
-	let context = handle.context.get(AppProvider);
+  let context = handle.context.get(AppProvider)
 
-	addEventListeners(context, handle.signal, {
-		userChange() {
-			handle.update();
-		},
-	});
+  addEventListeners(context, handle.signal, {
+    userChange() {
+      handle.update()
+    },
+  })
 
-	return () => <div>{context.user?.name ?? "Not logged in"}</div>;
+  return () => <div>{context.user?.name ?? 'Not logged in'}</div>
 }
 ```
 

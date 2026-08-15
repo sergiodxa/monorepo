@@ -8,16 +8,16 @@ Props flow from parent to child through JSX attributes:
 
 ```tsx
 function Parent() {
-	return () => <Child message="Hello from parent" count={42} />;
+  return () => <Child message="Hello from parent" count={42} />
 }
 
 function Child(handle: Handle<{ message: string; count: number }>) {
-	return () => (
-		<div>
-			<p>{handle.props.message}</p>
-			<p>Count: {handle.props.count}</p>
-		</div>
-	);
+  return () => (
+    <div>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
+    </div>
+  )
 }
 ```
 
@@ -27,22 +27,22 @@ Components can compose other components via `children`:
 
 ```tsx
 function Layout(handle: Handle<{ children: RemixNode }>) {
-	return () => (
-		<div mix={[css({ padding: "20px", maxWidth: "1200px", margin: "0 auto" })]}>
-			<header>My App</header>
-			<main>{handle.props.children}</main>
-			<footer>© 2024</footer>
-		</div>
-	);
+  return () => (
+    <div mix={[css({ padding: '20px', maxWidth: '1200px', margin: '0 auto' })]}>
+      <header>My App</header>
+      <main>{handle.props.children}</main>
+      <footer>© 2024</footer>
+    </div>
+  )
 }
 
 function App() {
-	return () => (
-		<Layout>
-			<h1>Welcome</h1>
-			<p>Content goes here</p>
-		</Layout>
-	);
+  return () => (
+    <Layout>
+      <h1>Welcome</h1>
+      <p>Content goes here</p>
+    </Layout>
+  )
 }
 ```
 
@@ -52,23 +52,23 @@ Use the `ref(...)` mixin to get a reference to the DOM node after it's rendered.
 
 ```tsx
 function Form(handle: Handle) {
-	let inputRef: HTMLInputElement;
+  let inputRef: HTMLInputElement
 
-	return () => (
-		<form>
-			<input type="text" mix={[ref((node) => (inputRef = node))]} />
-			<button
-				mix={[
-					on("click", () => {
-						// Focus the input from elsewhere in the form
-						inputRef.focus();
-					}),
-				]}
-			>
-				Focus Input
-			</button>
-		</form>
-	);
+  return () => (
+    <form>
+      <input type="text" mix={[ref((node) => (inputRef = node))]} />
+      <button
+        mix={[
+          on('click', () => {
+            // Focus the input from elsewhere in the form
+            inputRef.focus()
+          }),
+        ]}
+      >
+        Focus Input
+      </button>
+    </form>
+  )
 }
 ```
 
@@ -76,33 +76,33 @@ The `ref` callback receives an `AbortSignal` as its second parameter, which is a
 
 ```tsx
 function ResizeTracker(handle: Handle) {
-	let dimensions = { width: 0, height: 0 };
+  let dimensions = { width: 0, height: 0 }
 
-	return () => (
-		<div
-			mix={[
-				ref((node, signal) => {
-					// Set up ResizeObserver
-					let observer = new ResizeObserver((entries) => {
-						let entry = entries[0];
-						if (entry) {
-							dimensions.width = Math.round(entry.contentRect.width);
-							dimensions.height = Math.round(entry.contentRect.height);
-							handle.update();
-						}
-					});
-					observer.observe(node);
+  return () => (
+    <div
+      mix={[
+        ref((node, signal) => {
+          // Set up ResizeObserver
+          let observer = new ResizeObserver((entries) => {
+            let entry = entries[0]
+            if (entry) {
+              dimensions.width = Math.round(entry.contentRect.width)
+              dimensions.height = Math.round(entry.contentRect.height)
+              handle.update()
+            }
+          })
+          observer.observe(node)
 
-					// Clean up when element is removed
-					signal.addEventListener("abort", () => {
-						observer.disconnect();
-					});
-				}),
-			]}
-		>
-			Size: {dimensions.width} x {dimensions.height}
-		</div>
-	);
+          // Clean up when element is removed
+          signal.addEventListener('abort', () => {
+            observer.disconnect()
+          })
+        }),
+      ]}
+    >
+      Size: {dimensions.width} x {dimensions.height}
+    </div>
+  )
 }
 ```
 
@@ -114,19 +114,19 @@ Use the `key` prop to uniquely identify elements in lists. Keys enable efficient
 
 ```tsx
 function TodoList(handle: Handle) {
-	let todos = [
-		{ id: "1", text: "Buy milk" },
-		{ id: "2", text: "Walk dog" },
-		{ id: "3", text: "Write code" },
-	];
+  let todos = [
+    { id: '1', text: 'Buy milk' },
+    { id: '2', text: 'Walk dog' },
+    { id: '3', text: 'Write code' },
+  ]
 
-	return () => (
-		<ul>
-			{todos.map((todo) => (
-				<li key={todo.id}>{todo.text}</li>
-			))}
-		</ul>
-	);
+  return () => (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}>{todo.text}</li>
+      ))}
+    </ul>
+  )
 }
 ```
 
@@ -139,27 +139,27 @@ When you reorder, add, or remove items, keys ensure:
 
 ```tsx
 function ReorderableList(handle: Handle) {
-	let items = [
-		{ id: "a", label: "Item A" },
-		{ id: "b", label: "Item B" },
-		{ id: "c", label: "Item C" },
-	];
+  let items = [
+    { id: 'a', label: 'Item A' },
+    { id: 'b', label: 'Item B' },
+    { id: 'c', label: 'Item C' },
+  ]
 
-	function reverse() {
-		items = [...items].reverse();
-		handle.update();
-	}
+  function reverse() {
+    items = [...items].reverse()
+    handle.update()
+  }
 
-	return () => (
-		<div>
-			<button mix={[on("click", reverse)]}>Reverse List</button>
-			{items.map((item) => (
-				<div key={item.id}>
-					<input type="text" defaultValue={item.label} />
-				</div>
-			))}
-		</div>
-	);
+  return () => (
+    <div>
+      <button mix={[on('click', reverse)]}>Reverse List</button>
+      {items.map((item) => (
+        <div key={item.id}>
+          <input type="text" defaultValue={item.label} />
+        </div>
+      ))}
+    </div>
+  )
 }
 ```
 
@@ -170,17 +170,17 @@ Keys can be any type (string, number, bigint, object, symbol), but should be sta
 ```tsx
 // Good: stable, unique IDs
 {
-	items.map((item) => <Item key={item.id} item={item} />);
+  items.map((item) => <Item key={item.id} item={item} />)
 }
 
 // Good: index can work if list never reorders
 {
-	items.map((item, index) => <Item key={index} item={item} />);
+  items.map((item, index) => <Item key={index} item={item} />)
 }
 
 // Bad: don't use random values or values that change
 {
-	items.map((item) => <Item key={Math.random()} item={item} />);
+  items.map((item) => <Item key={Math.random()} item={item} />)
 }
 ```
 

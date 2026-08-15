@@ -26,14 +26,14 @@ Since import resolution still follows Node.js, configure type checking to match 
 
 ```json
 {
-	"compilerOptions": {
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
-		"allowImportingTsExtensions": true,
-		"isolatedModules": true,
-		"verbatimModuleSyntax": true,
-		"rewriteRelativeImportExtensions": true
-	}
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "rewriteRelativeImportExtensions": true
+  }
 }
 ```
 
@@ -52,7 +52,7 @@ Do not enable `erasableSyntaxOnly` if you want TypeScript to accept the same tra
 Import `remix/node-tsx` as a side effect to register the loader.
 
 ```ts
-import "remix/node-tsx";
+import 'remix/node-tsx'
 ```
 
 #### Loading a module with scoped JSX support
@@ -60,9 +60,9 @@ import "remix/node-tsx";
 Load a module with TypeScript and JSX syntax support scoped to its import graph:
 
 ```ts
-import { loadModule } from "remix/node-tsx/load-module";
+import { loadModule } from 'remix/node-tsx/load-module'
 
-let mod = await loadModule("./app/server.tsx", import.meta.url);
+let mod = await loadModule('./app/server.tsx', import.meta.url)
 ```
 
 ## Related Work

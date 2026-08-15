@@ -9,32 +9,32 @@ Only the components you mark are hydrated. The rest of the page stays as static 
 Use `clientEntry` to mark a component for hydration. The first argument is the module URL and export name the client will use to load the component:
 
 ```tsx
-import { clientEntry, on, type Handle } from "remix/ui";
+import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
-	"/assets/counter.js#Counter",
-	function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
-		let count = handle.props.initialCount ?? 0;
+  '/assets/counter.js#Counter',
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-		return () => (
-			<div>
-				<span>
-					{handle.props.label}: {count}
-				</span>
-				<button
-					mix={[
-						on("click", () => {
-							count++;
-							handle.update();
-						}),
-					]}
-				>
-					+
-				</button>
-			</div>
-		);
-	},
-);
+    return () => (
+      <div>
+        <span>
+          {handle.props.label}: {count}
+        </span>
+        <button
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          +
+        </button>
+      </div>
+    )
+  },
+)
 ```
 
 The format is `moduleUrl#ExportName`. If you omit the export name, the function's name is used as a fallback.
@@ -46,39 +46,59 @@ On the server, `clientEntry` components render like any other component. The ser
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:
 
 ```tsx
-import { run } from "remix/ui";
+import type { ResolveFrameOptions } from 'remix/ui'
+import { run } from 'remix/ui'
 
 let app = run({
-	async loadModule(moduleUrl, exportName) {
-		let mod = await import(moduleUrl);
-		return mod[exportName];
-	},
-	async resolveFrame(src, signal) {
-		let res = await fetch(src, { headers: { Accept: "text/html" }, signal });
-		return res.body ?? (await res.text());
-	},
-});
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  async resolveFrame(src, options) {
+    let res = await fetch(src, {
+      headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
+      method: options?.method,
+      body: getRequestBody(options),
+      signal: options?.signal,
+    })
+    return res.body ?? (await res.text())
+  },
+})
 
-await app.ready();
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
+
+await app.ready()
 ```
 
 ### `run` options
 
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
-- **`resolveFrame(src, signal, target)`** (optional) - Called when a `<Frame>` needs to load or reload content. The examples here only use `src` and `signal`, but `target` is also available when frame targeting matters. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
+- **`resolveFrame(src, options)`** (optional) - Called when a `<Frame>` needs to load or reload content and when a link or form performs a frame navigation. `options` may contain `signal` and `target`; non-GET forms also provide `formData`, `method`, and `encType`. GET form values are already encoded in `src`. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`) and leaves document navigation to the browser. See [Frames](./frames.md#form-navigation) for request encoding, targeting, and opt-outs.
 
-### `app` methods
+### `app` properties
 
 - **`app.ready()`** - Returns a promise that resolves when all initial client entries have been hydrated.
 - **`app.flush()`** - Synchronously flushes all pending updates.
+- **`app.frames.top`** - The top-level frame for the app.
+- **`app.frames.get(name)`** - Returns a frame handle, if one exists.
 - **`app.dispose()`** - Tears down all hydrated components and cleans up.
 
 `app` is also an `EventTarget`. You can listen for errors from any hydrated component:
 
 ```tsx
-app.addEventListener("error", (event) => {
-	console.error("Component error:", event.error);
-});
+app.addEventListener('error', (event) => {
+  console.error('Component error:', event.error)
+})
 ```
 
 ## What gets serialized

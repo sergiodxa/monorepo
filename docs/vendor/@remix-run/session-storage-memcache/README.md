@@ -11,12 +11,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { createMemcacheSessionStorage } from "remix/session-storage/memcache";
+import { createMemcacheSessionStorage } from 'remix/session-storage/memcache'
 
-let sessionStorage = createMemcacheSessionStorage("127.0.0.1:11211", {
-	keyPrefix: "my-app:session:",
-	ttlSeconds: 60 * 60 * 24 * 7,
-});
+let sessionStorage = createMemcacheSessionStorage('127.0.0.1:11211', {
+  keyPrefix: 'my-app:session:',
+  ttlSeconds: 60 * 60 * 24 * 7,
+})
 ```
 
 Available options:

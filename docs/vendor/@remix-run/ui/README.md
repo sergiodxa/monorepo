@@ -4,7 +4,7 @@ Runtime UI primitives for Remix apps, including the component runtime, server re
 
 ## Features
 
-- Component runtime APIs for rendering, hydration, frame navigation, and JSX
+- Component runtime APIs for rendering, hydration, link and form frame navigation, and JSX
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
 - Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
@@ -21,63 +21,124 @@ npm i remix
 Compose behavior primitives with your own markup and styles:
 
 ```tsx
-import { css } from "remix/ui";
-import * as popover from "remix/ui/popover";
+import { css } from 'remix/ui'
+import * as popover from 'remix/ui/popover'
 
 let triggerCss = css({
-	border: "1px solid #d1d5db",
-	borderRadius: "6px",
-	padding: "6px 10px",
-});
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  padding: '6px 10px',
+})
 
 let surfaceCss = css({
-	background: "white",
-	border: "1px solid #d1d5db",
-	borderRadius: "6px",
-	padding: "8px",
-});
+  background: 'white',
+  border: '1px solid #d1d5db',
+  borderRadius: '6px',
+  padding: '8px',
+})
 
 function ViewOptions() {
-	let open = false;
+  let open = false
 
-	return () => (
-		<popover.Context>
-			<button
-				mix={[triggerCss, popover.anchor({ placement: "bottom-end" }), popover.focusOnHide()]}
-				onClick={() => {
-					open = true;
-				}}
-				type="button"
-			>
-				View options
-			</button>
-			<div
-				mix={[
-					surfaceCss,
-					popover.surface({
-						open,
-						onHide() {
-							open = false;
-						},
-					}),
-				]}
-			>
-				Panel content
-			</div>
-		</popover.Context>
-	);
+  return () => (
+    <popover.Context>
+      <button
+        mix={[triggerCss, popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide()]}
+        onClick={() => {
+          open = true
+        }}
+        type="button"
+      >
+        View options
+      </button>
+      <div
+        mix={[
+          surfaceCss,
+          popover.surface({
+            open,
+            onHide() {
+              open = false
+            },
+          }),
+        ]}
+      >
+        Panel content
+      </div>
+    </popover.Context>
+  )
 }
 ```
 
 Button styling is available as a composable mixin:
 
 ```tsx
-import button from "remix/ui/button";
+import button from 'remix/ui/button'
 
 function Actions() {
-	return () => <button mix={button({ tone: "primary" })}>Create project</button>;
+  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
 }
 ```
+
+## Frame Navigation
+
+Configure `resolveFrame` once to progressively enhance same-origin links and forms. The resolver owns the fetch request and receives native submission metadata for non-GET forms:
+
+```tsx
+import type { ResolveFrameOptions } from 'remix/ui'
+import { run } from 'remix/ui'
+
+let app = run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  async resolveFrame(src, options) {
+    return fetch(src, {
+      headers: { Accept: 'text/html', 'X-Remix-Frame': 'true' },
+      method: options?.method,
+      body: getRequestBody(options),
+      signal: options?.signal,
+    })
+  },
+})
+
+function getRequestBody(options?: ResolveFrameOptions): BodyInit | undefined {
+  let formData = options?.formData
+  if (!formData) return
+  if (options.encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
+}
+
+await app.ready()
+```
+
+Forms remain ordinary HTML forms before the runtime starts. Add `rmx-target` to reload a named frame, or `rmx-document` to require a full-document submission:
+
+```tsx
+import { Frame } from 'remix/ui'
+
+function AccountPage() {
+  return () => (
+    <>
+      <Frame name="account" src="/account/edit" />
+      <form action="/account/edit" method="post" rmx-target="account">
+        <label for="display-name">Display name</label>
+        <input id="display-name" name="displayName" required />
+        <button type="submit">Save</button>
+      </form>
+    </>
+  )
+}
+```
+
+Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
+
+Use `rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
 
 ## Preserving Client-Owned DOM
 
@@ -85,7 +146,7 @@ Use `rmx-preserve-dom` on the smallest element whose live DOM should belong to c
 
 ```tsx
 <pagefind-ui data-key="search" rmx-preserve-dom>
-	<button type="button">Search</button>
+  <button type="button">Search</button>
 </pagefind-ui>
 ```
 
@@ -101,14 +162,14 @@ Put layers that should lose to Remix UI before `rmx`:
 @layer base, rmx;
 
 @layer base {
-	button,
-	input,
-	textarea,
-	select {
-		font: inherit;
-		margin: 0;
-		padding: 0;
-	}
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
 }
 ```
 

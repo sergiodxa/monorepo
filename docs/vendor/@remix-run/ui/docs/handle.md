@@ -8,20 +8,20 @@ Schedules a component update and returns a promise that resolves with an `AbortS
 
 ```tsx
 function Counter(handle: Handle) {
-	let count = 0;
+  let count = 0
 
-	return () => (
-		<button
-			mix={[
-				on("click", () => {
-					count++;
-					handle.update();
-				}),
-			]}
-		>
-			Count: {count}
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', () => {
+          count++
+          handle.update()
+        }),
+      ]}
+    >
+      Count: {count}
+    </button>
+  )
 }
 ```
 
@@ -29,23 +29,23 @@ Waiting for the update:
 
 ```tsx
 function Player(handle: Handle) {
-	let isPlaying = false;
-	let stopButton: HTMLButtonElement;
+  let isPlaying = false
+  let stopButton: HTMLButtonElement
 
-	return () => (
-		<button
-			disabled={isPlaying}
-			mix={[
-				on("click", async () => {
-					isPlaying = true;
-					await handle.update();
-					stopButton.focus();
-				}),
-			]}
-		>
-			Play
-		</button>
-	);
+  return () => (
+    <button
+      disabled={isPlaying}
+      mix={[
+        on('click', async () => {
+          isPlaying = true
+          await handle.update()
+          stopButton.focus()
+        }),
+      ]}
+    >
+      Play
+    </button>
+  )
 }
 ```
 
@@ -60,32 +60,32 @@ Schedules a task to run after the next update. The task receives an `AbortSignal
 
 ```tsx
 function Form(handle: Handle) {
-	let showDetails = false;
-	let detailsSection: HTMLElement;
+  let showDetails = false
+  let detailsSection: HTMLElement
 
-	return () => (
-		<form>
-			<input
-				type="checkbox"
-				checked={showDetails}
-				mix={[
-					on("change", (event) => {
-						showDetails = event.currentTarget.checked;
-						handle.update();
-						if (showDetails) {
-							// Queue DOM operation after the new section renders
-							handle.queueTask(() => {
-								detailsSection.scrollIntoView({ behavior: "smooth" });
-							});
-						}
-					}),
-				]}
-			/>
-			{showDetails && (
-				<section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
-			)}
-		</form>
-	);
+  return () => (
+    <form>
+      <input
+        type="checkbox"
+        checked={showDetails}
+        mix={[
+          on('change', (event) => {
+            showDetails = event.currentTarget.checked
+            handle.update()
+            if (showDetails) {
+              // Queue DOM operation after the new section renders
+              handle.queueTask(() => {
+                detailsSection.scrollIntoView({ behavior: 'smooth' })
+              })
+            }
+          }),
+        ]}
+      />
+      {showDetails && (
+        <section mix={[ref((node) => (detailsSection = node))]}>Details content</section>
+      )}
+    </form>
+  )
 }
 ```
 
@@ -100,46 +100,46 @@ When you need to perform async work (like data fetching) that should respond to 
 ```tsx
 // ❌ Avoid: Creating state just to react to it in queueTask
 function BadExample(handle: Handle) {
-	let shouldLoad = false; // Unnecessary state
+  let shouldLoad = false // Unnecessary state
 
-	return () => (
-		<div>
-			<button
-				mix={[
-					on("click", () => {
-						shouldLoad = true; // Setting state just to trigger queueTask
-						handle.update();
-						handle.queueTask(() => {
-							if (shouldLoad) {
-								// Do work
-							}
-						});
-					}),
-				]}
-			>
-				Load
-			</button>
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on('click', () => {
+            shouldLoad = true // Setting state just to trigger queueTask
+            handle.update()
+            handle.queueTask(() => {
+              if (shouldLoad) {
+                // Do work
+              }
+            })
+          }),
+        ]}
+      >
+        Load
+      </button>
+    </div>
+  )
 }
 
 // ✅ Prefer: Do the work directly in the event handler or queueTask
 function GoodExample(handle: Handle) {
-	return () => (
-		<div>
-			<button
-				mix={[
-					on("click", () => {
-						handle.queueTask(() => {
-							// Do work directly - no intermediate state needed
-						});
-					}),
-				]}
-			>
-				Load
-			</button>
-		</div>
-	);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on('click', () => {
+            handle.queueTask(() => {
+              // Do work directly - no intermediate state needed
+            })
+          }),
+        ]}
+      >
+        Load
+      </button>
+    </div>
+  )
 }
 ```
 
@@ -147,22 +147,22 @@ function GoodExample(handle: Handle) {
 
 ```tsx
 function AsyncExample(handle: Handle) {
-	let data: string[] = [];
-	let loading = false;
+  let data: string[] = []
+  let loading = false
 
-	async function load() {
-		loading = true;
-		let signal = await handle.update();
+  async function load() {
+    loading = true
+    let signal = await handle.update()
 
-		let response = await fetch("/api/data", { signal });
-		if (signal.aborted) return;
+    let response = await fetch('/api/data', { signal })
+    if (signal.aborted) return
 
-		data = await response.json();
-		loading = false;
-		handle.update();
-	}
+    data = await response.json()
+    loading = false
+    handle.update()
+  }
 
-	return () => <button mix={[on("click", load)]}>{loading ? "Loading..." : "Load data"}</button>;
+  return () => <button mix={[on('click', load)]}>{loading ? 'Loading...' : 'Load data'}</button>
 }
 ```
 
@@ -172,15 +172,15 @@ An `AbortSignal` that's aborted when the component is disconnected. Useful for c
 
 ```tsx
 function Clock(handle: Handle) {
-	let interval = setInterval(() => {
-		if (handle.signal.aborted) {
-			clearInterval(interval);
-			return;
-		}
-		handle.update();
-	}, 1000);
+  let interval = setInterval(() => {
+    if (handle.signal.aborted) {
+      clearInterval(interval)
+      return
+    }
+    handle.update()
+  }, 1000)
 
-	return () => <span>{new Date().toString()}</span>;
+  return () => <span>{new Date().toString()}</span>
 }
 ```
 
@@ -188,10 +188,10 @@ Or using event listeners:
 
 ```tsx
 function Clock(handle: Handle) {
-	let interval = setInterval(handle.update, 1000);
-	handle.signal.addEventListener("abort", () => clearInterval(interval));
+  let interval = setInterval(handle.update, 1000)
+  handle.signal.addEventListener('abort', () => clearInterval(interval))
 
-	return () => <span>{new Date().toString()}</span>;
+  return () => <span>{new Date().toString()}</span>
 }
 ```
 
@@ -201,16 +201,16 @@ Listen to an `EventTarget` with automatic cleanup when the component disconnects
 
 ```tsx
 function KeyboardTracker(handle: Handle) {
-	let keys: string[] = [];
+  let keys: string[] = []
 
-	addEventListeners(document, handle.signal, {
-		keydown(event) {
-			keys.push(event.key);
-			handle.update();
-		},
-	});
+  addEventListeners(document, handle.signal, {
+    keydown(event) {
+      keys.push(event.key)
+      handle.update()
+    },
+  })
 
-	return () => <div>Keys: {keys.join(", ")}</div>;
+  return () => <div>Keys: {keys.join(', ')}</div>
 }
 ```
 
@@ -222,17 +222,17 @@ When server rendering with `renderToStream()`, pass the `frameSrc` option to pop
 
 ```tsx
 function RefreshAllButton(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				on("click", async () => {
-					await handle.frames.top.reload();
-				}),
-			]}
-		>
-			Refresh everything
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', async () => {
+          await handle.frames.top.reload()
+        }),
+      ]}
+    >
+      Refresh everything
+    </button>
+  )
 }
 ```
 
@@ -247,18 +247,18 @@ Return value:
 
 ```tsx
 function CartRow(handle: Handle) {
-	return () => (
-		<button
-			mix={[
-				on("click", async () => {
-					await handle.frames.get("cart-summary")?.reload();
-					await handle.frame.reload();
-				}),
-			]}
-		>
-			Update Cart
-		</button>
-	);
+  return () => (
+    <button
+      mix={[
+        on('click', async () => {
+          await handle.frames.get('cart-summary')?.reload()
+          await handle.frame.reload()
+        }),
+      ]}
+    >
+      Update Cart
+    </button>
+  )
 }
 ```
 
@@ -270,12 +270,12 @@ Stable identifier per component instance. Useful for HTML APIs like `htmlFor`, `
 
 ```tsx
 function LabeledInput(handle: Handle) {
-	return () => (
-		<div>
-			<label htmlFor={handle.id}>Name</label>
-			<input id={handle.id} type="text" />
-		</div>
-	);
+  return () => (
+    <div>
+      <label htmlFor={handle.id}>Name</label>
+      <input id={handle.id} type="text" />
+    </div>
+  )
 }
 ```
 
@@ -285,21 +285,21 @@ Context API for ancestor/descendant communication. See [Context](./context.md) f
 
 ```tsx
 function App(handle: Handle<Record<string, never>, { theme: string }>) {
-	handle.context.set({ theme: "dark" });
+  handle.context.set({ theme: 'dark' })
 
-	return () => (
-		<div>
-			<Header />
-			<Content />
-		</div>
-	);
+  return () => (
+    <div>
+      <Header />
+      <Content />
+    </div>
+  )
 }
 
 function Header(handle: Handle) {
-	let { theme } = handle.context.get(App);
-	return () => (
-		<header mix={[css({ backgroundColor: theme === "dark" ? "#000" : "#fff" })]}>Header</header>
-	);
+  let { theme } = handle.context.get(App)
+  return () => (
+    <header mix={[css({ backgroundColor: theme === 'dark' ? '#000' : '#fff' })]}>Header</header>
+  )
 }
 ```
 
