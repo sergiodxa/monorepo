@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",
-		"jose": "^6.2.4",
+		"jose": "^6.2.8",
 		"typescript": "^6.0.3",
 		"zod": "^4.4.3"
 	},

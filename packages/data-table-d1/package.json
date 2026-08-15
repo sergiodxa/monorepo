@@ -14,7 +14,7 @@
 		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20260723.1",
+		"@cloudflare/workers-types": "^5.20260815.1",
 		"@types/bun": "^1.3.14"
 	}
 }

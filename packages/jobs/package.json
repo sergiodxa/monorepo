@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@cloudflare/workers-types": "^5.20260723.1",
+		"@cloudflare/workers-types": "^5.20260815.1",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/strings": "workspace:*",

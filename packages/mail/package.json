@@ -15,7 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@markdoc/markdoc": "^0.5.8",
+		"@markdoc/markdoc": "^0.5.9",
 		"@pkg/result": "workspace:*",
 		"prismjs": "^1.30.0",
 		"remix": "3.0.0-beta.5"
