@@ -13,8 +13,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createDatabase } from "remix/data-table";
-import { createSqliteDatabaseAdapter } from "remix/data-table-sqlite";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 /**
  * Applies every `.sql` migration in `database/migrations/`, filename-sorted — the same
@@ -54,7 +53,7 @@ export function createTestDatabase() {
 	let sqliteDb = new SqliteDatabase(":memory:");
 	applyMigrations(sqliteDb);
 
-	let db = createDatabase(createSqliteDatabaseAdapter(sqliteDb), { now: () => Date.now() });
+	let db = createSqliteDatabase(sqliteDb, { now: () => Date.now() });
 
 	return { db, sqliteDb };
 }

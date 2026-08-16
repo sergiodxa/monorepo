@@ -1,5 +1,5 @@
 /**
- * Tests for the D1 `DatabaseAdapter`.
+ * Tests for the D1 `DatabaseDriver`.
  *
  * A real Cloudflare D1 binding is not available in a plain `bun:test` process, so
  * these tests drive the real adapter through a small `D1Database`-shaped shim over
@@ -22,7 +22,7 @@
 import { Database as BunSqlite, type SQLQueryBindings } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { column as c, createDatabase, table } from "remix/data-table";
+import { column as c, Database, table } from "remix/data-table";
 
 import type { D1StatementObservation, D1StatementObserver } from "./index";
 
@@ -194,7 +194,7 @@ function setup() {
 	sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
 
 	let adapter = createD1DatabaseAdapter(createD1Shim(sqlite));
-	let db = createDatabase(adapter);
+	let db = new Database(adapter);
 
 	return { db, sqlite };
 }
@@ -391,7 +391,7 @@ describe("createD1DatabaseAdapter onStatement", () => {
 		let sqlite = new BunSqlite(":memory:");
 		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
 
-		let db = createDatabase(
+		let db = new Database(
 			createD1DatabaseAdapter(createD1Shim(sqlite), {
 				onStatement:
 					onStatement ??
@@ -453,7 +453,7 @@ describe("createD1DatabaseAdapter onStatement", () => {
 		let observations: D1StatementObservation[] = [];
 		let sqlite = new BunSqlite(":memory:");
 		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
-		let db = createDatabase(
+		let db = new Database(
 			createD1DatabaseAdapter(createMetalessD1Shim(sqlite), {
 				onStatement: (observation) => observations.push(observation),
 			}),
@@ -484,7 +484,7 @@ describe("createD1DatabaseAdapter onStatement", () => {
 	test("an adapter without an observer behaves exactly as before", async () => {
 		let sqlite = new BunSqlite(":memory:");
 		sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
-		let db = createDatabase(createD1DatabaseAdapter(createD1Shim(sqlite)));
+		let db = new Database(createD1DatabaseAdapter(createD1Shim(sqlite)));
 
 		await db.create(users, { id: 1, email: "one@example.com" });
 

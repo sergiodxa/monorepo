@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DatabaseAdapter } from "remix/data-table";
+import type { DatabaseDriver } from "remix/data-table";
 
 import { Logger } from "@pkg/logger/request";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { runMigrations } from "./database/migrations";
 import AuthorizationCode from "./oauth/models/authorization-code";
@@ -34,7 +34,7 @@ export interface AnalyticsSink {
 /** Configuration for {@link createOidcProvider}. */
 export interface OidcProviderConfig {
 	/** SQL access. DO host: @pkg/data-table-sqlstorage. Self-hosted: @pkg/data-table-d1. */
-	database: DatabaseAdapter;
+	database: DatabaseDriver;
 	/** HMAC secret shared with the control plane for Management API internal tokens. */
 	internalSecret: string;
 	/** Optional analytics sink; a no-op sink is used when omitted (self-hosted default). */
@@ -73,7 +73,7 @@ const NOOP_ANALYTICS: AnalyticsSink = {
  * @returns A provider exposing `fetch` and `migrate`.
  */
 export function createOidcProvider(config: OidcProviderConfig): OidcProvider {
-	let db = createDatabase(config.database);
+	let db = new Database(config.database);
 	let analytics = config.analytics ?? NOOP_ANALYTICS;
 	let options = { internalSecret: config.internalSecret, analytics };
 

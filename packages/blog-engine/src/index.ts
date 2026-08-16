@@ -7,12 +7,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { DatabaseAdapter } from "remix/data-table";
+import type { DatabaseDriver } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 
 import { Logger } from "@pkg/logger/request";
 import { ServiceContainer } from "@pkg/service-container";
-import { createDatabase, Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import type { OIDCMetadata } from "./auth/oidc";
 
@@ -28,7 +28,7 @@ export type { Permission } from "./shared/permissions";
 /** Configuration for {@link createBlogEngine}. */
 export interface BlogEngineConfig {
 	/** SQL access. Self-hosted: `@pkg/data-table-d1`. DO host: `@pkg/data-table-sqlstorage`. */
-	database: DatabaseAdapter;
+	database: DatabaseDriver;
 
 	/** OIDC relying-party configuration for the admin panel. */
 	auth: {
@@ -91,7 +91,7 @@ export interface BlogEngine {
  * @returns An engine exposing `fetch` and `migrate`.
  */
 export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
-	let db = createDatabase(config.database);
+	let db = new Database(config.database);
 	let container = new ServiceContainer();
 	container.instance(Database, db);
 	let sessionMiddleware = createSessionMiddleware({

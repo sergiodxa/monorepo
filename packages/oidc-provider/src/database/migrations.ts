@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DatabaseAdapter } from "remix/data-table";
+import type { DatabaseDriver } from "remix/data-table";
 
-import { column as c, createDatabase, table } from "remix/data-table";
+import { column as c, Database, table } from "remix/data-table";
 
 import m0001 from "../migrations/0001-init.sql?raw";
 import m0002 from "../migrations/0002-add-authz-codes-client-index.sql?raw";
@@ -61,12 +61,12 @@ const journal = table({
  * @example
  * let { applied } = await runMigrations(config.database);
  */
-export async function runMigrations(adapter: DatabaseAdapter): Promise<{ applied: string[] }> {
+export async function runMigrations(adapter: DatabaseDriver): Promise<{ applied: string[] }> {
 	await adapter.executeScript(
 		"CREATE TABLE IF NOT EXISTS oidc_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL);",
 	);
 
-	let db = createDatabase(adapter);
+	let db = new Database(adapter);
 	let existing = await db.findMany(journal);
 	let done = new Set(existing.map((row) => row.id));
 

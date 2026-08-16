@@ -16,7 +16,7 @@ import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { Logger } from "@pkg/logger/request";
-import { createDatabase, type Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import type { AnalyticsSink } from "../../index";
 
@@ -80,7 +80,7 @@ describe("WebAuthn options endpoints", () => {
 			await import("../../migrations/0006-add-passkey-credential-id.sql?raw");
 		sqliteDb.run(migration0001);
 		sqliteDb.run(migration0006);
-		db = createDatabase(createBunSqliteDatabaseAdapter(sqliteDb));
+		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
 		clearUserRateLimitCache();
 	});
 

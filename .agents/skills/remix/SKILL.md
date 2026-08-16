@@ -222,8 +222,8 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids. Use when input arrives as a string but should be a typed value
 - `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use in actions that read browser forms
 - `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to refer to itself or another schema that is declared later
-- `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`, `createDatabase` when modeling persisted data
-- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — adapters. Use to back `createDatabase` with a real engine. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
+- `remix/data-table` — typed tables and the `Database` class. Use for `table`, `column`, and `new Database(driver)` when modeling persisted data
+- `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — engine-backed databases (`createSqliteDatabase` and friends), each returning a `Database` ready to query. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
 - `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`, `createMigrationRunner`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses need set or comparison logic

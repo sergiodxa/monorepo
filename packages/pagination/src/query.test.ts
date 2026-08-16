@@ -14,8 +14,8 @@ import { Database as Sqlite } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import { isFailure, unwrap } from "@pkg/result";
-import { column as c, createDatabase, table } from "remix/data-table";
-import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
+import { column as c, Database, table } from "remix/data-table";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 import type { OrderByTuple } from "./keyset";
 
@@ -76,12 +76,12 @@ function seed(sqlite: Sqlite): void {
 	}
 }
 
-let db: ReturnType<typeof createDatabase>;
+let db: Database;
 
 beforeEach(() => {
 	let sqlite = new Sqlite(":memory:");
 	seed(sqlite);
-	db = createDatabase(createSqliteDatabaseAdapter(sqlite));
+	db = createSqliteDatabase(sqlite);
 });
 
 /** Team 1's events, newest first, as an offset query would compose them. */

@@ -9,7 +9,7 @@
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import type { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { renderThemeStyle } from "../../appearance/theme/theme";
 import { createTestDatabase } from "../../shared/test/db";
@@ -17,7 +17,7 @@ import { createTestDatabase } from "../../shared/test/db";
 import { Settings } from "./settings";
 
 describe("Settings.theme", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());
@@ -45,7 +45,7 @@ describe("Settings.theme", () => {
 });
 
 describe("theme derivation from stored settings", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());

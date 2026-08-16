@@ -113,20 +113,20 @@ export const books = table({
 
 ## Database Setup
 
-Create a database with an adapter and expose it via middleware:
+Create a database for your engine and expose it via middleware:
 
 ```typescript
 import BetterSqlite3 from "better-sqlite3";
-import { createDatabase, Database } from "remix/data-table";
-import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 let sqlite = new BetterSqlite3("./db/app.db");
 sqlite.pragma("foreign_keys = ON");
-let adapter = createSqliteDatabaseAdapter(sqlite);
-export let db = createDatabase(adapter);
+export let db = createSqliteDatabase(sqlite);
 ```
 
-`createSqliteDatabaseAdapter` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required.
+`createSqliteDatabase` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required. It also accepts a config object (`{ filename, foreignKeys }`) when you want it to open the file itself.
+
+For an engine with no shipped package — Cloudflare D1, a Durable Object's `SqlStorage` — implement `DatabaseDriver` and construct the database around it: `new Database(driver, { now })`.
 
 ### Database middleware
 

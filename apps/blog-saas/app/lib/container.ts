@@ -11,7 +11,7 @@ import { HostnameClient } from "@pkg/hostname";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { createDatabase, Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 
@@ -22,7 +22,7 @@ import { BlogProvisioner } from "~/app/services/blog-provisioner";
  */
 export const container = new ServiceContainer();
 
-container.singleton(Database, () => createDatabase(createD1DatabaseAdapter(env.PLATFORM_DB)));
+container.singleton(Database, () => new Database(createD1DatabaseAdapter(env.PLATFORM_DB)));
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 container.singleton(
 	HostnameClient,

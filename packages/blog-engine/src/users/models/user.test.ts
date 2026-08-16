@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import type { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { Role } from "../../roles/models/role";
 import { createTestDatabase } from "../../shared/test/db";
@@ -30,7 +30,7 @@ function profile(overrides: Partial<AuthProfile> = {}): AuthProfile {
 }
 
 describe("User.findOrCreateFromAuthProfile admin assignment", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());

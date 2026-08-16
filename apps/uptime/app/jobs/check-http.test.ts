@@ -36,18 +36,19 @@ import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { IngestEvent } from "@pkg/polar";
-import type { DataManipulationRequest, DatabaseAdapter } from "remix/data-table";
+import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
-import { createDatabase, Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import {
 	applyMigrations,
+	compileSqliteStatement,
 	createBunSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
@@ -693,11 +694,11 @@ function createObservedDatabase() {
 	applyMigrations(sqliteDb);
 
 	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
-	let observed: DatabaseAdapter = {
+	let observed: DatabaseDriver = {
 		...adapter,
 		async execute(request: DataManipulationRequest) {
 			let result = await adapter.execute(request);
-			let compiled = adapter.compileSql(request.operation)[0];
+			let compiled = compileSqliteStatement(request.operation);
 
 			statements.push({
 				kind: request.operation.kind,
@@ -710,7 +711,7 @@ function createObservedDatabase() {
 		},
 	};
 
-	return { db: createDatabase(observed, { now: () => Date.now() }), statements };
+	return { db: new Database(observed, { now: () => Date.now() }), statements };
 }
 
 /**

@@ -6,7 +6,7 @@ A complete, host-agnostic blog application — public site, admin CMS, schema, a
 
 The engine is "WordPress core": zero Cloudflare-specific imports, one entry point
 (`createBlogEngine`), and a config object as its entire public boundary. The host
-injects a `remix/data-table` `DatabaseAdapter`, OIDC credentials, and a cookie
+injects a `remix/data-table` `DatabaseDriver`, OIDC credentials, and a cookie
 secret; everything a blog owner edits (title, theme, post types, posts, users,
 roles) lives in the blog's own SQL database.
 
@@ -104,7 +104,7 @@ let response = await engine.fetch(request);
 
 | Field         | Type                                                              | Description                                                                       |
 | ------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `database`    | `DatabaseAdapter`                                                 | SQL access (D1 or SqlStorage adapter).                                            |
+| `database`    | `DatabaseDriver`                                                  | SQL access (D1 or SqlStorage adapter).                                            |
 | `auth`        | `{ issuer, clientId, clientSecret, metadata?, scopes?, admins? }` | OIDC relying-party config; `admins` are emails/subjects mapped to the admin role. |
 | `session`     | `{ secret, storage?, cookieName? }`                               | Cookie signing secret + optional storage override.                                |
 | `migrations?` | `"auto" \| "manual"`                                              | `"auto"` (default) migrates lazily; `"manual"` for the DO host.                   |

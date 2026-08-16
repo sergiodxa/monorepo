@@ -10,7 +10,12 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import type { Database, DataManipulationOperation, DataManipulationResult } from "remix/data-table";
+import type {
+	Database,
+	DataManipulationOperation,
+	DataManipulationResult,
+	DatabaseDriver,
+} from "remix/data-table";
 
 import type { AlertConfig } from "~/database/schema";
 
@@ -18,7 +23,7 @@ import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /**
- * Patches a test database's adapter so writes to the given JSON-typed columns are
+ * Patches a test database's driver so writes to the given JSON-typed columns are
  * `JSON.stringify`-d before binding and `JSON.parse`-d back on read. The bun:sqlite
  * test adapter binds column values as-is with no column-type awareness, so passing a
  * plain object into a `c.json()` column (here, `config`) throws at the SQLite binding
@@ -26,8 +31,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
  * `app/services/alerts.ts`), so this codec is required to exercise `create`/`update`
  * against the real database instead of mocking the model away.
  */
-function patchJsonColumns(db: Database, columns: string[]): void {
-	let adapter = db.adapter;
+function patchJsonColumns(adapter: DatabaseDriver, columns: string[]): void {
 	let originalExecute = adapter.execute.bind(adapter);
 
 	adapter.execute = async (request) => {
@@ -92,8 +96,9 @@ let emailConfig: AlertConfig = {
 };
 
 beforeEach(() => {
-	db = createTestDatabase().db;
-	patchJsonColumns(db, ["config"]);
+	let database = createTestDatabase();
+	db = database.db;
+	patchJsonColumns(database.adapter, ["config"]);
 });
 
 describe("Alert.create", () => {

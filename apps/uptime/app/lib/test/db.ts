@@ -14,27 +14,26 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type {
-	AdapterCapabilityOverrides,
+	DatabaseCapabilities,
 	DataManipulationOperation,
 	DataManipulationRequest,
 	DataManipulationResult,
-	DatabaseAdapter,
-	SqlStatement,
+	DatabaseDriver,
 	TableRef,
 	TransactionOptions,
 	TransactionToken,
 } from "remix/data-table";
 
 import {
-	type Predicate,
-	createDatabase,
+	Database,
 	getTableColumnDefinitions,
 	getTableName,
 	getTablePrimaryKey,
+	type Predicate,
 } from "remix/data-table";
 
 interface BunSqliteAdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
+	capabilities?: Partial<DatabaseCapabilities>;
 }
 
 /**
@@ -43,14 +42,14 @@ interface BunSqliteAdapterOptions {
  * in-memory SQLite database instead of a mock.
  * @param db - An open Bun `bun:sqlite` database instance.
  * @param options - Optional capability overrides for the adapter.
- * @returns A `DatabaseAdapter` backed by the given SQLite database.
+ * @returns A `DatabaseDriver` backed by the given SQLite database.
  * @example
  * let adapter = createBunSqliteDatabaseAdapter(new SqliteDatabase(":memory:"));
  */
 export function createBunSqliteDatabaseAdapter(
 	db: SqliteDatabase,
 	options?: BunSqliteAdapterOptions,
-): DatabaseAdapter {
+): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
 
@@ -69,12 +68,6 @@ export function createBunSqliteDatabaseAdapter(
 			upsert: options?.capabilities?.upsert ?? true,
 			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
-		},
-
-		compileSql(operation: DataManipulationOperation): SqlStatement[] {
-			let statement = compileSqliteStatement(operation);
-
-			return [{ text: statement.text, values: statement.values }];
 		},
 
 		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
@@ -201,6 +194,18 @@ export function createBunSqliteDatabaseAdapter(
 			assertTransaction(token);
 			db.run("RELEASE SAVEPOINT " + quoteIdentifier(name));
 		},
+
+		/**
+		 * Rejects: the SQLite database is created and migrated by the caller, which is
+		 * also the only party that knows how to build an empty one. Tests that want a
+		 * clean schema should call {@link createTestDatabase} again.
+		 */
+		async wipe(): Promise<void> {
+			throw new Error("bun:sqlite test adapter wipe is not supported");
+		},
+
+		/** The caller owns the `bun:sqlite` handle, so there is nothing to release. */
+		close(): void {},
 	};
 }
 
@@ -369,7 +374,7 @@ interface CompileContext {
 	values: unknown[];
 }
 
-function compileSqliteStatement(statement: DataManipulationOperation): CompiledSql {
+export function compileSqliteStatement(statement: DataManipulationOperation): CompiledSql {
 	if (statement.kind === "raw") {
 		return {
 			text: statement.sql.text,
@@ -1063,7 +1068,8 @@ function migrationsDirectory(): string {
  * Creates an in-memory test database with every migration applied, wrapped as a
  * `remix/data-table` `Database` the same way `app/lib/container.ts` wraps the
  * production D1 database (epoch-ms `now()`, since timestamp columns are `c.integer()`).
- * @returns The remix `db` handle and the underlying `bun:sqlite` instance.
+ * @returns The remix `db` handle, the underlying `bun:sqlite` instance, and the
+ * driver between them, which a test can wrap to intercept statements.
  * @example
  * let { db } = createTestDatabase();
  */
@@ -1072,7 +1078,7 @@ export function createTestDatabase() {
 	applyMigrations(sqliteDb);
 
 	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
-	let db = createDatabase(adapter, { now: () => Date.now() });
+	let db = new Database(adapter, { now: () => Date.now() });
 
-	return { db, sqliteDb };
+	return { db, sqliteDb, adapter };
 }

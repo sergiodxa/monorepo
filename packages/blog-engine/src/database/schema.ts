@@ -14,7 +14,7 @@ import { column as c, table } from "remix/data-table";
  * Engine-owned database schema (WordPress-style `posts` + `post_meta` EAV, plus
  * runtime-defined post types, roles, users, settings, and SQL-backed sessions).
  *
- * These `table()` definitions drive the query layer (`createDatabase(adapter)`).
+ * These `table()` definitions drive the query layer (`new Database(adapter)`).
  * The physical DDL — indexes, foreign keys, cascade rules — lives in the SQL
  * migration strings in {@link ./migrations.ts}; both must be kept in sync.
  */

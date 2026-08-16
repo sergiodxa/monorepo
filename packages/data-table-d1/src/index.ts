@@ -1,10 +1,9 @@
 import type {
-	AdapterCapabilityOverrides,
 	DataManipulationOperation,
 	DataManipulationRequest,
 	DataManipulationResult,
-	DatabaseAdapter,
-	SqlStatement,
+	DatabaseCapabilities,
+	DatabaseDriver,
 	TableRef,
 	TransactionOptions,
 	TransactionToken,
@@ -46,7 +45,7 @@ export interface D1StatementObservation {
 export type D1StatementObserver = (observation: D1StatementObservation) => void;
 
 interface D1AdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
+	capabilities?: Partial<DatabaseCapabilities>;
 	/**
 	 * Optional observer called after every statement the adapter executes, with the
 	 * row counts D1 reported for it. Purely additive: leave it out and the adapter
@@ -78,7 +77,7 @@ interface D1PreparedQuery {
 }
 
 /**
- * Creates a `DatabaseAdapter` backed by a Cloudflare D1 database.
+ * Creates a `DatabaseDriver` backed by a Cloudflare D1 database.
  *
  * SQL generation follows SQLite semantics to match D1 behavior.
  *
@@ -101,12 +100,12 @@ interface D1PreparedQuery {
  * @param db D1 binding used to prepare and execute SQL.
  * @param options Optional capability overrides for adapter feature flags, plus an
  * optional {@link D1StatementObserver} for per-statement row counts.
- * @returns A `DatabaseAdapter` implementation for D1.
+ * @returns A `DatabaseDriver` implementation for D1.
  */
 export function createD1DatabaseAdapter(
 	db: D1Database,
 	options?: D1AdapterOptions,
-): DatabaseAdapter {
+): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
 	/** Read once so the hot path is a closure variable check, not a property lookup. */
@@ -127,12 +126,6 @@ export function createD1DatabaseAdapter(
 			upsert: options?.capabilities?.upsert ?? true,
 			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
-		},
-
-		compileSql(operation: DataManipulationOperation): SqlStatement[] {
-			let statement = compileSqliteStatement(operation);
-
-			return [{ text: statement.text, values: statement.values }];
 		},
 
 		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
@@ -274,6 +267,22 @@ export function createD1DatabaseAdapter(
 		async releaseSavepoint(_token: TransactionToken, _name: string): Promise<void> {
 			throw new Error("D1 adapter savepoints are not supported");
 		},
+
+		/**
+		 * Rejects: a D1 database is provisioned by Cloudflare and reached through a
+		 * binding, so a Worker can drop the tables it knows about but cannot recreate
+		 * the database itself. Callers that want an empty schema should run migrations
+		 * down, or provision a fresh database.
+		 */
+		async wipe(): Promise<void> {
+			throw new Error("D1 adapter wipe is not supported");
+		},
+
+		/**
+		 * The binding is owned by the Worker runtime and outlives every adapter built
+		 * on it, so there is no handle to release.
+		 */
+		close(): void {},
 	};
 }
 

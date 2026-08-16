@@ -552,9 +552,9 @@ test("caches the response after replying", async () => {
 
 ## Related Packages
 
-- [`@pkg/data-table-d1`](/packages/data-table-d1) - `DatabaseAdapter` over a `D1Database`;
+- [`@pkg/data-table-d1`](/packages/data-table-d1) - `DatabaseDriver` over a `D1Database`;
   its generated SQL is covered by the parity tests in this package
-- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseAdapter` over a
+- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - `DatabaseDriver` over a
   Durable Object `SqlStorage`, including real transaction atomicity
 - [`@pkg/kv-cache`](/packages/kv-cache) - Caching over a KV namespace
 - [`@pkg/session-storage-kv`](/packages/session-storage-kv) - Session storage over a KV

@@ -11,8 +11,7 @@ import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
-import { createDatabase } from "remix/data-table";
-import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 import { DataTableAdapter, RATE_LIMIT_HITS_SCHEMA_SQL, rateLimitHits } from "./data-table";
 import { RateLimitError } from "./rate-limit-error";
@@ -24,12 +23,12 @@ const NOW = 1_700_000_000_000;
 function createTestDatabase() {
 	let sqlite = new SqliteDatabase(":memory:");
 	sqlite.run(RATE_LIMIT_HITS_SCHEMA_SQL);
-	return { sqlite, db: createDatabase(createSqliteDatabaseAdapter(sqlite)) };
+	return { sqlite, db: createSqliteDatabase(sqlite) };
 }
 
 /** Builds a database that has no rate limit table, standing in for a missing migration. */
 function createBrokenDatabase() {
-	return createDatabase(createSqliteDatabaseAdapter(new SqliteDatabase(":memory:")));
+	return createSqliteDatabase(new SqliteDatabase(":memory:"));
 }
 
 /** Counts every stored attempt, including ones outside the window. */

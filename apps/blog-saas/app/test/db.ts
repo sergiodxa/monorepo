@@ -1,7 +1,7 @@
 /**
  * In-memory `bun:sqlite` {@link Database} harness for blog-saas unit tests. Applies
  * the control-plane D1 migration to a fresh database and wraps it with the shared
- * `bun:sqlite` `DatabaseAdapter` from `@pkg/blog-engine`, so models and services run
+ * `bun:sqlite` `DatabaseDriver` from `@pkg/blog-engine`, so models and services run
  * against a real SQL engine mirroring the production D1/SqlStorage adapters.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -9,7 +9,7 @@
  */
 import { Database as Sqlite } from "bun:sqlite";
 
-import { type Database, createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 // Raw SQL of the control-plane schema; run verbatim to match production D1.
 import migration from "~/database/migrations/0001-init.sql?raw";
@@ -29,6 +29,6 @@ export interface TestDatabase {
 export function createTestDatabase(): TestDatabase {
 	let sqliteDb = new Sqlite(":memory:");
 	sqliteDb.run(migration);
-	let db = createDatabase(createBunSqliteDatabaseAdapter(sqliteDb));
+	let db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
 	return { db, sqliteDb };
 }

@@ -17,15 +17,16 @@ import { Database as SqliteDatabase } from "bun:sqlite";
 import { describe, expect, mock, test } from "bun:test";
 
 import type { Result } from "@pkg/result";
-import type { DataManipulationRequest, Database, DatabaseAdapter } from "remix/data-table";
+import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
 import { failure, success } from "@pkg/result";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
 
 import {
 	applyMigrations,
+	compileSqliteStatement,
 	createBunSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/lib/test/db";
@@ -90,17 +91,17 @@ function createPlanRecordingDatabase() {
 	applyMigrations(sqliteDb);
 
 	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
-	let observed: DatabaseAdapter = {
+	let observed: DatabaseDriver = {
 		...adapter,
 		async execute(request: DataManipulationRequest) {
-			let compiled = adapter.compileSql(request.operation)[0];
+			let compiled = compileSqliteStatement(request.operation);
 			let result = await adapter.execute(request);
 			plans.push(explain(sqliteDb, compiled?.text ?? "", compiled?.values ?? []));
 			return result;
 		},
 	};
 
-	return { db: createDatabase(observed, { now: () => Date.now() }), plans };
+	return { db: new Database(observed, { now: () => Date.now() }), plans };
 }
 
 /**

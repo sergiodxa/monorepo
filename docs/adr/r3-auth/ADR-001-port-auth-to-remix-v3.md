@@ -244,7 +244,7 @@ These restate the monorepo rules (root `AGENTS.md`) that matter most for this po
 7. **Commands:** Bun and `bunx` only. Tests run from the repo root. `bun format:fix` at the root before every commit. Commit directly on `main` with Conventional Commits.
 8. **DB-facing field names are snake_case**, and timestamp columns are epoch-ms integers (Notes).
 9. **D1 has no transactions.** Multi-step writes (subject + connection + grant + session) need compensation on failure, or a single statement. The OLD APP uses `db.batch(...)` in the GitHub strategy — `remix/data-table` has no batch equivalent, so write those steps sequentially and delete what you created if a later step fails.
-10. **Prefer what Remix v3 ships:** `remix/session-middleware`, `remix/cop-middleware`, `remix/form-data-middleware`, `remix/method-override-middleware`, `remix/render-middleware`, `createAction`/`createController`, `remix/data-schema`. Check `docs/vendor/@remix-run/<package>/README.md` before hand-rolling anything.
+10. **Prefer what Remix v3 ships:** `remix/middleware/session`, `remix/middleware/cop`, `remix/middleware/form-data`, `remix/middleware/method-override`, `remix/middleware/render`, `createAction`/`createController`, `remix/data-schema`. Check `docs/vendor/@remix-run/<package>/README.md` before hand-rolling anything.
 
 ### 1. Where Files Go
 
@@ -288,15 +288,15 @@ Global middleware order in `createRouter({ middleware: [...] })`:
 2. Request logger — `ctx.logger` (a `RequestLogger` from `@pkg/logger`).
 3. `formData()` — parses form bodies into `ctx.formData`.
 4. `methodOverride()` — turns `_method=DELETE` posts into DELETE requests.
-5. `session(cookie, storage)` from `remix/session-middleware` — see §7.
+5. `session(cookie, storage)` from `remix/middleware/session` — see §7.
 6. `i18n` from `@pkg/i18n/middleware` — see §11.
-7. `cop()` from `remix/cop-middleware` — cross-origin protection for browser form posts. **Must bypass** `/oauth/{path...}`, `/api/{path...}`, and `/oidc/logout`: those are cross-origin POSTs from relying parties and server-to-server callers by design. Get this list right or every client login breaks.
+7. `cop()` from `remix/middleware/cop` — cross-origin protection for browser form posts. **Must bypass** `/oauth/{path...}`, `/api/{path...}`, and `/oidc/logout`: those are cross-origin POSTs from relying parties and server-to-server callers by design. Get this list right or every client login breaks.
 8. `renderWith(createHtmlRenderer)` — HTML rendering for `ctx.render(...)`.
 
 Type the array as `Middleware[]` (non-tuple) and declare every context property in the owning middleware module (or `config/router-context.d.ts` for `render`/`formData`):
 
 ```ts
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		logger: RequestLogger;
 		formData: FormData;
@@ -317,7 +317,7 @@ The `Database`'s `now` option must be `() => Date.now()` so `touch` writes epoch
 `routes/web.ts` declares every URL from the URL Surface section using the route helpers, so `.href(...)` is typed everywhere:
 
 ```ts
-import { form, get, post, route } from "remix/fetch-router/routes";
+import { form, get, post, route } from "remix/routes";
 
 export default route({
 	home: get("/"),
@@ -492,7 +492,7 @@ Drop `@pkg/db-helpers` (`pk`, `fk`, `url`, `timestamp` are Drizzle column helper
 
 ### 7. Sessions and Login State
 
-The IdP's own browser session moves to `remix/session-middleware` + `@pkg/session-storage-kv` over the same `KV` namespace:
+The IdP's own browser session moves to `remix/middleware/session` + `@pkg/session-storage-kv` over the same `KV` namespace:
 
 - Cookie name: **`auth:session`**, not `sid`. The record format differs from `createWorkersKVSessionStorage`, and a distinct name means a rollback to the OLD APP finds its own untouched `sid` cookie instead of one it cannot parse.
 - KV prefix `session:`, TTL 30 days, matching the cookie's `maxAge`.
@@ -555,7 +555,7 @@ Keep (not replaceable): `@edgefirst-dev/jwt`, `@edgefirst-dev/r2-file-storage`, 
 
 Drop: `@pkg/ui`, `@pkg/cn`, `@pkg/db-helpers`, `bcryptjs` (the production `credentials` table is empty, so no stored bcrypt hash exists and there is no migration risk — see §5; `@pkg/crypto`, listed here originally as not adopted, **is** adopted and is the only password implementation), `react`, `react-dom`, `react-router`, `@react-router/*`, `drizzle-orm`, `drizzle-kit`, `zod`, `tailwindcss`, `@tailwindcss/vite`, `tailwindcss-animate`, `lucide-react`, `remix-auth`, `remix-auth-oauth2`, `remix-i18next`, `remix-utils`, `react-i18next`, `i18next-*`, `isbot`, `dequal`, `date-fns`, `pretty-cache-header`, `@mjackson/file-storage` (transitively used by the R2 storage — keep only if still imported), `@pkg/api-client` if unused after the port.
 
-**GitHub login uses `remix/auth`** (decided and implemented in Phase 3). `createGitHubAuthProvider` plus `startExternalAuth` / `finishExternalAuth` replaces `remix-auth-oauth2` and the hand-rolled alternative is not built. It fits an IdP acting as a downstream client exactly: the provider's default scopes are already `read:user user:email`, the in-flight transaction (state and PKCE verifier) is stored in the session this app already has rather than in a second cookie, and `finishExternalAuth` returns the identity as a plain result without writing any app-owned auth record — so the server is free to resolve it to a subject and issue its own authorization code. `completeAuth()` and `remix/auth-middleware` are deliberately not used: this app's own session is a pair of tokens it issued itself, not a provider identity. The flow also gains PKCE against GitHub for free, which the previous strategy did not send.
+**GitHub login uses `remix/auth`** (decided and implemented in Phase 3). `createGitHubAuthProvider` plus `startExternalAuth` / `finishExternalAuth` replaces `remix-auth-oauth2` and the hand-rolled alternative is not built. It fits an IdP acting as a downstream client exactly: the provider's default scopes are already `read:user user:email`, the in-flight transaction (state and PKCE verifier) is stored in the session this app already has rather than in a second cookie, and `finishExternalAuth` returns the identity as a plain result without writing any app-owned auth record — so the server is free to resolve it to a subject and issue its own authorization code. `completeAuth()` and `remix/middleware/auth` are deliberately not used: this app's own session is a pair of tokens it issued itself, not a provider identity. The flow also gains PKCE against GitHub for free, which the previous strategy did not send.
 
 `@octokit/core` is dropped with it — the provider fetches the profile and, when the profile carries no public address, the primary verified email itself. `app/services/github-login.ts` therefore holds only the provider construction (built per request, so the callback URL matches the origin the person is actually on) and the subject/connection/customer provisioning.
 
@@ -967,7 +967,7 @@ Rules for every phase: work only inside `apps/r3-auth` and this ADR file (plus t
 2. Fill `wrangler.jsonc` per §13 (no consumer, no crons, no route); run `bun cf:typegen`.
 3. Replace the template's `infrastructure/database` adapter with `@pkg/data-table-d1`; delete `resources/components/timer.tsx` and any demo leftovers.
 4. Copy the 8 migrations into `database/migrations/`; write `database/schema.ts` for all six tables; `bun db:local:migrate` and verify locally.
-5. Port the six models into `app/data/` with tests against `remix/data-table-sqlite`.
+5. Port the six models into `app/data/` with tests against `remix/data-table/sqlite`.
 6. Create `app/lib/container.ts` (Database with the epoch-ms `now`, PolarClient, rate limiters) and `config/router-context.d.ts`.
 
 ### Phase 1: The OIDC engine
@@ -1099,7 +1099,7 @@ Would inherit the domain, queue, and crons automatically.
 
   **Deviations from this ADR, all recorded here rather than guessed at:**
 
-  1. §14 asks for `createSqliteDatabaseAdapter` from `remix/data-table/sqlite`; the export path is `remix/data-table-sqlite`. The shipped adapter was tried first and works for everything this app does (relations, counts, scoped deletes, `returning`), so `app/lib/test/db.ts` uses it and no adapter is hand-rolled.
+  1. §14 asks for `createSqliteDatabaseAdapter` from `remix/data-table/sqlite`; the export path is `remix/data-table/sqlite`. The shipped adapter was tried first and works for everything this app does (relations, counts, scoped deletes, `returning`), so `app/lib/test/db.ts` uses it and no adapter is hand-rolled.
   2. §6 says `Customer` moves onto `@pkg/polar`'s `createCustomer`/`findCustomerByEmail`/`updateCustomer`. `createCustomer` accepts no external id, so `Customer.create` creates and then links with `updateCustomer`. A failure between the two leaves an unlinked customer, which `findOrCreateByEmail` links on the next sign-in — so the two-step write needs no compensation.
   3. `AUTH_SERVER_NAME` and `AUTH_SERVER_CLIENT_ID` are needed by `Client.ensureAuthServerClient`, so `app/config.ts` exists already holding just those two. Phase 1 fills in the rest of the file rather than creating it.
   4. §13's `.oxfmtrc.json` entry is not added: the only override there is a Tailwind stylesheet path, and this app has no Tailwind, so an entry would be a no-op. `.claude/launch.json` is left to Phase 7 with the rest of the developer-facing config.
@@ -1355,7 +1355,7 @@ Would inherit the domain, queue, and crons automatically.
   3. The completion log line reports the number of rows the delete statement actually removed, where the source app reported the length of the list it had counted a moment earlier. Same number in practice, and the smaller lie is not worth keeping.
   4. `test/setup.ts` (the monorepo-wide test preload) now also exports `waitUntil` from its virtual `cloudflare:workers` module. A module's export set is fixed at link time, so any source file statically importing `waitUntil` fails to load before a per-file `mock.module` can replace the stub — which broke `require-subject.test.ts` the moment the API controller entered the router's module graph. The stub's `waitUntil` only swallows rejections; a test that needs to observe background work still supplies its own.
   5. `app/lib/test/http.ts` gained the same `waitUntil` in its two `cloudflare:workers` mocks, so a test can assert on a cache entry written in the background after one `await Bun.sleep(0)`.
-  6. **`@pkg/auth-sdk`'s `authenticate()` cannot be driven through MSW, and the reason is worth writing down.** It posts a `FormData` body, and with MSW's interception active, `remix/form-data-middleware` yields an **empty** `FormData` for a multipart body — reduced to a minimal case: the same request parses correctly through `parseFormData` directly and through a route added to the same router, but the token endpoint sees nothing, and removing `server.listen()` makes it pass. The failure is silent (an empty body, not an error), which is what makes it worth a note rather than a shrug. Multipart parsing is proven without MSW instead, by a test posting the library's exact bytes — multipart body plus base64url Basic header — so the wire format is covered even though the library's own call is not. This is a test-environment interaction, not an app defect; nothing was changed in the app for it, and it was not established which of MSW's patches causes it.
+  6. **`@pkg/auth-sdk`'s `authenticate()` cannot be driven through MSW, and the reason is worth writing down.** It posts a `FormData` body, and with MSW's interception active, `remix/middleware/form-data` yields an **empty** `FormData` for a multipart body — reduced to a minimal case: the same request parses correctly through `parseFormData` directly and through a route added to the same router, but the token endpoint sees nothing, and removing `server.listen()` makes it pass. The failure is silent (an empty body, not an error), which is what makes it worth a note rather than a shrug. Multipart parsing is proven without MSW instead, by a test posting the library's exact bytes — multipart body plus base64url Basic header — so the wire format is covered even though the library's own call is not. This is a test-environment interaction, not an app defect; nothing was changed in the app for it, and it was not established which of MSW's patches causes it.
   7. `app/http/validators/queue.ts` holds the message schema rather than `bootstrap/worker.ts`, matching where every other validator lives.
 
 - [x] Email foundation and the new-sign-in notice (§17, outside the numbered phases)

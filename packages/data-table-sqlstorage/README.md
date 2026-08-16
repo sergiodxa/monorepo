@@ -1,11 +1,11 @@
 # @pkg/data-table-sqlstorage
 
-A `remix/data-table` `DatabaseAdapter` backed by a Cloudflare Durable Object `SqlStorage`.
+A `remix/data-table` `DatabaseDriver` backed by a Cloudflare Durable Object `SqlStorage`.
 
 ## Overview
 
 [`remix/data-table`](https://github.com/remix-run/remix) models talk to a database
-through a `DatabaseAdapter`. This package implements that adapter over a Durable
+through a `DatabaseDriver`. This package implements that adapter over a Durable
 Object's embedded SQLite (`ctx.storage.sql`), so the same models, queries, and
 migrations you write for D1 or `node:sqlite` run unchanged inside a Durable Object.
 
@@ -25,10 +25,10 @@ Object and any other DO-backed app can share one adapter (see
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 export class Tenant extends DurableObject {
-	#db = createDatabase(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
+	#db = new Database(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
 
 	async listUsers() {
 		return this.#db.findMany(users);
@@ -38,28 +38,28 @@ export class Tenant extends DurableObject {
 
 ## API
 
-### `createSQLStorageDatabaseAdapter(db: SqlStorage, options?: SqlStorageAdapterOptions): DatabaseAdapter`
+### `createSQLStorageDatabaseAdapter(db: SqlStorage, options?: SqlStorageAdapterOptions): DatabaseDriver`
 
-Creates a `remix/data-table` `DatabaseAdapter` that executes against a Durable
+Creates a `remix/data-table` `DatabaseDriver` that executes against a Durable
 Object `SqlStorage` handle.
 
 **Parameters:**
 
 - `db`: The `SqlStorage` handle to execute SQL against, typically `ctx.storage.sql`.
 - `options.capabilities`: Optional overrides for the adapter's feature flags
-  (`AdapterCapabilityOverrides` from `remix/data-table`). Defaults: `returning`,
+  (`Partial<DatabaseCapabilities>` from `remix/data-table`). Defaults: `returning`,
   `upsert`, and `transactionalDdl` are `true`; `savepoints` and `migrationLock` are
   `false`.
 
 **Returns:**
 
-- A `DatabaseAdapter` you pass to `createDatabase(...)`.
+- A `DatabaseDriver` you pass to `new Database(...)`.
 
 **Example:**
 
 ```typescript
 let adapter = createSQLStorageDatabaseAdapter(ctx.storage.sql);
-let db = createDatabase(adapter);
+let db = new Database(adapter);
 ```
 
 ## Pattern: Running migrations against a Durable Object
@@ -75,7 +75,7 @@ await adapter.executeScript("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY K
 ## Pattern: Hosting `@pkg/oidc-provider` in a tenant Durable Object
 
 The adapter is what lets the host-agnostic provider run inside a DO — the host
-injects it and the provider only ever sees the `DatabaseAdapter` interface:
+injects it and the provider only ever sees the `DatabaseDriver` interface:
 
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";

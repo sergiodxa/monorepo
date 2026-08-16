@@ -1,11 +1,11 @@
 # @pkg/data-table-d1
 
-A `remix/data-table` `DatabaseAdapter` backed by Cloudflare D1.
+A `remix/data-table` `DatabaseDriver` backed by Cloudflare D1.
 
 ## Overview
 
 [`remix/data-table`](https://github.com/remix-run/remix) models talk to a database
-through a `DatabaseAdapter`. This package implements that adapter over a Cloudflare
+through a `DatabaseDriver`. This package implements that adapter over a Cloudflare
 D1 binding, so `remix/data-table` models, queries, and migrations run against D1 in
 a Worker.
 
@@ -38,11 +38,11 @@ and other D1-backed apps can share one adapter (see
 
 ```typescript
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 export default {
 	async fetch(request, env) {
-		let db = createDatabase(createD1DatabaseAdapter(env.DB));
+		let db = new Database(createD1DatabaseAdapter(env.DB));
 		let users = await db.findMany(usersTable);
 		return Response.json(users);
 	},
@@ -51,16 +51,16 @@ export default {
 
 ## API
 
-### `createD1DatabaseAdapter(db: D1Database, options?: D1AdapterOptions): DatabaseAdapter`
+### `createD1DatabaseAdapter(db: D1Database, options?: D1AdapterOptions): DatabaseDriver`
 
-Creates a `remix/data-table` `DatabaseAdapter` that executes against a Cloudflare
+Creates a `remix/data-table` `DatabaseDriver` that executes against a Cloudflare
 D1 binding.
 
 **Parameters:**
 
 - `db`: The D1 binding to execute SQL against (e.g. `env.DB`).
 - `options.capabilities`: Optional overrides for the adapter's feature flags
-  (`AdapterCapabilityOverrides` from `remix/data-table`). Defaults: `returning`,
+  (`Partial<DatabaseCapabilities>` from `remix/data-table`). Defaults: `returning`,
   `upsert`, and `transactionalDdl` are `true`; `savepoints` and `migrationLock` are
   `false`.
 - `options.onStatement`: Optional `D1StatementObserver` called after every executed
@@ -69,13 +69,13 @@ D1 binding.
 
 **Returns:**
 
-- A `DatabaseAdapter` you pass to `createDatabase(...)`.
+- A `DatabaseDriver` you pass to `new Database(...)`.
 
 **Example:**
 
 ```typescript
 let adapter = createD1DatabaseAdapter(env.DB);
-let db = createDatabase(adapter);
+let db = new Database(adapter);
 ```
 
 ## Pattern: Attributing D1 rows read and written per query
@@ -90,7 +90,7 @@ extra statement and no extra billable operation:
 ```typescript
 let usage = { statements: 0, rowsRead: 0, rowsWritten: 0 };
 
-let db = createDatabase(
+let db = new Database(
 	createD1DatabaseAdapter(env.DB, {
 		onStatement({ rowsRead, rowsWritten }) {
 			usage.statements += 1;
@@ -110,18 +110,18 @@ D1 omits the corresponding `meta` field rather than being estimated.
 
 ## Pattern: Caching the database per isolate
 
-`createDatabase` is cheap, but the binding is stable for the isolate, so build the
+`new Database()` is cheap, but the binding is stable for the isolate, so build the
 adapter once and reuse it across requests:
 
 ```typescript
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
-let db: ReturnType<typeof createDatabase> | null = null;
+let db: Database | null = null;
 
 export default {
 	async fetch(request, env) {
-		db ??= createDatabase(createD1DatabaseAdapter(env.DB));
+		db ??= new Database(createD1DatabaseAdapter(env.DB));
 		return Response.json(await db.findMany(usersTable));
 	},
 } satisfies ExportedHandler<Env>;
@@ -130,7 +130,7 @@ export default {
 ## Pattern: Self-hosting `@pkg/oidc-provider` on D1
 
 The adapter is what lets the host-agnostic provider run on a plain Worker; the host
-injects it and the provider only ever sees the `DatabaseAdapter` interface:
+injects it and the provider only ever sees the `DatabaseDriver` interface:
 
 ```typescript
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";

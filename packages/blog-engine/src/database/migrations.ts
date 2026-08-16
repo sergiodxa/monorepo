@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { DatabaseAdapter } from "remix/data-table";
+import type { DatabaseDriver } from "remix/data-table";
 
-import { column as c, createDatabase, table } from "remix/data-table";
+import { column as c, Database, table } from "remix/data-table";
 
 /** An ordered, id-tagged schema migration (SQL bodies are inlined). */
 interface EngineMigration {
@@ -157,12 +157,12 @@ const journal = table({
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
  */
-export async function runMigrations(adapter: DatabaseAdapter): Promise<{ applied: string[] }> {
+export async function runMigrations(adapter: DatabaseDriver): Promise<{ applied: string[] }> {
 	await adapter.executeScript(
 		"CREATE TABLE IF NOT EXISTS blog_engine_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL);",
 	);
 
-	let db = createDatabase(adapter);
+	let db = new Database(adapter);
 	let existing = await db.findMany(journal);
 	let done = new Set(existing.map((row) => row.id));
 

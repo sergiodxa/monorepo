@@ -9,8 +9,7 @@
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import type { createDatabase } from "remix/data-table";
-
+import { Database } from "remix/data-table";
 import { createSession } from "remix/session";
 
 import { createTestDatabase } from "../shared/test/db";
@@ -19,7 +18,7 @@ import { sessions } from "./schema";
 import { SqlSessionStorage } from "./session-storage";
 
 describe("SqlSessionStorage expiry", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());

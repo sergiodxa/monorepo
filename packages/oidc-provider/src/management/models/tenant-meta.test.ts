@@ -10,13 +10,13 @@
 import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
 
 import TenantMeta from "./tenant-meta";
 
-type Db = ReturnType<typeof createDatabase>;
+type Db = Database;
 
 describe("TenantMeta per-Database issuer cache isolation", () => {
 	let sqliteA: SqliteDatabase;
@@ -29,11 +29,11 @@ describe("TenantMeta per-Database issuer cache isolation", () => {
 
 		sqliteA = new SqliteDatabase(":memory:");
 		sqliteA.run(migration);
-		dbA = createDatabase(createBunSqliteDatabaseAdapter(sqliteA));
+		dbA = new Database(createBunSqliteDatabaseAdapter(sqliteA));
 
 		sqliteB = new SqliteDatabase(":memory:");
 		sqliteB.run(migration);
-		dbB = createDatabase(createBunSqliteDatabaseAdapter(sqliteB));
+		dbB = new Database(createBunSqliteDatabaseAdapter(sqliteB));
 	});
 
 	afterEach(() => {

@@ -19,19 +19,19 @@ import { describe, expect, mock, spyOn, test } from "bun:test";
 import type {
 	DataManipulationRequest,
 	DataManipulationResult,
-	DatabaseAdapter,
+	DatabaseDriver,
 } from "remix/data-table";
-import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createTranslator } from "@pkg/i18n";
 import { logger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
-import { Database, createDatabase } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { renderWith } from "remix/render-middleware";
+import { Database } from "remix/data-table";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -151,7 +151,7 @@ function createRawFailingDatabase(
 ): Database {
 	let inner = createBunSqliteDatabaseAdapter(sqliteDb);
 
-	let adapter: DatabaseAdapter = {
+	let adapter: DatabaseDriver = {
 		...inner,
 		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
 			if (request.operation.kind === "raw") {
@@ -162,7 +162,7 @@ function createRawFailingDatabase(
 		},
 	};
 
-	return createDatabase(adapter, { now: () => Date.now() });
+	return new Database(adapter, { now: () => Date.now() });
 }
 
 /** Sends a GET request through a minimal router mapping only the monitor usage card route. */

@@ -1,5 +1,5 @@
 /**
- * In-memory `bun:sqlite` {@link DatabaseAdapter} for unit tests, mirroring the
+ * In-memory `bun:sqlite` {@link DatabaseDriver} for unit tests, mirroring the
  * production SqlStorage/D1 adapters so models and controllers can run against a
  * real SQL engine. Ported from the oidc-provider test harness; `createTestDatabase`
  * applies the engine's own migrations so seeded roles/settings are present.
@@ -7,30 +7,29 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database, type SQLQueryBindings } from "bun:sqlite";
+import { Database as SqliteDatabase, type SQLQueryBindings } from "bun:sqlite";
 
 import type {
-	AdapterCapabilityOverrides,
 	DataManipulationOperation,
 	DataManipulationRequest,
 	DataManipulationResult,
-	DatabaseAdapter,
-	SqlStatement,
+	DatabaseCapabilities,
+	DatabaseDriver,
 	TableRef,
 	TransactionOptions,
 	TransactionToken,
 } from "remix/data-table";
 
-import { type Predicate, createDatabase, getTableName, getTablePrimaryKey } from "remix/data-table";
+import { Database, getTableName, getTablePrimaryKey, type Predicate } from "remix/data-table";
 
 import { runMigrations } from "../../database/migrations";
 
 interface BunSqliteAdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
+	capabilities?: Partial<DatabaseCapabilities>;
 }
 
 /**
- * Creates a {@link DatabaseAdapter} over a `bun:sqlite` database that mirrors the
+ * Creates a {@link DatabaseDriver} over a `bun:sqlite` database that mirrors the
  * production SqlStorage adapter, so models and controllers can be exercised against a
  * real SQL engine in tests.
  * @param db - The `bun:sqlite` database to wrap.
@@ -38,9 +37,9 @@ interface BunSqliteAdapterOptions {
  * @returns A data-table adapter backed by the given SQLite database.
  */
 export function createBunSqliteDatabaseAdapter(
-	db: Database,
+	db: SqliteDatabase,
 	options?: BunSqliteAdapterOptions,
-): DatabaseAdapter {
+): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
 
@@ -59,12 +58,6 @@ export function createBunSqliteDatabaseAdapter(
 			upsert: options?.capabilities?.upsert ?? true,
 			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
-		},
-
-		compileSql(operation: DataManipulationOperation): SqlStatement[] {
-			let statement = compileSqliteStatement(operation);
-
-			return [{ text: statement.text, values: statement.values }];
 		},
 
 		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
@@ -182,6 +175,18 @@ export function createBunSqliteDatabaseAdapter(
 			assertTransaction(token);
 			db.run("RELEASE SAVEPOINT " + quoteIdentifier(name));
 		},
+
+		/**
+		 * Rejects: the SQLite database is created and handed in by the caller, which is
+		 * also the only party that knows how to build an empty one. Tests that want a
+		 * clean schema should build a new test database.
+		 */
+		async wipe(): Promise<void> {
+			throw new Error("bun:sqlite test adapter wipe is not supported");
+		},
+
+		/** The caller owns the `bun:sqlite` handle, so there is nothing to release. */
+		close(): void {},
 	};
 }
 
@@ -853,10 +858,10 @@ function isInsertOperation(
  * @returns The `remix/data-table` `db` handle and the raw `bun:sqlite` database.
  */
 export async function createTestDatabase() {
-	let sqliteDb = new Database(":memory:");
+	let sqliteDb = new SqliteDatabase(":memory:");
 	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
 	await runMigrations(adapter);
-	let db = createDatabase(adapter);
+	let db = new Database(adapter);
 
 	return { db, sqliteDb };
 }

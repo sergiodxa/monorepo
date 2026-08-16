@@ -1,10 +1,9 @@
 import type {
-	AdapterCapabilityOverrides,
 	DataManipulationOperation,
 	DataManipulationRequest,
 	DataManipulationResult,
-	DatabaseAdapter,
-	SqlStatement,
+	DatabaseCapabilities,
+	DatabaseDriver,
 	TableRef,
 	TransactionOptions,
 	TransactionToken,
@@ -13,11 +12,11 @@ import type {
 import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
 interface SqlStorageAdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
+	capabilities?: Partial<DatabaseCapabilities>;
 }
 
 /**
- * Creates a `DatabaseAdapter` backed by a Cloudflare Durable Object `SqlStorage`.
+ * Creates a `DatabaseDriver` backed by a Cloudflare Durable Object `SqlStorage`.
  *
  * SQL generation follows SQLite semantics. Durable Object SQLite (`ctx.storage.sql`)
  * runs synchronously inside the object and accepts `BEGIN`/`COMMIT`/`ROLLBACK` and
@@ -26,12 +25,12 @@ interface SqlStorageAdapterOptions {
  * as a unit on failure. Nested transactions are implemented with savepoints.
  * @param db `SqlStorage` handle used to execute SQL.
  * @param options Optional capability overrides for adapter feature flags.
- * @returns A `DatabaseAdapter` implementation for `SqlStorage`.
+ * @returns A `DatabaseDriver` implementation for `SqlStorage`.
  */
 export function createSQLStorageDatabaseAdapter(
 	db: SqlStorage,
 	options?: SqlStorageAdapterOptions,
-): DatabaseAdapter {
+): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
 
@@ -50,12 +49,6 @@ export function createSQLStorageDatabaseAdapter(
 			upsert: options?.capabilities?.upsert ?? true,
 			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
-		},
-
-		compileSql(operation: DataManipulationOperation): SqlStatement[] {
-			let statement = compileSqliteStatement(operation);
-
-			return [{ text: statement.text, values: statement.values }];
 		},
 
 		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
@@ -224,6 +217,22 @@ export function createSQLStorageDatabaseAdapter(
 			assertTransaction(token);
 			db.exec("RELEASE SAVEPOINT " + quoteIdentifier(name));
 		},
+
+		/**
+		 * Rejects: the SQLite database belongs to the Durable Object and is created and
+		 * destroyed with it, so an adapter holding `ctx.storage.sql` can drop the tables
+		 * it knows about but cannot recreate the database. Callers that want an empty
+		 * schema should run migrations down, or delete the object's storage.
+		 */
+		async wipe(): Promise<void> {
+			throw new Error("SqlStorage adapter wipe is not supported");
+		},
+
+		/**
+		 * The handle is owned by the Durable Object and outlives every adapter built on
+		 * it, so there is no connection to release.
+		 */
+		close(): void {},
 	};
 }
 

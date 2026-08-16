@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database } from "bun:sqlite";
+import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import bcrypt from "bcryptjs";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
@@ -28,15 +28,15 @@ const LEGACY_BCRYPT_COST = 10;
 const CURRENT_PREFIX = "$pbkdf2-sha256$";
 
 describe("Secret", () => {
-	let sqliteDb: Database;
-	let db: ReturnType<typeof createDatabase>;
+	let sqliteDb: SqliteDatabase;
+	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new Database(":memory:");
+		sqliteDb = new SqliteDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
 		sqliteDb.run(migration);
 		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
-		db = createDatabase(adapter);
+		db = new Database(adapter);
 	});
 
 	afterEach(() => {

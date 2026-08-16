@@ -19,7 +19,7 @@ import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { createDatabase, Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { recordD1Statement, trackJobCost } from "~/app/services/cost";
@@ -54,10 +54,12 @@ setJobUsageTracker(trackJobCost);
  * `onStatement` costs no extra query: D1 already returns the row counts in every
  * response's `meta`, and the adapter already reads `meta` to normalise `affectedRows`.
  */
-container.singleton(Database, () =>
-	createDatabase(createD1DatabaseAdapter(env.DB, { onStatement: recordD1Statement }), {
-		now: () => Date.now(),
-	}),
+container.singleton(
+	Database,
+	() =>
+		new Database(createD1DatabaseAdapter(env.DB, { onStatement: recordD1Statement }), {
+			now: () => Date.now(),
+		}),
 );
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 /**

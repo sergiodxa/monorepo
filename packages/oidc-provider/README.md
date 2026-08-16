@@ -7,12 +7,12 @@ A host-agnostic OAuth 2.0 / OpenID Connect provider with passkey authentication.
 This package is a complete OIDC/OAuth2 authorization server — authorize, token,
 userinfo, introspect, revoke, discovery, JWKS, RP-initiated logout — with passkey
 (WebAuthn) authentication, a management API, and server-rendered UI. It is built on
-[`remix/fetch-router`](https://github.com/remix-run/remix) and `remix/data-table`.
+[`remix/router`](https://github.com/remix-run/remix) and `remix/data-table`.
 
 The same provider runs inside a Cloudflare Durable Object (the multi-tenant
 `apps/auth-saas` platform) or on a plain Worker with D1 (self-hosted), the way
 WordPress core is independent of WordPress.com. It never imports Durable Object or
-Cloudflare APIs: the host injects a `remix/data-table` `DatabaseAdapter` and an
+Cloudflare APIs: the host injects a `remix/data-table` `DatabaseDriver` and an
 HMAC secret, and everything the provider needs at request time (issuer, signing
 keys, clients, subjects) lives in its own database.
 
@@ -88,7 +88,7 @@ Creates a provider instance bound to injected storage and secrets.
 
 **Parameters:**
 
-- `config.database`: A `remix/data-table` `DatabaseAdapter`. Use
+- `config.database`: A `remix/data-table` `DatabaseDriver`. Use
   [`@pkg/data-table-d1`](/packages/data-table-d1) for a self-hosted Worker or
   [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) for a Durable Object.
 - `config.internalSecret`: HMAC secret shared with the control plane; used to verify
@@ -174,7 +174,7 @@ management-auth middleware; exported for tests and custom hosts.
 
 ```typescript
 interface OidcProviderConfig {
-	database: DatabaseAdapter;
+	database: DatabaseDriver;
 	internalSecret: string;
 	analytics?: AnalyticsSink;
 	migrations?: "auto" | "manual";

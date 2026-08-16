@@ -1,5 +1,5 @@
 /**
- * Tests for the SqlStorage `DatabaseAdapter`, focused on transaction atomicity.
+ * Tests for the SqlStorage `DatabaseDriver`, focused on transaction atomicity.
  *
  * Durable Object `SqlStorage` runs synchronously and is not available in a plain
  * `bun:test` process, so these tests drive the real adapter through a small
@@ -16,7 +16,7 @@
 import { Database as BunSqlite, type SQLQueryBindings } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { column as c, createDatabase, table } from "remix/data-table";
+import { column as c, Database, table } from "remix/data-table";
 
 import { createSQLStorageDatabaseAdapter } from "./index";
 
@@ -79,7 +79,7 @@ function setup() {
 	sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
 
 	let adapter = createSQLStorageDatabaseAdapter(createSqlStorageShim(sqlite));
-	let db = createDatabase(adapter);
+	let db = new Database(adapter);
 
 	return { db, sqlite };
 }

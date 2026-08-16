@@ -11,13 +11,13 @@ import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { JWK, JWT } from "@pkg/jwt";
-import { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
 
 import SigningKey from "./signing-key";
 
-type Db = ReturnType<typeof createDatabase>;
+type Db = Database;
 
 describe("SigningKey per-Database cache isolation", () => {
 	let sqliteA: SqliteDatabase;
@@ -30,11 +30,11 @@ describe("SigningKey per-Database cache isolation", () => {
 
 		sqliteA = new SqliteDatabase(":memory:");
 		sqliteA.run(migration);
-		dbA = createDatabase(createBunSqliteDatabaseAdapter(sqliteA));
+		dbA = new Database(createBunSqliteDatabaseAdapter(sqliteA));
 
 		sqliteB = new SqliteDatabase(":memory:");
 		sqliteB.run(migration);
-		dbB = createDatabase(createBunSqliteDatabaseAdapter(sqliteB));
+		dbB = new Database(createBunSqliteDatabaseAdapter(sqliteB));
 	});
 
 	afterEach(() => {
@@ -109,7 +109,7 @@ describe("SigningKey algorithm handling", () => {
 
 		sqlite = new SqliteDatabase(":memory:");
 		sqlite.run(migration);
-		db = createDatabase(createBunSqliteDatabaseAdapter(sqlite));
+		db = new Database(createBunSqliteDatabaseAdapter(sqlite));
 	});
 
 	afterEach(() => sqlite.close());

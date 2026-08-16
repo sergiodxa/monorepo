@@ -15,7 +15,7 @@ import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { createDatabase, Database } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { MailTransport } from "~/app/services/mail-transport";
@@ -37,8 +37,9 @@ export const container = new ServiceContainer();
  * The library's default `now()` returns a `Date`, which D1 cannot bind — and which
  * would sort and compare wrongly against every existing row even if it could.
  */
-container.singleton(Database, () =>
-	createDatabase(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
+container.singleton(
+	Database,
+	() => new Database(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
 );
 
 /**

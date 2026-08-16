@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import type { createDatabase } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import { ADMIN_PERMISSIONS, PERMISSION_KEYS } from "../../shared/permissions";
 import { createTestDatabase } from "../../shared/test/db";
@@ -16,7 +16,7 @@ import { createTestDatabase } from "../../shared/test/db";
 import { Role } from "./role";
 
 describe("Role permission resolution", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());
@@ -63,7 +63,7 @@ describe("Role permission resolution", () => {
 });
 
 describe("Role custom-role creation", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());
@@ -112,7 +112,7 @@ describe("Role custom-role creation", () => {
 });
 
 describe("Role built-in protection", () => {
-	let db: ReturnType<typeof createDatabase>;
+	let db: Database;
 
 	beforeEach(async () => {
 		({ db } = await createTestDatabase());

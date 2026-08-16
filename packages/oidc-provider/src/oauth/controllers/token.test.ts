@@ -13,10 +13,10 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { Logger } from "@pkg/logger/request";
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Database, createDatabase } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
+import { Database } from "remix/data-table";
+import { asyncContext } from "remix/middleware/async-context";
+import { formData } from "remix/middleware/form-data";
+import { createRouter } from "remix/router";
 
 import Client from "../../clients/models/client";
 import RedirectUri from "../../clients/models/redirect-uri";
@@ -33,7 +33,7 @@ import Session from "../models/session";
 
 import token from "./token";
 
-type Db = ReturnType<typeof createDatabase>;
+type Db = Database;
 
 /**
  * POSTs an application/x-www-form-urlencoded body to the token endpoint through a
@@ -69,7 +69,7 @@ describe("POST /oauth/token — allowed_resources enforcement", () => {
 		sqliteDb = new SqliteDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
 		sqliteDb.run(migration);
-		db = createDatabase(createBunSqliteDatabaseAdapter(sqliteDb));
+		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
 
 		await TenantMeta.setIssuer(db, "auth.example.com");
 		await SigningKey.generate(db);
@@ -156,7 +156,7 @@ describe("POST /oauth/token — refresh-token gating on offline_access", () => {
 		sqliteDb = new SqliteDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
 		sqliteDb.run(migration);
-		db = createDatabase(createBunSqliteDatabaseAdapter(sqliteDb));
+		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
 
 		await TenantMeta.setIssuer(db, "auth.example.com");
 		await SigningKey.generate(db);

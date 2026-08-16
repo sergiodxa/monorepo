@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { column as c, createDatabase, table } from "remix/data-table";
+import { column as c, Database, table } from "remix/data-table";
 
 import { createD1Database } from "./d1";
 import { createSqlStorage } from "./sql-storage";
@@ -35,14 +35,14 @@ let settings = table({
 async function setupD1() {
 	let binding = createD1Database();
 	await binding.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
-	return createDatabase(createD1DatabaseAdapter(binding));
+	return new Database(createD1DatabaseAdapter(binding));
 }
 
 /** Builds a `remix/data-table` handle over the SqlStorage mock with `users` created. */
 function setupSqlStorage() {
 	let binding = createSqlStorage();
 	binding.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
-	return createDatabase(createSQLStorageDatabaseAdapter(binding));
+	return new Database(createSQLStorageDatabaseAdapter(binding));
 }
 
 describe("createD1Database with the D1 data-table adapter", () => {
