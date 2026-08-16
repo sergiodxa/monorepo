@@ -3,29 +3,43 @@
  * success/failure `Result` mapping, the KV-cached variant's cache-hit vs cache-miss
  * branching, the cache-key/TTL helpers, the ping-result write path, and every derived
  * dashboard query (team summaries' health-derivation rules, sparkline
- * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings (`KV`, `PING_RESULTS`)
- * are stubbed via `mock.module("cloudflare:workers", ...)` and the Analytics Engine
- * SQL HTTP API is stubbed via a mocked global `fetch`.
+ * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings are
+ * an in-memory KV namespace and a recording Analytics Engine dataset installed through
+ * `mock.module("cloudflare:workers", ...)`, so a cache hit is a value the writer really
+ * stored; the Analytics Engine SQL HTTP API is stubbed via a mocked global `fetch`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { isFailure } from "@pkg/result";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
-let kvPutMock = mock(async (..._args: unknown[]) => undefined);
-let writeDataPointMock = mock((..._args: unknown[]) => undefined);
+/**
+ * The dashboard cache and the ping dataset. Both live at module scope because the module
+ * under test captures `env` on import.
+ */
+let kv = createKVNamespace();
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
+
+/**
+ * The cache is spied on as well as stored to: a write's `expirationTtl` and a read that
+ * never happened are the two things a stored value cannot express.
+ */
+let kvGet = spyOn(kv, "get");
+let kvPut = spyOn(kv, "put");
 
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: kvPutMock },
-		PING_RESULTS: { writeDataPoint: writeDataPointMock },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+	}),
 }));
 
 let {
@@ -44,12 +58,15 @@ let {
 /** The Analytics Engine SQL API endpoint every query POSTs to. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
 
-beforeEach(() => {
-	kvGetMock.mockClear();
-	kvPutMock.mockClear();
-	writeDataPointMock.mockClear();
-	kvGetMock.mockImplementation(async () => null);
-	kvPutMock.mockImplementation(async () => undefined);
+beforeEach(async () => {
+	// The namespace outlives the test that seeded it, so every key goes before the next one
+	// runs — a cache entry inherited from an earlier test would turn a miss into a hit.
+	let { keys } = await kv.list();
+	for (let key of keys) await kv.delete(key.name);
+
+	kvGet.mockClear();
+	kvPut.mockClear();
+	pingResults.reset();
 	globalThis.fetch = mock(
 		async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
 	) as unknown as typeof fetch;
@@ -107,7 +124,7 @@ describe("queryAnalytics", () => {
 
 describe("queryAnalyticsCached", () => {
 	test("returns the cached value from KV without querying Analytics Engine on a cache hit", async () => {
-		kvGetMock.mockImplementation(async () => [{ cached: true }]);
+		await kv.put("cache:key", JSON.stringify([{ cached: true }]));
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -115,12 +132,12 @@ describe("queryAnalyticsCached", () => {
 
 		expect(fetchMock).not.toHaveBeenCalled();
 		if (isFailure(result)) throw new Error("expected success");
+		// Parsed rows rather than the stored text, so the read asked KV to decode the JSON.
 		expect(result.data).toEqual([{ cached: true }]);
-		expect(kvGetMock).toHaveBeenCalledWith("cache:key", "json");
+		expect(kvGet).toHaveBeenCalledWith("cache:key", "json");
 	});
 
 	test("queries Analytics Engine and populates the KV cache on a cache miss", async () => {
-		kvGetMock.mockImplementation(async () => null);
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [{ fresh: true }] })),
 		) as unknown as typeof fetch;
@@ -129,13 +146,14 @@ describe("queryAnalyticsCached", () => {
 
 		if (isFailure(result)) throw new Error("expected success");
 		expect(result.data).toEqual([{ fresh: true }]);
-		expect(kvPutMock).toHaveBeenCalledWith("cache:key", JSON.stringify([{ fresh: true }]), {
+		expect(await kv.get("cache:key")).toBe(JSON.stringify([{ fresh: true }]));
+		// A stored key does not report the TTL it was written with, so the option is asserted.
+		expect(kvPut).toHaveBeenCalledWith("cache:key", JSON.stringify([{ fresh: true }]), {
 			expirationTtl: 120,
 		});
 	});
 
 	test("does not populate the KV cache when the underlying query fails", async () => {
-		kvGetMock.mockImplementation(async () => null);
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response("nope", { status: 500 }),
 		) as unknown as typeof fetch;
@@ -143,7 +161,8 @@ describe("queryAnalyticsCached", () => {
 		let result = await queryAnalyticsCached("cache:key", 120, "SELECT 1");
 
 		expect(isFailure(result)).toBe(true);
-		expect(kvPutMock).not.toHaveBeenCalled();
+		expect(kvPut).not.toHaveBeenCalled();
+		expect(await kv.get("cache:key")).toBeNull();
 	});
 });
 
@@ -184,12 +203,13 @@ describe("writePingResult", () => {
 			expectedStatus: 200,
 		});
 
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: ["monitor-1", "http", "degraded"],
-			doubles: [1234, 1, 200, 200],
-			indexes: ["team-1"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: ["monitor-1", "http", "degraded"],
+				doubles: [1234, 1, 200, 200],
+				indexes: ["team-1"],
+			},
+		]);
 	});
 
 	test("puts a non-http check's type in blob2 and its own status vocabulary in blob3", () => {
@@ -201,11 +221,13 @@ describe("writePingResult", () => {
 			responseTimeMs: 42,
 		});
 
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: ["monitor-2", "dns", "changed"],
-			doubles: [42, 1, 0, 0],
-			indexes: ["team-2"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: ["monitor-2", "dns", "changed"],
+				doubles: [42, 1, 0, 0],
+				indexes: ["team-2"],
+			},
+		]);
 	});
 
 	test("defaults the HTTP-only doubles to zero for a type that has no status of its own", () => {
@@ -217,10 +239,10 @@ describe("writePingResult", () => {
 			responseTimeMs: 0,
 		});
 
-		let [point] = writeDataPointMock.mock.calls[0] as [{ doubles: number[] }];
+		let [point] = pingResults.dataPoints;
 		// Zero already spells "unknown" for HTTP itself, so a missing status reads the same
 		// way as an unreachable target's and no query has to special-case it.
-		expect(point.doubles).toEqual([0, 1, 0, 0]);
+		expect(point?.doubles).toEqual([0, 1, 0, 0]);
 	});
 
 	test("tags an ad-hoc ping, which belongs to a team but to no monitor's dashboard", () => {
@@ -232,8 +254,8 @@ describe("writePingResult", () => {
 			responseTimeMs: 7,
 		});
 
-		let [point] = writeDataPointMock.mock.calls[0] as [{ blobs: string[] }];
-		expect(point.blobs).toEqual(["monitor-4", "adhoc", "error"]);
+		let [point] = pingResults.dataPoints;
+		expect(point?.blobs).toEqual(["monitor-4", "adhoc", "error"]);
 	});
 });
 
@@ -366,33 +388,39 @@ describe("getTeamHttpSummaries", () => {
 
 		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
 		expect(init.body as string).toContain("index1 = 'team-9'");
-		expect(kvPutMock).toHaveBeenCalledWith(
+		// The rows as the query returned them, under the versioned key, with the dashboard's
+		// floor TTL — which only the write's options can say.
+		expect(await kv.get<unknown[]>("cache:team-9:dashboard:v1:httpSummaries", "json")).toEqual([
+			{
+				monitorId: "m1",
+				totalChecks: 4,
+				upChecks: 4,
+				degradedChecks: 0,
+				downChecks: 0,
+				maxResponseTimeMs: 50,
+			},
+		]);
+		expect(kvPut).toHaveBeenCalledWith(
 			"cache:team-9:dashboard:v1:httpSummaries",
-			JSON.stringify([
-				{
-					monitorId: "m1",
-					totalChecks: 4,
-					upChecks: 4,
-					degradedChecks: 0,
-					downChecks: 0,
-					maxResponseTimeMs: 50,
-				},
-			]),
+			expect.any(String),
 			{ expirationTtl: 60 },
 		);
 	});
 
 	test("reuses a cached rollup without re-querying Analytics Engine", async () => {
-		kvGetMock.mockImplementation(async () => [
-			{
-				monitorId: "m1",
-				totalChecks: 2,
-				upChecks: 1,
-				degradedChecks: 1,
-				downChecks: 0,
-				maxResponseTimeMs: 20,
-			},
-		]);
+		await kv.put(
+			"cache:team-1:dashboard:v1:httpSummaries",
+			JSON.stringify([
+				{
+					monitorId: "m1",
+					totalChecks: 2,
+					upChecks: 1,
+					degradedChecks: 1,
+					downChecks: 0,
+					maxResponseTimeMs: 20,
+				},
+			]),
+		);
 		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -606,16 +634,20 @@ describe("getHttpP99ResponseTime", () => {
 
 		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
 		expect(init.body as string).toContain("index1 = 'team-9'");
-		expect(kvGetMock).toHaveBeenCalledWith("cache:team-9:dashboard:v1:p99", "json");
-		expect(kvPutMock).toHaveBeenCalledWith(
-			"cache:team-9:dashboard:v1:p99",
-			JSON.stringify([{ p99ResponseTimeMs: 250, totalChecks: 10 }]),
-			{ expirationTtl: 60 },
-		);
+		expect(kvGet).toHaveBeenCalledWith("cache:team-9:dashboard:v1:p99", "json");
+		expect(await kv.get<unknown[]>("cache:team-9:dashboard:v1:p99", "json")).toEqual([
+			{ p99ResponseTimeMs: 250, totalChecks: 10 },
+		]);
+		expect(kvPut).toHaveBeenCalledWith("cache:team-9:dashboard:v1:p99", expect.any(String), {
+			expirationTtl: 60,
+		});
 	});
 
 	test("reuses the cached row without re-querying Analytics Engine", async () => {
-		kvGetMock.mockImplementation(async () => [{ p99ResponseTimeMs: 99, totalChecks: 5 }]);
+		await kv.put(
+			"cache:team-1:dashboard:v1:p99",
+			JSON.stringify([{ p99ResponseTimeMs: 99, totalChecks: 5 }]),
+		);
 		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -638,8 +670,8 @@ describe("getHttpP99ResponseTime", () => {
 		let body = init.body as string;
 		expect(body).toContain("blob1 = 'monitor-1'");
 		expect(body).not.toContain("index1");
-		expect(kvGetMock).not.toHaveBeenCalled();
-		expect(kvPutMock).not.toHaveBeenCalled();
+		expect(kvGet).not.toHaveBeenCalled();
+		expect(kvPut).not.toHaveBeenCalled();
 	});
 
 	test("returns null when the window holds no checks, even though the aggregate returns a row", async () => {
@@ -672,9 +704,9 @@ describe("getHttpP99ResponseTime", () => {
 	});
 
 	test("degrades to a failure Result instead of throwing when the KV read throws", async () => {
-		kvGetMock.mockImplementation(async () => {
-			throw new Error("KV unavailable");
-		});
+		// Cached text that is not JSON, so the decode the read asks for is what fails. A KV
+		// read really can throw, and a dashboard must not go down with it.
+		await kv.put("cache:team-1:dashboard:v1:p99", "}not json{");
 		let fetchMock = mock(async (..._args: unknown[]) => p99Response(1, 1));
 		globalThis.fetch = fetchMock as unknown as typeof fetch;
 

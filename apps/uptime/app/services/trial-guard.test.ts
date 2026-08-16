@@ -22,10 +22,11 @@
  * go, and the two that keep this Worker from being an attack proxy stay. Both halves are
  * asserted, because the failure modes are a spent budget nobody owed and an open prober.
  *
- * The Cloudflare bindings (`KV`, `TRIAL_RATE_LIMITER`) are stubbed via
- * `mock.module("cloudflare:workers", ...)`, and both outbound calls — DNS-over-HTTPS and
- * Turnstile's siteverify — are stubbed on the global `fetch`, routed by hostname so a test
- * can fail one without touching the other.
+ * The Cloudflare bindings are an in-memory KV namespace and a really-counting rate limiter,
+ * installed through `mock.module("cloudflare:workers", ...)`, so the day's counter is read
+ * back from storage and a refused caller is one that spent its allowance. Both outbound
+ * calls — DNS-over-HTTPS and Turnstile's siteverify — are stubbed on the global `fetch`,
+ * routed by hostname so a test can fail one without touching the other.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,34 +34,44 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { RateLimitMock } from "@pkg/cloudflare-mocks";
+
+import { createEnv, createKVNamespace, createRateLimit } from "@pkg/cloudflare-mocks";
 import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 
 import type { TrialProbeRequest } from "~/app/services/trial-guard";
 
-/** Stands in for KV, so a test can seed today's counter and read back what was written. */
-let kvStore = new Map<string, string>();
-let kvGetMock = mock(async (key: string) => kvStore.get(key) ?? null);
-let kvPutMock = mock(async (key: string, value: string, _options?: unknown) => {
-	kvStore.set(key, value);
-});
+/** Probes one caller may make in a minute, as the deployed binding is configured. */
+const TRIAL_PROBE_LIMIT = 3;
 
-/** What the rate limiter binding answers; flipped by the rate-limit tests. */
-let rateLimitAllowed = true;
-let rateLimitMock = mock(async (_options: { key: string }) => ({ success: rateLimitAllowed }));
+/** Holds today's counter, so a test seeds it and reads back what the guard wrote. */
+let kv = createKVNamespace();
 
 /**
- * The bindings and secrets the service reads. Mutated rather than re-mocked between tests,
- * because the service reads both Turnstile keys off this object at call time — which is the
- * behaviour that lets an absent secret be a supported state.
+ * The counter's namespace is spied on as well as stored to: the write's `expirationTtl`, and
+ * a read that a billed or refused probe never made, are not things a stored value can say.
  */
-let envStub: Record<string, unknown> = {
-	KV: { get: kvGetMock, put: kvPutMock },
-	TRIAL_RATE_LIMITER: { limit: rateLimitMock },
-};
+let kvGet = spyOn(kv, "get");
+let kvPut = spyOn(kv, "put");
+
+/** The per-caller limiter, counting for real, so a refusal is an allowance actually spent. */
+let limiter: RateLimitMock = createRateLimit({ limit: TRIAL_PROBE_LIMIT, period: 60 });
+
+/**
+ * Turnstile's two keys. They are variables behind accessors rather than plain bindings
+ * because the service reads them off `env` at call time, and the tests move each one between
+ * configured, empty and absent — which is what makes an unconfigured deployment testable.
+ */
+let turnstileSecretKey: string | undefined = "turnstile-secret";
+let turnstileSiteKey: string | undefined = "turnstile-site";
+
+let env = createEnv<Env>({ KV: kv, TRIAL_RATE_LIMITER: limiter });
+Object.defineProperty(env, "TURNSTILE_SECRET_KEY", { get: () => turnstileSecretKey });
+Object.defineProperty(env, "TURNSTILE_SITE_KEY", { get: () => turnstileSiteKey });
 
 mock.module("cloudflare:workers", () => ({
-	env: envStub,
+	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
 
@@ -111,22 +122,19 @@ function submission(
 	};
 }
 
-beforeEach(() => {
-	kvStore.clear();
-	kvGetMock.mockClear();
-	kvPutMock.mockClear();
-	kvGetMock.mockImplementation(async (key: string) => kvStore.get(key) ?? null);
-	kvPutMock.mockImplementation(async (key: string, value: string) => {
-		kvStore.set(key, value);
-	});
-
-	rateLimitAllowed = true;
-	rateLimitMock.mockClear();
+beforeEach(async () => {
+	// The namespace and the limiter outlive the test that used them, so yesterday's counter
+	// and a spent allowance are cleared rather than re-created.
+	let { keys } = await kv.list();
+	for (let key of keys) await kv.delete(key.name);
+	kvGet.mockClear();
+	kvPut.mockClear();
+	limiter.reset();
 
 	turnstileSuccess = true;
 	turnstileStatus = 200;
-	envStub.TURNSTILE_SECRET_KEY = "turnstile-secret";
-	envStub.TURNSTILE_SITE_KEY = "turnstile-site";
+	turnstileSecretKey = "turnstile-secret";
+	turnstileSiteKey = "turnstile-site";
 
 	dnsRecords.clear();
 	dnsFailures.clear();
@@ -482,7 +490,7 @@ describe("guardTrialProbe", () => {
 	});
 
 	test("refuses, loudly, when no secret is configured rather than passing unchallenged", async () => {
-		delete envStub.TURNSTILE_SECRET_KEY;
+		turnstileSecretKey = undefined;
 		let log = spyOn(logger, "error").mockImplementation(() => {});
 
 		let result = await guardTrialProbe(submission("example.com"));
@@ -501,7 +509,7 @@ describe("guardTrialProbe", () => {
 	});
 
 	test("refuses when the secret is present but empty", async () => {
-		envStub.TURNSTILE_SECRET_KEY = "";
+		turnstileSecretKey = "";
 
 		let result = await guardTrialProbe(submission("example.com"));
 
@@ -522,7 +530,8 @@ describe("guardTrialProbe", () => {
 			billed: false,
 		});
 
-		expect(rateLimitMock).toHaveBeenCalledWith({ key: "trial-probe:198.51.100.2" });
+		expect(limiter.count("trial-probe:198.51.100.2")).toBe(1);
+		expect(limiter.count("trial-probe:1.2.3.4")).toBe(0);
 	});
 
 	test("spends exactly one unit of the binding's budget per probe", async () => {
@@ -534,11 +543,15 @@ describe("guardTrialProbe", () => {
 		 * Cheap to assert, and the failure it catches looks like the feature being broken
 		 * rather than like a limit being wrong.
 		 */
-		expect(rateLimitMock).toHaveBeenCalledTimes(1);
+		expect(limiter.count("trial-probe:203.0.113.9")).toBe(1);
 	});
 
 	test("refuses an address that is over its budget, before anything is spent on it", async () => {
-		rateLimitAllowed = false;
+		// The caller's whole minute spent before it submits, so the refusal comes from the
+		// binding's own counter reaching its ceiling rather than from a canned answer.
+		for (let spent = 0; spent < TRIAL_PROBE_LIMIT; spent++) {
+			await limiter.limit({ key: "trial-probe:203.0.113.9" });
+		}
 
 		let result = await guardTrialProbe(submission("example.com"));
 
@@ -546,29 +559,32 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("rate-limited");
 		expect(result.error.retryAfterSeconds).toBeGreaterThan(0);
-		expect(kvGetMock).not.toHaveBeenCalled();
+		expect(kvGet).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
 	test("counts a granted probe against today's global budget", async () => {
 		await guardTrialProbe(submission("example.com"));
 
-		expect(kvPutMock).toHaveBeenCalledWith(budgetKey, "1", { expirationTtl: 172_800 });
+		expect(await kv.get(budgetKey)).toBe("1");
+		// Two days, which the stored counter cannot report back on its own.
+		expect(kvPut).toHaveBeenCalledWith(budgetKey, "1", { expirationTtl: 172_800 });
 	});
 
 	test("continues from the count already stored for the day", async () => {
-		kvStore.set(budgetKey, "41");
+		await kv.put(budgetKey, "41");
 
 		let result = await guardTrialProbe(submission("example.com"));
 
 		expect(isFailure(result)).toBe(false);
 		if (isFailure(result)) return;
 		expect(result.data.budgetRemaining).toBe(TRIAL_DAILY_BUDGET - 42);
-		expect(kvPutMock).toHaveBeenCalledWith(budgetKey, "42", { expirationTtl: 172_800 });
+		expect(await kv.get(budgetKey)).toBe("42");
+		expect(kvPut).toHaveBeenCalledWith(budgetKey, "42", { expirationTtl: 172_800 });
 	});
 
 	test("refuses once the day's budget is spent, and says so distinguishably", async () => {
-		kvStore.set(budgetKey, String(TRIAL_DAILY_BUDGET));
+		await kv.put(budgetKey, String(TRIAL_DAILY_BUDGET));
 
 		let result = await guardTrialProbe(submission("example.com"));
 
@@ -576,11 +592,12 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("budget-exhausted");
 		expect(result.error.detail).toBe("daily-cap");
-		expect(kvPutMock).not.toHaveBeenCalled();
+		// Untouched: a probe that was refused must not spend anything on top of a spent day.
+		expect(await kv.get(budgetKey)).toBe(String(TRIAL_DAILY_BUDGET));
 	});
 
 	test("treats an unreadable counter as exhaustion rather than as unlimited spend", async () => {
-		kvGetMock.mockImplementation(async () => {
+		kvGet.mockImplementationOnce(async () => {
 			throw new Error("KV is unavailable");
 		});
 
@@ -593,7 +610,7 @@ describe("guardTrialProbe", () => {
 	});
 
 	test("still grants the probe when the counter cannot be written back", async () => {
-		kvPutMock.mockImplementation(async () => {
+		kvPut.mockImplementationOnce(async () => {
 			throw new Error("KV is unavailable");
 		});
 
@@ -609,7 +626,7 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
 		expect(globalThis.fetch).not.toHaveBeenCalled();
-		expect(kvPutMock).not.toHaveBeenCalled();
+		expect(kvPut).not.toHaveBeenCalled();
 	});
 
 	test("spends none of the free-tier controls on a billed probe", async () => {
@@ -619,9 +636,9 @@ describe("guardTrialProbe", () => {
 		if (isFailure(result)) return;
 		// Nothing to report: a billed probe takes nothing out of the day's allowance.
 		expect(result.data.budgetRemaining).toBeNull();
-		expect(rateLimitMock).not.toHaveBeenCalled();
-		expect(kvGetMock).not.toHaveBeenCalled();
-		expect(kvPutMock).not.toHaveBeenCalled();
+		expect(limiter.count("trial-probe:203.0.113.9")).toBe(0);
+		expect(kvGet).not.toHaveBeenCalled();
+		expect(kvPut).not.toHaveBeenCalled();
 
 		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
 		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
@@ -655,10 +672,10 @@ describe("trialTurnstileSiteKey", () => {
 	});
 
 	test("is null when unconfigured, so the page renders no widget", () => {
-		delete envStub.TURNSTILE_SITE_KEY;
+		turnstileSiteKey = undefined;
 		expect(trialTurnstileSiteKey()).toBeNull();
 
-		envStub.TURNSTILE_SITE_KEY = "";
+		turnstileSiteKey = "";
 		expect(trialTurnstileSiteKey()).toBeNull();
 	});
 });

@@ -19,23 +19,20 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { D1StatementObservation } from "@pkg/data-table-d1";
 
-/** Every data point written through the `COSTS` binding, newest last. */
-interface WrittenPoint {
-	indexes: string[];
-	blobs: string[];
-	doubles: number[];
-}
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 
-let points: WrittenPoint[] = [];
-/** Every KV method call the counted namespace proxied, in order. */
-let kvCalls: string[] = [];
+/**
+ * The dataset the ledger flushes to. It lives at module scope because the module under test
+ * captures `env` on import, and it enforces the platform's per-point limits, so a rate card
+ * grown past what one data point can carry fails here rather than in production.
+ */
+let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		COSTS: { writeDataPoint: (point: WrittenPoint) => points.push(point) },
-	},
+	env: createEnv<Env>({ COSTS: costs }),
 }));
 
 let { COST_RESOURCES, priceCostQuantities, MODELLED_CPU_MS, RATES } =
@@ -59,8 +56,7 @@ let {
 spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
-	points = [];
-	kvCalls = [];
+	costs.reset();
 });
 
 /** Throws, for the one test that needs the Analytics Engine binding to reject a write. */
@@ -81,13 +77,13 @@ function observation(overrides: Partial<D1StatementObservation> = {}): D1Stateme
 }
 
 /** The quantity a written point recorded for one resource. */
-function quantity(point: WrittenPoint, resource: string): number {
-	return point.doubles[COST_RESOURCES.indexOf(resource as never)] ?? 0;
+function quantity(point: AnalyticsEngineDataPoint, resource: string): number {
+	return point.doubles?.[COST_RESOURCES.indexOf(resource as never)] ?? 0;
 }
 
 /** The priced total a written point recorded, which is its last double. */
-function total(point: WrittenPoint): number {
-	return point.doubles[COST_RESOURCES.length] ?? 0;
+function total(point: AnalyticsEngineDataPoint): number {
+	return point.doubles?.[COST_RESOURCES.length] ?? 0;
 }
 
 /** Runs `body` inside a ledger and returns the points its flush wrote. */
@@ -98,14 +94,14 @@ async function flushing(
 		detail?: string;
 		workerRequests?: number;
 	} = {},
-): Promise<WrittenPoint[]> {
+): Promise<AnalyticsEngineDataPoint[]> {
 	let ledger = new CostLedger({
 		handler: options.handler ?? "queue",
 		detail: options.detail,
 		workerRequests: options.workerRequests,
 	});
 	await trackCost(ledger, body);
-	return points;
+	return costs.dataPoints;
 }
 
 describe("recordD1Statement", () => {
@@ -180,7 +176,7 @@ describe("trackCost", () => {
 		).rejects.toBe(boom);
 
 		// A unit of work that threw still consumed everything it consumed.
-		expect(points).toHaveLength(1);
+		expect(costs.dataPoints).toHaveLength(1);
 	});
 
 	test("returns whatever the tracked unit of work returned", async () => {
@@ -199,8 +195,8 @@ describe("CostLedger attribution", () => {
 		);
 
 		expect(point?.indexes).toEqual(["team-1"]);
-		expect(point?.blobs[0]).toBe("queue:check-http-job");
-		expect(point?.blobs[1]).toBe("direct");
+		expect(point?.blobs?.[0]).toBe("queue:check-http-job");
+		expect(point?.blobs?.[1]).toBe("direct");
 		expect(quantity(point!, "emailSent")).toBe(1);
 	});
 
@@ -211,10 +207,10 @@ describe("CostLedger attribution", () => {
 			recordCost("queueOperation", 8);
 		});
 
-		let byTeam = new Map(written.map((point) => [point.indexes[0], point]));
+		let byTeam = new Map(written.map((point) => [point.indexes?.[0], point]));
 		expect(quantity(byTeam.get("team-1")!, "queueOperation")).toBeCloseTo(6, 9);
 		expect(quantity(byTeam.get("team-2")!, "queueOperation")).toBeCloseTo(2, 9);
-		expect(byTeam.get("team-1")?.blobs[1]).toBe("apportioned");
+		expect(byTeam.get("team-1")?.blobs?.[1]).toBe("apportioned");
 	});
 
 	test("accumulates weights across calls, so a sweep can declare them in batches", async () => {
@@ -224,7 +220,7 @@ describe("CostLedger attribution", () => {
 			recordCost("aeQuery", 3);
 		});
 
-		let byTeam = new Map(written.map((point) => [point.indexes[0], point]));
+		let byTeam = new Map(written.map((point) => [point.indexes?.[0], point]));
 		expect(quantity(byTeam.get("team-1")!, "aeQuery")).toBeCloseTo(2, 9);
 		expect(quantity(byTeam.get("team-2")!, "aeQuery")).toBeCloseTo(1, 9);
 	});
@@ -237,7 +233,7 @@ describe("CostLedger attribution", () => {
 			]);
 		});
 
-		expect(written.map((point) => point.indexes[0])).toEqual(["team-1"]);
+		expect(written.map((point) => point.indexes?.[0])).toEqual(["team-1"]);
 	});
 
 	test("records unattributed work as platform cost rather than dropping it", async () => {
@@ -248,7 +244,7 @@ describe("CostLedger attribution", () => {
 		// A dead-letter record or a sweep with nothing pending. Written, because a reporting
 		// job that can say how much spend landed on nobody is the point of writing it.
 		expect(point?.indexes).toEqual([PLATFORM_TEAM_ID]);
-		expect(point?.blobs[1]).toBe("platform");
+		expect(point?.blobs?.[1]).toBe("platform");
 	});
 
 	test("folds teams past the data-point cap into one overflow point", async () => {
@@ -261,7 +257,7 @@ describe("CostLedger attribution", () => {
 		// 249 teams keep their own point and the tail merges, rather than the write silently
 		// failing — which would read as "those customers cost nothing".
 		expect(written).toHaveLength(250);
-		let overflow = written.find((point) => point.indexes[0] === OVERFLOW_TEAM_ID);
+		let overflow = written.find((point) => point.indexes?.[0] === OVERFLOW_TEAM_ID);
 		expect(quantity(overflow!, "d1RowWritten")).toBeCloseTo(51, 6);
 	});
 });
@@ -313,41 +309,39 @@ describe("CostLedger self-accounting", () => {
 	});
 
 	test("never lets a failed write fail the work it was measuring", async () => {
+		// The binding rejecting the point is the failure mode: instrumentation that takes
+		// down the request it was measuring is worse than no instrumentation. One write is
+		// all a single-team flush makes, so the binding is itself again afterwards.
+		spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
+
 		await expect(
 			trackCost(new CostLedger({ handler: "fetch" }), async () => {
 				apportionCostByTeam(["team-1"]);
-				// The binding rejecting the point is the failure mode: instrumentation that
-				// takes down the request it was measuring is worse than no instrumentation.
-				points = { push: () => raise() } as unknown as WrittenPoint[];
 				return "done";
 			}),
 		).resolves.toBe("done");
+
+		expect(costs.dataPoints).toHaveLength(0);
 	});
 });
 
 describe("countedKv", () => {
 	test("counts reads and mutations without changing what the namespace does", async () => {
-		let kv = {
-			get: async (key: string) => {
-				kvCalls.push(`get:${key}`);
-				return "value";
-			},
-			put: async (key: string) => {
-				kvCalls.push(`put:${key}`);
-			},
-			name: "session-store",
-		} as unknown as KVNamespace;
+		// A namespace that really stores, so "without changing what it does" is read back
+		// from it rather than from a record of the calls. The extra property is there
+		// because a non-method one has to pass through the proxy untouched as well.
+		let kv = Object.assign(createKVNamespace(), { name: "session-store" });
+		await kv.put("a", "value");
 
 		let [point] = await flushing(async () => {
 			apportionCostByTeam(["team-1"]);
 			let counted = countedKv(kv);
 			expect(await counted.get("a")).toBe("value");
 			await counted.put("a", "b");
-			// A non-method property passes straight through.
 			expect(Reflect.get(counted, "name")).toBe("session-store");
 		});
 
-		expect(kvCalls).toEqual(["get:a", "put:a"]);
+		expect(await kv.get("a")).toBe("b");
 		expect(quantity(point!, "kvRead")).toBe(1);
 		expect(quantity(point!, "kvMutation")).toBe(1);
 	});
@@ -372,7 +366,7 @@ describe("dailyCostQuery", () => {
 		}));
 
 		let row: Record<string, unknown> = {};
-		for (let { index, alias } of aliases) row[alias] = point!.doubles[index - 1];
+		for (let { index, alias } of aliases) row[alias] = point!.doubles?.[index - 1];
 		let parsed = toDailyTeamCost({ ...row, teamId: "team-1", rateCard: "v" });
 
 		expect(parsed.quantities.aeQuery).toBe(7);

@@ -10,7 +10,8 @@
  * "Check now" is told something the hourly run never says.
  *
  * `sweepDnsName` is mocked, since DNS resolution has tests of its own, and the bindings the
- * job reaches for are faked so it can be run in-process alongside the direct calls.
+ * job reaches for are in-memory ones installed through `cloudflare:workers`, so it can be run
+ * in-process alongside the direct calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +19,9 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
+
+import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -26,6 +30,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
+import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -76,11 +81,12 @@ function sweepOf(name: string, outcomes: DnsQueryOutcome[]): DnsNameSweep {
 /** Resolves nothing and fails nothing: no answers means no diff, so a check reads `ok`. */
 let sweepDnsNameMock = mock(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
 
+/** Where the job's status-change notifications land, and where its checks are reported. */
+let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
-		QUEUE: { sendBatch: async () => {}, send: async () => {} },
-		PING_RESULTS: { writeDataPoint: () => {} },
-	},
+	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
@@ -127,6 +133,8 @@ async function seedNames(db: Database, monitorId: string, names: readonly string
 beforeEach(() => {
 	sweepDnsNameMock.mockReset();
 	sweepDnsNameMock.mockImplementation(async (name: string) => sweepOf(name, []));
+	queue.reset();
+	pingResults.reset();
 });
 
 /**

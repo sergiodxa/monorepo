@@ -20,22 +20,21 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 
 import type { AdhocPing } from "./adhoc-ping";
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
+/**
+ * The dataset `writePingResult` reports to. It lives at module scope because the module
+ * under test captures `env` on import, and it enforces the platform's per-point limits, so
+ * a point too large to be ingested fails here instead of vanishing in production.
+ */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /**
  * Work deferred past the caller's response. Held rather than dropped so a test can await
@@ -44,7 +43,7 @@ let writeDataPointMock = mock((_point: DataPoint) => {});
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: { PING_RESULTS: { writeDataPoint: writeDataPointMock } },
+	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -67,7 +66,7 @@ let container = new ServiceContainer();
 container.singleton(PolarClient, () => polar);
 
 beforeEach(() => {
-	writeDataPointMock.mockClear();
+	pingResults.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
 	deferred = [];
@@ -98,22 +97,25 @@ describe("recordAdhocPing analytics", () => {
 	test("writes one data point under the shared adhoc monitor id, indexed by team", async () => {
 		record();
 
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [ADHOC_MONITOR_ID, "adhoc", "up"],
-			doubles: [12, 1, 0, 0],
-			indexes: ["team-1"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: [ADHOC_MONITOR_ID, "adhoc", "up"],
+				doubles: [12, 1, 0, 0],
+				indexes: ["team-1"],
+			},
+		]);
 	});
 
 	test("records the ping's own status rather than a fixed one", async () => {
 		record(adhocPing({ status: "down", responseTimeMs: 0 }));
 
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [ADHOC_MONITOR_ID, "adhoc", "down"],
-			doubles: [0, 1, 0, 0],
-			indexes: ["team-1"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: [ADHOC_MONITOR_ID, "adhoc", "down"],
+				doubles: [0, 1, 0, 0],
+				indexes: ["team-1"],
+			},
+		]);
 	});
 });
 
@@ -160,7 +162,7 @@ describe("recordAdhocPing billing", () => {
 
 		// The call is back with the data point already written while the meter event is
 		// still in flight — which is the whole reason it goes out under `waitUntil`.
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(deferred).toHaveLength(1);
 		expect(settled).toBe(false);
 
@@ -176,7 +178,7 @@ describe("recordAdhocPing billing", () => {
 
 		// A billing outage must not turn a check the caller already paid for into an error.
 		expect(() => record()).not.toThrow();
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 
 		await expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
 	});
@@ -188,6 +190,6 @@ describe("recordAdhocPing billing", () => {
 
 		// Best-effort by design: a refused event is logged and dropped, never retried.
 		await expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 });

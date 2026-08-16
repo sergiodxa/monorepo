@@ -23,6 +23,10 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
+
 import type { ContentCheckRule } from "~/app/data/content-check";
 import type { CostResource } from "~/app/lib/cost-rates";
 import type { HttpCheckOptions, HttpProbeOutcome } from "~/app/services/http-check";
@@ -41,13 +45,6 @@ interface Probe extends FakeObjectId {
 	locationHint: string | undefined;
 }
 
-/** One data point the cost ledger flushed through the `COSTS` binding. */
-interface WrittenPoint {
-	indexes: string[];
-	blobs: string[];
-	doubles: number[];
-}
-
 /** The `GeoFetchDO` stub `probe` calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = mock(
 	async (_url: string, _init?: RequestInit) =>
@@ -63,8 +60,8 @@ let idFromNameMock = mock(
 /** The probes issued so far, in order, one per `get`. */
 let probes: Probe[] = [];
 
-/** Points the ledger wrote, which is where the probe's recorded costs are read back. */
-let points: WrittenPoint[] = [];
+/** The dataset the ledger flushes to, which is where a probe's recorded costs are read back. */
+let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
 /**
  * A fake `DurableObjectNamespace`, optionally restricted to a jurisdiction.
@@ -97,10 +94,13 @@ function makeGeoFetchNamespace(jurisdiction?: string) {
 let fakeGeoFetchNamespace = makeGeoFetchNamespace();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: fakeGeoFetchNamespace,
-		COSTS: { writeDataPoint: (point: WrittenPoint) => points.push(point) },
-	},
+	env: createEnv<Env>({
+		// The one binding with no in-memory implementation: it models the jurisdiction rule
+		// the suite below is about, so it is cast rather than replaced, leaving every other
+		// binding checked against the generated type.
+		GEO_FETCH: fakeGeoFetchNamespace as unknown as Env["GEO_FETCH"],
+		COSTS: costs,
+	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
 	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
 	DurableObject: class {},
@@ -163,14 +163,14 @@ function lastRequestInit(): RequestInit | undefined {
 }
 
 /** Runs `body` inside a cost ledger and returns the single point its flush wrote. */
-async function flushing(body: () => Promise<void>): Promise<WrittenPoint | undefined> {
+async function flushing(body: () => Promise<void>): Promise<AnalyticsEngineDataPoint | undefined> {
 	await trackCost(new CostLedger({ handler: "fetch" }), body);
-	return points[points.length - 1];
+	return costs.dataPoints[costs.dataPoints.length - 1];
 }
 
 /** The quantity a written point recorded for one resource. */
-function quantity(point: WrittenPoint | undefined, resource: CostResource): number {
-	return point?.doubles[COST_RESOURCES.indexOf(resource)] ?? 0;
+function quantity(point: AnalyticsEngineDataPoint | undefined, resource: CostResource): number {
+	return point?.doubles?.[COST_RESOURCES.indexOf(resource)] ?? 0;
 }
 
 async function seedMonitor(db: Db, overrides: Record<string, unknown> = {}) {
@@ -201,7 +201,7 @@ beforeEach(() => {
 	);
 	idFromNameMock.mockClear();
 	probes.length = 0;
-	points.length = 0;
+	costs.reset();
 });
 
 describe("HttpCheck probe jurisdiction", () => {
