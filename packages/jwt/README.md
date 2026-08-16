@@ -8,9 +8,9 @@ A decoded JWT is a bag of `unknown`. Reading claims off it directly scatters the
 
 This package models a kind of token as a class instead. `JWT` carries the registered claims as typed accessors; an application subclasses it, narrows the accessors its tokens guarantee, and adds the ones it carries beyond the registered set — each one a single type-checked read against the claim set. Verifying through that subclass returns an instance of it, so the claims a handler reads and the claims the token class declares are the same list.
 
-`JWK` covers the other half: generating an ES256 key pair, serializing it so it survives in a bucket or a database row, importing it back into `CryptoKey` objects, publishing the public half as a JWKS, and resolving someone else's JWKS — held locally or fetched — into a key to verify against.
+`JWK` covers the other half: generating an ES256 key pair, serializing it so it survives in a bucket or a database row, importing it back into `CryptoKey` objects, publishing the public half as a JWKS, and turning someone else's JWKS — held locally or fetched — into the resolver a token is verified through.
 
-Signing and verification are [jose](https://github.com/panva/jose)'s, deliberately. Everything here is the object model around it, not a second implementation of JWS.
+An object model over JWT claim sets and the keys that sign them, then, sitting on top of a JOSE implementation that does the signing and verifying itself.
 
 ## Usage
 
@@ -59,12 +59,13 @@ let signed = await token.sign(JWK.Algorithm.ES256, keys);
 ```typescript
 import { JWK } from "@pkg/jwt";
 
-// Resolve once per isolate, not per request — this fetches.
-let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
+// Hold this for the life of the isolate: it caches the fetched key set.
+let keys = JWK.importRemote(new URL(jwksUrl));
 
 let idToken = await IdToken.verify(rawToken, await keys, {
 	issuer: "https://auth.example.com",
 	audience: clientId,
+	algorithms: [JWK.Algorithm.ES256],
 	clockTolerance: 60,
 });
 
@@ -134,7 +135,7 @@ Protected. Type-checked reads over `payload`, for the accessors a subclass defin
 
 Every accessor answers `null` for a claim that is absent, so reading one never throws on a token that simply does not carry it. The setters take `null` to drop the claim, and convert `Date` values to the epoch seconds the RFC defines.
 
-`expiresIn`, `expiresAt`, and `expired` read `exp` as **milliseconds**, not the seconds RFC 7519 defines. That is a quirk of the implementation this package vendors, kept because the token classes that care already override `expiresIn`. Treat these three as display helpers; expiry is enforced by `JWT.verify`, which reads `exp` correctly.
+`expiresIn`, `expiresAt`, and `expired` read `exp` as **milliseconds**, where RFC 7519 defines it in seconds. That is a quirk of the implementation this package vendors, kept because the token classes that care already override `expiresIn`. Treat these three as display helpers; expiry is enforced by `JWT.verify`, which reads `exp` correctly.
 
 #### `jwt.sign(algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string>`
 
@@ -148,39 +149,47 @@ Throws when no key in the set was generated for that algorithm.
 
 #### `jwt.toJSON(): Record<string, unknown>`
 
-The claims a subclass exposes, as a plain object. Reads the getters declared directly on the instance's own prototype, so the result is the subclass's view of the token — not the registered-claim accessors it inherited but may not use.
+The claims a subclass exposes, as a plain object. Reads the getters declared directly on the instance's own prototype, so the result is the subclass's view of the token: the claims it models.
 
 #### `JWT.sign(jwt: JWT, algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string>`
 
 The static form of `jwt.sign`, for signing a token you were handed.
 
-#### `JWT.verify(token: string, jwks: JWK.VerificationKey[], options?: JWT.VerifyOptions): Promise<JWT>`
+#### `JWT.verify(token: string, jwks: JWK.VerificationKeys, options?: JWT.VerifyOptions): Promise<JWT>`
 
 Verifies a token and returns it as an instance of the class the method was called on.
 
 **Parameters:**
 
 - `token`: The compact-serialized token
-- `jwks`: Candidate verification keys; the first with a `public` key is used
-- `options`: `issuer`, `audience`, `clockTolerance`, `algorithms`, and the rest of jose's `JWTVerifyOptions`
+- `jwks`: The keys themselves, or a resolver from `JWK.importLocal` / `JWK.importRemote`
+- `options`: `issuer`, `audience`, `algorithms`, `clockTolerance`, and the rest of `JWT.VerifyOptions`
 
 **Returns:**
 
 - The verified token, typed as the class this was called on
 
-Signature, `exp`, `nbf`, and whichever of `issuer` and `audience` are given are all checked, and any failure throws — so reaching the return value means the claims are trustworthy.
+Signature, `exp`, `nbf`, and whichever of `issuer` and `audience` are given are all checked, and the first failure throws — so reaching the return value means the claims are trustworthy.
+
+The key is chosen per token, from the header the token carries: the key whose `kid` the header names is the one used, narrowed further by key type, curve, algorithm and intended use. A set that offers exactly one key for what the token asks for verifies it; a set that offers none, or several the token gives no way to choose between, is an error. Deciding per token is what lets an issuer publish several keys at once — during a rotation the retired key stays published and the tokens it signed keep verifying, while new tokens name the new key and get it.
+
+Pass `algorithms`, listing the ones the caller expects. It is the pin that keeps a token naming one algorithm from being answered with a key published for another, once a set carries keys for more than one.
 
 **Example:**
 
 ```typescript
-let idToken = await IdToken.verify(raw, keys, { issuer, audience: clientId });
+let idToken = await IdToken.verify(raw, keys, {
+	issuer,
+	audience: clientId,
+	algorithms: [JWK.Algorithm.ES256],
+});
 ```
 
 #### `JWT.decode(token: string): JWT`
 
 Reads a token's claims without checking anything, as an instance of the class this was called on.
 
-Nothing that comes back has been authenticated. Use it to look at a token before deciding how to verify it — reading `iss` to pick a JWKS, for instance — never to make a decision about a request.
+What comes back is the token's own account of itself, read without any check. Use it to decide how to verify a token — reading `iss` to pick a JWKS, for instance — and let `verify` be what every decision about the request rests on.
 
 #### `JWT.Payload`
 
@@ -204,7 +213,7 @@ The supported signature algorithms. ES256 only.
 JWK.Algorithm.ES256; // "ES256"
 ```
 
-Adding an algorithm is not just a new entry here: a JWKS publishing more than one key needs `kid`-aware resolution on the verifying side, or a relying party cannot tell which key to use.
+Adding an algorithm used to need `kid`-aware resolution on the verifying side first, so a relying party could tell which of several published keys to use. `JWT.verify` now resolves that way, so that prerequisite is met: a second algorithm is a matter of generating and importing it.
 
 #### `JWK.generateKeyPair(alg: JWK.Algorithm): Promise<JWK.SerializedKeyPair>`
 
@@ -232,19 +241,21 @@ let pair = await JWK.importKeyPair({
 
 #### `JWK.signingKeys(storage: KeyStorage): Promise<JWK.KeyPair[]>`
 
-Loads the signing keys out of storage, generating one on first use. Newest first, which is the order `sign` relies on to pick what to sign with.
+Loads every signing key out of storage, generating one on first use. Newest first, which is the order `sign` relies on to pick what to sign with and the order `toJSON` publishes them in. A set holding several is the normal state during a rotation: the newest signs, the older ones stay published so the tokens they signed keep verifying. A new key is minted when nothing usable is stored at all.
 
-Never point this at an empty production bucket. It will happily generate a fresh key, and tokens signed with it verify against no relying party's cached JWKS.
+Point this at the bucket the issuer already keeps its keys in. Against an empty one it bootstraps a key, and tokens signed with it verify once every relying party has refreshed its copy of the published set.
 
-#### `JWK.importLocal(jwks: jose.JSONWebKeySet, options?: { alg: JWK.Algorithm }): Promise<JWK.VerificationKey[]>`
+#### `JWK.importLocal(jwks: jose.JSONWebKeySet): Promise<JWK.KeyResolver>`
 
-Resolves a key set that is already in hand into a verification key.
+Turns a key set that is already in hand into a resolver `JWT.verify` can use.
 
-#### `JWK.importRemote(url: URL, options: jose.RemoteJWKSetOptions & { alg: JWK.Algorithm }): Promise<JWK.VerificationKey[]>`
+#### `JWK.importRemote(url: URL, options?: JWK.RemoteOptions): Promise<JWK.KeyResolver>`
 
-Fetches a JWKS endpoint and resolves it into a verification key. The fetch happens once, here — hold the result for the life of the isolate rather than calling this per request.
+Points a resolver at a JWKS endpoint. The document is fetched when a token first needs it, then held — so hold the resolver for the life of the isolate, and every verification shares one fetched key set.
 
-Both resolve a **single** key, matched on algorithm alone, at import time. The token's `kid` is never consulted, so a set publishing two keys for the same algorithm fails to resolve rather than picking one. See [Constraint: One Published Signing Key](#constraint-one-published-signing-key).
+The held copy is fetched again, at most once per cooldown window, when a token names a `kid` it does not carry. That is what carries a verifier across a rotation between deploys: the first token signed by a newly published key is what pulls that key in.
+
+Both resolve per token rather than up front, because which key a token needs is what the token itself says. `JWT.verify` describes the selection that follows.
 
 #### `JWK.toJSON(keys: JWK.KeyPair[])`
 
@@ -279,8 +290,12 @@ interface SigningKey {
 }
 
 interface VerificationKey {
-	public: jose.CryptoKey;
+	jwk: jose.JWK; // the published key, carrying the `kid` a token names
 }
+
+type KeyResolver = jose.JWTVerifyGetKey; // answers with the key a token calls for
+type VerificationKeys = KeyResolver | VerificationKey[];
+type RemoteOptions = jose.RemoteJWKSetOptions;
 ```
 
 `KeyPair` satisfies both `SigningKey` and `VerificationKey`, so a full pair is accepted anywhere either is.
@@ -299,7 +314,7 @@ interface KeyStorage {
 
 Three operations, each allowed to be synchronous or to return a promise — which is what lets a plain in-memory object satisfy it in a test while a bucket client satisfies it in production. Any object store that pages by prefix with an opaque cursor fits without an adapter.
 
-Deliberately absent: `has`, `put`, and `remove`. This package never deletes a key, because a deleted key is one that already-issued tokens can no longer be verified against.
+Reading, listing and writing are the whole contract: a key is written once and kept, so that every token it ever signed stays verifiable.
 
 ### Errors
 
@@ -315,26 +330,32 @@ These classes are internal — a caller catches them by name (`ParserMissingKeyE
 
 `boolean` is strict. The string `"true"` is a type error, not a `true` — silently coercing it would turn an identity provider's malformed `email_verified` into a trusted `true`.
 
-## Constraint: One Published Signing Key
+## Rotation, And The Order To Roll It Out In
 
-`importLocal` and `importRemote` resolve a key set at import time, before any token is in hand, so they match on algorithm alone and have no `kid` to disambiguate with. A JWKS publishing two ES256 keys therefore fails to resolve at all, for every relying party.
+A rotation adds a key. The issuer writes a new pair into storage, `signingKeys` returns it first, `sign` picks it because it is the newest, and the retired key stays in the published JWKS so that the tokens it already signed keep verifying until they expire. Keys are kept, which is what makes that possible.
 
-`JWK.signingKeys` is built to that constraint, and its paging carries a quirk that enforces it: the first listed entry is never yielded, so a bucket bootstrapped from empty ends up holding two key files and reporting one. That is preserved on purpose. Correcting the paging on its own would start publishing both keys and break every consumer, so it has to be done together with kid-aware resolution and a deliberate migration.
+That rests on every verifier being able to pick a key by `kid`, which makes the rollout order a **deployment constraint as much as a code one**. Issuer and verifiers are deployed separately, so:
 
-Until then: **one key in the published set**. Rotation means replacing it, not adding to it, and it means a window in which tokens signed by the retired key stop verifying.
+1. Deploy the verifiers first — everything that verifies tokens against the published set — and confirm they are live on a version that resolves a key per token.
+2. Then let the issuer publish more than one key.
+
+In that order every verifier can already tell two published keys apart on the day a second one appears. A verifier still on a version that resolves a single key up front has no way to choose between them, and it is every verification it does that stops, not a few.
+
+A verifier picks a newly published key up when a token first names it, so keep a retired key published for at least as long as the tokens it signed can live.
 
 ## Pattern: Verifying An Upstream ID Token
 
 Resolve the key set once, at module scope or in a container singleton, and treat any failure — an unreachable JWKS, a bad signature, a wrong issuer — as the same "not authenticated" outcome.
 
 ```typescript
-let verificationKey = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
+let verificationKey = JWK.importRemote(new URL(jwksUrl));
 
 export async function verify(raw: string) {
 	try {
 		return await IdToken.verify(raw, await verificationKey, {
 			issuer: "https://auth.example.com",
 			audience: clientId,
+			algorithms: [JWK.Algorithm.ES256],
 			clockTolerance: 60,
 		});
 	} catch {
@@ -343,11 +364,11 @@ export async function verify(raw: string) {
 }
 ```
 
-The `try` has to wrap the accessor reads too if the caller reads claims the issuer does not guarantee — those throw from the getter, not from `verify`.
+Wrap the accessor reads in the same `try` when the caller reads claims the issuer treats as optional: those throw from the getter itself.
 
 ## Pattern: Keys In A Database Instead Of A Bucket
 
-`signingKeys` is a convenience over one particular storage shape. When keys live in rows, skip it and drive `generateKeyPair`/`importKeyPair` directly — they are the whole contract.
+`signingKeys` is a convenience over one particular storage shape. When keys live in rows, drive `generateKeyPair`/`importKeyPair` directly — they are the whole contract.
 
 ```typescript
 let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
@@ -373,11 +394,11 @@ Importing is not free — cache the resulting `KeyPair[]` for the life of a requ
 
 1. **Subclass per kind of token** - one class per token type, with an accessor for every claim it guarantees, is what keeps claim names out of handlers.
 2. **Narrow the accessors you override** - a token that always carries `sub` should expose `string`, not `string | null`; that is the difference between one check and one at every call site.
-3. **Resolve a remote JWKS once** - `importRemote` fetches. Hold the promise in a container singleton or at module scope, never per request.
-4. **`decode` is not `verify`** - nothing it returns has been authenticated. Use it to route, never to decide.
+3. **Resolve a remote JWKS once** - the resolver holds the fetched key set. Hold it in a container singleton or at module scope, so every request shares one.
+4. **Route with `decode`, decide with `verify`** - what `decode` returns is the token's own account of itself, read without any check.
 5. **Always pass `issuer` and `audience` to `verify`** - a valid signature from the right issuer for the wrong audience is still someone else's token.
 6. **Give `clockTolerance` a value** - a small window (60 seconds is typical) absorbs drift between the issuer and the verifier without meaningfully extending a token's life.
 7. **Use `expired` for display, not for access control** - it reads `exp` in milliseconds; `verify` is what enforces expiry.
-8. **Do not publish a second signing key** - see [the constraint above](#constraint-one-published-signing-key); resolution matches on algorithm alone and two keys resolve to none.
+8. **Roll a rotation out verifier-first** - see [the ordering above](#rotation-and-the-order-to-roll-it-out-in); every verifier resolves a key per token before the issuer publishes a second one.
 9. **Guard optional claims with `has`** - the typed reads throw, and `has` is the only cheap way to ask first.
-10. **Never call `signingKeys` against an empty production bucket** - it will generate a key nobody's cached JWKS can verify.
+10. **Point `signingKeys` at the bucket that already holds the keys** - against an empty one it bootstraps a fresh key, which verifies once every verifier has refreshed its copy of the published set.

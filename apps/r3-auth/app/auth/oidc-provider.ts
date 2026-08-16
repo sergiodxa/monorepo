@@ -603,7 +603,7 @@ export class OIDC {
 			let accessToken = await AccessToken.verify(
 				args.token,
 				await this.repository.getSigningKey(),
-				{ issuer: this.issuer },
+				{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
 			);
 
 			return {
@@ -639,7 +639,7 @@ export class OIDC {
 		let accessToken = await AccessToken.verify(
 			args.accessToken,
 			await this.repository.getSigningKey(),
-			{ issuer: this.issuer },
+			{ issuer: this.issuer, algorithms: [JWK.Algorithm.ES256] },
 		);
 
 		// UserInfo speaks for an end user, which OIDC marks with the `openid` scope. Reading

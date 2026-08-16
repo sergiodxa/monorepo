@@ -57,7 +57,7 @@ export default class IdToken extends JWT {
  * audience/issuer claims.
  *
  * @param token Raw JWT string from the OAuth callback.
- * @param verificationKey Imported remote JWK used to validate the signature.
+ * @param verificationKey Resolver for the auth server's published keys.
  * @param clientId OAuth client id expected in the `aud` claim.
  * @returns A verified `IdToken` instance when the token is valid.
  * @example
@@ -71,5 +71,9 @@ export async function verifyIdToken(
 	return await IdToken.verify(token, verificationKey, {
 		audience: clientId,
 		issuer: "auth.sergiodxa.com",
+		// Pinned rather than inferred from the key: the auth server publishes one
+		// algorithm today, and this is what keeps a token that names another from being
+		// verified with whatever key the JWKS happens to offer for it.
+		algorithms: [JWK.Algorithm.ES256],
 	});
 }

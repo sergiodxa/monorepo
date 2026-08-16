@@ -3,8 +3,8 @@
  *
  * Covers the whole life of a signing key: generating an ES256 pair, serializing it
  * so it survives in a bucket or a database row, importing it back into `CryptoKey`
- * objects, publishing the public half as a JWKS, and resolving someone else's JWKS
- * — local or remote — into a key a token can be verified against.
+ * objects, publishing the public half as a JWKS, and turning someone else's JWKS —
+ * local or remote — into the resolver a token is verified through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,10 +25,12 @@ const SIGNING_KEY_PREFIX = "signing:key";
 /**
  * Page size used while walking the stored keys.
  *
- * One per page, which is how the original implementation paged and is load-bearing
- * for which keys `signingKeys` ends up returning — see the note on `scan`.
+ * A bucket accumulates one key file per rotation, so a set of this size is the whole
+ * listing in practice and paging never runs a second time. It is kept well under the
+ * 1000 an object store typically caps a listing at, so a store is free to return a
+ * shorter page than asked for — `scan` follows the cursor either way.
  */
-const SCAN_PAGE_SIZE = 1;
+const SCAN_PAGE_SIZE = 100;
 
 /**
  * Everything about the keys a token is signed with or verified against.
@@ -40,10 +42,10 @@ export namespace JWK {
 	/**
 	 * Signature algorithms this package supports.
 	 *
-	 * ES256 only, which is what every issuer and relying party here is configured
-	 * for. Adding another is not just a new entry: a JWKS publishing more than one
-	 * key needs `kid`-aware resolution on the verifying side, or a relying party
-	 * cannot tell which key to use.
+	 * ES256 only, which is what every issuer and relying party here is configured for.
+	 * Adding a second one is a matter of generating and importing it: verification
+	 * already picks a key by the `kid` and algorithm a token names, so a set publishing
+	 * keys for several algorithms resolves the same way a set of one does.
 	 */
 	export const Algorithm = { ES256: "ES256" } as const;
 
@@ -104,11 +106,30 @@ export namespace JWK {
 		private: jose.CryptoKey;
 	}
 
-	/** A resolved public key, in the shape `JWT.verify` accepts. */
+	/**
+	 * The half of a key pair `JWT.verify` needs when the keys are already in hand.
+	 *
+	 * One field rather than two, because the published JWK carries both the material
+	 * and the `kid` a token's header is matched against, which is everything selecting
+	 * a key out of a set takes.
+	 */
 	export interface VerificationKey {
-		/** The public key to verify against. */
-		public: jose.CryptoKey;
+		jwk: jose.JWK;
 	}
+
+	/**
+	 * Answers with the key a given token's header calls for.
+	 *
+	 * What `importLocal` and `importRemote` hand back: the key set is only consulted
+	 * once there is a token to consult it about.
+	 */
+	export type KeyResolver = jose.JWTVerifyGetKey;
+
+	/** Where `JWT.verify` can find a token's key: the keys themselves, or a resolver. */
+	export type VerificationKeys = KeyResolver | VerificationKey[];
+
+	/** Request headers, timeouts, and cache windows a remote key set can be given. */
+	export type RemoteOptions = jose.RemoteJWKSetOptions;
 
 	/**
 	 * Generates a new key pair in serialized form.
@@ -171,10 +192,15 @@ export namespace JWK {
 	/**
 	 * Loads the signing keys out of storage, generating one on first use.
 	 *
-	 * Newest key first, which is the order `JWT.sign` relies on to pick what to sign
-	 * with. Never point this at an empty production bucket: it will happily generate a
-	 * fresh key, and tokens signed with it verify against no relying party's cached
-	 * JWKS.
+	 * Every stored key comes back, newest first — which is the order `JWT.sign` relies
+	 * on to pick what to sign with, and the order `toJSON` publishes them in. A set
+	 * holding several is the normal state during a rotation: the newest signs, and the
+	 * older ones stay published so tokens they signed keep verifying. A new key is
+	 * minted when nothing usable is stored at all.
+	 *
+	 * Point this at the bucket the issuer already keeps its keys in. Against an empty
+	 * one it bootstraps a key, and only tokens signed after every relying party has
+	 * refreshed its copy of the published set will verify.
 	 *
 	 * @param storage - Where key files live.
 	 * @returns The usable key pairs, newest first.
@@ -204,47 +230,50 @@ export namespace JWK {
 	}
 
 	/**
-	 * Resolves a JWK set that is already in hand into a verification key.
+	 * Turns a key set that is already in hand into a resolver `JWT.verify` can use.
 	 *
-	 * Note that this resolves a *single* key, matched on algorithm alone, at import
-	 * time — the token's `kid` is never consulted. A set that publishes two keys for
-	 * the same algorithm therefore fails to resolve rather than picking one, which is
-	 * the constraint that keeps the number of published signing keys at one.
+	 * The set is consulted per token, with that token's header in hand: the entry whose
+	 * `kid` the header names is the one used, narrowed further by the key type, curve,
+	 * algorithm and intended use each entry declares. Deciding per token is what lets a
+	 * set publish several keys at once, since the token itself says which is meant.
 	 *
-	 * @param jwks - The key set, as fetched from a JWKS endpoint.
-	 * @param options - Algorithm to match on.
-	 * @returns A single-element array in the shape `JWT.verify` takes.
+	 * A set that offers exactly one key for what a token asks for verifies it. A set
+	 * that offers none, or several a token gives no way to choose between, is an error.
+	 *
+	 * @param jwks - The key set, as served by a JWKS endpoint.
+	 * @returns A resolver that answers with the key a given token names.
 	 * @example
-	 * let keys = await JWK.importLocal(jwks, { alg: JWK.Algorithm.ES256 });
-	 * let token = await IdToken.verify(raw, keys, { issuer, audience });
+	 * let keys = await JWK.importLocal(jwks);
+	 * let token = await IdToken.verify(raw, keys, { issuer, audience, algorithms });
 	 */
-	export async function importLocal(
-		jwks: jose.JSONWebKeySet,
-		options?: { alg: Algorithm },
-	): Promise<VerificationKey[]> {
-		let load = jose.createLocalJWKSet(jwks);
-		return [{ public: await load({ alg: options?.alg }) }];
+	// Async despite reading nothing, so that a caller holding the result for the life of
+	// an isolate — the way `importRemote` is meant to be held — awaits the same way for
+	// both, and so either can start doing I/O without a breaking change.
+	// biome-ignore lint/suspicious/useAwait: symmetry with `importRemote`, see above.
+	export async function importLocal(jwks: jose.JSONWebKeySet): Promise<KeyResolver> {
+		return jose.createLocalJWKSet(jwks);
 	}
 
 	/**
-	 * Fetches a JWKS endpoint and resolves it into a verification key.
+	 * Points a resolver at a JWKS endpoint, fetched when a token first needs it.
 	 *
-	 * The fetch happens once, here, so callers are expected to hold the returned
-	 * promise for the life of the isolate rather than calling this per request. Same
-	 * single-key, algorithm-only resolution as `importLocal`.
+	 * The document is fetched on first use and then held, and fetched again — at most
+	 * once per cooldown window — when a token names a `kid` the held copy does not
+	 * carry. That is what carries a relying party across a rotation between deploys:
+	 * the first token signed by a newly published key is what pulls that key in.
+	 *
+	 * Hold the result for the life of the isolate, so that every verification shares
+	 * one fetched key set.
 	 *
 	 * @param url - The JWKS endpoint.
-	 * @param options - Algorithm to match on, plus any remote-set option jose accepts.
-	 * @returns A single-element array in the shape `JWT.verify` takes.
+	 * @param options - Request headers, timeouts, and cache windows.
+	 * @returns A resolver that answers with the key a given token names.
 	 * @example
-	 * let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
+	 * let keys = JWK.importRemote(new URL(jwksUrl));
 	 */
-	export async function importRemote(
-		url: URL,
-		options: jose.RemoteJWKSetOptions & { alg: Algorithm },
-	): Promise<VerificationKey[]> {
-		let load = jose.createRemoteJWKSet(url, options);
-		return [{ public: await load({ alg: options.alg }) }];
+	// biome-ignore lint/suspicious/useAwait: async for the reason given on `importLocal`.
+	export async function importRemote(url: URL, options?: RemoteOptions): Promise<KeyResolver> {
+		return jose.createRemoteJWKSet(url, options);
 	}
 
 	/**
@@ -268,32 +297,28 @@ export namespace JWK {
 	}
 
 	/**
-	 * Walks the stored keys under a prefix.
+	 * Walks every stored key under a prefix, page by page.
 	 *
-	 * This intentionally reproduces a quirk of the implementation it replaces: the
-	 * first page is fetched to obtain a cursor and is then *not* yielded, so the
-	 * entries this produces are the second onward. With a page size of one, that means
-	 * the lexicographically first key file is invisible to `signingKeys`.
+	 * The first request is made with no cursor and its entries are yielded like every
+	 * other page's, which is what puts the lexicographically first key file in the set
+	 * `signingKeys` returns. An earlier version took that page's cursor and dropped its
+	 * entries, and the resulting blind spot is what held the published JWKS at one key.
 	 *
-	 * It is preserved rather than corrected because the skip is what keeps the number
-	 * of returned keys at one in a bucket holding two, and `importLocal` /
-	 * `importRemote` resolve a JWKS by algorithm alone — publishing a second key would
-	 * make every relying party in this monorepo fail to resolve a verification key.
-	 * Fixing the paging therefore has to happen together with kid-aware resolution and
-	 * a deliberate bucket migration, not on its own.
+	 * A page is followed by another whenever the store hands back a cursor, so a store
+	 * that answers with fewer entries than the requested limit is walked correctly.
 	 *
 	 * @param storage - Where key files live.
 	 * @param prefix - Key prefix to walk.
-	 * @yields Each listed entry after the first page.
+	 * @yields Every listed entry, in the order the store returns them.
 	 */
 	async function* scan(storage: KeyStorage, prefix: string) {
-		let { cursor } = await storage.list({ prefix, limit: SCAN_PAGE_SIZE });
+		let cursor: string | undefined;
 
-		while (cursor) {
+		do {
 			let result = await storage.list({ prefix, cursor, limit: SCAN_PAGE_SIZE });
 			yield* result.files;
 			cursor = result.cursor;
-		}
+		} while (cursor);
 	}
 
 	/**

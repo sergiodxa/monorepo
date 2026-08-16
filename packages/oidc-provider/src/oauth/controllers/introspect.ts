@@ -10,6 +10,7 @@
  */
 
 import { ok } from "@pkg/http/response/json";
+import { JWK } from "@pkg/jwt";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -131,6 +132,7 @@ export default createAction(
 
 			let accessToken = await AccessToken.verify(token, signingKeys, {
 				issuer: `https://${issuer}`,
+				algorithms: [JWK.Algorithm.ES256],
 			});
 
 			log.info("Access token introspected successfully", {

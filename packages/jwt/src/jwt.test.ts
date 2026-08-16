@@ -10,11 +10,16 @@
 
 import { beforeAll, describe, expect, test } from "bun:test";
 
+import * as jose from "jose";
+
 import { JWK } from "./jwk";
 import { JWT } from "./jwt";
 
 /** Seconds of clock drift the tolerance tests allow. */
 const CLOCK_TOLERANCE = 60;
+
+/** Pinned the way a caller is meant to verify, rather than left to the key's own type. */
+const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 
 /** A token class shaped like the real ones: required claims, narrowed return types. */
 class TestToken extends JWT {
@@ -97,6 +102,53 @@ describe("signing and verifying", () => {
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		expect(JWT.verify(signed, [])).rejects.toThrow("No key available to verify JWT");
+	});
+});
+
+describe("choosing a key out of a set", () => {
+	test("verifies with the key the token names, out of several held", async () => {
+		let [signer] = keys;
+		let [other] = otherKeys;
+		if (!signer || !other) throw new Error("no keys");
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		let verified = await JWT.verify(signed, [other, signer], VERIFY);
+
+		expect(verified.subject).toBe("user-123");
+	});
+
+	test("refuses a token naming a key the set does not hold", async () => {
+		let [signer] = keys;
+		let [other] = otherKeys;
+		if (!signer || !other) throw new Error("no keys");
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		// The `kid` decides, so a set that does not publish it has nothing to try — this
+		// never reaches a signature check.
+		expect(JWT.verify(signed, [other], VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
+	});
+
+	test("refuses a token whose algorithm is not the pinned one", async () => {
+		let [signer] = keys;
+		if (!signer) throw new Error("no signing key");
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		expect(JWT.verify(signed, keys, { algorithms: ["RS256"] })).rejects.toThrow();
+	});
+
+	test("accepts a resolver as readily as the keys themselves", async () => {
+		let [signer] = keys;
+		if (!signer) throw new Error("no signing key");
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+		let resolver = jose.createLocalJWKSet({ keys: keys.map((key) => key.jwk) });
+
+		await expect(JWT.verify(signed, resolver, VERIFY)).resolves.toBeDefined();
 	});
 });
 
@@ -325,8 +377,8 @@ describe("registered claim accessors", () => {
 
 	test("read `exp` in milliseconds, unlike the RFC and unlike verification", () => {
 		// Documented quirk, kept because token classes override `expiresIn` and because
-		// `expired` is derived from it. An `exp` in seconds always reads as expired here
-		// even though jose would accept the token.
+		// `expired` is derived from it. An `exp` in seconds always reads as expired here,
+		// while `verify` reads the same claim in the units the RFC defines and accepts it.
 		expect(new JWT({ exp: now() + 3600 }).expired).toBe(true);
 		expect(new JWT({ exp: Date.now() + 3600_000 }).expired).toBe(false);
 	});

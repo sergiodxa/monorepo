@@ -157,8 +157,8 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Whether the token is past its expiry, by this class's reading of `exp`.
 	 *
-	 * This is a convenience for display and for cache decisions, not an authorization
-	 * check — `JWT.verify` is what enforces `exp`, against the units the RFC defines.
+	 * A convenience for display and for cache decisions. `JWT.verify` is what enforces
+	 * `exp`, against the units the RFC defines.
 	 *
 	 * @returns `false` for a token with no `exp`, since nothing says it has expired.
 	 */
@@ -259,8 +259,7 @@ export class JWT implements jose.JWTPayload {
 	 * The claims a subclass exposes, as a plain object.
 	 *
 	 * Reads the getters declared directly on the instance's own prototype, so what
-	 * comes out is the subclass's view of the token — the claims it models — and not
-	 * the registered-claim accessors it inherited but may not use.
+	 * comes out is the subclass's view of the token: the claims it models.
 	 *
 	 * @returns Each own getter's name mapped to its value.
 	 */
@@ -279,9 +278,10 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Signs a token with the first key matching the algorithm.
 	 *
-	 * The `kid` of the chosen key goes into the header, so a relying party can tell
-	 * which published key to verify against even though this package's own JWKS
-	 * resolution does not use it yet.
+	 * The keys arrive newest first, so the newest usable one signs and the older ones
+	 * stay published purely to verify what they already signed. The chosen key's `kid`
+	 * goes into the header, which is what lets `verify` — here and at any other relying
+	 * party — pick it straight out of a set publishing several.
 	 *
 	 * @param jwt - The token to sign.
 	 * @param algorithm - Algorithm to sign with; also selects the key.
@@ -301,29 +301,51 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Verifies a token and returns it as an instance of the class this was called on.
 	 *
+	 * The key is chosen per token, from the header the token carries: the key whose
+	 * `kid` the header names is the one used, narrowed further by key type, curve,
+	 * algorithm and intended use. That is what lets an issuer publish several keys at
+	 * once — during a rotation, the retired key stays published and the tokens it
+	 * signed keep verifying, while new tokens name the new key and get it.
+	 *
+	 * Pass `algorithms`, and pass the ones this caller actually expects. It is the pin
+	 * that keeps a token naming one algorithm from being answered with a key published
+	 * for another, once a set carries keys for more than one.
+	 *
 	 * Signature, `exp`, `nbf`, and whichever of `issuer` and `audience` are given are
-	 * all checked by jose, which throws on the first failure — so reaching the return
-	 * value means the claims are trustworthy. Calling this on a subclass produces that
-	 * subclass, which is what makes `IdToken.verify(...)` yield typed claim accessors.
+	 * all checked, and the first failure throws — so reaching the return value means
+	 * the claims are trustworthy. Calling this on a subclass produces that subclass,
+	 * which is what makes `IdToken.verify(...)` yield typed claim accessors.
 	 *
 	 * @param token - The compact-serialized token.
-	 * @param jwks - Candidate verification keys.
-	 * @param options - Expected issuer, audience, clock tolerance, and so on.
+	 * @param jwks - The keys themselves, or a resolver from `JWK.importLocal` /
+	 *   `JWK.importRemote`.
+	 * @param options - Expected issuer, audience, algorithms, clock tolerance, and so on.
 	 * @returns The verified token.
-	 * @throws When no key is available, or when jose rejects the token.
+	 * @throws When the set offers no key for the token, or when a check on it fails.
 	 * @example
-	 * let idToken = await IdToken.verify(raw, keys, { issuer, audience: clientId });
+	 * let idToken = await IdToken.verify(raw, keys, {
+	 * 	issuer,
+	 * 	audience: clientId,
+	 * 	algorithms: [JWK.Algorithm.ES256],
+	 * });
 	 */
 	static async verify<M extends JWT>(
 		this: new (payload: JWT.Payload) => M,
 		token: string,
-		jwks: JWK.VerificationKey[],
+		jwks: JWK.VerificationKeys,
 		options?: JWT.VerifyOptions,
 	): Promise<M> {
-		let key = jwks.find((candidate) => candidate.public);
-		if (!key) throw new Error("No key available to verify JWT");
+		if (Array.isArray(jwks) && jwks.length === 0) {
+			throw new Error("No key available to verify JWT");
+		}
 
-		let result = await jose.jwtVerify(token, key.public, options);
+		// Keys held directly become a key set of the caller's own making, so that they go
+		// through the same per-token selection as a set published by somebody else.
+		let key = Array.isArray(jwks)
+			? jose.createLocalJWKSet({ keys: jwks.map((candidate) => candidate.jwk) })
+			: jwks;
+
+		let result = await jose.jwtVerify(token, key, options);
 
 		return new this(result.payload);
 	}
@@ -331,9 +353,9 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Reads a token's claims without checking anything.
 	 *
-	 * Nothing that comes back has been authenticated. Use it to look at a token before
-	 * deciding how to verify it — reading `iss` to pick a JWKS, for instance — never to
-	 * make a decision about the request.
+	 * What comes back is the token's own account of itself, read without any check. Use
+	 * it to decide how to verify a token — reading `iss` to pick a JWKS, for instance —
+	 * and let `verify` be what every decision about the request rests on.
 	 *
 	 * @param token - The compact-serialized token.
 	 * @returns The decoded token, as an instance of the class this was called on.

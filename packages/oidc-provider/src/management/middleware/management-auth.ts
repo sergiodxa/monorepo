@@ -10,6 +10,7 @@
  */
 
 import { unauthorized } from "@pkg/http/response/json";
+import { JWK } from "@pkg/jwt";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
@@ -84,6 +85,7 @@ export default (internalSecret: string) => {
 		try {
 			accessToken = await AccessToken.verify(token, signingKeys, {
 				issuer: `https://${issuer}`,
+				algorithms: [JWK.Algorithm.ES256],
 			});
 		} catch (error) {
 			log.info("Invalid access token", {

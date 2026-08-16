@@ -58,15 +58,16 @@ export async function verifyIdToken(
 		let jwks = (await jwksResponse.json()) as { keys?: unknown[] };
 		if (!jwks.keys || jwks.keys.length === 0) return null;
 
-		let publicKeys = await JWK.importLocal(jwks as Parameters<typeof JWK.importLocal>[0], {
-			alg: JWK.Algorithm.ES256,
-		});
+		let publicKeys = await JWK.importLocal(jwks as Parameters<typeof JWK.importLocal>[0]);
 
-		// jose validates signature + iss + aud + exp + nbf and throws on any failure.
+		// jose validates signature + iss + aud + exp + nbf and throws on any failure. The
+		// algorithm is pinned rather than inferred from whichever key the set offers, so a
+		// token naming another one is refused before a key is even chosen for it.
 		let verified = await JWT.verify(idToken, publicKeys, {
 			issuer: options.issuer,
 			audience: options.audience,
 			clockTolerance: ID_TOKEN_CLOCK_TOLERANCE,
+			algorithms: [JWK.Algorithm.ES256],
 		});
 
 		let nonce = typeof verified.payload.nonce === "string" ? verified.payload.nonce : null;

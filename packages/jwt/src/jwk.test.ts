@@ -3,9 +3,9 @@
  * storage, the JWKS document the public half is published as, and resolving a key
  * set — local or fetched — back into something a token can be verified against.
  *
- * The signing-key rotation suite also pins the paging quirk this package inherited,
- * because the number of keys it returns is what keeps single-key JWKS resolution
- * working for every relying party in the monorepo.
+ * The signing-key rotation suite asserts that every stored key comes back, newest
+ * first, across a page boundary — a set holding several is the normal state during a
+ * rotation, and each of them is published and verified against by `kid`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
+import * as jose from "jose";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 
@@ -23,6 +24,9 @@ import { JWT } from "./jwt";
 
 /** Where the remote-JWKS tests pretend an authorization server publishes its keys. */
 const JWKS_URL = "https://auth.test/.well-known/jwks.json";
+
+/** Pinned the way a caller is meant to verify, rather than left to the key's own type. */
+const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 
 let server = setupServer();
 
@@ -36,6 +40,9 @@ class MemoryKeyStorage implements KeyStorage {
 
 	/** Keys the listing still reports but whose file has gone, as a bucket mid-write. */
 	readonly missing = new Set<string>();
+
+	/** Cap on a page, so a listing can be forced to span more pages than asked for. */
+	maxPageSize = 1000;
 
 	/**
 	 * Reads a stored file.
@@ -75,7 +82,10 @@ class MemoryKeyStorage implements KeyStorage {
 			start = index === -1 ? keys.length : index + 1;
 		}
 
-		let page = keys.slice(start, start + (options.limit ?? keys.length));
+		// An object store is free to answer with fewer entries than the requested limit,
+		// so the walk has to follow the cursor rather than assume one page holds it all.
+		let limit = Math.min(options.limit ?? keys.length, this.maxPageSize);
+		let page = keys.slice(start, start + limit);
 		let exhausted = start + page.length >= keys.length;
 
 		return {
@@ -190,10 +200,9 @@ describe("importLocal", () => {
 		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
 
-		let resolved = await JWK.importLocal(JWK.toJSON([pair]), { alg: JWK.Algorithm.ES256 });
+		let resolved = await JWK.importLocal(JWK.toJSON([pair]));
 
-		expect(resolved).toHaveLength(1);
-		await expect(JWT.verify(signed, resolved)).resolves.toBeDefined();
+		await expect(JWT.verify(signed, resolved, VERIFY)).resolves.toBeDefined();
 	});
 
 	test("does not resolve a key from an unrelated issuer", async () => {
@@ -201,45 +210,100 @@ describe("importLocal", () => {
 		let other = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
 
-		let resolved = await JWK.importLocal(JWK.toJSON([other]), { alg: JWK.Algorithm.ES256 });
+		let resolved = await JWK.importLocal(JWK.toJSON([other]));
 
-		expect(JWT.verify(signed, resolved)).rejects.toThrow();
+		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow();
 	});
 
-	test("fails on an empty key set", () => {
-		expect(JWK.importLocal({ keys: [] }, { alg: JWK.Algorithm.ES256 })).rejects.toThrow();
+	test("has no key to offer for an empty set", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
+
+		let resolved = await JWK.importLocal({ keys: [] });
+
+		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
 	});
 
-	test("matches on algorithm alone, so two ES256 keys are ambiguous", async () => {
-		// This is the constraint that keeps the published JWKS at one key: resolution
-		// happens once, up front, with no token in hand and therefore no `kid` to match
-		// on. Publishing a second signing key would break every relying party.
-		let first = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
-		let second = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+	test("picks the key a token names out of a set publishing several", async () => {
+		// The set a rotation publishes: the key that signs now, alongside the one it
+		// replaced. Both stay resolvable, and the token's `kid` is what tells them apart.
+		let retired = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let current = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 
-		expect(
-			JWK.importLocal(JWK.toJSON([first, second]), { alg: JWK.Algorithm.ES256 }),
-		).rejects.toThrow(/multiple matching keys/i);
+		let resolved = await JWK.importLocal(JWK.toJSON([current, retired]));
+
+		for (let pair of [current, retired]) {
+			let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
+			await expect(JWT.verify(signed, resolved, VERIFY)).resolves.toBeDefined();
+		}
+	});
+
+	test("refuses a token naming a key the set does not publish", async () => {
+		let published = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let unpublished = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [unpublished]);
+
+		let resolved = await JWK.importLocal(JWK.toJSON([published]));
+
+		// Rejected on the `kid` alone, before the signature is even checked — the set has
+		// nothing to offer for that name.
+		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
+	});
+
+	test("will not verify a signature with a key published for encryption", async () => {
+		// Choosing a key reads `use` and `alg`, not just `kid`, because a set is free to
+		// publish keys meant for encryption or for another algorithm entirely.
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
+		let [published] = JWK.toJSON([pair]).keys;
+
+		let encryption = await JWK.importLocal({ keys: [{ ...published, use: "enc" }] });
+		let otherAlgorithm = await JWK.importLocal({ keys: [{ ...published, alg: "RS256" }] });
+
+		expect(JWT.verify(signed, encryption, VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
+		expect(JWT.verify(signed, otherAlgorithm, VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
+	});
+
+	test("fails when the document is not a key set at all", () => {
+		expect(JWK.importLocal({} as jose.JSONWebKeySet)).rejects.toThrow(/malformed/i);
 	});
 });
 
 describe("importRemote", () => {
-	test("fetches a key set and verifies a token against it", async () => {
+	test("fetches the key set when a token first needs it, not at import", async () => {
 		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let signed = await new JWT({ sub: "user-123", iss: "https://auth.test" }).sign(
 			JWK.Algorithm.ES256,
 			[pair],
 		);
+		let requests = 0;
 
-		server.use(http.get(JWKS_URL, () => HttpResponse.json(JWK.toJSON([pair]))));
+		server.use(
+			http.get(JWKS_URL, () => {
+				requests += 1;
+				return HttpResponse.json(JWK.toJSON([pair]));
+			}),
+		);
 
-		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 });
-		let verified = await JWT.verify(signed, resolved, { issuer: "https://auth.test" });
+		let resolved = await JWK.importRemote(new URL(JWKS_URL));
+
+		expect(requests).toBe(0);
+
+		let verified = await JWT.verify(signed, resolved, { ...VERIFY, issuer: "https://auth.test" });
 
 		expect(verified.subject).toBe("user-123");
+		expect(requests).toBe(1);
 	});
 
-	test("fetches once, so the resolved keys can be held for the isolate's life", async () => {
+	test("reuses the fetched set, so it can be held for the isolate's life", async () => {
 		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let requests = 0;
 
@@ -250,19 +314,45 @@ describe("importRemote", () => {
 			}),
 		);
 
-		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 });
+		let resolved = await JWK.importRemote(new URL(JWKS_URL));
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
-		await JWT.verify(signed, resolved);
-		await JWT.verify(signed, resolved);
+		await JWT.verify(signed, resolved, VERIFY);
+		await JWT.verify(signed, resolved, VERIFY);
 
 		expect(requests).toBe(1);
 	});
 
+	test("refetches when a token names a key the cached set does not hold", async () => {
+		// How a verifier crosses a rotation without being redeployed: the first token
+		// signed by a newly published key is what pulls that key in. The cooldown is set
+		// to zero so the refetch is immediate here.
+		let current = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let rotated = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let published = [current];
+
+		server.use(http.get(JWKS_URL, () => HttpResponse.json(JWK.toJSON(published))));
+
+		let resolved = await JWK.importRemote(new URL(JWKS_URL), { cooldownDuration: 0 });
+
+		let before = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [current]);
+		await JWT.verify(before, resolved, VERIFY);
+
+		published = [rotated, current];
+		let after = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [rotated]);
+
+		await expect(JWT.verify(after, resolved, VERIFY)).resolves.toBeDefined();
+	});
+
 	test("fails when the endpoint does not serve a key set", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
+
 		server.use(http.get(JWKS_URL, () => new HttpResponse(null, { status: 500 })));
 
-		expect(JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 })).rejects.toThrow();
+		let resolved = await JWK.importRemote(new URL(JWKS_URL));
+
+		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow(/200 OK/);
 	});
 });
 
@@ -296,28 +386,53 @@ describe("signingKeys", () => {
 		expect(storage.files.size).toBe(stored);
 	});
 
-	test("returns exactly one key from a bootstrapped store, which is what the JWKS needs", async () => {
-		// Inherited paging quirk: the first listed entry is never yielded, so bootstrap
-		// writes two key files and reports one. Preserved deliberately — see `scan` —
-		// because `importLocal`/`importRemote` cannot resolve a set holding two ES256
-		// keys, and the JWKS endpoint publishes exactly what this returns.
+	test("bootstraps exactly one key file and returns the key in it", async () => {
+		// The store is written to once and read back, rather than the pair of files an
+		// earlier walk produced by generating a key it then could not see.
 		let storage = new MemoryKeyStorage();
 
 		let keys = await JWK.signingKeys(storage);
 
 		expect(keys).toHaveLength(1);
-		expect(storage.files.size).toBe(2);
+		expect(storage.files.size).toBe(1);
 		expect(JWK.toJSON(keys).keys).toHaveLength(1);
 	});
 
-	test("orders the keys it does return newest first", async () => {
+	test("returns every stored key, newest first", async () => {
 		let storage = await seed(4);
 
 		let keys = await JWK.signingKeys(storage);
 
-		expect(keys.length).toBeGreaterThan(1);
+		expect(keys).toHaveLength(4);
 		let timestamps = keys.map((key) => key.created.getTime());
 		expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
+	});
+
+	test("returns the lexicographically first key too, across a page boundary", async () => {
+		// The first listed entry is the one the old walk dropped, and a store that pages
+		// is where that showed: the entries before the first cursor were never yielded.
+		let storage = await seed(5);
+		storage.maxPageSize = 2;
+
+		let keys = await JWK.signingKeys(storage);
+
+		let stored = [...storage.files.keys()].sort();
+		expect(keys.map((key) => `signing:key:${key.id}`).sort()).toEqual(stored);
+	});
+
+	test("publishes every key it returns, so a rotation keeps the old one verifiable", async () => {
+		let storage = await seed(3);
+
+		let keys = await JWK.signingKeys(storage);
+		let published = await JWK.importLocal(JWK.toJSON(keys));
+
+		expect(JWK.toJSON(keys).keys).toHaveLength(3);
+
+		// Signed by the oldest key, verified against the published set: only possible
+		// because every stored key is published and the token's `kid` finds it there.
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys.slice(-1));
+
+		await expect(JWT.verify(signed, published, VERIFY)).resolves.toBeDefined();
 	});
 
 	test("skips a listed entry whose file has gone missing", async () => {
@@ -329,7 +444,7 @@ describe("signingKeys", () => {
 
 		let keys = await JWK.signingKeys(storage);
 
-		expect(keys).toHaveLength(2);
+		expect(keys).toHaveLength(3);
 		expect(keys.map((key) => `signing:key:${key.id}`)).not.toContain(listed[1]);
 	});
 });

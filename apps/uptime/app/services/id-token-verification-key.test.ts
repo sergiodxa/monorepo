@@ -1,81 +1,105 @@
 /**
- * Unit tests for the ID-token verification key service. Mocks the global `fetch`
- * that backs the remote JWKS lookup so a matching key resolves to a usable
- * `CryptoKey` and a JWKS with no matching key rejects, without any real network
- * call to the auth server.
+ * Unit tests for the ID-token verification key service. The JWKS endpoint is served
+ * by a mock server, so the tests cover what the service is actually responsible for:
+ * holding a resolver that fetches the key set lazily, reuses it across verifications,
+ * and is not shared between instances.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+
+import { JWK, JWT } from "@pkg/jwt";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
 
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
-let originalFetch = globalThis.fetch;
+/** The endpoint the service is pointed at. */
+const JWKS_URL = "https://auth.sergiodxa.com/.well-known/jwks.json";
 
-afterEach(() => {
-	globalThis.fetch = originalFetch;
-});
+let server = setupServer();
 
-/** Generates a real ES256 (P-256) public JWK usable as a JWKS entry. */
-async function generateEs256PublicJwk() {
-	let keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
-		"sign",
-		"verify",
-	]);
-	return crypto.subtle.exportKey("jwk", keyPair.publicKey);
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** Generates a key pair and serves its public half as the auth server's key set. */
+async function publish(): Promise<JWK.KeyPair> {
+	let keyPair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+	server.use(http.get(JWKS_URL, () => HttpResponse.json(JWK.toJSON([keyPair]))));
+	return keyPair;
 }
 
 describe("IdTokenVerificationKeyService", () => {
-	test("resolves the remote ES256 public key when the JWKS has a matching key", async () => {
-		let jwk = await generateEs256PublicJwk();
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify({ keys: [jwk] }), {
-				status: 200,
-				headers: { "content-type": "application/json" },
-			})) as unknown as typeof fetch;
+	test("verifies a token against the key set the auth server publishes", async () => {
+		let keyPair = await publish();
+		let token = await new JWT({ sub: "user-1" }).sign(JWK.Algorithm.ES256, [keyPair]);
 
+		let service = new IdTokenVerificationKeyService();
+		let verified = await JWT.verify(token, await service.value, {
+			algorithms: [JWK.Algorithm.ES256],
+		});
+
+		expect(verified.subject).toBe("user-1");
+	});
+
+	test("fetches the key set once and reuses it across verifications", async () => {
+		let keyPair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let requests = 0;
+
+		server.use(
+			http.get(JWKS_URL, () => {
+				requests += 1;
+				return HttpResponse.json(JWK.toJSON([keyPair]));
+			}),
+		);
+
+		let token = await new JWT({ sub: "user-1" }).sign(JWK.Algorithm.ES256, [keyPair]);
 		let service = new IdTokenVerificationKeyService();
 		let keys = await service.value;
 
-		expect(keys).toHaveLength(1);
-		expect(keys[0]?.public).toBeInstanceOf(CryptoKey);
+		// Nothing has been fetched yet: the resolver goes to the network when a token
+		// first needs a key, which is what keeps construction free of I/O.
+		expect(requests).toBe(0);
+
+		await JWT.verify(token, keys, { algorithms: [JWK.Algorithm.ES256] });
+		await JWT.verify(token, keys, { algorithms: [JWK.Algorithm.ES256] });
+
+		expect(requests).toBe(1);
 	});
 
-	test("rejects when the JWKS has no key matching the ES256 algorithm", async () => {
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify({ keys: [] }), {
-				status: 200,
-				headers: { "content-type": "application/json" },
-			})) as unknown as typeof fetch;
+	test("rejects a token the published key set cannot account for", async () => {
+		await publish();
+		let unpublished = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let token = await new JWT({ sub: "user-1" }).sign(JWK.Algorithm.ES256, [unpublished]);
 
 		let service = new IdTokenVerificationKeyService();
 
-		await expect(service.value).rejects.toThrow();
+		await expect(
+			JWT.verify(token, await service.value, { algorithms: [JWK.Algorithm.ES256] }),
+		).rejects.toThrow();
 	});
 
-	test("rejects when the JWKS endpoint responds with a non-200 status", async () => {
-		globalThis.fetch = (async () =>
-			new Response("not found", { status: 404 })) as unknown as typeof fetch;
+	test("rejects when the JWKS endpoint answers with an error", async () => {
+		let keyPair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let token = await new JWT({ sub: "user-1" }).sign(JWK.Algorithm.ES256, [keyPair]);
+
+		server.use(http.get(JWKS_URL, () => new HttpResponse(null, { status: 500 })));
 
 		let service = new IdTokenVerificationKeyService();
 
-		await expect(service.value).rejects.toThrow();
+		await expect(
+			JWT.verify(token, await service.value, { algorithms: [JWK.Algorithm.ES256] }),
+		).rejects.toThrow();
 	});
 
-	test("each instance gets its own independent verifier promise", async () => {
-		let jwk = await generateEs256PublicJwk();
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify({ keys: [jwk] }), {
-				status: 200,
-				headers: { "content-type": "application/json" },
-			})) as unknown as typeof fetch;
-
+	test("each instance gets its own resolver, and therefore its own cache", async () => {
 		let first = new IdTokenVerificationKeyService();
 		let second = new IdTokenVerificationKeyService();
 
 		expect(first.value).not.toBe(second.value);
-		await expect(first.value).resolves.toHaveLength(1);
-		await expect(second.value).resolves.toHaveLength(1);
+		await expect(first.value).resolves.toBeFunction();
+		await expect(second.value).resolves.toBeFunction();
 	});
 });

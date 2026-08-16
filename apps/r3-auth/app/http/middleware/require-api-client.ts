@@ -12,6 +12,7 @@
 import type { Middleware } from "remix/fetch-router";
 
 import { unauthorized } from "@pkg/http/response/json";
+import { JWK } from "@pkg/jwt";
 import { TimingCollector } from "@pkg/server-timing";
 import { getServiceContainer } from "@pkg/service-container";
 import { env, waitUntil } from "cloudflare:workers";
@@ -88,7 +89,11 @@ async function resolveClient(
 	let clientId: string;
 
 	try {
-		let jwt = await AccessToken.verify(token, jwks, { issuer: ISSUER, audience: ISSUER });
+		let jwt = await AccessToken.verify(token, jwks, {
+			issuer: ISSUER,
+			audience: ISSUER,
+			algorithms: [JWK.Algorithm.ES256],
+		});
 		clientId = jwt.subject;
 	} catch {
 		return null;

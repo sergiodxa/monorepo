@@ -23,6 +23,11 @@ async function generateSigningKey() {
 	return await JWK.importKeyPair(generated);
 }
 
+/** Resolves keys the way the app does in production: out of a published JWK set. */
+async function publishedKeys(keyPair: Awaited<ReturnType<typeof generateSigningKey>>) {
+	return await JWK.importLocal(JWK.toJSON([keyPair]));
+}
+
 /** Signs a raw payload into a JWT string using the given key pair. */
 async function signToken(
 	payload: Record<string, unknown>,
@@ -50,7 +55,7 @@ describe("IdToken", () => {
 			keyPair,
 		);
 
-		let idToken = await verifyIdToken(token, [{ public: keyPair.public }], CLIENT_ID);
+		let idToken = await verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID);
 
 		expect(idToken).toBeInstanceOf(IdToken);
 		expect(idToken.subject).toBe("user-1");
@@ -66,7 +71,7 @@ describe("IdToken", () => {
 		let keyPair = await generateSigningKey();
 		let token = await signToken({ sub: "user-1", aud: "someone-else", iss: ISSUER }, keyPair);
 
-		await expect(verifyIdToken(token, [{ public: keyPair.public }], CLIENT_ID)).rejects.toThrow();
+		await expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
 	});
 
 	test("rejects a token whose issuer doesn't match auth.sergiodxa.com", async () => {
@@ -76,7 +81,7 @@ describe("IdToken", () => {
 			keyPair,
 		);
 
-		await expect(verifyIdToken(token, [{ public: keyPair.public }], CLIENT_ID)).rejects.toThrow();
+		await expect(verifyIdToken(token, await publishedKeys(keyPair), CLIENT_ID)).rejects.toThrow();
 	});
 
 	test("rejects a token signed with a key that doesn't match the verification key", async () => {
@@ -85,7 +90,7 @@ describe("IdToken", () => {
 		let token = await signToken({ sub: "user-1", aud: CLIENT_ID, iss: ISSUER }, signingKeyPair);
 
 		await expect(
-			verifyIdToken(token, [{ public: unrelatedKeyPair.public }], CLIENT_ID),
+			verifyIdToken(token, await publishedKeys(unrelatedKeyPair), CLIENT_ID),
 		).rejects.toThrow();
 	});
 });

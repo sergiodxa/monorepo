@@ -34,9 +34,8 @@ export interface KeyStorageListResult {
  *
  * Every method may be synchronous or return a promise, which is what lets a plain
  * in-memory object satisfy this in a test while a bucket client satisfies it in
- * production. Deliberately absent: `has`, `put`, and `remove` — this package never
- * deletes a key, because a deleted key is one that published tokens can no longer
- * be verified against.
+ * production. Reading, listing and writing are the whole contract: a key is written
+ * once and kept, so that every token it ever signed stays verifiable.
  */
 export interface KeyStorage {
 	/**

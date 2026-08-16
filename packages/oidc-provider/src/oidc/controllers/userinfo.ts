@@ -9,6 +9,7 @@
  */
 
 import { json } from "@pkg/http/response";
+import { JWK } from "@pkg/jwt";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -78,7 +79,10 @@ export default createAction(
 
 		let accessToken;
 		try {
-			accessToken = await AccessToken.verify(token, signingKeys, { issuer: `https://${issuer}` });
+			accessToken = await AccessToken.verify(token, signingKeys, {
+				issuer: `https://${issuer}`,
+				algorithms: [JWK.Algorithm.ES256],
+			});
 		} catch {
 			log.info("Access token verification failed");
 			return reject("invalid_token", "Access token is invalid or expired");
