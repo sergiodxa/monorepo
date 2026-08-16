@@ -73,6 +73,35 @@ describe("createExecutionContext", () => {
 		expect(ctx.passedThroughOnException).toBe(true);
 	});
 
+	test("records abort and the reason it was given", () => {
+		let ctx = createExecutionContext();
+		let reason = new Error("client went away");
+
+		expect(ctx.aborted).toBe(false);
+		ctx.abort(reason);
+
+		expect(ctx.aborted).toBe(true);
+		expect(ctx.abortReason).toBe(reason);
+	});
+
+	test("records an abort that was given no reason", () => {
+		let ctx = createExecutionContext();
+
+		ctx.abort();
+
+		expect(ctx.aborted).toBe(true);
+		expect(ctx.abortReason).toBeUndefined();
+	});
+
+	test("keeps the first reason when aborted more than once", () => {
+		let ctx = createExecutionContext();
+
+		ctx.abort("first");
+		ctx.abort("second");
+
+		expect(ctx.abortReason).toBe("first");
+	});
+
 	test("exposes the props it was given", () => {
 		let ctx = createExecutionContext<{ tenant: string }>({ props: { tenant: "acme" } });
 

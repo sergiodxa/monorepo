@@ -18,6 +18,21 @@ export interface ExecutionContextMock<Props = unknown> extends ExecutionContext<
 	readonly waitUntilPromises: readonly Promise<unknown>[];
 	/** Whether the handler asked to pass exceptions through to the origin. */
 	readonly passedThroughOnException: boolean;
+	/** Whether the handler aborted the context. */
+	readonly aborted: boolean;
+	/** Reason given to the first `abort` call, or `undefined` when it was called without one. */
+	readonly abortReason: unknown;
+
+	/**
+	 * Abandons the context, recording that it happened.
+	 *
+	 * Declared here rather than left to the platform interface: a workspace that checks
+	 * against generated worker types sees whichever vintage was last written to disk, and
+	 * `abort` is absent from the older ones. Stating it here keeps this mock checkable
+	 * under both.
+	 * @param reason Cause supplied by the caller, absent when it aborted without one.
+	 */
+	abort(reason?: unknown): void;
 
 	/**
 	 * Awaits every registered promise, including ones registered while awaiting, so a
@@ -41,6 +56,8 @@ export function createExecutionContext<Props = unknown>(
 ): ExecutionContextMock<Props> {
 	let promises: Promise<unknown>[] = [];
 	let passedThrough = false;
+	let aborted = false;
+	let abortReason: unknown;
 
 	return {
 		get waitUntilPromises(): readonly Promise<unknown>[] {
@@ -49,6 +66,14 @@ export function createExecutionContext<Props = unknown>(
 
 		get passedThroughOnException(): boolean {
 			return passedThrough;
+		},
+
+		get aborted(): boolean {
+			return aborted;
+		},
+
+		get abortReason(): unknown {
+			return abortReason;
 		},
 
 		/**
@@ -62,6 +87,19 @@ export function createExecutionContext<Props = unknown>(
 		/** Records that the handler opted into passing exceptions through. */
 		passThroughOnException(): void {
 			passedThrough = true;
+		},
+
+		/**
+		 * Records that the handler abandoned the context.
+		 *
+		 * Aborting is terminal on the platform, so a second call cannot change why the first
+		 * one happened; the original reason is kept rather than overwritten.
+		 * @param reason Cause supplied by the caller, absent when it aborted without one.
+		 */
+		abort(reason?: unknown): void {
+			if (aborted) return;
+			aborted = true;
+			abortReason = reason;
 		},
 
 		async settled(): Promise<void> {
