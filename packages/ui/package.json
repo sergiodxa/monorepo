@@ -21,7 +21,7 @@
 	"dependencies": {
 		"@pkg/lucide-remix": "workspace:*",
 		"@pkg/u": "workspace:*",
-		"remix": "3.0.0-beta.5"
+		"remix": "3.0.0-beta.6"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.14"

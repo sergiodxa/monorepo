@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"@pkg/result": "workspace:*",
-		"remix": "3.0.0-beta.5"
+		"remix": "3.0.0-beta.6"
 	},
 	"devDependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",

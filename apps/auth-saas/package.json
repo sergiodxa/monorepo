@@ -33,7 +33,7 @@
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1",
 		"@simplewebauthn/server": "^13.3.2",
-		"remix": "3.0.0-beta.5"
+		"remix": "3.0.0-beta.6"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.52.1",

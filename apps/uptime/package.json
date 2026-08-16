@@ -39,7 +39,7 @@
 		"@pkg/ui": "workspace:*",
 		"@pkg/uuid": "workspace:*",
 		"@pkg/validate": "workspace:*",
-		"remix": "3.0.0-beta.5"
+		"remix": "3.0.0-beta.6"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.52.1",

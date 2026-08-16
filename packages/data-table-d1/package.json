@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"remix": "3.0.0-beta.5"
+		"remix": "3.0.0-beta.6"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260815.1",
