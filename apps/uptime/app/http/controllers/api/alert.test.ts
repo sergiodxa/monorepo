@@ -11,6 +11,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -24,14 +25,12 @@ import { alertEvents, alerts, teams } from "~/database/schema";
 
 /**
  * `~/app/data/monitor` (imported transitively by `./alert`, for its `monitorId`
- * validation) reads `env` from `cloudflare:workers` at module load. The repo-root
- * `bunfig.toml` preload stubs this automatically for `bun test` run from the repo
- * root, but not when run from this package's own directory, so it's stubbed
- * explicitly here too.
+ * validation) reads `env` from `cloudflare:workers` at module load, so the module has to
+ * resolve here as well as through the repo-root `bunfig.toml` preload. These endpoints
+ * touch no binding, and the empty strict env proves it: any read would throw by the
+ * binding's name instead of quietly answering a stand-in value.
  */
-mock.module("cloudflare:workers", () => ({
-	env: new Proxy({} as Record<string, unknown>, { get: (_target, prop: string) => `test-${prop}` }),
-}));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: alertController, alertRoutes } = await import("./alert");
 

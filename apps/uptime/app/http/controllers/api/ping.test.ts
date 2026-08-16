@@ -18,9 +18,13 @@
  *
  * `cloudflare:workers` is mocked before the controller is imported: the caller budget
  * reads its backend off `env`, the probe goes through the `GEO_FETCH` binding, and the
- * result lands in `PING_RESULTS`. `cloudflare:sockets` and the global `fetch` stand in for
- * the TCP and DNS checks the same way their own service tests stub them, and the Polar
- * ingest runs under a `waitUntil` the harness drains so the billed event can be asserted.
+ * result lands in `PING_RESULTS`. The limiter really counts per key and the dataset really
+ * records what it was handed, so the budget is exhausted rather than faked; `GEO_FETCH` is
+ * the one binding still written by hand, because a probe has to answer with a canned
+ * response and record the region it was asked for. `cloudflare:sockets` and the global
+ * `fetch` stand in for the TCP and DNS checks the same way their own service tests stub
+ * them, and the Polar ingest runs under a `waitUntil` the harness drains so the billed
+ * event can be asserted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,6 +34,7 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -55,13 +60,6 @@ import routes from "~/routes/web";
 /** The binding's declared `simple.limit` in `wrangler.jsonc`, mirrored by the controller. */
 let CALLER_LIMIT = 60;
 
-/** One data point written through the `PING_RESULTS` binding. */
-interface WrittenPoint {
-	indexes: string[];
-	blobs: string[];
-	doubles: number[];
-}
-
 /** The `GeoFetchDO` stub the HTTP check probes through. */
 let doFetchMock = mock(
 	async (_url: string, _init?: RequestInit) =>
@@ -83,34 +81,32 @@ function makeGeoFetchNamespace() {
 	};
 }
 
-/** Data points the endpoint recorded in Analytics Engine, one per served ping. */
-let writtenPoints: WrittenPoint[] = [];
+/** The `PING_RESULTS` dataset, recording the data point each served ping writes. */
+let pingResults = createAnalyticsEngine();
 
-/** Attempts counted per key by the {@link rateLimiter} double, one window per test run. */
-let counts = new Map<string, number>();
+/** The `COSTS` dataset; nothing here runs inside a tracked unit of work, so it stays empty. */
+let costs = createAnalyticsEngine();
 
 /**
- * Stand-in for the `RATE_LIMITER` binding: counts per key and refuses past
- * {@link CALLER_LIMIT}, which is the whole contract the real binding exposes.
+ * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT} the way the
+ * platform's does. The clock is frozen so the fixed window never rolls over mid-test: the
+ * budget test spends sixty requests, and a rollover between two of them would hand the
+ * caller a fresh allowance and turn the expected refusal into a pass.
  */
-let rateLimiter = {
-	async limit({ key }: { key: string }) {
-		let used = (counts.get(key) ?? 0) + 1;
-		counts.set(key, used);
-		return { success: used <= CALLER_LIMIT };
-	},
-};
+let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 
 /** Promises the handler deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: makeGeoFetchNamespace(),
-		PING_RESULTS: { writeDataPoint: (point: WrittenPoint) => writtenPoints.push(point) },
-		COSTS: { writeDataPoint: () => {} },
+	env: createEnv<Env>({
+		// The only binding still written by hand: a probe has to answer with a canned
+		// response and record the region it was asked for, which no factory can supply.
+		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		PING_RESULTS: pingResults,
+		COSTS: costs,
 		RATE_LIMITER: rateLimiter,
-	},
+	}),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -253,7 +249,9 @@ beforeEach(() => {
 	openSocket = async () => {};
 	globalThis.fetch = originalFetch;
 	probedLocationHints.length = 0;
-	writtenPoints.length = 0;
+	pingResults.reset();
+	costs.reset();
+	rateLimiter.reset();
 	ingested.length = 0;
 	deferred.length = 0;
 });
@@ -300,7 +298,7 @@ describe("POST /api/v1/ping entitlement", () => {
 		expect((await errorBody(response)).error.code).toBe("SUBSCRIPTION_REQUIRED");
 		// Refused before any billable work: no probe, no data point, no ingested event.
 		expect(doFetchMock).not.toHaveBeenCalled();
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 	});
 
@@ -328,7 +326,7 @@ describe("POST /api/v1/ping validation", () => {
 		expect(response.status).toBe(400);
 		expect((await errorBody(response)).error.code).toBe("VALIDATION_ERROR");
 		expect(doFetchMock).not.toHaveBeenCalled();
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 	}
 
 	test("rejects an http ping with no url", async () => {
@@ -628,11 +626,11 @@ describe("POST /api/v1/ping side effects", () => {
 
 		await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
-		expect(writtenPoints).toHaveLength(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 		// One shared monitor id, so a team's ad-hoc traffic counts as the single stream it
 		// is rather than one high-cardinality blob per ping.
-		expect(writtenPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "up"]);
-		expect(writtenPoints[0]?.indexes).toEqual([team.id]);
+		expect(pingResults.dataPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "up"]);
+		expect(pingResults.dataPoints[0]?.indexes).toEqual([team.id]);
 	});
 
 	test("bills exactly one ping, against the team and against no monitor", async () => {
@@ -664,7 +662,7 @@ describe("POST /api/v1/ping side effects", () => {
 		await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
 
 		expect(ingested).toHaveLength(1);
-		expect(writtenPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "down"]);
+		expect(pingResults.dataPoints[0]?.blobs).toEqual(["adhoc", "adhoc", "down"]);
 	});
 });
 

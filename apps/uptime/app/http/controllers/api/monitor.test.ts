@@ -11,6 +11,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -25,10 +26,11 @@ import routes from "~/routes/web";
 
 /**
  * `app/data/monitor.ts` (imported by `./monitor`) reads `env` from `cloudflare:workers`
- * at module load time — stub it so importing the module doesn't crash under `bun test`,
- * matching `app/data/monitor.test.ts`'s established pattern.
+ * at module load time, so it has to resolve under `bun test`. These endpoints touch no
+ * binding, and the empty strict env proves it: any read would throw by the binding's name
+ * instead of quietly answering `undefined`.
  */
-mock.module("cloudflare:workers", () => ({ env: {} }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: monitorController, monitorRoutes } =
 	await import("~/app/http/controllers/api/monitor");

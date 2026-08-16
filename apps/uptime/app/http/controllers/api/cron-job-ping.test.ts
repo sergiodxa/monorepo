@@ -21,11 +21,11 @@
  * must bill nothing.
  *
  * `cloudflare:workers` is mocked before the dynamic import of the controller because
- * the caller budget reads its backend off `env`. The double stands in for the
- * `RATE_LIMITER` binding, counting per key exactly as the platform's does, which is
- * what lets the budget be asserted without the counting being real. `waitUntil` collects
- * the deferred ingestion instead of dropping it, so a test can await what the response
- * deliberately doesn't.
+ * the caller budget reads its backend off `env`. The `RATE_LIMITER` binding is an
+ * in-memory limiter that really counts per key, so the budget is asserted by exhausting
+ * it rather than by returning a canned refusal, and `PING_RESULTS` records the data
+ * points it is handed. `waitUntil` collects the deferred ingestion instead of dropping
+ * it, so a test can await what the response deliberately doesn't.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,6 +35,7 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { IngestEvent } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { PolarClient } from "@pkg/polar";
@@ -55,30 +56,16 @@ import routes from "~/routes/web";
 /** The binding's declared `simple.limit` in `wrangler.jsonc`, mirrored by the controller. */
 const CALLER_LIMIT = 60;
 
-/** Attempts counted per key by the {@link rateLimiter} double, one window per test run. */
-let counts = new Map<string, number>();
-
 /**
- * Stand-in for the `RATE_LIMITER` binding: counts per key and refuses past
- * {@link CALLER_LIMIT}, which is the whole contract the real binding exposes.
+ * The `RATE_LIMITER` binding, counting per key against {@link CALLER_LIMIT} the way the
+ * platform's does. The clock is frozen so the fixed window never rolls over mid-test: a
+ * budget test spends sixty requests, and a rollover between two of them would hand the
+ * caller a fresh allowance and turn the expected refusal into a pass.
  */
-let rateLimiter = {
-	async limit({ key }: { key: string }) {
-		let used = (counts.get(key) ?? 0) + 1;
-		counts.set(key, used);
-		return { success: used <= CALLER_LIMIT };
-	},
-};
+let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
+/** The `PING_RESULTS` dataset, recording every point `writePingResult` writes. */
+let pingResults = createAnalyticsEngine();
 
 /**
  * Work the handler deferred past the response. Held rather than dropped so a test can
@@ -87,7 +74,7 @@ let writeDataPointMock = mock((_point: DataPoint) => {});
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: { RATE_LIMITER: rateLimiter, PING_RESULTS: { writeDataPoint: writeDataPointMock } },
+	env: createEnv<Env>({ RATE_LIMITER: rateLimiter, PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -104,7 +91,8 @@ let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 
 beforeEach(() => {
-	writeDataPointMock.mockClear();
+	pingResults.reset();
+	rateLimiter.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
 	deferred = [];
@@ -200,7 +188,7 @@ async function recorded(db: Db, monitorId: string) {
 	let pings = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitorId } });
 	return {
 		pings: pings.length,
-		dataPoints: writeDataPointMock.mock.calls.length,
+		dataPoints: pingResults.dataPoints.length,
 		events: ingestedEvents().length,
 	};
 }
@@ -421,11 +409,9 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.31" }));
 
 		// A cron ping is a report, not a measurement: the job already ran, elsewhere.
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [monitor.id, "cron", "up"],
-			doubles: [0, 1, 0, 0],
-			indexes: [team.id],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{ blobs: [monitor.id, "cron", "up"], doubles: [0, 1, 0, 0], indexes: [team.id] },
+		]);
 	});
 
 	test("records a ping that missed its deadline as degraded", async () => {
@@ -436,11 +422,9 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.32" }));
 
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [monitor.id, "cron", "degraded"],
-			doubles: [0, 1, 0, 0],
-			indexes: [team.id],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{ blobs: [monitor.id, "cron", "degraded"], doubles: [0, 1, 0, 0], indexes: [team.id] },
+		]);
 		// Late is still a ping the team performed, so it is still billed.
 		expect(ingestedEvents()).toHaveLength(1);
 	});
@@ -453,7 +437,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		expect(response.status).toBe(401);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("bills nothing for a key without the cron-jobs:ping scope", async () => {
@@ -466,7 +450,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		expect(response.status).toBe(403);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("bills nothing for an unknown cron job id", async () => {
@@ -478,7 +462,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		expect(response.status).toBe(404);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("bills nothing for a disabled job", async () => {
@@ -489,7 +473,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 
 		expect(response.status).toBe(409);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("bills nothing for a ping inside the per-monitor window", async () => {
@@ -503,7 +487,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		// its minute must not spend allowance on the refusals.
 		expect(response.status).toBe(429);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("bills nothing once the caller has spent its budget", async () => {
@@ -515,14 +499,14 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 			await dispatch(db, ping(monitor.id, { key, address }));
 		}
 		ingestEventsSafeMock.mockClear();
-		writeDataPointMock.mockClear();
+		pingResults.reset();
 
 		// Refused by the middleware, so the handler never ran at all.
 		let refused = await dispatch(db, ping(monitor.id, { key, address }));
 
 		expect(refused.status).toBe(429);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("answers the caller even when ingestion is rejected", async () => {

@@ -2,8 +2,9 @@
  * Tests `POST /api/v1/backfill-daily-stats`: enqueues an `aggregateDailyStats`
  * queue message and returns 202 Accepted, gated by
  * `requireApiKey("monitors:write")` like every other `/api/v1/*` endpoint. The
- * `env.QUEUE` binding is stubbed via `mock.module("cloudflare:workers", ...)`
- * since the controller reads `env` at module load.
+ * `env.QUEUE` binding is an in-memory queue installed through
+ * `mock.module("cloudflare:workers", ...)`, since the controller reads `env` at
+ * module load, so the assertions read the message that really landed on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +12,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -18,15 +20,13 @@ import { createRouter } from "remix/router";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-/** One recorded `QUEUE.send` call. */
-let queueSendCalls: unknown[] = [];
-let queueSendMock = mock(async (message: unknown) => {
-	queueSendCalls.push(message);
-});
+/**
+ * The queue the endpoint enqueues onto. Module scope because the controller captures
+ * `env` on import, so it is emptied per test rather than rebuilt.
+ */
+let queue = createQueue({ name: "uptime" });
 
-mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { send: queueSendMock } },
-}));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");
@@ -73,8 +73,7 @@ function post(key: string | null) {
 }
 
 beforeEach(() => {
-	queueSendCalls = [];
-	queueSendMock.mockClear();
+	queue.reset();
 });
 
 describe("POST /api/v1/backfill-daily-stats", () => {
@@ -89,22 +88,23 @@ describe("POST /api/v1/backfill-daily-stats", () => {
 		let body = (await response.json()) as { data: { status: string } };
 		expect(body.data.status).toBe("queued");
 
-		expect(queueSendMock).toHaveBeenCalledTimes(1);
-		expect(queueSendCalls[0]).toEqual({ type: "aggregateDailyStats" });
+		expect(queue.sent).toHaveLength(1);
+		expect(queue.sent[0]?.body).toEqual({ type: "aggregateDailyStats" });
+		expect(queue.sent[0]?.contentType).toBe("json");
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, post(null));
 		expect(response.status).toBe(401);
-		expect(queueSendMock).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("returns 401 for a garbage Authorization header", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, post("not-a-real-key"));
 		expect(response.status).toBe(401);
-		expect(queueSendMock).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("returns 403 for a key missing the monitors:write scope", async () => {
@@ -114,6 +114,6 @@ describe("POST /api/v1/backfill-daily-stats", () => {
 
 		let response = await dispatch(db, post(key));
 		expect(response.status).toBe(403);
-		expect(queueSendMock).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 });

@@ -10,6 +10,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -24,7 +25,7 @@ import routes from "~/routes/web";
 
 /** `app/data/monitor.ts` imports `env` from `cloudflare:workers` for `Monitor.ping()`, which this route never calls, but the module-level import still needs a resolvable mock. */
 mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { send: mock(async () => {}) } },
+	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
