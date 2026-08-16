@@ -1,9 +1,13 @@
 /**
  * Model for the tenant's JWT signing keys.
  *
- * Manages the ES256 key pairs used to sign and verify OAuth/OIDC tokens: listing,
- * fetching the current key, generation, rotation, and deletion, with a short
- * per-tenant in-memory cache to avoid re-importing keys on every request.
+ * Manages the key pairs used to sign and verify OAuth/OIDC tokens: listing, fetching
+ * the current key, generation, rotation, and deletion, with a short per-tenant
+ * in-memory cache to avoid re-importing keys on every request.
+ *
+ * A row is imported under the algorithm it names, so a key generated under one
+ * algorithm keeps signing and verifying under that one for as long as it is stored.
+ * New keys are generated as ES256, which is what this server advertises.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,6 +31,9 @@ interface SigningKeyCache {
 	keys: JWK.KeyPair[];
 	expiresAt: number;
 }
+
+/** Algorithm names a stored row can be imported under. */
+const SUPPORTED_ALGORITHMS = new Set<string>(Object.values(JWK.Algorithm));
 
 /**
  * Model for JWT signing keys.
@@ -87,11 +94,30 @@ export default class SigningKey {
 
 		return await JWK.importKeyPair({
 			id: record.id as `${string}-${string}-${string}-${string}-${string}`,
-			alg: JWK.Algorithm.ES256,
+			alg: SigningKey.#algorithm(record.id, record.algorithm),
 			privateKey: record.private_key,
 			publicKey: record.public_key,
 			created: new Date(record.created_at).getTime(),
 		});
+	}
+
+	/**
+	 * Reads a row's algorithm as one this package can import under.
+	 *
+	 * A row naming something else is reported rather than imported as the default: the
+	 * key would import under the wrong algorithm and then verify nothing, which reads
+	 * as a rejected token rather than as the stored value being wrong. Raising it takes
+	 * the whole set with it, so a set is never served with one key silently missing —
+	 * the tokens that key signed are the ones that would stop verifying.
+	 *
+	 * @param id - The row being read, named in the error.
+	 * @param value - The algorithm as stored.
+	 * @returns The algorithm to import under.
+	 * @throws {SigningKey.UnsupportedAlgorithmError} When the stored value names no known algorithm.
+	 */
+	static #algorithm(id: string, value: string): JWK.Algorithm {
+		if (SUPPORTED_ALGORITHMS.has(value)) return value as JWK.Algorithm;
+		throw new SigningKey.UnsupportedAlgorithmError(id, value);
 	}
 
 	/**
@@ -115,7 +141,7 @@ export default class SigningKey {
 			records.map((record) =>
 				JWK.importKeyPair({
 					id: record.id as `${string}-${string}-${string}-${string}-${string}`,
-					alg: JWK.Algorithm.ES256,
+					alg: SigningKey.#algorithm(record.id, record.algorithm),
 					privateKey: record.private_key,
 					publicKey: record.public_key,
 					created: new Date(record.created_at).getTime(),
@@ -167,7 +193,7 @@ export default class SigningKey {
 			id: rawKeyPair.id,
 			private_key: rawKeyPair.privateKey,
 			public_key: rawKeyPair.publicKey,
-			algorithm: "ES256",
+			algorithm: rawKeyPair.alg,
 			is_current: true,
 			created_at: now,
 			expires_at: null,
@@ -206,7 +232,7 @@ export default class SigningKey {
 			id: rawKeyPair.id,
 			private_key: rawKeyPair.privateKey,
 			public_key: rawKeyPair.publicKey,
-			algorithm: "ES256",
+			algorithm: rawKeyPair.alg,
 			is_current: true,
 			created_at: now,
 			expires_at: null,
@@ -240,6 +266,22 @@ export default class SigningKey {
 
 		return result;
 	}
+
+	/** Error thrown when a stored key names an algorithm this package cannot import. */
+	static UnsupportedAlgorithmError = class extends Error {
+		override name = "UnsupportedAlgorithmError";
+		/**
+		 * Builds the error naming the row and the value it holds.
+		 * @param id - The signing key row that was read.
+		 * @param algorithm - The algorithm as stored.
+		 */
+		constructor(
+			public id: string,
+			public algorithm: string,
+		) {
+			super(`Signing key ${id} names an unsupported algorithm: ${algorithm}`);
+		}
+	};
 
 	/** Error thrown when attempting to delete the current signing key. */
 	static CannotDeleteCurrentKeyError = class extends Error {

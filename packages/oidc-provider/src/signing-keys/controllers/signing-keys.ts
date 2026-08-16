@@ -63,7 +63,7 @@ export const create = createAction(
 
 		return created({
 			id: keyPair.id,
-			algorithm: "ES256",
+			algorithm: keyPair.alg,
 			isCurrent: true,
 		});
 	}),
@@ -85,7 +85,7 @@ export const rotate = createAction(
 
 		return ok({
 			id: keyPair.id,
-			algorithm: "ES256",
+			algorithm: keyPair.alg,
 			isCurrent: true,
 		});
 	}),
