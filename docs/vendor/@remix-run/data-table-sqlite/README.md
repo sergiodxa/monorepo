@@ -24,12 +24,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { createSqliteDatabase } from 'remix/data-table/sqlite'
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 let db = createSqliteDatabase({
-  filename: 'app.db',
-  foreignKeys: true,
-})
+	filename: "app.db",
+	foreignKeys: true,
+});
 ```
 
 The config-backed database uses `node:sqlite` in Node.js and `bun:sqlite` in Bun. It supports `db.wipe()` and `db.reset()` because it can close and reopen the database file. Call `await db.close()` during application shutdown to release the connection and its file handle.
@@ -41,17 +41,17 @@ The database also applies `pragma busy_timeout = 5000` whenever it opens the con
 You may also pass an existing synchronous client when your application owns its lifecycle:
 
 ```ts
-import { Database } from 'bun:sqlite'
-import { createSqliteDatabase } from 'remix/data-table/sqlite'
+import { Database } from "bun:sqlite";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
-let sqlite = new Database('app.db')
-let db = createSqliteDatabase(sqlite)
+let sqlite = new Database("app.db");
+let db = createSqliteDatabase(sqlite);
 
 // Leaves the supplied client open.
-await db.close()
+await db.close();
 
 // The application closes the client it owns.
-sqlite.close()
+sqlite.close();
 ```
 
 Destructive lifecycle methods are unavailable when you pass an existing client.
@@ -81,11 +81,11 @@ SQLite migrations run without a cross-process migration lock (`migrationLock: fa
 ### In-Memory Database For Tests
 
 ```ts
-import { DatabaseSync } from 'node:sqlite'
-import { createSqliteDatabase } from 'remix/data-table/sqlite'
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteDatabase } from "remix/data-table/sqlite";
 
-let sqlite = new DatabaseSync(':memory:')
-let db = createSqliteDatabase(sqlite)
+let sqlite = new DatabaseSync(":memory:");
+let db = createSqliteDatabase(sqlite);
 ```
 
 ## Related Packages

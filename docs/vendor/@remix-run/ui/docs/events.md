@@ -8,20 +8,20 @@ Use the `on()` mixin to attach event listeners to elements:
 
 ```tsx
 function Button(handle: Handle) {
-  let count = 0
+	let count = 0;
 
-  return () => (
-    <button
-      mix={[
-        on('click', () => {
-          count++
-          handle.update()
-        }),
-      ]}
-    >
-      Clicked {count} times
-    </button>
-  )
+	return () => (
+		<button
+			mix={[
+				on("click", () => {
+					count++;
+					handle.update();
+				}),
+			]}
+		>
+			Clicked {count} times
+		</button>
+	);
 }
 ```
 
@@ -50,41 +50,41 @@ This prevents race conditions when users create events faster than async work co
 
 ```tsx
 function SearchInput(handle: Handle) {
-  let results: string[] = []
-  let loading = false
+	let results: string[] = [];
+	let loading = false;
 
-  return () => (
-    <div>
-      <input
-        type="text"
-        mix={[
-          on('input', async (event, signal) => {
-            let query = event.currentTarget.value
-            loading = true
-            handle.update()
+	return () => (
+		<div>
+			<input
+				type="text"
+				mix={[
+					on("input", async (event, signal) => {
+						let query = event.currentTarget.value;
+						loading = true;
+						handle.update();
 
-            // Passing signal automatically aborts previous requests
-            let response = await fetch(`/search?q=${query}`, { signal })
-            let data = await response.json()
-            // Manual check for APIs that don't accept a signal
-            if (signal.aborted) return
+						// Passing signal automatically aborts previous requests
+						let response = await fetch(`/search?q=${query}`, { signal });
+						let data = await response.json();
+						// Manual check for APIs that don't accept a signal
+						if (signal.aborted) return;
 
-            results = data.results
-            loading = false
-            handle.update()
-          }),
-        ]}
-      />
-      {loading && <div>Loading...</div>}
-      {!loading && results.length > 0 && (
-        <ul>
-          {results.map((result, i) => (
-            <li key={i}>{result}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+						results = data.results;
+						loading = false;
+						handle.update();
+					}),
+				]}
+			/>
+			{loading && <div>Loading...</div>}
+			{!loading && results.length > 0 && (
+				<ul>
+					{results.map((result, i) => (
+						<li key={i}>{result}</li>
+					))}
+				</ul>
+			)}
+		</div>
+	);
 }
 ```
 
@@ -96,28 +96,28 @@ Handle multiple events on the same element:
 
 ```tsx
 function InteractiveBox(handle: Handle) {
-  let state = 'idle'
+	let state = "idle";
 
-  return () => (
-    <div
-      mix={[
-        on('mouseenter', () => {
-          state = 'hovered'
-          handle.update()
-        }),
-        on('mouseleave', () => {
-          state = 'idle'
-          handle.update()
-        }),
-        on('click', () => {
-          state = 'clicked'
-          handle.update()
-        }),
-      ]}
-    >
-      State: {state}
-    </div>
-  )
+	return () => (
+		<div
+			mix={[
+				on("mouseenter", () => {
+					state = "hovered";
+					handle.update();
+				}),
+				on("mouseleave", () => {
+					state = "idle";
+					handle.update();
+				}),
+				on("click", () => {
+					state = "clicked";
+					handle.update();
+				}),
+			]}
+		>
+			State: {state}
+		</div>
+	);
 }
 ```
 
@@ -127,35 +127,35 @@ Common form event patterns:
 
 ```tsx
 function Form(handle: Handle) {
-  return () => (
-    <form
-      mix={[
-        on('submit', (event) => {
-          event.preventDefault()
-          let formData = new FormData(event.currentTarget)
-          // Process form data
-        }),
-      ]}
-    >
-      <input
-        name="email"
-        mix={[
-          on('blur', (event) => {
-            // Validate on blur
-            let value = event.currentTarget.value
-            if (!value.includes('@')) {
-              event.currentTarget.setCustomValidity('Invalid email')
-            }
-          }),
-          on('input', (event) => {
-            // Clear validation on input
-            event.currentTarget.setCustomValidity('')
-          }),
-        ]}
-      />
-      <button type="submit">Submit</button>
-    </form>
-  )
+	return () => (
+		<form
+			mix={[
+				on("submit", (event) => {
+					event.preventDefault();
+					let formData = new FormData(event.currentTarget);
+					// Process form data
+				}),
+			]}
+		>
+			<input
+				name="email"
+				mix={[
+					on("blur", (event) => {
+						// Validate on blur
+						let value = event.currentTarget.value;
+						if (!value.includes("@")) {
+							event.currentTarget.setCustomValidity("Invalid email");
+						}
+					}),
+					on("input", (event) => {
+						// Clear validation on input
+						event.currentTarget.setCustomValidity("");
+					}),
+				]}
+			/>
+			<button type="submit">Submit</button>
+		</form>
+	);
 }
 ```
 
@@ -165,36 +165,36 @@ Handle keyboard interactions:
 
 ```tsx
 function KeyboardNav(handle: Handle) {
-  let selectedIndex = 0
-  let items = ['Apple', 'Banana', 'Cherry']
+	let selectedIndex = 0;
+	let items = ["Apple", "Banana", "Cherry"];
 
-  return () => (
-    <ul
-      tabIndex={0}
-      mix={[
-        on('keydown', (event) => {
-          switch (event.key) {
-            case 'ArrowDown':
-              event.preventDefault()
-              selectedIndex = Math.min(selectedIndex + 1, items.length - 1)
-              handle.update()
-              break
-            case 'ArrowUp':
-              event.preventDefault()
-              selectedIndex = Math.max(selectedIndex - 1, 0)
-              handle.update()
-              break
-          }
-        }),
-      ]}
-    >
-      {items.map((item, i) => (
-        <li key={i} mix={[css({ backgroundColor: i === selectedIndex ? '#eee' : 'transparent' })]}>
-          {item}
-        </li>
-      ))}
-    </ul>
-  )
+	return () => (
+		<ul
+			tabIndex={0}
+			mix={[
+				on("keydown", (event) => {
+					switch (event.key) {
+						case "ArrowDown":
+							event.preventDefault();
+							selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+							handle.update();
+							break;
+						case "ArrowUp":
+							event.preventDefault();
+							selectedIndex = Math.max(selectedIndex - 1, 0);
+							handle.update();
+							break;
+					}
+				}),
+			]}
+		>
+			{items.map((item, i) => (
+				<li key={i} mix={[css({ backgroundColor: i === selectedIndex ? "#eee" : "transparent" })]}>
+					{item}
+				</li>
+			))}
+		</ul>
+	);
 }
 ```
 
@@ -204,38 +204,38 @@ Use `addEventListeners()` for global event targets with automatic cleanup:
 
 ```tsx
 function WindowResizeTracker(handle: Handle) {
-  let width = window.innerWidth
-  let height = window.innerHeight
+	let width = window.innerWidth;
+	let height = window.innerHeight;
 
-  // Set up global listeners once in setup
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      height = window.innerHeight
-      handle.update()
-    },
-  })
+	// Set up global listeners once in setup
+	addEventListeners(window, handle.signal, {
+		resize() {
+			width = window.innerWidth;
+			height = window.innerHeight;
+			handle.update();
+		},
+	});
 
-  return () => (
-    <div>
-      Window size: {width} x {height}
-    </div>
-  )
+	return () => (
+		<div>
+			Window size: {width} x {height}
+		</div>
+	);
 }
 ```
 
 ```tsx
 function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+	let keys: string[] = [];
 
-  addEventListeners(document, handle.signal, {
-    keydown(event) {
-      keys.push(event.key)
-      handle.update()
-    },
-  })
+	addEventListeners(document, handle.signal, {
+		keydown(event) {
+			keys.push(event.key);
+			handle.update();
+		},
+	});
 
-  return () => <div>Keys: {keys.join(', ')}</div>
+	return () => <div>Keys: {keys.join(", ")}</div>;
 }
 ```
 
@@ -247,13 +247,13 @@ For button-like actions, prefer native interactive elements and listen for `clic
 
 ```tsx
 <button
-  mix={[
-    on('click', () => {
-      doAction()
-    }),
-  ]}
+	mix={[
+		on("click", () => {
+			doAction();
+		}),
+	]}
 >
-  Action
+	Action
 </button>
 ```
 
@@ -266,36 +266,36 @@ Do as much work as possible in event handlers. Use the event handler scope for t
 ```tsx
 // ✅ Good: Do work in handler, only store what renders need
 function SearchResults(handle: Handle) {
-  let results: string[] = [] // Needed for rendering
-  let loading = false // Needed for rendering loading state
+	let results: string[] = []; // Needed for rendering
+	let loading = false; // Needed for rendering loading state
 
-  return () => (
-    <div>
-      <input
-        mix={[
-          on('input', async (event, signal) => {
-            let query = event.currentTarget.value
-            // Do work in handler scope
-            loading = true
-            handle.update()
+	return () => (
+		<div>
+			<input
+				mix={[
+					on("input", async (event, signal) => {
+						let query = event.currentTarget.value;
+						// Do work in handler scope
+						loading = true;
+						handle.update();
 
-            let response = await fetch(`/search?q=${query}`, { signal })
-            let data = await response.json()
-            if (signal.aborted) return
+						let response = await fetch(`/search?q=${query}`, { signal });
+						let data = await response.json();
+						if (signal.aborted) return;
 
-            // Only store what's needed for rendering
-            results = data.results
-            loading = false
-            handle.update()
-          }),
-        ]}
-      />
-      {loading && <div>Loading...</div>}
-      {results.map((result, i) => (
-        <div key={i}>{result}</div>
-      ))}
-    </div>
-  )
+						// Only store what's needed for rendering
+						results = data.results;
+						loading = false;
+						handle.update();
+					}),
+				]}
+			/>
+			{loading && <div>Loading...</div>}
+			{results.map((result, i) => (
+				<div key={i}>{result}</div>
+			))}
+		</div>
+	);
 }
 ```
 

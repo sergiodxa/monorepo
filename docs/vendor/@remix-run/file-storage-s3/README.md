@@ -17,21 +17,21 @@ npm i remix
 ## Usage
 
 ```ts
-import { createS3FileStorage } from 'remix/file-storage/s3'
+import { createS3FileStorage } from "remix/file-storage/s3";
 
 let storage = createS3FileStorage({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  bucket: 'my-app-uploads',
-  region: 'us-east-1',
-})
+	accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+	secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+	bucket: "my-app-uploads",
+	region: "us-east-1",
+});
 
 await storage.set(
-  'uploads/hello.txt',
-  new File(['hello world'], 'hello.txt', { type: 'text/plain' }),
-)
-let file = await storage.get('uploads/hello.txt')
-await storage.remove('uploads/hello.txt')
+	"uploads/hello.txt",
+	new File(["hello world"], "hello.txt", { type: "text/plain" }),
+);
+let file = await storage.get("uploads/hello.txt");
+await storage.remove("uploads/hello.txt");
 ```
 
 For S3-compatible providers such as MinIO and LocalStack, set `endpoint` and `forcePathStyle: true`.

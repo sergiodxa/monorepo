@@ -27,33 +27,33 @@ npm i remix
 Mirrors `node:assert/strict` — uses strict equality (`Object.is`), so `1 !== '1'`, `null !== undefined`, `NaN` equals `NaN`, and `0` does not equal `-0`.
 
 ```ts
-import assert from 'remix/assert'
+import assert from "remix/assert";
 
-assert.ok(true)
-assert(true)
-assert.equal(1, 1)
-assert.equal(1, '1') // throws — different types
-assert.equal(NaN, NaN)
-assert.notEqual('a', 'b')
-assert.deepEqual({ a: 1 }, { a: 1 })
-assert.deepEqual({ a: 1 }, { a: '1' }) // throws — different types
-assert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
-assert.match('hello world', /world/)
-assert.fail('should not reach here')
+assert.ok(true);
+assert(true);
+assert.equal(1, 1);
+assert.equal(1, "1"); // throws — different types
+assert.equal(NaN, NaN);
+assert.notEqual("a", "b");
+assert.deepEqual({ a: 1 }, { a: 1 });
+assert.deepEqual({ a: 1 }, { a: "1" }); // throws — different types
+assert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 });
+assert.match("hello world", /world/);
+assert.fail("should not reach here");
 
-await assert.rejects(() => Promise.reject(new Error('oops')))
+await assert.rejects(() => Promise.reject(new Error("oops")));
 assert.throws(() => {
-  throw new TypeError('bad')
-}, TypeError)
+	throw new TypeError("bad");
+}, TypeError);
 
 assert.throws(
-  () => {
-    let error = new Error('Invalid value') as Error & { code: string }
-    error.code = 'ERR_INVALID_ARG_VALUE'
-    throw error
-  },
-  { code: 'ERR_INVALID_ARG_VALUE', message: /Invalid value/ },
-)
+	() => {
+		let error = new Error("Invalid value") as Error & { code: string };
+		error.code = "ERR_INVALID_ARG_VALUE";
+		throw error;
+	},
+	{ code: "ERR_INVALID_ARG_VALUE", message: /Invalid value/ },
+);
 ```
 
 ### Named exports
@@ -62,21 +62,21 @@ Each assertion is also exported as a named function:
 
 ```ts
 import {
-  ok,
-  assert, // alias of ok()
-  equal,
-  notEqual,
-  deepEqual,
-  partialDeepEqual,
-  notDeepEqual,
-  match,
-  doesNotMatch,
-  fail,
-  throws,
-  doesNotThrow,
-  rejects,
-  doesNotReject,
-} from 'remix/assert'
+	ok,
+	assert, // alias of ok()
+	equal,
+	notEqual,
+	deepEqual,
+	partialDeepEqual,
+	notDeepEqual,
+	match,
+	doesNotMatch,
+	fail,
+	throws,
+	doesNotThrow,
+	rejects,
+	doesNotReject,
+} from "remix/assert";
 ```
 
 ### `expect`
@@ -84,18 +84,18 @@ import {
 A vitest-/jest-style chainable matcher API on top of the same `AssertionError`. Use `.not` to negate, `.rejects` / `.resolves` to assert on a promise. Mock-aware matchers work with `mock.fn()` / `mock.method()` from `remix/test`.
 
 ```ts
-import { expect } from 'remix/assert'
+import { expect } from "remix/assert";
 
-expect(value).toBe(42)
-expect({ a: 1, b: 2 }).toEqual({ a: 1, b: 2 })
-expect({ a: 1, b: 2 }).toEqual(expect.objectContaining({ a: 1 }))
-expect({ a: { b: 1, c: 2 } }).toMatchObject({ a: { b: 1 } })
-expect(value).not.toBeNull()
-expect(arr).toHaveLength(3)
-expect(spy).toHaveBeenCalledWith('hello', 1)
+expect(value).toBe(42);
+expect({ a: 1, b: 2 }).toEqual({ a: 1, b: 2 });
+expect({ a: 1, b: 2 }).toEqual(expect.objectContaining({ a: 1 }));
+expect({ a: { b: 1, c: 2 } }).toMatchObject({ a: { b: 1 } });
+expect(value).not.toBeNull();
+expect(arr).toHaveLength(3);
+expect(spy).toHaveBeenCalledWith("hello", 1);
 
-await expect(fetch('/missing')).rejects.toThrow('Not found')
-await expect(loadModule()).resolves.toBeUndefined()
+await expect(fetch("/missing")).rejects.toThrow("Not found");
+await expect(loadModule()).resolves.toBeUndefined();
 ```
 
 Available matchers:

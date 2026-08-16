@@ -20,24 +20,24 @@ npm i remix
 Use `asyncContext()` at the router level to make the current request context available to helpers deeper in the same async call stack.
 
 ```ts
-import { createRouter } from 'remix/router'
-import { asyncContext, getContext } from 'remix/middleware/async-context'
+import { createRouter } from "remix/router";
+import { asyncContext, getContext } from "remix/middleware/async-context";
 
 let router = createRouter({
-  middleware: [asyncContext()],
-})
+	middleware: [asyncContext()],
+});
 
 async function loadCurrentUser() {
-  let context = getContext()
-  let userId = context.params.id
+	let context = getContext();
+	let userId = context.params.id;
 
-  return users.getById(userId)
+	return users.getById(userId);
 }
 
-router.get('/users/:id', async () => {
-  let user = await loadCurrentUser()
-  return Response.json(user)
-})
+router.get("/users/:id", async () => {
+	let user = await loadCurrentUser();
+	return Response.json(user);
+});
 ```
 
 This middleware requires support for `node:async_hooks`, so it is intended for Node.js runtimes.
@@ -47,39 +47,39 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 `getContext()` is global and out-of-band, so it reuses your fetch-router `RouterTypes.context` by default.
 
 ```ts
-import { requireAuth } from 'remix/middleware/auth'
-import type { AnyParams, ContextWithParams, MiddlewareContext } from 'remix/router'
-import { loadAuth } from './middleware/auth.ts'
-import { loadSession } from './middleware/session.ts'
+import { requireAuth } from "remix/middleware/auth";
+import type { AnyParams, ContextWithParams, MiddlewareContext } from "remix/router";
+import { loadAuth } from "./middleware/auth.ts";
+import { loadSession } from "./middleware/session.ts";
 
-export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
-export const authenticatedMiddleware = [requireAuth<{ id: string }>()] as const
+export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>];
+export const authenticatedMiddleware = [requireAuth<{ id: string }>()] as const;
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
->
+	MiddlewareContext<RootMiddleware>,
+	params
+>;
 
 export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<typeof authenticatedMiddleware, AppContext>,
-  params
->
+	MiddlewareContext<typeof authenticatedMiddleware, AppContext>,
+	params
+>;
 
-declare module 'remix/router' {
-  interface RouterTypes {
-    context: AppContext
-  }
+declare module "remix/router" {
+	interface RouterTypes {
+		context: AppContext;
+	}
 }
 ```
 
 After that augmentation, `getContext()` returns your app context values everywhere in the app, with route params typed broadly as `AnyParams`.
 
 ```ts
-import { Auth } from 'remix/middleware/auth'
-import { getContext } from 'remix/middleware/async-context'
+import { Auth } from "remix/middleware/auth";
+import { getContext } from "remix/middleware/async-context";
 
 function getCurrentAuth() {
-  return getContext().get(Auth)
+	return getContext().get(Auth);
 }
 ```
 

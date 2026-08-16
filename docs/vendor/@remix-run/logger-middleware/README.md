@@ -19,17 +19,17 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { logger } from 'remix/middleware/logger'
+import { createRouter } from "remix/router";
+import { logger } from "remix/middleware/logger";
 
 let router = createRouter({
-  middleware: [logger()],
-})
+	middleware: [logger()],
+});
 
-router.get('/users/:id', (context) => {
-  context.logger(`Loading user ${context.params.id}`)
-  return Response.json(loadUser(context.params.id))
-})
+router.get("/users/:id", (context) => {
+	context.logger(`Loading user ${context.params.id}`);
+	return Response.json(loadUser(context.params.id));
+});
 
 // Logs: [19/Nov/2025:14:32:10 -0800] GET /users/123 200 1234
 ```
@@ -61,12 +61,12 @@ You can use the `format` option to customize the log format. The following token
 
 ```ts
 let router = createRouter({
-  middleware: [
-    logger({
-      format: '%method %path - %status (%duration ms)',
-    }),
-  ],
-})
+	middleware: [
+		logger({
+			format: "%method %path - %status (%duration ms)",
+		}),
+	],
+});
 // Logs: GET /users/123 - 200 (42 ms)
 ```
 
@@ -74,12 +74,12 @@ For Apache-style combined log format, you can use the following format:
 
 ```ts
 let router = createRouter({
-  middleware: [
-    logger({
-      format: '%host - - [%date] "%method %path" %status %contentLength "%referer" "%userAgent"',
-    }),
-  ],
-})
+	middleware: [
+		logger({
+			format: '%host - - [%date] "%method %path" %status %contentLength "%referer" "%userAgent"',
+		}),
+	],
+});
 ```
 
 ### Colorized Output
@@ -88,12 +88,12 @@ Logger output automatically uses ANSI colors for high-signal tokens when termina
 
 ```ts
 let router = createRouter({
-  middleware: [
-    logger({
-      colors: false,
-    }),
-  ],
-})
+	middleware: [
+		logger({
+			colors: false,
+		}),
+	],
+});
 ```
 
 The following tokens are colorized when colors are enabled:
@@ -108,19 +108,19 @@ The following tokens are colorized when colors are enabled:
 You can use a custom logger to write logs to a file or other stream.
 
 ```ts
-import { createWriteStream } from 'node:fs'
+import { createWriteStream } from "node:fs";
 
-let logStream = createWriteStream('access.log', { flags: 'a' })
+let logStream = createWriteStream("access.log", { flags: "a" });
 
 let router = createRouter({
-  middleware: [
-    logger({
-      log(message) {
-        logStream.write(message + '\n')
-      },
-    }),
-  ],
-})
+	middleware: [
+		logger({
+			log(message) {
+				logStream.write(message + "\n");
+			},
+		}),
+	],
+});
 ```
 
 ## Related Packages

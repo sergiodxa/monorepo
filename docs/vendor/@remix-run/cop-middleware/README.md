@@ -18,12 +18,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { cop } from 'remix/middleware/cop'
+import { createRouter } from "remix/router";
+import { cop } from "remix/middleware/cop";
 
 let router = createRouter({
-  middleware: [cop()],
-})
+	middleware: [cop()],
+});
 ```
 
 ## Behavior
@@ -50,19 +50,19 @@ This middleware is intentionally tokenless. If you cannot guarantee the deployme
 You can also layer `cop()` in front of `csrf()` when you want both browser provenance checks and session-backed synchronizer tokens.
 
 ```ts
-import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/router'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
-import { cop } from 'remix/middleware/cop'
-import { csrf } from 'remix/middleware/csrf'
+import { createCookie } from "remix/cookie";
+import { createRouter } from "remix/router";
+import { createCookieSessionStorage } from "remix/session-storage/cookie";
+import { session } from "remix/middleware/session";
+import { cop } from "remix/middleware/cop";
+import { csrf } from "remix/middleware/csrf";
 
-let sessionCookie = createCookie('__session', { secrets: ['secret1'] })
-let sessionStorage = createCookieSessionStorage()
+let sessionCookie = createCookie("__session", { secrets: ["secret1"] });
+let sessionStorage = createCookieSessionStorage();
 
 let router = createRouter({
-  middleware: [cop(), session(sessionCookie, sessionStorage), csrf()],
-})
+	middleware: [cop(), session(sessionCookie, sessionStorage), csrf()],
+});
 ```
 
 In this setup, `cop()` runs first and rejects unsafe cross-origin browser requests early using `Sec-Fetch-Site` and `Origin`. Requests that pass `cop()` continue into `csrf()`, which still enforces synchronizer-token validation and origin checks for the remaining traffic.
@@ -70,16 +70,16 @@ In this setup, `cop()` runs first and rejects unsafe cross-origin browser reques
 ## Trusted Origins
 
 ```ts
-import { createRouter } from 'remix/router'
-import { cop } from 'remix/middleware/cop'
+import { createRouter } from "remix/router";
+import { cop } from "remix/middleware/cop";
 
 let router = createRouter({
-  middleware: [
-    cop({
-      trustedOrigins: ['https://admin.example.com'],
-    }),
-  ],
-})
+	middleware: [
+		cop({
+			trustedOrigins: ["https://admin.example.com"],
+		}),
+	],
+});
 ```
 
 Trusted origins must be exact origin values in the form `scheme://host[:port]`.
@@ -95,16 +95,16 @@ Bypass patterns intentionally weaken protection for specific endpoints. They sup
 - Tail wildcards with `{name...}`
 
 ```ts
-import { createRouter } from 'remix/router'
-import { cop } from 'remix/middleware/cop'
+import { createRouter } from "remix/router";
+import { cop } from "remix/middleware/cop";
 
 let router = createRouter({
-  middleware: [
-    cop({
-      insecureBypassPatterns: ['POST /webhooks/{provider}', '/healthz'],
-    }),
-  ],
-})
+	middleware: [
+		cop({
+			insecureBypassPatterns: ["POST /webhooks/{provider}", "/healthz"],
+		}),
+	],
+});
 ```
 
 ## Related Packages

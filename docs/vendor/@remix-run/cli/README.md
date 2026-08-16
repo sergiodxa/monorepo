@@ -63,20 +63,20 @@ remix --no-color doctor
 You can also run the CLI programmatically:
 
 ```ts
-import { runRemix } from 'remix/cli'
+import { runRemix } from "remix/cli";
 
-await runRemix(['new', 'my-remix-app'])
-await runRemix(['completion', 'bash'])
-await runRemix(['doctor'])
-await runRemix(['doctor', '--fix'])
-await runRemix(['db', 'migrate'])
-await runRemix(['db', 'status'])
-await runRemix(['db', 'reset', '--force'])
-await runRemix(['routes'])
-await runRemix(['routes', '--table'])
-await runRemix(['routes', '--table', '--no-headers'])
-await runRemix(['test'])
-await runRemix(['version'])
+await runRemix(["new", "my-remix-app"]);
+await runRemix(["completion", "bash"]);
+await runRemix(["doctor"]);
+await runRemix(["doctor", "--fix"]);
+await runRemix(["db", "migrate"]);
+await runRemix(["db", "status"]);
+await runRemix(["db", "reset", "--force"]);
+await runRemix(["routes"]);
+await runRemix(["routes", "--table"]);
+await runRemix(["routes", "--table", "--no-headers"]);
+await runRemix(["test"]);
+await runRemix(["version"]);
 ```
 
 Destructive database commands (`remix db wipe` and `remix db reset`) refuse to run without `--force`.
@@ -90,65 +90,65 @@ trailing commas. Every top-level field is optional:
 
 ```jsonc
 {
-  "$schema": "https://remix.run/schemas/remix.json",
+	"$schema": "https://remix.run/schemas/remix.json",
 
-  "db": {
-    "adapter": {
-      "type": "sqlite",
-      "filename": { "env": "DATABASE_URL", "default": "./db/app.sqlite" },
-      "foreignKeys": true,
-      "busyTimeout": 5000,
-    },
-    "migrations": {
-      "directory": "./db/migrations",
-      "journalTable": "data_table_migrations",
-    },
-    "seed": "./db/seed.sql",
-  },
+	"db": {
+		"adapter": {
+			"type": "sqlite",
+			"filename": { "env": "DATABASE_URL", "default": "./db/app.sqlite" },
+			"foreignKeys": true,
+			"busyTimeout": 5000,
+		},
+		"migrations": {
+			"directory": "./db/migrations",
+			"journalTable": "data_table_migrations",
+		},
+		"seed": "./db/seed.sql",
+	},
 
-  "doctor": {
-    "strict": true,
-  },
+	"doctor": {
+		"strict": true,
+	},
 
-  "test": {
-    // Test discovery
-    "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
-    "browserFiles": ["**/*.test.browser.{ts,tsx}"],
-    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
-    "exclude": ["node_modules/**", "dist/**"],
-    "type": ["server", "browser", "e2e"],
-    "only": ["/checkout/i"],
+	"test": {
+		// Test discovery
+		"files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
+		"browserFiles": ["**/*.test.browser.{ts,tsx}"],
+		"e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
+		"exclude": ["node_modules/**", "dist/**"],
+		"type": ["server", "browser", "e2e"],
+		"only": ["/checkout/i"],
 
-    // Test execution
-    "concurrency": 4,
-    "pool": "forks",
-    "setup": "./test/setup.ts",
-    "watch": false,
+		// Test execution
+		"concurrency": 4,
+		"pool": "forks",
+		"setup": "./test/setup.ts",
+		"watch": false,
 
-    // Playwright
-    "playwright": {
-      "echo": false,
-      "open": false,
-      "configFile": "./playwright.config.ts",
-      "projects": ["chromium", "firefox"],
-    },
+		// Playwright
+		"playwright": {
+			"echo": false,
+			"open": false,
+			"configFile": "./playwright.config.ts",
+			"projects": ["chromium", "firefox"],
+		},
 
-    // Output
-    "reporter": "spec",
-    "quiet": false,
+		// Output
+		"reporter": "spec",
+		"quiet": false,
 
-    // Coverage
-    "coverage": {
-      "enabled": true,
-      "dir": ".coverage",
-      "include": ["app/**"],
-      "exclude": ["**/*.test.*"],
-      "branches": 80,
-      "functions": 80,
-      "lines": 80,
-      "statements": 80,
-    },
-  },
+		// Coverage
+		"coverage": {
+			"enabled": true,
+			"dir": ".coverage",
+			"include": ["app/**"],
+			"exclude": ["**/*.test.*"],
+			"branches": 80,
+			"functions": 80,
+			"lines": 80,
+			"statements": 80,
+		},
+	},
 }
 ```
 

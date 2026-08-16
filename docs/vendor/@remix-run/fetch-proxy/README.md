@@ -19,22 +19,22 @@ npm i remix
 ## Usage
 
 ```ts
-import { createFetchProxy } from 'remix/fetch-proxy'
+import { createFetchProxy } from "remix/fetch-proxy";
 
 // Create a proxy that sends all requests through to remix.run
-let proxy = createFetchProxy('https://remix.run')
+let proxy = createFetchProxy("https://remix.run");
 
 // This fetch handler is probably running as part of your server somewhere...
 function handleFetch(request: Request): Promise<Response> {
-  return proxy(request)
+	return proxy(request);
 }
 
 // Test it out by manually throwing a Request at it
-let response = await handleFetch(new Request('https://shopify.com'))
+let response = await handleFetch(new Request("https://shopify.com"));
 
-let text = await response.text()
-let title = text.match(/<title>([^<]+)<\/title>/)[1]
-assert(title.includes('Remix'))
+let text = await response.text();
+let title = text.match(/<title>([^<]+)<\/title>/)[1];
+assert(title.includes("Remix"));
 ```
 
 ## Encoding and Framing Headers
@@ -48,15 +48,15 @@ Since `fetch` can decompress upstream responses and does not expose raw HTTP tra
 To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response#compress-responses):
 
 ```ts
-import { createFetchProxy } from 'remix/fetch-proxy'
-import { compressResponse } from 'remix/response/compress'
+import { createFetchProxy } from "remix/fetch-proxy";
+import { compressResponse } from "remix/response/compress";
 
-let proxy = createFetchProxy('https://remix.run')
+let proxy = createFetchProxy("https://remix.run");
 
 async function handleFetch(request: Request): Promise<Response> {
-  let response = await proxy(request)
+	let response = await proxy(request);
 
-  return compressResponse(response, request)
+	return compressResponse(response, request);
 }
 ```
 

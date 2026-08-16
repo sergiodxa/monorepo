@@ -21,35 +21,35 @@ npm i remix
 ## Quick example
 
 ```ts
-import { createMultiMatcher } from 'remix/route-pattern/match'
+import { createMultiMatcher } from "remix/route-pattern/match";
 
-let matcher = createMultiMatcher<{ name: string }>()
+let matcher = createMultiMatcher<{ name: string }>();
 
-matcher.add('blog/:slug', { name: 'blog-post' })
-matcher.add('api(/v:version)/*path', { name: 'api' })
-matcher.add('http(s)://:region.cdn.com/assets/*file.:ext', { name: 'assets' })
+matcher.add("blog/:slug", { name: "blog-post" });
+matcher.add("api(/v:version)/*path", { name: "api" });
+matcher.add("http(s)://:region.cdn.com/assets/*file.:ext", { name: "assets" });
 
-let match = matcher.match('https://example.com/blog/v3')
-match?.pattern.toString()
+let match = matcher.match("https://example.com/blog/v3");
+match?.pattern.toString();
 // /blog/:slug
-match?.params
+match?.params;
 // { slug: 'v3' }
-match?.data
+match?.data;
 // { name: 'blog-post' }
 
-import { createHref } from 'remix/route-pattern/href'
+import { createHref } from "remix/route-pattern/href";
 
-createHref('blog/:slug', { slug: 'v3' })
+createHref("blog/:slug", { slug: "v3" });
 // '/blog/v3'
 
-createHref('api(/v:version)/*path', { version: '2', path: 'users/profile' })
+createHref("api(/v:version)/*path", { version: "2", path: "users/profile" });
 // '/api/v2/users/profile'
 
-createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
-  region: 'us-west',
-  file: 'images/logo',
-  ext: 'png',
-})
+createHref("http(s)://:region.cdn.com/assets/*file.:ext", {
+	region: "us-west",
+	file: "images/logo",
+	ext: "png",
+});
 // 'https://us-west.cdn.com/assets/images/logo.png'
 ```
 
@@ -74,8 +74,8 @@ Examples in this README use `remix/route-pattern/*` imports. The same APIs are a
 Protocol must be `http`, `https`, or `http(s)`:
 
 ```ts
-'https://example.com' // matches https://example.com
-'http(s)://example.com' // matches http://example.com, https://example.com
+"https://example.com"; // matches https://example.com
+"http(s)://example.com"; // matches http://example.com, https://example.com
 ```
 
 ### Hostname & pathname
@@ -83,9 +83,9 @@ Protocol must be `http`, `https`, or `http(s)`:
 **Variables** capture dynamic segments using `:name`:
 
 ```ts
-'users/:id' // matches /users/123
-'blog/:date/:slug' // matches /blog/2024-01-15/hello
-'files/:name.:ext' // matches /files/readme.md
+"users/:id"; // matches /users/123
+"blog/:date/:slug"; // matches /blog/2024-01-15/hello
+"files/:name.:ext"; // matches /files/readme.md
 ```
 
 Pathname variables possessively capture the largest non-empty run up to `/` or `.`. Hyphens are data, so UUIDs and slugs remain intact. A variable may have static text before it, but every path through following optionals must reach `/`, `.`, a wildcard, or the end of the hostname or pathname. Capture an inseparable value such as a date with one variable instead of `:year-:month-:day`.
@@ -95,9 +95,9 @@ Raw `/` and `.` are structural delimiters. Their percent-encoded forms remain da
 **Wildcards** match multi-segment paths using `*name`:
 
 ```ts
-'files/*path' // matches /files/images/logo.png
-'node_modules/*package/dist/index.js' // matches /node_modules/@remix-run/router/dist/index.js
-'files/*' // matches any path under /files, but doesn't capture the wildcard value
+"files/*path"; // matches /files/images/logo.png
+"node_modules/*package/dist/index.js"; // matches /node_modules/@remix-run/router/dist/index.js
+"files/*"; // matches any path under /files, but doesn't capture the wildcard value
 ```
 
 Patterns may contain any number of wildcards when static text or a delimiter separates them. Adjacent wildcards such as `*left*right` are rejected because their capture boundary is ambiguous.
@@ -105,10 +105,10 @@ Patterns may contain any number of wildcards when static text or a delimiter sep
 **Optionals** make parts optional using `()`:
 
 ```ts
-'api(/v:version)/users' // matches /api/users, /api/v2/users
-'blog/:slug(.html)' // matches /blog/hello, /blog/hello.html
-'docs(/guides/:category)' // matches /docs, /docs/guides/routing
-'api(/v:major(.:minor))' // matches /api, /api/v2, /api/v2.1
+"api(/v:version)/users"; // matches /api/users, /api/v2/users
+"blog/:slug(.html)"; // matches /blog/hello, /blog/hello.html
+"docs(/guides/:category)"; // matches /docs, /docs/guides/routing
+"api(/v:major(.:minor))"; // matches /api, /api/v2, /api/v2.1
 ```
 
 Optionals compile as state branches rather than concrete variants, so independent and nested optionals do not cause exponential matcher construction. Empty optionals and adjacent optional branches that give the same URL different capture schemas are rejected.
@@ -116,32 +116,32 @@ Optionals compile as state branches rather than concrete variants, so independen
 While variables, wildcards, and optionals are most prevalent in pathnames, you can also use them in hostnames:
 
 ```ts
-':tenant.example.com/dashboard' // matches acme.example.com/dashboard
-'(www.)example.com/blog/:slug(.html)' // matches example.com/blog/hello, www.example.com/blog/hello.html
-'*.example.com/files/*path' // matches cdn.example.com/files/images/logo.png
-'(:locale.)example.com/docs(/:section)' // matches en.example.com/docs, en.example.com/docs/guides
+":tenant.example.com/dashboard"; // matches acme.example.com/dashboard
+"(www.)example.com/blog/:slug(.html)"; // matches example.com/blog/hello, www.example.com/blog/hello.html
+"*.example.com/files/*path"; // matches cdn.example.com/files/images/logo.png
+"(:locale.)example.com/docs(/:section)"; // matches en.example.com/docs, en.example.com/docs/guides
 ```
 
 Capture names may repeat. `params` uses the last participating capture in pattern order, while `paramsMeta` retains every participating capture:
 
 ```ts
-let matcher = createMatcher('/:id/:id')
-let match = matcher.match('https://example.com/first/second')
+let matcher = createMatcher("/:id/:id");
+let match = matcher.match("https://example.com/first/second");
 
-match?.params
+match?.params;
 // { id: 'second' }
 
-match?.paramsMeta.pathname.map(({ name, value }) => ({ name, value }))
+match?.paramsMeta.pathname.map(({ name, value }) => ({ name, value }));
 // [{ name: 'id', value: 'first' }, { name: 'id', value: 'second' }]
 ```
 
 **Escape characters** with `\`:
 
 ```ts
-'time/12\\:30' // matches /time/12:30
-'calculator/2\\*3' // matches /calculator/2*3
-'wiki/Mercury_\\(planet\\)' // matches /wiki/Mercury_(planet)
-'wiki/AC\\/DC' // matches /wiki/AC%2FDC
+"time/12\\:30"; // matches /time/12:30
+"calculator/2\\*3"; // matches /calculator/2*3
+"wiki/Mercury_\\(planet\\)"; // matches /wiki/Mercury_(planet)
+"wiki/AC\\/DC"; // matches /wiki/AC%2FDC
 ```
 
 ### Search
@@ -149,8 +149,8 @@ match?.paramsMeta.pathname.map(({ name, value }) => ({ name, value }))
 **Search constraints** narrow matches using `?key` or `?key=value`:
 
 ```ts
-'search?q' // key must be present
-'search?q=routing' // requires ?q=routing exactly
+"search?q"; // key must be present
+"search?q=routing"; // requires ?q=routing exactly
 ```
 
 ## Match URLs
@@ -176,14 +176,14 @@ docsMatcher.match(url)?.params
 Matchers accept absolute URL strings or `URL` objects. To match a relative URL reference, pass an absolute `baseURL`; the input is resolved with the same semantics as `new URL(input, baseURL)`, and the resolved URL is returned on the match.
 
 ```ts
-let match = blogMatcher.match('../blog/v3', {
-  baseURL: 'https://example.com/admin/settings',
-})
+let match = blogMatcher.match("../blog/v3", {
+	baseURL: "https://example.com/admin/settings",
+});
 
-match?.params
+match?.params;
 // { slug: 'v3' }
 
-match?.url.href
+match?.url.href;
 // 'https://example.com/blog/v3'
 ```
 
@@ -194,19 +194,19 @@ This works for root-relative, path-relative, query-relative, and network-path re
 Use `createMultiMatcher` when you need to match many patterns and attach your own data to each match.
 
 ```ts
-import { createMultiMatcher } from 'remix/route-pattern/match'
+import { createMultiMatcher } from "remix/route-pattern/match";
 
-let matcher = createMultiMatcher<string>()
+let matcher = createMultiMatcher<string>();
 // Any data type you want!         👆
 
-matcher.add('/', 'home')
-matcher.add('blog/:slug', 'blog-post')
-matcher.add('api(/v:version)/*path', 'api')
+matcher.add("/", "home");
+matcher.add("blog/:slug", "blog-post");
+matcher.add("api(/v:version)/*path", "api");
 
-matcher.match('https://example.com/blog/v3')
+matcher.match("https://example.com/blog/v3");
 // { params: { slug: 'v3' }, data: 'blog-post' }
 
-matcher.match('https://example.com/api/v2/users/profile')
+matcher.match("https://example.com/api/v2/users/profile");
 // { params: { version: '2', path: 'users/profile' }, data: 'api' }
 ```
 
@@ -225,9 +225,9 @@ Each match returns:
 Set `ignoreCase: true` to make pathname matching case-insensitive. Hostname matching is always case-insensitive, and search constraints are always case-sensitive.
 
 ```ts
-let matcher = createMatcher('/Docs/:slug', { ignoreCase: true })
+let matcher = createMatcher("/Docs/:slug", { ignoreCase: true });
 
-matcher.match('https://example.com/docs/Intro')?.params
+matcher.match("https://example.com/docs/Intro")?.params;
 // { slug: 'Intro' }
 ```
 
@@ -235,8 +235,8 @@ Matchers limit individual pattern size, total matcher size, and the work perform
 
 ```ts
 let matcher = createMultiMatcher({
-  limits: { maxPatternSize: 4096, maxMatchWork: 100_000 },
-})
+	limits: { maxPatternSize: 4096, maxMatchWork: 100_000 },
+});
 ```
 
 ### Ranking matches by specificity
@@ -254,17 +254,17 @@ This is the same ranking used by `createMultiMatcher`.
 For advanced use cases, `/specificity` provides comparison utilities: `lessThan`, `greaterThan`, `equal`, `descending`, `ascending`, `compare`. `lessThan(a, b)` returns `true` when match `a` is less specific than match `b`. For example:
 
 ```ts
-import { createMultiMatcher } from 'remix/route-pattern/match'
-import { descending } from 'remix/route-pattern/specificity'
+import { createMultiMatcher } from "remix/route-pattern/match";
+import { descending } from "remix/route-pattern/specificity";
 
-let matcher = createMultiMatcher()
-matcher.add('files/*path', null)
-matcher.add('files/:name', null)
-matcher.add('files/readme', null)
+let matcher = createMultiMatcher();
+matcher.add("files/*path", null);
+matcher.add("files/:name", null);
+matcher.add("files/readme", null);
 
-let matches = matcher.matchAll('https://example.com/files/readme')
+let matches = matcher.matchAll("https://example.com/files/readme");
 
-matches.sort(descending).map((match) => match.pattern.toString())
+matches.sort(descending).map((match) => match.pattern.toString());
 // ['/files/readme', '/files/:name', '/files/*path']
 ```
 
@@ -273,46 +273,46 @@ matches.sort(descending).map((match) => match.pattern.toString())
 `createHref` turns a pattern and params into a URL string. Required variables and wildcards must be provided, while params inside optional groups may be omitted.
 
 ```ts
-import { createHref } from 'remix/route-pattern/href'
+import { createHref } from "remix/route-pattern/href";
 
-createHref('blog/:slug', { slug: 'v3' })
+createHref("blog/:slug", { slug: "v3" });
 // '/blog/v3'
 
-createHref('api(/v:version)/*path', { path: 'users/profile' })
+createHref("api(/v:version)/*path", { path: "users/profile" });
 // '/api/users/profile'
 
-createHref('api(/v:version)/*path', { version: '2', path: 'users/profile' })
+createHref("api(/v:version)/*path", { version: "2", path: "users/profile" });
 // '/api/v2/users/profile'
 
-createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
-  region: 'us-west',
-  file: 'images/logo',
-  ext: 'png',
-})
+createHref("http(s)://:region.cdn.com/assets/*file.:ext", {
+	region: "us-west",
+	file: "images/logo",
+	ext: "png",
+});
 // 'https://us-west.cdn.com/assets/images/logo.png'
 
 createHref(
-  'blog/:slug?ref=docs',
-  { slug: 'v3' },
-  {
-    searchParams: { utm_source: 'newsletter' },
-  },
-)
+	"blog/:slug?ref=docs",
+	{ slug: "v3" },
+	{
+		searchParams: { utm_source: "newsletter" },
+	},
+);
 // '/blog/v3?utm_source=newsletter&ref=docs'
 
-createHref('users/:id', { id: 'a.b' })
+createHref("users/:id", { id: "a.b" });
 // '/users/a%2Eb' (the encoded dot remains variable data when matched)
 ```
 
 Pass `baseURL` to generate a path-relative reference to a same-origin route. Patterns with a different origin remain absolute.
 
 ```ts
-let baseURL = new URL('https://example.com/admin/settings')
+let baseURL = new URL("https://example.com/admin/settings");
 
-createHref('users/:id', { id: '123' }, { baseURL })
+createHref("users/:id", { id: "123" }, { baseURL });
 // '../users/123'
 
-createHref('https://cdn.example.com/assets/*path', { path: 'logo.svg' }, { baseURL })
+createHref("https://cdn.example.com/assets/*path", { path: "logo.svg" }, { baseURL });
 // 'https://cdn.example.com/assets/logo.svg'
 ```
 
@@ -320,11 +320,11 @@ The `searchParams` option accepts a plain object or `URLSearchParams`. Use `URLS
 
 ```ts
 let searchParams = new URLSearchParams([
-  ['tag', 'featured'],
-  ['tag', 'popular'],
-])
+	["tag", "featured"],
+	["tag", "popular"],
+]);
 
-createHref('search', undefined, { searchParams })
+createHref("search", undefined, { searchParams });
 // '/search?tag=featured&tag=popular'
 ```
 
@@ -335,10 +335,10 @@ Common failures include missing required params, nameless wildcards, invalid hos
 **Note:** optional groups without params are included in the generated href:
 
 ```ts
-createHref('todos(/new)')
+createHref("todos(/new)");
 // '/todos/new'
 
-createHref('products(.json)')
+createHref("products(.json)");
 // '/products.json'
 ```
 
@@ -347,18 +347,18 @@ createHref('products(.json)')
 You can explicitly parse and stringify patterns. Create a `RoutePattern` with `RoutePattern.parse` and use the methods and helpers below instead of reading parsed token internals.
 
 ```ts
-import { getRoutePatternCaptures, RoutePattern } from 'remix/route-pattern'
+import { getRoutePatternCaptures, RoutePattern } from "remix/route-pattern";
 
-let pattern = RoutePattern.parse('://:tenant.example.com/blog/:slug(/*path)')
+let pattern = RoutePattern.parse("://:tenant.example.com/blog/:slug(/*path)");
 //  ^? RoutePattern
 
-pattern.toString()
+pattern.toString();
 // '://:tenant.example.com/blog/:slug(/*path)'
 
-pattern.toJSON()
+pattern.toJSON();
 // { hostname: ':tenant.example.com', pathname: 'blog/:slug(/*path)', ... }
 
-getRoutePatternCaptures(pattern)
+getRoutePatternCaptures(pattern);
 // [
 //   { part: 'hostname', type: ':', name: 'tenant', optional: false },
 //   { part: 'pathname', type: ':', name: 'slug', optional: false },
@@ -390,16 +390,16 @@ Literal patterns are validated and infer named params until the type-level parse
 `joinPatterns` builds a new pattern from a base pattern.
 
 ```ts
-import { joinPatterns } from 'remix/route-pattern/join'
+import { joinPatterns } from "remix/route-pattern/join";
 
-let user = joinPatterns('users', ':id')
+let user = joinPatterns("users", ":id");
 
-user.toString()
+user.toString();
 // '/users/:id'
 
-let apiUser = joinPatterns('api(/v:version)', '://remix.run/users/:id')
+let apiUser = joinPatterns("api(/v:version)", "://remix.run/users/:id");
 
-apiUser.toString()
+apiUser.toString();
 // '://remix.run/api(/v:version)/users/:id'
 ```
 

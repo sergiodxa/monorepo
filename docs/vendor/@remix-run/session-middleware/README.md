@@ -17,27 +17,27 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { createCookie } from 'remix/cookie'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
+import { createRouter } from "remix/router";
+import { createCookie } from "remix/cookie";
+import { createCookieSessionStorage } from "remix/session-storage/cookie";
+import { session } from "remix/middleware/session";
 
-let sessionCookie = createCookie('__session', {
-  secrets: ['s3cr3t'], // session cookies must be signed!
-  secure: true,
-  sameSite: 'lax',
-})
+let sessionCookie = createCookie("__session", {
+	secrets: ["s3cr3t"], // session cookies must be signed!
+	secure: true,
+	sameSite: "lax",
+});
 
-let sessionStorage = createCookieSessionStorage()
+let sessionStorage = createCookieSessionStorage();
 
 let router = createRouter({
-  middleware: [session(sessionCookie, sessionStorage)],
-})
+	middleware: [session(sessionCookie, sessionStorage)],
+});
 
-router.get('/', (context) => {
-  context.session.set('count', Number(context.session.get('count') ?? 0) + 1)
-  return new Response(`Count: ${context.session.get('count')}`)
-})
+router.get("/", (context) => {
+	context.session.set("count", Number(context.session.get("count") ?? 0) + 1);
+	return new Response(`Count: ${context.session.get("count")}`);
+});
 ```
 
 The middleware:
@@ -56,48 +56,48 @@ Session cookies are HTTP-only by default.
 A basic login/logout flow could look like this:
 
 ```ts
-import { html } from 'remix/html-template'
-import { createHtmlResponse } from 'remix/response/html'
-import { redirect } from 'remix/response/redirect'
+import { html } from "remix/html-template";
+import { createHtmlResponse } from "remix/response/html";
+import { redirect } from "remix/response/redirect";
 
-router.get('/login', ({ session }) => {
-  let error = session.get('error')
-  return createHtmlResponse(html`
-    <html>
-      <body>
-        <h1>Login</h1>
-        ${typeof error === 'string' ? html`<div class="error">${error}</div>` : null}
-        <form method="POST" action="/login">
-          <input type="text" name="username" placeholder="Username" />
-          <input type="password" name="password" placeholder="Password" />
-          <button type="submit">Login</button>
-        </form>
-      </body>
-    </html>
-  `)
-})
+router.get("/login", ({ session }) => {
+	let error = session.get("error");
+	return createHtmlResponse(html`
+		<html>
+			<body>
+				<h1>Login</h1>
+				${typeof error === "string" ? html`<div class="error">${error}</div>` : null}
+				<form method="POST" action="/login">
+					<input type="text" name="username" placeholder="Username" />
+					<input type="password" name="password" placeholder="Password" />
+					<button type="submit">Login</button>
+				</form>
+			</body>
+		</html>
+	`);
+});
 
-router.post('/login', ({ get, session }) => {
-  let formData = get(FormData)
-  let username = formData.get('username')
-  let password = formData.get('password')
+router.post("/login", ({ get, session }) => {
+	let formData = get(FormData);
+	let username = formData.get("username");
+	let password = formData.get("password");
 
-  let user = authenticateUser(username, password)
-  if (!user) {
-    session.flash('error', 'Invalid username or password')
-    return redirect('/login')
-  }
+	let user = authenticateUser(username, password);
+	if (!user) {
+		session.flash("error", "Invalid username or password");
+		return redirect("/login");
+	}
 
-  session.regenerateId()
-  session.set('userId', user.id)
+	session.regenerateId();
+	session.set("userId", user.id);
 
-  return redirect('/dashboard')
-})
+	return redirect("/dashboard");
+});
 
-router.post('/logout', ({ session }) => {
-  session.destroy()
-  return redirect('/')
-})
+router.post("/logout", ({ session }) => {
+	session.destroy();
+	return redirect("/");
+});
 ```
 
 ## Related Packages

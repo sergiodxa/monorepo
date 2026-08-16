@@ -20,12 +20,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { html } from 'remix/html-template'
+import { html } from "remix/html-template";
 
-let userInput = '<script>alert("XSS")</script>'
-let greeting = html`<h1>Hello ${userInput}!</h1>`
+let userInput = '<script>alert("XSS")</script>';
+let greeting = html`<h1>Hello ${userInput}!</h1>`;
 
-console.log(String(greeting))
+console.log(String(greeting));
 // Output: <h1>Hello &lt;script&gt;alert("XSS")&lt;/script&gt;!</h1>
 ```
 
@@ -34,12 +34,12 @@ By default, all interpolated values are automatically escaped to prevent XSS att
 If you have trusted HTML that should not be escaped, use `html.raw`:
 
 ```ts
-import { html } from 'remix/html-template'
+import { html } from "remix/html-template";
 
-let trustedIcon = '<svg>...</svg>'
-let button = html.raw`<button>${trustedIcon} Click me</button>`
+let trustedIcon = "<svg>...</svg>";
+let button = html.raw`<button>${trustedIcon} Click me</button>`;
 
-console.log(String(button))
+console.log(String(button));
 // => <button><svg>...</svg> Click me</button>
 ```
 
@@ -50,19 +50,19 @@ console.log(String(button))
 SafeHtml values can be nested without double-escaping:
 
 ```ts
-import { html } from 'remix/html-template'
+import { html } from "remix/html-template";
 
-let title = html`<h1>My Title</h1>`
-let content = html`<p>Some content with ${userInput}</p>`
+let title = html`<h1>My Title</h1>`;
+let content = html`<p>Some content with ${userInput}</p>`;
 
 let page = html`
-  <!doctype html>
-  <html>
-    <body>
-      ${title} ${content}
-    </body>
-  </html>
-`
+	<!doctype html>
+	<html>
+		<body>
+			${title} ${content}
+		</body>
+	</html>
+`;
 ```
 
 ### Working with Arrays
@@ -70,14 +70,14 @@ let page = html`
 You can interpolate arrays of values, which will be flattened and joined:
 
 ```ts
-import { html } from 'remix/html-template'
+import { html } from "remix/html-template";
 
-let items = ['Apple', 'Banana', 'Cherry']
+let items = ["Apple", "Banana", "Cherry"];
 let list = html`
-  <ul>
-    ${items.map((item) => html`<li>${item}</li>`)}
-  </ul>
-`
+	<ul>
+		${items.map((item) => html`<li>${item}</li>`)}
+	</ul>
+`;
 ```
 
 ### Conditional Rendering
@@ -85,11 +85,11 @@ let list = html`
 Use `null` or `undefined` to render nothing:
 
 ```ts
-import { html } from 'remix/html-template'
+import { html } from "remix/html-template";
 
-let showError = false
-let errorMessage = 'Something went wrong'
-let page = html`<div>${showError ? html`<div class="error">${errorMessage}</div>` : null}</div>`
+let showError = false;
+let errorMessage = "Something went wrong";
+let page = html`<div>${showError ? html`<div class="error">${errorMessage}</div>` : null}</div>`;
 ```
 
 ## Related Packages
