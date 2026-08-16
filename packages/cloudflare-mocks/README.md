@@ -76,6 +76,9 @@ let env = createEnv<Env>({
 Reading a binding that was not supplied throws by name, so a forgotten binding fails at the
 access that needed it rather than surfacing later as `undefined is not a function`.
 
+Bindings are copied by property descriptor, not by spread, so a binding defined as a getter
+is re-read on every access and a test can swap what it resolves to between cases.
+
 ### Deferred work
 
 ```typescript
@@ -101,7 +104,7 @@ and cursor-paginated prefix listing.
 
 **Returns:**
 
-- A `KVNamespace` binding backed by an isolated map
+- A `KVNamespaceMock`: a `KVNamespace` backed by an isolated map, plus `reset()`
 
 **Example:**
 
@@ -132,7 +135,8 @@ failure.
 
 **Returns:**
 
-- A `D1Database` binding whose SQL really runs
+- A `D1DatabaseMock`: a `D1Database` whose SQL really runs, plus `reset()`, which drops
+  every table, index, view, and trigger so a migration can be applied again
 
 **Example:**
 
@@ -273,7 +277,7 @@ returning the object without a body when a condition fails. `list` implements `p
 
 **Returns:**
 
-- An `R2BucketMock` exposing `keys` alongside the binding surface
+- An `R2BucketMock` exposing `keys` and `reset()` alongside the binding surface
 
 **Example:**
 
@@ -339,7 +343,8 @@ generated binding type as the type argument to have the bindings checked against
 
 **Parameters:**
 
-- `bindings`: Bindings to expose, keyed by binding name
+- `bindings`: Bindings to expose, keyed by binding name; a getter is carried over as a
+  getter and evaluated on each read
 - `options.strict`: Whether reading an unsupplied binding throws; defaults to `true`
 
 **Returns:**
@@ -565,9 +570,8 @@ test("caches the response after replying", async () => {
 
 1. **Construct a mock per test** - every factory returns isolated state, so a fresh call in
    `beforeEach` removes any need for a cleanup step. When a binding has to live at module
-   scope because the code under test captured `env` on import, call `reset()` on the
-   recording mocks (`createQueue`, `createAnalyticsEngine`, `createSendEmail`,
-   `createRateLimit`) in `beforeEach` instead.
+   scope because the code under test captured `env` on import, call `reset()` in
+   `beforeEach` instead — every stateful factory has one.
 2. **Inject a clock to test time** - `createKVNamespace` and `createRateLimit` accept `now`;
    this is the only way to observe KV expiry, since the real 60 second `expirationTtl` floor
    is enforced.

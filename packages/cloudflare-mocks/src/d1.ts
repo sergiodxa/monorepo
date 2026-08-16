@@ -35,6 +35,18 @@ interface D1StatementContext {
 	rebind: (text: string, values: unknown[]) => D1PreparedStatement;
 }
 
+/** A `D1Database` binding whose schema and rows a test can drop in place. */
+export interface D1DatabaseMock extends D1Database {
+	/**
+	 * Drops every table, index, view, and trigger, as if the database were new.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets an empty database without re-creating the `env` the code
+	 * under test already captured.
+	 */
+	reset(): void;
+}
+
 /** Options for {@link createD1Database}. */
 export interface D1DatabaseMockOptions {
 	/**
@@ -55,7 +67,7 @@ export interface D1DatabaseMockOptions {
  * @returns A `D1Database` binding whose SQL really runs.
  * @example let db = createD1Database(); await db.exec("CREATE TABLE t (id INTEGER)");
  */
-export function createD1Database(options?: D1DatabaseMockOptions): D1Database {
+export function createD1Database(options?: D1DatabaseMockOptions): D1DatabaseMock {
 	let sqlite = new Database(options?.filename ?? ":memory:");
 	let prepared = new WeakMap<D1PreparedStatement, { text: string; values: unknown[] }>();
 	let bookmark = 0;
@@ -193,7 +205,27 @@ export function createD1Database(options?: D1DatabaseMockOptions): D1Database {
 		throw new Error("D1_ERROR: dump() is not supported by @pkg/cloudflare-mocks");
 	}
 
-	return { prepare, batch, exec, withSession, dump };
+	/**
+	 * Drops every schema object so a module-scoped binding can start a test clean.
+	 *
+	 * Dropping a table takes its indexes and triggers with it, so each statement is
+	 * guarded with `IF EXISTS` rather than ordered; foreign keys are suspended for the
+	 * duration so a reference cycle cannot block the teardown.
+	 */
+	function reset(): void {
+		sqlite.exec("PRAGMA foreign_keys = OFF");
+
+		let schema = sqlite
+			.query("SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")
+			.all() as { type: string; name: string }[];
+
+		for (let object of schema) sqlite.exec(`DROP ${object.type} IF EXISTS "${object.name}"`);
+
+		sqlite.exec("PRAGMA foreign_keys = ON");
+		bookmark = 0;
+	}
+
+	return { prepare, batch, exec, withSession, dump, reset };
 }
 
 /**

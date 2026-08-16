@@ -263,4 +263,13 @@ describe("createKVNamespace", () => {
 
 		expect(await second.get("key")).toBeNull();
 	});
+	test("empties itself on reset, so a shared binding starts each test clean", async () => {
+		let kv = createKVNamespace();
+		await kv.put("key", "value", { metadata: { version: 1 } });
+
+		kv.reset();
+
+		expect(await kv.get("key")).toBeNull();
+		expect((await kv.list()).keys).toHaveLength(0);
+	});
 });

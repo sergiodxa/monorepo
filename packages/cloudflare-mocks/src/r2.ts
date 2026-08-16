@@ -54,6 +54,16 @@ interface R2StoredUpload {
 export interface R2BucketMock extends R2Bucket {
 	/** Keys currently stored, in lexicographic order. */
 	readonly keys: string[];
+
+	/**
+	 * Discards every object and every in-flight multipart upload, as if the bucket were
+	 * new.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets an empty bucket without re-creating the `env` the code under
+	 * test already captured.
+	 */
+	reset(): void;
 }
 
 /**
@@ -329,6 +339,11 @@ export function createR2Bucket(): R2BucketMock {
 	return {
 		get keys(): string[] {
 			return [...objects.keys()].sort();
+		},
+
+		reset(): void {
+			objects.clear();
+			uploads.clear();
 		},
 
 		head,

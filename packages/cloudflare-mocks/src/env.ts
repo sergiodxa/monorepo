@@ -47,7 +47,12 @@ export function createEnv<Env extends object = Record<string, unknown>>(
 	bindings: Partial<Env> & Record<string, unknown>,
 	options?: EnvMockOptions,
 ): Env {
-	let target = { ...bindings };
+	// Descriptors rather than a spread: a spread reads every getter once, so a test that
+	// varies a binding per case through one would be pinned to the first value forever.
+	let target = Object.defineProperties({}, Object.getOwnPropertyDescriptors(bindings)) as Record<
+		string,
+		unknown
+	>;
 
 	if (options?.strict === false) return target as Env;
 

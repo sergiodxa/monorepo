@@ -43,6 +43,18 @@ export interface KVNamespaceMockOptions {
 	now?: () => number;
 }
 
+/** A `KVNamespace` binding whose store a test can empty in place. */
+export interface KVNamespaceMock extends KVNamespace {
+	/**
+	 * Deletes every key, as if the namespace were new.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets an empty namespace without re-creating the `env` the code
+	 * under test already captured.
+	 */
+	reset(): void;
+}
+
 /** A value stored under a key, with its resolved absolute expiration. */
 interface KVStoredEntry {
 	/** Raw bytes, always an owned copy so callers cannot mutate stored data. */
@@ -65,7 +77,7 @@ interface KVStoredEntry {
  * @example let kv = createKVNamespace(); await kv.put("a", "1");
  * @example let kv = createKVNamespace({ now: () => clock });
  */
-export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace {
+export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespaceMock {
 	let entries = new Map<string, KVStoredEntry>();
 	let now = options?.now ?? Date.now;
 
@@ -399,7 +411,12 @@ export function createKVNamespace(options?: KVNamespaceMockOptions): KVNamespace
 		};
 	}
 
-	return { get, getWithMetadata, put, delete: remove, list };
+	/** Empties the namespace so a module-scoped binding can start a test clean. */
+	function reset(): void {
+		entries.clear();
+	}
+
+	return { get, getWithMetadata, put, delete: remove, list, reset };
 }
 
 /** Rejects key names KV rejects: empty, `.`/`..`, or longer than 512 bytes. */

@@ -217,4 +217,17 @@ describe("createD1Database", () => {
 		let count = await other.prepare("SELECT COUNT(*) AS total FROM users").first<number>("total");
 		expect(count).toBe(0);
 	});
+	test("drops every schema object on reset, so a shared binding starts each test clean", async () => {
+		let db = createD1Database();
+		await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+		await db.exec("CREATE INDEX users_email ON users (email)");
+		await db.prepare("INSERT INTO users VALUES (?, ?)").bind(1, "ada@example.com").run();
+
+		db.reset();
+
+		// The table is gone, not merely emptied, so a migration can be applied again.
+		await expect(db.prepare("SELECT * FROM users").all()).rejects.toThrow(/no such table/);
+		await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+		expect((await db.prepare("SELECT * FROM users").all()).results).toHaveLength(0);
+	});
 });

@@ -65,4 +65,19 @@ describe("createEnv", () => {
 
 		expect(env.SECRET).toBe("shhh");
 	});
+	test("reads a binding defined as a getter every time, rather than snapshotting it", () => {
+		let current = createKVNamespace();
+		let env = createEnv<{ CACHE: KVNamespace }>({
+			get CACHE(): KVNamespace {
+				return current;
+			},
+		});
+
+		expect(env.CACHE).toBe(current);
+
+		// A test that swaps the binding between cases must see the replacement, which a
+		// spread of the bindings object would have frozen out.
+		current = createKVNamespace();
+		expect(env.CACHE).toBe(current);
+	});
 });

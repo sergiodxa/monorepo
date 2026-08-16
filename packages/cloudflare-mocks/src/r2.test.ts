@@ -332,4 +332,17 @@ describe("createR2Bucket", () => {
 
 		expect(other.keys).toEqual([]);
 	});
+	test("discards its objects and in-flight uploads on reset", async () => {
+		let bucket = createR2Bucket();
+		await bucket.put("a.txt", "hello");
+		let upload = await bucket.createMultipartUpload("b.txt");
+
+		bucket.reset();
+
+		expect(bucket.keys).toHaveLength(0);
+		expect(await bucket.get("a.txt")).toBeNull();
+		await expect(
+			bucket.resumeMultipartUpload("b.txt", upload.uploadId).complete([]),
+		).rejects.toThrow();
+	});
 });
