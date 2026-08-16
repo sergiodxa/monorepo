@@ -26,6 +26,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
@@ -49,7 +50,7 @@ import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 mock.module("cloudflare:workers", () => ({
-	env: {},
+	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
 	DurableObject: class {},

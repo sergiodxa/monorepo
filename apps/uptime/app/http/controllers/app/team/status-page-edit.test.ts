@@ -1,9 +1,10 @@
 /**
  * Tests for the edit status-page form controller. `cloudflare:workers` is mocked
  * before the dynamic import because the controller's import chain pulls in
- * `~/app/data/monitor`, which touches the `QUEUE` binding at module scope
- * (see `monitors.test.ts`). `requireUser`/`requireTeam`/`i18n` are bypassed the same
- * way `monitors.test.ts` bypasses auth: a stand-in middleware seeds
+ * `~/app/data/monitor`, which touches the `QUEUE` binding at module scope; the
+ * bindings behind it are in-memory implementations, and the env is strict, so a
+ * binding this form reaches for without supplying fails by name.
+ * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds
  * `ctx.team`/`ctx.membership`/`ctx.i18next` directly, and `ctx.render` is backed by
  * a minimal renderer mirroring `bootstrap/app.tsx`'s `createHtmlRenderer`.
  *
@@ -16,6 +17,12 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -33,15 +40,19 @@ import en from "~/app/locales/en";
 import { memberships, statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/** The bindings the import chain captures on load, so they live at module scope. */
+let kv = createKVNamespace();
+let queue = createQueue();
+let pingResults = createAnalyticsEngine();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let { default: statusPageEditAction } = await import("./status-page-edit");

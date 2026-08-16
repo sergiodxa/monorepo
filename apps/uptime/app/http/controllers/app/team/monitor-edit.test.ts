@@ -1,7 +1,7 @@
 /**
  * Tests for the HTTP monitor edit page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load — following the exact
- * pattern established in `app/http/controllers/actions/monitors.test.ts`. This
+ * because `~/app/data/monitor` reads `env` at module load; the env carries no bindings
+ * and is strict, so this page reaching for one would fail by name here. This
  * controller is a pure GET render with a 404 guard; it doesn't re-render the form with
  * validation errors inline (that only happens in the separate `update-monitor` action,
  * already covered by `app/http/controllers/actions/monitors.test.ts`), so there's no
@@ -18,6 +18,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -34,7 +35,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: {} }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./monitor-edit")).default as { handler: RequestHandler<any> };
 

@@ -1,8 +1,8 @@
 /**
  * Tests for the maintenance windows list page controller. `cloudflare:workers` is
  * mocked because `~/app/data/monitor` (used here to resolve each window's scoped
- * monitor name) reads `env` at module load — following the exact pattern established
- * in `app/http/controllers/actions/monitors.test.ts`. `getViewer()`/`ctx.team`/
+ * monitor name) reads `env` at module load. The env carries no bindings and is strict,
+ * so this page reaching for one would fail by name here. `getViewer()`/`ctx.team`/
  * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for
  * the real `auth`/`requireUser`/`requireTeam` chain, matching the template in
  * `app/http/controllers/app/team/http-monitors.test.ts`.
@@ -16,6 +16,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -32,7 +33,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { maintenanceWindows, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: {} }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./maintenance-windows")).default as {
 	handler: RequestHandler<any>;

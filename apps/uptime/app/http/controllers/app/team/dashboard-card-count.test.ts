@@ -17,6 +17,12 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -34,21 +40,31 @@ import en from "~/app/locales/en";
 import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/**
+ * The bindings the page reads, real enough to answer for themselves: an empty KV is a
+ * cache miss, so every test starts uncached without arranging one. They live at module
+ * scope because the modules under test capture `env` on import; each test's team id is
+ * fresh, so the cache keys derived from it never collide across tests.
+ */
+let kv = createKVNamespace();
+let queue = createQueue();
+let pingResults = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 	handler: RequestHandler<any>;
 };
+
+let { buildCacheKey } = await import("~/app/services/analytics");
 
 let { i18n: i18nextInstance } = await createTranslator({
 	resources: { en: { translation: en } },
@@ -133,8 +149,8 @@ async function send(
 }
 
 beforeEach(() => {
-	kvGetMock.mockClear();
-	kvGetMock.mockImplementation(async () => null);
+	queue.reset();
+	pingResults.reset();
 	globalThis.fetch = mock(
 		async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
 	) as unknown as typeof fetch;
@@ -243,5 +259,8 @@ describe("dashboard-card-count", () => {
 		expect(body).not.toContain("0 down");
 		expect(body).toContain(`href="${routes.app.team.monitors.new.href({ team: team.slug })}"`);
 		expect(body).toContain(`aria-label="${en.page.dashboard.stats.httpMonitors.create}"`);
+		// The summaries are read through the KV cache, so the answer has to be in the namespace
+		// afterwards — the next load of this card is what the write is for.
+		expect(await kv.get(buildCacheKey(team.id, "httpSummaries"), "json")).not.toBeNull();
 	});
 });

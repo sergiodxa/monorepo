@@ -33,6 +33,7 @@ import type { Middleware, RequestContext, RequestHandler, Router } from "remix/r
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -72,12 +73,14 @@ function makeGeoFetchNamespace() {
 /** Work the action deferred, drained by {@link createHarness}'s `submit` before it returns. */
 let deferred: Promise<unknown>[] = [];
 
+/** The check's data point; nothing here asserts on it, but it has to land somewhere. */
+let pingResults = createAnalyticsEngine();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: makeGeoFetchNamespace(),
-		/** The check's data point; nothing here asserts on it, but it has to land somewhere. */
-		PING_RESULTS: { writeDataPoint: () => {} },
-	},
+	env: createEnv<Env>({
+		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		PING_RESULTS: pingResults,
+	}),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},

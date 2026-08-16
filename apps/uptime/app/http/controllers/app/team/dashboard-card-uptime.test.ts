@@ -16,6 +16,12 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -33,16 +39,24 @@ import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/**
+ * The bindings the page reads, real enough to answer for themselves: an empty KV is a
+ * cache miss, so every test starts uncached without arranging one. They live at module
+ * scope because the modules under test capture `env` on import; each test's team id is
+ * fresh, so the cache keys derived from it never collide across tests.
+ */
+let kv = createKVNamespace();
+let queue = createQueue();
+let pingResults = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let dashboardCardUptime = (await import("./dashboard-card-uptime")).default as {
@@ -131,8 +145,8 @@ async function send(
 }
 
 beforeEach(() => {
-	kvGetMock.mockClear();
-	kvGetMock.mockImplementation(async () => null);
+	queue.reset();
+	pingResults.reset();
 });
 
 describe("dashboard-card-uptime", () => {

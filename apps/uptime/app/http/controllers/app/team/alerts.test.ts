@@ -16,6 +16,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -32,7 +33,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { alerts, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: {} }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./alerts")).default as { handler: RequestHandler<any> };
 

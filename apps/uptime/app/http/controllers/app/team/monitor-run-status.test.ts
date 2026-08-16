@@ -13,6 +13,7 @@ import { describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -27,7 +28,7 @@ import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 mock.module("cloudflare:workers", () => ({
-	env: { CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" },
+	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
 let monitorRunStatus = (await import("./monitor-run-status")).default as {

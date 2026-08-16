@@ -1,8 +1,10 @@
 /**
  * Tests for the monitor detail page "P99 Response Time" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load, and the global `fetch` is
- * mocked so `queryAnalytics`'s Analytics Engine SQL API call never hits the network.
+ * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
+ * in-memory implementations, so the cache the card must not consult is a store that
+ * would really have answered. The global `fetch` is mocked so `queryAnalytics`'s
+ * Analytics Engine SQL API call never hits the network.
  * `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing in for
  * the real `requireUser`/`requireTeam`/i18n middleware chain, following the template
  * in `monitor-card-slowest-result.test.ts`.
@@ -11,11 +13,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -33,16 +41,27 @@ import en from "~/app/locales/en";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/**
+ * The bindings the import chain captures on load, so they live at module scope. The KV
+ * namespace really stores, which is what makes "this card never consults the team cache"
+ * an assertion about a store that would have answered rather than about a stub that
+ * could only ever return `null`.
+ */
+let kv = createKVNamespace();
+let queue = createQueue();
+let pingResults = createAnalyticsEngine();
+
+/** A cache read is a call, not a stored value, so the uncached path is pinned with a spy. */
+let kvGet = spyOn(kv, "get");
 
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let monitorCardP99ResponseTime = (await import("./monitor-card-p99-response-time")).default as {
@@ -144,8 +163,9 @@ async function send(
 }
 
 beforeEach(() => {
-	kvGetMock.mockClear();
-	kvGetMock.mockImplementation(async () => null);
+	kvGet.mockClear();
+	queue.reset();
+	pingResults.reset();
 });
 
 describe("monitor-card-p99-response-time", () => {
@@ -181,7 +201,7 @@ describe("monitor-card-p99-response-time", () => {
 		let sql = init.body as string;
 		expect(sql).toContain(`blob1 = '${monitor.id}'`);
 		expect(sql).not.toContain(`index1 = '${team.id}'`);
-		expect(kvGetMock).not.toHaveBeenCalled();
+		expect(kvGet).not.toHaveBeenCalled();
 	});
 
 	test("renders an em dash when there are no checks in range", async () => {

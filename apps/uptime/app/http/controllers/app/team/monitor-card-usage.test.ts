@@ -24,6 +24,7 @@ import type {
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { logger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
@@ -46,7 +47,7 @@ import routes from "~/routes/web";
 import type { Database as SqliteDatabase } from "bun:sqlite";
 
 mock.module("cloudflare:workers", () => ({
-	env: { CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" },
+	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
 let monitorCardUsage = (await import("./monitor-card-usage")).default as {

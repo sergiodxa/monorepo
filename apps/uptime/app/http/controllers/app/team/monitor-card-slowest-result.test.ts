@@ -1,8 +1,9 @@
 /**
  * Tests for the monitor detail page "Slowest Result" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load, and the global `fetch` is
- * mocked so `queryAnalytics`'s Analytics Engine SQL API call never hits the network.
+ * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
+ * in-memory implementations. The global `fetch` is mocked so `queryAnalytics`'s
+ * Analytics Engine SQL API call never hits the network.
  * `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing in for
  * the real `requireUser`/`requireTeam`/i18n middleware chain, following the template
  * in `dashboard-card-slowest-endpoint.test.ts`.
@@ -16,6 +17,12 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -33,16 +40,19 @@ import en from "~/app/locales/en";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/** The bindings the import chain captures on load, so they live at module scope. */
+let kv = createKVNamespace();
+let queue = createQueue();
+let pingResults = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let monitorCardSlowestResult = (await import("./monitor-card-slowest-result")).default as {
@@ -144,8 +154,8 @@ async function send(
 }
 
 beforeEach(() => {
-	kvGetMock.mockClear();
-	kvGetMock.mockImplementation(async () => null);
+	queue.reset();
+	pingResults.reset();
 });
 
 describe("monitor-card-slowest-result", () => {
