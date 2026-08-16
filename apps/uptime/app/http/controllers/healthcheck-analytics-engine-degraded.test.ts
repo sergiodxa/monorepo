@@ -1,8 +1,9 @@
 /**
  * Tests the `/healthcheck/analytics-engine` controller's "degraded" branch: the
- * `PING_RESULTS.writeDataPoint` binding is configured, but the Analytics Engine
- * read-API probe fails (simulated via a rejecting global `fetch`, the same way
- * `app/services/analytics.test.ts` stubs it), so `queryAnalytics` returns a
+ * `PING_RESULTS` binding is a real in-memory Analytics Engine dataset, so writes
+ * genuinely work, but the Analytics Engine read-API probe fails (simulated via a
+ * rejecting global `fetch`, the same way `app/services/analytics.test.ts` stubs
+ * it), so `queryAnalytics` returns a
  * `failure()` Result. The controller must still respond 200, since writes keep
  * working even though the read API is down — see the source's docblock. Split into
  * its own file (rather than a second `describe` in
@@ -16,6 +17,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
@@ -23,12 +25,15 @@ import { createRouter } from "remix/router";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
+/** The write binding the controller probes; module-scoped because `env` is captured on import. */
+let pingResults = createAnalyticsEngine();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		PING_RESULTS: { writeDataPoint: () => {} },
-	},
+		PING_RESULTS: pingResults,
+	}),
 }));
 
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");

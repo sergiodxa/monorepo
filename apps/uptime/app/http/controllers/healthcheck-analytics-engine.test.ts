@@ -1,7 +1,10 @@
 /**
  * Tests the `/healthcheck/analytics-engine` controller's "binding not configured"
- * branch: with no `PING_RESULTS.writeDataPoint` on `cloudflare:workers`' `env`, the
- * controller must respond 503 without ever attempting the read-API probe. The
+ * branch: with no `PING_RESULTS` on `cloudflare:workers`' `env`, the controller must
+ * respond 503 without ever attempting the read-API probe. This is the one case where
+ * the env is deliberately non-strict, since a missing binding is the subject rather
+ * than a mistake: the controller reads `env.PING_RESULTS?.writeDataPoint`, and a
+ * strict env would throw on that read instead of letting the guard answer. The
  * "degraded" (writes work, reads fail) branch is covered separately in
  * `healthcheck-analytics-engine-degraded.test.ts`, since `cloudflare:workers` is
  * mocked once per file via `mock.module` before the controller's dynamic import,
@@ -14,6 +17,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
@@ -21,7 +25,7 @@ import { createRouter } from "remix/router";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: {} }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
 
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 

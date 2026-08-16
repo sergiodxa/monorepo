@@ -21,6 +21,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import logger from "@pkg/logger/middleware";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -81,7 +82,7 @@ mock.module("~/app/auth/value-objects/id-token", () => ({
 }));
 
 mock.module("cloudflare:workers", () => ({
-	env: { CLIENT_ID: "client-id", CLIENT_SECRET: "client-secret" },
+	env: createEnv<Env>({ CLIENT_ID: "client-id", CLIENT_SECRET: "client-secret" }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 

@@ -18,6 +18,7 @@ import { describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { PolarWebhookEvent } from "@pkg/polar";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
@@ -33,7 +34,9 @@ import { polarSubscription } from "~/app/lib/test/polar";
 import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: { POLAR_WEBHOOK_SECRET: "whsec_test" } }));
+mock.module("cloudflare:workers", () => ({
+	env: createEnv<Env>({ POLAR_WEBHOOK_SECRET: "whsec_test" }),
+}));
 
 spyOn(console, "info").mockImplementation(() => {});
 spyOn(console, "error").mockImplementation(() => {});

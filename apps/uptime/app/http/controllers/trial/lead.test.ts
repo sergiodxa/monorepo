@@ -34,6 +34,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
@@ -67,10 +68,12 @@ import routes from "~/routes/web";
  * Re-rendering the page on a rejected address pulls the try-it controller in, and through
  * it `HttpCheck` and `~/app/do/geo-fetch`, whose `DurableObject` base class only exists
  * inside the Workers runtime. Nothing here probes anything, so a bare base class and an
- * empty environment are enough to let the module graph load.
+ * environment with no bindings at all are enough to let the module graph load — and the
+ * environment being strict is what keeps that claim honest, since a binding this route
+ * quietly started reading would fail by name rather than read as `undefined`.
  */
 mock.module("cloudflare:workers", () => ({
-	env: {},
+	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	DurableObject: class {},
 }));

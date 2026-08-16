@@ -6,7 +6,8 @@
  * `healthcheck-analytics-engine-degraded.test.ts`). This controller has no auth
  * middleware at all, so only `ctx.locale`/`ctx.i18next` are seeded — no
  * `ctx.team`/`ctx.membership`. `getTeamHttpSummaries` hits `queryAnalyticsCached`,
- * which checks `env.KV.get` (mocked to a cache miss) and then calls the real
+ * which reads `env.KV` — an in-memory namespace that really stores, so a repeated
+ * render inside the cache window is served from it — and otherwise calls the real
  * `fetch()` against the Analytics Engine SQL API, so `globalThis.fetch` is stubbed
  * too.
  *
@@ -25,6 +26,12 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import {
+	createAnalyticsEngine,
+	createEnv,
+	createKVNamespace,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -47,15 +54,23 @@ import {
 } from "~/database/schema";
 import routes from "~/routes/web";
 
-let kvGetMock = mock(async (..._args: unknown[]) => null as unknown);
+/**
+ * The bindings the page's import chain reaches for. They live at module scope because the
+ * controller captures `env` on import; the dashboard cache key carries the team id and every
+ * fixture creates a fresh team, so no test can read another's cached summaries.
+ */
+let kv = createKVNamespace();
+let pingResults = createAnalyticsEngine();
+let queue = createQueue();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
-		KV: { get: kvGetMock, put: mock(async () => undefined) },
-		PING_RESULTS: { writeDataPoint: () => {} },
-		QUEUE: { send: async () => {} },
-	},
+		KV: kv,
+		PING_RESULTS: pingResults,
+		QUEUE: queue,
+	}),
 }));
 
 let { default: publicStatusPageModule } = await import("./status-page");

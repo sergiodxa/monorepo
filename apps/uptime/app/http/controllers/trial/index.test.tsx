@@ -40,6 +40,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
@@ -78,9 +79,13 @@ let doFetch = mock(async (url: string, init?: RequestInit) => {
 	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
 });
 
-/** Data points written to Analytics Engine; a trial probe must write none. */
-let writtenPoints: unknown[] = [];
+/** The dataset a billed check reports to; a trial probe must write nothing to it. */
+let pingResults = createAnalyticsEngine();
 
+/**
+ * The prober's namespace, hand-rolled because a `DurableObjectNamespace` has no in-memory
+ * equivalent to reach for: what the action needs from it is a `fetch` it can steer per test.
+ */
 function makeGeoFetchNamespace() {
 	return {
 		idFromName: (name: string) => ({ name }),
@@ -93,10 +98,10 @@ function makeGeoFetchNamespace() {
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: makeGeoFetchNamespace(),
-		PING_RESULTS: { writeDataPoint: (point: unknown) => writtenPoints.push(point) },
-	},
+	env: createEnv<Env>({
+		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		PING_RESULTS: pingResults,
+	}),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -286,7 +291,7 @@ async function runTry(body: Record<string, string>, session = new Session(), act
 
 beforeEach(() => {
 	probes.length = 0;
-	writtenPoints.length = 0;
+	pingResults.reset();
 	ingested.length = 0;
 	deferred.length = 0;
 	guardTrialProbe.mockClear();
@@ -336,7 +341,7 @@ describe("GET /try", () => {
 		expect(body).toContain('name="url"');
 		expect(guardTrialProbe).not.toHaveBeenCalled();
 		expect(probes).toHaveLength(0);
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("a pre-filled GET starts nothing either — the field is filled, not submitted", async () => {
@@ -346,7 +351,7 @@ describe("GET /try", () => {
 		expect(body).toContain('method="post"');
 		expect(guardTrialProbe).not.toHaveBeenCalled();
 		expect(probes).toHaveLength(0);
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("comes back empty even when a probe is still sitting in the session", async () => {
@@ -562,7 +567,7 @@ describe("POST /try", () => {
 	test("bills nothing: no data point is written for a trial probe", async () => {
 		await runTry({ url: "example.com" });
 
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("passes the Turnstile token through under the name the widget writes", async () => {
@@ -757,7 +762,9 @@ describe("POST /try for a signed-in viewer", () => {
 		await runTry({ url: "example.com" }, new Session(), actor);
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
-		expect(writtenPoints).toHaveLength(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
+		// Indexed by the team, which is what makes the check countable against them.
+		expect(pingResults.dataPoints[0]?.indexes).toEqual([actor.team.id]);
 		expect(ingested).toHaveLength(1);
 		expect(ingested[0]?.[0]?.externalCustomerId).toBe(actor.team.owner_id);
 		expect(ingested[0]?.[0]?.metadata).toMatchObject({ teamId: actor.team.id, type: "adhoc" });
@@ -771,7 +778,7 @@ describe("POST /try for a signed-in viewer", () => {
 		await runTry({ url: "example.com" }, new Session(), actor);
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(true);
-		expect(writtenPoints).toHaveLength(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 
 	test("gives a revoked subscription the free path rather than refusing it", async () => {
@@ -780,7 +787,7 @@ describe("POST /try for a signed-in viewer", () => {
 		let { body } = await runTry({ url: "example.com" }, new Session(), actor);
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 		expect(body).toContain("HTTP 200");
 	});
@@ -846,7 +853,7 @@ describe("POST /try for a signed-in viewer", () => {
 		let { body } = await runTry({ url: "example.com" });
 
 		expect(guardTrialProbe.mock.calls[0]?.[0].billed).toBe(false);
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 		expect(body).toContain(`action="${routes.trial.lead.href()}"`);
 		expect(body).toContain("Also email me occasionally about Uptime itself.");
