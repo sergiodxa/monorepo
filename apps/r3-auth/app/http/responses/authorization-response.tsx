@@ -9,7 +9,7 @@
  */
 
 import type { i18n } from "@pkg/i18n";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";

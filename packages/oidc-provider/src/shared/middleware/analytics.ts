@@ -14,7 +14,7 @@ import middleware from "../lib/middleware";
 
 // Declared here (an imported module, not an ambient .d.ts) so the augmentation is
 // applied in consuming projects that compile the provider's source.
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Host-provided analytics sink (no-op when none was configured). */
 		analytics: AnalyticsSink;

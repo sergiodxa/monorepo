@@ -1,4 +1,4 @@
-import type {} from "remix/fetch-router";
+import type {} from "remix/router";
 
 /**
  * Router context values installed by globally-applied middleware.
@@ -14,7 +14,7 @@ import type {} from "remix/fetch-router";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Parsed request body form data, present for every routed request. */
 		formData: FormData;

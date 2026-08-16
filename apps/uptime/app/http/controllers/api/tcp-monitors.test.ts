@@ -10,9 +10,9 @@
 import { describe, expect, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { asyncContext } from "remix/middleware/async-context";
+import { createRouter } from "remix/router";
 
 import type { ApiKeyScope } from "~/database/schema";
 

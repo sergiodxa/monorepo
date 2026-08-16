@@ -13,7 +13,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { generateUUID } from "@pkg/uuid";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import ContentCheck from "~/app/data/content-check";

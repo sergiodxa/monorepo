@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, resources, route } from "remix/fetch-router/routes";
+import { get, resources, route } from "remix/routes";
 
 /**
  * Maps CMS endpoints for dashboard metrics and editorial resource CRUD routes.

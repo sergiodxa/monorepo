@@ -14,7 +14,7 @@
  */
 
 import * as s from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { getSoftwareApplicationSchema, SEO } from "~/app/lib/seo";

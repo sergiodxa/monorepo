@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { getServiceContainer } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
-import { auth, Auth, createSessionAuthScheme } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
-import { createContextKey } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { auth, Auth, createSessionAuthScheme } from "remix/middleware/auth";
+import { createContextKey } from "remix/router";
 import { Session } from "remix/session";
 
 import type { SelectUser } from "../../database/schema";

@@ -9,17 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
-import { asyncContext } from "remix/async-context-middleware";
-import { cop } from "remix/cop-middleware";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
+import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import checkout from "~/app/http/controllers/checkout";

@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { createCookie } from "remix/cookie";
-import { session } from "remix/session-middleware";
+import { session } from "remix/middleware/session";
 
 import { getEnv } from "~/app/http/middleware/env";
 import { KVSessionStorage } from "~/app/infrastructure/session/kv-session-storage-adapter";

@@ -9,10 +9,10 @@
  */
 
 import { KVSessionStorage } from "@pkg/session-storage-kv";
-import { getContext } from "remix/async-context-middleware";
 import { createCookie } from "remix/cookie";
+import { getContext } from "remix/middleware/async-context";
+import { session } from "remix/middleware/session";
 import { Session } from "remix/session";
-import { session } from "remix/session-middleware";
 
 /**
  * Name of the signed cookie carrying the session id.

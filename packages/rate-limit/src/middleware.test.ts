@@ -10,7 +10,7 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 
 import { failure, success } from "@pkg/result";
-import { RequestContext } from "remix/fetch-router";
+import { RequestContext } from "remix/router";
 
 import type { RateLimitLogger } from "./middleware";
 import type { Adapter, RateLimitDecision } from "./types";

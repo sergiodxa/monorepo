@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { seo } from "~/app/lib/seo";
 import DocumentLayout from "~/resources/layouts/document";

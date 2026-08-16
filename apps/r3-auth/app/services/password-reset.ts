@@ -12,7 +12,7 @@
  */
 
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { Hex, randomToken, sha256 } from "@pkg/crypto";
 import { toMs, toSeconds } from "@pkg/duration";

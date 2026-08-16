@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { getClientIP } from "@pkg/get-client-ip";
 import { tooManyRequests } from "@pkg/http/response/json";

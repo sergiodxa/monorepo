@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { forbidden } from "@pkg/http/response/html";
 

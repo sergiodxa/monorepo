@@ -11,7 +11,7 @@
 
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import type { SelectMonitor } from "~/database/schema";
 

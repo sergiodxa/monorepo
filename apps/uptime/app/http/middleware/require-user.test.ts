@@ -1,5 +1,5 @@
 /**
- * Integration tests for `requireUser`. They run the real `remix/session-middleware`
+ * Integration tests for `requireUser`. They run the real `remix/middleware/session`
  * + this app's own `auth` middleware ahead of `requireUser`, seeding the session via
  * `login()` from a preceding test-only middleware, to verify authenticated requests
  * pass through untouched while anonymous requests are redirected home (303) with a
@@ -11,10 +11,10 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { asyncContext } from "remix/async-context-middleware";
 import { createCookie } from "remix/cookie";
-import { createRouter } from "remix/fetch-router";
-import { session } from "remix/session-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
 import { returnTo } from "~/app/http/cookies";

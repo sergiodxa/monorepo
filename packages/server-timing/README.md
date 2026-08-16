@@ -144,7 +144,7 @@ Publish the collector on the request context so handlers can add their own measu
 the same header, then write it after the handler has answered.
 
 ```typescript
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		timing: TimingCollector;
 	}

@@ -47,7 +47,7 @@ breaks something you cannot see from here:
 
 ## Conventions
 
-- **Routing** is `remix/fetch-router`: `routes/web.ts` declares the route table, and one
+- **Routing** is `remix/router`: `routes/web.ts` declares the route table, and one
   controller per endpoint lives in `app/http/controllers/`. Link and redirect through
   the typed `routes.x.href()` — never a hand-written path string.
 - **Views** are `remix/ui` components under `resources/`. Every component takes a

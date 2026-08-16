@@ -8,15 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestHandler } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
-import { asyncContext } from "remix/async-context-middleware";
-import { cop } from "remix/cop-middleware";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { methodOverride } from "remix/method-override-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { createRouter } from "remix/router";
 
 import polarWebhook from "~/app/http/controllers/api/webhooks/polar";
 import dashboardIndex from "~/app/http/controllers/dashboard/index";

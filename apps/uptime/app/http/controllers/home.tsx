@@ -83,7 +83,7 @@ import {
 	weight,
 } from "@pkg/u/typography";
 import { Button, Heading, LinkButton, TextField } from "@pkg/ui";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { TRIAL_URL_FIELD } from "~/app/http/validators/trial";

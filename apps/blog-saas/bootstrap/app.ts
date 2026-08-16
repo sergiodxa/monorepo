@@ -6,16 +6,16 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import { notFound } from "@pkg/http/response/html";
 import { env } from "cloudflare:workers";
-import { asyncContext } from "remix/async-context-middleware";
-import { cop } from "remix/cop-middleware";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { methodOverride } from "remix/method-override-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { createRouter } from "remix/router";
 
 import polarWebhook from "~/app/http/controllers/api/webhooks/polar";
 import * as auth from "~/app/http/controllers/auth";

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { notFound } from "@pkg/http/response/html";
 import { getServiceContainer } from "@pkg/service-container";
@@ -20,7 +20,7 @@ import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";
 import { apportionCostByTeam } from "~/app/services/cost";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		team: SelectTeam;
 		membership: SelectMembership;

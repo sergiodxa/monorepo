@@ -8,7 +8,7 @@
  */
 import { css } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import routes from "../../routes";
 import { PRISM_CSS } from "../prism-css";

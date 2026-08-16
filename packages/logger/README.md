@@ -71,7 +71,7 @@ let router = createRouter({ middleware: [logger] });
 
 Register it as the outermost middleware so every later middleware and handler can reach it. It is also the module's default export, if you prefer `import logger from "@pkg/logger/middleware"`.
 
-Importing the middleware is also what gives you the type. The `declare module "remix/fetch-router"` augmentation that adds `logger` to `RequestContext` ships from the middleware module itself rather than an ambient `.d.ts`, because ambient declarations are not pulled in transitively — a consumer only picks up the type by importing the module it comes with.
+Importing the middleware is also what gives you the type. The `declare module "remix/router"` augmentation that adds `logger` to `RequestContext` ships from the middleware module itself rather than an ambient `.d.ts`, because ambient declarations are not pulled in transitively — a consumer only picks up the type by importing the module it comes with.
 
 ### Using scoped loggers
 
@@ -295,7 +295,7 @@ namespace Logger {
 
 ### `logger` (middleware)
 
-The request-logging middleware, from `@pkg/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/fetch-router`.
+The request-logging middleware, from `@pkg/logger/middleware` as either a named or a default export. It is a `Middleware` from `remix/router`.
 
 ```typescript
 import { logger } from "@pkg/logger/middleware";

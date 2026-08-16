@@ -23,7 +23,7 @@ Instructions for the implementer:
 
 ## Background
 
-The uptime monitoring product is a production SaaS. The OLD APP is built on React Router v8, React 19, Drizzle ORM, Tailwind CSS v4, and Zod. The monorepo is standardizing new server-rendered apps on Remix v3 (`remix` npm package, 3.0.0-beta.x): `remix/fetch-router` for HTTP routing, `remix/ui` JSX with `css()` mixins for server-rendered views, `remix/data-table` for persistence, and `remix/data-schema` for validation. Client-side JavaScript is limited to small hydrated islands (`clientEntry`).
+The uptime monitoring product is a production SaaS. The OLD APP is built on React Router v8, React 19, Drizzle ORM, Tailwind CSS v4, and Zod. The monorepo is standardizing new server-rendered apps on Remix v3 (`remix` npm package, 3.0.0-beta.x): `remix/router` for HTTP routing, `remix/ui` JSX with `css()` mixins for server-rendered views, `remix/data-table` for persistence, and `remix/data-schema` for validation. Client-side JavaScript is limited to small hydrated islands (`clientEntry`).
 
 The NEW APP exists as a minimal scaffold with a working build, worker entry, middleware stack, and SSR renderer — but zero feature code. This ADR specifies how to port **every feature** of the OLD APP into the NEW APP, reusing the same Cloudflare resources (same D1 database, KV namespace, queue, Durable Object binding, Workflow, Analytics Engine dataset, cron schedules, and secrets) so the NEW APP becomes a drop-in replacement and the OLD APP can be retired.
 
@@ -254,7 +254,7 @@ These restate the monorepo rules (root `AGENTS.md`) and app rules (`apps/r3-upti
 8. **DB-facing field names are snake_case** (`author_id`, `created_at`) — this matches the frozen production schema.
 9. **D1 has no real transactions.** Any multi-step write (example: create a status page, then insert its monitor rows) must be written as independent steps with compensation on failure (delete what you created), or as a single statement / upsert. Never assume rollback.
 10. **Per-tenant caches must be keyed by team** so one team's data can never appear for another.
-11. **Prefer what Remix v3 ships before writing anything custom**: `remix/session-middleware`, `remix/cop-middleware`, `remix/auth` + `remix/auth-middleware`, `remix/form-data-middleware`, `remix/method-override-middleware`, `remix/render-middleware`, `createAction`/`createController`, `remix/data-schema`. Check `docs/vendor/@remix-run/<package>/README.md` for any package before hand-rolling.
+11. **Prefer what Remix v3 ships before writing anything custom**: `remix/middleware/session`, `remix/middleware/cop`, `remix/auth` + `remix/middleware/auth`, `remix/middleware/form-data`, `remix/middleware/method-override`, `remix/middleware/render`, `createAction`/`createController`, `remix/data-schema`. Check `docs/vendor/@remix-run/<package>/README.md` for any package before hand-rolling.
 
 ### 1. Where Files Go (directory layout of the NEW APP)
 
@@ -292,16 +292,16 @@ Middleware order in `createRouter({ middleware: [...] })` (order matters — lat
 2. Request logger — provides `ctx.logger` (a `RequestLogger` from `@pkg/logger`).
 3. `formData()` — already present; parses form bodies.
 4. `methodOverride()` — already present; turns `_method=DELETE` posts into DELETE requests.
-5. `session(cookie, sessionStorage)` from `remix/session-middleware` — cookie signed with `COOKIE_SESSION_SECRET`, storage = the KV adapter over `env.KV` with prefix `session:`.
-6. `auth({ schemes: [...] })` from `remix/auth-middleware` — a session scheme that reads the auth record (user id, name, email, avatar, idToken) and resolves the current user.
-7. `cop()` from `remix/cop-middleware` — cross-origin protection for browser form posts. Configure `insecureBypassPatterns` for `/api/` (bearer-token authenticated, called server-to-server) — the cron ping endpoint lives under `/api`, so this also exempts it.
+5. `session(cookie, sessionStorage)` from `remix/middleware/session` — cookie signed with `COOKIE_SESSION_SECRET`, storage = the KV adapter over `env.KV` with prefix `session:`.
+6. `auth({ schemes: [...] })` from `remix/middleware/auth` — a session scheme that reads the auth record (user id, name, email, avatar, idToken) and resolves the current user.
+7. `cop()` from `remix/middleware/cop` — cross-origin protection for browser form posts. Configure `insecureBypassPatterns` for `/api/` (bearer-token authenticated, called server-to-server) — the cron ping endpoint lives under `/api`, so this also exempts it.
 8. `database(options.database)` — already present.
 9. `renderWith(createHtmlRenderer)` — already present.
 
 Type the middleware array as `Middleware[]` (non-tuple). For every value a middleware exposes as a context property, add a global augmentation:
 
 ```ts
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		logger: RequestLogger;
 		formData: FormData;
@@ -329,7 +329,7 @@ async scheduled(controller: ScheduledController) {
 Define every URL from the "URL Surface" section in `routes/web.ts` (pages + form actions) and `routes/api.ts` (API v1), using explicit patterns:
 
 ```ts
-import { form, route } from "remix/fetch-router/routes";
+import { form, route } from "remix/routes";
 
 export default route({
 	home: { method: "GET", pattern: "/" },
@@ -392,9 +392,9 @@ One file per action (or one file per small group), under `app/http/controllers/<
 
 ```tsx
 import { inject } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
+import { getContext } from "remix/middleware/async-context";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
 import MonitorsIndexView from "~/resources/views/monitors/index";
@@ -585,7 +585,7 @@ Event handlers go in `mix={[on("click", fn)]}`. In async handlers, use the provi
    - Provision the Polar customer: find by external id → find by email → create; assign external id if missing.
    - Resolve teams in this order: existing memberships → `Team.joinByDomain` (verified `team_domains` matching the email domain) → `Team.createTeam`.
    - Write the session record `{ id, name, email, avatar, idToken }` and redirect to the `returnTo` cookie value or `/app`.
-3. Sessions: `remix/session-middleware` + the KV session adapter (`session:` prefix, same `KV` namespace, cookie signed with `COOKIE_SESSION_SECRET`). Compare the stored record format with the OLD APP's `apps/uptime/app/vendor/create-worker-kv-session-storage.ts`; if the formats differ, existing users are logged out once at cutover — acceptable, but state it in the cutover checklist.
+3. Sessions: `remix/middleware/session` + the KV session adapter (`session:` prefix, same `KV` namespace, cookie signed with `COOKIE_SESSION_SECRET`). Compare the stored record format with the OLD APP's `apps/uptime/app/vendor/create-worker-kv-session-storage.ts`; if the formats differ, existing users are logged out once at cutover — acceptable, but state it in the cutover checklist.
 4. Logout (`/logout`): clear the session, then redirect to `https://auth.sergiodxa.com/oidc/logout?id_token_hint=<stored idToken>&post_logout_redirect_uri=https://uptime.sergiodxa.com`, with a `Clear-Site-Data: "*"` header — port `logout()` from `apps/uptime/app/modules/auth.ts`.
 
 ### 6. Validation
@@ -676,7 +676,7 @@ Final shape of `apps/r3-uptime/wrangler.jsonc` (name and main stay as they are):
 ### 12. Testing
 
 - Test runner: `bun:test` only, run from the repo root (`bun test apps/r3-uptime/...`). Test files must pass `bun typecheck`.
-- Database-backed tests: run models/repositories against the in-memory `remix/data-table-sqlite` adapter (`bun:sqlite`), which mirrors the D1 adapter's SQLite semantics. Do not mock the query layer.
+- Database-backed tests: run models/repositories against the in-memory `remix/data-table/sqlite` adapter (`bun:sqlite`), which mirrors the D1 adapter's SQLite semantics. Do not mock the query layer.
 - Outbound HTTP (Polar, Resend, Slack/Discord/webhook deliveries, Analytics Engine SQL API, DNS-over-HTTPS): mock with MSW `setupServer` from `msw/node`. Never stub `globalThis.fetch` directly and never add injectable fetch parameters.
 - Cloudflare bindings in tests: `mock.module("cloudflare:workers", ...)` to supply `env`.
 - Router-level tests: call `router.fetch(new Request(url, ...))` and assert on responses — cover: unauthenticated redirect, non-member 404, member vs admin permissions, API key 401/403 by scope, and one happy-path CRUD per monitor type.
@@ -878,5 +878,5 @@ Both fixes are verified end-to-end (real script runs and/or the packages' own te
 - The monorepo root `TODO.md` documents two accepted quirks that also apply here: `ctx.params.x!` is the accepted idiom for context-erased route params, and oxlint `jsx-key` warnings on remix/ui component arrays are a known false positive (do not "fix" them by adding `key` to components).
 - **`database/schema.ts` timestamp columns are `c.integer()`, not `c.text()`.** Other Remix v3 apps in this repo store audit timestamps as ISO text; this app's production D1 database already has `created_at`/`updated_at`/etc. as INTEGER (milliseconds since epoch), written by the OLD APP's Drizzle `timestamp_ms` mode. Write epoch-ms integers (e.g. `Date.now()`), not ISO strings, when inserting/updating these columns in later phases — mixing representations would break ordering and comparisons against existing rows.
 - **`wrangler d1 migrations apply` needs the binding name as a positional argument** (`bunx wrangler d1 migrations apply DB --local`) — omitting it fails with "Not enough non-option arguments" on this wrangler version. `db:local:migrate`/`db:remote:migrate` already pass it.
-- **`createAction`-typed handlers need `as RequestHandler<any>` in `router.map()` calls that add per-route middleware beyond the global chain.** A handler built with `createAction(route, fn)` fixes its context's middleware-entries tuple at `[]`; a `router.map(route, { middleware: [...], handler })` call with one or more plain (untransformed) `Middleware` values instead types the merged context's entries as an opaque `any[]`, and the two tuple shapes never unify. `bootstrap/app.tsx`'s `/app`, `/app/:team`, and `/app/:team/dashboard` mappings cast the handler `as RequestHandler<any>` to route around this; `ctx.team`/`ctx.membership`/etc. stay correctly typed inside the handler regardless, since those come from the global `declare module "remix/fetch-router"` augmentations in each middleware's own file, not from the entries tuple.
+- **`createAction`-typed handlers need `as RequestHandler<any>` in `router.map()` calls that add per-route middleware beyond the global chain.** A handler built with `createAction(route, fn)` fixes its context's middleware-entries tuple at `[]`; a `router.map(route, { middleware: [...], handler })` call with one or more plain (untransformed) `Middleware` values instead types the merged context's entries as an opaque `any[]`, and the two tuple shapes never unify. `bootstrap/app.tsx`'s `/app`, `/app/:team`, and `/app/:team/dashboard` mappings cast the handler `as RequestHandler<any>` to route around this; `ctx.team`/`ctx.membership`/etc. stay correctly typed inside the handler regardless, since those come from the global `declare module "remix/router"` augmentations in each middleware's own file, not from the entries tuple.
 - **`wrangler deploy`/`wrangler dev` do not build the Vite app themselves.** Run `bun run build` (`vite build`) first so `dist/client` and `dist/ssr/wrangler.json` exist; only then does `@cloudflare/vite-plugin`'s config redirection make `wrangler deploy --dry-run` (or a real deploy) succeed. A stale `.wrangler/deploy/config.json` pointing at a deleted `dist/` also fails — delete it if you clean `dist/` out from under a redirect.

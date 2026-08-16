@@ -17,7 +17,7 @@ export default (config: EngineAuthConfig) =>
 		return next();
 	});
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	export interface RequestContext {
 		oidc: EngineAuthConfig;
 	}

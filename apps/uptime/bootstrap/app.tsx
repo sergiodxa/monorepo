@@ -14,19 +14,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import mail from "@pkg/mail/middleware";
 import { env } from "cloudflare:workers";
-import { asyncContext } from "remix/async-context-middleware";
-import { cop } from "remix/cop-middleware";
-import { createController, createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { methodOverride } from "remix/method-override-middleware";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { renderWith } from "remix/middleware/render";
+import { createController, createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import {
@@ -264,7 +264,7 @@ namespace application {
 /** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
 export default function application(options: application.Options) {
 	// Non-tuple `Middleware[]`: values middleware expose on the context are declared
-	// via `declare module "remix/fetch-router"` augmentations in their own files,
+	// via `declare module "remix/router"` augmentations in their own files,
 	// not through the transform-typed middleware chain (see AGENTS.md).
 	let globalMiddleware: Middleware[] = [
 		// First, so everything after it — the session, the auth guard, cross-origin
@@ -425,7 +425,7 @@ export default function application(options: application.Options) {
 	// member-level `[requireUser, requireTeam]` chain, repeated as an inline array at
 	// each call site rather than a shared variable — inline arrays are what let
 	// TypeScript infer the middleware-provided context (see this file's imports'
-	// `remix/fetch-router` README on `createController()`).
+	// `remix/router` README on `createController()`).
 	router.map(
 		routes.actions.monitor.http,
 		createController(routes.actions.monitor.http, {

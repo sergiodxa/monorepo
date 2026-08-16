@@ -26,7 +26,7 @@ export default (logger: Logger) =>
 		return next();
 	});
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	export interface RequestContext {
 		logger: Logger;
 	}

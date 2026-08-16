@@ -26,14 +26,14 @@ import type { PolarClient } from "@pkg/polar";
 import type { Result } from "@pkg/result";
 import type { GitHubAuthProfile } from "remix/auth";
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { failure, isFailure, success } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
-import { getContext } from "remix/async-context-middleware";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
 import * as s from "remix/data-schema";
+import { getContext } from "remix/middleware/async-context";
 
 import Connection from "~/app/data/connection";
 import Subject from "~/app/data/subject";

@@ -20,9 +20,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { ServiceContainer } from "@pkg/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { asyncContext } from "remix/middleware/async-context";
+import { createRouter } from "remix/router";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 

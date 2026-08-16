@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, route } from "remix/fetch-router/routes";
+import { get, route } from "remix/routes";
 
 import auth from "~/routes/auth";
 import cms from "~/routes/cms";

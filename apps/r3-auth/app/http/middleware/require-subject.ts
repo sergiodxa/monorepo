@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { redirect } from "@pkg/http/response";
 import { getServiceContainer } from "@pkg/service-container";
@@ -30,7 +30,7 @@ import {
 } from "~/app/services/access-token-claims";
 import routes from "~/routes/web";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** The signed-in subject, published by `requireSubject`. */
 		subject: SelectSubject;

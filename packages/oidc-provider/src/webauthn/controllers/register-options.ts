@@ -18,10 +18,10 @@ import {
 	generateRegistrationOptions,
 	type GenerateRegistrationOptionsOpts,
 } from "@simplewebauthn/server";
-import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createAction } from "remix/router";
 
 import TenantMeta from "../../management/models/tenant-meta";
 import routes from "../../routes";

@@ -22,15 +22,15 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
-import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import { SEO } from "~/app/lib/seo";

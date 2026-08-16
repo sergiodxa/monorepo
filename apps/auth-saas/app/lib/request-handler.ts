@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext, RequestHandler } from "remix/fetch-router";
+import type { RequestContext, RequestHandler } from "remix/router";
 
 /**
  * Identity helper that types a value as a `RequestHandler` for the router.

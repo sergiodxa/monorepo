@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import DocumentLayout from "~/resources/layouts/document";
 

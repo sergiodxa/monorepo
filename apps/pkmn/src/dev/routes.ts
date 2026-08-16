@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { form, get, route } from "remix/fetch-router/routes";
+import { form, get, route } from "remix/routes";
 
 /**
  * The dev-tools routes. Every tool page (`/`, `/sprite`, `/map`, `/species`,

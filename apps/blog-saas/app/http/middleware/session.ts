@@ -11,12 +11,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
-import { getContext } from "remix/async-context-middleware";
 import { createCookie } from "remix/cookie";
+import { getContext } from "remix/middleware/async-context";
+import { session } from "remix/middleware/session";
 import { Session } from "remix/session";
-import { session } from "remix/session-middleware";
 import { createCookieSessionStorage } from "remix/session-storage/cookie";
 
 /** OIDC PKCE transaction stored between login start and callback. */
@@ -37,7 +37,7 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 /**
  * Builds the dashboard session middleware backed by Remix's signed-cookie session
- * storage (`remix/session-middleware` + `createCookieSessionStorage`). The cookie is
+ * storage (`remix/middleware/session` + `createCookieSessionStorage`). The cookie is
  * signed with the platform secret, so a tampered payload fails verification and reads
  * back as an empty session.
  *

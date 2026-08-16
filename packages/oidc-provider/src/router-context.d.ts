@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type {} from "remix/fetch-router";
+import type {} from "remix/router";
 
 /**
  * The `formData` context value, from the `formData()` middleware's
@@ -19,7 +19,7 @@ import type {} from "remix/fetch-router";
  * so it is applied by consuming projects that compile the provider's source (an
  * ambient `.d.ts` is not pulled in transitively).
  */
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Parsed request body form data. */
 		formData: FormData;

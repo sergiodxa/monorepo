@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { form, get, resources, route } from "remix/fetch-router/routes";
+import { form, get, resources, route } from "remix/routes";
 
 /**
  * The engine's route map. Fixed routes are declared before the dynamic

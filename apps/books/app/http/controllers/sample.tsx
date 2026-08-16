@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@pkg/get-client-ip";
 import { renderToRemix } from "@pkg/markdown/client";
@@ -17,7 +17,7 @@ import { isFailure, isSuccess } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
 import { readAttribution } from "~/app/lib/attribution";

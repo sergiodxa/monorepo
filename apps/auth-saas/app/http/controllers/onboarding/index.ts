@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { base64UrlEncode } from "~/app/lib/crypto-utils";
 import routes from "~/routes/web";

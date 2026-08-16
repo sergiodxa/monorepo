@@ -6,10 +6,10 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { renderWith } from "remix/render-middleware";
+import { renderWith } from "remix/middleware/render";
 import { renderToString } from "remix/ui/server";
 
 /**
@@ -32,7 +32,7 @@ function createHtmlRenderer(_context: RequestContext) {
 /** Middleware that installs `ctx.render` for the dashboard request pipeline. */
 export default renderWith(createHtmlRenderer);
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		render(node: RemixNode, init?: ResponseInit): Promise<Response>;
 	}

@@ -25,7 +25,7 @@
  */
 
 import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { BadRequest, PaymentRequired } from "@pkg/http/status-code";
 import { CloudflareAdapter, MemoryAdapter } from "@pkg/rate-limit";
@@ -38,7 +38,7 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import type { ContentCheckRule } from "~/app/data/content-check";
 import type { DnsRecordType } from "~/app/lib/dns-record-value";

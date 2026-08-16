@@ -16,7 +16,7 @@ import { describe, expect, mock, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";

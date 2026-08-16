@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { redirect } from "@pkg/http/response";
 import { Location } from "@pkg/location";
@@ -16,7 +16,7 @@ import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { Discounts, Product } from "~/app/data/product";
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";

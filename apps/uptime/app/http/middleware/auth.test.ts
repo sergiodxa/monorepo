@@ -1,7 +1,7 @@
 /**
  * Integration tests for the auth middleware's session-identity helpers
  * (`getViewer`, `isAuthenticated`, `login`, `logout`, `getIdToken`, `setIdToken`).
- * They run the real `remix/session-middleware` + `auth()` chain — seeding the
+ * They run the real `remix/middleware/session` + `auth()` chain — seeding the
  * session via `login()` from a preceding test-only middleware — so the session
  * auth scheme's `read`/`verify`/`invalidate` hooks execute for real instead of
  * being stubbed out.
@@ -12,11 +12,11 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { asyncContext, getContext } from "remix/async-context-middleware";
 import { createCookie } from "remix/cookie";
-import { createRouter, type Middleware } from "remix/fetch-router";
+import { asyncContext, getContext } from "remix/middleware/async-context";
+import { session } from "remix/middleware/session";
+import { createRouter, type Middleware } from "remix/router";
 import { Session } from "remix/session";
-import { session } from "remix/session-middleware";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
 import {

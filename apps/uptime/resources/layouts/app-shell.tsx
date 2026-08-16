@@ -52,7 +52,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { getContext } from "remix/async-context-middleware";
+import type { getContext } from "remix/middleware/async-context";
 import type { Handle, RemixNode } from "remix/ui";
 
 import {

@@ -9,7 +9,7 @@
  */
 
 import type { i18n, InitOptions, Module, NewableModule, Resource } from "i18next";
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { createInstance } from "i18next";
 import { Session } from "remix/session";
@@ -20,7 +20,7 @@ import { LanguageDetector } from "./lib/language-detector";
 
 // Declared here (an imported module, not an ambient .d.ts) so the augmentation
 // is applied in consuming projects that import the middleware.
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Language detected for the current request, always a supported language. */
 		locale: string;

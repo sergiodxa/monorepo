@@ -12,7 +12,7 @@ import { describe, expect, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import healthcheck from "~/app/http/controllers/healthcheck";
 import { createTestDatabase } from "~/app/lib/test/db";

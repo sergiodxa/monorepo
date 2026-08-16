@@ -12,9 +12,9 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import { headRequests } from "./head-requests";
 

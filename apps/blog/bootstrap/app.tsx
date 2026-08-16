@@ -7,17 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
 import { redirect } from "@pkg/http/response";
-import { asyncContext } from "remix/async-context-middleware";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { methodOverride } from "remix/method-override-middleware";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
+import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";

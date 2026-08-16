@@ -10,7 +10,7 @@
 import { ok, serviceUnavailable } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { users } from "~/database/schema";
 import routes from "~/routes/web";

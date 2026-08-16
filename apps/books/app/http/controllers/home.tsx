@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { readAttribution } from "~/app/lib/attribution";
 import { seo } from "~/app/lib/seo";

@@ -13,7 +13,7 @@
  */
 
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@pkg/get-client-ip";
 

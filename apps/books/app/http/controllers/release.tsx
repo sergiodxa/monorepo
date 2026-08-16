@@ -14,7 +14,7 @@ import { PolarClient } from "@pkg/polar";
 import { isSuccess } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import * as s from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import type { PriceView, ReleaseView as ReleaseViewTypes } from "~/resources/views/release";
 

@@ -22,7 +22,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TcpCheckStatus } from "~/app/services/tcp-check";

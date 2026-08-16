@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { isFailure } from "@pkg/result";
 
@@ -18,7 +18,7 @@ import { Mailer } from "./mailer";
 
 // Declared here (an imported module, not an ambient .d.ts) so the augmentation
 // is applied in consuming projects that import the middleware.
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/**
 		 * Mailer for the current request, configured by the mail middleware. This is

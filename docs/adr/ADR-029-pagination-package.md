@@ -233,7 +233,7 @@ import { createPaging, Pagination } from "@pkg/pagination";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import { alertEvents, monitors } from "~/database/schema";
 import requireApiKey from "~/app/http/middleware/require-api-key";

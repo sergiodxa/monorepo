@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getContext } from "remix/async-context-middleware";
-import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";
+import { getContext } from "remix/middleware/async-context";
+import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/middleware/auth";
 import { Session } from "remix/session";
 
 /**

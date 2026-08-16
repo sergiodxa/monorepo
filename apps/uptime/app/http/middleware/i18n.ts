@@ -21,13 +21,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import i18next from "@pkg/i18n/middleware";
 import { getServiceContainer } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
+import { getContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";

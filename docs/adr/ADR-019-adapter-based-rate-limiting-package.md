@@ -94,7 +94,7 @@ let limiter = rateLimit({
 });
 ```
 
-The factory returns a `Middleware` from `remix/fetch-router`. Default key derivation uses `@pkg/get-client-ip`; authenticated surfaces pass a client id, token id, or tenant id instead. Options also cover `cost`, a `skip(ctx)` predicate, and an `onLimit(ctx, decision)` hook for a custom response (an HTML page instead of JSON, for example).
+The factory returns a `Middleware` from `remix/router`. Default key derivation uses `@pkg/get-client-ip`; authenticated surfaces pass a client id, token id, or tenant id instead. Options also cover `cost`, a `skip(ctx)` predicate, and an `onLimit(ctx, decision)` hook for a custom response (an HTML page instead of JSON, for example).
 
 ### 4. Response Headers
 

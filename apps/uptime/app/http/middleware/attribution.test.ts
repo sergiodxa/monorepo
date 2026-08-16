@@ -15,10 +15,10 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { headRequests } from "@pkg/http/middleware/head-requests";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TrialAttribution } from "~/app/http/middleware/attribution";

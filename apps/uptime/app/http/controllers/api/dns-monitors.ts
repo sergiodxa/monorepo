@@ -21,7 +21,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import type { ZoneFileImport } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";

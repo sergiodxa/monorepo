@@ -18,7 +18,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { and, Database, eq } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
 

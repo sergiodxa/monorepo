@@ -14,7 +14,7 @@ import { describe, expect, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import type { ApiKeyScope } from "~/database/schema";
 

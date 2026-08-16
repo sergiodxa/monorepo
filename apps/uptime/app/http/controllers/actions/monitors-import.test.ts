@@ -11,17 +11,17 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { formData } from "remix/middleware/form-data";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { session } from "remix/session-middleware";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
 import type { Viewer } from "~/app/http/middleware/auth";

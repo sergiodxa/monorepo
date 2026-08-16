@@ -30,7 +30,7 @@
  */
 
 import type { Adapter, RateLimiterBinding } from "@pkg/rate-limit";
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { conflict, created, notFound, tooManyRequests } from "@pkg/http/response/json";
 import { PolarClient } from "@pkg/polar";
@@ -40,7 +40,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Team from "~/app/data/team";

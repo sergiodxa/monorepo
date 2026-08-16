@@ -10,7 +10,7 @@
 import { redirect } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";

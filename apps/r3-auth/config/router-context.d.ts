@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type {} from "remix/fetch-router";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
+import type {} from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Renders a `remix/ui` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;

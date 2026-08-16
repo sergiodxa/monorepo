@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { del, form, get, post, put, resource, resources, route } from "remix/fetch-router/routes";
+import { del, form, get, post, put, resource, resources, route } from "remix/routes";
 
 /** Typed route tree consumed by the provider router and controllers. */
 export default route({

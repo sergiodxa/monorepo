@@ -19,7 +19,7 @@
 
 import { m, maxIs, pbe, pbs, pi } from "@pkg/u/size";
 import { Typeset } from "@pkg/ui";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/lib/seo";

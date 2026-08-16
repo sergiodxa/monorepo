@@ -10,16 +10,16 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware } from "remix/fetch-router";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
+import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
 
 import i18n from "~/app/http/middleware/i18n";

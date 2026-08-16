@@ -2,7 +2,7 @@
  * Route guard requiring a signed-in viewer. On failure, stores the current URL in the
  * `returnTo` cookie before redirecting home so the visitor lands back where they
  * started after signing in. Written as a plain middleware (rather than
- * `remix/auth-middleware`'s `requireAuth`) so it stays a plain `Middleware` with no
+ * `remix/middleware/auth`'s `requireAuth`) so it stays a plain `Middleware` with no
  * context-transform generic to reconcile against route-specific middleware chains.
  * Must run after the `auth` middleware.
  *
@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { redirect } from "@pkg/http/response";
 

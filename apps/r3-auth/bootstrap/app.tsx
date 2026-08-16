@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext, Router } from "remix/fetch-router";
+import type { Middleware, RequestContext, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
@@ -16,13 +16,13 @@ import { headRequests } from "@pkg/http/middleware/head-requests";
 import logger from "@pkg/logger/middleware";
 import mail from "@pkg/mail/middleware";
 import { getServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { cop } from "remix/cop-middleware";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { methodOverride } from "remix/method-override-middleware";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { cop } from "remix/middleware/cop";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
+import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
@@ -91,7 +91,7 @@ namespace application {
 /** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
 export default function application(options: application.Options) {
 	// A non-tuple `Middleware[]`: the values these middleware publish are declared with
-	// `declare module "remix/fetch-router"` in their own modules rather than carried
+	// `declare module "remix/router"` in their own modules rather than carried
 	// through the chain's transform types.
 	let middleware: Middleware[] = [
 		// First, so everything after it — the session, cross-origin protection with its

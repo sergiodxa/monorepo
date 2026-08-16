@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { unauthorized } from "@pkg/http/response/json";
 import { JWK } from "@pkg/jwt";
@@ -24,7 +24,7 @@ import { ISSUER } from "~/app/config";
 import Client from "~/app/data/client";
 import { getSigningKey } from "~/app/services/signing-keys";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** The client whose credentials the request presented, published by `requireApiClient`. */
 		apiClient: ApiClient;

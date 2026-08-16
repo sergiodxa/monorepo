@@ -14,7 +14,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 

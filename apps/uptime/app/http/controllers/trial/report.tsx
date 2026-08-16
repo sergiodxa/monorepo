@@ -55,7 +55,7 @@ import { fontSize, leading, textAlign, weight, wordBreak } from "@pkg/u/typograp
 import { Card, Heading, HeadingScope, LinkButton, Text } from "@pkg/ui";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { TrialIncident } from "~/app/lib/trial-report";

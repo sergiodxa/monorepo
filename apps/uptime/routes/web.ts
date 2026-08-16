@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { del, form, get, patch, post, put, resources, route } from "remix/fetch-router/routes";
+import { del, form, get, patch, post, put, resources, route } from "remix/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for

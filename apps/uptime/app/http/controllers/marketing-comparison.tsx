@@ -45,7 +45,7 @@ import { m, maxIs, mbe, mbs, mi, p, pb, pi } from "@pkg/u/size";
 import { font, fontSize, leading, textAlign, tracking, weight } from "@pkg/u/typography";
 import { Heading, Table } from "@pkg/ui";
 import * as s from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 

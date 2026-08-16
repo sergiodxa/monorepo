@@ -20,7 +20,7 @@ production and against an in-memory fake in tests without any Workers runtime.
 
 ```typescript
 import { KVSessionStorage } from "@pkg/session-storage-kv";
-import { session } from "remix/session-middleware";
+import { session } from "remix/middleware/session";
 
 let storage = new KVSessionStorage(env.KV, { prefix: "session:" });
 

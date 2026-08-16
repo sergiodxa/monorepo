@@ -24,17 +24,17 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { IngestEvent } from "@pkg/polar";
-import type { Middleware, RequestHandler } from "remix/fetch-router";
-import type { Route } from "remix/fetch-router/routes";
+import type { Middleware, RequestHandler } from "remix/router";
+import type { Route } from "remix/routes";
 
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { formData } from "remix/middleware/form-data";
+import { createRouter } from "remix/router";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 

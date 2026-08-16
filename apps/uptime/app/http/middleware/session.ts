@@ -11,7 +11,7 @@
 
 import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
-import { session } from "remix/session-middleware";
+import { session } from "remix/middleware/session";
 
 /**
  * Name of the signed cookie carrying the session id.

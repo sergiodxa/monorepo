@@ -26,7 +26,7 @@ import routes from "~/routes/web";
 /**
  * Extends the request context with the authenticated platform session.
  */
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		platformSession: {
 			/** The unique identifier for the authenticated subject */

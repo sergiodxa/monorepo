@@ -22,7 +22,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { getContext } from "remix/async-context-middleware";
+import type { getContext } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
 import { Select, Switch, TextField } from "@pkg/ui";

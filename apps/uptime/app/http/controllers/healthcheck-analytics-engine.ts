@@ -14,7 +14,7 @@
 import { ok, serviceUnavailable } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { queryAnalytics } from "~/app/services/analytics";
 import routes from "~/routes/web";

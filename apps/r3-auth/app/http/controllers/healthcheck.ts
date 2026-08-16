@@ -12,7 +12,7 @@ import { InternalServerError, Ok } from "@pkg/http/status-code";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { clients } from "~/database/schema";
 import routes from "~/routes/web";

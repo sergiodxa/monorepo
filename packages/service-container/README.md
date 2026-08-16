@@ -267,7 +267,7 @@ export default {
 Use `inject` inside controllers. If the Remix `asyncContext()` middleware is installed, the callback can read the current request context with `getContext()`. If you prefer, the controller context can also be forwarded as the single runtime argument and inferred from the route handler position.
 
 ```typescript
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 import { getContext } from "remix/middleware/async-context";
 import { inject } from "@pkg/service-container";
 

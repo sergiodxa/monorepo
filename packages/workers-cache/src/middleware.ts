@@ -9,7 +9,7 @@
  */
 
 import type { Result } from "@pkg/result";
-import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { isFailure } from "@pkg/result";
 import { Session } from "remix/session";
@@ -31,7 +31,7 @@ import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error";
 
 // Declared here (an imported module, not an ambient .d.ts) so the augmentation
 // is applied in consuming projects that import the middleware.
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Declares how this response caches, and purges cached entries by tag. */
 		cache: CacheDeclaration;

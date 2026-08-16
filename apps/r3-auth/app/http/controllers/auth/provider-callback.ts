@@ -12,16 +12,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/http/response/json";
 import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createAction } from "remix/router";
 
 import type { AuthzState } from "~/app/http/middleware/session";
 

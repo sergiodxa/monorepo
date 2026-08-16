@@ -9,16 +9,16 @@
  */
 
 import type { i18n } from "@pkg/i18n";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import NotFoundView from "~/resources/views/not-found";
 
 /**
- * Narrowed shape of `remix/fetch-router`'s `RequestContext` this handler
+ * Narrowed shape of `remix/router`'s `RequestContext` this handler
  * actually reads. `i18next` is declared here (rather than imported from
- * `remix/fetch-router` directly) only to keep this file's dependency surface
+ * `remix/router` directly) only to keep this file's dependency surface
  * explicit; the global `i18n` middleware (see `bootstrap/app.tsx`) wraps the
  * whole router, `defaultHandler` included, so `ctx.i18next` is populated at
  * runtime the same way it is for every `createAction`/`createController`

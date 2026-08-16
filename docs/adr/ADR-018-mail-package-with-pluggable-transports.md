@@ -179,7 +179,7 @@ A small layout kit ships with the package for the constraints email clients impo
 
 ### 6. Middleware
 
-Request handlers should not construct a mailer, and they should not have to know which transport an app uses. A `remix/fetch-router` middleware receives the transport, builds the `Mailer` itself, and publishes it on the request context:
+Request handlers should not construct a mailer, and they should not have to know which transport an app uses. A `remix/router` middleware receives the transport, builds the `Mailer` itself, and publishes it on the request context:
 
 ```ts
 import mail from "@pkg/mail/middleware";
@@ -197,7 +197,7 @@ router.use(
 The context is augmented from the middleware module, the way the i18n middleware does it, so the augmentation applies in every consuming app:
 
 ```ts
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Mailer for the current request, configured by the mail middleware. */
 		email: Mailer;

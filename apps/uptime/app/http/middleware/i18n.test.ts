@@ -16,11 +16,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { session } from "remix/session-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
 import UserPreferences from "~/app/data/user-preferences";

@@ -31,14 +31,14 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestHandler } from "remix/router";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";

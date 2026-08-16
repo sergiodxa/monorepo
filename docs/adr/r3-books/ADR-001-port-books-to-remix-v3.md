@@ -23,7 +23,7 @@ Instructions for the implementer:
 
 `apps/books` is the landing page and sales funnel for the _React Router OAuth2 Handbook_: a homepage with email capture, a release/pricing page driven by live Polar prices, a gated Markdoc sample chapter, an upgrade path for existing readers, and a Polar webhook that tags paying customers in Buttondown.
 
-It and `apps/auth` are the only React (React Router v8) apps left in the monorepo after `apps/blog` and `apps/uptime` were replaced by their Remix v3 ports in commit `38d79a03`. Every convention the rest of the monorepo now follows — `remix/fetch-router` controllers, `remix/ui` views with `css()` mixins, `remix/data-schema` validation, `@pkg/service-container` services — is skipped here, and this one worker is why React, React DOM, Tailwind, Zod, `remix-utils`, Markdoc, and Prism stay installed.
+It and `apps/auth` are the only React (React Router v8) apps left in the monorepo after `apps/blog` and `apps/uptime` were replaced by their Remix v3 ports in commit `38d79a03`. Every convention the rest of the monorepo now follows — `remix/router` controllers, `remix/ui` views with `css()` mixins, `remix/data-schema` validation, `@pkg/service-container` services — is skipped here, and this one worker is why React, React DOM, Tailwind, Zod, `remix-utils`, Markdoc, and Prism stay installed.
 
 Unlike the auth port, there is almost no risk surface: no database, no sessions, no tokens, no schema to freeze. The whole app is four pages, three JSON/redirect endpoints, and two HTTP integrations. The work is mostly translating Tailwind markup into `remix/ui` and swapping four libraries for packages the monorepo already owns.
 
@@ -167,7 +167,7 @@ Global middleware in `createRouter({ middleware: [...] })`:
 1. `asyncContext()`
 2. Request logger (`ctx.logger`), replacing the `remix-utils` context-storage + `logger()` accessor pair
 3. `formData()` — every form in this app is a plain POST
-4. `cop()` from `remix/cop-middleware`, **bypassing `/webhooks/polar`** (a cross-origin POST from Polar, authenticated by signature, not by origin) — verify this before Phase 4, because a `cop()` rejection here looks exactly like a healthy 403 in logs while silently dropping paid-order events
+4. `cop()` from `remix/middleware/cop`, **bypassing `/webhooks/polar`** (a cross-origin POST from Polar, authenticated by signature, not by origin) — verify this before Phase 4, because a `cop()` rejection here looks exactly like a healthy 403 in logs while silently dropping paid-order events
 5. `renderWith(createHtmlRenderer)`
 
 No session middleware: the app has no session, and `/sample`'s deliberate non-persistence depends on that staying true.
@@ -179,7 +179,7 @@ No session middleware: the app has no session, and `/sample`'s deliberate non-pe
 `routes/web.ts`:
 
 ```ts
-import { form, get, post, route } from "remix/fetch-router/routes";
+import { form, get, post, route } from "remix/routes";
 
 export default route({
 	home: get("/"),

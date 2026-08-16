@@ -10,9 +10,9 @@
 import { Location } from "@pkg/location";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createController } from "remix/router";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
 import Subscription from "~/app/models/subscription";

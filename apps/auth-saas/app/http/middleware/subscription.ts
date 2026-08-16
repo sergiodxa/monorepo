@@ -28,7 +28,7 @@ const BLOCKED_STATUSES = new Set(["canceled", "unpaid", "incomplete"]);
 /**
  * Extends the request context with the tenant's subscription information.
  */
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		subscription: {
 			/** The unique subscription identifier */

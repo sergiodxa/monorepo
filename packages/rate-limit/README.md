@@ -98,7 +98,7 @@ Creates a middleware that counts the request, refuses it when the budget is gone
 
 **Returns:**
 
-- A `Middleware` from `remix/fetch-router`
+- A `Middleware` from `remix/router`
 
 **Example:**
 

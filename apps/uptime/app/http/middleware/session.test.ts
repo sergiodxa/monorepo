@@ -13,7 +13,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 

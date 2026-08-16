@@ -11,11 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { Logger } from "./request-logger";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** The request-scoped logger, flushed once the response is settled. */
 		logger: Logger;

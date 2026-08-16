@@ -212,7 +212,7 @@ Errors and degraded outcomes are always kept, unconditionally. Sampling drops on
 ### 7. The Middleware
 
 ```ts
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		event: Event;
 	}

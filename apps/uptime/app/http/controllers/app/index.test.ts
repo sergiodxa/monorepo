@@ -10,13 +10,13 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { createRouter } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

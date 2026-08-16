@@ -13,7 +13,7 @@ import { redirect } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { renderHome } from "~/app/http/controllers/home";
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";

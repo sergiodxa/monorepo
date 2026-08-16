@@ -17,7 +17,7 @@ import { PolarClient } from "@pkg/polar";
 import { failure, isFailure, success } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { Product } from "~/app/data/product";
 import { Buttondown } from "~/app/services/buttondown";

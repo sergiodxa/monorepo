@@ -12,18 +12,18 @@
 
 import { describe, expect, test } from "bun:test";
 
-import type { Middleware, RequestContext, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { renderWith } from "remix/middleware/render";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { session } from "remix/session-middleware";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
 

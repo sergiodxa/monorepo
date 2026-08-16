@@ -9,7 +9,7 @@
  */
 
 import { ok } from "@pkg/http/response/json";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { WELL_KNOWN } from "~/app/config";
 import routes from "~/routes/web";

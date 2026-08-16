@@ -10,7 +10,7 @@
  */
 
 import { Accepted } from "@pkg/http/status-code";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { sendQueueMessage } from "~/app/lib/queue";

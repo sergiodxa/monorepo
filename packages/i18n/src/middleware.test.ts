@@ -13,7 +13,7 @@ import { describe, expect, mock, test } from "bun:test";
  */
 import type { BackendModule } from "i18next";
 
-import { RequestContext } from "remix/fetch-router";
+import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 
 import i18next from "./middleware";

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { form, get, post, route } from "remix/fetch-router/routes";
+import { form, get, post, route } from "remix/routes";
 
 /**
  * Registers the funnel's pages, form endpoints, checkout redirect, and webhook.

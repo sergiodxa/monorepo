@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import requireSubject from "~/app/http/middleware/require-subject";
 import { accountChrome } from "~/app/http/view-models/account-chrome";

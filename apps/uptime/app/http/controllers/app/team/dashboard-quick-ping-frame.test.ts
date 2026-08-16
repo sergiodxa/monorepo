@@ -29,21 +29,21 @@
 import { describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { PolarClient as PolarClientType } from "@pkg/polar";
-import type { Middleware, RequestContext, RequestHandler, Router } from "remix/fetch-router";
+import type { Middleware, RequestContext, RequestHandler, Router } from "remix/router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { createTranslator } from "@pkg/i18n";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
-import { renderWith } from "remix/render-middleware";
-import { session } from "remix/session-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
 

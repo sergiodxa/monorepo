@@ -140,7 +140,7 @@ export default (internalSecret: string) => {
 	});
 };
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	export interface RequestContext {
 		managementClient: Awaited<ReturnType<typeof Client.show>>;
 	}

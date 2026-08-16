@@ -11,7 +11,7 @@
  */
 
 import type { i18n } from "@pkg/i18n";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
@@ -24,10 +24,10 @@ import { m, minBs, p } from "@pkg/u/size";
 import { hover } from "@pkg/u/state";
 import { fontSize, textAlign, textDecoration } from "@pkg/u/typography";
 import { env } from "cloudflare:workers";
-import { getContext } from "remix/async-context-middleware";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
@@ -57,7 +57,7 @@ function provider(ctx: { request: Request }) {
 }
 
 /**
- * Narrowed shape of `remix/fetch-router`'s `RequestContext` this helper
+ * Narrowed shape of `remix/router`'s `RequestContext` this helper
  * actually reads. `i18next` is declared here only to keep this file's
  * dependency surface explicit — the global `i18n` middleware (see
  * `bootstrap/app.tsx`) already populates `ctx.i18next` for every action this

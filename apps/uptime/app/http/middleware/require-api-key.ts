@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 
 import { Forbidden, Unauthorized } from "@pkg/http/status-code";
 import { getServiceContainer } from "@pkg/service-container";
@@ -23,7 +23,7 @@ import Team from "~/app/data/team";
 import { hashApiKey } from "~/app/services/api-key";
 import { apiError } from "~/app/services/api-response";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** The authenticated API key for the current `/api/v1/*` request. */
 		apiKey: SelectApiKey;

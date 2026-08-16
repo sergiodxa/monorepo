@@ -29,7 +29,7 @@ There is an opportunity to build a multi-tenant blog platform — the WordPress.
 
 | Aspect    | Implementation                                                                                                                        |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework | Remix v3 (`remix@3.0.0-beta.4`), `remix/fetch-router`, SSR-only via `remix/ui/server`                                                 |
+| Framework | Remix v3 (`remix@3.0.0-beta.4`), `remix/router`, SSR-only via `remix/ui/server`                                                       |
 | Bootstrap | `bootstrap/worker.ts` (Worker entry + service providers) and `bootstrap/app.tsx` (`createApplication(env)` returns a router)          |
 | DI        | `@pkg/service-container` per [ADR-008](./ADR-008-service-container-for-remix-v3.md); controllers use `inject([Database] as const, …)` |
 | Data      | `remix/data-table` over D1 through a hand-written `D1DataTableAdapter` (`app/infrastructure/database/d1-data-table-adapter.ts`)       |
@@ -216,7 +216,7 @@ Exports map and dependencies:
 }
 ```
 
-`remix` is a **peer dependency** on purpose: the engine and its host must share one copy of `remix/fetch-router`, `remix/data-table`, and `remix/session`, because container keys and context keys are class-identity-based (`container.get(Database)` only resolves when both sides load the same `Database` class). Bun workspace hoisting makes this true implicitly; the peer dependency makes it a contract.
+`remix` is a **peer dependency** on purpose: the engine and its host must share one copy of `remix/router`, `remix/data-table`, and `remix/session`, because container keys and context keys are class-identity-based (`container.get(Database)` only resolves when both sides load the same `Database` class). Bun workspace hoisting makes this true implicitly; the peer dependency makes it a contract.
 
 Schema validation uses `remix/data-schema` (riding the same `remix` peer dependency) rather than a third-party library — the same choice r3-blog's CMS schemas already made (`apps/r3-blog/app/schemas/`).
 
@@ -705,7 +705,7 @@ CMS additions for this system: `/cms/users` (list users, change role, delete wit
 
 ```typescript
 // packages/blog-engine/src/routes.ts
-import { form, get, resources, route } from "remix/fetch-router/routes";
+import { form, get, resources, route } from "remix/routes";
 
 export const routes = route({
 	feed: get("/"),
@@ -1273,7 +1273,7 @@ Webhooks (`/api/webhooks/polar`, HMAC-verified as in auth-saas):
 
 ```typescript
 // apps/blog-saas/src/app/routes.ts
-import { form, get, post, resources, route } from "remix/fetch-router/routes";
+import { form, get, post, resources, route } from "remix/routes";
 
 export default route({
 	index: get("/"), // marketing landing
@@ -1588,7 +1588,7 @@ Ship admin/editor/writer/reader as a TypeScript enum with fixed permission check
 - **Slug immutability in v1**: the KV cache assumes slugs never change. Renames would need KV delete + DO meta push; deferred.
 - **Field definition evolution**: removing or re-kinding a field on a type with existing posts leaves stale meta rows (harmless — codecs skip unknown keys) or mis-decoded values (kind change). v1 policy: allow add/remove, warn on kind change, no data migration.
 - **Custom CSS risk**: CSS cannot execute script; `url()` beacons/defacement by a malicious admin are accepted (admins own their blog). The platform can disable the escape hatch via a future engine config flag if needed.
-- **Packaging constraint discovered during design**: r3-blog types its router context by globally augmenting `remix/fetch-router` (`declare module`); a shared package must not do this (the augmentation would leak into every host). The engine threads an explicit `BlogContext` generic instead.
+- **Packaging constraint discovered during design**: r3-blog types its router context by globally augmenting `remix/router` (`declare module`); a shared package must not do this (the augmentation would leak into every host). The engine threads an explicit `BlogContext` generic instead.
 - **`published_at` placement**: the original product sketch listed `published_at` as an `article` field; it was deliberately promoted to a core `posts` column so publish/draft/scheduled semantics work uniformly for every custom type and public queries sort without joining `post_meta`.
 - **OIDC credentials in DO storage**: stored in the tenant's private SQLite, same trust level as auth-saas signing keys. Encrypting with a worker-held key is a possible hardening step.
 - **Polar meter credits**: the included allowance uses Polar's meter-credits benefit; verify reset/rollover semantics against the current Polar API before committing pricing copy. All prices are TBD (working figures: $5/month base, 100k views included, $0.50 per additional 1k).

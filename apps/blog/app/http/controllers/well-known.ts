@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";

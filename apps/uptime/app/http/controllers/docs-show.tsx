@@ -21,7 +21,7 @@ import { vstack } from "@pkg/u/layout";
 import { m, mbe } from "@pkg/u/size";
 import { fontSize } from "@pkg/u/typography";
 import * as s from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/lib/seo";

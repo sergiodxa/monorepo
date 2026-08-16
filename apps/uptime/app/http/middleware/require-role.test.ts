@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { RequestContext } from "remix/fetch-router";
+import { RequestContext } from "remix/router";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 

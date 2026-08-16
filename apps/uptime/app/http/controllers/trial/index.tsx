@@ -134,9 +134,9 @@ import {
 	TextField,
 } from "@pkg/ui";
 import { generateUUID } from "@pkg/uuid";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";

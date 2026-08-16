@@ -14,7 +14,7 @@ JSON can branch on a single field it can always count on, without inspecting the
 code first, and TypeScript narrows the parsed body from that same field.
 
 The return value is a plain `Response`. It can be returned straight out of a
-`remix/fetch-router` controller, handed to any fetch handler, or asserted on in a test
+`remix/router` controller, handed to any fetch handler, or asserted on in a test
 with `response.status` and `await response.json()`. Nothing here is tied to a framework;
 the package's only dependency is [`@pkg/location`](/packages/location), which `redirect`
 uses to accept path-only targets.
@@ -28,7 +28,7 @@ import { conflict, created } from "@pkg/response";
 import { getServiceContainer } from "@pkg/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
 import routes from "~/routes/web";

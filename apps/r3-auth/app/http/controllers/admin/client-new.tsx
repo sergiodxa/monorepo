@@ -7,14 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createController } from "remix/router";
 
 import Client from "~/app/data/client";
 import requireAdmin from "~/app/http/middleware/require-admin";

@@ -14,16 +14,16 @@
  */
 
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import { password } from "@pkg/crypto";
 import { getClientIP } from "@pkg/get-client-ip";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
 import { Database as DatabaseKey } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createController } from "remix/router";
 
 import { createOidcProvider } from "~/app/auth/repository";
 import Credential from "~/app/data/credential";

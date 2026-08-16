@@ -13,7 +13,7 @@ import type { Handle } from "remix/ui";
 import { ok } from "@pkg/http/response/html";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 

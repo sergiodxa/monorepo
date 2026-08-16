@@ -11,7 +11,7 @@ import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { dashboardTab } from "~/app/http/cookies";
 import requireTeam from "~/app/http/middleware/require-team";

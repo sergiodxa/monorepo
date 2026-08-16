@@ -10,10 +10,10 @@
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-import type { RequestContext as Context } from "remix/fetch-router";
+import type { RequestContext as Context } from "remix/router";
 
 import { isFailure, isSuccess } from "@pkg/result";
-import { RequestContext } from "remix/fetch-router";
+import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
 
 import { createTags } from "./create-tags";

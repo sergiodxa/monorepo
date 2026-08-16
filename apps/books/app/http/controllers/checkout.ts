@@ -20,7 +20,7 @@ import { isFailure, isSuccess } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import * as s from "remix/data-schema";
 import { email } from "remix/data-schema/checks";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { Product } from "~/app/data/product";
 import defaultHandler from "~/app/http/controllers/default-handler";

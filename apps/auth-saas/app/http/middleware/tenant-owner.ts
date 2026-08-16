@@ -17,7 +17,7 @@ import middleware from "~/app/lib/middleware";
 import Tenant from "~/app/models/tenant";
 import { TenantApiService } from "~/app/services/tenant-api";
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		tenant: {
 			id: string;

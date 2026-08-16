@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Database } from "remix/data-table";
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from "remix/router";
 import type { SessionStorage } from "remix/session";
 
 import { createCookie } from "remix/cookie";
-import { session } from "remix/session-middleware";
+import { session } from "remix/middleware/session";
 
 import { SqlSessionStorage } from "../../database/session-storage";
 

@@ -9,7 +9,7 @@ they belong to an HTTP package that any runtime can use. Invalidation is not.
 Tagging a response uses a `Cache-Tag` header that no specification defines, and
 clearing entries means calling a purge method on the platform's cache object.
 This package holds that vendor half: a typed tag vocabulary, the `Cache-Tag`
-header, purging, cache-status inspection, and a `remix/fetch-router` middleware
+header, purging, cache-status inspection, and a `remix/router` middleware
 that applies all of it.
 
 Anything importing this package is Cloudflare-specific by construction, which is
@@ -432,7 +432,7 @@ let tenantTag: Middleware = (ctx, next) => {
 };
 ```
 
-Note that `remix/fetch-router` has no nested routes: accumulation happens along a
+Note that `remix/router` has no nested routes: accumulation happens along a
 middleware chain and within a handler, never up a route tree.
 
 ## Pattern: Testing A Cached Route

@@ -9,8 +9,8 @@
  */
 
 import { inject } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
+import { getContext } from "remix/middleware/async-context";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";

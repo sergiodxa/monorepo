@@ -10,7 +10,7 @@
  */
 
 import type { i18n } from "@pkg/i18n";
-import type { Renderer } from "remix/render-middleware";
+import type { Renderer } from "remix/middleware/render";
 import type { RemixNode } from "remix/ui";
 
 import NotFoundViewModel from "~/app/http/view-models/not-found";

@@ -12,9 +12,9 @@
 
 import { JWK } from "@pkg/jwt";
 import { inject } from "@pkg/service-container";
-import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createAction } from "remix/router";
 
 import TenantMeta from "../../management/models/tenant-meta";
 import routes from "../../routes";

@@ -1,6 +1,6 @@
 /**
  * Bun dev-tools server. It builds the client bundle with `Bun.build` at startup,
- * then serves requests through a `remix/fetch-router` router: a static HTML shell
+ * then serves requests through a `remix/router` router: a static HTML shell
  * for every tool page, the bundled client JS at `/client.js`, and a JSON export
  * action that writes authored content to disk. Development-only; refuses to start
  * unless `APP_ENV=development`.
@@ -10,7 +10,7 @@
  */
 
 import { isFailure, type Result } from "@pkg/result";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import { runAtlasExport } from "./atlas-export";
 import { runBinaryExport, runExport, runSpriteExport } from "./export";

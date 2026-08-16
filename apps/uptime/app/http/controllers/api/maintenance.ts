@@ -14,7 +14,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { SelectMaintenanceWindow } from "~/database/schema";

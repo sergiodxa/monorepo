@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
 import type { SessionWithClient } from "~/app/data/session";
 import type { SelectClient, SelectConnection, SelectSubject } from "~/database/schema";

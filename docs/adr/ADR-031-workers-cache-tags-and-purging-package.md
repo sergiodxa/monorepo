@@ -100,7 +100,7 @@ A typed read of the platform's cache status header. It exists for tests that ass
 
 ### 4. Middleware
 
-Request handlers should declare how a response caches, not assemble headers for it, and should never receive a platform object in order to purge. A `remix/fetch-router` middleware owns both:
+Request handlers should declare how a response caches, not assemble headers for it, and should never receive a platform object in order to purge. A `remix/router` middleware owns both:
 
 ```ts
 import cache from "@pkg/workers-cache/middleware";
@@ -109,7 +109,7 @@ let cacheMiddleware = cache({ cache: (ctx) => ctx.workers.cache });
 ```
 
 ```ts
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	interface RequestContext {
 		/** Declares how this response caches, and purges cached entries by tag. */
 		cache: CacheDeclaration;
@@ -144,7 +144,7 @@ Every `ctx.cache()` call in a request adds to one set, which the middleware seri
 - A router-scoped or controller-scoped middleware can add a tag that applies to every response in its group, such as a tenant tag that lets one purge invalidate all of a team's pages.
 - A handler can call `ctx.cache()` more than once as it loads records, tagging each one it read.
 
-This is not a layout mechanism. `remix/fetch-router` has no nested routes: middleware is scoped to routers, controllers, and actions, and a controller's middleware applies only to the direct route actions in that controller. So accumulation happens along a middleware chain and within a handler, never up a route tree, and the benefit is narrower than in a nested-route framework.
+This is not a layout mechanism. `remix/router` has no nested routes: middleware is scoped to routers, controllers, and actions, and a controller's middleware applies only to the direct route actions in that controller. So accumulation happens along a middleware chain and within a handler, never up a route tree, and the benefit is narrower than in a nested-route framework.
 
 #### Every Declaration Carries Its Own Policy
 

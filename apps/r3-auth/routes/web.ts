@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { form, get, post, route } from "remix/fetch-router/routes";
+import { form, get, post, route } from "remix/routes";
 
 /**
  * Every route this server serves, grouped by area.

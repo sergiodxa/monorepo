@@ -20,7 +20,7 @@ Rendering translations through `remix/ui` is a separate concern from detecting a
 
 ```typescript
 import i18next from "@pkg/i18n/middleware";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 let router = createRouter({
 	middleware: [
@@ -171,7 +171,7 @@ Default export of `@pkg/i18n/middleware`. Creates a middleware that detects the 
 
 **Returns:**
 
-- A `Middleware` for `remix/fetch-router` that populates `context.locale` and `context.i18next`
+- A `Middleware` for `remix/router` that populates `context.locale` and `context.i18next`
 
 **Example:**
 
@@ -183,7 +183,7 @@ let middleware = i18next({
 });
 ```
 
-Importing the module augments `RequestContext` from `remix/fetch-router` with:
+Importing the module augments `RequestContext` from `remix/router` with:
 
 - `locale`: `string` - Language detected for the current request
 - `i18next`: `i18n` - Per-request i18next instance initialized with that language
@@ -432,13 +432,13 @@ let middleware = i18next({
 
 ## Pattern: Reusing the session from the session middleware
 
-When `remix/session-middleware` runs earlier in the chain, the detector reads the language from the live request session — no second storage read, and no `sessionCookie`/`sessionStorage` configuration needed.
+When `remix/middleware/session` runs earlier in the chain, the detector reads the language from the live request session — no second storage read, and no `sessionCookie`/`sessionStorage` configuration needed.
 
 ```typescript
 import i18next from "@pkg/i18n/middleware";
 import { createCookie } from "remix/cookie";
-import { createRouter } from "remix/fetch-router";
-import { session } from "remix/session-middleware";
+import { createRouter } from "remix/router";
+import { session } from "remix/middleware/session";
 
 let sessionCookie = createCookie("__session", { secrets: ["s3cr3t"] });
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { LandingPage, PublicDocument } from "~/app/views/landing";
 import routes from "~/routes/web";

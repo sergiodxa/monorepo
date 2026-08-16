@@ -54,7 +54,7 @@ every client app, not a change to this app. `apps/blog`, `apps/uptime` and
 
 ## Stack Rules
 
-- MUST use `remix/fetch-router` (`createAction` / `createController`) for HTTP actions, and
+- MUST use `remix/router` (`createAction` / `createController`) for HTTP actions, and
   MUST declare every URL in `routes/web.ts` and link through `routes.<name>.href(...)`
   rather than writing a path string.
 - MUST render pages as `remix/ui` JSX through `ctx.render(...)`, built from `@pkg/ui`
@@ -73,9 +73,9 @@ every client app, not a change to this app. `apps/blog`, `apps/uptime` and
   instead.
 - MUST keep Cloudflare-specific code in `bootstrap/worker.ts` and the router wiring in
   `bootstrap/app.tsx`; MUST import `env` from `cloudflare:workers`.
-- MUST prefer what Remix v3 ships (`remix/session-middleware`, `remix/cop-middleware`,
-  `remix/form-data-middleware`, `remix/method-override-middleware`,
-  `remix/render-middleware`, `remix/auth`) over hand-rolled equivalents, and MUST check
+- MUST prefer what Remix v3 ships (`remix/middleware/session`, `remix/middleware/cop`,
+  `remix/middleware/form-data`, `remix/middleware/method-override`,
+  `remix/middleware/render`, `remix/auth`) over hand-rolled equivalents, and MUST check
   `docs/vendor/@remix-run/<package>/README.md` first.
 - MUST use `@pkg/result` for expected failures. The engine's `throw`-based token path stays
   as it is — it is part of its tested contract — and controllers MUST catch and map to OAuth

@@ -16,7 +16,7 @@ import { dark } from "@pkg/u/responsive";
 import { m, minBs, p } from "@pkg/u/size";
 import { textAlign } from "@pkg/u/typography";
 import { Button } from "@pkg/ui";
-import { createController } from "remix/fetch-router";
+import { createController } from "remix/router";
 
 import { getIdToken, logout } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";

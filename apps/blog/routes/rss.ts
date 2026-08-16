@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, route } from "remix/fetch-router/routes";
+import { get, route } from "remix/routes";
 
 /**
  * Exposes RSS endpoints for the site feed plus article, tutorial, and bookmark feeds.

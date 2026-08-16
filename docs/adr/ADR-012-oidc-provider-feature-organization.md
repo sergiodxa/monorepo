@@ -102,7 +102,7 @@ src/
 
 > The utility helpers are nested one level under `shared/lib/` rather than sitting
 > flat in `shared/`. This avoids a name collision: the `middleware.ts` helper (the
-> `remix/fetch-router` type wrapper) would otherwise sit next to the
+> `remix/router` type wrapper) would otherwise sit next to the
 > `shared/middleware/` runtime-middleware directory, and a file and directory with
 > the same stem cannot be referenced by an unambiguous relative import from inside
 > that directory. Scope management has no dedicated controller — scopes are handled
@@ -119,7 +119,7 @@ src/
   reads `webauthn/models/passkey`. Feature-based organization co-locates cohesive
   code; it does not forbid a feature from importing another feature's model.
 - **`shared/` must not depend on features.** Only genuinely cross-cutting,
-  feature-agnostic code goes there (the `remix/fetch-router` helpers, crypto, the
+  feature-agnostic code goes there (the `remix/router` helpers, crypto, the
   base layout, the DB/logger/analytics middleware, the 404 and home pages, test
   helpers). Middleware that reads feature models is not shared — `management-auth`
   reads clients/signing-keys/tenant-meta, so it lives in `management/`.

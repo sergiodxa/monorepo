@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RequestContext } from "remix/fetch-router";
+import type { RequestContext } from "remix/router";
 
-import { asyncContext, getContext } from "remix/async-context-middleware";
-import { createController } from "remix/fetch-router";
-import { route } from "remix/fetch-router/routes";
-import { renderWith } from "remix/render-middleware";
+import { asyncContext, getContext } from "remix/middleware/async-context";
+import { renderWith } from "remix/middleware/render";
+import { createController } from "remix/router";
+import { route } from "remix/routes";
 
 import {
 	getServiceContainer,

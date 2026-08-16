@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getContext } from "remix/async-context-middleware";
-import { createContextKey, type Middleware } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createContextKey, type Middleware } from "remix/router";
 
 const envKey = createContextKey<App.Env>();
 

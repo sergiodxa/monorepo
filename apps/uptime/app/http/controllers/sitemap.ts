@@ -11,7 +11,7 @@
 
 import { xml } from "@pkg/http/response";
 import { Sitemap } from "@pkg/sitemap";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { listDocs } from "~/app/services/docs";
 import { audiences, comparisons, features, useCases } from "~/resources/content/marketing";

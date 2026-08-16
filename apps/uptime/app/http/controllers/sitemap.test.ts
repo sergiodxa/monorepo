@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 
 import { plugin } from "bun";
 import { Glob } from "bun";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import routes from "~/routes/web";
 

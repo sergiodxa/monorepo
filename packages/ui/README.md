@@ -672,7 +672,7 @@ import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { parseSafe } from "remix/data-schema";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import type { Handle } from "remix/ui";
 
 import { Button, Form, TextField } from "@pkg/ui";

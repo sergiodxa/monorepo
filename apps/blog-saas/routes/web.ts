@@ -1,4 +1,4 @@
-import { form, get, post, resources, route } from "remix/fetch-router/routes";
+import { form, get, post, resources, route } from "remix/routes";
 
 /**
  * The platform dashboard + marketing route map (mapped in `bootstrap/app.ts`).

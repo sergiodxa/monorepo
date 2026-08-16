@@ -25,7 +25,7 @@ import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import Subscription, { SUBSCRIPTION_PRODUCT_ID } from "~/app/data/subscription";
 import TrialConversion from "~/app/data/trial-conversion";

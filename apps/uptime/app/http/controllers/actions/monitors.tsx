@@ -18,7 +18,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import Monitor from "~/app/data/monitor";

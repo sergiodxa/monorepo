@@ -13,15 +13,15 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
-import type { Middleware, RequestHandler } from "remix/fetch-router";
+import type { Middleware, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { asyncContext } from "remix/async-context-middleware";
-import { Auth } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
-import { createRouter } from "remix/fetch-router";
-import { formData } from "remix/form-data-middleware";
+import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
+import { formData } from "remix/middleware/form-data";
+import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 
 import type { Viewer } from "~/app/http/middleware/auth";

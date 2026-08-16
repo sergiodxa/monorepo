@@ -9,7 +9,7 @@
 
 import { text } from "@pkg/http/response";
 import { Ok } from "@pkg/http/status-code";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
 

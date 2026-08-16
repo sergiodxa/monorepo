@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ContextWithEntries, RequestContext } from "remix/fetch-router";
+import type { ContextWithEntries, RequestContext } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { Auth } from "remix/auth-middleware";
-import { Renderer } from "remix/render-middleware";
+import { Auth } from "remix/middleware/auth";
+import { Renderer } from "remix/middleware/render";
 import { Session } from "remix/session";
 
 /** Optional HTTP metadata for rendered HTML responses. */
@@ -40,7 +40,7 @@ export type AppContext = ContextWithEntries<
 	]
 >;
 
-declare module "remix/fetch-router" {
+declare module "remix/router" {
 	/** Uses the app middleware context as the default for route helpers. */
 	interface RouterTypes {
 		context: AppContext;

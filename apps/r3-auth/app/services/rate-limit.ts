@@ -14,7 +14,7 @@ import { toSeconds } from "@pkg/duration";
 import { tooManyRequests } from "@pkg/http/response/json";
 import { applyRateLimitHeaders } from "@pkg/rate-limit";
 import { isFailure } from "@pkg/result";
-import { getContext } from "remix/async-context-middleware";
+import { getContext } from "remix/middleware/async-context";
 
 /** Error code a refused request carries. Relying parties may match on it. */
 const LIMITED_ERROR = "too_many_requests";

@@ -9,7 +9,7 @@
  */
 
 import { redirect } from "@pkg/http/response";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";

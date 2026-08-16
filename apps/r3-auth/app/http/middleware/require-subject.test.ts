@@ -11,8 +11,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import { ok } from "@pkg/http/response/json";
-import { getContext } from "remix/async-context-middleware";
-import { get, route } from "remix/fetch-router/routes";
+import { getContext } from "remix/middleware/async-context";
+import { get, route } from "remix/routes";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";

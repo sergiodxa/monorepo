@@ -7,7 +7,7 @@
  */
 
 import { env } from "cloudflare:workers";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { PLATFORM_TENANT } from "~/app/lib/platform-bootstrap";
 import {

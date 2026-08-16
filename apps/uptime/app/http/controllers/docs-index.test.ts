@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 import docsIndex from "~/app/http/controllers/docs-index";
 import routes from "~/routes/web";

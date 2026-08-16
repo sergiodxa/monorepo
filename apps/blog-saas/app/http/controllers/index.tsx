@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 
 import { getAccountId } from "~/app/http/middleware/session";
 import { Page } from "~/app/views/layout";

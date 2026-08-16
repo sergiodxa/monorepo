@@ -34,7 +34,7 @@ The MIME builder is the exception to that split: it ships from the root rather t
 import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import mail from "@pkg/mail/middleware";
 import { env } from "cloudflare:workers";
-import { createRouter } from "remix/fetch-router";
+import { createRouter } from "remix/router";
 
 let router = createRouter({
 	middleware: [

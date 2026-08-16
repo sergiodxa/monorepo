@@ -11,7 +11,7 @@
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
-import { RequestContext } from "remix/fetch-router";
+import { RequestContext } from "remix/router";
 
 import logger from "./middleware";
 import { Logger } from "./request-logger";

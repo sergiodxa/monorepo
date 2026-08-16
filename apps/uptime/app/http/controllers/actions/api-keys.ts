@@ -15,7 +15,7 @@ import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";

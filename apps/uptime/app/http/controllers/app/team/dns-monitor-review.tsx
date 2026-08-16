@@ -20,7 +20,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { getContext as getContextType } from "remix/async-context-middleware";
+import type { getContext as getContextType } from "remix/middleware/async-context";
 import type { Handle } from "remix/ui";
 
 import { notFound } from "@pkg/http/response/html";
@@ -33,10 +33,10 @@ import { overflow } from "@pkg/u/overflow";
 import { maxBs, maxIs } from "@pkg/u/size";
 import { fontSize, overflowWrap } from "@pkg/u/typography";
 import { Alert, Button, Checkbox, Description, LinkButton, Table } from "@pkg/ui";
-import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { getContext } from "remix/middleware/async-context";
+import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { ZoneFileDuplicate, ZoneFileRejection } from "~/app/services/zone-file";
