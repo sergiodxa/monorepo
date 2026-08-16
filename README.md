@@ -100,6 +100,7 @@ Run from the repository root:
 | [i18n](packages/i18n)                                   | Internationalization utilities                                |
 | [iife](packages/iife)                                   | Immediately invoked function helper                           |
 | [jobs](packages/jobs)                                   | Job queue utilities                                           |
+| [jwt](packages/jwt)                                     | JWT payload classes and the ES256 keys that sign them         |
 | [kv-cache](packages/kv-cache)                           | Read-through cache store over Cloudflare KV                   |
 | [location](packages/location)                           | URL-like path Location class                                  |
 | [logger](packages/logger)                               | Request-scoped logging                                        |
