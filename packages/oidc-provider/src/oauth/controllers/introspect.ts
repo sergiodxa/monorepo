@@ -146,7 +146,7 @@ export default createAction(
 					active: true,
 					sub: accessToken.subject,
 					client_id: accessToken.audience as string,
-					exp: Math.floor(accessToken.expiresIn / 1000),
+					exp: accessToken.expirationTime,
 					iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
 					iss: accessToken.issuer,
 					aud: accessToken.audience,

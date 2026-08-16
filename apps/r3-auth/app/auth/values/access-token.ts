@@ -29,6 +29,11 @@ export default class AccessToken extends JWT {
 		return this.parser.number("exp");
 	}
 
+	/** Required here, so the seconds are a `number` rather than `number | null`. */
+	override get expirationTime() {
+		return this.parser.number("exp");
+	}
+
 	/** When the token was issued, converted from the seconds RFC 7519 stores. */
 	override get issuedAt() {
 		return new Date(this.parser.number("iat") * 1000);

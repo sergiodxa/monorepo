@@ -147,6 +147,28 @@ describe("POST /oauth/introspect", () => {
 		expect(await response.json()).toMatchObject({ active: true, sub: fixtures.subjectId });
 	});
 
+	test("reports expiry as the seconds since the epoch RFC 7662 asks for", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+
+		let response = await post(
+			routes.oauth.introspect.href(),
+			{ token: tokens.access_token, token_type_hint: "access_token" },
+			{ Authorization: basic() },
+		);
+
+		let body = (await response.json()) as { exp: number; iat: number };
+		let now = Math.floor(Date.now() / 1000);
+
+		// Bounded on both sides, since a value in the wrong unit still reads as a number:
+		// seconds put the expiry just ahead of now, milliseconds put it in the year 58000,
+		// and dividing seconds by a thousand again puts it in 1970.
+		expect(body.exp).toBeGreaterThan(now);
+		expect(body.exp).toBeLessThan(now + 24 * 60 * 60);
+		expect(body.iat).toBeLessThanOrEqual(now);
+		expect(body.iat).toBeGreaterThan(now - 60);
+	});
+
 	test("reports an unknown token as inactive without saying why", async () => {
 		let response = await post(
 			routes.oauth.introspect.href(),
