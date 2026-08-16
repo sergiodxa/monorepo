@@ -6,11 +6,11 @@
  * second alert. An unavailable Durable Object must ask for a redelivery; an unreachable
  * monitored endpoint must not.
  *
- * `env.GEO_FETCH`'s Durable Object stub is faked to control the region-hinted fetch per
- * test — and to record which object id the job derived, which is how the shard a check
- * lands on and the jurisdiction it is pinned to are asserted — and the database is a real
- * in-memory SQLite one so the primary-key collision that backs idempotency is genuinely
- * exercised rather than simulated.
+ * `env.GEO_FETCH` is a binding mock whose objects answer with a stub, so the region-hinted
+ * fetch is controlled per test and every object the job resolved is recorded, which is how
+ * the shard a check lands on and the jurisdiction it is pinned to are asserted. The
+ * database is a real in-memory SQLite one so the primary-key collision that backs
+ * idempotency is genuinely exercised rather than simulated.
  *
  * Neither `~/app/services/analytics` nor `~/app/services/alerts` is mocked: analytics is
  * observed through the in-memory `PING_RESULTS` dataset it writes to, which records each
@@ -40,13 +40,20 @@ import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
-import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+	createQueue,
+} from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+
+import type { GeoFetchDO } from "~/app/do/geo-fetch";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import {
@@ -71,55 +78,20 @@ let doFetchMock = mock(
 	async (_url?: string, _init?: { method?: string }) =>
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
-let doStub = { fetch: doFetchMock };
-
-/** An object id as the fake namespace mints it: the derived name plus its jurisdiction. */
-interface FakeObjectId {
-	name: string;
-	jurisdiction: string | undefined;
-}
-
-/** One `get` the job made: the id it probed through and the region it asked for. */
-interface Probe extends FakeObjectId {
-	locationHint: string | undefined;
-}
-
-/** Records the object names the job derives, which is what the sharding suite asserts. */
-let idFromNameMock = mock(
-	(name: string, jurisdiction?: string): FakeObjectId => ({ name, jurisdiction }),
-);
-/** The probes the job issued, in order, one per `get`. */
-let probes: Probe[] = [];
 
 /**
- * A fake `DurableObjectNamespace`, optionally restricted to a jurisdiction.
+ * The `GEO_FETCH` binding, routing every object it hands out to {@link doFetchMock}.
  *
- * A jurisdiction is a property of the *id*, stamped on by whichever (sub)namespace minted
- * it, and `get` errors when the id's jurisdiction differs from the namespace's — see
+ * Its `resolutions` are the probes the job issued, in order, one per `get`, each carrying
+ * the object's name, the region it was placed in, and the jurisdiction it was reached
+ * through. It enforces the platform's rule that a jurisdiction is a property of the *id*,
+ * stamped on by whichever (sub)namespace minted it, so `get` errors when the id's
+ * jurisdiction differs from the namespace's — see
  * https://developers.cloudflare.com/durable-objects/reference/data-location/. That rule is
- * modelled here rather than accepting any id, because it is the whole reason the EU branch
- * has to mint its id from the subnamespace instead of from `env.GEO_FETCH` (ADR-013).
- * @param jurisdiction Jurisdiction this namespace is restricted to, none when omitted.
- * @returns A stand-in for `env.GEO_FETCH` handing out {@link doStub}.
+ * the whole reason the EU branch has to mint its id from the subnamespace instead of from
+ * `env.GEO_FETCH` (ADR-013).
  */
-function makeGeoFetchNamespace(jurisdiction?: string) {
-	return {
-		idFromName: (name: string) => idFromNameMock(name, jurisdiction),
-		jurisdiction: (value: string) => makeGeoFetchNamespace(value),
-		get(id: FakeObjectId, options?: { locationHint?: string }) {
-			if (id.jurisdiction !== jurisdiction) {
-				throw new Error(
-					`Jurisdiction mismatch: id ${id.jurisdiction ?? "none"}, namespace ${jurisdiction ?? "none"}`,
-				);
-			}
-
-			probes.push({ ...id, locationHint: options?.locationHint });
-			return doStub;
-		},
-	};
-}
-
-let fakeGeoFetchNamespace = makeGeoFetchNamespace();
+let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
 /**
  * The dataset `writePingResult` reports to. It lives at module scope because the module
@@ -141,10 +113,7 @@ let queue: QueueMock = createQueue();
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
-		// The only binding with no in-memory implementation: it models the jurisdiction rule
-		// the sharding suites are about, so it stays hand-rolled and is cast in place rather
-		// than costing every other binding its type check.
-		GEO_FETCH: fakeGeoFetchNamespace as unknown as Env["GEO_FETCH"],
+		GEO_FETCH: geoFetch,
 		QUEUE: queue,
 		PING_RESULTS: pingResults,
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
@@ -267,9 +236,9 @@ function lastRecordedStatus(): unknown {
 	return pingResults.dataPoints.at(-1)?.blobs?.[2];
 }
 
-/** The `GeoFetchDO` object names the job asked for, one per probe it issued. */
+/** The `GeoFetchDO` object names the job resolved, one per probe it issued. */
 function derivedObjectNames(): string[] {
-	return idFromNameMock.mock.calls.map(([name]) => name);
+	return geoFetch.resolutions.map((resolution) => resolution.name);
 }
 
 /** Set to make the Analytics Engine SQL API fail instead of answering. */
@@ -282,10 +251,9 @@ beforeEach(() => {
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
 	pingResults.reset();
-	idFromNameMock.mockClear();
+	geoFetch.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	probes.length = 0;
 	analyticsUnavailable = false;
 	realFetch = globalThis.fetch;
 	globalThis.fetch = (async (input: unknown) => {
@@ -513,11 +481,11 @@ describe("CheckHttpJob EU jurisdiction", () => {
 
 		for (let hint of LOCATION_HINTS) {
 			let monitor = await seedMonitor(db, { location_hint: hint });
-			probes.length = 0;
+			geoFetch.reset();
 
 			await runJob(db, monitor.id);
 
-			if (probes[0]?.jurisdiction === "eu") pinned.push(hint);
+			if (geoFetch.resolutions[0]?.jurisdiction === "eu") pinned.push(hint);
 		}
 
 		expect(pinned).toEqual(["weur", "eeur"]);
@@ -532,8 +500,8 @@ describe("CheckHttpJob EU jurisdiction", () => {
 		// Eastern *North America*: the region it asked for, and no jurisdiction to
 		// override it. Pinning it to the EU moved the probe to another continent, and
 		// every response time it recorded with it.
-		expect(probes[0]?.locationHint).toBe("enam");
-		expect(probes[0]?.jurisdiction).toBeUndefined();
+		expect(geoFetch.resolutions[0]?.locationHint).toBe("enam");
+		expect(geoFetch.resolutions[0]?.jurisdiction).toBeUndefined();
 	});
 
 	test("mints an EU-pinned monitor's id from the EU subnamespace", async () => {
@@ -545,8 +513,8 @@ describe("CheckHttpJob EU jurisdiction", () => {
 		// An id minted off the base namespace carries no jurisdiction, and handing that to
 		// the EU subnamespace's `get` is the mismatch the real binding rejects — which
 		// turned every check in a European region into a retry that could only spin.
-		expect(probes[0]?.jurisdiction).toBe("eu");
-		expect(probes[0]?.name).toMatch(/^eeur:[0-7]$/);
+		expect(geoFetch.resolutions[0]?.jurisdiction).toBe("eu");
+		expect(geoFetch.resolutions[0]?.name).toMatch(/^eeur:[0-7]$/);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 });
