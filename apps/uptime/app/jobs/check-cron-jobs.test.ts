@@ -7,15 +7,19 @@
  * makes the transition classifiable downstream. A monitor with `alert_on_late` off still
  * transitions to `late`; it just never reaches the queue.
  *
- * The `QUEUE` binding is faked so the enqueued messages can be asserted on; alert delivery
- * itself now happens in `NotifyJob` and has its own tests.
+ * The `QUEUE` binding is an in-memory queue installed through `cloudflare:workers`, so the
+ * assertions are about the messages that really landed on it; alert delivery itself now
+ * happens in `NotifyJob` and has its own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
+
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -29,17 +33,23 @@ import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-let enqueued: NotifyMessage[] = [];
-let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
-	for (let request of requests) enqueued.push(request.body);
-});
+/**
+ * The queue the sweep notifies through. It lives at module scope because the module under
+ * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 
-mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
-}));
+/** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
+let sendBatch = spyOn(queue, "sendBatch");
+
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { CheckCronJobsJob } = await import("./check-cron-jobs");
+
+/** Every `notify` message body the sweep put on the queue, in order. */
+function enqueued(): NotifyMessage[] {
+	return queue.sent.map((message) => message.body);
+}
 
 function makeJob() {
 	return new CheckCronJobsJob({ logger: new BatchedLogger("test") }, {});
@@ -75,8 +85,8 @@ async function seedMonitor(db: Database, overrides: Partial<InsertCronJobMonitor
 }
 
 beforeEach(() => {
-	sendBatchMock.mockClear();
-	enqueued = [];
+	queue.reset();
+	sendBatch.mockClear();
 });
 
 describe("CheckCronJobsJob", () => {
@@ -94,7 +104,7 @@ describe("CheckCronJobsJob", () => {
 		expect(repaired?.next_expected_at ?? 0).toBeGreaterThan(Date.now());
 		// Repair is not a health verdict, and there is nothing to be late for yet.
 		expect(repaired?.status).toBe("healthy");
-		expect(enqueued).toEqual([]);
+		expect(enqueued()).toEqual([]);
 	});
 
 	test("goes late on the pass after a repair once the repaired deadline passes", async () => {
@@ -151,7 +161,7 @@ describe("CheckCronJobsJob", () => {
 
 		let stillHealthy = await CronJobMonitor.findById(db, monitor.id);
 		expect(stillHealthy?.status).toBe("healthy");
-		expect(enqueued).toEqual([]);
+		expect(enqueued()).toEqual([]);
 	});
 
 	test("transitions a healthy monitor whose grace period has elapsed to late", async () => {
@@ -169,7 +179,7 @@ describe("CheckCronJobsJob", () => {
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("late");
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "cron",
@@ -206,8 +216,8 @@ describe("CheckCronJobsJob", () => {
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("late");
 
-		expect(enqueued).toHaveLength(0);
-		expect(sendBatchMock).not.toHaveBeenCalled();
+		expect(enqueued()).toHaveLength(0);
+		expect(sendBatch).not.toHaveBeenCalled();
 
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
@@ -229,7 +239,7 @@ describe("CheckCronJobsJob", () => {
 
 		await runJob(db);
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "cron",
@@ -253,7 +263,7 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("missed");
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "cron",
@@ -277,7 +287,7 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("missed");
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "cron",
@@ -300,7 +310,7 @@ describe("CheckCronJobsJob", () => {
 
 		let updated = await CronJobMonitor.findById(db, monitor.id);
 		expect(updated?.status).toBe("healthy");
-		expect(sendBatchMock).not.toHaveBeenCalled();
+		expect(sendBatch).not.toHaveBeenCalled();
 
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
@@ -318,7 +328,7 @@ describe("CheckCronJobsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(enqueued).toHaveLength(0);
+		expect(enqueued()).toHaveLength(0);
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
 		);
@@ -331,7 +341,7 @@ describe("CheckCronJobsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(enqueued).toHaveLength(0);
+		expect(enqueued()).toHaveLength(0);
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",
 		);
@@ -357,9 +367,11 @@ describe("CheckCronJobsJob", () => {
 
 		let job = await runJob(db);
 
-		expect(enqueued.map((message) => message.monitorId).sort()).toEqual(
-			seeded.map((monitor) => monitor.id).sort(),
-		);
+		expect(
+			enqueued()
+				.map((message) => message.monitorId)
+				.sort(),
+		).toEqual(seeded.map((monitor) => monitor.id).sort());
 
 		let completed = job.logger.events.find(
 			(event) => event.event === "job.check_cron_jobs.completed",

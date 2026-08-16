@@ -17,11 +17,12 @@
  * HTTP's, and the sweep bills one ping per monitor per check — not one per query — in a
  * single ingestion call.
  *
- * `sweepDnsName` is mocked — DNS resolution has its own tests — and the `QUEUE` and
- * `PING_RESULTS` bindings are faked so the enqueued messages and the data points can be
- * asserted on. Polar is a real client with its one ingestion call spied on, so the events
- * asserted here are the ones the job actually built. Alert delivery itself happens in
- * `NotifyJob`.
+ * `sweepDnsName` is mocked — DNS resolution has its own tests — while the `QUEUE` and
+ * `PING_RESULTS` bindings are in-memory implementations installed through
+ * `cloudflare:workers`, so the enqueued messages and the data points asserted on are the
+ * ones that really landed on them. Polar is a real client with its one ingestion call spied
+ * on, so the events asserted here are the ones the job actually built. Alert delivery itself
+ * happens in `NotifyJob`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,8 +30,10 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -95,27 +98,19 @@ function sweepOf(name: string, outcomes: DnsQueryOutcome[]): DnsNameSweep {
  */
 let sweepDnsNameMock = mock(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-let enqueued: NotifyMessage[] = [];
-let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
-	for (let request of requests) enqueued.push(request.body);
-});
+/**
+ * The queue the sweep notifies through and the dataset it reports checks to. Both live at
+ * module scope because the module under test captures `env` on import, so `beforeEach`
+ * empties them rather than re-creating them.
+ */
+let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
+/** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
+let sendBatch = spyOn(queue, "sendBatch");
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		QUEUE: { sendBatch: sendBatchMock, send: async () => {} },
-		PING_RESULTS: { writeDataPoint: writeDataPointMock },
-	},
+	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
 /**
@@ -136,6 +131,11 @@ mock.module("~/app/services/dns-check", () => ({
 let { CheckDnsJob } = await import("./check-dns");
 let { QUERIES_PER_NAME } = realDnsCheckModule;
 let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns-discovery");
+
+/** Every `notify` message body the sweep put on the queue, in order. */
+function enqueued(): NotifyMessage[] {
+	return queue.sent.map((message) => message.body);
+}
 
 function makeJob() {
 	return new CheckDnsJob({ logger: new BatchedLogger("test") }, {});
@@ -223,11 +223,11 @@ async function onlyResult(db: Database, monitorId: string) {
 beforeEach(() => {
 	sweepDnsNameMock.mockReset();
 	sweepDnsNameMock.mockImplementation(async (name: string) => sweepOf(name, []));
-	sendBatchMock.mockClear();
-	writeDataPointMock.mockClear();
+	queue.reset();
+	sendBatch.mockClear();
+	pingResults.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	enqueued = [];
 });
 
 describe("CheckDnsJob", () => {
@@ -257,7 +257,7 @@ describe("CheckDnsJob", () => {
 		expect(result.records_new).toBe(0);
 		expect(result.queries_failed).toBe(0);
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "dns",
@@ -282,7 +282,7 @@ describe("CheckDnsJob", () => {
 		await runJob(db);
 
 		expect(sweepDnsNameMock).not.toHaveBeenCalled();
-		expect(enqueued).toHaveLength(0);
+		expect(enqueued()).toHaveLength(0);
 	});
 
 	test("skips a monitor whose configured interval hasn't come round yet", async () => {
@@ -324,7 +324,7 @@ describe("CheckDnsJob", () => {
 		let result = await onlyResult(db, monitor.id);
 		expect(result.status).toBe("ok");
 		expect(result.records_checked).toBe(1);
-		expect(sendBatchMock).not.toHaveBeenCalled();
+		expect(sendBatch).not.toHaveBeenCalled();
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
 		expect(completed?.notified).toBe(0);
@@ -336,7 +336,7 @@ describe("CheckDnsJob", () => {
 
 		await runJob(db);
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "dns",
@@ -362,7 +362,7 @@ describe("CheckDnsJob", () => {
 		try {
 			let job = await runJob(db);
 
-			expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
+			expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
 			let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
 			expect(completed?.total).toBe(2);
@@ -582,8 +582,8 @@ describe("CheckDnsJob ping reporting", () => {
 	}
 
 	/** The monitor each data point was written for, in the order the sweep wrote them. */
-	function pingedMonitorIds(): (string | undefined)[] {
-		return writeDataPointMock.mock.calls.map(([point]) => point.blobs[0]);
+	function pingedMonitorIds(): unknown[] {
+		return pingResults.dataPoints.map((point) => point.blobs?.[0]);
 	}
 
 	/** The id of the result row a monitor's check wrote, which its ping is keyed on. */
@@ -605,14 +605,15 @@ describe("CheckDnsJob ping reporting", () => {
 
 		await runJob(db);
 
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
 		// `changed` is not in HTTP's vocabulary at all: nothing reads a status without
 		// filtering to one ping type first, so the two never have to agree.
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [monitor.id, "dns", "changed"],
-			doubles: [42, 1, 0, 0],
-			indexes: ["team-1"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: [monitor.id, "dns", "changed"],
+				doubles: [42, 1, 0, 0],
+				indexes: ["team-1"],
+			},
+		]);
 	});
 
 	test("bills one ping per monitor per check, however many queries the sweep made", async () => {

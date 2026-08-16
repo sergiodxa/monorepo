@@ -6,16 +6,19 @@
  * rest of the sweep.
  *
  * `calculateSslStatus` is mocked so each test controls the exact status/expiry outcome
- * instead of depending on wall-clock arithmetic, and the `QUEUE` binding is faked so the
- * enqueued messages can be asserted on. Status classification and alert delivery have
- * their own tests.
+ * instead of depending on wall-clock arithmetic, and the `QUEUE` binding is an in-memory
+ * queue, so the assertions are about the messages that really landed on it. Status
+ * classification and alert delivery have their own tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
+
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -45,28 +48,21 @@ let calculateSslStatusMock = mock(
 	},
 );
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-let enqueued: NotifyMessage[] = [];
-let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
-	for (let request of requests) enqueued.push(request.body);
-});
-
 /**
- * `~/app/data/monitor` (imported transitively by `./check-ssl`) reads `env` from
- * `cloudflare:workers` at module load, and the sweep itself reads the `QUEUE` binding from
- * it. The repo-root `bunfig.toml` preload stubs the module automatically for `bun test` run
- * from the repo root, but its placeholder bindings aren't callable, so a real queue fake is
- * provided here.
+ * The queue the sweep notifies through. It lives at module scope because the module under
+ * test captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ *
+ * `~/app/data/monitor` (imported transitively by `./check-ssl`) imports `env` from
+ * `cloudflare:workers` too. The repo-root `bunfig.toml` preload stubs the module
+ * automatically for `bun test` run from the repo root, but its placeholder bindings aren't
+ * callable, so the real queue is installed here.
  */
-mock.module("cloudflare:workers", () => ({
-	env: new Proxy(
-		{ QUEUE: { sendBatch: sendBatchMock, send: async () => {} } },
-		{
-			get: (target: Record<string, unknown>, prop: string) =>
-				prop in target ? target[prop] : `test-${prop}`,
-		},
-	),
-}));
+let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+
+/** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
+let sendBatch = spyOn(queue, "sendBatch");
+
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let realSslInfoModule = await import("~/app/services/ssl-info");
 
@@ -81,6 +77,11 @@ let { CheckSslJob } = await import("./check-ssl");
  * itself reads `env` at module load and a static import would be hoisted before it.
  */
 let { default: Monitor } = await import("~/app/data/monitor");
+
+/** Every `notify` message body the sweep put on the queue, in order. */
+function enqueued(): NotifyMessage[] {
+	return queue.sent.map((message) => message.body);
+}
 
 function makeJob() {
 	return new CheckSslJob({ logger: new BatchedLogger("test") }, {});
@@ -116,8 +117,8 @@ beforeEach(() => {
 		return { status: "valid", daysUntilExpiry: 100 };
 	});
 	calculateCalls = [];
-	sendBatchMock.mockClear();
-	enqueued = [];
+	queue.reset();
+	sendBatch.mockClear();
 });
 
 describe("CheckSslJob", () => {
@@ -133,7 +134,7 @@ describe("CheckSslJob", () => {
 		expect(updated?.ssl_status).toBe("expiring");
 		expect(updated?.ssl_last_checked_at).not.toBeNull();
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "ssl",
@@ -157,7 +158,7 @@ describe("CheckSslJob", () => {
 		await runJob(db);
 
 		expect(calculateSslStatusMock).not.toHaveBeenCalled();
-		expect(enqueued).toHaveLength(0);
+		expect(enqueued()).toHaveLength(0);
 	});
 
 	test("persists a valid certificate's status without enqueuing a notification", async () => {
@@ -168,7 +169,7 @@ describe("CheckSslJob", () => {
 
 		let updated = await Monitor.findByIdForTeam(db, "team-1", monitor.id);
 		expect(updated?.ssl_status).toBe("valid");
-		expect(sendBatchMock).not.toHaveBeenCalled();
+		expect(sendBatch).not.toHaveBeenCalled();
 	});
 
 	test("passes each monitor's own expiry settings into calculateSslStatus", async () => {
@@ -215,7 +216,7 @@ describe("CheckSslJob", () => {
 
 		let job = await runJob(db);
 
-		expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
+		expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_ssl.completed");
 		expect(completed?.total).toBe(2);

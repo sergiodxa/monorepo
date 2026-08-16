@@ -15,6 +15,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -62,13 +63,12 @@ let notifyCronJobResultMock = mock(recordCall("cron"));
 let notifySslResultMock = mock(recordCall("ssl"));
 
 /**
- * `~/app/data/monitor` reads `env` from `cloudflare:workers` at module load, and the
+ * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and the
  * repo-root preload's placeholder bindings are only strings, so the module is stubbed here
- * for runs from this package's own directory too.
+ * for runs from this package's own directory too. Nothing on the routing path this file
+ * covers reaches a binding, so none is supplied and one that got read would fail by name.
  */
-mock.module("cloudflare:workers", () => ({
-	env: new Proxy({} as Record<string, unknown>, { get: (_target, prop: string) => `test-${prop}` }),
-}));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let realAlertsModule = await import("~/app/services/alerts");
 

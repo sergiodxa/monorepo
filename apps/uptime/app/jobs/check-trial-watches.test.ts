@@ -23,6 +23,9 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -61,14 +64,16 @@ let runMock = mock(
 	}),
 );
 
-/** Records the data points anything in the sweep's path would write to Analytics Engine. */
-let writeDataPointMock = mock((_point: unknown) => {});
+/**
+ * The two datasets anything in the sweep's path could write to, kept apart so a point
+ * landing on either one is attributable. Both live at module scope because the module under
+ * test captures `env` on import, so `beforeEach` empties them rather than re-creating them.
+ */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
+let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		PING_RESULTS: { writeDataPoint: writeDataPointMock },
-		COSTS: { writeDataPoint: writeDataPointMock },
-	},
+	env: createEnv<Env>({ PING_RESULTS: pingResults, COSTS: costs }),
 }));
 
 mock.module("~/app/services/http-check", () => ({
@@ -164,7 +169,8 @@ function sentOf(kind: unknown): number {
 beforeEach(() => {
 	probes = [];
 	transport.clear();
-	writeDataPointMock.mockClear();
+	pingResults.reset();
+	costs.reset();
 	runMock.mockReset();
 	answering("up");
 });
@@ -453,7 +459,8 @@ describe("CheckTrialWatchesJob metering", () => {
 		await runJob(db);
 
 		// A watch belongs to no team, and every query against the ping dataset filters on one.
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toBeEmpty();
+		expect(costs.dataPoints).toBeEmpty();
 	});
 
 	test("runs without a Polar client in the container, so nothing can be billed", async () => {

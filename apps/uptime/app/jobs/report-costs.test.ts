@@ -10,7 +10,8 @@
  * double registered in the container would assert the arguments, not the request.
  *
  * The Analytics Engine SQL API is stubbed through the same server, since the job reads the
- * cost dataset back through it.
+ * cost dataset back through it, while the `COSTS` binding it would write its own run's cost
+ * to is an in-memory dataset that enforces the platform's per-point limits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +29,9 @@ import {
 	test,
 } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
+
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -45,12 +49,19 @@ const ANALYTICS_URL =
 	"https://api.cloudflare.com/client/v4/accounts/test-account/analytics_engine/sql";
 const INGEST_URL = "https://api.polar.sh/v1/events/ingest";
 
+/**
+ * The dataset the job's own run would be costed to. It lives at module scope because the
+ * module under test captures `env` on import, so `beforeEach` empties it rather than
+ * re-creating it.
+ */
+let costs: AnalyticsEngineMock = createAnalyticsEngine();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
+	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
-		COSTS: { writeDataPoint: () => {} },
-	},
+		COSTS: costs,
+	}),
 }));
 
 let { Job } = await import("@pkg/jobs");
@@ -85,6 +96,7 @@ let db: Db;
 
 beforeEach(() => {
 	({ db } = createTestDatabase());
+	costs.reset();
 	ingested = [];
 	queries = [];
 });

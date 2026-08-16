@@ -14,10 +14,12 @@
  * row, so it produces no ping either.
  *
  * `checkTcpConnection` is mocked — raw TCP connectivity needs `cloudflare:sockets`, which
- * is unavailable under `bun test` — and the `QUEUE` and `PING_RESULTS` bindings are faked
- * so the enqueued messages and the data points can be asserted on. Polar is a real client
- * with its one ingestion call spied on, so the events asserted here are the ones the sweep
- * actually built. Alert delivery itself now happens in `NotifyJob` and has its own tests.
+ * is unavailable under `bun test` — while the `QUEUE` and `PING_RESULTS` bindings are
+ * in-memory implementations installed through `cloudflare:workers`, so the enqueued messages
+ * and the data points asserted on are the ones that really landed on them. Polar is a real
+ * client with its one ingestion call spied on, so the events asserted here are the ones the
+ * sweep actually built. Alert delivery itself now happens in `NotifyJob` and has its own
+ * tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +27,10 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -50,27 +54,19 @@ let checkTcpConnectionMock = mock(
 	}),
 );
 
-/** Every `notify` message body the sweep put on the queue, in order. */
-let enqueued: NotifyMessage[] = [];
-let sendBatchMock = mock(async (requests: Array<{ body: NotifyMessage }>) => {
-	for (let request of requests) enqueued.push(request.body);
-});
+/**
+ * The queue the sweep notifies through and the dataset it reports checks to. Both live at
+ * module scope because the module under test captures `env` on import, so `beforeEach`
+ * empties them rather than re-creating them.
+ */
+let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
+/** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
+let sendBatch = spyOn(queue, "sendBatch");
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		QUEUE: { sendBatch: sendBatchMock, send: async () => {} },
-		PING_RESULTS: { writeDataPoint: writeDataPointMock },
-	},
+	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 mock.module("~/app/services/tcp-check", () => ({
 	checkTcpConnection: checkTcpConnectionMock,
@@ -85,6 +81,11 @@ let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 
 let { CheckTcpJob } = await import("./check-tcp");
+
+/** Every `notify` message body the sweep put on the queue, in order. */
+function enqueued(): NotifyMessage[] {
+	return queue.sent.map((message) => message.body);
+}
 
 function makeJob() {
 	return new CheckTcpJob({ logger: new BatchedLogger("test") }, {});
@@ -134,11 +135,11 @@ async function seedTeam(db: Database, teamId: string, ownerId: string) {
 beforeEach(() => {
 	checkTcpConnectionMock.mockReset();
 	checkTcpConnectionMock.mockImplementation(async () => ({ status: "up", responseTimeMs: 10 }));
-	sendBatchMock.mockClear();
-	writeDataPointMock.mockClear();
+	queue.reset();
+	sendBatch.mockClear();
+	pingResults.reset();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	enqueued = [];
 });
 
 describe("CheckTcpJob", () => {
@@ -162,7 +163,7 @@ describe("CheckTcpJob", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0]!.status).toBe("down");
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "tcp",
@@ -186,7 +187,7 @@ describe("CheckTcpJob", () => {
 		await runJob(db);
 
 		expect(checkTcpConnectionMock).not.toHaveBeenCalled();
-		expect(enqueued).toHaveLength(0);
+		expect(enqueued()).toHaveLength(0);
 	});
 
 	test("skips a monitor whose configured interval hasn't come round yet", async () => {
@@ -222,7 +223,7 @@ describe("CheckTcpJob", () => {
 
 		let results = await TcpMonitor.listResults(db, monitor.id);
 		expect(results).toHaveLength(1);
-		expect(sendBatchMock).not.toHaveBeenCalled();
+		expect(sendBatch).not.toHaveBeenCalled();
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
 		expect(completed?.notified).toBe(0);
@@ -234,7 +235,7 @@ describe("CheckTcpJob", () => {
 
 		await runJob(db);
 
-		expect(enqueued).toEqual([
+		expect(enqueued()).toEqual([
 			{
 				type: "notify",
 				monitorType: "tcp",
@@ -257,7 +258,7 @@ describe("CheckTcpJob", () => {
 
 		let job = await runJob(db);
 
-		expect(enqueued.map((message) => message.monitorId)).toEqual([healthy.id]);
+		expect(enqueued().map((message) => message.monitorId)).toEqual([healthy.id]);
 
 		let completed = job.logger.events.find((event) => event.event === "job.check_tcp.completed");
 		expect(completed?.total).toBe(2);
@@ -288,8 +289,8 @@ describe("CheckTcpJob ping reporting", () => {
 	}
 
 	/** The monitor each data point was written for, in the order the sweep wrote them. */
-	function pingedMonitorIds(): (string | undefined)[] {
-		return writeDataPointMock.mock.calls.map(([point]) => point.blobs[0]);
+	function pingedMonitorIds(): unknown[] {
+		return pingResults.dataPoints.map((point) => point.blobs?.[0]);
 	}
 
 	/** The id of the result row a monitor's check wrote, which its ping is keyed on. */
@@ -307,12 +308,13 @@ describe("CheckTcpJob ping reporting", () => {
 
 		await runJob(db);
 
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
-		expect(writeDataPointMock).toHaveBeenCalledWith({
-			blobs: [monitor.id, "tcp", "up"],
-			doubles: [25, 1, 0, 0],
-			indexes: ["team-1"],
-		});
+		expect(pingResults.dataPoints).toEqual([
+			{
+				blobs: [monitor.id, "tcp", "up"],
+				doubles: [25, 1, 0, 0],
+				indexes: ["team-1"],
+			},
+		]);
 	});
 
 	test("reports zero latency for a connection that never answered", async () => {
@@ -328,7 +330,7 @@ describe("CheckTcpJob ping reporting", () => {
 
 		// The column is nullable for exactly this, but the dataset's doubles are not, and
 		// zero is how the rest of the dataset already spells "no measurement".
-		expect(writeDataPointMock).toHaveBeenCalledWith({
+		expect(pingResults.dataPoints).toContainEqual({
 			blobs: [monitor.id, "tcp", "timeout"],
 			doubles: [0, 1, 0, 0],
 			indexes: ["team-1"],

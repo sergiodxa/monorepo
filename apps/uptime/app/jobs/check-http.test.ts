@@ -13,7 +13,8 @@
  * exercised rather than simulated.
  *
  * Neither `~/app/services/analytics` nor `~/app/services/alerts` is mocked: analytics is
- * observed through the `PING_RESULTS` binding it writes to, and alert dispatch runs for
+ * observed through the in-memory `PING_RESULTS` dataset it writes to, which records each
+ * point and enforces the platform's cardinality and size limits, and alert dispatch runs for
  * real against the test database and is observed through the `alert_events` rows it
  * leaves behind — which is what makes the "no duplicate alert" assertions meaningful.
  * `globalThis.fetch` stands in for webhook delivery, and for the Analytics Engine SQL API
@@ -35,9 +36,11 @@
 import { Database as SqliteDatabase } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
+import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -118,8 +121,12 @@ function makeGeoFetchNamespace(jurisdiction?: string) {
 
 let fakeGeoFetchNamespace = makeGeoFetchNamespace();
 
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: { blobs: string[] }) => {});
+/**
+ * The dataset `writePingResult` reports to. It lives at module scope because the module
+ * under test captures `env` on import, so `beforeEach` empties it rather than re-creating
+ * it, and it enforces the platform's per-point cardinality and size limits.
+ */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /**
  * The billing client the container hands the job, with the one call `ingestPings` makes
@@ -129,14 +136,20 @@ let writeDataPointMock = mock((_point: { blobs: string[] }) => {});
 let polar = new PolarClient({ accessToken: "polar_at_test" });
 let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 
+/** The queue the check's own path never sends to, kept so a stray send would be recorded. */
+let queue: QueueMock = createQueue();
+
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: fakeGeoFetchNamespace,
-		QUEUE: { send: async () => {} },
-		PING_RESULTS: { writeDataPoint: writeDataPointMock },
+	env: createEnv<Env>({
+		// The only binding with no in-memory implementation: it models the jurisdiction rule
+		// the sharding suites are about, so it stays hand-rolled and is cast in place rather
+		// than costing every other binding its type check.
+		GEO_FETCH: fakeGeoFetchNamespace as unknown as Env["GEO_FETCH"],
+		QUEUE: queue,
+		PING_RESULTS: pingResults,
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
-	},
+	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
 	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
 	DurableObject: class {},
@@ -250,9 +263,8 @@ async function seedContentCheck(db: Database, monitorId: string, value: string) 
 }
 
 /** The status handed to Analytics Engine for the most recently recorded check (`blob3`). */
-function lastRecordedStatus(): string | undefined {
-	let calls = writeDataPointMock.mock.calls;
-	return calls[calls.length - 1]?.[0]?.blobs[2];
+function lastRecordedStatus(): unknown {
+	return pingResults.dataPoints.at(-1)?.blobs?.[2];
 }
 
 /** The `GeoFetchDO` object names the job asked for, one per probe it issued. */
@@ -269,7 +281,7 @@ beforeEach(() => {
 	doFetchMock.mockImplementation(
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
-	writeDataPointMock.mockClear();
+	pingResults.reset();
 	idFromNameMock.mockClear();
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
@@ -552,7 +564,7 @@ describe("CheckHttpJob idempotency", () => {
 
 		let rows = await db.findMany(monitorResults, { where: { monitor_id: monitor.id } });
 		expect(rows).toHaveLength(1);
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(await db.findMany(alertEvents, { where: { monitor_id: monitor.id } })).toHaveLength(1);
 	});
 
@@ -620,7 +632,7 @@ describe("CheckHttpJob error handling", () => {
 
 		await expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("a database fault asks the queue to redeliver", async () => {

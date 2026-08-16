@@ -18,6 +18,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
@@ -35,16 +36,25 @@ import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-/** The recipient this deployment is pretending to have; cleared for the unconfigured case. */
-let envStub: Record<string, unknown> = { FUNNEL_REPORT_TO: "ops@example.com" };
+/**
+ * The app's bindings plus the recipient, which is not a generated binding: the job reads it
+ * structurally off `env` precisely so a deployment that never declared it is a supported
+ * state rather than a crash.
+ */
+interface FunnelEnv extends Env {
+	FUNNEL_REPORT_TO?: string;
+}
+
+/**
+ * The bindings the job runs against. It lives at module scope because the module under test
+ * captures `env` on import, so each case writes the recipient it is about onto it rather
+ * than re-creating it, and every other binding stays unsupplied — a read of one would fail
+ * by name instead of quietly answering with a `test-<KEY>` string that looks configured.
+ */
+let env: FunnelEnv = createEnv<FunnelEnv>({ FUNNEL_REPORT_TO: "ops@example.com" });
 
 mock.module("cloudflare:workers", () => ({
-	env: new Proxy(
-		{},
-		{
-			get: (_target, key: string) => envStub[key],
-		},
-	),
+	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
 
@@ -56,7 +66,7 @@ let transport = new MemoryTransport();
 beforeEach(() => {
 	db = createTestDatabase().db;
 	transport = new MemoryTransport();
-	envStub = { FUNNEL_REPORT_TO: "ops@example.com" };
+	env.FUNNEL_REPORT_TO = "ops@example.com";
 });
 
 /** Yesterday in UTC, which is the only day the job ever reports. */
@@ -98,7 +108,7 @@ function reports() {
 
 describe("staying quiet", () => {
 	test("sends nothing when the deployment names no recipient", async () => {
-		envStub = {};
+		env.FUNNEL_REPORT_TO = undefined;
 		await seedSubmission("ada@example.com");
 
 		await runJob();
@@ -107,7 +117,7 @@ describe("staying quiet", () => {
 	});
 
 	test("still writes the day's row when there is nobody to send it to", async () => {
-		envStub = {};
+		env.FUNNEL_REPORT_TO = undefined;
 		await seedSubmission("ada@example.com");
 
 		await runJob();
@@ -132,7 +142,7 @@ describe("staying quiet", () => {
 	});
 
 	test("ignores a recipient variable that is declared and left blank", async () => {
-		envStub = { FUNNEL_REPORT_TO: "" };
+		env.FUNNEL_REPORT_TO = "";
 		await seedSubmission("ada@example.com");
 
 		await runJob();
