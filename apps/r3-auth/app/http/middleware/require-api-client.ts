@@ -11,8 +11,8 @@
 
 import type { Middleware } from "remix/fetch-router";
 
-import { TimingCollector } from "@edgefirst-dev/server-timing";
 import { unauthorized } from "@pkg/http/response/json";
+import { TimingCollector } from "@pkg/server-timing";
 import { getServiceContainer } from "@pkg/service-container";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
