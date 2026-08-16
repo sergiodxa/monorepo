@@ -1,18 +1,21 @@
 /**
  * Tests for the bulk monitor import action. Runs it behind the real session/i18n/form-data
  * chain — its whole output is a redirect plus what it flashed, so the flash is read back on a
- * second request the way the import page reads it. `cloudflare:workers` is mocked because
- * `~/app/data/monitor` reaches the queue binding at import time, and `ctx.team`/`ctx.membership`
- * plus the viewer are seeded by a fake middleware standing in for `requireUser`/`requireTeam`.
+ * second request the way the import page reads it. The `QUEUE` binding is an in-memory queue
+ * installed through `cloudflare:workers`, because `~/app/data/monitor` reaches it at import
+ * time, and `ctx.team`/`ctx.membership` plus the viewer are seeded by a fake middleware
+ * standing in for `requireUser`/`requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware } from "remix/router";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
 import { Database } from "remix/data-table";
@@ -34,12 +37,20 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let queueSend = mock(async () => {});
+/**
+ * The queue an on-demand check would land on. Module scope because `~/app/data/monitor`
+ * captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let queue: QueueMock = createQueue();
 
 mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { send: queueSend } },
+	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
+
+beforeEach(() => {
+	queue.reset();
+});
 
 let { MONITOR_IMPORT_REPORT, importMonitors } = await import("./monitors-import");
 
@@ -278,10 +289,9 @@ describe("importMonitors", () => {
 
 	test("queues no on-demand check, leaving the first one to the scheduler", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		await submit(db, team, membership, { urls: "example.com\nother.example" });
 
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 });

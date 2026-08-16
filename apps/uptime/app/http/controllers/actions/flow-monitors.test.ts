@@ -8,11 +8,11 @@
  * so it would be an hourly `error` result and a customer wondering why. The refusal is asserted by
  * the absence of a row, not only by the redirect.
  *
- * **A run is billed for the requests it made.** `cloudflare:workers` is stubbed so the meter events
- * the response deliberately doesn't wait for are collected instead of dropped: a run that made
- * three requests is exactly three `ping` events keyed on the result row it wrote, and every request
- * that returned without running — rejected form, another team's monitor, a lapsed owner, a source no
- * verified domain covers — is none.
+ * **A run is billed for the requests it made.** `cloudflare:workers` supplies a `waitUntil` that
+ * collects the meter events the response deliberately doesn't wait for instead of dropping them: a
+ * run that made three requests is exactly three `ping` events keyed on the result row it wrote, and
+ * every request that returned without running — rejected form, another team's monitor, a lapsed
+ * owner, a source no verified domain covers — is none.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,10 +20,12 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { PolarClient } from "@pkg/polar";
@@ -56,18 +58,16 @@ const ORIGIN = `https://app.${DOMAIN}`;
 /** Work the run action deferred past its response, held so a test can await it. */
 let deferred: Promise<unknown>[] = [];
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
+/**
+ * The dataset `writePingResult` reports to. Module scope because the actions capture `env`
+ * on import, so `beforeEach` empties it rather than re-creating it. It enforces the
+ * platform's cardinality and size limits, so an over-budget point fails here instead of
+ * being lost the way production loses it.
+ */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
-	env: { PING_RESULTS: { writeDataPoint: writeDataPointMock } },
+	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -86,7 +86,7 @@ let server = setupServer();
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	writeDataPointMock.mockClear();
+	pingResults.reset();
 	deferred = [];
 	server.resetHandlers();
 });
@@ -497,7 +497,7 @@ describe("checkFlowMonitor", () => {
 			`ping:${stored!.id}:2`,
 		]);
 		// One data point for the run, not one per request: the series is "how long did it take".
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 
 	test("a source no verified domain covers is recorded as an error and bills nothing", async () => {
@@ -548,7 +548,7 @@ describe("checkFlowMonitor", () => {
 			await db.findOne(flowMonitorResults, { where: { flow_monitor_id: monitor.id } }),
 		).toBeNull();
 		expect(await ingestedEvents()).toHaveLength(0);
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 
 	test("a caller that did not ask for JSON gets the redirect instead", async () => {

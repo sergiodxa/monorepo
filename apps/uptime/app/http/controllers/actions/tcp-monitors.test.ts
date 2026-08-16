@@ -4,7 +4,7 @@
  * on-demand check can run under `bun test`; the other three actions don't reach that
  * code path but still transitively import it, so the stub applies to the whole file.
  *
- * `cloudflare:workers` is stubbed for the same reason and one more: the meter event an
+ * `cloudflare:workers` is replaced for the same reason and one more: the meter event an
  * on-demand check produces is handed to `waitUntil`, so the double collects that work
  * instead of dropping it and a test can await what the response deliberately doesn't. What
  * is pinned here is which requests are billable — a check that opened a connection is
@@ -12,10 +12,10 @@
  * returned without checking (rejected form, another team's monitor, an owner without an
  * active subscription) is none.
  *
- * The same stub carries a `PING_RESULTS` double, which pins the other half of that: a check
- * that ran writes exactly one Analytics Engine point with the same dimensions the scheduled
- * sweep writes, and a refused one writes none — so billed work and reported work stay in
- * step.
+ * The same module supplies an in-memory `PING_RESULTS` dataset, which pins the other half of
+ * that: a check that ran writes exactly one Analytics Engine point with the same dimensions
+ * the scheduled sweep writes, and a refused one writes none — so billed work and reported
+ * work stay in step.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +23,12 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { MemoryTransport } from "@pkg/mail/memory";
 import mail from "@pkg/mail/middleware";
 import { PolarClient } from "@pkg/polar";
@@ -67,22 +69,17 @@ mock.module("cloudflare:sockets", () => ({
  */
 let deferred: Promise<unknown>[] = [];
 
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
-
-/** Records the data points `writePingResult` sends to Analytics Engine. */
-let writeDataPointMock = mock((_point: DataPoint) => {});
-
 /**
- * `waitUntil` collects deferred work, and `PING_RESULTS` records the analytics point the
- * check writes — the only binding these paths touch.
+ * The dataset `writePingResult` reports to — the only binding these paths touch. Module
+ * scope because the actions capture `env` on import, so `beforeEach` empties it rather than
+ * re-creating it. It enforces the platform's cardinality and size limits, so an over-budget
+ * point fails here instead of being lost the way production loses it.
  */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
+
+/** `waitUntil` collects deferred work so a test can await what the response doesn't. */
 mock.module("cloudflare:workers", () => ({
-	env: { PING_RESULTS: { writeDataPoint: writeDataPointMock } },
+	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -99,7 +96,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
-	writeDataPointMock.mockClear();
+	pingResults.reset();
 	deferred = [];
 });
 
@@ -556,19 +553,19 @@ describe("checkTcpMonitor analytics", () => {
 			{ monitor_id: monitor.id },
 		);
 
-		expect(writeDataPointMock).toHaveBeenCalledTimes(1);
-
-		let [point] = writeDataPointMock.mock.calls[0]!;
-		expect(point.blobs).toEqual([monitor.id, "tcp", "up"]);
-		expect(point.indexes).toEqual([team.id]);
+		let [point] = pingResults.dataPoints;
+		expect(pingResults.dataPoints).toHaveLength(1);
+		expect(point?.blobs).toEqual([monitor.id, "tcp", "up"]);
+		expect(point?.indexes).toEqual([team.id]);
 		/**
 		 * The connection's latency is measured, not stubbed, so only its shape is pinned. The
 		 * three that follow are fixed: one row means one check, and TCP has no notion of an
 		 * HTTP status to report or to expect.
 		 */
-		expect(point.doubles).toHaveLength(4);
-		expect(point.doubles[0]).toBeGreaterThanOrEqual(0);
-		expect(point.doubles.slice(1)).toEqual([1, 0, 0]);
+		let doubles = point?.doubles ?? [];
+		expect(doubles).toHaveLength(4);
+		expect(doubles[0]).toBeGreaterThanOrEqual(0);
+		expect(doubles.slice(1)).toEqual([1, 0, 0]);
 	});
 
 	test("writes no data point when the owner has no active subscription", async () => {
@@ -587,6 +584,6 @@ describe("checkTcpMonitor analytics", () => {
 		);
 
 		// No connection was attempted, so there is no result to report.
-		expect(writeDataPointMock).not.toHaveBeenCalled();
+		expect(pingResults.dataPoints).toHaveLength(0);
 	});
 });

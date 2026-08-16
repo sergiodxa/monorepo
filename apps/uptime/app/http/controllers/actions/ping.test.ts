@@ -13,9 +13,10 @@
  * subscription rows at all is *allowed* through; that fail-open is deliberate and is
  * pinned here so a later tightening has to be a deliberate one too.
  *
- * `cloudflare:workers` is mocked before the action is imported: the probe goes out through
- * the `GEO_FETCH` binding, the result lands in `PING_RESULTS`, and the meter event is
- * deferred with `waitUntil`, which the harness drains so it can be asserted at all.
+ * `cloudflare:workers` is replaced before the action is imported: the probe goes out through
+ * the `GEO_FETCH` binding, the result lands in an in-memory `PING_RESULTS` dataset, and the
+ * meter event is deferred with `waitUntil`, which the harness drains so it can be asserted
+ * at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,8 +24,10 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
+import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
@@ -46,13 +49,6 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
-
-/** One Analytics Engine data point, as the `PING_RESULTS` binding receives it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
 
 /** The `GeoFetchDO` stub the quick check probes through. */
 let doFetchMock = mock(
@@ -81,17 +77,22 @@ function makeGeoFetchNamespace() {
 	};
 }
 
-/** Data points the action recorded in Analytics Engine, one per check it ran. */
-let writtenPoints: DataPoint[] = [];
+/**
+ * The dataset the action reports each check it ran to. Module scope because the action
+ * captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** Promises the action deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		GEO_FETCH: makeGeoFetchNamespace(),
-		PING_RESULTS: { writeDataPoint: (point: DataPoint) => writtenPoints.push(point) },
-	},
+	env: createEnv<Env>({
+		// The recording namespace above has no counterpart among the shared binding fakes, so
+		// it is cast in place rather than dragging the whole `env` out of type-checking.
+		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		PING_RESULTS: pingResults,
+	}),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -250,7 +251,7 @@ beforeEach(() => {
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
 	probes.length = 0;
-	writtenPoints.length = 0;
+	pingResults.reset();
 	ingested.length = 0;
 	deferred.length = 0;
 });
@@ -331,7 +332,7 @@ describe("POST /actions/:team/run-ping", () => {
 			responseTimeMs: 31,
 		});
 		// The check ran, so the team performed a ping: a failed check is billable work.
-		expect(writtenPoints).toHaveLength(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 		expect(ingested.flat()).toHaveLength(1);
 	});
 
@@ -391,7 +392,7 @@ describe("POST /actions/:team/run-ping refusals", () => {
 			expect(flashed.toast).toBeNull();
 
 			expect(doFetchMock).not.toHaveBeenCalled();
-			expect(writtenPoints).toHaveLength(0);
+			expect(pingResults.dataPoints).toHaveLength(0);
 			expect(ingested).toHaveLength(0);
 		});
 	}
@@ -412,7 +413,7 @@ describe("POST /actions/:team/run-ping refusals", () => {
 
 		// Refused before any billable work: no probe, no data point, no meter event.
 		expect(doFetchMock).not.toHaveBeenCalled();
-		expect(writtenPoints).toHaveLength(0);
+		expect(pingResults.dataPoints).toHaveLength(0);
 		expect(ingested).toHaveLength(0);
 	});
 
@@ -424,6 +425,6 @@ describe("POST /actions/:team/run-ping refusals", () => {
 		// An unknown state is not an unentitled one: the gate reads `stateFor`, so refusing
 		// a paying customer because a lookup was inconclusive is the mistake it avoids.
 		expect(expectResult(flashed.outcome).status).toBe("up");
-		expect(writtenPoints).toHaveLength(1);
+		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 });

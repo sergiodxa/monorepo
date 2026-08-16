@@ -12,6 +12,7 @@ import { describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -27,9 +28,10 @@ import routes from "~/routes/web";
 /**
  * The action imports `~/app/data/monitor`, which imports `env` from
  * `cloudflare:workers` — a module that doesn't resolve outside the Workers runtime.
- * Stub it so the import below can load; nothing here reaches the queue binding.
+ * Install an `env` so the import below can load; it is supplied with no bindings at all,
+ * which is the assertion that these paths reach none — reading one would throw by name.
  */
-mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: async () => {} } } }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { updateSsl } = await import("./ssl");
 

@@ -1,10 +1,11 @@
 /**
  * Tests for the HTTP monitor create/update/delete/play actions. Not part of either
  * half of the actions-directory test-backfill split (it's neither in this half's list
- * nor the other's) but exists in the tree, so it's covered here too. `cloudflare:workers`
- * is mocked so `Monitor.ping()`'s `env.QUEUE.send(...)` call never touches a real
- * queue binding, and `getViewer()` is seeded the same way `ctx.team`/`ctx.membership`
- * are, standing in for the real `auth`/`requireUser`/`requireTeam` middleware.
+ * nor the other's) but exists in the tree, so it's covered here too. The `QUEUE` binding
+ * is an in-memory queue installed through `cloudflare:workers`, so `Monitor.ping()`'s
+ * message is asserted on as the message it really enqueued, and `getViewer()` is seeded
+ * the same way `ctx.team`/`ctx.membership` are, standing in for the real
+ * `auth`/`requireUser`/`requireTeam` middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,9 +13,11 @@
 
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -32,10 +35,22 @@ import { createRevokedSubscription } from "~/app/lib/test/polar";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let queueSend = mock(async () => {});
+/** The message `Monitor.ping()` enqueues for an on-demand HTTP check. */
+interface CheckHttpMessage {
+	type: "checkHttp";
+	id: string;
+	monitorId: string;
+	scheduledAt: number;
+}
+
+/**
+ * The queue on-demand checks land on. Module scope because `~/app/data/monitor` captures
+ * `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let queue: QueueMock<CheckHttpMessage> = createQueue<CheckHttpMessage>();
 
 mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { send: queueSend } },
+	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
@@ -65,6 +80,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
 	ingestEventsSafeMock.mockImplementation(async () => true);
+	queue.reset();
 });
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
@@ -149,7 +165,6 @@ async function send(
 describe("createMonitor", () => {
 	test("creates a monitor, queues a ping, and redirects to its detail page", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -170,12 +185,12 @@ describe("createMonitor", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent).toHaveLength(1);
+		expect(queue.sent[0]!.body.monitorId).toBe(created!.id);
 	});
 
 	test("redirects back to the form without creating a monitor when the url is invalid", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -194,7 +209,7 @@ describe("createMonitor", () => {
 
 		let matching = await db.findMany(monitors, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 });
 
@@ -360,7 +375,6 @@ describe("playMonitor", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -376,7 +390,8 @@ describe("playMonitor", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent).toHaveLength(1);
+		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
 	});
 
 	test("queues nothing when the team owner is known to be unsubscribed", async () => {
@@ -394,7 +409,6 @@ describe("playMonitor", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -407,12 +421,11 @@ describe("playMonitor", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -425,7 +438,7 @@ describe("playMonitor", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 });
 
@@ -451,7 +464,6 @@ describe("playMonitor billing", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		await send(
 			db,
@@ -463,7 +475,8 @@ describe("playMonitor billing", () => {
 			{ monitor_id: monitor.id },
 		);
 
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent).toHaveLength(1);
+		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});
 
@@ -482,7 +495,6 @@ describe("playMonitor billing", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		await send(
 			db,
@@ -494,7 +506,7 @@ describe("playMonitor billing", () => {
 			{ monitor_id: monitor.id },
 		);
 
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});
 });
@@ -566,26 +578,25 @@ describe("playMonitor for a caller asking for JSON", () => {
 			last_status: "up",
 			last_checked_at: checkedAt,
 		});
-		queueSend.mockClear();
 
 		let response = await sendJson(db, team, membership, monitor.id);
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ queued: true, status: "up", checkedAt });
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent).toHaveLength(1);
+		expect(queue.sent[0]!.body.monitorId).toBe(monitor.id);
 	});
 
 	test("reports that nothing was queued when the team owner is known to be unsubscribed", async () => {
 		let { db, team, membership } = await createFixture();
 		await createRevokedSubscription(db, team.owner_id);
 		let monitor = await createMonitorRow(db, team, membership);
-		queueSend.mockClear();
 
 		let response = await sendJson(db, team, membership, monitor.id);
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ queued: false, status: null, checkedAt: null });
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	/**
@@ -595,7 +606,6 @@ describe("playMonitor for a caller asking for JSON", () => {
 	test("still redirects a caller that did not ask for JSON", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await createMonitorRow(db, team, membership);
-		queueSend.mockClear();
 
 		let response = await send(
 			db,

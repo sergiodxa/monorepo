@@ -1,17 +1,20 @@
 /**
- * Tests for the add/remove/retry-verification team-domain actions. `cloudflare:workers`
- * is mocked so `waitUntil(env.QUEUE.send(...))` — fired for every add and every retry
- * of an unverified domain — never touches a real queue binding.
+ * Tests for the add/remove/retry-verification team-domain actions. The `QUEUE` binding is
+ * an in-memory queue installed through `cloudflare:workers`, so `waitUntil(QUEUE.send(...))`
+ * — fired for every add and every retry of an unverified domain — is asserted on the
+ * message that really landed rather than on the fact a function was called.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
@@ -24,12 +27,26 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-let queueSend = mock(async () => {});
+/** The only message these actions enqueue: a request to verify one team domain's ownership. */
+interface VerifyDomainMessage {
+	type: "verifyDomainOwnership";
+	teamDomainId: string;
+}
+
+/**
+ * The queue verification requests land on. It lives at module scope because the actions
+ * capture `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let queue: QueueMock<VerifyDomainMessage> = createQueue<VerifyDomainMessage>();
 
 mock.module("cloudflare:workers", () => ({
-	env: { QUEUE: { send: queueSend } },
+	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
+
+beforeEach(() => {
+	queue.reset();
+});
 
 /**
  * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
@@ -100,7 +117,6 @@ async function send(
 describe("addDomain", () => {
 	test("creates a pending domain, enqueues verification, and redirects to team settings", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -122,12 +138,13 @@ describe("addDomain", () => {
 		});
 		expect(domain).not.toBeNull();
 		expect(domain?.verified_at).toBeNull();
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent.map((message) => message.body)).toEqual([
+			{ type: "verifyDomainOwnership", teamDomainId: domain!.id },
+		]);
 	});
 
 	test("rejects a hostname already verified for the team without creating a duplicate", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		await db.create(
 			teamDomains,
@@ -157,12 +174,11 @@ describe("addDomain", () => {
 			where: { team_id: team.id, hostname: "verified.com" },
 		});
 		expect(matching).toHaveLength(1);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("redirects back without creating a domain when the hostname is empty", async () => {
 		let { db, team, membership } = await createFixture();
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -181,7 +197,7 @@ describe("addDomain", () => {
 
 		let matching = await db.findMany(teamDomains, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 });
 
@@ -237,7 +253,6 @@ describe("retryDomainVerification", () => {
 			{ id: crypto.randomUUID(), team_id: team.id, hostname: "pending.com", verified_at: null },
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -253,7 +268,9 @@ describe("retryDomainVerification", () => {
 		expect(response.headers.get("Location")).toBe(
 			routes.app.team.settings.href({ team: team.slug }),
 		);
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent.map((message) => message.body)).toEqual([
+			{ type: "verifyDomainOwnership", teamDomainId: domain.id },
+		]);
 	});
 
 	test("does not re-enqueue an already-verified domain", async () => {
@@ -268,7 +285,6 @@ describe("retryDomainVerification", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		queueSend.mockClear();
 
 		let response = await send(
 			db,
@@ -281,7 +297,7 @@ describe("retryDomainVerification", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("responds 404 for a domain that doesn't belong to the team", async () => {
