@@ -83,6 +83,7 @@ Run from the repository root:
 
 | Package                                                 | Description                                                   |
 | ------------------------------------------------------- | ------------------------------------------------------------- |
+| [api-client](packages/api-client)                       | Base class for clients of a remote HTTP API                   |
 | [arrays](packages/arrays)                               | Array utility functions                                       |
 | [auth-sdk](packages/auth-sdk)                           | OAuth 2.0 client SDK for auth.sergiodxa.com                   |
 | [blog-engine](packages/blog-engine)                     | Host-agnostic blog engine                                     |
@@ -113,6 +114,7 @@ Run from the repository root:
 | [response](packages/response)                           | HTTP response utilities                                       |
 | [result](packages/result)                               | Result type for error handling                                |
 | [rss](packages/rss)                                     | RSS feed utilities                                            |
+| [server-timing](packages/server-timing)                 | Server-Timing measurements written to a response header       |
 | [service-container](packages/service-container)         | Dependency injection service container                        |
 | [seo](packages/seo)                                     | Canonical URLs, schema.org builders and head metadata         |
 | [session-storage-kv](packages/session-storage-kv)       | Session storage adapter for Cloudflare KV                     |

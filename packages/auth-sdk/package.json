@@ -10,17 +10,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/api-client": "workspace:*",
 		"@pkg/result": "workspace:*"
 	},
 	"devDependencies": {
-		"@edgefirst-dev/api-client": "^0.3.0",
-		"jose": "^6.2.8",
-		"typescript": "^6.0.3",
-		"zod": "^4.4.3"
-	},
-	"peerDependencies": {
-		"@edgefirst-dev/api-client": "^0.3.0",
-		"jose": "^6.0.0",
-		"zod": "^4.0.0"
+		"remix": "3.0.0-beta.5",
+		"typescript": "^6.0.3"
 	}
 }
