@@ -11,6 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/duration": "workspace:*",
 		"jose": "^6.2.8"
 	},
 	"devDependencies": {

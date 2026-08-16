@@ -47,8 +47,8 @@ let token = new JWT({
 	iss: "https://auth.example.com",
 	sub: user.id,
 	aud: client.id,
-	iat: Math.floor(Date.now() / 1000),
-	exp: Math.floor(Date.now() / 1000) + 3600,
+	iat: "0s",
+	exp: "1h",
 });
 
 let signed = await token.sign(JWK.Algorithm.ES256, keys);
@@ -91,13 +91,20 @@ return Response.json(JWK.toJSON(keys), {
 
 A JWT claim set with the registered claims exposed as accessors. Meant to be subclassed; usable directly when a token needs no accessors of its own.
 
-#### `new JWT(payload?: JWT.Payload)`
+#### `new JWT(payload?: JWT.PayloadInput)`
 
 Wraps a claim set.
 
 **Parameters:**
 
 - `payload`: The claims, defaulting to `{}` so a token can be built up through the setters
+
+`exp`, `iat`, and `nbf` accept a length of time as well as a number. Written as text, the claim is that long from the moment the token is built; written as a number, it is the seconds since the epoch and is used as given. Either way `payload` holds the resolved seconds, so the rest of the class, signing, and verification all see one form.
+
+```typescript
+new JWT({ sub: "user-123", iat: "0s", exp: "1h" });
+new JWT({ sub: "user-123", exp: Math.floor(Date.now() / 1000) + 3600 }); // the same token
+```
 
 Instances are proxied: a claim with no accessor is still readable by name and returns `null` when absent, and assigning an unknown property writes it into the payload so it is carried into the signature.
 
@@ -135,7 +142,7 @@ Protected. Type-checked reads over `payload`, for the accessors a subclass defin
 
 Every accessor answers `null` for a claim that is absent, so reading one never throws on a token that simply does not carry it. The setters take `null` to drop the claim, and convert `Date` values to the epoch seconds the RFC defines.
 
-`expiresIn`, `expiresAt`, and `expired` read `exp` as **milliseconds**, where RFC 7519 defines it in seconds. That is a quirk of the implementation this package vendors, kept because the token classes that care already override `expiresIn`. Treat these three as display helpers; expiry is enforced by `JWT.verify`, which reads `exp` correctly.
+`expiresIn` counts the seconds left before `exp` and goes negative once it has passed, and `expired` follows from it. Both read `exp` in the seconds RFC 7519 defines, which is what `JWT.verify` enforces expiry against.
 
 #### `jwt.sign(algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string>`
 
@@ -422,7 +429,7 @@ Importing is not free — cache the resulting `KeyPair[]` for the life of a requ
 4. **Route with `decode`, decide with `verify`** - what `decode` returns is the token's own account of itself, read without any check.
 5. **Always pass `issuer` and `audience` to `verify`** - a valid signature from the right issuer for the wrong audience is still someone else's token.
 6. **Give `clockTolerance` a value** - a small window (60 seconds is typical) absorbs drift between the issuer and the verifier without meaningfully extending a token's life.
-7. **Use `expired` for display, not for access control** - it reads `exp` in milliseconds; `verify` is what enforces expiry.
+7. **Use `expired` for display, not for access control** - it reports what the claim says, while `verify` is what rejects a token on it.
 8. **Roll a rotation out verifier-first** - see [the ordering above](#rotation-and-the-order-to-roll-it-out-in); every verifier resolves a key per token before the issuer publishes a second one.
 9. **Guard optional claims with `has`** - the typed reads throw, and `has` is the only cheap way to ask first.
 10. **Point `signingKeys` at the bucket that already holds the keys** - against an empty one it bootstraps a fresh key, which verifies once every verifier has refreshed its copy of the published set.

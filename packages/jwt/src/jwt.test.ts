@@ -394,12 +394,87 @@ describe("registered claim accessors", () => {
 		expect(new JWT({ sub: "user-123" }).expired).toBe(false);
 	});
 
-	test("read `exp` in milliseconds, unlike the RFC and unlike verification", () => {
-		// Documented quirk, kept because token classes override `expiresIn` and because
-		// `expired` is derived from it. An `exp` in seconds always reads as expired here,
-		// while `verify` reads the same claim in the units the RFC defines and accepts it.
-		expect(new JWT({ exp: now() + 3600 }).expired).toBe(true);
-		expect(new JWT({ exp: Date.now() + 3600_000 }).expired).toBe(false);
+	test("read `exp` in the seconds the RFC defines, as verification does", () => {
+		let token = new JWT({ exp: now() + 3600 });
+
+		// Bounded rather than exact, since the clock moves between building and reading.
+		expect(token.expiresIn).toBeGreaterThan(3590);
+		expect(token.expiresIn).toBeLessThanOrEqual(3600);
+		expect(token.expired).toBe(false);
+	});
+
+	test("count a past expiry as expired, with the seconds left going negative", () => {
+		let token = new JWT({ exp: now() - 10 });
+
+		expect(token.expired).toBe(true);
+		expect(token.expiresIn).toBeLessThanOrEqual(-10);
+	});
+
+	test("read the expiry as the instant it names", () => {
+		let expiry = now() + 3600;
+
+		expect(new JWT({ exp: expiry }).expiresAt?.getTime()).toBe(expiry * 1000);
+	});
+});
+
+describe("claims written as a length of time", () => {
+	test("resolve to that long from now", () => {
+		let token = new JWT({ exp: "1h", iat: "1 minute", nbf: "30s" });
+
+		expect(token.payload.exp).toBeCloseTo(now() + 3600, -1);
+		expect(token.payload.iat).toBeCloseTo(now() + 60, -1);
+		expect(token.payload.nbf).toBeCloseTo(now() + 30, -1);
+	});
+
+	test("leave a claim already given as seconds alone", () => {
+		let expiry = now() + 3600;
+
+		expect(new JWT({ exp: expiry }).payload.exp).toBe(expiry);
+	});
+
+	test("resolve before the claim is read back, so both forms read the same", () => {
+		let written = new JWT({ exp: "1h" });
+		let computed = new JWT({ exp: now() + 3600 });
+
+		expect(written.expiresIn).toBeCloseTo(computed.expiresIn ?? 0, -1);
+		expect(written.expiresAt).toBeInstanceOf(Date);
+		expect(written.expired).toBe(false);
+	});
+
+	test("keep the claim set the caller passed in when there is nothing to resolve", () => {
+		let claims = { sub: "user-123", exp: now() + 60 };
+
+		expect(new JWT(claims).payload).toBe(claims);
+	});
+
+	test("copy the claim set when a duration is resolved, leaving the caller's untouched", () => {
+		let claims = { sub: "user-123", exp: "1h" } as const;
+		let token = new JWT(claims);
+
+		expect(token.payload).not.toBe(claims);
+		expect(claims.exp).toBe("1h");
+		expect(typeof token.payload.exp).toBe("number");
+	});
+
+	test("survive signing and verification as an ordinary expiry", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123", exp: "1h" }).sign(JWK.Algorithm.ES256, [pair]);
+
+		let verified = await JWT.verify(signed, [pair], { algorithms: [JWK.Algorithm.ES256] });
+
+		expect(verified.subject).toBe("user-123");
+		expect(verified.expiresIn).toBeGreaterThan(3590);
+	});
+
+	test("reject a token whose expiry has already passed", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123", exp: now() - 60 }).sign(JWK.Algorithm.ES256, [
+			pair,
+		]);
+
+		await expect(
+			JWT.verify(signed, [pair], { algorithms: [JWK.Algorithm.ES256] }),
+		).rejects.toThrow();
 	});
 });
 

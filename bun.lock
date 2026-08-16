@@ -432,6 +432,7 @@
       "name": "@pkg/jwt",
       "version": "0.0.1",
       "dependencies": {
+        "@pkg/duration": "workspace:*",
         "jose": "^6.2.8",
       },
       "devDependencies": {

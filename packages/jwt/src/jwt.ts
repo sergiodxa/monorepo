@@ -11,6 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DurationString } from "@pkg/duration";
+
+import { toSeconds } from "@pkg/duration";
 import * as jose from "jose";
 
 import type { JWK } from "./jwk";
@@ -19,6 +22,35 @@ import { ObjectParser } from "./lib/parser";
 
 /** Milliseconds in a second, for converting between epoch claims and `Date`. */
 const MS_PER_SECOND = 1000;
+
+/** Claims that may be written as a length of time from now. */
+const RELATIVE_CLAIMS = ["exp", "iat", "nbf"] as const;
+
+/**
+ * Resolves any claim written as a length of time into the instant it names.
+ *
+ * A duration is measured from now, so `exp: "1h"` is an hour from the moment the
+ * token is built. Only text is read this way: a number is already the seconds since
+ * the epoch RFC 7519 defines, and reading it as a length of time instead would move
+ * every existing claim to 1970.
+ *
+ * The claim set is copied only when there is something to resolve, so a caller that
+ * holds onto the object it passed in keeps seeing what the token carries.
+ *
+ * @param payload - The claims as written.
+ * @returns The claims with every time claim as seconds since the epoch.
+ */
+function resolveRelativeClaims(payload: JWT.PayloadInput): JWT.Payload {
+	let relative = RELATIVE_CLAIMS.filter((claim) => typeof payload[claim] === "string");
+	if (relative.length === 0) return payload as JWT.Payload;
+
+	let resolved = { ...payload } as JWT.Payload;
+	let now = Math.floor(Date.now() / MS_PER_SECOND);
+
+	for (let claim of relative) resolved[claim] = now + toSeconds(payload[claim] as DurationString);
+
+	return resolved;
+}
 
 /**
  * A JWT payload, with the registered claims exposed as typed accessors.
@@ -66,9 +98,9 @@ export class JWT implements jose.JWTPayload {
 	 * let jwt = new JWT({ sub: "user-123" });
 	 * jwt.subject; // "user-123"
 	 */
-	constructor(payload: JWT.Payload = {}) {
-		this.payload = payload;
-		this.parser = new ObjectParser(payload);
+	constructor(payload: JWT.PayloadInput = {}) {
+		this.payload = resolveRelativeClaims(payload);
+		this.parser = new ObjectParser(this.payload);
 
 		// Returning a proxy from the constructor is what makes an instance behave like
 		// the payload it wraps: a claim with no accessor reads through to the payload
@@ -129,29 +161,26 @@ export class JWT implements jose.JWTPayload {
 	}
 
 	/**
-	 * How long is left before the token expires.
+	 * How many seconds are left before the token expires.
 	 *
-	 * Beware the units: this subtracts `Date.now()`, in milliseconds, from `exp`, which
-	 * RFC 7519 defines in seconds, so the number is only meaningful for a token whose
-	 * `exp` was written in milliseconds. It is preserved as-is because the token
-	 * classes that care override it, and because `expired` is built on it — changing
-	 * the units here would silently change which tokens are treated as expired.
+	 * Counted in the seconds RFC 7519 stores `exp` in, so the number is a length of
+	 * time and goes negative once the token is past its expiry.
 	 *
-	 * @returns The difference between `exp` and now, or `null` when absent.
+	 * @returns The seconds until `exp`, or `null` when the claim is absent.
 	 */
 	get expiresIn(): number | null {
-		if (this.parser.has("exp")) return this.parser.number("exp") - Date.now();
-		return null;
+		if (this.expirationTime === null) return null;
+		return this.expirationTime - Math.floor(Date.now() / MS_PER_SECOND);
 	}
 
 	/**
-	 * The expiration as a `Date`, built from `exp` read as milliseconds.
+	 * The expiration as a `Date`.
 	 *
 	 * @returns The expiry, or `null` when the token does not expire.
 	 */
 	get expiresAt(): Date | null {
-		if (this.expirationTime) return new Date(this.expirationTime);
-		return null;
+		if (this.expirationTime === null) return null;
+		return new Date(this.expirationTime * MS_PER_SECOND);
 	}
 
 	/**
@@ -368,8 +397,21 @@ export class JWT implements jose.JWTPayload {
 }
 
 export namespace JWT {
-	/** A JWT claim set. */
+	/** A JWT claim set, with every time claim as the seconds since the epoch. */
 	export type Payload = jose.JWTPayload;
+
+	/**
+	 * A claim set as it may be written, where a time claim can be a length of time.
+	 *
+	 * `exp: "1h"` is an hour from the moment the token is built. A number stays the
+	 * seconds since the epoch, so a claim computed by the caller is passed through as
+	 * it is. Whichever form is used, `payload` holds the resolved seconds.
+	 */
+	export type PayloadInput = Omit<Payload, "exp" | "iat" | "nbf"> & {
+		exp?: number | DurationString;
+		iat?: number | DurationString;
+		nbf?: number | DurationString;
+	};
 
 	/** The checks `JWT.verify` can be asked to run beyond the signature. */
 	export type VerifyOptions = jose.JWTVerifyOptions;
