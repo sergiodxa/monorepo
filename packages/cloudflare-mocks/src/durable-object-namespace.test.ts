@@ -152,6 +152,33 @@ describe("createDurableObjectNamespace", () => {
 		expect(namespace.jurisdiction("eu").getByName("acme")).toBe(namespace.getByName("acme"));
 	});
 
+	test("refuses an id minted outside the view's jurisdiction", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		let unscoped = namespace.idFromName("acme");
+
+		expect(() => namespace.jurisdiction("eu").get(unscoped)).toThrow(
+			"belongs to jurisdiction none, but the namespace is scoped to eu",
+		);
+	});
+
+	test("refuses an id minted under a different jurisdiction", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		let european = namespace.jurisdiction("eu").idFromName("acme");
+
+		expect(() => namespace.jurisdiction("us").get(european)).toThrow(
+			"belongs to jurisdiction eu, but the namespace is scoped to us",
+		);
+	});
+
+	test("accepts an id minted under the same jurisdiction", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+		let european = namespace.jurisdiction("eu");
+
+		expect(european.get(european.idFromName("acme"))).toBe(european.getByName("acme"));
+	});
+
 	test("reset clears the recorded resolutions", () => {
 		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
 

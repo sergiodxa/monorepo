@@ -380,7 +380,9 @@ object as `getByName`.
 
 Placement is the one thing a caller decides that cannot be read back off the stub, so
 `resolutions` records it. `jurisdiction()` returns a view over the same objects that tags
-what it resolves, which is what makes a sharding or data-residency rule assertable:
+what it resolves, and an id minted under one jurisdiction is refused by a view scoped to
+another, exactly as the platform refuses it — which is the mistake sharding code actually
+makes, deriving the id from the unscoped binding and resolving it through a scoped one:
 
 ```typescript
 let shards = createDurableObjectNamespace(() => async () => new Response("ok"));

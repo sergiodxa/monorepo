@@ -145,16 +145,25 @@ export function createDurableObjectNamespace<
 				id: DurableObjectId,
 				options?: DurableObjectNamespaceGetDurableObjectOptions,
 			): DurableObjectStub<T> {
+				// The platform refuses an id minted under a different jurisdiction, and code that
+				// shards by region gets this wrong in exactly one direction: it derives the id
+				// from the unscoped binding and resolves it through a scoped one.
+				if (id.jurisdiction !== jurisdiction) {
+					throw new Error(
+						`Durable Object id belongs to jurisdiction ${id.jurisdiction ?? "none"}, but the namespace is scoped to ${jurisdiction ?? "none"}`,
+					);
+				}
+
 				return resolve(id.toString(), options);
 			},
 
 			/**
-			 * Derives the id for a name.
+			 * Derives the id for a name, scoped to this view's jurisdiction.
 			 * @param name Name identifying the object.
 			 * @returns An id that resolves back to the same object.
 			 */
 			idFromName(name: string): DurableObjectId {
-				return createId(name);
+				return createId(name, jurisdiction);
 			},
 
 			/**
@@ -171,7 +180,7 @@ export function createDurableObjectNamespace<
 			 * @returns An id for a fresh, anonymous object.
 			 */
 			newUniqueId(): DurableObjectId {
-				return createId(crypto.randomUUID());
+				return createId(crypto.randomUUID(), jurisdiction);
 			},
 
 			/**
@@ -217,9 +226,10 @@ function toStub<T extends Rpc.DurableObjectBranded | undefined>(
 }
 
 /** Builds an id that remembers its name, which is how `get` routes back to `getByName`. */
-function createId(name: string): DurableObjectId {
+function createId(name: string, jurisdiction?: DurableObjectJurisdiction): DurableObjectId {
 	return {
 		name,
+		jurisdiction,
 
 		/** The name the id was derived from, which is also its string form. */
 		toString(): string {
