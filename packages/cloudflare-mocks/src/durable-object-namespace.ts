@@ -1,5 +1,3 @@
-import type { FetcherHandler } from "./fetcher";
-
 /**
  * `DurableObjectNamespace` binding that routes to caller-supplied stubs. The object a
  * namespace hands back is the unit under test's collaborator, not its storage, so this
@@ -8,6 +6,8 @@ import type { FetcherHandler } from "./fetcher";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { FetcherHandler } from "./fetcher";
+
 import { createFetcher } from "./fetcher";
 
 /**
@@ -18,6 +18,16 @@ import { createFetcher } from "./fetcher";
  * @param name Name the caller resolved.
  */
 export type DurableObjectStubFactory = (name: string) => FetcherHandler | object;
+
+/** One resolution of an object, with the placement the caller asked for. */
+export interface DurableObjectResolution {
+	/** Name the caller resolved. */
+	name: string;
+	/** Region the caller asked the object be placed in, when it asked for one. */
+	locationHint?: DurableObjectLocationHint;
+	/** Jurisdiction the namespace was scoped to, when it was scoped. */
+	jurisdiction?: DurableObjectJurisdiction;
+}
 
 /**
  * A `DurableObjectNamespace` binding that routes names to supplied stubs.
@@ -30,6 +40,15 @@ export interface DurableObjectNamespaceMock<
 > extends DurableObjectNamespace<T> {
 	/** Names resolved so far, in first-resolution order and without duplicates. */
 	readonly names: readonly string[];
+
+	/**
+	 * Every resolution, in order, including repeats of the same name.
+	 *
+	 * Placement is the one thing a caller decides and cannot read back off the stub, so
+	 * recording it here is what lets a test assert an object was addressed in the region or
+	 * jurisdiction it was supposed to be.
+	 */
+	readonly resolutions: readonly DurableObjectResolution[];
 
 	/**
 	 * Forgets every stub built so far, so the next resolution builds a fresh one.
@@ -56,89 +75,120 @@ export interface DurableObjectNamespaceMock<
 export function createDurableObjectNamespace<
 	T extends Rpc.DurableObjectBranded | undefined = undefined,
 >(createStub: DurableObjectStubFactory): DurableObjectNamespaceMock<T> {
+	// Shared with every jurisdiction-scoped view, so a name means the same object however it
+	// was reached, and one log records the whole binding's traffic.
 	let stubs = new Map<string, DurableObjectStub<T>>();
 	let names: string[] = [];
+	let resolutions: DurableObjectResolution[] = [];
 
-	/** Builds the stub for a name once, then hands back that same object. */
-	function resolve(name: string): DurableObjectStub<T> {
-		let existing = stubs.get(name);
-		if (existing) return existing;
+	/**
+	 * Builds a namespace view, optionally scoped to a jurisdiction.
+	 * @param jurisdiction Jurisdiction this view scopes resolutions to.
+	 */
+	function build(jurisdiction?: DurableObjectJurisdiction): DurableObjectNamespaceMock<T> {
+		/** Builds the stub for a name once, then hands back that same object. */
+		function resolve(
+			name: string,
+			options?: DurableObjectNamespaceGetDurableObjectOptions,
+		): DurableObjectStub<T> {
+			let resolution: DurableObjectResolution = { name };
 
-		let built = createStub(name);
-		let stub = toStub<T>(name, built);
+			if (options?.locationHint !== undefined) resolution.locationHint = options.locationHint;
+			if (jurisdiction !== undefined) resolution.jurisdiction = jurisdiction;
 
-		stubs.set(name, stub);
-		names.push(name);
+			resolutions.push(resolution);
 
-		return stub;
+			let existing = stubs.get(name);
+			if (existing) return existing;
+
+			let stub = toStub<T>(name, createStub(name));
+
+			stubs.set(name, stub);
+			names.push(name);
+
+			return stub;
+		}
+
+		return {
+			get names(): readonly string[] {
+				return [...names];
+			},
+
+			get resolutions(): readonly DurableObjectResolution[] {
+				return resolutions.map((resolution) => ({ ...resolution }));
+			},
+
+			reset(): void {
+				stubs.clear();
+				names.length = 0;
+				resolutions.length = 0;
+			},
+
+			/**
+			 * Resolves an object by name.
+			 * @param name Name identifying the object.
+			 * @returns The stub the factory built for that name.
+			 */
+			getByName(
+				name: string,
+				options?: DurableObjectNamespaceGetDurableObjectOptions,
+			): DurableObjectStub<T> {
+				return resolve(name, options);
+			},
+
+			/**
+			 * Resolves an object by id.
+			 * @param id Id produced by {@link idFromName} or {@link newUniqueId}.
+			 * @returns The stub the factory built for the name behind that id.
+			 */
+			get(
+				id: DurableObjectId,
+				options?: DurableObjectNamespaceGetDurableObjectOptions,
+			): DurableObjectStub<T> {
+				return resolve(id.toString(), options);
+			},
+
+			/**
+			 * Derives the id for a name.
+			 * @param name Name identifying the object.
+			 * @returns An id that resolves back to the same object.
+			 */
+			idFromName(name: string): DurableObjectId {
+				return createId(name);
+			},
+
+			/**
+			 * Rebuilds an id from its string form.
+			 * @param id String previously produced by `DurableObjectId.toString()`.
+			 * @returns An id equal to the original.
+			 */
+			idFromString(id: string): DurableObjectId {
+				return createId(id);
+			},
+
+			/**
+			 * Mints an id no name maps to.
+			 * @returns An id for a fresh, anonymous object.
+			 */
+			newUniqueId(): DurableObjectId {
+				return createId(crypto.randomUUID());
+			},
+
+			/**
+			 * Scopes the namespace to a jurisdiction.
+			 *
+			 * The view shares this namespace's objects and log, and tags what it resolves, so
+			 * placement is asserted from {@link DurableObjectNamespaceMock.resolutions} rather
+			 * than taken on trust.
+			 * @param scope Jurisdiction objects resolved through the view belong to.
+			 */
+			jurisdiction(scope: DurableObjectJurisdiction): DurableObjectNamespaceMock<T> {
+				return build(scope);
+			},
+		};
 	}
 
-	return {
-		get names(): readonly string[] {
-			return [...names];
-		},
-
-		reset(): void {
-			stubs.clear();
-			names.length = 0;
-		},
-
-		/**
-		 * Resolves an object by name.
-		 * @param name Name identifying the object.
-		 * @returns The stub the factory built for that name.
-		 */
-		getByName(name: string): DurableObjectStub<T> {
-			return resolve(name);
-		},
-
-		/**
-		 * Resolves an object by id.
-		 * @param id Id produced by {@link idFromName} or {@link newUniqueId}.
-		 * @returns The stub the factory built for the name behind that id.
-		 */
-		get(id: DurableObjectId): DurableObjectStub<T> {
-			return resolve(id.toString());
-		},
-
-		/**
-		 * Derives the id for a name.
-		 * @param name Name identifying the object.
-		 * @returns An id that resolves back to the same object.
-		 */
-		idFromName(name: string): DurableObjectId {
-			return createId(name);
-		},
-
-		/**
-		 * Rebuilds an id from its string form.
-		 * @param id String previously produced by `DurableObjectId.toString()`.
-		 * @returns An id equal to the original.
-		 */
-		idFromString(id: string): DurableObjectId {
-			return createId(id);
-		},
-
-		/**
-		 * Mints an id no name maps to.
-		 * @returns An id for a fresh, anonymous object.
-		 */
-		newUniqueId(): DurableObjectId {
-			return createId(crypto.randomUUID());
-		},
-
-		/**
-		 * Rejects jurisdiction-scoped namespaces, which have no in-memory equivalent.
-		 *
-		 * A jurisdiction changes where an object is placed, not what it does, so a mock that
-		 * silently returned itself would let a test claim placement it never verified.
-		 */
-		jurisdiction(): DurableObjectNamespace<T> {
-			throw new Error(
-				"DurableObjectNamespace.jurisdiction is not implemented by @pkg/cloudflare-mocks",
-			);
-		},
-	};
+	return build();
 }
 
 /**

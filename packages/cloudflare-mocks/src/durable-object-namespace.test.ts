@@ -115,9 +115,49 @@ describe("createDurableObjectNamespace", () => {
 		expect(namespace.getByName("acme")).not.toBe(before);
 	});
 
-	test("rejects jurisdiction-scoped namespaces", () => {
+	test("records each resolution, including repeats", () => {
 		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
 
-		expect(() => namespace.jurisdiction("eu")).toThrow("not implemented");
+		namespace.getByName("acme");
+		namespace.getByName("acme");
+
+		expect(namespace.resolutions).toEqual([{ name: "acme" }, { name: "acme" }]);
+	});
+
+	test("records the region a caller asked for", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		namespace.getByName("acme", { locationHint: "weur" });
+		namespace.get(namespace.idFromName("globex"), { locationHint: "apac" });
+
+		expect(namespace.resolutions).toEqual([
+			{ name: "acme", locationHint: "weur" },
+			{ name: "globex", locationHint: "apac" },
+		]);
+	});
+
+	test("records the jurisdiction a scoped view resolved through", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		namespace.jurisdiction("eu").getByName("acme", { locationHint: "weur" });
+
+		expect(namespace.resolutions).toEqual([
+			{ name: "acme", locationHint: "weur", jurisdiction: "eu" },
+		]);
+	});
+
+	test("a scoped view addresses the same objects as the namespace", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		expect(namespace.jurisdiction("eu").getByName("acme")).toBe(namespace.getByName("acme"));
+	});
+
+	test("reset clears the recorded resolutions", () => {
+		let namespace = createDurableObjectNamespace(() => () => new Response("ok"));
+
+		namespace.getByName("acme");
+		namespace.reset();
+
+		expect(namespace.resolutions).toEqual([]);
 	});
 });

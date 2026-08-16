@@ -370,13 +370,25 @@ A `DurableObjectNamespace` that routes names to stubs the caller supplies.
 
 **Returns:**
 
-- A `DurableObjectNamespaceMock` with `names` (resolved so far) and `reset()`
+- A `DurableObjectNamespaceMock` with `names` (distinct, resolved so far), `resolutions`
+  (every resolution with its placement), and `reset()`
 
 A name resolves to the same stub every time, which is the property the platform guarantees
 and the one code under test relies on when it addresses an object by name from more than one
 place. Ids carry the name they were derived from, so `idFromName` then `get` reaches the same
-object as `getByName`. `jurisdiction()` throws: placement is not something an in-memory mock
-can honour, and returning itself would let a test claim placement it never verified.
+object as `getByName`.
+
+Placement is the one thing a caller decides that cannot be read back off the stub, so
+`resolutions` records it. `jurisdiction()` returns a view over the same objects that tags
+what it resolves, which is what makes a sharding or data-residency rule assertable:
+
+```typescript
+let shards = createDurableObjectNamespace(() => async () => new Response("ok"));
+
+shards.jurisdiction("eu").getByName("tenant-1", { locationHint: "weur" });
+
+shards.resolutions; // [{ name: "tenant-1", locationHint: "weur", jurisdiction: "eu" }]
+```
 
 Pass the branded Durable Object type as `T` — usually inferred from the `Env` the binding is
 assigned into — to have RPC methods typed on the stub.
@@ -587,8 +599,8 @@ is not mistaken for a guarantee about production.
 - **A namespace routes; it does not host.** The object behind a name is whatever the caller
   supplied, so nothing here exercises Durable Object lifecycle, placement, or concurrency.
   Pair it with `createDurableObjectState` to test the object itself.
-- **`jurisdiction()` throws**, because a jurisdiction changes where an object is placed and a
-  mock that returned itself would let a test claim placement it never verified.
+- **Placement is recorded, not honoured.** A `locationHint` and a `jurisdiction` are logged
+  on `resolutions` so a test can assert them, but every object lives in the same process.
 - **Ids are their names.** `idFromName` produces an id whose string form is the name, rather
   than the platform's opaque 64-hex-digit id, so a test that parses an id sees a different
   shape.
