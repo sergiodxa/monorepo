@@ -33,8 +33,7 @@
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1",
 		"@simplewebauthn/server": "^13.3.2",
-		"remix": "3.0.0-beta.5",
-		"zod": "^4.4.3"
+		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.52.1",
@@ -43,7 +42,6 @@
 		"msw": "^2.15.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.2.1",
-		"vite-tsconfig-paths": "^6.1.1",
 		"wrangler": "^4.123.0"
 	}
 }

@@ -12,7 +12,6 @@ import { globSync } from "node:fs";
 import path from "node:path";
 
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 // The client entries live in @pkg/oidc-provider; build them into this app's
 // assets/tenant/ (served by the DO at /assets/tenant/*.js, matching the
@@ -31,7 +30,7 @@ let clientInput = Object.fromEntries(
 );
 
 export default defineConfig({
-	plugins: [tsconfigPaths()],
+	resolve: { tsconfigPaths: true },
 	build: {
 		emptyOutDir: true,
 		lib: {

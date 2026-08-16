@@ -19,7 +19,6 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 /** Absolute path to the dashboard browser runtime entry. */
 let clientEntry = path.resolve(import.meta.dirname, "bootstrap/browser.ts");
@@ -62,7 +61,8 @@ function pruneStaleRootAssets(): Plugin {
 }
 
 export default defineConfig({
-	plugins: [tsconfigPaths(), pruneStaleRootAssets()],
+	resolve: { tsconfigPaths: true },
+	plugins: [pruneStaleRootAssets()],
 	build: {
 		// Emit into the `assets/` directory the ASSETS binding serves (see wrangler.jsonc).
 		// `emptyOutDir` stays off so this build never wipes the tenant build's
