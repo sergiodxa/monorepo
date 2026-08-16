@@ -140,37 +140,37 @@ describe("where the generated corpus stops short of what the grammar allows", ()
 	test("only reaches Sunday through a step that actually lands on seven", () => {
 		// Vixie cron expands the range into a bitmap of 0 to 7 and folds bit 7 onto bit 0
 		// afterwards, so "6-7/2" never sets bit 7 and Sunday is not included. cron-parser
-		// adds Sunday whenever the range end is 7, whatever the stride, which turns a
-		// Saturday-only schedule into a weekend one.
+		// used to add Sunday whenever the range end was 7, whatever the stride, turning a
+		// Saturday-only schedule into a weekend one; 5.10.0 fixed that, so the two now
+		// agree here. Ours is unchanged — this pins the semantics, not the agreement.
 		let from = new Date("2026-02-28T12:00:00Z"); // a Saturday afternoon
+		let saturdays = ["2026-03-07T00:00:00.000Z", "2026-03-14T00:00:00.000Z"];
 
 		expect(
 			unwrap(Schedule.parse("0 0 * * 6-7/2"))
 				.next({ from, timeZone: "UTC", count: 2 })
 				.map((date) => date.toISOString()),
-		).toEqual(["2026-03-07T00:00:00.000Z", "2026-03-14T00:00:00.000Z"]);
+		).toEqual(saturdays);
 
 		let interval = CronExpressionParser.parse("0 0 * * 6-7/2", { currentDate: from, tz: "UTC" });
 		expect([
 			interval.next().toDate().toISOString(),
 			interval.next().toDate().toISOString(),
-		]).toEqual([
-			"2026-03-01T00:00:00.000Z", // a Sunday, added by the fold
-			"2026-03-07T00:00:00.000Z",
-		]);
+		]).toEqual(saturdays);
 	});
 
 	test("reads a step on a single day-of-week value the same way", () => {
 		// "3/3" is Wednesday and Saturday: 3, then 6, then 9 which is past the field. The
-		// other library adds Sunday here too.
+		// other library used to add Sunday here too, and stopped in 5.10.0.
 		let from = new Date("2026-02-28T12:00:00Z"); // a Saturday afternoon
+		let wednesday = "2026-03-04T00:00:00.000Z";
 		expect(unwrap(Schedule.parse("0 0 * * 3/3")).toString()).toBe("0 0 * * 3,6");
 		expect(
 			unwrap(Schedule.parse("0 0 * * 3/3")).next({ from, timeZone: "UTC" }).toISOString(),
-		).toBe("2026-03-04T00:00:00.000Z"); // the Wednesday
+		).toBe(wednesday);
 
 		let interval = CronExpressionParser.parse("0 0 * * 3/3", { currentDate: from, tz: "UTC" });
-		expect(interval.next().toDate().toISOString()).toBe("2026-03-01T00:00:00.000Z"); // a Sunday
+		expect(interval.next().toDate().toISOString()).toBe(wednesday);
 	});
 
 	test("agrees on every day-of-week step whose stride does land on seven", () => {

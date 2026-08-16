@@ -1,5 +1,5 @@
 /**
- * Parity against `cron-parser` 5.6.2, the library this package replaces. The
+ * Parity against `cron-parser` 5.10.0, the library this package replaces. The
  * comparison is executed rather than recorded: the other library is a devDependency
  * and is called here, so a change to either side shows up as a failure instead of
  * agreeing with a stale transcript.
@@ -317,22 +317,19 @@ describe("deliberate differences from cron-parser", () => {
 		);
 	});
 
-	test("keeps advancing where cron-parser returns the same instant forever", () => {
-		// Lord Howe shifts by 30 minutes, and cron-parser stops advancing across it: every
-		// further next() hands back the same instant. This is not a semantic difference,
-		// it is the other library failing to make progress, and it is why parity is not a
+	test("keeps advancing where cron-parser gives up", () => {
+		// Lord Howe shifts by 30 minutes, and cron-parser cannot walk across it. Before
+		// 5.10.0 it stopped advancing silently, handing back the same instant from every
+		// further next(); it now exhausts an internal step limit and throws instead. The
+		// failure is louder but it is the same failure, and it is why parity is not a
 		// reason to keep it.
 		let timeZone = "Australia/Lord_Howe";
 		let interval = CronExpressionParser.parse("0 * * * *", {
 			currentDate: new Date("2026-04-04T13:00:00Z"),
 			tz: timeZone,
 		});
-		let theirs = [
-			interval.next().toDate().toISOString(),
-			interval.next().toDate().toISOString(),
-			interval.next().toDate().toISOString(),
-		];
-		expect(new Set(theirs).size).toBe(1);
+		expect(interval.next().toDate().toISOString()).toBe("2026-04-04T14:00:00.000Z");
+		expect(() => interval.next()).toThrow("loop limit exceeded");
 
 		// Ours advances, and every instant it reports reads as minute zero on the zone's
 		// wall clock: 01:00 at +11, then 02:00 and 03:00 at +10:30.
@@ -346,27 +343,22 @@ describe("deliberate differences from cron-parser", () => {
 		for (let occurrence of ours) expect(schedule.matches(occurrence, { timeZone })).toBe(true);
 	});
 
-	test("never reports an occurrence off a minute boundary, as cron-parser can", () => {
-		// Chatham's offset is 45 minutes off the hour, and walking back across its
-		// transition the other library returns an instant at :59 seconds, then repeats a
-		// value it has already given. Cron resolves to minutes, so neither can be right.
+	test("keeps walking back where cron-parser gives up", () => {
+		// Chatham's offset is 45 minutes off the hour. Walking back across its transition,
+		// the other library used to return an instant at :59 seconds and then repeat a
+		// value it had already given — cron resolves to minutes, so neither could be right.
+		// Since 5.10.0 it stops before producing either, and throws once its step limit
+		// runs out. It agrees on what it does manage to report.
 		let timeZone = "Pacific/Chatham";
 		let interval = CronExpressionParser.parse("0 * * * *", {
 			currentDate: new Date("2026-09-26T16:00:00Z"),
 			tz: timeZone,
 		});
-		let theirs = [
-			interval.prev().toDate(),
-			interval.prev().toDate(),
-			interval.prev().toDate(),
-			interval.prev().toDate(),
-		];
-		expect(theirs.map((date) => date.toISOString())).toEqual([
-			"2026-09-26T15:15:00.000Z",
-			"2026-09-26T14:15:00.000Z",
-			"2026-09-26T14:14:59.000Z", // not on a minute
-			"2026-09-26T14:15:00.000Z", // already reported
-		]);
+		expect([
+			interval.prev().toDate().toISOString(),
+			interval.prev().toDate().toISOString(),
+		]).toEqual(["2026-09-26T15:15:00.000Z", "2026-09-26T14:15:00.000Z"]);
+		expect(() => interval.prev()).toThrow("loop limit exceeded");
 
 		// Ours walks back a minute-aligned hour at a time, and never repeats itself.
 		let schedule = unwrap(Schedule.parse("0 * * * *"));
