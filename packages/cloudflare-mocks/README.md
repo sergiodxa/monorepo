@@ -204,6 +204,29 @@ let result = await queue.consume((batch) => batch.retryAll());
 result.deadLettered; // the message, now past its retry budget
 ```
 
+`options.context` covers the handler that does its real work in `waitUntil`. Such a handler
+has decided nothing by the time it returns, so without draining that work first the pass
+would ack on its behalf and hide whether it ever acked:
+
+```typescript
+let ctx = createExecutionContext();
+let queue = createQueue<{ id: string }>();
+await queue.send({ id: "a" });
+
+// The Worker defers the job, and the ack with it.
+let result = await queue.consume(
+	(batch) => {
+		for (let message of batch.messages) ctx.waitUntil(run(message).then(() => message.ack()));
+	},
+	{ context: ctx },
+);
+
+result.acked; // the message, because its deferred work ran first
+```
+
+Anything with a `settled(): Promise<void>` works, so a Worker calling the module-level
+`waitUntil` can pass whatever collects those promises instead of an execution context.
+
 ### `createAnalyticsEngine(): AnalyticsEngineMock`
 
 An `AnalyticsEngineDataset` that records every `writeDataPoint` call.
@@ -334,6 +357,94 @@ let object = new Counter(state, env);
 
 await object.increment();
 await state.storage.get<number>("count"); // 1
+```
+
+### `createDurableObjectNamespace<T>(createStub): DurableObjectNamespaceMock<T>`
+
+A `DurableObjectNamespace` that routes names to stubs the caller supplies.
+
+**Parameters:**
+
+- `createStub`: Builds the object a name routes to. Return a handler for a stub that only
+  answers `fetch`, or an object for one that also exposes RPC methods
+
+**Returns:**
+
+- A `DurableObjectNamespaceMock` with `names` (resolved so far) and `reset()`
+
+A name resolves to the same stub every time, which is the property the platform guarantees
+and the one code under test relies on when it addresses an object by name from more than one
+place. Ids carry the name they were derived from, so `idFromName` then `get` reaches the same
+object as `getByName`. `jurisdiction()` throws: placement is not something an in-memory mock
+can honour, and returning itself would let a test claim placement it never verified.
+
+Pass the branded Durable Object type as `T` — usually inferred from the `Env` the binding is
+assigned into — to have RPC methods typed on the stub.
+
+**Example:**
+
+```typescript
+let blogs = createDurableObjectNamespace((name) => async () => Response.json({ name }));
+let env = createEnv<Env>({ BLOG: blogs });
+
+await (await blogs.getByName("acme").fetch("https://do/")).json(); // { name: "acme" }
+blogs.names; // ["acme"]
+```
+
+### `createFetcher(handler: FetcherHandler): FetcherMock`
+
+A `Fetcher` for a service binding or the static-asset binding, backed by a handler.
+
+**Parameters:**
+
+- `handler`: Produces the response for each request, receiving a real `Request`
+
+**Returns:**
+
+- A `FetcherMock` with `requests` (what it was asked for) and `reset()`
+
+Every call is normalized to a `Request` whatever the caller passed, so assertions on method,
+path, and headers read the same as they would against the deployed Worker. A request is
+recorded before the handler runs, so a handler that throws still leaves evidence of the call.
+`connect()` throws: raw sockets have no in-memory equivalent.
+
+**Example:**
+
+```typescript
+let assets = createFetcher(() => new Response(null, { status: 404 }));
+let env = createEnv<Env>({ ASSETS: assets });
+
+await env.ASSETS.fetch("https://example.com/logo.png");
+assets.requests[0]?.url; // "https://example.com/logo.png"
+```
+
+### `createSecretsStoreSecret(options?): SecretsStoreSecretMock`
+
+A `SecretsStoreSecret` whose answer can be switched between tests.
+
+**Parameters:**
+
+- `options.name`: Secret name, used in the not-found error
+- `options.value`: Value `get()` resolves with; omitted, the secret reads as missing
+
+**Returns:**
+
+- A `SecretsStoreSecretMock` with `reads`, `set()`, `fail()`, and `reset()`
+
+The value is only reachable through an awaited `get()`, exactly as the platform requires, so
+code that treats the binding as a string fails here rather than in production. `reads` is what
+lets a test prove the secret was not read eagerly at wiring time.
+
+**Example:**
+
+```typescript
+let token = createSecretsStoreSecret({ name: "API_TOKEN", value: "sk_live_1" });
+let env = createEnv<Env>({ API_TOKEN: token });
+
+await env.API_TOKEN.get(); // "sk_live_1"
+
+token.fail(); // the store cannot answer
+await env.API_TOKEN.get(); // throws: Secret "API_TOKEN" not found
 ```
 
 ### `createEnv<Env>(bindings, options?): Env`
@@ -471,13 +582,26 @@ is not mistaken for a guarantee about production.
   reproduces the platform's algorithm.
 - **Email is never sent, and MIME is never parsed.** A raw message's body is captured as text.
 
+**Durable Object namespaces, fetchers, and secrets**
+
+- **A namespace routes; it does not host.** The object behind a name is whatever the caller
+  supplied, so nothing here exercises Durable Object lifecycle, placement, or concurrency.
+  Pair it with `createDurableObjectState` to test the object itself.
+- **`jurisdiction()` throws**, because a jurisdiction changes where an object is placed and a
+  mock that returned itself would let a test claim placement it never verified.
+- **Ids are their names.** `idFromName` produces an id whose string form is the name, rather
+  than the platform's opaque 64-hex-digit id, so a test that parses an id sees a different
+  shape.
+- **`Fetcher.connect()` throws.** Raw sockets have no in-memory equivalent.
+- **A secret is a value, not a store.** `createSecretsStoreSecret` models one binding's read;
+  there is no store, no rotation, and no caching window.
+
 **Not implemented at all**
 
 Reading `ExecutionContext.exports`, `ExecutionContext.tracing`, `DurableObjectState.exports`,
 or `DurableObjectState.facets` throws, because none of them has an in-memory equivalent.
-Bindings this monorepo does not use — Hyperdrive, Vectorize, Workers AI, Browser Rendering,
-service bindings, Durable Object namespaces and stubs — are absent by design; add one when
-code starts needing it.
+Bindings this monorepo does not use — Hyperdrive, Vectorize, Workers AI, Browser Rendering —
+are absent by design; add one when code starts needing it.
 
 ## Pattern: testing a repository against real SQL
 

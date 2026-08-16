@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
+import { createExecutionContext } from "./execution-context";
 import { createQueue } from "./queue";
 
 /** Body shape used throughout these tests. */
@@ -251,5 +252,108 @@ describe("createQueue", () => {
 		expect(queue.messages).toHaveLength(0);
 		expect(queue.sent).toHaveLength(0);
 		expect(queue.deadLetter).toHaveLength(0);
+	});
+});
+
+describe("createQueue with deferred work", () => {
+	/**
+	 * Defers `work` past the microtask queue.
+	 *
+	 * A promise chained off `Promise.resolve()` would settle on a tick `consume` happens to
+	 * yield anyway, so these tests would pass with or without the drain and prove nothing.
+	 * Real deferred work does IO, so a timer is the honest stand-in.
+	 * @param work What the handler put off until after it returned.
+	 */
+	function defer(work: () => void): Promise<void> {
+		return new Promise((resolve, reject) => {
+			setTimeout(() => {
+				// Settled both ways: a throw inside a timer callback escapes the executor, so
+				// without this the promise would never settle and `settled()` would hang.
+				try {
+					work();
+					resolve();
+				} catch (error) {
+					reject(error);
+				}
+			}, 0);
+		});
+	}
+
+	test("waits for deferred work before reading dispositions", async () => {
+		let queue = createQueue<Job>();
+		let context = createExecutionContext();
+
+		await queue.send({ type: "sweep" });
+
+		// The handler defers the retry, exactly as a Worker that hands its real work to
+		// `waitUntil` does.
+		let result = await queue.consume(
+			(batch) => {
+				for (let message of batch.messages) context.waitUntil(defer(() => message.retry()));
+			},
+			{ context },
+		);
+
+		expect(result.retried).toHaveLength(1);
+		expect(result.acked).toHaveLength(0);
+		expect(queue.messages).toHaveLength(1);
+	});
+
+	test("acks decided in deferred work are honoured", async () => {
+		let queue = createQueue<Job>();
+		let context = createExecutionContext();
+
+		await queue.send({ type: "sweep" });
+
+		let result = await queue.consume(
+			(batch) => {
+				for (let message of batch.messages) context.waitUntil(defer(() => message.ack()));
+			},
+			{ context },
+		);
+
+		expect(result.acked).toHaveLength(1);
+		expect(queue.messages).toHaveLength(0);
+	});
+
+	test("without the context, a deferred decision is missed", async () => {
+		let queue = createQueue<Job>();
+		let context = createExecutionContext();
+
+		await queue.send({ type: "sweep" });
+
+		// The point of the option: the same handler, with nothing draining its deferred
+		// work, is acked on its behalf before it ever decided.
+		let result = await queue.consume((batch) => {
+			for (let message of batch.messages) context.waitUntil(defer(() => message.retry()));
+		});
+
+		expect(result.acked).toHaveLength(1);
+		expect(result.retried).toHaveLength(0);
+
+		await context.settled();
+	});
+
+	test("a rejection in deferred work fails the pass", async () => {
+		let queue = createQueue<Job>();
+		let context = createExecutionContext();
+
+		await queue.send({ type: "sweep" });
+
+		let consuming = queue.consume(
+			() => {
+				context.waitUntil(
+					defer(() => {
+						throw new Error("job blew up");
+					}),
+				);
+			},
+			{ context },
+		);
+
+		await expect(consuming).rejects.toThrow("job blew up");
+
+		// Deferred work that failed decided nothing, so the message goes back for another try.
+		expect(queue.messages).toHaveLength(1);
 	});
 });

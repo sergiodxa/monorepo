@@ -49,10 +49,27 @@ export interface QueueConsumeResult<Body = unknown> {
 	deadLettered: QueueMessageRecord<Body>[];
 }
 
+/** Something holding deferred work that must finish before dispositions are read. */
+export interface DeferredWork {
+	/** Awaits every promise registered so far, including ones registered while awaiting. */
+	settled(): Promise<void>;
+}
+
 /** Options for a single {@link QueueMock.consume} pass. */
 export interface QueueConsumeOptions {
 	/** Messages to deliver in this batch; defaults to the queue's configured size. */
 	maxBatchSize?: number;
+
+	/**
+	 * Deferred work to drain after the handler returns, before dispositions are applied.
+	 *
+	 * A handler that hands its real work to `waitUntil` has not decided anything by the time
+	 * it returns, so without this the pass would ack on the handler's behalf and hide
+	 * whether it ever acked at all. Pass the execution context the handler defers into —
+	 * or, when the Worker calls the module-level `waitUntil`, whatever collects those
+	 * promises.
+	 */
+	context?: DeferredWork;
 }
 
 /** Consumer handler shape a Worker exports as its `queue` handler. */
@@ -92,8 +109,11 @@ export interface QueueMock<Body = unknown> extends Queue<Body> {
 	 * Messages the handler neither acks nor retries are acked, and every unacked message
 	 * is retried when the handler throws — the same rules the platform applies. A handler
 	 * error is rethrown after the retries are applied, so a test sees the failure.
+	 *
+	 * A handler that acks from inside deferred work needs `options.context`, without which
+	 * the pass reads dispositions before that work has run.
 	 * @param handler Consumer handler to invoke with the batch.
-	 * @param options Per-pass batch size override.
+	 * @param options Per-pass batch size override, and deferred work to drain.
 	 * @returns What happened to each delivered message.
 	 */
 	consume(
@@ -256,6 +276,9 @@ export function createQueue<Body = unknown>(options?: QueueMockOptions): QueueMo
 
 			try {
 				await handler(batch);
+				// Work the handler deferred may be what acks, so dispositions are not final
+				// until it has run.
+				await consumeOptions?.context?.settled();
 			} catch (error) {
 				failure = error;
 				// A handler that throws retries everything it did not explicitly ack.
