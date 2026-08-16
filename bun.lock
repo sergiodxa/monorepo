@@ -52,6 +52,7 @@
     "apps/blog": {
       "name": "@apps/blog",
       "dependencies": {
+        "@pkg/data-table-d1": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/jwt": "workspace:*",
         "@pkg/location": "workspace:*",

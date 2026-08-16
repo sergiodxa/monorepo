@@ -9,18 +9,16 @@
 
 import type { Container, ServiceProvider } from "@pkg/service-container";
 
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { env } from "cloudflare:workers";
-import { Database, createDatabase } from "remix/data-table";
-
-import { createD1DataTableAdapter } from "~/app/infrastructure/database/d1-data-table-adapter";
+import { Database } from "remix/data-table";
 
 /** Registers the D1-backed data-table database for service-container injection. */
 export class DatabaseService implements ServiceProvider {
 	/** Stores the database factory in the application container. */
 	register(container: Container) {
 		container.singleton(Database, () => {
-			let adapter = createD1DataTableAdapter(env.DB);
-			return createDatabase(adapter);
+			return new Database(createD1DatabaseAdapter(env.DB));
 		});
 	}
 }
