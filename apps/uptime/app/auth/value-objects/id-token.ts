@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK, JWT } from "@edgefirst-dev/jwt";
+import { JWK, JWT } from "@pkg/jwt";
 
 /**
  * Wraps a verified OpenID Connect ID token and exposes typed claim getters.

@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK } from "@edgefirst-dev/jwt";
 import { ok } from "@pkg/http/response/json";
+import { JWK } from "@pkg/jwt";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

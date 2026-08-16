@@ -10,8 +10,8 @@
 
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
-import { JWK } from "@edgefirst-dev/jwt";
 import { Base64Url, Hex, password, randomBytes, sha256 } from "@pkg/crypto";
+import { JWK } from "@pkg/jwt";
 import { unwrap } from "@pkg/result";
 
 import { OIDC } from "~/app/auth/oidc-provider";

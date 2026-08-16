@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK, JWT } from "@edgefirst-dev/jwt";
 import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@pkg/crypto";
 import { elapsed } from "@pkg/dates";
+import { JWK, JWT } from "@pkg/jwt";
 import { failure, isFailure, success } from "@pkg/result";
 
 import AccessToken from "~/app/auth/values/access-token";

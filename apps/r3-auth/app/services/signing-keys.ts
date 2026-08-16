@@ -8,11 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { JWT } from "@edgefirst-dev/jwt";
+import type { JWT } from "@pkg/jwt";
 
-import { JWK } from "@edgefirst-dev/jwt";
-import { R2FileStorage } from "@edgefirst-dev/r2-file-storage";
+import { JWK } from "@pkg/jwt";
 import { env } from "cloudflare:workers";
+
+import { createR2KeyStorage } from "~/app/services/r2-key-storage";
 
 /**
  * Loads the signing key pairs from the R2 bucket, generating and storing them on the
@@ -25,11 +26,7 @@ import { env } from "cloudflare:workers";
  * @returns Every key pair the JWKS publishes, newest usable key first.
  */
 export async function getSigningKey(): Promise<JWK.KeyPair[]> {
-	// The R2 storage adapter is typed against its own, older copy of the Workers
-	// types, whose `R2Bucket.get` declares a narrower return than the one this worker
-	// is generated with. The binding is the same object at runtime.
-	// @ts-expect-error
-	return await JWK.signingKeys(new R2FileStorage(env.R2));
+	return await JWK.signingKeys(createR2KeyStorage(env.R2));
 }
 
 /**

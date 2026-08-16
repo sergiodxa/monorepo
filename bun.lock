@@ -19,13 +19,13 @@
     "apps/auth-saas": {
       "name": "@apps/auth-saas",
       "dependencies": {
-        "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/hostname": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/jobs": "workspace:*",
+        "@pkg/jwt": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/oidc-provider": "workspace:*",
@@ -52,8 +52,8 @@
     "apps/blog": {
       "name": "@apps/blog",
       "dependencies": {
-        "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/http": "workspace:*",
+        "@pkg/jwt": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
@@ -147,8 +147,6 @@
     "apps/r3-auth": {
       "name": "@apps/r3-auth",
       "dependencies": {
-        "@edgefirst-dev/jwt": "^1.3.0",
-        "@edgefirst-dev/r2-file-storage": "^1.3.0",
         "@pkg/crypto": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/dates": "workspace:*",
@@ -157,6 +155,7 @@
         "@pkg/http": "workspace:*",
         "@pkg/i18n": "workspace:*",
         "@pkg/jobs": "workspace:*",
+        "@pkg/jwt": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/mail": "workspace:*",
         "@pkg/polar": "workspace:*",
@@ -204,7 +203,6 @@
     "apps/uptime": {
       "name": "@apps/uptime",
       "dependencies": {
-        "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/auth-sdk": "workspace:*",
         "@pkg/cron": "workspace:*",
         "@pkg/crypto": "workspace:*",
@@ -213,6 +211,7 @@
         "@pkg/http": "workspace:*",
         "@pkg/i18n": "workspace:*",
         "@pkg/jobs": "workspace:*",
+        "@pkg/jwt": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/lucide-remix": "workspace:*",
         "@pkg/mail": "workspace:*",
@@ -522,9 +521,9 @@
       "name": "@pkg/oidc-provider",
       "version": "0.0.0",
       "dependencies": {
-        "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/crypto": "workspace:*",
         "@pkg/http": "workspace:*",
+        "@pkg/jwt": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
@@ -826,12 +825,6 @@
 
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
-    "@edgefirst-dev/data": ["@edgefirst-dev/data@0.0.4", "", {}, "sha512-VLhlvEPDJ0Sd0pE6sAYTQkIqZCXVonaWlgRJIQQHzfjTXCadF77qqHj5NxaPSc4wCul0DJO/0MnejVqJAXUiRg=="],
-
-    "@edgefirst-dev/jwt": ["@edgefirst-dev/jwt@1.3.0", "", { "dependencies": { "@edgefirst-dev/data": "0.0.4", "@mjackson/file-storage": "^0.6.1", "jose": "^6.0.11", "type-fest": "^4.34.1" } }, "sha512-2okjhJbfdPdJC2ley9xUcHQVLJWG/XlTmEzVs+1fEqfreKzdTG6kidtjBg9f/URZzJETSBY45lQhz3h61D4EfA=="],
-
-    "@edgefirst-dev/r2-file-storage": ["@edgefirst-dev/r2-file-storage@1.3.0", "", { "peerDependencies": { "@cloudflare/workers-types": "^4.20250523.0", "@mjackson/file-storage": "^0.6.1" } }, "sha512-3NF4y3fd+tgDmFotlc6JXh8Pc1I7RrAnTMbmt/0Ds059ceQMV1YatQUEkj75ybHsbBCXYlOitxQrbbpcPuHNtg=="],
-
     "@emnapi/core": ["@emnapi/core@1.11.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw=="],
@@ -965,10 +958,6 @@
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 
     "@markdoc/markdoc": ["@markdoc/markdoc@0.5.9", "", { "optionalDependencies": { "@types/linkify-it": "^3.0.1", "@types/markdown-it": "12.2.3" }, "peerDependencies": { "@types/react": "*", "react": "*" }, "optionalPeers": ["@types/react", "react"] }, "sha512-req3Wpi1xXIs7C+n2nsKv7oGeC0xREkpd+D+JRGZ/pIMXEuQSlT+s/I760fqdmiysvkx10EC3MGlScokRRcaSQ=="],
-
-    "@mjackson/file-storage": ["@mjackson/file-storage@0.6.1", "", { "dependencies": { "@mjackson/lazy-file": "^3.3.1" } }, "sha512-H3GEVpmfmNryNoYloddIOba5OAwckfVGMvutPeI94Shbv/R+NVh89gIYa8SK3Vfa+ky9PitclP+5XQ6/zlSdQQ=="],
-
-    "@mjackson/lazy-file": ["@mjackson/lazy-file@3.4.0", "", { "dependencies": { "mrmime": "^2.0.0" } }, "sha512-zQ/b3hEpHI7YQJjPeEKo1U9DVmLV7bNKFFYJbG20TM4bCug2u1CoBZ5IHlaIrI6oq6HuYs1FpqdtKSQyjWAN7g=="],
 
     "@mswjs/interceptors": ["@mswjs/interceptors@0.41.3", "", { "dependencies": { "@open-draft/deferred-promise": "^2.2.0", "@open-draft/logger": "^0.3.0", "@open-draft/until": "^2.0.0", "is-node-process": "^1.2.0", "outvariant": "^1.4.3", "strict-event-emitter": "^0.5.1" } }, "sha512-cXu86tF4VQVfwz8W1SPbhoRyHJkti6mjH/XJIxp40jhO4j2k1m4KYrEykxqWPkFF3vrK4rgQppBh//AwyGSXPA=="],
 
@@ -1632,8 +1621,6 @@
 
     "miniflare": ["miniflare@5.20260811.1-alpha", "", { "dependencies": { "@cspotcode/source-map-support": "0.8.1", "sharp": "0.35.2", "undici": "7.29.0", "workerd": "1.20260811.1", "ws": "8.21.0", "youch": "4.1.0-beta.10" } }, "sha512-DtOG0BeanIxs2sH0smFvExZD89cBQwGckbHiFkRJrrNAUu3NGClZkUxqu+zy7HYfKBAgq935EMY49vIPm3JVdA=="],
 
-    "mrmime": ["mrmime@2.0.1", "", {}, "sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ=="],
-
     "msw": ["msw@2.15.0", "", { "dependencies": { "@inquirer/confirm": "^6.0.11", "@mswjs/interceptors": "^0.41.3", "@open-draft/deferred-promise": "^3.0.0", "@types/statuses": "^2.0.6", "cookie": "^1.1.1", "graphql": "^16.13.2", "headers-polyfill": "^5.0.1", "is-node-process": "^1.2.0", "outvariant": "^1.4.3", "path-to-regexp": "^6.3.0", "picocolors": "^1.1.1", "rettime": "^0.11.11", "statuses": "^2.0.2", "strict-event-emitter": "^0.5.1", "tough-cookie": "^6.0.1", "type-fest": "^5.5.0", "until-async": "^3.0.2", "yargs": "^17.7.2" }, "peerDependencies": { "typescript": ">= 4.8.x" }, "optionalPeers": ["typescript"], "bin": { "msw": "cli/index.js" } }, "sha512-2wQAmKkQKxRuXvYJxVhPGG0wZNBQyD06oJvxqw90XqLvptdqxdlHrFUfEteKkpaNORX3Xzc+HtEl/q0nfmN2wQ=="],
 
     "mute-stream": ["mute-stream@3.0.0", "", {}, "sha512-dkEJPVvun4FryqBmZ5KhDo0K9iDXAwn08tMLDinNdRBNPcYEDiWYysLcc6k3mjTMlbP9KyylvRpd4wFtwrT9rw=="],
@@ -1763,12 +1750,6 @@
     "youch-core": ["youch-core@0.3.3", "", { "dependencies": { "@poppinss/exception": "^1.2.2", "error-stack-parser-es": "^1.0.5" } }, "sha512-ho7XuGjLaJ2hWHoK8yFnsUGy2Y5uDpqSTq1FkHLK4/oqKtyUU1AFbOOxY4IpC9f0fTLjwYbslUz0Po5BpD1wrA=="],
 
     "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
-
-    "@edgefirst-dev/jwt/jose": ["jose@6.1.3", "", {}, "sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ=="],
-
-    "@edgefirst-dev/jwt/type-fest": ["type-fest@4.41.0", "", {}, "sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA=="],
-
-    "@edgefirst-dev/r2-file-storage/@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260621.1", "", {}, "sha512-c4xrf4shZdDOK1ihh1UKzlS/3MDYiGThT/Oqr4Y3qR9NLCSNzHB7rt+Vk/LOp0ZSNjA+7WNJEQsOhpiQtpT2GA=="],
 
     "@mswjs/interceptors/@open-draft/deferred-promise": ["@open-draft/deferred-promise@2.2.0", "", {}, "sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA=="],
 

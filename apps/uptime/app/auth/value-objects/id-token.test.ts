@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { JWK, JWT } from "@edgefirst-dev/jwt";
+import { JWK, JWT } from "@pkg/jwt";
 
 import IdToken, { verifyIdToken } from "./id-token";
 

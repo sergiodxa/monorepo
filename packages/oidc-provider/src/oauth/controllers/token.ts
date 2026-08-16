@@ -11,7 +11,7 @@
 
 import type { Logger } from "@pkg/logger/batched";
 
-import { JWK } from "@edgefirst-dev/jwt";
+import { JWK } from "@pkg/jwt";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";

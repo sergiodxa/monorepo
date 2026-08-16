@@ -11,7 +11,7 @@
  */
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
-import { JWK, JWT } from "@edgefirst-dev/jwt";
+import { JWK, JWT } from "@pkg/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 

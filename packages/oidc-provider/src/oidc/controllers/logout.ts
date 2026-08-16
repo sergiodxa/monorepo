@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK } from "@edgefirst-dev/jwt";
+import { JWK } from "@pkg/jwt";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";

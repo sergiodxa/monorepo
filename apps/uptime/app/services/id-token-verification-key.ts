@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK } from "@edgefirst-dev/jwt";
+import { JWK } from "@pkg/jwt";
 
 /** Caches the remote JWK resolver used to verify upstream identity tokens. */
 export class IdTokenVerificationKeyService {

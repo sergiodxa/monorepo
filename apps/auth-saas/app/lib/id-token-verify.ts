@@ -12,7 +12,7 @@
 
 import type { JSONValue } from "@pkg/types";
 
-import { JWK, JWT } from "@edgefirst-dev/jwt";
+import { JWK, JWT } from "@pkg/jwt";
 
 /**
  * Clock skew tolerance (in seconds) allowed when verifying the ID token's time claims,

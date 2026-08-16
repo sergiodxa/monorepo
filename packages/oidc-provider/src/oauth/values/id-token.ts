@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@edgefirst-dev/jwt";
+import { JWT } from "@pkg/jwt";
 
 /** ID token time-to-live in milliseconds (1 hour). */
 const ID_TOKEN_TTL = 60 * 60 * 1000;

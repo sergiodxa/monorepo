@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@edgefirst-dev/jwt";
+import { JWT } from "@pkg/jwt";
 
 /**
  * Value Object for OpenID Connect Back-Channel Logout Tokens.

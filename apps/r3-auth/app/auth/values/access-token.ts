@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWT } from "@edgefirst-dev/jwt";
+import { JWT } from "@pkg/jwt";
 
 import { ACCESS_TOKEN_TTL, ISSUER } from "~/app/config";
 

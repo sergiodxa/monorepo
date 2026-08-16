@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { JWK } from "@edgefirst-dev/jwt";
+import { JWK } from "@pkg/jwt";
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";

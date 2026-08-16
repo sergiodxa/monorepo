@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK } from "@edgefirst-dev/jwt";
 import { toMs } from "@pkg/duration";
+import { JWK } from "@pkg/jwt";
 
 /** Display name of the authorization server's own OAuth client registration. */
 export const AUTH_SERVER_NAME = "Auth by Sergio Xalambrí";

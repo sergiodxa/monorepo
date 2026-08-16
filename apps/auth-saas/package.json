@@ -15,13 +15,13 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@edgefirst-dev/jwt": "^1.3.0",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/hostname": "workspace:*",
 		"@pkg/http": "workspace:*",
 		"@pkg/jobs": "workspace:*",
+		"@pkg/jwt": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/oidc-provider": "workspace:*",
