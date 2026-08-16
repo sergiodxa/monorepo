@@ -7,7 +7,7 @@ import AccessToken from "./access-token";
 let testKeyPair: JWK.KeyPair[];
 
 beforeAll(async () => {
-	let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+	let rawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	testKeyPair = [await JWK.importKeyPair(rawKeyPair)];
 });
 
@@ -122,7 +122,7 @@ describe(AccessToken.name, () => {
 		test("signs token and returns valid JWT string", async () => {
 			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
 
-			let signedToken = await token.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			expect(typeof signedToken).toBe("string");
 			expect(signedToken.split(".")).toHaveLength(3);
@@ -134,7 +134,7 @@ describe(AccessToken.name, () => {
 				"profile",
 			]);
 
-			let signedToken = await token.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 			let verified = await JWT.verify(signedToken, testKeyPair);
 
 			expect(verified).not.toBeNull();
@@ -147,10 +147,10 @@ describe(AccessToken.name, () => {
 		test("throws for token with invalid signature", async () => {
 			let token = AccessToken.generate("https://auth.example.com", "client-123", "subject-456");
 
-			let signedToken = await token.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await token.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			// Create a different key pair for verification
-			let differentRawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+			let differentRawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 			let differentKeyPair = [await JWK.importKeyPair(differentRawKeyPair)];
 
 			await expect(JWT.verify(signedToken, differentKeyPair)).rejects.toThrow();
@@ -169,7 +169,7 @@ describe(AccessToken.name, () => {
 				sub: "subject-456",
 			});
 
-			let signedToken = await expiredToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await expiredToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			await expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
 		});
@@ -186,7 +186,7 @@ describe(AccessToken.name, () => {
 				sub: "subject-456",
 			});
 
-			let signedToken = await futureToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await futureToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			await expect(JWT.verify(signedToken, testKeyPair)).rejects.toThrow();
 		});
@@ -252,7 +252,7 @@ describe(AccessToken.name, () => {
 				["openid", "profile"],
 			);
 
-			let signedToken = await originalToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedToken = await originalToken.sign(JWK.Algorithm.ES256, testKeyPair);
 			let verified = await JWT.verify(signedToken, testKeyPair);
 
 			expect(verified).not.toBeNull();

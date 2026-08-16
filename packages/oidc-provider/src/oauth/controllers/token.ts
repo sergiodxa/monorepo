@@ -279,7 +279,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		subject.id,
 		authzData.scope,
 	);
-	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
+	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	let idToken = IdToken.generate(
 		`https://${issuer}`,
@@ -299,7 +299,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			sessionId: session.id,
 		},
 	);
-	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
+	let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	// Only hand out a refresh token when the client requested (and was granted, per the
 	// scope check above) `offline_access`; otherwise the session id is not exposed as a
@@ -430,7 +430,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	}
 
 	let accessToken = AccessToken.generate(`https://${issuer}`, client.id, subject.id);
-	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
+	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	let authTime = Math.floor(new Date(session.created_at).getTime() / 1000);
 	let idToken = IdToken.generate(
@@ -446,7 +446,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		{ id: client.id },
 		{ authTime, sessionId: session.id },
 	);
-	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
+	let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	log.info("Token refreshed successfully", {
 		clientId: client.id,
@@ -566,7 +566,7 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let scopeArray = requestedScopes.isEmpty() ? undefined : requestedScopes.toArray();
 
 	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, scopeArray);
-	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
+	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 	log.info("Token issued successfully", {
 		clientId: client.id,

@@ -59,7 +59,7 @@ export async function verifyIdToken(
 		if (!jwks.keys || jwks.keys.length === 0) return null;
 
 		let publicKeys = await JWK.importLocal(jwks as Parameters<typeof JWK.importLocal>[0], {
-			alg: JWK.Algoritm.ES256,
+			alg: JWK.Algorithm.ES256,
 		});
 
 		// jose validates signature + iss + aud + exp + nbf and throws on any failure.

@@ -51,7 +51,7 @@ let token = new JWT({
 	exp: Math.floor(Date.now() / 1000) + 3600,
 });
 
-let signed = await token.sign(JWK.Algoritm.ES256, keys);
+let signed = await token.sign(JWK.Algorithm.ES256, keys);
 ```
 
 ### Verifying One
@@ -60,7 +60,7 @@ let signed = await token.sign(JWK.Algoritm.ES256, keys);
 import { JWK } from "@pkg/jwt";
 
 // Resolve once per isolate, not per request — this fetches.
-let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algoritm.ES256 });
+let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
 
 let idToken = await IdToken.verify(rawToken, await keys, {
 	issuer: "https://auth.example.com",
@@ -136,7 +136,7 @@ Every accessor answers `null` for a claim that is absent, so reading one never t
 
 `expiresIn`, `expiresAt`, and `expired` read `exp` as **milliseconds**, not the seconds RFC 7519 defines. That is a quirk of the implementation this package vendors, kept because the token classes that care already override `expiresIn`. Treat these three as display helpers; expiry is enforced by `JWT.verify`, which reads `exp` correctly.
 
-#### `jwt.sign(algorithm: JWK.Algoritm, jwks: JWK.SigningKey[]): Promise<string>`
+#### `jwt.sign(algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string>`
 
 Signs this token with the first key in the set matching the algorithm, writing that key's `kid` into the header.
 
@@ -150,7 +150,7 @@ Throws when no key in the set was generated for that algorithm.
 
 The claims a subclass exposes, as a plain object. Reads the getters declared directly on the instance's own prototype, so the result is the subclass's view of the token — not the registered-claim accessors it inherited but may not use.
 
-#### `JWT.sign(jwt: JWT, algorithm: JWK.Algoritm, jwks: JWK.SigningKey[]): Promise<string>`
+#### `JWT.sign(jwt: JWT, algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string>`
 
 The static form of `jwt.sign`, for signing a token you were handed.
 
@@ -196,17 +196,17 @@ type VerifyOptions = jose.JWTVerifyOptions;
 
 ### `JWK`
 
-#### `JWK.Algoritm`
+#### `JWK.Algorithm`
 
 The supported signature algorithms. ES256 only.
 
 ```typescript
-JWK.Algoritm.ES256; // "ES256"
+JWK.Algorithm.ES256; // "ES256"
 ```
 
-The misspelling is deliberate and load-bearing: it is how every call site in this monorepo spells it.
+Adding an algorithm is not just a new entry here: a JWKS publishing more than one key needs `kid`-aware resolution on the verifying side, or a relying party cannot tell which key to use.
 
-#### `JWK.generateKeyPair(alg: JWK.Algoritm): Promise<JWK.SerializedKeyPair>`
+#### `JWK.generateKeyPair(alg: JWK.Algorithm): Promise<JWK.SerializedKeyPair>`
 
 Generates a new key pair in serialized form: PEM strings and a millisecond timestamp, so the whole pair survives `JSON.stringify` into a bucket or a text column.
 
@@ -223,7 +223,7 @@ Stamping happens here rather than at publish time, so the identifier a token hea
 ```typescript
 let pair = await JWK.importKeyPair({
 	id: record.id,
-	alg: JWK.Algoritm.ES256,
+	alg: JWK.Algorithm.ES256,
 	publicKey: record.public_key,
 	privateKey: record.private_key,
 	created: new Date(record.created_at).getTime(),
@@ -236,11 +236,11 @@ Loads the signing keys out of storage, generating one on first use. Newest first
 
 Never point this at an empty production bucket. It will happily generate a fresh key, and tokens signed with it verify against no relying party's cached JWKS.
 
-#### `JWK.importLocal(jwks: jose.JSONWebKeySet, options?: { alg: JWK.Algoritm }): Promise<JWK.VerificationKey[]>`
+#### `JWK.importLocal(jwks: jose.JSONWebKeySet, options?: { alg: JWK.Algorithm }): Promise<JWK.VerificationKey[]>`
 
 Resolves a key set that is already in hand into a verification key.
 
-#### `JWK.importRemote(url: URL, options: jose.RemoteJWKSetOptions & { alg: JWK.Algoritm }): Promise<JWK.VerificationKey[]>`
+#### `JWK.importRemote(url: URL, options: jose.RemoteJWKSetOptions & { alg: JWK.Algorithm }): Promise<JWK.VerificationKey[]>`
 
 Fetches a JWKS endpoint and resolves it into a verification key. The fetch happens once, here — hold the result for the life of the isolate rather than calling this per request.
 
@@ -255,7 +255,7 @@ Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves: `crv`,
 ```typescript
 interface KeyPair {
 	id: string;
-	alg: Algoritm;
+	alg: Algorithm;
 	public: jose.CryptoKey;
 	private: jose.CryptoKey;
 	created: Date;
@@ -265,7 +265,7 @@ interface KeyPair {
 
 interface SerializedKeyPair {
 	id: `${string}-${string}-${string}-${string}-${string}`;
-	alg: Algoritm;
+	alg: Algorithm;
 	publicKey: string; // SPKI PEM
 	privateKey: string; // PKCS#8 PEM
 	created: number; // epoch milliseconds
@@ -328,7 +328,7 @@ Until then: **one key in the published set**. Rotation means replacing it, not a
 Resolve the key set once, at module scope or in a container singleton, and treat any failure — an unreachable JWKS, a bad signature, a wrong issuer — as the same "not authenticated" outcome.
 
 ```typescript
-let verificationKey = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algoritm.ES256 });
+let verificationKey = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
 
 export async function verify(raw: string) {
 	try {
@@ -350,7 +350,7 @@ The `try` has to wrap the accessor reads too if the caller reads claims the issu
 `signingKeys` is a convenience over one particular storage shape. When keys live in rows, skip it and drive `generateKeyPair`/`importKeyPair` directly — they are the whole contract.
 
 ```typescript
-let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 
 await db.create(table, {
 	id: serialized.id,

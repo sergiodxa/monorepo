@@ -87,7 +87,7 @@ function createMockRepository(): OIDC.Repository {
 }
 
 beforeAll(async () => {
-	let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+	let rawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	testKeyPair = [await JWK.importKeyPair(rawKeyPair)];
 });
 
@@ -510,7 +510,7 @@ describe("OIDC", () => {
 				},
 				{ id: testClient.id },
 			);
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			let result = await provider.logout({
 				idTokenHint: signedIdToken,
@@ -539,7 +539,7 @@ describe("OIDC", () => {
 				iat: expiredAt - 60,
 				exp: expiredAt,
 			});
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			let result = await provider.logout({
 				idTokenHint: signedIdToken,
@@ -555,7 +555,7 @@ describe("OIDC", () => {
 			let repo = createMockRepository();
 			let provider = new OIDC(ISSUER, repo);
 
-			let otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
+			let otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 			let idToken = IdToken.generate(
 				{
 					id: testSubject.id,
@@ -567,7 +567,7 @@ describe("OIDC", () => {
 				},
 				{ id: testClient.id },
 			);
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, otherKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, otherKeyPair);
 
 			await expect(provider.logout({ idTokenHint: signedIdToken })).rejects.toThrow(
 				OIDC.InvalidRequestError,
@@ -588,7 +588,7 @@ describe("OIDC", () => {
 				iat: Math.floor(Date.now() / 1000),
 				exp: Math.floor(Date.now() / 1000) + 600,
 			});
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			await expect(provider.logout({ idTokenHint: signedIdToken })).rejects.toThrow(
 				OIDC.InvalidRequestError,
@@ -635,7 +635,7 @@ describe("OIDC", () => {
 				},
 				{ id: testClient.id },
 			);
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			await expect(
 				provider.logout({
@@ -660,7 +660,7 @@ describe("OIDC", () => {
 				},
 				{ id: testClient.id },
 			);
-			let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, testKeyPair);
+			let signedIdToken = await idToken.sign(JWK.Algorithm.ES256, testKeyPair);
 
 			let result = await provider.logout({
 				idTokenHint: signedIdToken,

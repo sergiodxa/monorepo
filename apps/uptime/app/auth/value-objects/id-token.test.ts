@@ -19,7 +19,7 @@ const CLIENT_ID = "client-123";
 
 /** Generates a fresh ES256 signing key pair usable with `JWT.sign`/`JWT.verify`. */
 async function generateSigningKey() {
-	let generated = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+	let generated = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	return await JWK.importKeyPair(generated);
 }
 
@@ -28,8 +28,8 @@ async function signToken(
 	payload: Record<string, unknown>,
 	keyPair: Awaited<ReturnType<typeof generateSigningKey>>,
 ) {
-	return await JWT.sign(new JWT(payload), JWK.Algoritm.ES256, [
-		{ private: keyPair.private, alg: JWK.Algoritm.ES256, id: keyPair.id },
+	return await JWT.sign(new JWT(payload), JWK.Algorithm.ES256, [
+		{ private: keyPair.private, alg: JWK.Algorithm.ES256, id: keyPair.id },
 	]);
 }
 

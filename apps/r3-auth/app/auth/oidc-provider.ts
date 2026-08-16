@@ -699,7 +699,7 @@ export class OIDC {
 			try {
 				idToken = await IdToken.verify(args.idTokenHint, signingKeys, {
 					issuer: this.issuer,
-					algorithms: [JWK.Algoritm.ES256],
+					algorithms: [JWK.Algorithm.ES256],
 					clockTolerance: ID_TOKEN_HINT_CLOCK_TOLERANCE,
 				});
 			} catch {
@@ -981,7 +981,7 @@ export class OIDC {
 						client.backchannelLogoutSessionRequired === "true" ? client.sessionId : undefined;
 
 					let logoutToken = LogoutToken.generate(subjectId, client.clientId, sessionId);
-					let signedToken = await logoutToken.sign(JWK.Algoritm.ES256, signingKeys);
+					let signedToken = await logoutToken.sign(JWK.Algorithm.ES256, signingKeys);
 
 					let response = await fetch(client.backchannelLogoutUri!, {
 						method: "POST",
@@ -1104,7 +1104,7 @@ export class OIDC {
 		return {
 			issuer: this.issuer,
 			code_challenge_methods_supported: ["S256", "plain"],
-			id_token_signing_alg_values_supported: [JWK.Algoritm.ES256],
+			id_token_signing_alg_values_supported: [JWK.Algorithm.ES256],
 			request_parameter_supported: false,
 			request_uri_parameter_supported: false,
 			response_types_supported: ["code", "token"],
@@ -1287,7 +1287,7 @@ export class OIDC {
 	// =========================================================================
 
 	private async signJWT(jwt: JWT) {
-		return await jwt.sign(JWK.Algoritm.ES256, await this.repository.getSigningKey());
+		return await jwt.sign(JWK.Algorithm.ES256, await this.repository.getSigningKey());
 	}
 
 	/**

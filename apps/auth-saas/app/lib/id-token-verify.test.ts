@@ -30,8 +30,8 @@ let server = setupServer();
 
 beforeAll(async () => {
 	server.listen({ onUnhandledRequest: "error" });
-	keyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
-	otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
+	keyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
+	otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 	jwks = JWK.toJSON(keyPair);
 });
 
@@ -69,7 +69,7 @@ async function signIdToken(
 		exp: overrides.exp ?? now + 300,
 		jti: crypto.randomUUID(),
 	});
-	return token.sign(JWK.Algoritm.ES256, keys);
+	return token.sign(JWK.Algorithm.ES256, keys);
 }
 
 /** Registers an MSW handler serving the given JWKS body with a chosen status. */
@@ -112,7 +112,7 @@ describe("verifyIdToken — accepts", () => {
 			exp: now + 300,
 			jti: crypto.randomUUID(),
 		});
-		let idToken = await token.sign(JWK.Algoritm.ES256, keyPair);
+		let idToken = await token.sign(JWK.Algorithm.ES256, keyPair);
 
 		stubJwksFetch(jwks);
 		let result = await verifyIdToken(idToken, {

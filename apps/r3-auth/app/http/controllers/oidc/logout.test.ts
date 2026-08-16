@@ -92,7 +92,7 @@ async function resign(
 	let { payload } = JWT.decode(token);
 
 	return await new JWT({ ...payload, ...claims }).sign(
-		JWK.Algoritm.ES256,
+		JWK.Algorithm.ES256,
 		keys ?? (await getSigningKey()),
 	);
 }
@@ -204,7 +204,7 @@ describe("GET /oidc/logout", () => {
 
 		// The same claims signed by somebody else: it must be a refusal, not a crash.
 		let foreign = await resign(tokens.id_token, {}, [
-			await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256)),
+			await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256)),
 		]);
 
 		let response = await app.fetch(

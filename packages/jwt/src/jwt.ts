@@ -249,9 +249,9 @@ export class JWT implements jose.JWTPayload {
 	 * @param jwks - Candidate keys, newest first.
 	 * @returns The compact-serialized token.
 	 * @example
-	 * let signed = await token.sign(JWK.Algoritm.ES256, await JWK.signingKeys(storage));
+	 * let signed = await token.sign(JWK.Algorithm.ES256, await JWK.signingKeys(storage));
 	 */
-	sign(algorithm: JWK.Algoritm, jwks: JWK.SigningKey[]): Promise<string> {
+	sign(algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string> {
 		return JWT.sign(this, algorithm, jwks);
 	}
 
@@ -289,7 +289,7 @@ export class JWT implements jose.JWTPayload {
 	 * @returns The compact-serialized token.
 	 * @throws When no key in the set was generated for that algorithm.
 	 */
-	static sign(jwt: JWT, algorithm: JWK.Algoritm, jwks: JWK.SigningKey[]): Promise<string> {
+	static sign(jwt: JWT, algorithm: JWK.Algorithm, jwks: JWK.SigningKey[]): Promise<string> {
 		let key = jwks.find((candidate) => candidate.alg === algorithm);
 		if (!key) throw new Error(`No key available to sign JWT with algorithm ${algorithm}`);
 

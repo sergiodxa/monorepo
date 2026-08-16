@@ -14,6 +14,6 @@ import { JWK } from "@pkg/jwt";
 export class IdTokenVerificationKeyService {
 	/** Remote verifier promise reused across requests in the current isolate. */
 	readonly value = JWK.importRemote(new URL("https://auth.sergiodxa.com/.well-known/jwks.json"), {
-		alg: JWK.Algoritm.ES256,
+		alg: JWK.Algorithm.ES256,
 	});
 }

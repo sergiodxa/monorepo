@@ -40,21 +40,22 @@ export namespace JWK {
 	/**
 	 * Signature algorithms this package supports.
 	 *
-	 * ES256 only. The misspelling is intentional and load-bearing: `JWK.Algoritm` is
-	 * how the original package spelled it and how every call site in this monorepo
-	 * still spells it, so renaming it would be a breaking change with no upside.
+	 * ES256 only, which is what every issuer and relying party here is configured
+	 * for. Adding another is not just a new entry: a JWKS publishing more than one
+	 * key needs `kid`-aware resolution on the verifying side, or a relying party
+	 * cannot tell which key to use.
 	 */
-	export const Algoritm = { ES256: "ES256" } as const;
+	export const Algorithm = { ES256: "ES256" } as const;
 
 	/** One of the supported signature algorithms. */
-	export type Algoritm = (typeof Algoritm)[keyof typeof Algoritm];
+	export type Algorithm = (typeof Algorithm)[keyof typeof Algorithm];
 
 	/** A key pair imported into a usable form, with the public half in JWK format. */
 	export interface KeyPair {
 		/** Identifier published as the `kid`, and written into every token header. */
 		id: string;
 		/** Algorithm the pair was generated for. */
-		alg: Algoritm;
+		alg: Algorithm;
 		/** Public half, used to verify. */
 		public: jose.CryptoKey;
 		/** Private half, used to sign. */
@@ -77,7 +78,7 @@ export namespace JWK {
 		/** Identifier that becomes the `kid`. */
 		id: `${string}-${string}-${string}-${string}-${string}`;
 		/** Algorithm the pair was generated for. */
-		alg: Algoritm;
+		alg: Algorithm;
 		/** Public key in SPKI PEM form. */
 		publicKey: string;
 		/** Private key in PKCS#8 PEM form. */
@@ -119,10 +120,10 @@ export namespace JWK {
 	 * @param alg - Algorithm to generate for.
 	 * @returns The pair as PEM strings, ready to store.
 	 * @example
-	 * let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+	 * let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	 * await db.create(table, { id: serialized.id, private_key: serialized.privateKey });
 	 */
-	export async function generateKeyPair(alg: Algoritm): Promise<SerializedKeyPair> {
+	export async function generateKeyPair(alg: Algorithm): Promise<SerializedKeyPair> {
 		let key = await jose.generateKeyPair(alg, { extractable: true });
 
 		return {
@@ -197,7 +198,7 @@ export namespace JWK {
 		// Nothing usable came back, so mint one and re-read rather than returning the
 		// new pair directly — the re-read is what makes the result identical to what
 		// the next isolate will see, instead of racing it.
-		await storeKeyPair(storage, SIGNING_KEY_PREFIX, await generateKeyPair(Algoritm.ES256));
+		await storeKeyPair(storage, SIGNING_KEY_PREFIX, await generateKeyPair(Algorithm.ES256));
 
 		return await signingKeys(storage);
 	}
@@ -214,12 +215,12 @@ export namespace JWK {
 	 * @param options - Algorithm to match on.
 	 * @returns A single-element array in the shape `JWT.verify` takes.
 	 * @example
-	 * let keys = await JWK.importLocal(jwks, { alg: JWK.Algoritm.ES256 });
+	 * let keys = await JWK.importLocal(jwks, { alg: JWK.Algorithm.ES256 });
 	 * let token = await IdToken.verify(raw, keys, { issuer, audience });
 	 */
 	export async function importLocal(
 		jwks: jose.JSONWebKeySet,
-		options?: { alg: Algoritm },
+		options?: { alg: Algorithm },
 	): Promise<VerificationKey[]> {
 		let load = jose.createLocalJWKSet(jwks);
 		return [{ public: await load({ alg: options?.alg }) }];
@@ -236,11 +237,11 @@ export namespace JWK {
 	 * @param options - Algorithm to match on, plus any remote-set option jose accepts.
 	 * @returns A single-element array in the shape `JWT.verify` takes.
 	 * @example
-	 * let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algoritm.ES256 });
+	 * let keys = JWK.importRemote(new URL(jwksUrl), { alg: JWK.Algorithm.ES256 });
 	 */
 	export async function importRemote(
 		url: URL,
-		options: jose.RemoteJWKSetOptions & { alg: Algoritm },
+		options: jose.RemoteJWKSetOptions & { alg: Algorithm },
 	): Promise<VerificationKey[]> {
 		let load = jose.createRemoteJWKSet(url, options);
 		return [{ public: await load({ alg: options.alg }) }];

@@ -95,7 +95,7 @@ async function seed(count: number): Promise<MemoryKeyStorage> {
 	let storage = new MemoryKeyStorage();
 
 	for (let index = 0; index < count; index += 1) {
-		let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 		serialized.created = Date.now() - index * 86_400_000;
 		storage.set(
 			`signing:key:${serialized.id}`,
@@ -112,7 +112,7 @@ afterAll(() => server.close());
 
 describe("generating and importing key pairs", () => {
 	test("generates a serializable pair", async () => {
-		let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 
 		expect(serialized.alg).toBe("ES256");
 		expect(serialized.id).toMatch(/^[0-9a-f-]{36}$/);
@@ -122,15 +122,15 @@ describe("generating and importing key pairs", () => {
 	});
 
 	test("generates a distinct pair every time", async () => {
-		let first = await JWK.generateKeyPair(JWK.Algoritm.ES256);
-		let second = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let first = await JWK.generateKeyPair(JWK.Algorithm.ES256);
+		let second = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 
 		expect(first.id).not.toBe(second.id);
 		expect(first.privateKey).not.toBe(second.privateKey);
 	});
 
 	test("imports a pair back into usable keys", async () => {
-		let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 		let pair = await JWK.importKeyPair(serialized);
 
 		expect(pair.id).toBe(serialized.id);
@@ -142,7 +142,7 @@ describe("generating and importing key pairs", () => {
 	});
 
 	test("stamps the public JWK with the identifier tokens will carry", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 
 		expect(pair.jwk.kid).toBe(pair.id);
 		expect(pair.jwk.use).toBe("sig");
@@ -153,12 +153,12 @@ describe("generating and importing key pairs", () => {
 	});
 
 	test("survives a full round-trip through JSON, as storage requires", async () => {
-		let serialized = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 		let restored = await JWK.importKeyPair(
 			JSON.parse(JSON.stringify(serialized)) as JWK.SerializedKeyPair,
 		);
 
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, [restored]);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [restored]);
 
 		await expect(JWT.verify(signed, [restored])).resolves.toBeDefined();
 	});
@@ -166,7 +166,7 @@ describe("generating and importing key pairs", () => {
 
 describe("toJSON", () => {
 	test("publishes only the public EC parameters", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 
 		let jwks = JWK.toJSON([pair]);
 
@@ -187,60 +187,60 @@ describe("toJSON", () => {
 
 describe("importLocal", () => {
 	test("resolves a published key that verifies a token signed with its pair", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, [pair]);
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
 
-		let resolved = await JWK.importLocal(JWK.toJSON([pair]), { alg: JWK.Algoritm.ES256 });
+		let resolved = await JWK.importLocal(JWK.toJSON([pair]), { alg: JWK.Algorithm.ES256 });
 
 		expect(resolved).toHaveLength(1);
 		await expect(JWT.verify(signed, resolved)).resolves.toBeDefined();
 	});
 
 	test("does not resolve a key from an unrelated issuer", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
-		let other = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, [pair]);
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let other = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
 
-		let resolved = await JWK.importLocal(JWK.toJSON([other]), { alg: JWK.Algoritm.ES256 });
+		let resolved = await JWK.importLocal(JWK.toJSON([other]), { alg: JWK.Algorithm.ES256 });
 
 		expect(JWT.verify(signed, resolved)).rejects.toThrow();
 	});
 
 	test("fails on an empty key set", () => {
-		expect(JWK.importLocal({ keys: [] }, { alg: JWK.Algoritm.ES256 })).rejects.toThrow();
+		expect(JWK.importLocal({ keys: [] }, { alg: JWK.Algorithm.ES256 })).rejects.toThrow();
 	});
 
 	test("matches on algorithm alone, so two ES256 keys are ambiguous", async () => {
 		// This is the constraint that keeps the published JWKS at one key: resolution
 		// happens once, up front, with no token in hand and therefore no `kid` to match
 		// on. Publishing a second signing key would break every relying party.
-		let first = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
-		let second = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
+		let first = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let second = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 
 		expect(
-			JWK.importLocal(JWK.toJSON([first, second]), { alg: JWK.Algoritm.ES256 }),
+			JWK.importLocal(JWK.toJSON([first, second]), { alg: JWK.Algorithm.ES256 }),
 		).rejects.toThrow(/multiple matching keys/i);
 	});
 });
 
 describe("importRemote", () => {
 	test("fetches a key set and verifies a token against it", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let signed = await new JWT({ sub: "user-123", iss: "https://auth.test" }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			[pair],
 		);
 
 		server.use(http.get(JWKS_URL, () => HttpResponse.json(JWK.toJSON([pair]))));
 
-		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algoritm.ES256 });
+		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 });
 		let verified = await JWT.verify(signed, resolved, { issuer: "https://auth.test" });
 
 		expect(verified.subject).toBe("user-123");
 	});
 
 	test("fetches once, so the resolved keys can be held for the isolate's life", async () => {
-		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256));
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
 		let requests = 0;
 
 		server.use(
@@ -250,9 +250,9 @@ describe("importRemote", () => {
 			}),
 		);
 
-		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algoritm.ES256 });
+		let resolved = await JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 });
 
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, [pair]);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
 		await JWT.verify(signed, resolved);
 		await JWT.verify(signed, resolved);
 
@@ -262,7 +262,7 @@ describe("importRemote", () => {
 	test("fails when the endpoint does not serve a key set", async () => {
 		server.use(http.get(JWKS_URL, () => new HttpResponse(null, { status: 500 })));
 
-		expect(JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algoritm.ES256 })).rejects.toThrow();
+		expect(JWK.importRemote(new URL(JWKS_URL), { alg: JWK.Algorithm.ES256 })).rejects.toThrow();
 	});
 });
 
@@ -280,7 +280,7 @@ describe("signingKeys", () => {
 		let storage = new MemoryKeyStorage();
 		let keys = await JWK.signingKeys(storage);
 
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		await expect(JWT.verify(signed, keys)).resolves.toBeDefined();
 	});

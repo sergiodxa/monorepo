@@ -37,5 +37,5 @@ export async function getSigningKey(): Promise<JWK.KeyPair[]> {
  * @returns The compact-serialized, signed token.
  */
 export async function sign(jwt: JWT): Promise<string> {
-	return await jwt.sign(JWK.Algoritm.ES256, await getSigningKey());
+	return await jwt.sign(JWK.Algorithm.ES256, await getSigningKey());
 }

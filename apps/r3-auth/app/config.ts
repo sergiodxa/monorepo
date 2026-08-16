@@ -93,7 +93,7 @@ export const WELL_KNOWN = {
 	],
 	code_challenge_methods_supported: ["S256", "plain"],
 	grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
-	id_token_signing_alg_values_supported: [JWK.Algoritm.ES256],
+	id_token_signing_alg_values_supported: [JWK.Algorithm.ES256],
 	jwks_uri: new URL("/.well-known/jwks.json", ISSUER_HOST),
 	request_parameter_supported: false,
 	request_uri_parameter_supported: false,

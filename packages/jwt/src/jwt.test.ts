@@ -44,15 +44,15 @@ function now(): number {
 }
 
 beforeAll(async () => {
-	keys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
-	otherKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
+	keys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
+	otherKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 });
 
 describe("signing and verifying", () => {
 	test("round-trips a token through ES256", async () => {
 		let token = new JWT({ sub: "user-123", iss: "https://auth.test", aud: "client-1" });
 
-		let signed = await JWT.sign(token, JWK.Algoritm.ES256, keys);
+		let signed = await JWT.sign(token, JWK.Algorithm.ES256, keys);
 		let verified = await JWT.verify(signed, keys, {
 			issuer: "https://auth.test",
 			audience: "client-1",
@@ -68,15 +68,15 @@ describe("signing and verifying", () => {
 
 		// ECDSA signatures carry a nonce, so two signings of the same claims differ in
 		// the third segment; the header and payload are what must match.
-		let fromInstance = await token.sign(JWK.Algoritm.ES256, keys);
-		let fromStatic = await JWT.sign(token, JWK.Algoritm.ES256, keys);
+		let fromInstance = await token.sign(JWK.Algorithm.ES256, keys);
+		let fromStatic = await JWT.sign(token, JWK.Algorithm.ES256, keys);
 
 		expect(fromInstance.split(".").slice(0, 2)).toEqual(fromStatic.split(".").slice(0, 2));
 		await expect(JWT.verify(fromInstance, keys)).resolves.toBeDefined();
 	});
 
 	test("names the signing key in the header so a relying party can find it", async () => {
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		let header = JSON.parse(atob(signed.split(".")[0] ?? "")) as Record<string, unknown>;
 
@@ -88,13 +88,13 @@ describe("signing and verifying", () => {
 	test("refuses to sign when no key matches the algorithm", () => {
 		let token = new JWT({ sub: "user-123" });
 
-		expect(() => JWT.sign(token, JWK.Algoritm.ES256, [])).toThrow(
+		expect(() => JWT.sign(token, JWK.Algorithm.ES256, [])).toThrow(
 			"No key available to sign JWT with algorithm ES256",
 		);
 	});
 
 	test("refuses to verify when no key is available", async () => {
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		expect(JWT.verify(signed, [])).rejects.toThrow("No key available to verify JWT");
 	});
@@ -102,13 +102,13 @@ describe("signing and verifying", () => {
 
 describe("verification failures", () => {
 	test("rejects a token signed by another key", async () => {
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
 	});
 
 	test("rejects a token whose payload was edited after signing", async () => {
-		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
 		let [header, , signature] = signed.split(".");
 		let forged = btoa(JSON.stringify({ sub: "admin" })).replaceAll("=", "");
@@ -118,7 +118,7 @@ describe("verification failures", () => {
 
 	test("rejects a mismatched issuer", async () => {
 		let signed = await new JWT({ sub: "user-123", iss: "https://auth.test" }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			keys,
 		);
 
@@ -127,7 +127,10 @@ describe("verification failures", () => {
 	});
 
 	test("rejects a mismatched audience", async () => {
-		let signed = await new JWT({ sub: "user-123", aud: "client-1" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123", aud: "client-1" }).sign(
+			JWK.Algorithm.ES256,
+			keys,
+		);
 
 		expect(JWT.verify(signed, keys, { audience: "client-2" })).rejects.toThrow();
 		await expect(JWT.verify(signed, keys, { audience: "client-1" })).resolves.toBeDefined();
@@ -136,13 +139,19 @@ describe("verification failures", () => {
 
 describe("time claims", () => {
 	test("rejects an expired token", async () => {
-		let signed = await new JWT({ sub: "user-123", exp: now() - 10 }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123", exp: now() - 10 }).sign(
+			JWK.Algorithm.ES256,
+			keys,
+		);
 
 		expect(JWT.verify(signed, keys)).rejects.toThrow();
 	});
 
 	test("accepts a just-expired token within the clock tolerance", async () => {
-		let signed = await new JWT({ sub: "user-123", exp: now() - 10 }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123", exp: now() - 10 }).sign(
+			JWK.Algorithm.ES256,
+			keys,
+		);
 
 		let verified = await JWT.verify(signed, keys, { clockTolerance: CLOCK_TOLERANCE });
 
@@ -151,7 +160,7 @@ describe("time claims", () => {
 
 	test("still rejects a token expired beyond the clock tolerance", async () => {
 		let signed = await new JWT({ sub: "user-123", exp: now() - CLOCK_TOLERANCE * 10 }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			keys,
 		);
 
@@ -160,7 +169,7 @@ describe("time claims", () => {
 
 	test("rejects a token that is not valid yet", async () => {
 		let signed = await new JWT({ sub: "user-123", nbf: now() + 600 }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			keys,
 		);
 
@@ -172,7 +181,7 @@ describe("time claims", () => {
 describe("decoding", () => {
 	test("reads the claims of a token it cannot verify", async () => {
 		let signed = await new JWT({ sub: "user-123", iss: "https://auth.test" }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			keys,
 		);
 
@@ -188,7 +197,7 @@ describe("decoding", () => {
 
 	test("decodes into the subclass it is called on", async () => {
 		let signed = await new JWT({ sub: "user-123", aud: "client-1", email: "ada@test.dev" }).sign(
-			JWK.Algoritm.ES256,
+			JWK.Algorithm.ES256,
 			keys,
 		);
 
@@ -201,7 +210,7 @@ describe("decoding", () => {
 
 describe("the verified token, read both ways", () => {
 	test("exposes the raw claim set through payload", async () => {
-		let signed = await new JWT({ sub: "user-123", nonce: "n-1" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123", nonce: "n-1" }).sign(JWK.Algorithm.ES256, keys);
 
 		// The shape a relying party reads: it wants the claim bag, not accessors.
 		let verified = await JWT.verify(signed, keys);
@@ -216,7 +225,7 @@ describe("the verified token, read both ways", () => {
 			aud: "client-1",
 			email: "ada@test.dev",
 			email_verified: true,
-		}).sign(JWK.Algoritm.ES256, keys);
+		}).sign(JWK.Algorithm.ES256, keys);
 
 		let verified = await TestToken.verify(signed, keys);
 
@@ -229,7 +238,10 @@ describe("the verified token, read both ways", () => {
 	});
 
 	test("throws out of an accessor whose claim is missing", async () => {
-		let signed = await new JWT({ sub: "user-123", aud: "client-1" }).sign(JWK.Algoritm.ES256, keys);
+		let signed = await new JWT({ sub: "user-123", aud: "client-1" }).sign(
+			JWK.Algorithm.ES256,
+			keys,
+		);
 
 		let verified = await TestToken.verify(signed, keys);
 
@@ -254,7 +266,7 @@ describe("claims without an accessor", () => {
 
 		expect(token.payload.scope).toBe("read");
 
-		let signed = await token.sign(JWK.Algoritm.ES256, keys);
+		let signed = await token.sign(JWK.Algorithm.ES256, keys);
 		let verified = await JWT.verify(signed, keys);
 
 		expect(verified.payload.scope).toBe("read");
@@ -327,7 +339,7 @@ describe("toJSON", () => {
 			aud: "client-1",
 			email: "ada@test.dev",
 			email_verified: false,
-		}).sign(JWK.Algoritm.ES256, keys);
+		}).sign(JWK.Algorithm.ES256, keys);
 
 		let verified = await TestToken.verify(signed, keys);
 

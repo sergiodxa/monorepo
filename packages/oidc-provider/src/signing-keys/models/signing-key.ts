@@ -87,7 +87,7 @@ export default class SigningKey {
 
 		return await JWK.importKeyPair({
 			id: record.id as `${string}-${string}-${string}-${string}-${string}`,
-			alg: JWK.Algoritm.ES256,
+			alg: JWK.Algorithm.ES256,
 			privateKey: record.private_key,
 			publicKey: record.public_key,
 			created: new Date(record.created_at).getTime(),
@@ -115,7 +115,7 @@ export default class SigningKey {
 			records.map((record) =>
 				JWK.importKeyPair({
 					id: record.id as `${string}-${string}-${string}-${string}-${string}`,
-					alg: JWK.Algoritm.ES256,
+					alg: JWK.Algorithm.ES256,
 					privateKey: record.private_key,
 					publicKey: record.public_key,
 					created: new Date(record.created_at).getTime(),
@@ -146,7 +146,7 @@ export default class SigningKey {
 	 * if (!(await SigningKey.getCurrent(db))) await SigningKey.generate(db);
 	 */
 	static async generate(db: Database): Promise<JWK.KeyPair> {
-		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let rawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 		let keyPair = await JWK.importKeyPair(rawKeyPair);
 
 		let existingCurrent = await db.findMany(SigningKey.table, {
@@ -197,7 +197,7 @@ export default class SigningKey {
 			);
 		}
 
-		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
+		let rawKeyPair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 		let keyPair = await JWK.importKeyPair(rawKeyPair);
 
 		let now = new Date().toISOString();

@@ -82,7 +82,7 @@ export default createAction(
 			try {
 				let idToken = await IdToken.verify(id_token_hint, signingKeys, {
 					issuer: `https://${issuer}`,
-					algorithms: [JWK.Algoritm.ES256],
+					algorithms: [JWK.Algorithm.ES256],
 				});
 
 				subjectId = idToken.subject;
