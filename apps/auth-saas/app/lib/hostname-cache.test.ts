@@ -1,8 +1,8 @@
 /**
  * Behavioural tests for the hostname → tenant KV cache helpers: the key format, the
  * short TTL that lets a missed invalidation self-heal, and `invalidateHostnameCache`
- * which must delete exactly the cached key. `cloudflare:workers` is mocked with a
- * recording `HOSTNAMES_KV` stub before the module under test is imported, so the
+ * which must delete exactly the cached key. `cloudflare:workers` is mocked with an
+ * in-memory `HOSTNAMES_KV` namespace before the module under test is imported, so the
  * helper binds to it regardless of what other suites mock in the same process; no
  * real Cloudflare KV is touched.
  *
@@ -11,29 +11,33 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-/** Records every `HOSTNAMES_KV` operation so specs can assert cache invalidation. */
-let kvOperations: Array<{ op: "get" | "put" | "delete"; key: string }> = [];
+import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 
-let hostnamesKv = {
-	async get(key: string): Promise<string | null> {
-		kvOperations.push({ op: "get", key });
-		return null;
-	},
-	async put(key: string): Promise<void> {
-		kvOperations.push({ op: "put", key });
-	},
-	async delete(key: string): Promise<void> {
-		kvOperations.push({ op: "delete", key });
-	},
-};
+/** The namespace the helpers read and evict from, seeded per test. */
+let hostnamesKv = createKVNamespace();
 
-mock.module("cloudflare:workers", () => ({ env: { HOSTNAMES_KV: hostnamesKv } }));
+/**
+ * Publishes the current namespace as the app's environment. Re-run per test so each one
+ * invalidates entries of its own.
+ */
+function bindEnv(): void {
+	mock.module("cloudflare:workers", () => ({
+		env: createEnv<Cloudflare.Env>({ HOSTNAMES_KV: hostnamesKv }),
+	}));
+}
+
+bindEnv();
 
 let { HOSTNAME_CACHE_TTL, hostnameCacheKey, invalidateHostnameCache } =
 	await import("./hostname-cache");
 
-beforeEach(() => {
-	kvOperations = [];
+beforeEach(async () => {
+	hostnamesKv = createKVNamespace();
+	bindEnv();
+
+	for (let hostname of ["app.example.com", "one.example.com", "two.example.com"]) {
+		await hostnamesKv.put(hostnameCacheKey(hostname), "tenant-1");
+	}
 });
 
 describe("hostnameCacheKey", () => {
@@ -59,15 +63,27 @@ describe("HOSTNAME_CACHE_TTL", () => {
 describe("invalidateHostnameCache", () => {
 	test("deletes exactly the cached key for the hostname", async () => {
 		await invalidateHostnameCache("app.example.com");
-		expect(kvOperations).toEqual([{ op: "delete", key: "host:app.example.com" }]);
+
+		expect(await hostnamesKv.get("host:app.example.com")).toBeNull();
+		// Every other tenant's mapping is left to keep serving from cache.
+		expect((await hostnamesKv.list()).keys.map((key) => key.name)).toEqual([
+			"host:one.example.com",
+			"host:two.example.com",
+		]);
 	});
 
-	test("issues one delete per invalidation call", async () => {
+	test("evicts each hostname it is called for, and only those", async () => {
 		await invalidateHostnameCache("one.example.com");
 		await invalidateHostnameCache("two.example.com");
-		expect(kvOperations).toEqual([
-			{ op: "delete", key: "host:one.example.com" },
-			{ op: "delete", key: "host:two.example.com" },
+
+		expect((await hostnamesKv.list()).keys.map((key) => key.name)).toEqual([
+			"host:app.example.com",
 		]);
+	});
+
+	test("is a no-op for a hostname that was never cached", async () => {
+		await invalidateHostnameCache("absent.example.com");
+
+		expect((await hostnamesKv.list()).keys).toHaveLength(3);
 	});
 });
