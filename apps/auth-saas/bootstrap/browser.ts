@@ -58,18 +58,29 @@ run({
 
 	/**
 	 * Fetches the markup for a browser-loaded `<Frame>`, forwarding the frame target so
-	 * the server can render just that frame.
+	 * the server can render just that frame, and the submission that triggered a
+	 * reload so a form inside a frame reaches the server as the form it was.
 	 *
 	 * @param src - The `<Frame src>` value to load.
-	 * @param signal - Abort signal for the active frame load or reload.
-	 * @param target - Optional name of the frame being reloaded.
-	 * @returns The frame's response body stream (or its text when no body is present).
+	 * @param options - Target, abort signal, and submission for the active frame load.
+	 * @returns The frame's response, whose body is rendered into the frame.
 	 */
-	async resolveFrame(src, signal, target) {
+	async resolveFrame(src, options) {
+		let { target, signal, method, formData, encType } = options ?? {};
+
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
-		let response = await fetch(src, { credentials: "same-origin", headers, signal });
-		return response.body ?? response.text();
+		// A form that declares the default encoding is sent as one, so the server reads
+		// the body under the type the form asked for rather than the multipart type
+		// `fetch` picks for `FormData`.
+		let body =
+			formData && encType === "application/x-www-form-urlencoded"
+				? new URLSearchParams(Array.from(formData, ([key, value]) => [key, String(value)]))
+				: formData;
+
+		// The response itself carries the URL it was redirected to, which the frame
+		// reads to update its own source after a submission.
+		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
 	},
 });

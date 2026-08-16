@@ -16,12 +16,23 @@ let app = run({
 		let mod = await import(moduleUrl);
 		return mod[exportName];
 	},
-	async resolveFrame(src, signal, target) {
+	async resolveFrame(src, options) {
+		let { target, signal, method, formData, encType } = options ?? {};
+
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
-		let res = await fetch(src, { headers, signal });
-		return await res.text();
+		// A form that declares the default encoding is sent as one, so the server reads
+		// the body under the type the form asked for rather than the multipart type
+		// `fetch` picks for `FormData`.
+		let body =
+			formData && encType === "application/x-www-form-urlencoded"
+				? new URLSearchParams(Array.from(formData, ([key, value]) => [key, String(value)]))
+				: formData;
+
+		// The response itself carries the URL it was redirected to, which the frame
+		// reads to update its own source after a submission.
+		return await fetch(src, { headers, signal, method, body });
 	},
 });
 

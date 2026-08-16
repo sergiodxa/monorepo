@@ -912,10 +912,10 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			frameInit: {
 				...frameInit,
 				src: frameInit?.src ?? resolveURL(getCurrentLocation(options, baseURL), baseURL).href,
-				resolveFrame(src, signal, target) {
-					if (frameInit?.resolveFrame) return frameInit.resolveFrame(src, signal, target);
+				resolveFrame(src, options) {
+					if (frameInit?.resolveFrame) return frameInit.resolveFrame(src, options);
 
-					return renderURL(src, signal ?? new AbortController().signal);
+					return renderURL(src, options?.signal ?? new AbortController().signal);
 				},
 			},
 		};
