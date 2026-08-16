@@ -9,7 +9,13 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+	createFetcher,
+	createKVNamespace,
+} from "@pkg/cloudflare-mocks";
 
 /** Analytics Engine binding recording the data points this run reported. */
 let analytics = createAnalyticsEngine();
@@ -36,14 +42,9 @@ function bindEnv(): void {
 			PLATFORM_DOMAIN: "blog.test",
 			ANALYTICS: analytics,
 			SLUG_CACHE: slugCache,
-			// A namespace hands back a stub whose `fetch` answers as the tenant would; neither
-			// it nor the static-asset fetcher has an in-memory equivalent to build on.
-			BLOG: {
-				getByName: () => ({ fetch: async () => tenantResponse() }),
-			} as unknown as Cloudflare.Env["BLOG"],
-			ASSETS: {
-				fetch: async () => new Response("Not found", { status: 404 }),
-			} as unknown as Cloudflare.Env["ASSETS"],
+			// The namespace hands back a stub whose `fetch` answers as the tenant would.
+			BLOG: createDurableObjectNamespace(() => async () => tenantResponse()),
+			ASSETS: createFetcher(() => new Response("Not found", { status: 404 })),
 		}),
 		DurableObject: class {},
 	}));

@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
  */
 import type { HostnameClient } from "@pkg/hostname";
 
-import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { createDurableObjectNamespace, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 
@@ -38,8 +38,8 @@ function makeStub() {
 
 /**
  * Publishes the current bindings as the provisioner's environment, so each test writes
- * into a slug cache of its own. The namespace is the one binding with no in-memory
- * equivalent: it hands back a stub recording the RPCs the provisioner fans out.
+ * into a slug cache of its own. The namespace hands back a stub recording the RPCs the
+ * provisioner fans out; a blog resolves to the same stub every time, as on the platform.
  */
 function bindEnv(): void {
 	mock.module("cloudflare:workers", () => ({
@@ -49,7 +49,7 @@ function bindEnv(): void {
 			SSO_MANAGEMENT_CLIENT_ID: "mgmt-client",
 			SSO_MANAGEMENT_CLIENT_SECRET: "mgmt-secret",
 			SLUG_CACHE: slugCache,
-			BLOG: { getByName: () => makeStub() } as unknown as Cloudflare.Env["BLOG"],
+			BLOG: createDurableObjectNamespace(() => makeStub()),
 		}),
 		DurableObject: class {},
 	}));
