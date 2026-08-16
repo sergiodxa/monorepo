@@ -16,11 +16,11 @@
 		"@pkg/result": "workspace:*",
 		"@pkg/strings": "workspace:*",
 		"@pkg/types": "workspace:*",
-		"@pkg/validate": "workspace:*",
-		"zod": "^4.3.6"
+		"@pkg/validate": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.11",
-		"msw": "^2.15.0"
+		"msw": "^2.15.0",
+		"remix": "3.0.0-beta.5"
 	}
 }

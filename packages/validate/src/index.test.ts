@@ -1,36 +1,58 @@
+/**
+ * Covers `validate()` across every input shape it accepts — `FormData`,
+ * `URLSearchParams`, `Request` (JSON, urlencoded and multipart bodies) and plain
+ * objects — plus schema features (transforms, nested objects, optional fields),
+ * async Standard Schemas, and the two schema styles that read `FormData`
+ * differently: `remix/data-schema/form-data` (raw source) and core
+ * `remix/data-schema` (flattened plain object).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { describe, expect, test } from "bun:test";
 
-import { isSuccess, isFailure } from "@pkg/result";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+import { isFailure, isSuccess } from "@pkg/result";
 import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
-import { z } from "zod";
 
 import { validate, ValidationError } from "./index";
 
-// Define schemas using Zod
-let userSchema = z.object({
-	name: z.string().min(1, "Name is required"),
-	email: z.string().email("Invalid email format"),
+// Checks are plain objects, so a custom `message` is applied by spreading the
+// factory's result instead of passing an argument to it.
+let userSchema = s.object({
+	name: s.string().pipe({ ...minLength(1), message: "Name is required" }),
+	email: s.string().pipe({ ...email(), message: "Invalid email format" }),
 });
 
-let _stringSchema = z.object({
-	value: z.string(),
-});
+// `remix/data-schema` schemas are synchronous, so an async `.refine()` is not
+// expressible with them: `.refine()` takes a sync predicate, and a promise is
+// always truthy, which would make the check silently always pass. Hand-rolling
+// the Standard Schema interface is the only honest way to exercise the
+// `result instanceof Promise` branches in `validate()` — which stay reachable
+// because `validate()` accepts *any* Standard Schema, not just data-schema ones.
+type AsyncInput = { value: string };
 
-let _numberSchema = z.object({
-	value: z.number(),
-});
-
-let asyncSchema = z.object({
-	value: z.string().refine(
-		async (val) => {
+let asyncSchema: StandardSchemaV1<AsyncInput, AsyncInput> = {
+	"~standard": {
+		version: 1,
+		vendor: "test",
+		async validate(input) {
 			// Simulate async validation
 			await new Promise((resolve) => setTimeout(resolve, 1));
-			return val.length > 0;
+
+			let data = input as AsyncInput;
+
+			if (typeof data?.value !== "string" || data.value.length === 0) {
+				return { issues: [{ message: "Value must not be empty", path: ["value"] }] };
+			}
+
+			return { value: data };
 		},
-		{ message: "Value must not be empty" },
-	),
-});
+	},
+};
 
 describe("validate", () => {
 	describe("with FormData", () => {
@@ -429,9 +451,12 @@ describe("validate", () => {
 
 	describe("schema transformations", () => {
 		test("transforms data during validation", async () => {
-			let transformSchema = z.object({
-				email: z.string().email().toLowerCase(),
-				age: z.string().transform(Number),
+			let transformSchema = s.object({
+				email: s
+					.string()
+					.pipe(email())
+					.transform((value) => value.toLowerCase()),
+				age: s.string().transform(Number),
 			});
 
 			let formData = new FormData();
@@ -450,14 +475,14 @@ describe("validate", () => {
 
 	describe("nested objects", () => {
 		test("validates nested object structures", async () => {
-			let nestedSchema = z.object({
-				user: z.object({
-					name: z.string(),
-					email: z.string().email(),
+			let nestedSchema = s.object({
+				user: s.object({
+					name: s.string(),
+					email: s.string().pipe(email()),
 				}),
-				preferences: z.object({
-					newsletter: z.boolean(),
-					theme: z.enum(["light", "dark"]),
+				preferences: s.object({
+					newsletter: s.boolean(),
+					theme: s.enum_(["light", "dark"]),
 				}),
 			});
 
@@ -482,10 +507,10 @@ describe("validate", () => {
 		});
 
 		test("reports errors with nested paths", async () => {
-			let nestedSchema = z.object({
-				user: z.object({
-					name: z.string(),
-					email: z.string().email(),
+			let nestedSchema = s.object({
+				user: s.object({
+					name: s.string(),
+					email: s.string().pipe(email()),
 				}),
 			});
 
@@ -512,10 +537,10 @@ describe("validate", () => {
 
 	describe("optional fields", () => {
 		test("handles optional fields", async () => {
-			let optionalSchema = z.object({
-				name: z.string(),
-				email: z.string().email(),
-				age: z.number().optional(),
+			let optionalSchema = s.object({
+				name: s.string(),
+				email: s.string().pipe(email()),
+				age: s.optional(s.number()),
 			});
 
 			let formData = new FormData();
@@ -534,7 +559,7 @@ describe("validate", () => {
 
 	// `remix/data-schema/form-data`'s `object()` validates the raw `FormData`/
 	// `URLSearchParams` source directly (it reads fields via `.get()`/`.getAll()`)
-	// instead of a flattened plain object, unlike the Zod/core-`remix/data-schema`
+	// instead of a flattened plain object, unlike the core `remix/data-schema`
 	// schemas used everywhere else in this file. `validate()` must detect this and
 	// retry with the raw source instead of always failing.
 	describe("with remix/data-schema/form-data schemas", () => {
@@ -597,7 +622,7 @@ describe("validate", () => {
 
 	// Confirms the fix above didn't change behavior for schemas that already
 	// succeed against the flattened plain object — this is core `remix/data-schema`
-	// (not `form-data`), which, like Zod, expects a plain object rather than the raw
+	// (not `form-data`), which expects a plain object rather than the raw
 	// `FormData`/`URLSearchParams` source.
 	describe("with core remix/data-schema (non-form-data) schemas", () => {
 		let coreSchema = s.object({ name: s.string(), email: s.string() });

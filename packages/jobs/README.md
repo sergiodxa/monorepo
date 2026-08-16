@@ -21,11 +21,11 @@ Jobs are designed for use with [Cloudflare Queues](https://developers.cloudflare
 import { Job } from "@pkg/jobs";
 import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
 
 export class SyncTeamJob extends Job {
 	static override monitorId = "your-monitor-id"; // Optional: for uptime monitoring
-	static schema = z.object({ teamId: z.string() });
+	static schema = s.object({ teamId: s.string() });
 
 	async perform() {
 		let result = await validate(this.input, SyncTeamJob.schema);
@@ -45,7 +45,7 @@ export class SyncTeamJob extends Job {
 }
 
 export namespace SyncTeamJob {
-	export type Input = z.infer<typeof SyncTeamJob.schema>;
+	export type Input = s.InferOutput<typeof SyncTeamJob.schema>;
 }
 ```
 
@@ -236,12 +236,15 @@ Validate input using `@pkg/validate` to parse and type the input safely. Throw `
 import { Job } from "@pkg/jobs";
 import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+
+// There is no UUID check, so the format rule goes through `.refine()`.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class ProcessTeamJob extends Job {
-	static schema = z.object({
-		teamId: z.string().uuid(),
-		action: z.enum(["sync", "delete"]),
+	static schema = s.object({
+		teamId: s.string().refine((value) => UUID.test(value), "Expected a UUID"),
+		action: s.enum_(["sync", "delete"]),
 	});
 
 	async perform(): Promise<void> {
@@ -265,10 +268,11 @@ Handle transient failures with `RetryError`.
 import { Job } from "@pkg/jobs";
 import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { url } from "remix/data-schema/checks";
 
 class FetchDataJob extends Job {
-	static schema = z.object({ url: z.string().url() });
+	static schema = s.object({ url: s.string().pipe(url()) });
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, FetchDataJob.schema);
@@ -295,11 +299,14 @@ class FetchDataJob extends Job {
 import { Job } from "@pkg/jobs";
 import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { min } from "remix/data-schema/checks";
 import { db } from "~/db";
 
 class CleanupJob extends Job {
-	static schema = z.object({ olderThanDays: z.number().int().positive() });
+	static schema = s.object({
+		olderThanDays: s.number().pipe(min(1)).refine(Number.isInteger, "Expected an integer"),
+	});
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, CleanupJob.schema);
@@ -331,7 +338,7 @@ class CleanupJob extends Job {
 ## Tips
 
 1. **Use `waitUntil` for the caller** - Call `ctx.waitUntil(Job.run(...))` to run jobs without blocking the queue consumer response.
-2. **Define schema as static property** - Use `static schema = z.object({...})` on your job class, then access it internally with `MyJob.schema` for validation.
+2. **Define schema as static property** - Use `static schema = s.object({...})` on your job class, then access it internally with `MyJob.schema` for validation.
 3. **Validate input with `@pkg/validate`** - Since `input` is `JSONValue`, use validation to parse and type it safely. This also handles malformed messages gracefully.
 4. **Prefer `NonRetriableError` for bad input** - Invalid data won't become valid on retry; ack the message and move on.
 5. **Log context in `perform()`** - The logger automatically includes message ID and attempts; add job-specific context like entity IDs.

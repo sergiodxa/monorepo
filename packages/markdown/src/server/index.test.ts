@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import { isFailure, isSuccess } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
 
 import { Markdown, MarkdownParseError } from "./index";
 
-let defaultSchema = z.object({
-	title: z.string().optional(),
-	description: z.string().optional(),
-	lang: z.string().optional(),
+let defaultSchema = s.object({
+	title: s.optional(s.string()),
+	description: s.optional(s.string()),
+	lang: s.optional(s.string()),
 });
 
 describe("Markdown", () => {
@@ -20,7 +20,11 @@ describe("Markdown", () => {
 			expect(isSuccess(result)).toBe(true);
 			if (isFailure(result)) return;
 
-			expect(result.data.frontmatter).toEqual({});
+			// `s.optional()` types each key as present-but-`undefined` rather than as
+			// an optional property, so an empty object is not assignable to the
+			// inferred type even though parsing does drop the absent keys. Comparing
+			// the keys asserts the same emptiness without fighting the type.
+			expect(Object.keys(result.data.frontmatter)).toEqual([]);
 			expect(result.data.content).toBeDefined();
 		});
 	});
@@ -34,9 +38,9 @@ description: World
 
 Content here`;
 
-			let schema = z.object({
-				title: z.string(),
-				description: z.string(),
+			let schema = s.object({
+				title: s.string(),
+				description: s.string(),
 			});
 
 			let result = Markdown.frontmatter(input, schema);
@@ -58,9 +62,9 @@ title: Hello
 
 Content`;
 
-			let schema = z.object({
-				title: z.string(),
-				required: z.string(),
+			let schema = s.object({
+				title: s.string(),
+				required: s.string(),
 			});
 
 			let result = Markdown.frontmatter(input, schema);

@@ -4,7 +4,7 @@ Type-safe form and request validation using Standard Schema with Result types.
 
 ## Overview
 
-This package provides a unified validation function that works with FormData, Request objects (both form-encoded and JSON), and plain JavaScript objects. It uses the [Standard Schema](https://standardschema.dev) specification, which means it works with any schema validation library that implements the standard, including Zod, Valibot, ArkType, and more.
+This package provides a unified validation function that works with FormData, Request objects (both form-encoded and JSON), and plain JavaScript objects. It uses the [Standard Schema](https://standardschema.dev) specification, which means it works with any schema validation library that implements the standard, including `remix/data-schema`, Valibot, ArkType, and more.
 
 The validation result is returned as a `Result<T, ValidationError>` type from `@pkg/result`, making error handling explicit and type-safe.
 
@@ -13,21 +13,22 @@ The validation result is returned as a `Result<T, ValidationError>` type from `@
 This package requires `@pkg/result` and works with any Standard Schema-compliant validation library.
 
 ```bash
-bun add zod  # or valibot, arktype, etc.
+bun add remix  # or valibot, arktype, etc.
 ```
 
 ## Usage
 
-### Basic Example with Zod
+### Basic Example with `remix/data-schema`
 
 ```typescript
 import { validate } from "@pkg/validate";
 import { isSuccess, isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
 
-let schema = z.object({
-	email: z.string().email(),
-	name: z.string().min(2),
+let schema = s.object({
+	email: s.string().pipe(email()),
+	name: s.string().pipe(minLength(2)),
 });
 
 export async function action({ request }: Route.ActionArgs) {
@@ -134,7 +135,7 @@ Validates input data against a Standard Schema-compliant schema.
     - `application/x-www-form-urlencoded`: Parses as URLSearchParams
     - `multipart/form-data`: Parses as FormData
   - `Record<string, unknown>`: Validates plain object directly
-- `schema`: Any Standard Schema V1 compliant schema (Zod, Valibot, ArkType, etc.)
+- `schema`: Any Standard Schema V1 compliant schema (`remix/data-schema`, Valibot, ArkType, etc.)
 
 **Returns:**
 
@@ -181,8 +182,8 @@ if (isFailure(result)) {
 	console.log(result.error.message); // "Validation Error"
 	console.log(result.error.issues);
 	// [
-	//   { message: "Invalid email", path: ["email"] },
-	//   { message: "String must contain at least 2 character(s)", path: ["name"] }
+	//   { message: "Expected valid email", path: ["email"] },
+	//   { message: "Expected at least 2 characters", path: ["name"] }
 	// ]
 }
 ```
@@ -191,15 +192,16 @@ if (isFailure(result)) {
 
 This package works with any library that implements the Standard Schema specification.
 
-### Zod
+### `remix/data-schema`
 
 ```typescript
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email, min } from "remix/data-schema/checks";
 
-let schema = z.object({
-	email: z.string().email(),
-	age: z.number().min(18),
-	role: z.enum(["user", "admin"]),
+let schema = s.object({
+	email: s.string().pipe(email()),
+	age: s.number().pipe(min(18)),
+	role: s.enum_(["user", "admin"]),
 });
 
 let result = await validate(formData, schema);
@@ -238,10 +240,10 @@ let result = await validate(formData, schema);
 The `validate` function automatically infers the output type from your schema:
 
 ```typescript
-let schema = z.object({
-	email: z.string().email(),
-	name: z.string(),
-	age: z.number(),
+let schema = s.object({
+	email: s.string().pipe(email()),
+	name: s.string(),
+	age: s.number(),
 });
 
 let result = await validate(request, schema);
@@ -267,11 +269,12 @@ if (isSuccess(result)) {
 import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
 import { ok, badRequest } from "@pkg/response";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
 
-let schema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8),
+let schema = s.object({
+	email: s.string().pipe(email()),
+	password: s.string().pipe(minLength(8)),
 });
 
 export async function action({ request }: Route.ActionArgs) {
@@ -441,20 +444,27 @@ Define schemas once and reuse them across your application:
 
 ```typescript
 // schemas.ts
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email, min, minLength } from "remix/data-schema/checks";
 
-export let userSchema = z.object({
-	email: z.string().email(),
-	name: z.string().min(2),
-	age: z.number().min(18).optional(),
+export let userSchema = s.object({
+	email: s.string().pipe(email()),
+	name: s.string().pipe(minLength(2)),
+	age: s.optional(s.number().pipe(min(18))),
 });
 
-export let loginSchema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8),
+export let loginSchema = s.object({
+	email: s.string().pipe(email()),
+	password: s.string().pipe(minLength(8)),
 });
 
-export let updateUserSchema = userSchema.partial();
+// There is no `.partial()` helper, so a schema where every field is optional is
+// spelled out by wrapping each one in `s.optional()`.
+export let updateUserSchema = s.object({
+	email: s.optional(s.string().pipe(email())),
+	name: s.optional(s.string().pipe(minLength(2))),
+	age: s.optional(s.number().pipe(min(18))),
+});
 ```
 
 ```typescript
@@ -470,15 +480,20 @@ export async function action({ request }: Route.ActionArgs) {
 
 ## Pattern: Custom Error Messages
 
-```typescript
-import { z } from "zod";
+Checks are plain objects, so a custom message is applied by spreading the check
+and overriding its `message`. There is no regex check, so pattern rules go
+through `.refine()`, which takes the message as its second argument.
 
-let schema = z.object({
-	email: z.string().email("Please enter a valid email address"),
-	password: z
+```typescript
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
+
+let schema = s.object({
+	email: s.string().pipe({ ...email(), message: "Please enter a valid email address" }),
+	password: s
 		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter"),
+		.pipe({ ...minLength(8), message: "Password must be at least 8 characters" })
+		.refine((value) => /[A-Z]/.test(value), "Password must contain at least one uppercase letter"),
 });
 ```
 
@@ -487,12 +502,16 @@ let schema = z.object({
 Schema libraries can transform data during validation:
 
 ```typescript
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import { email } from "remix/data-schema/checks";
 
-let schema = z.object({
-	email: z.string().email().toLowerCase(), // Transform to lowercase
-	age: z.string().transform(Number), // Convert string to number
-	tags: z.string().transform((str) => str.split(",")), // Split into array
+let schema = s.object({
+	email: s
+		.string()
+		.pipe(email())
+		.transform((value) => value.toLowerCase()), // Transform to lowercase
+	age: s.string().transform(Number), // Convert string to number
+	tags: s.string().transform((str) => str.split(",")), // Split into array
 });
 
 let formData = new FormData();
@@ -515,14 +534,14 @@ if (isSuccess(result)) {
 ## Pattern: Nested Objects
 
 ```typescript
-let schema = z.object({
-	user: z.object({
-		name: z.string(),
-		email: z.string().email(),
+let schema = s.object({
+	user: s.object({
+		name: s.string(),
+		email: s.string().pipe(email()),
 	}),
-	preferences: z.object({
-		newsletter: z.boolean(),
-		theme: z.enum(["light", "dark"]),
+	preferences: s.object({
+		newsletter: s.boolean(),
+		theme: s.enum_(["light", "dark"]),
 	}),
 });
 
@@ -539,9 +558,9 @@ if (isFailure(result)) {
 ## Pattern: Array Validation
 
 ```typescript
-let schema = z.object({
-	tags: z.array(z.string()),
-	emails: z.array(z.string().email()),
+let schema = s.object({
+	tags: s.array(s.string()),
+	emails: s.array(s.string().pipe(email())),
 });
 
 // With FormData, you can append multiple values with the same name
@@ -594,7 +613,7 @@ if (isFailure(result)) {
 
 The Standard Schema specification allows this package to work with any compliant validation library without needing adapters or library-specific code. Benefits include:
 
-1. **Library agnostic** - Switch between Zod, Valibot, ArkType without changing validation code
+1. **Library agnostic** - Switch between `remix/data-schema`, Valibot, ArkType without changing validation code
 2. **Future-proof** - New libraries implementing the standard work automatically
 3. **Smaller bundles** - Use lightweight libraries like Valibot if bundle size matters
 4. **Ecosystem growth** - More tools and libraries are adopting the standard

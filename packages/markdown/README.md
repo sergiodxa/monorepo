@@ -21,12 +21,13 @@ Keeping the split at the entry-point level means highlighting and grammar import
 ```typescript
 import { Markdown } from "@pkg/markdown/server";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
+import * as s from "remix/data-schema";
+import * as coerce from "remix/data-schema/coerce";
 
-let schema = z.object({
-	title: z.string(),
-	description: z.string().optional(),
-	publishedAt: z.coerce.date(),
+let schema = s.object({
+	title: s.string(),
+	description: s.optional(s.string()),
+	publishedAt: coerce.date(),
 });
 
 let markdown = new Markdown({ frontmatter: schema });
@@ -155,9 +156,9 @@ Creates a parser instance.
 
 ```typescript
 import { Markdown } from "@pkg/markdown/server";
-import { z } from "zod";
+import * as s from "remix/data-schema";
 
-let markdown = new Markdown({ frontmatter: z.object({ title: z.string() }) });
+let markdown = new Markdown({ frontmatter: s.object({ title: s.string() }) });
 ```
 
 ##### `markdown.parse(raw: string): Result<Markdown.Parsed<FM>, MarkdownParseError>`

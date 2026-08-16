@@ -17,7 +17,7 @@ import { JSONValue } from "@pkg/types";
 import { validate } from "@pkg/validate";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { z } from "zod";
+import * as s from "remix/data-schema";
 
 import { Job, setJobUsageTracker } from "./index";
 
@@ -68,7 +68,7 @@ function createMessage<T extends JSONValue>(body: T): Message<T> {
 
 // Job subclasses for testing
 class SuccessfulJob extends Job {
-	static schema = z.object({ teamId: z.string() });
+	static schema = s.object({ teamId: s.string() });
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, SuccessfulJob.schema);
@@ -79,7 +79,7 @@ class SuccessfulJob extends Job {
 
 class SuccessfulJobWithMonitor extends Job {
 	static monitorId = MONITOR_ID;
-	static schema = z.object({ teamId: z.string() });
+	static schema = s.object({ teamId: s.string() });
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, SuccessfulJobWithMonitor.schema);
