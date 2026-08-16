@@ -16,13 +16,13 @@ Tooling in this monorepo is split across five independent tools with no shared c
 
 Taken on this repo, 2026-08-16:
 
-| Workload            | Time         | CPU    | Notes                             |
-| ------------------- | ------------ | ------ | --------------------------------- |
-| Full test suite     | 4m36s        | 116%   | 11,417 tests across 1,054 files   |
-| `apps/uptime` tests | 96s          | 112%   | 262 files, ~366ms per file        |
-| `bun typecheck`     | 33s local    | 647%   | 60 separate `tsc --noEmit` runs   |
-| Typecheck in CI     | 2m31s        | —      | slowest CI job by a wide margin   |
-| Lint / Format in CI | 15s / 38s    | —      | already fast                      |
+| Workload            | Time      | CPU  | Notes                           |
+| ------------------- | --------- | ---- | ------------------------------- |
+| Full test suite     | 4m36s     | 116% | 11,417 tests across 1,054 files |
+| `apps/uptime` tests | 96s       | 112% | 262 files, ~366ms per file      |
+| `bun typecheck`     | 33s local | 647% | 60 separate `tsc --noEmit` runs |
+| Typecheck in CI     | 2m31s     | —    | slowest CI job by a wide margin |
+| Lint / Format in CI | 15s / 38s | —    | already fast                    |
 
 ### The Test Runner Is Serial
 
@@ -30,10 +30,10 @@ Taken on this repo, 2026-08-16:
 
 Measured against Vitest 4.1.10 on identical inputs:
 
-| Workload                                      | `bun test --isolate` | `vp test` (threads) | Result              |
-| --------------------------------------------- | -------------------- | ------------------- | ------------------- |
-| `packages/u` — 303 small files, 1,033 tests   | **4.14s** @ 116%     | 6.15s @ 796%        | Vitest 1.5x slower  |
-| 60 synthetic files @ ~350ms each              | 16.6s @ **99%**      | **5.5s** @ 395%     | Vitest 3x faster    |
+| Workload                                    | `bun test --isolate` | `vp test` (threads) | Result             |
+| ------------------------------------------- | -------------------- | ------------------- | ------------------ |
+| `packages/u` — 303 small files, 1,033 tests | **4.14s** @ 116%     | 6.15s @ 796%        | Vitest 1.5x slower |
+| 60 synthetic files @ ~350ms each            | 16.6s @ **99%**      | **5.5s** @ 395%     | Vitest 3x faster   |
 
 Vitest carries higher per-file overhead and wins anyway, because this suite is dominated by heavy files. `apps/uptime` alone is 96s of the 276s total and runs effectively serially.
 
@@ -41,30 +41,30 @@ Vitest carries higher per-file overhead and wins anyway, because this suite is d
 
 Each of the following was executed, not inferred:
 
-| Question                                                    | Result                                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Does `vp` work in a Bun-installed workspace?                | Yes; Bun is detected as the package manager                                     |
-| Can `vi.doMock` replace `mock.module`?                      | Yes — 1:1 with the existing `doMock` + dynamic-import pattern                    |
-| Can the `cloudflare:workers` stub survive?                  | Yes — a ~10-line Vite plugin replaces `test/setup.ts`                            |
-| Does tsgolint match `tsc`?                                  | Yes — identical TS2440 / TS2345 / TS2307 diagnostics, in 460ms                   |
-| Does `@cloudflare/vitest-pool-workers` work under Vite+?    | Yes — `cloudflareTest()` plugin form, Vitest 4.1 peer satisfied                  |
-| Does MSW work inside workerd?                               | **Yes** — `msw/node` `setupServer` works under `nodejs_compat`                   |
-| Does `msw/browser` work inside workerd?                     | No — `setupWorker` throws "Failed to execute in a non-browser environment"       |
+| Question                                                 | Result                                                                     |
+| -------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Does `vp` work in a Bun-installed workspace?             | Yes; Bun is detected as the package manager                                |
+| Can `vi.doMock` replace `mock.module`?                   | Yes — 1:1 with the existing `doMock` + dynamic-import pattern              |
+| Can the `cloudflare:workers` stub survive?               | Yes — a ~10-line Vite plugin replaces `test/setup.ts`                      |
+| Does tsgolint match `tsc`?                               | Yes — identical TS2440 / TS2345 / TS2307 diagnostics, in 460ms             |
+| Does `@cloudflare/vitest-pool-workers` work under Vite+? | Yes — `cloudflareTest()` plugin form, Vitest 4.1 peer satisfied            |
+| Does MSW work inside workerd?                            | **Yes** — `msw/node` `setupServer` works under `nodejs_compat`             |
+| Does `msw/browser` work inside workerd?                  | No — `setupWorker` throws "Failed to execute in a non-browser environment" |
 
 The MSW result is the load-bearing one. It was initially assumed that `msw/node` could not run in workerd, which would have blocked `vitest-pool-workers` outright given 22 files depend on MSW and the repository guidelines forbid stubbing `globalThis.fetch`. Direct testing disproved that, including a negative control confirming that unhandled requests are rejected rather than silently passed through, and that per-test `server.use()` overrides work.
 
 ### Migration Surface
 
-| Item                                     | Count |
-| ----------------------------------------- | ----- |
-| Files importing `bun:test`               | 1,054 |
-| `mock.module` / `mock` call sites        | 356   |
-| Files mocking `cloudflare:workers`       | 84    |
-| ...of those, using `@pkg/cloudflare-mocks` | 2   |
-| Files using `bun:sqlite`                 | 37    |
-| `Bun.*` API calls in tests               | 47    |
-| Files using MSW                          | 22    |
-| `.spec` files (`@pkg/spec`)              | 44    |
+| Item                                       | Count |
+| ------------------------------------------ | ----- |
+| Files importing `bun:test`                 | 1,054 |
+| `mock.module` / `mock` call sites          | 356   |
+| Files mocking `cloudflare:workers`         | 84    |
+| ...of those, using `@pkg/cloudflare-mocks` | 2     |
+| Files using `bun:sqlite`                   | 37    |
+| `Bun.*` API calls in tests                 | 47    |
+| Files using MSW                            | 22    |
+| `.spec` files (`@pkg/spec`)                | 44    |
 
 `.spec` files run under their own CLI and are unaffected.
 
@@ -78,14 +78,14 @@ Adopt Vite+ as the single toolchain. Bun is retained as the package manager and 
 
 ### 1. Vite+ Owns The Commands
 
-| Concern                | Before                          | After                     |
-| ---------------------- | ------------------------------- | ------------------------- |
-| Format                 | `bunx oxfmt`                    | `vp fmt` (via `vp check`) |
-| Lint                   | `oxlint --deny-warnings`        | `vp lint` (via `vp check`) |
-| Typecheck              | 60x `tsc --noEmit`              | `vp check` (tsgolint)     |
-| Test                   | `bun test --isolate`            | `vp test`                 |
-| Build / dev / preview  | `vite build` / `vite dev`       | `vp build` / `vp dev`     |
-| Task orchestration     | `bun run --workspaces`          | `vp run -r`, with caching |
+| Concern               | Before                    | After                      |
+| --------------------- | ------------------------- | -------------------------- |
+| Format                | `bunx oxfmt`              | `vp fmt` (via `vp check`)  |
+| Lint                  | `oxlint --deny-warnings`  | `vp lint` (via `vp check`) |
+| Typecheck             | 60x `tsc --noEmit`        | `vp check` (tsgolint)      |
+| Test                  | `bun test --isolate`      | `vp test`                  |
+| Build / dev / preview | `vite build` / `vite dev` | `vp build` / `vp dev`      |
+| Task orchestration    | `bun run --workspaces`    | `vp run -r`, with caching  |
 
 `.oxlintrc.json` and `.oxfmtrc.json` collapse into `lint` and `fmt` blocks in the root `vite.config.ts`, using `overrides` for the per-app settings they carry today.
 
