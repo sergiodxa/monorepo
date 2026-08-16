@@ -1,10 +1,10 @@
 /**
  * Key material for the JWTs this monorepo issues and verifies.
  *
- * Covers the whole life of a signing key: generating an ES256 pair, serializing it
- * so it survives in a bucket or a database row, importing it back into `CryptoKey`
- * objects, publishing the public half as a JWKS, and turning someone else's JWKS —
- * local or remote — into the resolver a token is verified through.
+ * Covers the whole life of a signing key: generating a pair, serializing it so it
+ * survives in a bucket or a database row, importing it back into `CryptoKey` objects,
+ * publishing the public half as a JWKS, and turning someone else's JWKS — local or
+ * remote — into the resolver a token is verified through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,6 +33,21 @@ const SIGNING_KEY_PREFIX = "signing:key";
 const SCAN_PAGE_SIZE = 100;
 
 /**
+ * The public parameters a JWKS entry carries, one key type at a time.
+ *
+ * Each entry is rebuilt out of the fields its key type names here, which is what keeps
+ * a private component from reaching a published key set through a field nobody thought
+ * about: `d` on every key type, and `p`, `q`, `dp`, `dq` and `qi` on an RSA one
+ * besides. A key type this map leaves out is one whose private components have never
+ * been enumerated, which is why `toJSON` refuses it rather than publishing it unvetted.
+ */
+const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undefined> = {
+	EC: ({ crv, x, y }) => ({ crv, x, y }),
+	OKP: ({ crv, x }) => ({ crv, x }),
+	RSA: ({ e, n }) => ({ e, n }),
+};
+
+/**
  * Everything about the keys a token is signed with or verified against.
  *
  * Modeled as a namespace rather than loose exports because the names only make
@@ -42,12 +57,17 @@ export namespace JWK {
 	/**
 	 * Signature algorithms this package supports.
 	 *
-	 * ES256 only, which is what every issuer and relying party here is configured for.
-	 * Adding a second one is a matter of generating and importing it: verification
-	 * already picks a key by the `kid` and algorithm a token names, so a set publishing
-	 * keys for several algorithms resolves the same way a set of one does.
+	 * ES256 is what an issuer here signs with, and stays the algorithm a bootstrapped
+	 * key is minted for. RS256 is what upstream identity providers commonly sign with,
+	 * so it is here for the verifying side above all. EdDSA derives each signature's
+	 * nonce from the key and the message rather than drawing a fresh one, which is what
+	 * puts the nonce reuse that leaks an ECDSA private key out of reach.
+	 *
+	 * All three coexist in one key set: verification picks a key by the `kid` and the
+	 * algorithm a token names, so a set publishing several resolves the same way a set
+	 * of one does.
 	 */
-	export const Algorithm = { ES256: "ES256" } as const;
+	export const Algorithm = { ES256: "ES256", RS256: "RS256", EdDSA: "EdDSA" } as const;
 
 	/** One of the supported signature algorithms. */
 	export type Algorithm = (typeof Algorithm)[keyof typeof Algorithm];
@@ -195,8 +215,12 @@ export namespace JWK {
 	 * Every stored key comes back, newest first — which is the order `JWT.sign` relies
 	 * on to pick what to sign with, and the order `toJSON` publishes them in. A set
 	 * holding several is the normal state during a rotation: the newest signs, and the
-	 * older ones stay published so tokens they signed keep verifying. A new key is
-	 * minted when nothing usable is stored at all.
+	 * older ones stay published so tokens they signed keep verifying. A new ES256 key
+	 * is minted when nothing usable is stored at all.
+	 *
+	 * Generation time is the whole ordering, so a set mixing algorithms comes back as
+	 * one sequence and `JWT.sign` takes the newest key generated for the algorithm it
+	 * was asked for.
 	 *
 	 * Point this at the bucket the issuer already keeps its keys in. Against an empty
 	 * one it bootstraps a key, and only tokens signed after every relying party has
@@ -223,7 +247,8 @@ export namespace JWK {
 
 		// Nothing usable came back, so mint one and re-read rather than returning the
 		// new pair directly — the re-read is what makes the result identical to what
-		// the next isolate will see, instead of racing it.
+		// the next isolate will see, instead of racing it. ES256 because that is what
+		// this package issues; a key for another algorithm is stored deliberately.
 		await storeKeyPair(storage, SIGNING_KEY_PREFIX, await generateKeyPair(Algorithm.ES256));
 
 		return await signingKeys(storage);
@@ -279,19 +304,26 @@ export namespace JWK {
 	/**
 	 * Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves.
 	 *
-	 * Only the EC parameters are published, and only ever from the public half — the
-	 * shape of the output is what guarantees a private key cannot reach this endpoint
-	 * through a field nobody thought about.
+	 * Every entry is built out of the parameters its key type publishes, drawn only
+	 * from the public half, alongside the `kid` and `alg` a relying party selects on.
+	 * The shape of the output is what guarantees a private key cannot reach this
+	 * endpoint through a field nobody thought about, so a pair whose key type has no
+	 * published shape on record stops the whole document rather than going out unvetted.
 	 *
 	 * @param keys - The key pairs to publish.
 	 * @returns The JWKS document.
+	 * @throws When a pair's key type has no published shape on record.
 	 * @example
 	 * return Response.json(JWK.toJSON(await JWK.signingKeys(storage)));
 	 */
-	export function toJSON(keys: KeyPair[]) {
+	export function toJSON(keys: KeyPair[]): jose.JSONWebKeySet {
 		return {
-			keys: keys.map(({ jwk }) => {
-				return { crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y, kid: jwk.kid };
+			keys: keys.map(({ alg, id, jwk }) => {
+				let publish = jwk.kty ? PUBLISHED_JWK_FIELDS[jwk.kty] : undefined;
+
+				if (!publish) throw new Error(`Cannot publish a key of type ${String(jwk.kty)}`);
+
+				return { ...publish(jwk), kty: jwk.kty, kid: id, alg };
 			}),
 		};
 	}

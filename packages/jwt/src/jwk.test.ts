@@ -7,6 +7,10 @@
  * first, across a page boundary — a set holding several is the normal state during a
  * rotation, and each of them is published and verified against by `kid`.
  *
+ * Every supported algorithm runs the same generate/import/sign/verify suite, and a set
+ * holding all of them at once is asserted separately: the published entries have to
+ * carry each key type's own parameters and none of anybody's private ones.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -27,6 +31,19 @@ const JWKS_URL = "https://auth.test/.well-known/jwks.json";
 
 /** Pinned the way a caller is meant to verify, rather than left to the key's own type. */
 const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
+
+/** Every supported algorithm, with the key type and public parameters it produces. */
+const ALGORITHMS = [
+	{ alg: JWK.Algorithm.ES256, kty: "EC", parameters: ["crv", "x", "y"] },
+	{ alg: JWK.Algorithm.RS256, kty: "RSA", parameters: ["e", "n"] },
+	{ alg: JWK.Algorithm.EdDSA, kty: "OKP", parameters: ["crv", "x"] },
+] as const;
+
+/** Parameters that belong to a private key alone, across every key type here. */
+const PRIVATE_PARAMETERS = ["d", "dp", "dq", "p", "q", "qi"] as const;
+
+/** A day in milliseconds, the spacing between the key files a seeded store holds. */
+const ONE_DAY = 86_400_000;
 
 let server = setupServer();
 
@@ -96,6 +113,22 @@ class MemoryKeyStorage implements KeyStorage {
 }
 
 /**
+ * Writes one key file into a store, backdated so the walk has something to sort.
+ *
+ * @param storage - Store to write into.
+ * @param alg - Algorithm to generate the pair for.
+ * @param age - How many days back to date the pair.
+ */
+async function write(storage: MemoryKeyStorage, alg: JWK.Algorithm, age: number): Promise<void> {
+	let serialized = await JWK.generateKeyPair(alg);
+	serialized.created = Date.now() - age * ONE_DAY;
+	storage.set(
+		`signing:key:${serialized.id}`,
+		new File([JSON.stringify(serialized)], "jwks.json", { type: "application/json" }),
+	);
+}
+
+/**
  * Fills a store with key files, each a day older than the last.
  *
  * @param count - How many key pairs to write.
@@ -105,12 +138,7 @@ async function seed(count: number): Promise<MemoryKeyStorage> {
 	let storage = new MemoryKeyStorage();
 
 	for (let index = 0; index < count; index += 1) {
-		let serialized = await JWK.generateKeyPair(JWK.Algorithm.ES256);
-		serialized.created = Date.now() - index * 86_400_000;
-		storage.set(
-			`signing:key:${serialized.id}`,
-			new File([JSON.stringify(serialized)], "jwks.json", { type: "application/json" }),
-		);
+		await write(storage, JWK.Algorithm.ES256, index);
 	}
 
 	return storage;
@@ -174,6 +202,61 @@ describe("generating and importing key pairs", () => {
 	});
 });
 
+for (let { alg, kty, parameters } of ALGORITHMS) {
+	describe(alg, () => {
+		let verify = { algorithms: [alg] };
+
+		test("generates a pair as PEM strings", async () => {
+			let serialized = await JWK.generateKeyPair(alg);
+
+			expect(serialized.alg).toBe(alg);
+			expect(serialized.id).toMatch(/^[0-9a-f-]{36}$/);
+			expect(serialized.publicKey).toStartWith("-----BEGIN PUBLIC KEY-----");
+			expect(serialized.privateKey).toStartWith("-----BEGIN PRIVATE KEY-----");
+			expect(serialized.created).toBeCloseTo(Date.now(), -4);
+		});
+
+		test("imports the pair back into usable keys", async () => {
+			let pair = await JWK.importKeyPair(await JWK.generateKeyPair(alg));
+
+			expect(pair.alg).toBe(alg);
+			expect(pair.private.type).toBe("private");
+			expect(pair.public.type).toBe("public");
+			expect(pair.jwk.kty).toBe(kty);
+			expect(pair.jwk.kid).toBe(pair.id);
+			expect(pair.jwk.use).toBe("sig");
+			// The private component must never reach the JWK a key set is built from.
+			expect(pair.jwk.d).toBeUndefined();
+		});
+
+		test("signs and verifies after a round-trip through storage", async () => {
+			let serialized = await JWK.generateKeyPair(alg);
+			let pair = await JWK.importKeyPair(
+				JSON.parse(JSON.stringify(serialized)) as JWK.SerializedKeyPair,
+			);
+
+			let signed = await new JWT({ sub: "user-123" }).sign(alg, [pair]);
+			let published = await JWK.importLocal(JWK.toJSON([pair]));
+
+			let verified = await JWT.verify(signed, published, verify);
+
+			expect(verified.subject).toBe("user-123");
+		});
+
+		test("publishes its key type's parameters, its `kid`, and its own name", async () => {
+			let pair = await JWK.importKeyPair(await JWK.generateKeyPair(alg));
+
+			let [published] = JWK.toJSON([pair]).keys;
+			if (!published) throw new Error("nothing published");
+
+			expect(Object.keys(published).sort()).toEqual(["alg", "kid", "kty", ...parameters].sort());
+			expect(published.kty).toBe(kty);
+			expect(published.alg).toBe(alg);
+			expect(published.kid).toBe(pair.id);
+		});
+	});
+}
+
 describe("toJSON", () => {
 	test("publishes only the public EC parameters", async () => {
 		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
@@ -182,6 +265,7 @@ describe("toJSON", () => {
 
 		expect(jwks.keys).toHaveLength(1);
 		expect(jwks.keys[0]).toEqual({
+			alg: "ES256",
 			crv: "P-256",
 			kty: "EC",
 			x: pair.jwk.x,
@@ -192,6 +276,68 @@ describe("toJSON", () => {
 
 	test("produces an empty set for no keys", () => {
 		expect(JWK.toJSON([])).toEqual({ keys: [] });
+	});
+
+	test("refuses a key type whose public parameters are not on record", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		// A symmetric key, where the one parameter it carries is the secret itself: an
+		// entry built by copying whatever fields a JWK happened to have would publish it.
+		let symmetric: JWK.KeyPair = { ...pair, jwk: { kty: "oct", k: "c2VjcmV0" } };
+
+		expect(() => JWK.toJSON([symmetric])).toThrow("Cannot publish a key of type oct");
+	});
+
+	test("refuses an unrecognized key type instead of publishing an entry without material", () => {
+		let unrecognized = { alg: "ES256", id: "key-1", jwk: { kty: "XYZ", pub: "..." } };
+
+		// One key with no published shape on record stops the whole document, rather than
+		// the rest of the set going out with an entry a relying party cannot use.
+		expect(() => JWK.toJSON([unrecognized as unknown as JWK.KeyPair])).toThrow(
+			"Cannot publish a key of type XYZ",
+		);
+	});
+
+	test("refuses a key carrying no type at all", () => {
+		let untyped = { alg: "ES256", id: "key-1", jwk: { x: "...", y: "..." } };
+
+		expect(() => JWK.toJSON([untyped as unknown as JWK.KeyPair])).toThrow(
+			"Cannot publish a key of type undefined",
+		);
+	});
+});
+
+describe("a key set holding every algorithm", () => {
+	test("verifies a token signed with any one of them", async () => {
+		let pairs = await Promise.all(
+			ALGORITHMS.map(async ({ alg }) => JWK.importKeyPair(await JWK.generateKeyPair(alg))),
+		);
+
+		let published = await JWK.importLocal(JWK.toJSON(pairs));
+
+		// Selection is by `kid` and by the algorithm the token names, so a set carrying
+		// three key types answers each token with the one key that was asked for.
+		for (let pair of pairs) {
+			let signed = await new JWT({ sub: "user-123" }).sign(pair.alg, [pair]);
+			let verified = await JWT.verify(signed, published, { algorithms: [pair.alg] });
+
+			expect(verified.subject).toBe("user-123");
+		}
+	});
+
+	test("carries no private parameter, whatever the key type", async () => {
+		let pairs = await Promise.all(
+			ALGORITHMS.map(async ({ alg }) => JWK.importKeyPair(await JWK.generateKeyPair(alg))),
+		);
+
+		let jwks = JWK.toJSON(pairs);
+
+		for (let published of jwks.keys) {
+			for (let parameter of PRIVATE_PARAMETERS) expect(published[parameter]).toBeUndefined();
+		}
+
+		// The serialized document is what actually leaves the process, so the parameters
+		// are looked for there too, at any depth an entry might have nested them.
+		expect(JSON.stringify(jwks)).not.toMatch(/"(?:d|dp|dq|p|q|qi)":/);
 	});
 });
 
@@ -406,6 +552,34 @@ describe("signingKeys", () => {
 		expect(keys).toHaveLength(4);
 		let timestamps = keys.map((key) => key.created.getTime());
 		expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
+	});
+
+	test("returns a set mixing algorithms as one sequence, newest first", async () => {
+		let storage = new MemoryKeyStorage();
+		for (let [age, { alg }] of ALGORITHMS.entries()) await write(storage, alg, age);
+
+		let keys = await JWK.signingKeys(storage);
+
+		expect(keys.map((key) => key.alg)).toEqual(ALGORITHMS.map(({ alg }) => alg));
+		// A stored set counts as usable whatever it was generated for, so nothing is
+		// minted on top of one that already holds keys for algorithms other than ES256.
+		expect(storage.files.size).toBe(ALGORITHMS.length);
+
+		let published = await JWK.importLocal(JWK.toJSON(keys));
+
+		for (let { alg } of ALGORITHMS) {
+			let signed = await new JWT({ sub: "user-123" }).sign(alg, keys);
+
+			await expect(JWT.verify(signed, published, { algorithms: [alg] })).resolves.toBeDefined();
+		}
+	});
+
+	test("mints an ES256 key when the store holds nothing usable", async () => {
+		let storage = new MemoryKeyStorage();
+
+		let keys = await JWK.signingKeys(storage);
+
+		expect(keys.map((key) => key.alg)).toEqual(["ES256"]);
 	});
 
 	test("returns the lexicographically first key too, across a page boundary", async () => {

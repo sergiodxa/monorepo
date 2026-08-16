@@ -278,10 +278,12 @@ export class JWT implements jose.JWTPayload {
 	/**
 	 * Signs a token with the first key matching the algorithm.
 	 *
-	 * The keys arrive newest first, so the newest usable one signs and the older ones
-	 * stay published purely to verify what they already signed. The chosen key's `kid`
-	 * goes into the header, which is what lets `verify` — here and at any other relying
-	 * party — pick it straight out of a set publishing several.
+	 * The keys arrive newest first, so the newest one generated for that algorithm signs
+	 * and the older ones stay published purely to verify what they already signed — which
+	 * holds just as well for a set mixing algorithms, since the ones generated for
+	 * another are passed over. The chosen key's `kid` goes into the header, which is what
+	 * lets `verify` — here and at any other relying party — pick it straight out of a set
+	 * publishing several.
 	 *
 	 * @param jwt - The token to sign.
 	 * @param algorithm - Algorithm to sign with; also selects the key.

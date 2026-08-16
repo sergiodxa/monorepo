@@ -138,7 +138,26 @@ describe("choosing a key out of a set", () => {
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		expect(JWT.verify(signed, keys, { algorithms: ["RS256"] })).rejects.toThrow();
+		expect(JWT.verify(signed, keys, { algorithms: [JWK.Algorithm.RS256] })).rejects.toThrow();
+	});
+
+	test("signs with the first key in the set generated for the algorithm asked for", async () => {
+		let current = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.RS256));
+		let retired = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.RS256));
+		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA));
+		let mixed = [edwards, current, ...keys, retired];
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.RS256, mixed);
+		let header = JSON.parse(atob(signed.split(".")[0] ?? "")) as Record<string, unknown>;
+
+		// The keys arrive newest first, so the ones for other algorithms are passed over
+		// and the newest of the requested algorithm is what the header names.
+		expect(header.alg).toBe("RS256");
+		expect(header.kid).toBe(current.id);
+
+		await expect(
+			JWT.verify(signed, mixed, { algorithms: [JWK.Algorithm.RS256] }),
+		).resolves.toBeDefined();
 	});
 
 	test("accepts a resolver as readily as the keys themselves", async () => {

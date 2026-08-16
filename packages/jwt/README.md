@@ -1,6 +1,6 @@
 # @pkg/jwt
 
-JWT payload classes and the ES256 keys that sign them.
+JWT payload classes and the ES256, RS256 and EdDSA keys that sign them.
 
 ## Overview
 
@@ -8,7 +8,7 @@ A decoded JWT is a bag of `unknown`. Reading claims off it directly scatters the
 
 This package models a kind of token as a class instead. `JWT` carries the registered claims as typed accessors; an application subclasses it, narrows the accessors its tokens guarantee, and adds the ones it carries beyond the registered set — each one a single type-checked read against the claim set. Verifying through that subclass returns an instance of it, so the claims a handler reads and the claims the token class declares are the same list.
 
-`JWK` covers the other half: generating an ES256 key pair, serializing it so it survives in a bucket or a database row, importing it back into `CryptoKey` objects, publishing the public half as a JWKS, and turning someone else's JWKS — held locally or fetched — into the resolver a token is verified through.
+`JWK` covers the other half: generating a key pair, serializing it so it survives in a bucket or a database row, importing it back into `CryptoKey` objects, publishing the public half as a JWKS, and turning someone else's JWKS — held locally or fetched — into the resolver a token is verified through.
 
 An object model over JWT claim sets and the keys that sign them, then, sitting on top of a JOSE implementation that does the signing and verifying itself.
 
@@ -207,13 +207,23 @@ type VerifyOptions = jose.JWTVerifyOptions;
 
 #### `JWK.Algorithm`
 
-The supported signature algorithms. ES256 only.
+The supported signature algorithms.
 
 ```typescript
 JWK.Algorithm.ES256; // "ES256"
+JWK.Algorithm.RS256; // "RS256"
+JWK.Algorithm.EdDSA; // "EdDSA"
 ```
 
-Adding an algorithm used to need `kid`-aware resolution on the verifying side first, so a relying party could tell which of several published keys to use. `JWT.verify` now resolves that way, so that prerequisite is met: a second algorithm is a matter of generating and importing it.
+| Algorithm | `kty` | Reach for it when                                         |
+| --------- | ----- | --------------------------------------------------------- |
+| `ES256`   | `EC`  | Signing here; it is what a bootstrapped key is minted for |
+| `RS256`   | `RSA` | Verifying an upstream identity provider's tokens          |
+| `EdDSA`   | `OKP` | Signing, where a deterministic nonce is wanted            |
+
+`RS256` earns its place on the verifying side: an upstream identity provider signs with what it chooses, and that is commonly `RS256`. `EdDSA` derives each signature's nonce from the key and the message rather than drawing a fresh one, which puts the nonce reuse that recovers an ECDSA private key out of reach.
+
+All three coexist in one key set. Verification picks a key by the `kid` and the algorithm a token names, so a set publishing several resolves the same way a set of one does.
 
 #### `JWK.generateKeyPair(alg: JWK.Algorithm): Promise<JWK.SerializedKeyPair>`
 
@@ -241,7 +251,9 @@ let pair = await JWK.importKeyPair({
 
 #### `JWK.signingKeys(storage: KeyStorage): Promise<JWK.KeyPair[]>`
 
-Loads every signing key out of storage, generating one on first use. Newest first, which is the order `sign` relies on to pick what to sign with and the order `toJSON` publishes them in. A set holding several is the normal state during a rotation: the newest signs, the older ones stay published so the tokens they signed keep verifying. A new key is minted when nothing usable is stored at all.
+Loads every signing key out of storage, generating one on first use. Newest first, which is the order `sign` relies on to pick what to sign with and the order `toJSON` publishes them in. A set holding several is the normal state during a rotation: the newest signs, the older ones stay published so the tokens they signed keep verifying. A new ES256 key is minted when nothing usable is stored at all.
+
+Generation time is the whole ordering, so a store holding keys for several algorithms comes back as one sequence and `sign` takes the newest key generated for the algorithm it was asked for.
 
 Point this at the bucket the issuer already keeps its keys in. Against an empty one it bootstraps a key, and tokens signed with it verify once every relying party has refreshed its copy of the published set.
 
@@ -257,9 +269,19 @@ The held copy is fetched again, at most once per cooldown window, when a token n
 
 Both resolve per token rather than up front, because which key a token needs is what the token itself says. `JWT.verify` describes the selection that follows.
 
-#### `JWK.toJSON(keys: JWK.KeyPair[])`
+#### `JWK.toJSON(keys: JWK.KeyPair[]): jose.JSONWebKeySet`
 
-Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves: `crv`, `kty`, `x`, `y`, and `kid`, taken only from the public half. The shape of the output is what guarantees a private key cannot reach the endpoint through a field nobody thought about.
+Renders key pairs as the JSON a `/.well-known/jwks.json` endpoint serves. Every entry is built out of the parameters its key type publishes, drawn only from the public half, alongside the `kid` and `alg` a relying party selects on:
+
+| `kty` | Published entry                      |
+| ----- | ------------------------------------ |
+| `EC`  | `crv`, `x`, `y`, `kty`, `kid`, `alg` |
+| `OKP` | `crv`, `x`, `kty`, `kid`, `alg`      |
+| `RSA` | `e`, `n`, `kty`, `kid`, `alg`        |
+
+The shape of the output is what guarantees a private key cannot reach the endpoint through a field nobody thought about: `d` on any of them, and `p`, `q`, `dp`, `dq` and `qi` on an RSA key besides. A key type absent from that table is one whose private parameters have never been enumerated, so it **throws** rather than publishing an entry nobody has vetted — and it throws for the document as a whole, so the rest of the set does not go out alongside an entry a relying party cannot use.
+
+`alg` is published because a set carrying more than one algorithm gives a relying party nothing else to select on before it reaches the signature.
 
 #### Types
 
@@ -347,6 +369,8 @@ A verifier picks a newly published key up when a token first names it, so keep a
 
 Resolve the key set once, at module scope or in a container singleton, and treat any failure — an unreachable JWKS, a bad signature, a wrong issuer — as the same "not authenticated" outcome.
 
+Pin `algorithms` to what the provider actually signs with, which is usually `RS256`. It is the provider's choice, not yours, so read its discovery document rather than assuming.
+
 ```typescript
 let verificationKey = JWK.importRemote(new URL(jwksUrl));
 
@@ -355,7 +379,7 @@ export async function verify(raw: string) {
 		return await IdToken.verify(raw, await verificationKey, {
 			issuer: "https://auth.example.com",
 			audience: clientId,
-			algorithms: [JWK.Algorithm.ES256],
+			algorithms: [JWK.Algorithm.RS256],
 			clockTolerance: 60,
 		});
 	} catch {
@@ -402,3 +426,4 @@ Importing is not free — cache the resulting `KeyPair[]` for the life of a requ
 8. **Roll a rotation out verifier-first** - see [the ordering above](#rotation-and-the-order-to-roll-it-out-in); every verifier resolves a key per token before the issuer publishes a second one.
 9. **Guard optional claims with `has`** - the typed reads throw, and `has` is the only cheap way to ask first.
 10. **Point `signingKeys` at the bucket that already holds the keys** - against an empty one it bootstraps a fresh key, which verifies once every verifier has refreshed its copy of the published set.
+11. **Pin `algorithms` to what the signer uses, not to what you issue** - `RS256` for an upstream identity provider, `ES256` or `EdDSA` for a token minted here.
