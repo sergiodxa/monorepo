@@ -12,14 +12,14 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
-import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { createEnv, createExecutionContext, createQueue } from "@pkg/cloudflare-mocks";
 import { Database } from "remix/data-table";
 
 /** The queue the cron produces into, holding what it enqueued. */
-let queue = createQueue();
+let queue = createQueue({ name: "auth" });
 
-/** Promises handed to `waitUntil`, so a test can await the work it started. */
-let pending: Promise<unknown>[] = [];
+/** Collects the work the worker defers, so a test can await what it started. */
+let context = createExecutionContext();
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
@@ -29,7 +29,8 @@ mock.module("cloudflare:workers", () => ({
 		UPTIME_CRON_API_KEY: undefined,
 	}),
 	waitUntil(promise: Promise<unknown>) {
-		pending.push(promise);
+		// Read at call time, so replacing the context between tests takes effect here.
+		context.waitUntil(promise);
 	},
 }));
 
@@ -38,43 +39,21 @@ let subjectId: string;
 let clientId: string;
 
 /**
- * A queue message that records the disposition the handler chose for it.
+ * Delivers a batch to the worker's queue handler and reports what it did with each message.
  *
- * Delivery is driven by hand rather than through the queue binding, because the sweep is
- * acked from inside a `waitUntil` promise: a driver that settles dispositions when the
- * batch handler returns would ack on the handler's behalf and hide whether it ever did.
+ * The sweep acks from inside a `waitUntil` promise, so the context is handed to `consume`:
+ * without it the pass would read dispositions before that work ran and ack on the handler's
+ * behalf, hiding whether it ever acked.
  */
-function createMessage(body: unknown) {
-	let message = {
-		id: "message-1",
-		timestamp: new Date(),
-		body,
-		attempts: 1,
-		acked: false,
-		retried: false,
-		ack() {
-			message.acked = true;
-		},
-		retry() {
-			message.retried = true;
-		},
-	};
-
-	return message;
-}
-
-/** Delivers a batch to the worker's queue handler and waits for the work it started. */
 async function deliver(...bodies: unknown[]) {
 	let { default: worker } = await import("~/bootstrap/worker");
-	let messages = bodies.map(createMessage);
 
-	await worker.queue?.({ queue: "auth", messages } as unknown as Parameters<
-		NonNullable<typeof worker.queue>
-	>[0]);
+	for (let body of bodies) await queue.send(body);
 
-	await Promise.all(pending);
-
-	return messages;
+	return queue.consume(
+		(batch) => worker.queue?.(batch as unknown as Parameters<NonNullable<typeof worker.queue>>[0]),
+		{ context },
+	);
 }
 
 /** Delivers a cron trigger to the worker's scheduled handler. */
@@ -87,12 +66,12 @@ async function schedule(cron: string) {
 		noRetry() {},
 	} as unknown as Parameters<NonNullable<typeof worker.scheduled>>[0]);
 
-	await Promise.all(pending);
+	await context.settled();
 }
 
 beforeEach(async () => {
 	queue.reset();
-	pending = [];
+	context = createExecutionContext();
 
 	let { createTestDatabase } = await import("~/app/lib/test/db");
 	let { container } = await import("~/app/lib/container");
@@ -161,46 +140,44 @@ describe("queue", () => {
 		let expired = await createSession(Date.now() - 1000);
 		let live = await createSession(Date.now() + 60 * 1000);
 
-		let [message] = await deliver({ type: "cleanExpiredSessions" });
+		let result = await deliver({ type: "cleanExpiredSessions" });
 
 		let { sessions } = await import("~/database/schema");
 		let remaining = (await db.findMany(sessions)).map((row) => row.id);
 		expect(remaining).toEqual([live]);
 		expect(remaining).not.toContain(expired);
-		expect(message?.acked).toBe(true);
-		expect(message?.retried).toBe(false);
+		expect(result.acked).toHaveLength(1);
+		expect(result.retried).toHaveLength(0);
 	});
 
 	test("acks an unknown message type without running anything", async () => {
 		let expired = await createSession(Date.now() - 1000);
 
-		let [message] = await deliver({ type: "somethingElse" });
+		let result = await deliver({ type: "somethingElse" });
 
 		let { sessions } = await import("~/database/schema");
 		// Nothing ran, so the expired row is still there.
 		expect((await db.findMany(sessions)).map((row) => row.id)).toEqual([expired]);
-		expect(message?.acked).toBe(true);
-		expect(message?.retried).toBe(false);
+		expect(result.acked).toHaveLength(1);
+		expect(result.retried).toHaveLength(0);
 	});
 
 	test("acks a body that is not an object at all", async () => {
-		let messages = await deliver(null, "cleanExpiredSessions", 7, { nope: true });
+		let result = await deliver(null, "cleanExpiredSessions", 7, { nope: true });
 
-		for (let message of messages) {
-			expect(message.acked).toBe(true);
-			expect(message.retried).toBe(false);
-		}
+		expect(result.acked).toHaveLength(4);
+		expect(result.retried).toHaveLength(0);
 	});
 
 	test("processes the valid messages of a mixed batch", async () => {
 		let expired = await createSession(Date.now() - 1000);
 
-		let [invalid, valid] = await deliver({ type: "nope" }, { type: "cleanExpiredSessions" });
+		let result = await deliver({ type: "nope" }, { type: "cleanExpiredSessions" });
 
 		let { sessions } = await import("~/database/schema");
 		expect(await db.count(sessions)).toBe(0);
 		expect(expired).toBeTruthy();
-		expect(invalid?.acked).toBe(true);
-		expect(valid?.acked).toBe(true);
+		expect(result.acked).toHaveLength(2);
+		expect(result.retried).toHaveLength(0);
 	});
 });

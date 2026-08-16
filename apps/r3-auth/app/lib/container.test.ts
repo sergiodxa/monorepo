@@ -9,11 +9,11 @@
  * whatever `MailTransport` resolves to, so replacing that key replaces delivery and
  * nothing else.
  *
- * The binding is faked as an object with an async `get()`, matching what the platform
- * provides, and its behaviour is switched per test so the store's answer, the local
- * fallback, and the failure with neither can be told apart. Polar itself is intercepted
- * with MSW, so the token is asserted where it actually matters — on the wire, as the
- * bearer credential of a real request the client made.
+ * The binding is a Secrets Store secret, read asynchronously the way the platform requires,
+ * and its answer is switched per test so the store's answer, the local fallback, and the
+ * failure with neither can be told apart. Polar itself is intercepted with MSW, so the token
+ * is asserted where it actually matters — on the wire, as the bearer credential of a real
+ * request the client made.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +21,7 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { createEnv, createSecretsStoreSecret } from "@pkg/cloudflare-mocks";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
@@ -58,29 +59,24 @@ const POLAR_CUSTOMER = {
 	avatar_url: "https://avatars.example.com/jane.png",
 };
 
-/** What `env.POLAR_ACCESS_TOKEN.get()` does; swapped per test. */
-let readSecret: () => Promise<string> = async () => STORE_TOKEN;
-
-/** How many times the binding was read, so an eager read can be ruled out. */
-let secretReads = 0;
+/** The Secrets Store binding the billing token is read from; its answer is swapped per test. */
+let accessToken = createSecretsStoreSecret({
+	name: "POLAR_ACCESS_TOKEN",
+	value: STORE_TOKEN,
+});
 
 /** The plain local-development variable, absent unless a test sets it. */
 let localToken: string | undefined;
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		get POLAR_ACCESS_TOKEN() {
-			return {
-				get: () => {
-					secretReads++;
-					return readSecret();
-				},
-			};
-		},
-		get POLAR_ACCESS_TOKEN_LOCAL() {
+	env: createEnv<Env>({
+		POLAR_ACCESS_TOKEN: accessToken,
+		// A getter, because a test sets the fallback after `env` is already captured; the
+		// bindings are carried over as descriptors, so this is re-read on every access.
+		get POLAR_ACCESS_TOKEN_LOCAL(): string | undefined {
 			return localToken;
 		},
-	},
+	}),
 	waitUntil: () => {},
 }));
 
@@ -99,9 +95,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-	readSecret = async () => STORE_TOKEN;
+	accessToken.reset();
 	localToken = undefined;
-	secretReads = 0;
 });
 
 afterEach(() => {
@@ -136,18 +131,14 @@ describe("the Polar access token", () => {
 	});
 
 	test("falls back to the local variable when the binding cannot be read", async () => {
-		readSecret = async () => {
-			throw new Error(`Secret "POLAR_ACCESS_TOKEN" not found`);
-		};
+		accessToken.fail();
 		localToken = "polar_at_local";
 
 		expect(await readPolarAccessToken()).toBe("polar_at_local");
 	});
 
 	test("reports the binding's failure when there is no local variable", async () => {
-		readSecret = async () => {
-			throw new Error(`Secret "POLAR_ACCESS_TOKEN" not found`);
-		};
+		accessToken.fail();
 
 		await expect(readPolarAccessToken()).rejects.toThrow(`Secret "POLAR_ACCESS_TOKEN" not found`);
 	});
@@ -159,7 +150,7 @@ describe("the billing client", () => {
 
 		expect(client).toBeInstanceOf(PolarClient);
 		expect(container.get(PolarClient)).toBe(client);
-		expect(secretReads).toBe(0);
+		expect(accessToken.reads).toBe(0);
 	});
 
 	test("sends the token from the binding to Polar as a bearer credential", async () => {
@@ -175,6 +166,6 @@ describe("the billing client", () => {
 		await container.get(PolarClient).createCustomer("jane@example.com");
 
 		expect(authorizations).toEqual([`Bearer ${STORE_TOKEN}`]);
-		expect(secretReads).toBe(1);
+		expect(accessToken.reads).toBe(1);
 	});
 });
