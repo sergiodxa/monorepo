@@ -12,25 +12,22 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { Database } from "remix/data-table";
 
-/** Messages the queue producer was asked to send. */
-let sent: unknown[] = [];
+/** The queue the cron produces into, holding what it enqueued. */
+let queue = createQueue();
 
 /** Promises handed to `waitUntil`, so a test can await the work it started. */
 let pending: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
-	env: {
-		QUEUE: {
-			async send(body: unknown) {
-				sent.push(body);
-			},
-		},
+	env: createEnv<Env>({
+		QUEUE: queue,
 		// Left unset on purpose: with no token the job skips its uptime ping, so no
 		// test in this file reaches the network.
 		UPTIME_CRON_API_KEY: undefined,
-	},
+	}),
 	waitUntil(promise: Promise<unknown>) {
 		pending.push(promise);
 	},
@@ -40,7 +37,13 @@ let db: DataTableDatabase;
 let subjectId: string;
 let clientId: string;
 
-/** A queue message that records the disposition the handler chose for it. */
+/**
+ * A queue message that records the disposition the handler chose for it.
+ *
+ * Delivery is driven by hand rather than through the queue binding, because the sweep is
+ * acked from inside a `waitUntil` promise: a driver that settles dispositions when the
+ * batch handler returns would ack on the handler's behalf and hide whether it ever did.
+ */
 function createMessage(body: unknown) {
 	let message = {
 		id: "message-1",
@@ -88,7 +91,7 @@ async function schedule(cron: string) {
 }
 
 beforeEach(async () => {
-	sent = [];
+	queue.reset();
 	pending = [];
 
 	let { createTestDatabase } = await import("~/app/lib/test/db");
@@ -141,13 +144,15 @@ async function createSession(expiresAt: number): Promise<string> {
 describe("scheduled", () => {
 	test("enqueues the sweep on the daily trigger", async () => {
 		await schedule("0 0 * * *");
-		expect(sent).toEqual([{ type: "cleanExpiredSessions" }]);
+		expect(queue.messages.map((message) => message.body)).toEqual([
+			{ type: "cleanExpiredSessions" },
+		]);
 	});
 
 	test("enqueues nothing for any other trigger", async () => {
 		await schedule("*/5 * * * *");
 		await schedule("0 1 * * *");
-		expect(sent).toEqual([]);
+		expect(queue.messages).toEqual([]);
 	});
 });
 
