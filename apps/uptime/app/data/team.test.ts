@@ -14,6 +14,8 @@ import { describe, expect, mock, test } from "bun:test";
 
 import type { Database } from "remix/data-table";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
 import IdToken from "~/app/auth/value-objects/id-token";
@@ -47,11 +49,12 @@ import {
 
 /**
  * `~/app/data/monitor` imports `env` from `cloudflare:workers`, which doesn't resolve
- * outside the Workers runtime — stub it so the module loads, and import `Monitor`
- * dynamically afterwards so the stub is registered before that import evaluates.
- * Nothing here reaches the queue; the seed only creates monitors and reads them back.
+ * outside the Workers runtime — supply an in-memory queue so the module loads, and import
+ * `Monitor` dynamically afterwards so the binding is registered before that import
+ * evaluates. Nothing here reaches the queue; the seed only creates monitors and reads them
+ * back, so a send that did happen would surface as an unexpected recorded message.
  */
-mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: async () => {} } } }));
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
 

@@ -1,10 +1,11 @@
 /**
  * Smoke tests for the app service container (ADR-008): every service registered in
- * `./container` resolves to an instance of the right class without throwing. Real
- * `env.*` bindings are replaced with fakes since every service — including
+ * `./container` resolves to an instance of the right class without throwing. `env.*` is
+ * an in-memory binding set, which is enough because every service — including
  * `IdTokenVerificationKeyService`, whose resolver only goes to the network once a
  * token needs a key — stores its config at construction time rather than performing
- * I/O eagerly.
+ * I/O eagerly. Only the bindings the registrations read are supplied, so a service that
+ * grows a new dependency fails here naming the binding it reached for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,14 +13,16 @@
 
 import { describe, expect, mock, test } from "bun:test";
 
+import { createD1Database, createEnv, createSendEmail } from "@pkg/cloudflare-mocks";
+
 mock.module("cloudflare:workers", () => ({
-	env: {
-		DB: "fake-d1",
-		EMAIL: { send: async () => ({ messageId: "test-message-id" }) },
+	env: createEnv<Env>({
+		DB: createD1Database(),
+		EMAIL: createSendEmail(),
 		POLAR_ACCESS_TOKEN: "test-polar-token",
 		CLIENT_ID: "test-client-id",
 		CLIENT_SECRET: "test-client-secret",
-	},
+	}),
 }));
 
 let { AuthSDK } = await import("@pkg/auth-sdk");

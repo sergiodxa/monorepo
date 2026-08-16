@@ -7,18 +7,21 @@
  * rather than from the claim, no catch-up storm after an outage, and a disabled monitor
  * that is never claimed. `getStats*` gets the same treatment for its two-store split: the D1
  * aggregates against a real database, the Analytics Engine p99 against a stubbed service
- * so the scope and the failure degradation are both observable.
+ * so the scope and the failure degradation are both observable. The `QUEUE` binding is an
+ * in-memory queue, so `ping`'s assertions are about the messages that really landed on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { Database as SqliteDatabase } from "bun:sqlite";
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Result } from "@pkg/result";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
+import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { failure, success } from "@pkg/result";
 import { Database } from "remix/data-table";
 
@@ -55,12 +58,13 @@ interface PingQueueMessage {
 }
 
 /**
- * `Monitor.ping` calls `env.QUEUE.send(...)`, a queue binding with nothing to assert on
- * besides "it was called with the right message shape" — stub it so importing the
- * module doesn't crash and so `ping` can assert on the call.
+ * The queue `Monitor.ping` sends to. It lives at module scope because the module under
+ * test captures `env` on import, so `beforeEach` resets it rather than rebuilding it, and
+ * the recorded messages are what the `ping` cases assert on.
  */
-let queueSend = mock(async (_message: PingQueueMessage) => {});
-mock.module("cloudflare:workers", () => ({ env: { QUEUE: { send: queueSend } } }));
+let queue: QueueMock<PingQueueMessage> = createQueue<PingQueueMessage>({ name: "uptime" });
+
+mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 /**
  * `Monitor.getStats*` now reads its p99 from Analytics Engine (see the method's
@@ -74,6 +78,10 @@ let p99Query = mock(
 mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
+
+beforeEach(() => {
+	queue.reset();
+});
 
 /**
  * Builds a test database that records the query plan SQLite chose for every statement
@@ -316,15 +324,14 @@ describe("Monitor.deleteById", () => {
 
 describe("Monitor.ping", () => {
 	test("enqueues a checkHttp message with a job id derived from the monitor id", async () => {
-		queueSend.mockClear();
 		let { db } = createTestDatabase();
 		let monitorId = crypto.randomUUID();
 		await createActiveSubscription(db, "owner-1");
 
 		expect(await Monitor.ping(db, monitorId, "owner-1")).toBe(true);
 
-		expect(queueSend).toHaveBeenCalledTimes(1);
-		let message = queueSend.mock.calls[0]?.[0];
+		expect(queue.sent).toHaveLength(1);
+		let message = queue.sent[0]?.body;
 		expect(message?.type).toBe("checkHttp");
 		expect(message?.monitorId).toBe(monitorId);
 		expect(message?.id.startsWith(`${monitorId}:manual:`)).toBe(true);
@@ -332,13 +339,12 @@ describe("Monitor.ping", () => {
 	});
 
 	test("enqueues nothing when the team owner is known to be unsubscribed", async () => {
-		queueSend.mockClear();
 		let { db } = createTestDatabase();
 		await createRevokedSubscription(db, "owner-1");
 
 		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-1")).toBe(false);
 
-		expect(queueSend).not.toHaveBeenCalled();
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	/**
@@ -347,12 +353,11 @@ describe("Monitor.ping", () => {
 	 * the ADR removed.
 	 */
 	test("enqueues when the owner's subscription state is unknown", async () => {
-		queueSend.mockClear();
 		let { db } = createTestDatabase();
 
 		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-nobody")).toBe(true);
 
-		expect(queueSend).toHaveBeenCalledTimes(1);
+		expect(queue.sent).toHaveLength(1);
 	});
 
 	test("gives two cron deliveries in the same minute one shared job id", async () => {
@@ -390,7 +395,6 @@ describe("Monitor.ping", () => {
 	 * short-circuit on the `monitor_results` primary key and never reach the meter.
 	 */
 	test("gives an on-demand check an id no scheduled check can be given", async () => {
-		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
 		let scheduledAt = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 
@@ -398,7 +402,7 @@ describe("Monitor.ping", () => {
 		await createActiveSubscription(db, "owner-1");
 		await Monitor.ping(db, monitorId, "owner-1");
 
-		let manualId = queueSend.mock.calls[0]?.[0]?.id;
+		let manualId = queue.sent[0]?.body.id;
 		expect(manualId).not.toBe(Monitor.scheduledJobId(monitorId, scheduledAt));
 		// The segment a scheduled id cannot contain, since its second segment is a number.
 		expect(manualId).toContain(":manual:");
@@ -406,7 +410,6 @@ describe("Monitor.ping", () => {
 	});
 
 	test("gives each on-demand check its own job id", async () => {
-		queueSend.mockClear();
 		let monitorId = crypto.randomUUID();
 
 		let { db } = createTestDatabase();
@@ -415,7 +418,7 @@ describe("Monitor.ping", () => {
 		await Monitor.ping(db, monitorId, "owner-1");
 		await Monitor.ping(db, monitorId, "owner-1");
 
-		let [first, second] = queueSend.mock.calls.map((call) => call[0]?.id);
+		let [first, second] = queue.sent.map((message) => message.body.id);
 		expect(first).not.toBe(second);
 	});
 });

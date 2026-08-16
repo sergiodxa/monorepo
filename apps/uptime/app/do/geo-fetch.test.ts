@@ -6,8 +6,9 @@
  * monitor apart from this object being unavailable: a failed proxied request resolves
  * as `unreachable` rather than rejecting, and the header is always overwritten so a
  * monitored endpoint can't declare its own outcome. The global `fetch` is stubbed per
- * test instead of hitting the network, and `cloudflare:workers` is stubbed since
- * `GeoFetchDO extends DurableObject` imported from it.
+ * test instead of hitting the network, and `cloudflare:workers` is replaced since
+ * `GeoFetchDO extends DurableObject` imported from it: the object touches no binding, so
+ * the env is empty and reading one would name the binding that was reached for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,8 +16,10 @@
 
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
+import { createDurableObjectState, createEnv } from "@pkg/cloudflare-mocks";
+
 mock.module("cloudflare:workers", () => ({
-	env: {},
+	env: createEnv<Env>({}),
 	DurableObject: class {
 		constructor() {}
 	},
@@ -30,12 +33,17 @@ afterEach(() => {
 	globalThis.fetch = originalFetch;
 });
 
+/** The object under test on a fresh Durable Object state, with no bindings available. */
+function createGeoFetch() {
+	return new GeoFetchDO(createDurableObjectState({ name: "geo-fetch" }), createEnv<Env>({}));
+}
+
 describe("GeoFetchDO.fetch", () => {
 	test("adds a non-negative X-Response-Time header and passes a 2xx response through unchanged", async () => {
 		globalThis.fetch = (async () =>
 			new Response("hello world", { status: 200 })) as unknown as typeof fetch;
 
-		let instance = new GeoFetchDO({} as never, {} as never);
+		let instance = createGeoFetch();
 		let response = await instance.fetch(new Request("https://example.com/ping"));
 
 		let responseTime = Number(response.headers.get("X-Response-Time"));
@@ -50,7 +58,7 @@ describe("GeoFetchDO.fetch", () => {
 		globalThis.fetch = (async () =>
 			new Response("service unavailable", { status: 503 })) as unknown as typeof fetch;
 
-		let instance = new GeoFetchDO({} as never, {} as never);
+		let instance = createGeoFetch();
 		let response = await instance.fetch(new Request("https://example.com/ping"));
 
 		let responseTime = Number(response.headers.get("X-Response-Time"));
@@ -65,7 +73,7 @@ describe("GeoFetchDO.fetch", () => {
 		globalThis.fetch = (async () =>
 			new Response("hello world", { status: 200 })) as unknown as typeof fetch;
 
-		let instance = new GeoFetchDO({} as never, {} as never);
+		let instance = createGeoFetch();
 		let response = await instance.fetch(new Request("https://example.com/ping"));
 
 		expect(response.headers.get("X-Probe-Outcome")).toBe("responded");
@@ -78,7 +86,7 @@ describe("GeoFetchDO.fetch", () => {
 				headers: { "X-Probe-Outcome": "unreachable" },
 			})) as unknown as typeof fetch;
 
-		let instance = new GeoFetchDO({} as never, {} as never);
+		let instance = createGeoFetch();
 		let response = await instance.fetch(new Request("https://example.com/ping"));
 
 		expect(response.headers.get("X-Probe-Outcome")).toBe("responded");
@@ -89,7 +97,7 @@ describe("GeoFetchDO.fetch", () => {
 			throw new Error("connection refused");
 		}) as unknown as typeof fetch;
 
-		let instance = new GeoFetchDO({} as never, {} as never);
+		let instance = createGeoFetch();
 		let response = await instance.fetch(new Request("https://example.com/ping"));
 
 		expect(response.headers.get("X-Probe-Outcome")).toBe("unreachable");
