@@ -10,10 +10,15 @@
  */
 import { describe, expect, mock, test } from "bun:test";
 
-// The controller module reads `env` at import time; provide a minimal stub so the
-// module loads under `bun test` without touching the Workers runtime.
+import { createEnv } from "@pkg/cloudflare-mocks";
+
+// The controller module reads `env` at import time; supply only the billing
+// configuration, so it loads under `bun test` without touching the Workers runtime.
 mock.module("cloudflare:workers", () => ({
-	env: { POLAR_PRODUCT_ID: "prod_configured", POLAR_WEBHOOK_SECRET: "whsec_test" },
+	env: createEnv<Cloudflare.Env>({
+		POLAR_PRODUCT_ID: "prod_configured",
+		POLAR_WEBHOOK_SECRET: "whsec_test",
+	}),
 	DurableObject: class {},
 }));
 

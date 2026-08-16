@@ -7,11 +7,12 @@
  */
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 mock.module("cloudflare:workers", () => ({
-	env: { CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" },
+	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 }));
 
 let { queryDailyPageViews } = await import("./analytics");

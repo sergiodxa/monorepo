@@ -8,12 +8,14 @@
  */
 import { describe, expect, mock, test } from "bun:test";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
+
 import type { Region } from "~/app/models/blog";
 
-// The controller module reads `env` at import time; provide a minimal stub so it
-// loads under `bun test` without the Workers runtime.
+// The controller module reads `env` at import time; supply only the platform domain, so
+// it loads under `bun test` without the Workers runtime.
 mock.module("cloudflare:workers", () => ({
-	env: { PLATFORM_DOMAIN: "blog.test" },
+	env: createEnv<Cloudflare.Env>({ PLATFORM_DOMAIN: "blog.test" }),
 	DurableObject: class {},
 }));
 

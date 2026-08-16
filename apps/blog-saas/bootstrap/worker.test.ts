@@ -9,15 +9,13 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-/** One recorded `writeDataPoint` call, as Analytics Engine received it. */
-interface DataPoint {
-	blobs: string[];
-	doubles: number[];
-	indexes: string[];
-}
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 
-/** Data points written during the test currently running. */
-const written: DataPoint[] = [];
+/** Analytics Engine binding recording the data points this run reported. */
+let analytics = createAnalyticsEngine();
+
+/** Slug cache holding the one mapping the tenant subdomain resolves through. */
+let slugCache = createKVNamespace();
 
 /** The tenant DO's reply: a 200 HTML document, which is the billable shape. */
 function tenantResponse(): Response {
@@ -27,32 +25,32 @@ function tenantResponse(): Response {
 	});
 }
 
-// The worker and everything it pulls in read `env` at import time; provide a minimal stub
-// covering only the bindings a tenant page view touches.
-mock.module("cloudflare:workers", () => ({
-	env: {
-		PLATFORM_DOMAIN: "blog.test",
-		ANALYTICS: {
-			writeDataPoint(point: DataPoint) {
-				written.push(point);
-			},
-		},
-		BLOG: {
-			getByName() {
-				return { fetch: async () => tenantResponse() };
-			},
-		},
-		SLUG_CACHE: {
-			async get(key: string) {
-				if (key === "slug:acme") return { blogId: "blog-1", region: "weur" };
-				return null;
-			},
-			async put() {},
-		},
-		ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
-	},
-	DurableObject: class {},
-}));
+/**
+ * Publishes the current bindings as the worker's environment. Re-run per test so each one
+ * meters into its own dataset, and only the bindings a tenant page view touches are
+ * supplied, so reading any other one fails by name.
+ */
+function bindEnv(): void {
+	mock.module("cloudflare:workers", () => ({
+		env: createEnv<Cloudflare.Env>({
+			PLATFORM_DOMAIN: "blog.test",
+			ANALYTICS: analytics,
+			SLUG_CACHE: slugCache,
+			// A namespace hands back a stub whose `fetch` answers as the tenant would; neither
+			// it nor the static-asset fetcher has an in-memory equivalent to build on.
+			BLOG: {
+				getByName: () => ({ fetch: async () => tenantResponse() }),
+			} as unknown as Cloudflare.Env["BLOG"],
+			ASSETS: {
+				fetch: async () => new Response("Not found", { status: 404 }),
+			} as unknown as Cloudflare.Env["ASSETS"],
+		}),
+		DurableObject: class {},
+	}));
+}
+
+// The worker and everything it pulls in read `env` at import time.
+bindEnv();
 
 const worker = (await import("./worker")).default;
 
@@ -69,16 +67,21 @@ function fetchTenantPage(method: string): Promise<Response> {
 }
 
 describe("page view metering", () => {
-	beforeEach(() => {
-		written.length = 0;
+	beforeEach(async () => {
+		analytics = createAnalyticsEngine();
+		slugCache = createKVNamespace();
+		bindEnv();
+
+		// Pre-seeded so the subdomain resolves out of cache, without reaching D1.
+		await slugCache.put("slug:acme", JSON.stringify({ blogId: "blog-1", region: "weur" }));
 	});
 
 	test("bills a GET of a tenant page", async () => {
 		let response = await fetchTenantPage("GET");
 
 		expect(response.status).toBe(200);
-		expect(written).toHaveLength(1);
-		expect(written[0]?.blobs.slice(0, 2)).toEqual(["blog-1", "page_view"]);
+		expect(analytics.dataPoints).toHaveLength(1);
+		expect(analytics.dataPoints[0]?.blobs?.slice(0, 2)).toEqual(["blog-1", "page_view"]);
 	});
 
 	/**
@@ -93,6 +96,6 @@ describe("page view metering", () => {
 		let response = await fetchTenantPage("HEAD");
 
 		expect(response.status).toBe(200);
-		expect(written).toHaveLength(0);
+		expect(analytics.dataPoints).toHaveLength(0);
 	});
 });

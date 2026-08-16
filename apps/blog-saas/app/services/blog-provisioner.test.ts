@@ -12,6 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
  */
 import type { HostnameClient } from "@pkg/hostname";
 
+import { createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 
@@ -20,8 +21,8 @@ import type { PlatformMeta } from "~/bootstrap/tenant";
 
 // --- Controllable Cloudflare bindings -------------------------------------------------
 
-/** KV writes/deletes the provisioner performs, keyed by cache key. */
-let slugCache: Map<string, string>;
+/** The slug cache the provisioner writes to, read back to assert what it left there. */
+let slugCache = createKVNamespace();
 /** Per-blog record of the DO RPC calls the provisioner fans out. */
 let stubCalls: Array<{ method: string; arg: unknown }>;
 
@@ -35,20 +36,26 @@ function makeStub() {
 	};
 }
 
-mock.module("cloudflare:workers", () => ({
-	env: {
-		PLATFORM_DOMAIN: "blog.test",
-		OIDC_ISSUER: "https://sso.test",
-		SSO_MANAGEMENT_CLIENT_ID: "mgmt-client",
-		SSO_MANAGEMENT_CLIENT_SECRET: "mgmt-secret",
-		SLUG_CACHE: {
-			put: async (key: string, value: string) => void slugCache.set(key, value),
-			delete: async (key: string) => void slugCache.delete(key),
-		},
-		BLOG: { getByName: () => makeStub() },
-	},
-	DurableObject: class {},
-}));
+/**
+ * Publishes the current bindings as the provisioner's environment, so each test writes
+ * into a slug cache of its own. The namespace is the one binding with no in-memory
+ * equivalent: it hands back a stub recording the RPCs the provisioner fans out.
+ */
+function bindEnv(): void {
+	mock.module("cloudflare:workers", () => ({
+		env: createEnv<Cloudflare.Env>({
+			PLATFORM_DOMAIN: "blog.test",
+			OIDC_ISSUER: "https://sso.test",
+			SSO_MANAGEMENT_CLIENT_ID: "mgmt-client",
+			SSO_MANAGEMENT_CLIENT_SECRET: "mgmt-secret",
+			SLUG_CACHE: slugCache,
+			BLOG: { getByName: () => makeStub() } as unknown as Cloudflare.Env["BLOG"],
+		}),
+		DurableObject: class {},
+	}));
+}
+
+bindEnv();
 
 let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
@@ -103,7 +110,8 @@ afterAll(() => server.close());
 
 beforeEach(() => {
 	harness = createTestDatabase();
-	slugCache = new Map();
+	slugCache = createKVNamespace();
+	bindEnv();
 	stubCalls = [];
 	fetchedUrls = [];
 	stubFetch();
@@ -173,9 +181,12 @@ describe("BlogProvisioner.create — billing entitlement gate", () => {
 
 		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
 
-		expect(slugCache.get(`slug:${blog.slug}`)).toBe(
-			JSON.stringify({ blogId: blog.id, region: "wnam" }),
-		);
+		expect(
+			await slugCache.get<{ blogId: string; region: string }>(`slug:${blog.slug}`, "json"),
+		).toEqual({
+			blogId: blog.id,
+			region: "wnam",
+		});
 		expect(stubCalls.some((call) => call.method === "initialize")).toBe(true);
 	});
 
@@ -265,7 +276,7 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		await provisioner.softDelete(blog.id);
 
 		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("deleted");
-		expect(slugCache.has(`slug:${blog.slug}`)).toBe(false);
+		expect(await slugCache.get(`slug:${blog.slug}`)).toBeNull();
 		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "deleted" } });
 	});
 
@@ -281,9 +292,12 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		await provisioner.restore(blog.id);
 
 		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("active");
-		expect(slugCache.get(`slug:${blog.slug}`)).toBe(
-			JSON.stringify({ blogId: blog.id, region: "wnam" }),
-		);
+		expect(
+			await slugCache.get<{ blogId: string; region: string }>(`slug:${blog.slug}`, "json"),
+		).toEqual({
+			blogId: blog.id,
+			region: "wnam",
+		});
 		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "active" } });
 	});
 
@@ -299,9 +313,12 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("suspended");
 		// The slug cache is still re-seeded; the DO's own gate 402s public traffic.
-		expect(slugCache.get(`slug:${blog.slug}`)).toBe(
-			JSON.stringify({ blogId: blog.id, region: "wnam" }),
-		);
+		expect(
+			await slugCache.get<{ blogId: string; region: string }>(`slug:${blog.slug}`, "json"),
+		).toEqual({
+			blogId: blog.id,
+			region: "wnam",
+		});
 		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "suspended" } });
 	});
 

@@ -13,14 +13,16 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
  */
 import type { PolarClient as PolarClientType } from "@pkg/polar";
 
+import { createEnv } from "@pkg/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 import type { TestDatabase } from "~/app/test/db";
 
-// The analytics helper and job read `env` at import time; provide a minimal stub.
+// The analytics helper and job read `env` at import time; supply only the Analytics
+// Engine SQL API credentials, which is all the reporting path reads.
 mock.module("cloudflare:workers", () => ({
-	env: { CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" },
+	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 	DurableObject: class {},
 }));
 
