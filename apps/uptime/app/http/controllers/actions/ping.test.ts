@@ -27,7 +27,11 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+} from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { createCookie } from "remix/cookie";
@@ -39,6 +43,7 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
+import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { QuickPingOutcome, QuickPingResult } from "~/app/http/controllers/actions/ping";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
@@ -56,26 +61,11 @@ let doFetchMock = mock(
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
 
-/** One `get` the action made: the object it probed through and the region it asked for. */
-interface Probe {
-	name: string;
-	locationHint: string | undefined;
-}
-
-/** The probes the action issued, in order, one per check it ran. */
-let probes: Probe[] = [];
-
-/** A `DurableObjectNamespace` stand-in recording every probe's object and region. */
-function makeGeoFetchNamespace() {
-	return {
-		idFromName: (name: string) => ({ name }),
-		jurisdiction: () => makeGeoFetchNamespace(),
-		get(id: { name: string }, options?: { locationHint?: string }) {
-			probes.push({ name: id.name, locationHint: options?.locationHint });
-			return { fetch: doFetchMock };
-		},
-	};
-}
+/**
+ * The `GEO_FETCH` binding. Every object it hands out answers with {@link doFetchMock}, and
+ * its `resolutions` are the probes the action issued, in order, one per check it ran.
+ */
+let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
 /**
  * The dataset the action reports each check it ran to. Module scope because the action
@@ -88,9 +78,7 @@ let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
-		// The recording namespace above has no counterpart among the shared binding fakes, so
-		// it is cast in place rather than dragging the whole `env` out of type-checking.
-		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
 	}),
 	waitUntil: (promise: Promise<unknown>) => {
@@ -250,7 +238,7 @@ beforeEach(() => {
 	doFetchMock.mockImplementation(
 		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 	);
-	probes.length = 0;
+	geoFetch.reset();
 	pingResults.reset();
 	ingested.length = 0;
 	deferred.length = 0;
@@ -285,8 +273,8 @@ describe("POST /actions/:team/run-ping", () => {
 
 		// GET rather than the monitors' HEAD, from a shard of the default region.
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("GET");
-		expect(probes[0]?.locationHint).toBe("wnam");
-		expect(probes[0]?.name).toMatch(/^wnam:[0-7]$/);
+		expect(geoFetch.resolutions[0]?.locationHint).toBe("wnam");
+		expect(geoFetch.resolutions[0]?.name).toMatch(/^wnam:[0-7]$/);
 	});
 
 	test("keeps a repeated check on the same object, since the URL is the shard key", async () => {
@@ -298,6 +286,7 @@ describe("POST /actions/:team/run-ping", () => {
 
 		// A person poking at one deploy submits this form several times in a row, and each
 		// of those checks should land on the object that is already warm for that target.
+		let probes = geoFetch.resolutions;
 		expect(probes[1]?.name).toBe(probes[0]?.name);
 		expect(probes[2]?.name).not.toBe(probes[0]?.name);
 	});

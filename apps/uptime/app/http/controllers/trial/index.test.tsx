@@ -40,7 +40,11 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+} from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
@@ -53,6 +57,7 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
 
+import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type {
@@ -82,24 +87,15 @@ let doFetch = mock(async (url: string, init?: RequestInit) => {
 /** The dataset a billed check reports to; a trial probe must write nothing to it. */
 let pingResults = createAnalyticsEngine();
 
-/**
- * The prober's namespace, hand-rolled because a `DurableObjectNamespace` has no in-memory
- * equivalent to reach for: what the action needs from it is a `fetch` it can steer per test.
- */
-function makeGeoFetchNamespace() {
-	return {
-		idFromName: (name: string) => ({ name }),
-		jurisdiction: () => makeGeoFetchNamespace(),
-		get: () => ({ fetch: doFetch }),
-	};
-}
+/** The prober's namespace, routing every object it hands out to {@link doFetch}. */
+let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetch }));
 
 /** Work the action deferred, drained by {@link dispatch} so the meter event can be read. */
 let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
-		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
 	}),
 	waitUntil: (promise: Promise<unknown>) => {

@@ -33,7 +33,11 @@ import type { Middleware, RequestContext, RequestHandler, Router } from "remix/r
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
-import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+} from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -48,6 +52,7 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
 
+import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -61,14 +66,8 @@ async function probe() {
 	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
 }
 
-/** A `DurableObjectNamespace` stand-in handing every probe the same stub. */
-function makeGeoFetchNamespace() {
-	return {
-		idFromName: (name: string) => ({ name }),
-		jurisdiction: () => makeGeoFetchNamespace(),
-		get: () => ({ fetch: probe }),
-	};
-}
+/** The `GEO_FETCH` binding, routing every object it hands out to {@link probe}. */
+let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: probe }));
 
 /** Work the action deferred, drained by {@link createHarness}'s `submit` before it returns. */
 let deferred: Promise<unknown>[] = [];
@@ -78,7 +77,7 @@ let pingResults = createAnalyticsEngine();
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
-		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
 	}),
 	waitUntil: (promise: Promise<unknown>) => {

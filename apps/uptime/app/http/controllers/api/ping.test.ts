@@ -19,12 +19,11 @@
  * `cloudflare:workers` is mocked before the controller is imported: the caller budget
  * reads its backend off `env`, the probe goes through the `GEO_FETCH` binding, and the
  * result lands in `PING_RESULTS`. The limiter really counts per key and the dataset really
- * records what it was handed, so the budget is exhausted rather than faked; `GEO_FETCH` is
- * the one binding still written by hand, because a probe has to answer with a canned
- * response and record the region it was asked for. `cloudflare:sockets` and the global
- * `fetch` stand in for the TCP and DNS checks the same way their own service tests stub
- * them, and the Polar ingest runs under a `waitUntil` the harness drains so the billed
- * event can be asserted.
+ * records what it was handed, so the budget is exhausted rather than faked, and `GEO_FETCH`
+ * answers every probe with a canned response while recording the region it was asked for.
+ * `cloudflare:sockets` and the global `fetch` stand in for the TCP and DNS checks the same
+ * way their own service tests stub them, and the Polar ingest runs under a `waitUntil` the
+ * harness drains so the billed event can be asserted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,13 +33,19 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
-import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
+import {
+	createAnalyticsEngine,
+	createDurableObjectNamespace,
+	createEnv,
+	createRateLimit,
+} from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
+import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
@@ -66,19 +71,12 @@ let doFetchMock = mock(
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
 
-/** The region each probe asked for, so the endpoint's default region can be asserted. */
-let probedLocationHints: (string | undefined)[] = [];
+/** The `GEO_FETCH` binding, answering every probe with {@link doFetchMock}. */
+let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
-/** A `DurableObjectNamespace` stand-in recording the region every probe asked for. */
-function makeGeoFetchNamespace() {
-	return {
-		idFromName: (name: string) => ({ name }),
-		jurisdiction: () => makeGeoFetchNamespace(),
-		get(_id: { name: string }, options?: { locationHint?: string }) {
-			probedLocationHints.push(options?.locationHint);
-			return { fetch: doFetchMock };
-		},
-	};
+/** The region each probe asked for, so the endpoint's default region can be asserted. */
+function probedLocationHints(): (string | undefined)[] {
+	return geoFetch.resolutions.map((resolution) => resolution.locationHint);
 }
 
 /** The `PING_RESULTS` dataset, recording the data point each served ping writes. */
@@ -100,9 +98,7 @@ let deferred: Promise<unknown>[] = [];
 
 mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
-		// The only binding still written by hand: a probe has to answer with a canned
-		// response and record the region it was asked for, which no factory can supply.
-		GEO_FETCH: makeGeoFetchNamespace() as unknown as Env["GEO_FETCH"],
+		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
 		COSTS: costs,
 		RATE_LIMITER: rateLimiter,
@@ -248,7 +244,7 @@ beforeEach(() => {
 	);
 	openSocket = async () => {};
 	globalThis.fetch = originalFetch;
-	probedLocationHints.length = 0;
+	geoFetch.reset();
 	pingResults.reset();
 	costs.reset();
 	rateLimiter.reset();
@@ -449,7 +445,7 @@ describe("POST /api/v1/ping http", () => {
 
 		// GET rather than the monitor column's HEAD, and the caller's own region default.
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("GET");
-		expect(probedLocationHints).toEqual(["wnam"]);
+		expect(probedLocationHints()).toEqual(["wnam"]);
 		// A 200 is `up`, which is only true if the expected status defaulted to 200.
 		expect((await pingBody(response)).data.ping.status).toBe("up");
 	});
@@ -485,7 +481,7 @@ describe("POST /api/v1/ping http", () => {
 		});
 
 		expect(doFetchMock.mock.calls[0]?.[1]?.method).toBe("HEAD");
-		expect(probedLocationHints).toEqual(["apac"]);
+		expect(probedLocationHints()).toEqual(["apac"]);
 		expect((await pingBody(response)).data.ping.status).toBe("up");
 	});
 });
