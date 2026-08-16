@@ -81,4 +81,15 @@ describe("createAnalyticsEngine", () => {
 
 		expect(second.dataPoints).toHaveLength(0);
 	});
+	test("clears its recording on reset, so a shared binding starts each test empty", () => {
+		let analytics = createAnalyticsEngine();
+		analytics.writeDataPoint({ blobs: ["a"] });
+
+		analytics.reset();
+
+		expect(analytics.dataPoints).toHaveLength(0);
+
+		analytics.writeDataPoint({ blobs: ["b"] });
+		expect(analytics.dataPoints).toEqual([{ blobs: ["b"] }]);
+	});
 });

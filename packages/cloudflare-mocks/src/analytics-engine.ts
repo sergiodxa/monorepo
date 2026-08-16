@@ -25,6 +25,15 @@ const MAXIMUM_INDEX_BYTES = 96;
 export interface AnalyticsEngineMock extends AnalyticsEngineDataset {
 	/** Data points written so far, oldest first. */
 	readonly dataPoints: AnalyticsEngineDataPoint[];
+
+	/**
+	 * Discards every recorded data point, as if the dataset were new.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets an empty dataset without re-creating the `env` the code
+	 * under test already captured.
+	 */
+	reset(): void;
 }
 
 /**
@@ -42,6 +51,10 @@ export function createAnalyticsEngine(): AnalyticsEngineMock {
 	return {
 		get dataPoints(): AnalyticsEngineDataPoint[] {
 			return dataPoints.map((point) => structuredClone(point));
+		},
+
+		reset(): void {
+			dataPoints.length = 0;
 		},
 
 		/**

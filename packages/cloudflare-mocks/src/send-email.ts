@@ -48,6 +48,15 @@ export interface SendEmailMockOptions {
 export interface SendEmailMock extends SendEmail {
 	/** Messages sent so far, oldest first. */
 	readonly messages: SentEmailRecord[];
+
+	/**
+	 * Discards every recorded message, as if nothing had been sent.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets an empty outbox without re-creating the `env` the code under
+	 * test already captured.
+	 */
+	reset(): void;
 }
 
 /**
@@ -99,6 +108,10 @@ export function createSendEmail(options?: SendEmailMockOptions): SendEmailMock {
 	return {
 		get messages(): SentEmailRecord[] {
 			return messages.map((message) => ({ ...message }));
+		},
+
+		reset(): void {
+			messages.length = 0;
 		},
 
 		send,

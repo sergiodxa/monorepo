@@ -78,6 +78,15 @@ export interface QueueMock<Body = unknown> extends Queue<Body> {
 	readonly deadLetter: QueueMessageRecord<Body>[];
 
 	/**
+	 * Discards every recorded message, pending or delivered, as if the queue were new.
+	 *
+	 * A binding installed once at module scope outlives the test that used it, so this is
+	 * how a `beforeEach` gets a queue with no history without re-creating the `env` the
+	 * code under test already captured.
+	 */
+	reset(): void;
+
+	/**
 	 * Delivers one batch to a consumer handler and applies its `ack`/`retry` decisions.
 	 *
 	 * Messages the handler neither acks nor retries are acked, and every unacked message
@@ -157,6 +166,12 @@ export function createQueue<Body = unknown>(options?: QueueMockOptions): QueueMo
 
 		get deadLetter(): QueueMessageRecord<Body>[] {
 			return [...deadLetter];
+		},
+
+		reset(): void {
+			pending.length = 0;
+			sent.length = 0;
+			deadLetter.length = 0;
 		},
 
 		/**

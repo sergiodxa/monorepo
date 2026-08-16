@@ -241,4 +241,15 @@ describe("createQueue", () => {
 
 		expect(second.messages).toHaveLength(0);
 	});
+	test("clears its backlog and history on reset", async () => {
+		let queue = createQueue<Job>();
+		await queue.send({ type: "a" });
+		await queue.consume((batch) => batch.retryAll());
+
+		queue.reset();
+
+		expect(queue.messages).toHaveLength(0);
+		expect(queue.sent).toHaveLength(0);
+		expect(queue.deadLetter).toHaveLength(0);
+	});
 });

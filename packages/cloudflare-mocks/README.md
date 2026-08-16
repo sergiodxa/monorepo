@@ -180,8 +180,8 @@ A `Queue` that records sends and can drive a consumer.
 
 **Returns:**
 
-- A `QueueMock` with `messages` (pending), `sent` (full history), `deadLetter`, and
-  `consume()`
+- A `QueueMock` with `messages` (pending), `sent` (full history), `deadLetter`,
+  `consume()`, and `reset()`
 
 `consume(handler, options?)` delivers one batch and then applies the handler's decisions:
 messages the handler neither acked nor retried are acked, and when the handler throws every
@@ -206,7 +206,8 @@ An `AnalyticsEngineDataset` that records every `writeDataPoint` call.
 
 **Returns:**
 
-- An `AnalyticsEngineMock` exposing `dataPoints`, each a detached copy of what was written
+- An `AnalyticsEngineMock` exposing `dataPoints`, each a detached copy of what was written,
+  plus `reset()`
 
 `writeDataPoint` is fire-and-forget on the platform, so an over-budget data point is lost
 silently in production. This mock throws instead: more than 20 blobs, more than 20 doubles,
@@ -249,7 +250,7 @@ normalizes them into one `SentEmailRecord` with recipients flattened to plain ad
 
 **Returns:**
 
-- A `SendEmailMock` exposing `messages`
+- A `SendEmailMock` exposing `messages` and `reset()`
 
 **Example:**
 
@@ -563,7 +564,10 @@ test("caches the response after replying", async () => {
 ## Tips
 
 1. **Construct a mock per test** - every factory returns isolated state, so a fresh call in
-   `beforeEach` removes any need for a cleanup step.
+   `beforeEach` removes any need for a cleanup step. When a binding has to live at module
+   scope because the code under test captured `env` on import, call `reset()` on the
+   recording mocks (`createQueue`, `createAnalyticsEngine`, `createSendEmail`,
+   `createRateLimit`) in `beforeEach` instead.
 2. **Inject a clock to test time** - `createKVNamespace` and `createRateLimit` accept `now`;
    this is the only way to observe KV expiry, since the real 60 second `expirationTtl` floor
    is enforced.

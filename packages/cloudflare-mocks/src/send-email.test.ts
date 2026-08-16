@@ -122,4 +122,12 @@ describe("createSendEmail", () => {
 
 		expect(second.messages).toHaveLength(0);
 	});
+	test("clears its outbox on reset", async () => {
+		let mailer = createSendEmail();
+		await mailer.send({ from: "a@example.com", to: "b@example.com", subject: "Hi" });
+
+		mailer.reset();
+
+		expect(mailer.messages).toHaveLength(0);
+	});
 });
