@@ -97,7 +97,9 @@ export default createAction(
 			return await handleClientCredentials(db, body, log);
 		}
 
-		log.info("Unsupported grant type requested", { grantType: String(grantType) });
+		log.info("Unsupported grant type requested", {
+			grantType: typeof grantType === "string" ? grantType : null,
+		});
 		return reject("unsupported_grant_type", "The authorization grant type is not supported");
 	}),
 );

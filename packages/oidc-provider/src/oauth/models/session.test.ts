@@ -147,7 +147,7 @@ describe("Session", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent session", async () => {
-			await expect(Session.touch(db, "non-existent")).rejects.toThrow("record");
+			expect(Session.touch(db, "non-existent")).rejects.toThrow("record");
 		});
 	});
 
@@ -164,7 +164,7 @@ describe("Session", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent session", async () => {
-			await expect(Session.destroy(db, "non-existent")).rejects.toThrow("record");
+			expect(Session.destroy(db, "non-existent")).rejects.toThrow("record");
 		});
 	});
 

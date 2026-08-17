@@ -42,7 +42,7 @@ export let WebAuthnRegister = clientEntry(
 		async function register() {
 			status = "registering";
 			errorMessage = null;
-			handle.update();
+			await handle.update();
 
 			try {
 				// Use the modern API that handles base64url encoding automatically
@@ -73,7 +73,7 @@ export let WebAuthnRegister = clientEntry(
 				let successData = (await res.json()) as { redirect?: string };
 
 				status = "success";
-				handle.update();
+				await handle.update();
 
 				if (successData.redirect) {
 					window.location.href = successData.redirect;
@@ -81,13 +81,13 @@ export let WebAuthnRegister = clientEntry(
 			} catch (error) {
 				status = "error";
 				errorMessage = error instanceof Error ? error.message : "Registration failed";
-				handle.update();
+				await handle.update();
 			}
 		}
 
 		// Start registration immediately on mount
 		handle.queueTask(() => {
-			register();
+			void register();
 		});
 
 		return () => (

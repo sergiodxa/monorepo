@@ -242,7 +242,7 @@ describe("Secret", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent secret", async () => {
-			await expect(Secret.destroy(db, "non-existent-id")).rejects.toThrow(RecordNotFoundError);
+			expect(Secret.destroy(db, "non-existent-id")).rejects.toThrow(RecordNotFoundError);
 		});
 	});
 });

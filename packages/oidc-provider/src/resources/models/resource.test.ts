@@ -181,9 +181,7 @@ describe("Resource", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent resource", async () => {
-			await expect(Resource.update(db, "non-existent", { name: "New Name" })).rejects.toThrow(
-				"record",
-			);
+			expect(Resource.update(db, "non-existent", { name: "New Name" })).rejects.toThrow("record");
 		});
 	});
 
@@ -205,7 +203,7 @@ describe("Resource", () => {
 		});
 
 		test("throws RecordNotFoundError for non-existent resource", async () => {
-			await expect(Resource.destroy(db, "non-existent")).rejects.toThrow("record");
+			expect(Resource.destroy(db, "non-existent")).rejects.toThrow("record");
 		});
 	});
 

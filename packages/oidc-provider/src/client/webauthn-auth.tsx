@@ -42,7 +42,7 @@ export let WebAuthnAuth = clientEntry(
 		async function authenticate() {
 			status = "authenticating";
 			errorMessage = null;
-			handle.update();
+			await handle.update();
 
 			try {
 				// Use the modern API that handles base64url encoding automatically
@@ -73,7 +73,7 @@ export let WebAuthnAuth = clientEntry(
 				let successData = (await res.json()) as { redirect?: string };
 
 				status = "success";
-				handle.update();
+				await handle.update();
 
 				if (successData.redirect) {
 					window.location.href = successData.redirect;
@@ -81,13 +81,13 @@ export let WebAuthnAuth = clientEntry(
 			} catch (error) {
 				status = "error";
 				errorMessage = error instanceof Error ? error.message : "Authentication failed";
-				handle.update();
+				await handle.update();
 			}
 		}
 
 		// Start authentication immediately on mount
 		handle.queueTask(() => {
-			authenticate();
+			void authenticate();
 		});
 
 		return () => (

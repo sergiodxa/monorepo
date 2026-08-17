@@ -47,7 +47,7 @@ describe("hmacSign", () => {
 	});
 
 	test("throws error when secret is empty", async () => {
-		await expect(hmacSign("test", "")).rejects.toThrow("HMAC secret is required");
+		expect(hmacSign("test", "")).rejects.toThrow("HMAC secret is required");
 	});
 
 	test("handles unicode input", async () => {
