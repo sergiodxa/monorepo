@@ -253,7 +253,7 @@ describe("discover", () => {
 		globalThis.fetch = mock(
 			async () => new Response("nope", { status: 500 }),
 		) as unknown as typeof fetch;
-		expect(discover("https://c.example.com")).rejects.toThrow("OIDC discovery failed: 500");
+		await expect(discover("https://c.example.com")).rejects.toThrow("OIDC discovery failed: 500");
 	});
 });
 
@@ -292,7 +292,7 @@ describe("exchangeCode", () => {
 			async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
 		) as unknown as typeof fetch;
 
-		expect(
+		await expect(
 			exchangeCode(metadata, {
 				clientId: "c",
 				clientSecret: "s",
@@ -308,7 +308,7 @@ describe("exchangeCode", () => {
 			async () => new Response(JSON.stringify({}), { status: 200 }),
 		) as unknown as typeof fetch;
 
-		expect(
+		await expect(
 			exchangeCode(metadata, {
 				clientId: "c",
 				clientSecret: "s",

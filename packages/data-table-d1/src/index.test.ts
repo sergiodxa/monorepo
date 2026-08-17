@@ -369,7 +369,7 @@ describe("createD1DatabaseAdapter", () => {
 			throw boom;
 		});
 
-		expect(promise).rejects.toBe(boom);
+		await expect(promise).rejects.toBe(boom);
 
 		// D1 has no ROLLBACK: the first write already auto-committed and remains.
 		// This asserts the honest, documented behavior — NOT desired atomicity.

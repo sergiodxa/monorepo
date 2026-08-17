@@ -380,7 +380,7 @@ describe("cache middleware refusals", () => {
 			return new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
 		});
 
-		expect(run).rejects.toThrow(UnsafeCachePolicyError);
+		await expect(run).rejects.toThrow(UnsafeCachePolicyError);
 		expect(logger.error).toHaveBeenCalledTimes(1);
 	});
 
@@ -394,7 +394,7 @@ describe("cache middleware refusals", () => {
 			return new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
 		});
 
-		expect(run).rejects.toThrow(UnsafeCachePolicyError);
+		await expect(run).rejects.toThrow(UnsafeCachePolicyError);
 	});
 
 	test("logs a refusal through a plain log function published on the context", async () => {
@@ -533,7 +533,7 @@ describe("cache middleware purging", () => {
 			throw new Error("handler failed");
 		});
 
-		expect(run).rejects.toThrow("handler failed");
+		await expect(run).rejects.toThrow("handler failed");
 		expect(recording.purgedTags).toEqual(["posts"]);
 	});
 });

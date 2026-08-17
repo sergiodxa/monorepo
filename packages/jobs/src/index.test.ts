@@ -340,7 +340,7 @@ describe(Job.name, () => {
 		test("logs error and re-throws for Cloudflare to handle", async () => {
 			let message = createMessage({ teamId: "team-123" });
 
-			expect(UnexpectedErrorJob.run({ message })).rejects.toThrow("Something went wrong");
+			await expect(UnexpectedErrorJob.run({ message })).rejects.toThrow("Something went wrong");
 
 			// Should not call ack or retry - let Cloudflare handle it
 			expect(ackMock).not.toHaveBeenCalled();

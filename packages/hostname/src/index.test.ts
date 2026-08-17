@@ -161,7 +161,7 @@ describe("HostnameClient error handling", () => {
 
 		let client = makeClient();
 		let promise = client.status("cf-1");
-		expect(promise).rejects.toBeInstanceOf(HostnameApiError);
+		await expect(promise).rejects.toBeInstanceOf(HostnameApiError);
 	});
 });
 

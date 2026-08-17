@@ -324,7 +324,7 @@ describe("PolarClient", () => {
 			},
 		});
 
-		expect(polar.getCustomer("cus_1")).rejects.toThrow("Secret not found");
+		await expect(polar.getCustomer("cus_1")).rejects.toThrow("Secret not found");
 
 		await polar.getCustomer("cus_1");
 		expect(attempts).toBe(2);
@@ -473,7 +473,9 @@ describe("PolarClient", () => {
 				throw new Error("network error");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow("network error");
+			await expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow(
+				"network error",
+			);
 		});
 	});
 
@@ -515,7 +517,7 @@ describe("PolarClient", () => {
 				throw new Error("network error");
 			};
 			let polar = new PolarClient({ accessToken: "t" });
-			expect(polar.listDiscounts()).rejects.toThrow("network error");
+			await expect(polar.listDiscounts()).rejects.toThrow("network error");
 		});
 	});
 
@@ -721,7 +723,7 @@ describe("PolarClient", () => {
 
 	test("ingestEvents throws when an event identifies no customer", async () => {
 		let polar = new PolarClient({ accessToken: "t" });
-		expect(polar.ingestEvents([{ name: "infra.cost.daily" }])).rejects.toThrow(
+		await expect(polar.ingestEvents([{ name: "infra.cost.daily" }])).rejects.toThrow(
 			/names neither a customerId nor an externalCustomerId/,
 		);
 	});
