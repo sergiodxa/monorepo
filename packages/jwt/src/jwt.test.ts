@@ -101,7 +101,7 @@ describe("signing and verifying", () => {
 	test("refuses to verify when no key is available", async () => {
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		expect(JWT.verify(signed, [])).rejects.toThrow("No key available to verify JWT");
+		await expect(JWT.verify(signed, [])).rejects.toThrow("No key available to verify JWT");
 	});
 });
 
@@ -127,7 +127,7 @@ describe("choosing a key out of a set", () => {
 
 		// The `kid` decides, so a set that does not publish it has nothing to try — this
 		// never reaches a signature check.
-		expect(JWT.verify(signed, [other], VERIFY)).rejects.toBeInstanceOf(
+		await expect(JWT.verify(signed, [other], VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
 	});
@@ -138,7 +138,7 @@ describe("choosing a key out of a set", () => {
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		expect(JWT.verify(signed, keys, { algorithms: [JWK.Algorithm.RS256] })).rejects.toThrow();
+		await expect(JWT.verify(signed, keys, { algorithms: [JWK.Algorithm.RS256] })).rejects.toThrow();
 	});
 
 	test("signs with the first key in the set generated for the algorithm asked for", async () => {
@@ -175,7 +175,7 @@ describe("verification failures", () => {
 	test("rejects a token signed by another key", async () => {
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
+		await expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
 	});
 
 	test("rejects a token whose payload was edited after signing", async () => {
@@ -184,7 +184,7 @@ describe("verification failures", () => {
 		let [header, , signature] = signed.split(".");
 		let forged = btoa(JSON.stringify({ sub: "admin" })).replaceAll("=", "");
 
-		expect(JWT.verify(`${header}.${forged}.${signature}`, keys)).rejects.toThrow();
+		await expect(JWT.verify(`${header}.${forged}.${signature}`, keys)).rejects.toThrow();
 	});
 
 	test("rejects a mismatched issuer", async () => {
@@ -193,7 +193,7 @@ describe("verification failures", () => {
 			keys,
 		);
 
-		expect(JWT.verify(signed, keys, { issuer: "https://elsewhere.test" })).rejects.toThrow();
+		await expect(JWT.verify(signed, keys, { issuer: "https://elsewhere.test" })).rejects.toThrow();
 		await expect(JWT.verify(signed, keys, { issuer: "https://auth.test" })).resolves.toBeDefined();
 	});
 
@@ -203,7 +203,7 @@ describe("verification failures", () => {
 			keys,
 		);
 
-		expect(JWT.verify(signed, keys, { audience: "client-2" })).rejects.toThrow();
+		await expect(JWT.verify(signed, keys, { audience: "client-2" })).rejects.toThrow();
 		await expect(JWT.verify(signed, keys, { audience: "client-1" })).resolves.toBeDefined();
 	});
 });
@@ -215,7 +215,7 @@ describe("time claims", () => {
 			keys,
 		);
 
-		expect(JWT.verify(signed, keys)).rejects.toThrow();
+		await expect(JWT.verify(signed, keys)).rejects.toThrow();
 	});
 
 	test("accepts a just-expired token within the clock tolerance", async () => {
@@ -235,7 +235,7 @@ describe("time claims", () => {
 			keys,
 		);
 
-		expect(JWT.verify(signed, keys, { clockTolerance: CLOCK_TOLERANCE })).rejects.toThrow();
+		await expect(JWT.verify(signed, keys, { clockTolerance: CLOCK_TOLERANCE })).rejects.toThrow();
 	});
 
 	test("rejects a token that is not valid yet", async () => {
@@ -244,7 +244,7 @@ describe("time claims", () => {
 			keys,
 		);
 
-		expect(JWT.verify(signed, keys)).rejects.toThrow();
+		await expect(JWT.verify(signed, keys)).rejects.toThrow();
 		await expect(JWT.verify(signed, keys, { clockTolerance: 1200 })).resolves.toBeDefined();
 	});
 });
@@ -258,7 +258,7 @@ describe("decoding", () => {
 
 		// Nothing has been authenticated here — this is the "which issuer is this?"
 		// read that happens before a JWKS is even chosen.
-		expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
+		await expect(JWT.verify(signed, otherKeys)).rejects.toThrow();
 
 		let decoded = JWT.decode(signed);
 

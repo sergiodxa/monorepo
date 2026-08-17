@@ -358,7 +358,7 @@ describe("importLocal", () => {
 
 		let resolved = await JWK.importLocal(JWK.toJSON([other]));
 
-		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow();
+		await expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow();
 	});
 
 	test("has no key to offer for an empty set", async () => {
@@ -367,7 +367,7 @@ describe("importLocal", () => {
 
 		let resolved = await JWK.importLocal({ keys: [] });
 
-		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
+		await expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
 	});
@@ -395,7 +395,7 @@ describe("importLocal", () => {
 
 		// Rejected on the `kid` alone, before the signature is even checked — the set has
 		// nothing to offer for that name.
-		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
+		await expect(JWT.verify(signed, resolved, VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
 	});
@@ -410,16 +410,16 @@ describe("importLocal", () => {
 		let encryption = await JWK.importLocal({ keys: [{ ...published, use: "enc" }] });
 		let otherAlgorithm = await JWK.importLocal({ keys: [{ ...published, alg: "RS256" }] });
 
-		expect(JWT.verify(signed, encryption, VERIFY)).rejects.toBeInstanceOf(
+		await expect(JWT.verify(signed, encryption, VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
-		expect(JWT.verify(signed, otherAlgorithm, VERIFY)).rejects.toBeInstanceOf(
+		await expect(JWT.verify(signed, otherAlgorithm, VERIFY)).rejects.toBeInstanceOf(
 			jose.errors.JWKSNoMatchingKey,
 		);
 	});
 
-	test("fails when the document is not a key set at all", () => {
-		expect(JWK.importLocal({} as jose.JSONWebKeySet)).rejects.toThrow(/malformed/i);
+	test("fails when the document is not a key set at all", async () => {
+		await expect(JWK.importLocal({} as jose.JSONWebKeySet)).rejects.toThrow(/malformed/i);
 	});
 });
 
@@ -498,7 +498,7 @@ describe("importRemote", () => {
 
 		let resolved = await JWK.importRemote(new URL(JWKS_URL));
 
-		expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow(/200 OK/);
+		await expect(JWT.verify(signed, resolved, VERIFY)).rejects.toThrow(/200 OK/);
 	});
 });
 
