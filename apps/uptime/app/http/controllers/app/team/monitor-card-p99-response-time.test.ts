@@ -3,8 +3,8 @@
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
  * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
  * in-memory implementations, so the cache the card must not consult is a store that
- * would really have answered. The global `fetch` is mocked so `queryAnalytics`'s
- * Analytics Engine SQL API call never hits the network.
+ * would really have answered. `queryAnalytics`'s Analytics Engine SQL API call is
+ * intercepted by MSW, so it never hits the network.
  * `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing in for
  * the real `requireUser`/`requireTeam`/i18n middleware chain, following the template
  * in `monitor-card-slowest-result.test.ts`.
@@ -13,7 +13,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -26,6 +36,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -162,6 +174,16 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
+/** The Analytics Engine SQL API endpoint `queryAnalytics` POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server intercepting the Analytics Engine SQL API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 beforeEach(() => {
 	kvGet.mockClear();
 	queue.reset();
@@ -171,10 +193,11 @@ beforeEach(() => {
 describe("monitor-card-p99-response-time", () => {
 	test("renders the monitor's p99 response time with its window label", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(JSON.stringify({ data: [{ p99ResponseTimeMs: 842.4, totalChecks: 1200 }] })),
-		) as unknown as typeof fetch;
+		server.use(
+			http.post(SQL_URL, () =>
+				HttpResponse.json({ data: [{ p99ResponseTimeMs: 842.4, totalChecks: 1200 }] }),
+			),
+		);
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
@@ -187,18 +210,21 @@ describe("monitor-card-p99-response-time", () => {
 
 	test("scopes the query to this monitor and does not read the team cache", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		let fetchMock = mock(
-			async (..._args: unknown[]) =>
-				new Response(JSON.stringify({ data: [{ p99ResponseTimeMs: 100, totalChecks: 5 }] })),
+		// The SQL the card actually sent, read off the intercepted request body; it stays
+		// empty if the card never queries, which the assertions below would then catch.
+		let sql = "";
+
+		server.use(
+			http.post(SQL_URL, async ({ request }) => {
+				sql = await request.text();
+				return HttpResponse.json({ data: [{ p99ResponseTimeMs: 100, totalChecks: 5 }] });
+			}),
 		);
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
 
 		// The monitor-scoped query filters `blob1`, never `index1`, and is uncached.
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let sql = init.body as string;
 		expect(sql).toContain(`blob1 = '${monitor.id}'`);
 		expect(sql).not.toContain(`index1 = '${team.id}'`);
 		expect(kvGet).not.toHaveBeenCalled();
@@ -206,10 +232,11 @@ describe("monitor-card-p99-response-time", () => {
 
 	test("renders an em dash when there are no checks in range", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(JSON.stringify({ data: [{ p99ResponseTimeMs: null, totalChecks: 0 }] })),
-		) as unknown as typeof fetch;
+		server.use(
+			http.post(SQL_URL, () =>
+				HttpResponse.json({ data: [{ p99ResponseTimeMs: null, totalChecks: 0 }] }),
+			),
+		);
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
@@ -221,9 +248,7 @@ describe("monitor-card-p99-response-time", () => {
 
 	test("renders an em dash when the Analytics Engine query fails", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response("upstream exploded", { status: 503 }),
-		) as unknown as typeof fetch;
+		server.use(http.post(SQL_URL, () => new HttpResponse("upstream exploded", { status: 503 })));
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
@@ -235,9 +260,13 @@ describe("monitor-card-p99-response-time", () => {
 
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
+		// A monitor the team doesn't own is rejected before any query is billed, which this
+		// handler and the `onUnhandledRequest: "error"` guard together hold the card to.
+		server.use(
+			http.post(SQL_URL, () => {
+				throw new Error("the p99 card must not query for a monitor outside the team");
+			}),
+		);
 
 		let response = await send(db, team, membership, crypto.randomUUID());
 		expect(response.status).toBe(404);

@@ -1,8 +1,8 @@
 /**
  * Tests for the dashboard "Slowest Endpoint" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load, and the global `fetch`
- * is mocked so `queryAnalytics`'s Analytics Engine SQL API call never hits the
+ * `~/app/services/analytics` both read `env` at module load, and `queryAnalytics`'s
+ * Analytics Engine SQL API call is intercepted by MSW, so it never hits the
  * network. `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly,
  * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain,
  * following the template in `app/http/controllers/actions/monitors.test.ts`.
@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -24,6 +24,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -144,6 +146,16 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
+/** The Analytics Engine SQL API endpoint `queryAnalytics` POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server intercepting the Analytics Engine SQL API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 beforeEach(() => {
 	queue.reset();
 	pingResults.reset();
@@ -164,23 +176,22 @@ describe("dashboard-card-slowest-endpoint", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(
-					JSON.stringify({
-						data: [
-							{
-								monitorId: monitor.id,
-								totalChecks: 5,
-								upChecks: 5,
-								degradedChecks: 0,
-								downChecks: 0,
-								maxResponseTimeMs: 842,
-							},
-						],
-					}),
-				),
-		) as unknown as typeof fetch;
+		server.use(
+			http.post(SQL_URL, () =>
+				HttpResponse.json({
+					data: [
+						{
+							monitorId: monitor.id,
+							totalChecks: 5,
+							upChecks: 5,
+							degradedChecks: 0,
+							downChecks: 0,
+							maxResponseTimeMs: 842,
+						},
+					],
+				}),
+			),
+		);
 
 		let response = await send(db, team, membership);
 		expect(response.status).toBe(200);
@@ -192,9 +203,7 @@ describe("dashboard-card-slowest-endpoint", () => {
 
 	test("renders the no-data fallback when there are no summaries", async () => {
 		let { db, team, membership } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
+		server.use(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
 
 		let response = await send(db, team, membership);
 		expect(response.status).toBe(200);
@@ -206,9 +215,9 @@ describe("dashboard-card-slowest-endpoint", () => {
 
 	test("renders the analytics-unavailable fallback when the query fails", async () => {
 		let { db, team, membership } = await createFixture();
-		globalThis.fetch = mock(async (..._args: unknown[]) => {
-			throw new Error("network unreachable");
-		}) as unknown as typeof fetch;
+		// A transport failure, not a non-2xx body: the card's fallback covers the branch
+		// where `queryAnalytics` never gets a response at all.
+		server.use(http.post(SQL_URL, () => HttpResponse.error()));
 
 		let response = await send(db, team, membership);
 		expect(response.status).toBe(200);

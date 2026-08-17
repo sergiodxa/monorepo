@@ -1,8 +1,8 @@
 /**
  * Tests for the HTTP monitors list page controller. `cloudflare:workers` is mocked
  * because `~/app/data/monitor` reads `env` at module load — following the exact
- * pattern established in `app/http/controllers/actions/monitors.test.ts` — and the
- * global `fetch` is mocked so a stray network call would be visible rather than silent;
+ * pattern established in `app/http/controllers/actions/monitors.test.ts` — and MSW
+ * intercepts outbound HTTP so a stray network call would be visible rather than silent;
  * the page itself no longer makes one. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
  * seeded directly by a fake middleware standing in for the real `auth`/`requireUser`/
  * `requireTeam` chain, matching the same template's `seedTeam` helper.
@@ -11,13 +11,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -107,11 +109,19 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
-beforeEach(() => {
-	globalThis.fetch = mock(
-		async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-	) as unknown as typeof fetch;
-});
+/** The Analytics Engine SQL API endpoint `queryAnalytics` POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/**
+ * MSW server intercepting the Analytics Engine SQL API, answering with no rows. The page
+ * makes no query of its own, so with `onUnhandledRequest: "error"` any request at all —
+ * to this endpoint or another — is a regression these tests catch.
+ */
+let server = setupServer(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe("httpMonitors", () => {
 	test("renders the empty state when the team has no HTTP monitors", async () => {

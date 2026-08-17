@@ -2,8 +2,8 @@
  * Tests for the monitor detail page "Slowest Result" stat-card fragment controller.
  * `cloudflare:workers` is mocked because `~/app/data/monitor` and
  * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
- * in-memory implementations. The global `fetch` is mocked so `queryAnalytics`'s
- * Analytics Engine SQL API call never hits the network.
+ * in-memory implementations. `queryAnalytics`'s Analytics Engine SQL API call is
+ * intercepted by MSW, so it never hits the network.
  * `ctx.team`/`ctx.membership`/auth/i18next state is seeded directly, standing in for
  * the real `requireUser`/`requireTeam`/i18n middleware chain, following the template
  * in `dashboard-card-slowest-endpoint.test.ts`.
@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -25,6 +25,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -153,6 +155,16 @@ async function send(
 	return container.scope(() => router.fetch(request));
 }
 
+/** The Analytics Engine SQL API endpoint `queryAnalytics` POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server intercepting the Analytics Engine SQL API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 beforeEach(() => {
 	queue.reset();
 	pingResults.reset();
@@ -161,10 +173,7 @@ beforeEach(() => {
 describe("monitor-card-slowest-result", () => {
 	test("renders the monitor's slowest response time", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) =>
-				new Response(JSON.stringify({ data: [{ maxResponseTimeMs: 842 }] })),
-		) as unknown as typeof fetch;
+		server.use(http.post(SQL_URL, () => HttpResponse.json({ data: [{ maxResponseTimeMs: 842 }] })));
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
@@ -176,9 +185,7 @@ describe("monitor-card-slowest-result", () => {
 
 	test("renders N/A when there are no checks in range", async () => {
 		let { db, team, membership, monitor } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
+		server.use(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);
@@ -189,9 +196,13 @@ describe("monitor-card-slowest-result", () => {
 
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
+		// A monitor the team doesn't own is rejected before any query is billed, which this
+		// handler and the `onUnhandledRequest: "error"` guard together hold the card to.
+		server.use(
+			http.post(SQL_URL, () => {
+				throw new Error("the slowest-result card must not query for a monitor outside the team");
+			}),
+		);
 
 		let response = await send(db, team, membership, crypto.randomUUID());
 		expect(response.status).toBe(404);

@@ -1,8 +1,9 @@
 /**
  * Tests for the dashboard tab-panel fragment controller. `cloudflare:workers` is
  * mocked so the HTTP tab's `getTeamHttpSummaries`/`getTeamHttpSparklines` (which hit
- * the Analytics Engine SQL HTTP API via `fetch`, using `env.CLOUDFLARE_ACCOUNT_ID`/
- * `env.CLOUDFLARE_ANALYTICS_TOKEN`) never touch real Cloudflare bindings.
+ * the Analytics Engine SQL HTTP API, using `env.CLOUDFLARE_ACCOUNT_ID`/
+ * `env.CLOUDFLARE_ANALYTICS_TOKEN`) never touch real Cloudflare bindings; MSW
+ * intercepts that API so the queries never leave the process either.
  * `requireUser`/`requireTeam`/`i18n` are bypassed the same way as the other
  * page-controller tests in this directory: `ctx.team`/`ctx.membership`/`ctx.i18next`
  * are seeded directly, and `ctx.render` is stood in for with a minimal renderer
@@ -12,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -25,6 +26,8 @@ import {
 } from "@pkg/cloudflare-mocks";
 import { createTranslator } from "@pkg/i18n";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -148,13 +151,20 @@ async function fetchPanel(
 	return container.scope(() => router.fetch(request));
 }
 
+/** The Analytics Engine SQL API endpoint the HTTP tab's summary queries POST to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server intercepting the Analytics Engine SQL API, answering with no rows. */
+let server = setupServer(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 describe("app/team/dashboard-panel", () => {
 	beforeEach(() => {
 		queue.reset();
 		pingResults.reset();
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })),
-		) as unknown as typeof fetch;
 	});
 
 	test("http tab renders the seeded monitor's name and table columns", async () => {
