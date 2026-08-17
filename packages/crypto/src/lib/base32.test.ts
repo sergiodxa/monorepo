@@ -26,11 +26,11 @@ const VECTORS = [
 ] as const;
 
 describe("base32", () => {
-	test.each(VECTORS)("encodes %p as %p", (text, expected) => {
+	test.each(VECTORS)("encodes %j as %j", (text, expected) => {
 		expect(encode(new TextEncoder().encode(text))).toBe(expected);
 	});
 
-	test.each(VECTORS)("decodes back to %p", (text, encoded) => {
+	test.each(VECTORS)("decodes back to %j", (text, encoded) => {
 		expect(new TextDecoder().decode(unwrap(decode(encoded)))).toBe(text);
 	});
 

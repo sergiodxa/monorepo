@@ -79,7 +79,7 @@ describe("Subscription.getStatusLabel", () => {
 		["past_due", "Past Due"],
 		["unpaid", "Unpaid"],
 		["incomplete", "Incomplete"],
-	])("labels %p as %p", (status, label) => {
+	])("labels %j as %j", (status, label) => {
 		expect(Subscription.getStatusLabel(status)).toBe(label);
 	});
 

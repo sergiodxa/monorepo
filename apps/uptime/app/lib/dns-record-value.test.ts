@@ -50,7 +50,7 @@ describe("normalizeDnsName", () => {
 		["example.com", "example.com"],
 		["WWW.Example.COM.", "www.example.com"],
 		["  WWW.example.com.  ", "www.example.com"],
-	])("folds %p to %p", (input, expected) => {
+	])("folds %j to %j", (input, expected) => {
 		expect(normalizeDnsName(input)).toBe(expected);
 	});
 
@@ -60,7 +60,7 @@ describe("normalizeDnsName", () => {
 });
 
 describe("isIpv4Address", () => {
-	test.each(["1.1.1.1", "104.21.58.249", "0.0.0.0", "255.255.255.255"])("accepts %p", (value) => {
+	test.each(["1.1.1.1", "104.21.58.249", "0.0.0.0", "255.255.255.255"])("accepts %j", (value) => {
 		expect(isIpv4Address(value)).toBe(true);
 	});
 
@@ -71,7 +71,7 @@ describe("isIpv4Address", () => {
 		/** Ambiguous: read as octal by some resolvers and as decimal by others. */
 		"010.1.1.1",
 		"1.1.1.-1",
-	])("refuses %p", (value) => {
+	])("refuses %j", (value) => {
 		expect(isIpv4Address(value)).toBe(false);
 	});
 });
@@ -89,7 +89,7 @@ describe("canonicalizeIpv6", () => {
 		["2001:db8:0:0:1:0:0:1", "2001:db8::1:0:0:1"],
 		["2001:DB8:0:1:1:1:1:1", "2001:db8:0:1:1:1:1:1"],
 		["::ffff:192.0.2.1", "::ffff:c000:201"],
-	])("rewrites %p as %p", (input, expected) => {
+	])("rewrites %j as %j", (input, expected) => {
 		expect(canonicalizeIpv6(input)).toBe(expected);
 	});
 
@@ -100,7 +100,7 @@ describe("canonicalizeIpv6", () => {
 		"fe80::1%eth0",
 		"gggg::1",
 		"",
-	])("refuses %p", (value) => {
+	])("refuses %j", (value) => {
 		expect(canonicalizeIpv6(value)).toBeNull();
 	});
 
@@ -108,7 +108,7 @@ describe("canonicalizeIpv6", () => {
 		["2001:0:0:1:2001:0:0:1", "2001::1:2001:0:0:1"],
 		["2001:0:0:1:0:0:0:1", "2001:0:0:1::1"],
 		["1:0:0:1:0:0:1:1", "1::1:0:0:1:1"],
-	])("elides the longest run of zero groups, leftmost on a tie: %p", (input, expected) => {
+	])("elides the longest run of zero groups, leftmost on a tie: %j", (input, expected) => {
 		expect(canonicalizeIpv6(input)).toBe(expected);
 	});
 });
@@ -169,7 +169,7 @@ describe("parseDnsRecordValue", () => {
 		 * while the resolver's own quoted answer keeps the space.
 		 */
 		["TXT", "  v=spf1 -all  ", "v=spf1 -all"],
-	] as const)("reads a %s of %p as %p", (type, data, expected) => {
+	] as const)("reads a %s of %j as %j", (type, data, expected) => {
 		expect(parseDnsRecordValue(type, data)).toBe(expected);
 	});
 
@@ -184,7 +184,7 @@ describe("parseDnsRecordValue", () => {
 		["MX", "high aspmx.l.google.com."],
 		["MX", "10"],
 		["TXT", '"unterminated'],
-	] as const)("refuses a %s of %p", (type, data) => {
+	] as const)("refuses a %s of %j", (type, data) => {
 		expect(parseDnsRecordValue(type, data)).toBeNull();
 	});
 });
@@ -197,7 +197,7 @@ describe("normalizeDnsRecordValue", () => {
 		["NS", "dora.ns.cloudflare.com.", "dora.ns.cloudflare.com"],
 		["MX", "05 aspmx.l.google.com.", "5 aspmx.l.google.com"],
 		["TXT", '"a" "b"', "ab"],
-	] as const)("agrees with the strict reading on a %s of %p", (type, data, expected) => {
+	] as const)("agrees with the strict reading on a %s of %j", (type, data, expected) => {
 		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
 		expect(parseDnsRecordValue(type, data)).toBe(expected);
 	});
@@ -217,7 +217,7 @@ describe("normalizeDnsRecordValue", () => {
 		/** Kept as written rather than folded to `NaN`. */
 		["MX", "high mx.example.com.", "high mx.example.com"],
 		["TXT", '"open', "open"],
-	] as const)("carries an unparseable %s of %p through as %p", (type, data, expected) => {
+	] as const)("carries an unparseable %s of %j through as %j", (type, data, expected) => {
 		expect(parseDnsRecordValue(type, data)).toBeNull();
 		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
 	});
