@@ -1,9 +1,0 @@
-{
-	"$schema": "../../node_modules/oxlint/configuration_schema.json",
-	"extends": ["../../.oxlintrc.json"],
-	"rules": {
-		"jsx_a11y/anchor-has-content": "allow",
-		"jsx_a11y/alt-text": "allow",
-		"jsx_a11y/label-has-associated-control": "allow"
-	}
-}

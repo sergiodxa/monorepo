@@ -7,24 +7,26 @@
 	],
 	"type": "module",
 	"scripts": {
-		"format": "bunx oxfmt --check",
-		"format:fix": "bunx oxfmt",
-		"lint": "oxlint --deny-warnings",
-		"lint:fix": "oxlint --deny-warnings --fix",
+		"format": "vp fmt --check",
+		"format:fix": "vp fmt",
+		"lint": "vp lint",
+		"lint:fix": "vp lint --fix",
 		"test": "bun test --isolate",
-		"typecheck": "bun run --workspaces typecheck",
+		"typecheck": "vp check --no-fmt --no-lint",
 		"upgrade": "bun scripts/upgrade-dependencies.ts",
 		"upgrade:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run",
 		"upgrade:apps": "bun scripts/upgrade-dependencies.ts --workspace apps",
 		"upgrade:apps:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace apps",
 		"upgrade:packages": "bun scripts/upgrade-dependencies.ts --workspace packages",
-		"upgrade:packages:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace packages"
+		"upgrade:packages:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace packages",
+		"check": "vp check",
+		"check:fix": "vp check --fix"
 	},
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",
-		"oxfmt": "^0.55.0",
-		"oxlint": "^1.70.0",
+		"oxfmt": "^0.62.0",
+		"oxlint": "^1.77.0",
 		"typescript": "^6.0.3"
 	},
 	"devDependencies": {

@@ -38,14 +38,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Format
-            command: bun format
-            typegen: false
-          - name: Lint
-            command: bun lint
-            typegen: false
-          - name: Typecheck
-            command: bun typecheck
+          # `vp check` is format, lint and type check in one pass, so it replaces the three
+          # jobs these used to be. It needs the generated framework types for the type-aware
+          # path. The `vp` binary comes from the `vite-plus` devDependency, so the toolchain
+          # version is pinned by the lockfile rather than by an installer.
+          - name: Check
+            command: bun run check
             typegen: true
           - name: Test
             command: bun run test
