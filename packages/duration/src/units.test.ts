@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { LONG_UNIT_MS, longUnitToMs, SECOND_MS, SHORT_UNIT_MS, shortUnitToMs } from "./units";
 

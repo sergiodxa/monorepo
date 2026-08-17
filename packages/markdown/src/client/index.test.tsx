@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import Markdoc from "@markdoc/markdoc";
 import { renderToString } from "remix/ui/server";

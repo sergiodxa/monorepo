@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { isFailure, isSuccess } from "@pkg/result";
 import { XML } from "@pkg/xml";
