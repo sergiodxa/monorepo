@@ -10,7 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { Button, type InputManager } from "../core/input";
 import { TILE_SIZE } from "../core/loop";

@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the battle mechanics test module for this game engine layer. This
  * module defines focused behavioral checks around deterministic combat-related
@@ -13,9 +14,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";

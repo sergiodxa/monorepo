@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the learn system's move-window math and moveset mutation rules.
  *
@@ -13,9 +14,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { LearnsetEntry } from "../data/species";
 import type { LegacyCreatureComponent } from "../world/components";

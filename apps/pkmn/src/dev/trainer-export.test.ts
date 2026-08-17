@@ -4,17 +4,17 @@
  * definition, and rejects invalid ids (blank, uppercase, dotted, traversal-ish,
  * over-length) before any path work; the derived path always passes the shared
  * path-safety guard. The server handler {@link runTrainerExport} is exercised end
- * to end with a real `Bun.write` into an allow-listed scratch target (removed
+ * to end with a real write into an allow-listed scratch target (removed
  * after), and guards that malformed payloads and unsafe ids fail without writing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, describe, expect, test } from "bun:test";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { afterAll, describe, expect, test } from "vitest";
 
 import type { TrainerDefinition } from "~/content/trainers";
 
@@ -119,7 +119,7 @@ describe("runTrainerExport", () => {
 			expect(result.data.path).toBe(SCRATCH_PATH);
 			expect(result.data.bytesWritten).toBeGreaterThan(0);
 
-			let written = await Bun.file(result.data.absolutePath).json();
+			let written = JSON.parse(await readFile(result.data.absolutePath, "utf8"));
 			expect(written).toEqual(definition);
 		}
 	});

@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Verifies the multi-map project lifecycle without a canvas: newMap adds a fresh map
  * and selects it, selectMap switches the active map, renameMap keeps ordering/edits
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { packTileRef, type Tileset } from "~/presentation/render/map-schema";
 

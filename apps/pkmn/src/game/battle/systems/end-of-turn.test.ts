@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the end-of-turn residual pipeline's held-item passive heal in isolation,
  * so the Leftovers-style recovery can be covered without depending on unrelated
@@ -7,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { ItemId } from "~/game/data/item";
 import type { NatureId } from "~/game/data/nature";

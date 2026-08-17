@@ -1,3 +1,7 @@
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Verifies the map export: the pure payload shaper derives the
  * `src/content/maps/<id>.json` write path, the `/content/maps/<id>.json` served
@@ -6,17 +10,13 @@
  * derived path always passes the shared path-safety guard; and manifest
  * registration adds the map without mutating the input or clobbering other kinds.
  * The server handler {@link runMapExport} is exercised end to end with a real
- * `Bun.write` into an allow-listed scratch target (map JSON removed after, manifest
+ * write into an allow-listed scratch target (map JSON removed after, manifest
  * restored), and guards that malformed maps and unsafe ids fail without writing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, describe, expect, test } from "bun:test";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { afterAll, describe, expect, test } from "vitest";
 
 import { EMPTY_CELL, type MapData } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
@@ -183,10 +183,12 @@ describe("runMapExport", () => {
 			expect(result.data.url).toBe(`${MAP_URL_PREFIX}/${SCRATCH_ID}.json`);
 			expect(result.data.bytesWritten).toBeGreaterThan(0);
 
-			let written = await Bun.file(result.data.absolutePath).json();
+			let written = JSON.parse(await readFile(result.data.absolutePath, "utf8"));
 			expect(written).toEqual(map);
 
-			let manifest = (await Bun.file(MANIFEST_ABS).json()) as { maps: Record<string, string> };
+			let manifest = JSON.parse(await readFile(MANIFEST_ABS, "utf8")) as {
+				maps: Record<string, string>;
+			};
 			expect(manifest.maps[SCRATCH_ID]).toBe(`${MAP_URL_PREFIX}/${SCRATCH_ID}.json`);
 		}
 	});

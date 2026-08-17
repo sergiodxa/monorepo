@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Exercises the battle test module that validates end-to-end turn resolution,
  * action ordering, and combat state transitions against the public battle API.
@@ -11,9 +12,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";

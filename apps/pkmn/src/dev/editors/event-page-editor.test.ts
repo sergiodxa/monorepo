@@ -1,3 +1,4 @@
+import { isSuccess } from "@pkg/result";
 /**
  * Verifies the pure event page/command editing logic without a DOM: the page and
  * command factories mint schema-valid defaults, the recursive command-tree operations
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { EventCommand } from "~/presentation/render/map-schema";
 

@@ -3,17 +3,18 @@
  * the whole `species.json` map (preserving every other species) and re-serializes
  * tab-indented with a trailing newline; it rejects invalid ids before any file
  * work. The server handler {@link runSpeciesExport} is exercised end to end with a
- * real `Bun.write` into a scratch entry of the real `species.json` (removed after),
+ * real write into a scratch entry of the real `species.json` (removed after),
  * and guards that malformed payloads and invalid ids fail without corrupting the
  * file.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Species, SpeciesId } from "~/game/data/species";
 
@@ -62,7 +63,7 @@ function validSpecies(): Species {
 
 /** Loads the current on-disk species index the same way the handler does. */
 async function currentIndex(): Promise<Record<SpeciesId, Species>> {
-	let current = await Bun.file(resolve(APP_ROOT, SPECIES_CONTENT_PATH)).json();
+	let current = JSON.parse(await readFile(resolve(APP_ROOT, SPECIES_CONTENT_PATH), "utf8"));
 	return parseSpecies(current);
 }
 
@@ -181,11 +182,11 @@ describe("runSpeciesExport", () => {
 	let originalContents: string;
 
 	beforeAll(async () => {
-		originalContents = await Bun.file(resolve(APP_ROOT, SPECIES_CONTENT_PATH)).text();
+		originalContents = await readFile(resolve(APP_ROOT, SPECIES_CONTENT_PATH), "utf8");
 	});
 
 	afterAll(async () => {
-		await Bun.write(resolve(APP_ROOT, SPECIES_CONTENT_PATH), originalContents);
+		await writeFile(resolve(APP_ROOT, SPECIES_CONTENT_PATH), originalContents);
 	});
 
 	test("rejects a non-object payload", async () => {

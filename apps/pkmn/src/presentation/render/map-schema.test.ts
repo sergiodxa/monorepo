@@ -1,3 +1,4 @@
+import { parseSafe } from "remix/data-schema";
 /**
  * Tests for the map JSON format's schema and its pack/unpack helpers.
  *
@@ -13,9 +14,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { parseSafe } from "remix/data-schema";
+import { expect, test } from "vitest";
 
 import {
 	EMPTY_CELL,

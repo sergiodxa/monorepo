@@ -9,11 +9,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-import { rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import {
 	AtlasExportError,
@@ -191,8 +192,8 @@ describe("runAtlasExport", () => {
 	test("writes the PNG and registers the image + atlas region in the manifest", async () => {
 		let SPRITE_NAME = "atlas-export-test-sprite";
 		let SPRITE_ASSET_PATH = `src/assets/${SPRITE_NAME}.png`;
-		let manifestFile = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
-		let original = (await manifestFile.exists()) ? await manifestFile.text() : null;
+		let manifestFile = resolve(APP_ROOT, MANIFEST_PATH);
+		let original = existsSync(manifestFile) ? await readFile(manifestFile, "utf8") : null;
 
 		try {
 			let result = await runAtlasExport({
@@ -216,13 +217,11 @@ describe("runAtlasExport", () => {
 				expect(result.data.bytesWritten).toBeGreaterThan(0);
 
 				// The PNG landed on disk with the expected magic bytes.
-				let pngBytes = new Uint8Array(
-					await Bun.file(resolve(APP_ROOT, SPRITE_ASSET_PATH)).arrayBuffer(),
-				);
+				let pngBytes = new Uint8Array(await readFile(resolve(APP_ROOT, SPRITE_ASSET_PATH)));
 				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
 
 				// The manifest now holds both the flat image and the atlas region.
-				let manifestText = await Bun.file(resolve(APP_ROOT, MANIFEST_PATH)).text();
+				let manifestText = await readFile(resolve(APP_ROOT, MANIFEST_PATH), "utf8");
 				let manifest = JSON.parse(manifestText) as ManifestAtlases;
 				expect(manifest.images[SPRITE_NAME]).toBe(`/assets/${SPRITE_NAME}.png`);
 				expect(manifest.atlases["test-atlas"]).toEqual({
@@ -232,7 +231,7 @@ describe("runAtlasExport", () => {
 			}
 		} finally {
 			// Restore the manifest and delete the scratch PNG — leave no trace.
-			if (original !== null) await Bun.write(resolve(APP_ROOT, MANIFEST_PATH), original);
+			if (original !== null) await writeFile(resolve(APP_ROOT, MANIFEST_PATH), original);
 			await rm(resolve(APP_ROOT, SPRITE_ASSET_PATH), { force: true });
 		}
 	});

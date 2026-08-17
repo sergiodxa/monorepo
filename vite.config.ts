@@ -62,6 +62,7 @@ export default defineConfig({
 						"packages/server-timing/src/**/*.test.ts?(x)",
 						"packages/sitemap/src/**/*.test.ts?(x)",
 						"packages/mail/src/**/*.test.ts?(x)",
+						"packages/cloudflare-mocks/src/**/*.test.ts?(x)",
 					],
 					pool: "threads",
 				},

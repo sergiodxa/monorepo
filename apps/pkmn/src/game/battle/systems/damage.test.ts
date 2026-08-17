@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies direct damage-system behavior under controlled battle state so crit-specific
  * stat overrides can be covered without depending on unrelated full-battle sequencing.
@@ -5,9 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { BattleEvent, BattleState } from "~/game/battle/battle";
 import type { ItemId } from "~/game/data/item";

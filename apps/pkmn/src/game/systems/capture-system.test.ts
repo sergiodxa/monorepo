@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the capture system's status bonus, catch-value roll, and placement rules.
  *
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { LegacyCreatureComponent } from "../world/components";
 

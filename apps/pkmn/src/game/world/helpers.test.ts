@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { pickPersistentWorld } from "./helpers";
 import { createCreatureId, createPlayerId } from "./ids";

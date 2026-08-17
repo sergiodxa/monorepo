@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies deterministic turn action ordering when priority and effective speed
  * are tied. These tests focus on the turn-order system directly and add one
@@ -6,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";

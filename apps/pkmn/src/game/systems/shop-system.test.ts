@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the shop system's money and transaction behaviors in isolation from the engine boundary.
  *
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import { GameData, type GameDataSource } from "../data/game-data";
 import { ItemAttribute, type Item } from "../data/item";

@@ -1,6 +1,6 @@
 /**
  * Verifies the dev-tools export logic: payload schema validation, path-safety
- * enforcement before any disk write, and a real `Bun.write` round-trip into an
+ * enforcement before any disk write, and a real write round-trip into an
  * allow-listed target under a temporary root. Covers text, binary (base64), and
  * sprite (PNG + manifest registration) exports. Guards that malformed payloads
  * and unsafe paths fail without ever touching disk, and restores the real asset
@@ -9,11 +9,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, describe, expect, test } from "bun:test";
-import { rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { afterAll, describe, expect, test } from "vitest";
 
 import {
 	APP_ROOT,
@@ -38,7 +40,7 @@ let ONE_PX_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 afterAll(async () => {
-	await rm(join(import.meta.dir, "..", "..", SCRATCH_DIR), {
+	await rm(join(dirname(fileURLToPath(import.meta.url)), "..", "..", SCRATCH_DIR), {
 		recursive: true,
 		force: true,
 	});
@@ -90,7 +92,7 @@ test("runExport writes a valid payload into an allow-listed target", async () =>
 	if (isSuccess(result)) {
 		expect(result.data.path).toBe(path);
 		expect(result.data.bytesWritten).toBe(Buffer.byteLength(contents));
-		let written = await Bun.file(result.data.absolutePath).text();
+		let written = await readFile(result.data.absolutePath, "utf8");
 		expect(written).toBe(contents);
 	}
 });
@@ -120,7 +122,7 @@ describe("runBinaryExport", () => {
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) {
 			expect(result.data.bytesWritten).toBe(bytes.length);
-			let written = new Uint8Array(await Bun.file(result.data.absolutePath).arrayBuffer());
+			let written = new Uint8Array(await readFile(result.data.absolutePath));
 			expect(Array.from(written)).toEqual(Array.from(bytes));
 		}
 	});
@@ -133,9 +135,9 @@ describe("runSpriteExport", () => {
 	});
 
 	test("writes the PNG to src/assets and registers it in the manifest", async () => {
-		let manifestFile = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
+		let manifestFile = resolve(APP_ROOT, MANIFEST_PATH);
 		// Snapshot the real manifest so we can restore it after the write.
-		let original = (await manifestFile.exists()) ? await manifestFile.text() : null;
+		let original = existsSync(manifestFile) ? await readFile(manifestFile, "utf8") : null;
 
 		try {
 			let result = await runSpriteExport({ name: SPRITE_NAME, pngBase64: ONE_PX_PNG_BASE64 });
@@ -147,20 +149,18 @@ describe("runSpriteExport", () => {
 				expect(result.data.bytesWritten).toBeGreaterThan(0);
 
 				// The PNG landed on disk with the expected magic bytes.
-				let pngBytes = new Uint8Array(
-					await Bun.file(resolve(APP_ROOT, SPRITE_ASSET_PATH)).arrayBuffer(),
-				);
+				let pngBytes = new Uint8Array(await readFile(resolve(APP_ROOT, SPRITE_ASSET_PATH)));
 				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
 
 				// The manifest now maps the id to the served URL. Read through a fresh
 				// file handle so we see the post-write contents, not a cached blob.
-				let manifestText = await Bun.file(resolve(APP_ROOT, MANIFEST_PATH)).text();
+				let manifestText = await readFile(resolve(APP_ROOT, MANIFEST_PATH), "utf8");
 				let manifest = JSON.parse(manifestText) as { images: Record<string, string> };
 				expect(manifest.images[SPRITE_NAME]).toBe(`/assets/${SPRITE_NAME}.png`);
 			}
 		} finally {
 			// Restore the manifest and delete the scratch PNG — leave no trace.
-			if (original !== null) await Bun.write(resolve(APP_ROOT, MANIFEST_PATH), original);
+			if (original !== null) await writeFile(resolve(APP_ROOT, MANIFEST_PATH), original);
 			await rm(resolve(APP_ROOT, SPRITE_ASSET_PATH), { force: true });
 		}
 	});

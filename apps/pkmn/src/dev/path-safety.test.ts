@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Verifies the dev-tools path-safety guard that gates every export disk write.
  * It exercises the accept path for allow-listed `src/content`/`src/assets`
@@ -7,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { ALLOWED_WRITE_PREFIXES, PathSafetyError, validateWritePath } from "./path-safety";
 

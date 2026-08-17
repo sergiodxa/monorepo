@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Verifies the trainer content format's validation and loader. A well-formed
  * definition parses into a typed value; malformed inputs — empty party,
@@ -10,9 +11,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import {
 	MAX_MOVES_PER_MEMBER,

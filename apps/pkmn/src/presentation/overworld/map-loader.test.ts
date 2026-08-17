@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Tests for the map loader, the map wrapper, and the built-in sample map.
  *
@@ -12,9 +13,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import route1 from "~/content/maps/route-1.json";
 

@@ -1,3 +1,4 @@
+import { isSuccess } from "@pkg/result";
 /**
  * Verifies the pure map-editor logic without a canvas: creating and resizing the
  * map (layers/collision stay `width * height`, resize preserves the overlap),
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { loadMap } from "~/presentation/overworld/map-loader";
 import {

@@ -1,3 +1,4 @@
+import { isSuccess } from "@pkg/result";
 /**
  * Verifies the {@link TrainerEditor} as pure logic: field setters (id, name,
  * sprite, quotes) mutate the snapshot; party mutations add/remove/reorder members
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { MAX_PARTY_SIZE, parseTrainer } from "~/content/trainers";
 

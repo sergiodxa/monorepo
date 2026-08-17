@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Tests for the creature summary and species-detail selectors.
  *
@@ -13,9 +14,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import { ITEMS } from "~/content/items";
 import { TYPE_MATCHUPS } from "~/content/matchups";

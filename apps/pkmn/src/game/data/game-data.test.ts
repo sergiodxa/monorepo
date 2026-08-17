@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 /**
  * Exercises the `GameData` test module that verifies how structured game content is
  * assembled into runtime lookup tables and validated for internal consistency.
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { SPECIES } from "~/content/species";
 

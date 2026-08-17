@@ -1,3 +1,4 @@
+import { unwrap } from "@pkg/result";
 /**
  * Verifies the encounter system spawns reproducible, unowned wild creatures.
  *
@@ -10,9 +11,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "bun:test";
-
-import { unwrap } from "@pkg/result";
+import { expect, test } from "vitest";
 
 import { GameData, type GameDataSource } from "../data/game-data";
 import { GrowthRate } from "../data/growth-rate";

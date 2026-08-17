@@ -53,4 +53,5 @@ pathIgnorePatterns = [
 	"**/packages/jwt/**",
 	"**/packages/server-timing/**",
 	"**/packages/sitemap/**",
+	"**/packages/cloudflare-mocks/**",
 ]
