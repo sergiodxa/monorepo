@@ -19,17 +19,25 @@ bun format:fix                  # Fix formatting
 bun lint                        # Check linting only (oxlint)
 bun lint:fix                    # Fix linting issues
 bun typecheck                   # Type check only, via the Oxlint type-aware path (tsgolint)
-bun test --isolate              # Run all tests (--isolate is required: many test files across
-                                 # the monorepo use mock.module(), which permanently overrides a
-                                 # module for the rest of the process once applied — without
-                                 # --isolate, one file's mock leaks into every file that runs
-                                 # after it in the same shared process, causing unrelated
-                                 # failures. --isolate gives every file its own fresh registry.)
-bun run test                    # Same as above; the root script is `bun test --isolate`
-bun test file-path               # Single file/directory scope doesn't need --isolate
-bun test --watch                # Watch mode
-vp lint <path>                  # Scope a check to one workspace while iterating
+bun run test                    # Run every test: Vitest for the whole repo, then the one
+                                 # remaining bun file. CI runs exactly this.
+bun run test:vitest             # Vitest only (`vp test run`)
+bun run test:bun                # The single bun file only
+vp test run <path>              # Scope Vitest to a path while iterating
+vp test watch                   # Watch mode
+vp lint <path>                  # Scope a static check to one workspace while iterating
 ```
+
+Tests run under Vitest, configured as one project per app plus one covering every package
+in the root `vite.config.ts`. Each app gets its own project so the app's own tsconfig supplies
+its `~/*` aliases and `jsxImportSource`, which a root-rooted run cannot see. Use `vi.doMock` +
+`await import(...)` where a test needs to replace a module before the subject loads; a second
+`vi.doMock` for the same specifier in one file has no effect, because the second dynamic import
+resolves to the instance already in the registry.
+
+`packages/spec/src/plugins/db.test.ts` is the one file still on `bun:test`. Its end-to-end block
+connects through Bun's built-in SQL client, which has no Node equivalent, so it keeps its own
+runner rather than losing the coverage.
 
 `bun typecheck` no longer shells out to `tsc` per workspace. It runs the same type-aware pass
 `vp check` does, which covers every file the workspace's tsconfig includes — test files
@@ -48,14 +56,14 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 ## Rules
 
-- MUST use Bun to install dependencies, run scripts, and execute tests
+- MUST use Bun to install dependencies and run scripts; tests execute through Vite+ (`vp test`)
 - MUST follow Conventional Commits for commit messages
 - MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits)
 - MUST run `bun check` at the repo root before every commit, and `bun check:fix` to apply formatting and autofixes
 - MUST preserve every individual commit when merging into `main` — use a fast-forward merge (`git merge --ff-only`), never squash and never create a merge commit
 - MUST use `@pkg/result` for error handling instead of throwing exceptions
-- MUST write using `bun:test`, never using external test runners like Jest or Mocha, or Node's built-in `assert` module
-- MUST run tests from the root of the repository, never from individual package directories
+- MUST write tests with Vitest, never Jest, Mocha, or Node's built-in `assert` module
+- MUST run tests from the root of the repository, never from individual package directories — `vp test run <path>` scopes a run without changing directory
 - MUST use Vite+ (`vp check`) for formatting, linting and type checking, never other tools like Prettier, ESLint or a direct `tsc` run in CI
 - MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `wrangler d1 migrations` directly
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines

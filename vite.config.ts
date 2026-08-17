@@ -148,6 +148,11 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "pkmn",
+					// Four of the dev-export tests snapshot, write and restore the app's real
+					// manifest and `src/assets`, which they do deliberately — writing to the real
+					// paths is what they assert. That only survived because `bun test` ran files
+					// one at a time; in parallel one file's restore clobbers another's write.
+					fileParallelism: false,
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the

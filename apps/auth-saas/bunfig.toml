@@ -1,5 +1,0 @@
-[test]
-# Registers the virtual `cloudflare:workers` module (see the repo-root test/setup.ts)
-# so source files that import `env` at module load can be exercised when this app's
-# suite is run on its own. The repo-root bunfig preloads the same file at the root.
-preload = ["../../test/setup.ts"]
