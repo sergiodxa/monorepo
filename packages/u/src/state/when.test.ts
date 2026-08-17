@@ -2,15 +2,14 @@
  * Unit tests for `when.ts`, the primitive selector wrapper every other state
  * utility is sugar over.
  *
- * The environment split is directly reachable here: under `bun test`,
- * `import.meta.env` is Bun's live alias for `process.env`, so `.DEV` is simply
- * `process.env.DEV` and each branch can be selected by setting or deleting it
- * around an assertion, with no module mocking.
+ * The environment split is directly reachable here: `import.meta.env.DEV` reads
+ * through to `process.env.DEV` at call time, so each branch can be selected by
+ * setting or deleting it around an assertion, with no module mocking.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { bg } from "../color/bg";
 import { border } from "../color/border";
@@ -77,7 +76,7 @@ describe("when", () => {
 		});
 
 		test("the same rejected selector renders instead of throwing, and warns only once", () => {
-			let warn = spyOn(console, "warn").mockImplementation(() => {});
+			let warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 			try {
 				// Twice over: the guard has to survive a re-render of the same
@@ -93,7 +92,7 @@ describe("when", () => {
 		});
 
 		test("a second, distinct rejected selector still gets its own warning", () => {
-			let warn = spyOn(console, "warn").mockImplementation(() => {});
+			let warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 			try {
 				when("table:empty ~ &", p(4));
