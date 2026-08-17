@@ -19,8 +19,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { Transport } from "@pkg/mail";
 
 import { Mailer, MailError } from "@pkg/mail";
@@ -28,6 +26,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { failure } from "@pkg/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
 	AlertEventSnapshot,
@@ -42,59 +41,54 @@ import type {
 import { AlertEmail } from "~/app/emails/alert";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
-let listForMonitorMock = mock(async (..._args: unknown[]) => [] as SelectAlert[]);
-let recordMock = mock(async (..._args: unknown[]) => ({}) as unknown);
-let isInCooldownMock = mock(async (..._args: unknown[]) => false);
-let countSentSinceRecoveryMock = mock(async (..._args: unknown[]) => 0);
-let summarizeIncidentMock = mock(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
+let listForMonitorMock = vi.fn(async (..._args: unknown[]) => [] as SelectAlert[]);
+let recordMock = vi.fn(async (..._args: unknown[]) => ({}) as unknown);
+let isInCooldownMock = vi.fn(async (..._args: unknown[]) => false);
+let countSentSinceRecoveryMock = vi.fn(async (..._args: unknown[]) => 0);
+let summarizeIncidentMock = vi.fn(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
 
 /**
- * `bun:test`'s `mock.module` patches the shared module registry for the lifetime of
- * the whole `bun test` process (it's a live rebinding, not scoped to this file), and
- * `beforeAll`/`afterAll` don't actually bound that window the way they look like they
- * should — `bun test` can interleave another file's test bodies with this file's
- * mocked window, so a same-process file that imports the real `~/app/data/alert`
- * (e.g. a page controller's own test) can observe the mock. Subclassing the real
- * `Alert`/`AlertEvent` classes (rather than object-spreading them) means any other
- * file caught in that window still gets every real static method it needs — object
- * spread silently drops class static methods since they're non-enumerable, which is
- * exactly what caused the two overridden methods to look like the only ones that
- * existed at all. Only `listForHttpMonitor`/`listTeamWide` (and
- * `record`/`isInCooldown` on `AlertEvent`) are actually faked here.
+ * The real classes, imported before the `vi.doMock` calls below so this file still holds a
+ * handle on the implementations it is replacing. A mock registered with `vi.doMock` only
+ * reaches imports that run after it, which is why the subject and everything it pulls the two
+ * data classes in through are imported dynamically further down rather than statically here.
  */
 let realAlertModule = await import("~/app/data/alert");
 let realAlertEventModule = await import("~/app/data/alert-event");
 
 /**
- * The two history reads, captured as function values before `mock.module` rebinds the module
- * they came from — reaching for them through the module namespace later would find the mocks
- * and recurse. Bound to the real class so any static they reach for is the real one too.
+ * The two history reads, captured as function values before the mocks take their place —
+ * reaching for them through the fake classes later would find the mocks and recurse. Bound to
+ * the real class so any static they reach for is the real one too.
  */
 let realIsInCooldown = realAlertEventModule.default.isInCooldown.bind(realAlertEventModule.default);
 let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceRecovery.bind(
 	realAlertEventModule.default,
 );
 
-beforeAll(async () => {
-	class FakeAlert extends realAlertModule.default {
-		static override listForMonitor = listForMonitorMock;
-	}
-	class FakeAlertEvent extends realAlertEventModule.default {
-		static override record =
-			recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
-		static override isInCooldown = isInCooldownMock;
-		static override countSentSinceRecovery = countSentSinceRecoveryMock;
-		static override summarizeIncident = summarizeIncidentMock;
-	}
+/**
+ * The fakes subclass the real classes rather than object-spreading them, so every static this
+ * file does not fake is still the real one: object spread silently drops class statics, since
+ * they are non-enumerable, which is what once made the overridden methods look like the only
+ * ones that existed. Only `listForMonitor` on `Alert`, and
+ * `record`/`isInCooldown`/`countSentSinceRecovery`/`summarizeIncident` on `AlertEvent`, are
+ * actually replaced.
+ */
+class FakeAlert extends realAlertModule.default {
+	static override listForMonitor = listForMonitorMock;
+}
 
-	await mock.module("~/app/data/alert", () => ({ default: FakeAlert }));
-	await mock.module("~/app/data/alert-event", () => ({ default: FakeAlertEvent }));
-});
+/** See `FakeAlert`: the four history statics `dispatchAlerts` calls, and nothing else. */
+class FakeAlertEvent extends realAlertEventModule.default {
+	static override record =
+		recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
+	static override isInCooldown = isInCooldownMock;
+	static override countSentSinceRecovery = countSentSinceRecoveryMock;
+	static override summarizeIncident = summarizeIncidentMock;
+}
 
-afterAll(async () => {
-	await mock.module("~/app/data/alert", () => realAlertModule);
-	await mock.module("~/app/data/alert-event", () => realAlertEventModule);
-});
+vi.doMock("~/app/data/alert", () => ({ default: FakeAlert }));
+vi.doMock("~/app/data/alert-event", () => ({ default: FakeAlertEvent }));
 
 let { createTestDatabase } = await import("~/app/lib/test/db");
 let { alertEvents, teams, monitors, maintenanceWindows } = await import("~/database/schema");
