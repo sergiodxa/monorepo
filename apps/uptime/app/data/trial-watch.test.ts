@@ -12,9 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { NewTrialWatch } from "~/app/data/trial-watch";
 
@@ -95,7 +95,7 @@ describe("TrialWatch.create", () => {
 	test("issues a report token, so every watch has a page it can be read at", async () => {
 		let watch = await createWatch();
 
-		expect(watch.report_token).toBeString();
+		expect(watch.report_token).toBeTypeOf("string");
 		// Long enough that guessing one is not a strategy; the UUID form is 36 characters.
 		expect(watch.report_token.length).toBeGreaterThanOrEqual(32);
 		// Never the id: the id is a key other tables carry, and a report URL derived from it
@@ -161,7 +161,7 @@ describe("TrialWatch.claimDue", () => {
 	test("claims nothing before the first check is due", async () => {
 		await createWatch();
 
-		expect(await TrialWatch.claimDue(db, Date.now())).toBeEmpty();
+		expect(await TrialWatch.claimDue(db, Date.now())).toHaveLength(0);
 	});
 
 	test("claims every watch that has come due, across leads", async () => {
@@ -180,7 +180,7 @@ describe("TrialWatch.claimDue", () => {
 		let scheduledAt = Date.now() + MS_PER_HOUR;
 
 		expect(await TrialWatch.claimDue(db, scheduledAt)).toHaveLength(1);
-		expect(await TrialWatch.claimDue(db, scheduledAt)).toBeEmpty();
+		expect(await TrialWatch.claimDue(db, scheduledAt)).toHaveLength(0);
 	});
 
 	test("advances by one whole hour rather than catching up on every missed check", async () => {
@@ -201,7 +201,7 @@ describe("TrialWatch.claimDue", () => {
 		let watch = await createWatch();
 		await TrialWatch.finish(db, watch.id);
 
-		expect(await TrialWatch.claimDue(db, Date.now() + 8 * MS_PER_DAY)).toBeEmpty();
+		expect(await TrialWatch.claimDue(db, Date.now() + 8 * MS_PER_DAY)).toHaveLength(0);
 	});
 
 	test("still claims an expired watch, which is how the wrap-up gets sent", async () => {
@@ -220,8 +220,8 @@ describe("TrialWatch.claimDue", () => {
 		expect(claimed?.url).toBe("https://example.com");
 		expect(claimed?.lead_id).toBe("lead-1");
 		expect(claimed?.last_status).toBe("up");
-		expect(claimed?.expires_at).toBeNumber();
-		expect(claimed?.created_at).toBeNumber();
+		expect(claimed?.expires_at).toBeTypeOf("number");
+		expect(claimed?.created_at).toBeTypeOf("number");
 	});
 });
 
@@ -299,7 +299,7 @@ describe("TrialWatch.recordCheck", () => {
 		let stored = await TrialWatch.findById(db, watch.id);
 
 		expect(stored?.next_due_at).toBeNull();
-		expect(stored ? TrialWatch.isConvertible(stored, Date.now()) : false).toBeTrue();
+		expect(stored ? TrialWatch.isConvertible(stored, Date.now()) : false).toBe(true);
 	});
 });
 
@@ -328,7 +328,7 @@ describe("TrialWatch result history", () => {
 
 		expect(results).toHaveLength(2);
 		expect(results.map((result) => result.status)).toContain("degraded");
-		expect(results.every((result) => result.trial_watch_id === watch.id)).toBeTrue();
+		expect(results.every((result) => result.trial_watch_id === watch.id)).toBe(true);
 	});
 
 	test("reads a time range oldest first, which is the order a bar is drawn in", async () => {
@@ -417,7 +417,7 @@ describe("TrialWatch.listDigestForLead", () => {
 		let watch = await createWatch();
 		await TrialWatch.finish(db, watch.id);
 
-		expect(await TrialWatch.listDigestForLead(db, "lead-1", 0)).toBeEmpty();
+		expect(await TrialWatch.listDigestForLead(db, "lead-1", 0)).toHaveLength(0);
 	});
 
 	test("never mixes in another lead's targets", async () => {
@@ -433,9 +433,9 @@ describe("TrialWatch.listDigestForLead", () => {
 
 describe("isHealthyTrialStatus", () => {
 	test("counts only a fully healthy check, so the ratio is not flattered by a slow one", () => {
-		expect(isHealthyTrialStatus("up")).toBeTrue();
-		expect(isHealthyTrialStatus("degraded")).toBeFalse();
-		expect(isHealthyTrialStatus("down")).toBeFalse();
+		expect(isHealthyTrialStatus("up")).toBe(true);
+		expect(isHealthyTrialStatus("degraded")).toBe(false);
+		expect(isHealthyTrialStatus("down")).toBe(false);
 	});
 });
 
@@ -443,27 +443,27 @@ describe("shouldNotifyChange", () => {
 	let now = Date.parse("2026-08-02T12:00:00Z");
 
 	test("says nothing on the first check, which has nothing to differ from", () => {
-		expect(
-			shouldNotifyChange({ last_status: null, change_notified_at: null }, "up", now),
-		).toBeFalse();
+		expect(shouldNotifyChange({ last_status: null, change_notified_at: null }, "up", now)).toBe(
+			false,
+		);
 	});
 
 	test("says nothing when the status is unchanged", () => {
-		expect(
-			shouldNotifyChange({ last_status: "up", change_notified_at: null }, "up", now),
-		).toBeFalse();
+		expect(shouldNotifyChange({ last_status: "up", change_notified_at: null }, "up", now)).toBe(
+			false,
+		);
 	});
 
 	test("notifies the first change of the day", () => {
-		expect(
-			shouldNotifyChange({ last_status: "up", change_notified_at: null }, "down", now),
-		).toBeTrue();
+		expect(shouldNotifyChange({ last_status: "up", change_notified_at: null }, "down", now)).toBe(
+			true,
+		);
 	});
 
 	test("notifies a recovery, not only a failure", () => {
-		expect(
-			shouldNotifyChange({ last_status: "down", change_notified_at: null }, "up", now),
-		).toBeTrue();
+		expect(shouldNotifyChange({ last_status: "down", change_notified_at: null }, "up", now)).toBe(
+			true,
+		);
 	});
 
 	test("bounds a flapping target to one change email per day", () => {
@@ -471,7 +471,7 @@ describe("shouldNotifyChange", () => {
 
 		expect(
 			shouldNotifyChange({ last_status: "down", change_notified_at: earlier }, "up", now),
-		).toBeFalse();
+		).toBe(false);
 	});
 
 	test("notifies again the next day, so a genuine later outage is not lost", () => {
@@ -479,16 +479,16 @@ describe("shouldNotifyChange", () => {
 
 		expect(
 			shouldNotifyChange({ last_status: "up", change_notified_at: yesterday }, "down", now),
-		).toBeTrue();
+		).toBe(true);
 	});
 
 	test("treats a slide into degraded as a change worth one email", () => {
 		expect(
 			shouldNotifyChange({ last_status: "up", change_notified_at: null }, "degraded", now),
-		).toBeTrue();
+		).toBe(true);
 		expect(
 			shouldNotifyChange({ last_status: "up", change_notified_at: now - 1000 }, "degraded", now),
-		).toBeFalse();
+		).toBe(false);
 	});
 });
 
@@ -496,13 +496,13 @@ describe("shouldSendSummary", () => {
 	let expires = Date.parse("2026-08-09T09:00:00Z");
 
 	test("waits until the watch has expired", () => {
-		expect(
-			shouldSendSummary({ expires_at: expires, summary_sent_at: null }, expires - 1),
-		).toBeFalse();
+		expect(shouldSendSummary({ expires_at: expires, summary_sent_at: null }, expires - 1)).toBe(
+			false,
+		);
 	});
 
 	test("is owed once the seven days are up", () => {
-		expect(shouldSendSummary({ expires_at: expires, summary_sent_at: null }, expires)).toBeTrue();
+		expect(shouldSendSummary({ expires_at: expires, summary_sent_at: null }, expires)).toBe(true);
 	});
 
 	test("is sent only once, however many times the sweep sees the watch", () => {
@@ -511,7 +511,7 @@ describe("shouldSendSummary", () => {
 				{ expires_at: expires, summary_sent_at: expires + 60_000 },
 				expires + MS_PER_DAY,
 			),
-		).toBeFalse();
+		).toBe(false);
 	});
 
 	test("targets started on different days are wrapped up on different days", async () => {
@@ -524,8 +524,8 @@ describe("shouldSendSummary", () => {
 		let firstStored = stored.find((watch) => watch.id === first.id);
 		let secondStored = stored.find((watch) => watch.id === second.id);
 
-		expect(firstStored ? shouldSendSummary(firstStored, atDaySeven) : false).toBeTrue();
-		expect(secondStored ? shouldSendSummary(secondStored, atDaySeven) : true).toBeFalse();
+		expect(firstStored ? shouldSendSummary(firstStored, atDaySeven) : false).toBe(true);
+		expect(secondStored ? shouldSendSummary(secondStored, atDaySeven) : true).toBe(false);
 	});
 });
 
@@ -534,12 +534,12 @@ describe("TrialWatch.markChangeNotified", () => {
 		let watch = await createWatch({ last_status: "up" });
 		let now = Date.now();
 
-		expect(shouldNotifyChange(watch, "down", now)).toBeTrue();
+		expect(shouldNotifyChange(watch, "down", now)).toBe(true);
 		await TrialWatch.markChangeNotified(db, watch.id, now);
 		let stored = await TrialWatch.findById(db, watch.id);
 
 		expect(stored?.change_notified_at).toBe(now);
-		expect(stored ? shouldNotifyChange(stored, "down", now) : true).toBeFalse();
+		expect(stored ? shouldNotifyChange(stored, "down", now) : true).toBe(false);
 	});
 });
 
@@ -560,8 +560,8 @@ describe("TrialWatch conversion", () => {
 	test("a watch is convertible inside its own window and never converted", async () => {
 		let watch = await createWatch();
 
-		expect(TrialWatch.isConvertible(watch, Date.now() + 29 * MS_PER_DAY)).toBeTrue();
-		expect(TrialWatch.isConvertible(watch, Date.now() + 31 * MS_PER_DAY)).toBeFalse();
+		expect(TrialWatch.isConvertible(watch, Date.now() + 29 * MS_PER_DAY)).toBe(true);
+		expect(TrialWatch.isConvertible(watch, Date.now() + 31 * MS_PER_DAY)).toBe(false);
 	});
 
 	test("offers every unexpired unconverted watch a lead started, oldest first", async () => {
@@ -612,7 +612,7 @@ describe("TrialWatch conversion", () => {
 
 		let stored = await TrialWatch.findById(db, watch.id);
 
-		expect(await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now())).toBeEmpty();
+		expect(await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now())).toHaveLength(0);
 		expect(stored?.converted_monitor_id).toBe("monitor-1");
 		expect(stored?.converted_at).not.toBeNull();
 	});

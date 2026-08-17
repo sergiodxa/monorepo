@@ -19,9 +19,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { DigestPeriod } from "~/app/data/team-digest";
@@ -193,14 +193,14 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		await seedMembership("team-a", { lastDailyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	test("excludes a membership stamped after the cutoff", async () => {
 		await seedMonitor("http", "team-a");
 		await seedMembership("team-a", { lastDailyDigestAt: cutoff + MS_PER_DAY });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	/**
@@ -211,7 +211,7 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a", { lastDailyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 		expect((await TeamDigest.listDue(db, "weekly", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
@@ -221,7 +221,7 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a", { lastWeeklyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "weekly", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "weekly", cutoff)).toHaveLength(0);
 		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
@@ -260,14 +260,14 @@ describe("TeamDigest.listDue", () => {
 	test("excludes a membership of a team with no monitors at all", async () => {
 		await seedMembership("team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	test("excludes a membership of a team whose only monitor belongs to another team", async () => {
 		await seedMonitor("http", "team-b");
 		await seedMembership("team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	for (let type of MONITOR_TYPES) {
@@ -284,7 +284,7 @@ describe("TeamDigest.listDue", () => {
 			await seedMonitor(type, "team-a", { enabled: false });
 			await seedMembership("team-a");
 
-			expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+			expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 		});
 	}
 
@@ -312,7 +312,7 @@ describe("TeamDigest.listDue", () => {
 	test("returns nothing when there are no memberships at all", async () => {
 		await seedMonitor("http", "team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toBeEmpty();
+		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
 	});
 });
 
@@ -432,7 +432,7 @@ describe("TeamDigest.listMonitors", () => {
 	test("returns nothing for a team with no monitors", async () => {
 		await seedMonitor("http", "team-b");
 
-		expect(await TeamDigest.listMonitors(db, "team-a", since, until)).toBeEmpty();
+		expect(await TeamDigest.listMonitors(db, "team-a", since, until)).toHaveLength(0);
 	});
 
 	/** The one-day window both bounds collapse to, which is what the daily digest asks for. */
@@ -473,7 +473,7 @@ describe("TeamDigest.markSent", () => {
 
 			await TeamDigest.markSent(db, membership.id, period, sentAt);
 
-			expect(await TeamDigest.listDue(db, period, today)).toBeEmpty();
+			expect(await TeamDigest.listDue(db, period, today)).toHaveLength(0);
 			// And due again once the bound has moved, which is what the next trigger passes.
 			expect((await TeamDigest.listDue(db, period, tomorrow)).map((each) => each.id)).toEqual([
 				membership.id,

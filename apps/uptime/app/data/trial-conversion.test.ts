@@ -13,9 +13,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TrialSignup } from "~/app/data/trial-conversion";
 
@@ -162,7 +162,7 @@ describe("the report's two windows", () => {
 	test("an unpaid account is never in the paid window, however wide it is", async () => {
 		await record();
 
-		expect(await TrialConversion.listPaidBetween(db, 0, Date.now() + 1)).toBeEmpty();
+		expect(await TrialConversion.listPaidBetween(db, 0, Date.now() + 1)).toHaveLength(0);
 	});
 });
 
@@ -176,8 +176,8 @@ describe("trialConversionUrls", () => {
 
 	/** A report that threw on one malformed row would take the whole day's email down with it. */
 	test("answers with nothing rather than throwing on a value it cannot read", () => {
-		expect(trialConversionUrls({ urls: "not json" })).toBeEmpty();
-		expect(trialConversionUrls({ urls: '{"a":1}' })).toBeEmpty();
+		expect(trialConversionUrls({ urls: "not json" })).toHaveLength(0);
+		expect(trialConversionUrls({ urls: '{"a":1}' })).toHaveLength(0);
 		expect(trialConversionUrls({ urls: '["https://a", 7]' })).toEqual(["https://a"]);
 	});
 });

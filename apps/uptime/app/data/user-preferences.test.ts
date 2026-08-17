@@ -16,9 +16,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { describe, expect, test } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -105,8 +105,8 @@ describe("UserPreferences.setLanguage", () => {
 
 describe("UserPreferences.wants", () => {
 	test("sends every optional email to a subject with no preferences row", () => {
-		expect(UserPreferences.wants(null, "teamDailyDigest")).toBeTrue();
-		expect(UserPreferences.wants(null, "teamWeeklyDigest")).toBeTrue();
+		expect(UserPreferences.wants(null, "teamDailyDigest")).toBe(true);
+		expect(UserPreferences.wants(null, "teamWeeklyDigest")).toBe(true);
 	});
 
 	/** A row exists for the language alone far more often than for an opt-out. */
@@ -116,15 +116,15 @@ describe("UserPreferences.wants", () => {
 		let row = await UserPreferences.setLanguage(db, subjectId, "es");
 
 		expect(row.unsubscribed_emails).toBeNull();
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeTrue();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
 	});
 
 	test("sends every optional email to a subject who has turned nothing off", async () => {
 		let { db } = createTestDatabase();
 		let row = await UserPreferences.setUnsubscribedEmails(db, crypto.randomUUID(), []);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeTrue();
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBeTrue();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
+		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("stops only the email the stored list names", async () => {
@@ -133,8 +133,8 @@ describe("UserPreferences.wants", () => {
 			"teamDailyDigest",
 		]);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeFalse();
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBeTrue();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
+		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("stops both when both are named", async () => {
@@ -144,8 +144,8 @@ describe("UserPreferences.wants", () => {
 			"teamWeeklyDigest",
 		]);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeFalse();
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBeFalse();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
+		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(false);
 	});
 
 	/**
@@ -161,8 +161,8 @@ describe("UserPreferences.wants", () => {
 		let row = await UserPreferences.findBySubjectId(db, subjectId);
 
 		expect(row?.unsubscribed_emails?.map(String)).toEqual(["teamMonthlyRecap"]);
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeTrue();
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBeTrue();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
+		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("still honours a live refusal stored beside a retired one", async () => {
@@ -172,8 +172,8 @@ describe("UserPreferences.wants", () => {
 
 		let row = await UserPreferences.findBySubjectId(db, subjectId);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBeFalse();
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBeTrue();
+		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
+		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
 	});
 });
 
@@ -216,7 +216,7 @@ describe("UserPreferences.setUnsubscribedEmails", () => {
 		let cleared = await UserPreferences.setUnsubscribedEmails(db, subjectId, []);
 
 		expect(cleared.unsubscribed_emails).toEqual([]);
-		expect(UserPreferences.wants(cleared, "teamDailyDigest")).toBeTrue();
+		expect(UserPreferences.wants(cleared, "teamDailyDigest")).toBe(true);
 	});
 
 	/** The two settings live on one row and are saved by two different forms. */
@@ -247,7 +247,7 @@ describe("UserPreferences.findBySubjectIds", () => {
 	test("returns an empty map for an empty list, without a query", async () => {
 		let { db } = createTestDatabase();
 
-		expect(await UserPreferences.findBySubjectIds(db, [])).toBeEmpty();
+		expect((await UserPreferences.findBySubjectIds(db, [])).size).toBe(0);
 	});
 
 	test("keys each subject's row by their subject id", async () => {
@@ -277,7 +277,7 @@ describe("UserPreferences.findBySubjectIds", () => {
 		let found = await UserPreferences.findBySubjectIds(db, [known, unknown]);
 
 		expect([...found.keys()]).toEqual([known]);
-		expect(found.has(unknown)).toBeFalse();
+		expect(found.has(unknown)).toBe(false);
 		expect(found.get(unknown) ?? null).toBeNull();
 	});
 
@@ -286,8 +286,8 @@ describe("UserPreferences.findBySubjectIds", () => {
 		await UserPreferences.setLanguage(db, crypto.randomUUID(), "es");
 
 		expect(
-			await UserPreferences.findBySubjectIds(db, [crypto.randomUUID(), crypto.randomUUID()]),
-		).toBeEmpty();
+			(await UserPreferences.findBySubjectIds(db, [crypto.randomUUID(), crypto.randomUUID()])).size,
+		).toBe(0);
 	});
 
 	/** One person in three teams appears three times in the due list. */
@@ -311,7 +311,7 @@ describe("UserPreferences.findBySubjectIds", () => {
 
 		let found = await UserPreferences.findBySubjectIds(db, [optedOut, never]);
 
-		expect(UserPreferences.wants(found.get(optedOut) ?? null, "teamDailyDigest")).toBeFalse();
-		expect(UserPreferences.wants(found.get(never) ?? null, "teamDailyDigest")).toBeTrue();
+		expect(UserPreferences.wants(found.get(optedOut) ?? null, "teamDailyDigest")).toBe(false);
+		expect(UserPreferences.wants(found.get(never) ?? null, "teamDailyDigest")).toBe(true);
 	});
 });

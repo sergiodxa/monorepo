@@ -233,6 +233,8 @@ export default defineConfig({
 						"app/data/trial-conversion.test.ts",
 						"app/data/trial-watch.test.ts",
 						"app/data/user-preferences.test.ts",
+						"app/auth/value-objects/id-token.test.ts",
+						"app/auth/services/oauth.test.ts",
 					],
 					pool: "threads",
 				},

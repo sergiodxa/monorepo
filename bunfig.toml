@@ -214,4 +214,6 @@ pathIgnorePatterns = [
 	"**/apps/uptime/app/data/trial-conversion.test.ts",
 	"**/apps/uptime/app/data/trial-watch.test.ts",
 	"**/apps/uptime/app/data/user-preferences.test.ts",
+	"**/apps/uptime/app/auth/value-objects/id-token.test.ts",
+	"**/apps/uptime/app/auth/services/oauth.test.ts",
 ]

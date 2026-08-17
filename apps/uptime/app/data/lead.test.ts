@@ -13,9 +13,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { LeadInput } from "~/app/data/lead";
 
@@ -224,10 +224,10 @@ describe("Lead.forget", () => {
 		let lead = await upsert();
 		let watch = await TrialWatch.create(db, lead.id, { url: "https://a.example" });
 
-		expect(TrialWatch.isConvertible(watch, Date.now())).toBeTrue();
+		expect(TrialWatch.isConvertible(watch, Date.now())).toBe(true);
 		await Lead.forget(db, lead.id);
 
-		expect(await TrialWatch.listConvertibleByLead(db, lead.id, Date.now())).toBeEmpty();
+		expect(await TrialWatch.listConvertibleByLead(db, lead.id, Date.now())).toHaveLength(0);
 	});
 
 	/** The distinction the two names carry: one path is conditional, the other is not. */
@@ -275,29 +275,29 @@ describe("shouldSendDigest", () => {
 	test("sends no digest on the day the lead signed up", () => {
 		let sameDay = Date.parse("2026-08-02T23:00:00Z");
 
-		expect(shouldSendDigest({ created_at: created, last_digest_at: null }, sameDay)).toBeFalse();
+		expect(shouldSendDigest({ created_at: created, last_digest_at: null }, sameDay)).toBe(false);
 	});
 
 	test("sends the first digest the next day, covering a full day of checks", () => {
 		let nextDay = Date.parse("2026-08-03T00:30:00Z");
 
-		expect(shouldSendDigest({ created_at: created, last_digest_at: null }, nextDay)).toBeTrue();
+		expect(shouldSendDigest({ created_at: created, last_digest_at: null }, nextDay)).toBe(true);
 	});
 
 	test("sends exactly one per day however often the job runs", () => {
 		let sentAt = Date.parse("2026-08-03T00:30:00Z");
 		let laterSameDay = Date.parse("2026-08-03T22:00:00Z");
 
-		expect(
-			shouldSendDigest({ created_at: created, last_digest_at: sentAt }, laterSameDay),
-		).toBeFalse();
+		expect(shouldSendDigest({ created_at: created, last_digest_at: sentAt }, laterSameDay)).toBe(
+			false,
+		);
 	});
 
 	test("sends the next one on the following day", () => {
 		let sentAt = Date.parse("2026-08-03T00:30:00Z");
 		let nextDay = Date.parse("2026-08-04T00:30:00Z");
 
-		expect(shouldSendDigest({ created_at: created, last_digest_at: sentAt }, nextDay)).toBeTrue();
+		expect(shouldSendDigest({ created_at: created, last_digest_at: sentAt }, nextDay)).toBe(true);
 	});
 });
 
@@ -334,7 +334,7 @@ describe("Lead.listDueForDigest", () => {
 			created_at: Date.now() - 2 * MS_PER_DAY,
 		});
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toBeEmpty();
+		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead whose every watch has finished", async () => {
@@ -342,14 +342,14 @@ describe("Lead.listDueForDigest", () => {
 		let [watch] = await TrialWatch.listByLead(db, lead.id);
 		if (watch) await TrialWatch.finish(db, watch.id);
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toBeEmpty();
+		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead on the day they signed up", async () => {
 		let lead = await upsert({ email: "fresh@example.com" });
 		await TrialWatch.create(db, lead.id, { url: "https://fresh.example" });
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toBeEmpty();
+		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead already sent a digest today, and returns them again tomorrow", async () => {
@@ -357,7 +357,7 @@ describe("Lead.listDueForDigest", () => {
 		let now = Date.now();
 		await Lead.markDigestSent(db, lead.id, now);
 
-		expect(await Lead.listDueForDigest(db, now)).toBeEmpty();
+		expect(await Lead.listDueForDigest(db, now)).toHaveLength(0);
 		expect((await Lead.listDueForDigest(db, now + MS_PER_DAY)).map((each) => each.id)).toEqual([
 			lead.id,
 		]);
@@ -369,7 +369,7 @@ describe("Lead.listDueForDigest", () => {
 		let [due] = await Lead.listDueForDigest(db, now);
 
 		expect(due?.id).toBe(lead.id);
-		expect(due ? shouldSendDigest(due, now) : false).toBeTrue();
+		expect(due ? shouldSendDigest(due, now) : false).toBe(true);
 	});
 });
 
@@ -382,7 +382,7 @@ describe("Lead.markDigestSent", () => {
 		let stored = await Lead.findById(db, lead.id);
 
 		expect(stored?.last_digest_at).toBe(now);
-		expect(stored ? shouldSendDigest(stored, now) : true).toBeFalse();
+		expect(stored ? shouldSendDigest(stored, now) : true).toBe(false);
 	});
 });
 
@@ -454,8 +454,8 @@ describe("Lead.hasMarketingConsent", () => {
 		let withoutConsent = await upsert({ email: "quiet@example.com", consented: false });
 		let withConsent = await upsert({ email: "loud@example.com", consented: true });
 
-		expect(Lead.hasMarketingConsent(withoutConsent)).toBeFalse();
-		expect(Lead.hasMarketingConsent(withConsent)).toBeTrue();
+		expect(Lead.hasMarketingConsent(withoutConsent)).toBe(false);
+		expect(Lead.hasMarketingConsent(withConsent)).toBe(true);
 	});
 });
 
@@ -473,7 +473,7 @@ describe("Lead.deleteOrphaned", () => {
 		let swept = await Lead.deleteOrphaned(db, Date.now());
 
 		expect(swept.rowsAffected).toBe(1);
-		expect(swept.reachedCeiling).toBeFalse();
+		expect(swept.reachedCeiling).toBe(false);
 		expect(await db.count(leads)).toBe(0);
 	});
 
