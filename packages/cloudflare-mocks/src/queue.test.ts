@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { createExecutionContext } from "./execution-context";
 import { createQueue } from "./queue";
@@ -24,7 +24,7 @@ describe("createQueue", () => {
 
 		expect(queue.messages).toHaveLength(1);
 		expect(queue.messages[0]?.body).toEqual({ type: "check-http" });
-		expect(queue.messages[0]?.id).toBeString();
+		expect(queue.messages[0]?.id).toBeTypeOf("string");
 		expect(queue.messages[0]?.timestamp).toBeInstanceOf(Date);
 		expect(response.metadata.metrics.backlogCount).toBe(1);
 	});

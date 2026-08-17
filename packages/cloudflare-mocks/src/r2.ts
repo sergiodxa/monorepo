@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createHash } from "node:crypto";
+
 /** Objects returned by `list` when no `limit` is given, and the ceiling R2 enforces. */
 const DEFAULT_LIST_LIMIT = 1000;
 
@@ -510,9 +512,14 @@ function verifyChecksums(options: R2PutOptions | undefined, computed: R2StringCh
 	}
 }
 
-/** Computes one hex digest over the given bytes. */
+/**
+ * Computes one hex digest over the given bytes.
+ *
+ * `node:crypto` rather than a runtime-specific hasher, because every runner this mock is
+ * exercised under provides it and the digests have to be byte-identical across them.
+ */
 function digest(algorithm: string, bytes: ArrayBuffer): string {
-	return new Bun.CryptoHasher(algorithm as "md5").update(new Uint8Array(bytes)).digest("hex");
+	return createHash(algorithm).update(new Uint8Array(bytes)).digest("hex");
 }
 
 /** Normalizes a caller-supplied digest, hex string or bytes, to lowercase hex. */

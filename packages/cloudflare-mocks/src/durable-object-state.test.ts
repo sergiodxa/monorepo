@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { DurableObjectStateMock } from "./durable-object-state";
 
@@ -288,7 +288,7 @@ describe("createDurableObjectState", () => {
 	});
 
 	test("returns bookmarks for the session APIs", async () => {
-		expect(await state.storage.getCurrentBookmark()).toBeString();
+		expect(await state.storage.getCurrentBookmark()).toBeTypeOf("string");
 		expect(await state.storage.getBookmarkForTime(1_000)).toContain("1000");
 		expect(await state.storage.onNextSessionRestoreBookmark("mark")).toBe("mark");
 		await state.storage.sync();

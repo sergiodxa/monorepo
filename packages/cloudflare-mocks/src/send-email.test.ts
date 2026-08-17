@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { createSendEmail } from "./send-email";
 
@@ -21,7 +21,7 @@ describe("createSendEmail", () => {
 			text: "Hello",
 		});
 
-		expect(result.messageId).toBeString();
+		expect(result.messageId).toBeTypeOf("string");
 		expect(mailer.messages).toHaveLength(1);
 		expect(mailer.messages[0]?.from).toBe("noreply@example.com");
 		expect(mailer.messages[0]?.to).toEqual(["user@example.com"]);

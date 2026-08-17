@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { createD1Database } from "./d1";
 
@@ -209,7 +209,7 @@ describe("createD1Database", () => {
 
 		await session.batch([session.prepare("SELECT 1 AS one")]);
 
-		expect(session.getBookmark()).toBeString();
+		expect(session.getBookmark()).toBeTypeOf("string");
 	});
 
 	test("gives every database its own isolated storage", async () => {

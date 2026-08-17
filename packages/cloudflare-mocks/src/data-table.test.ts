@@ -1,3 +1,6 @@
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { column as c, Database, table } from "remix/data-table";
 /**
  * Parity tests that drive the real `remix/data-table` D1 and SqlStorage adapters against
  * the mocks in this package. They are the package's fidelity contract: if a mock drifts
@@ -6,11 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
-
-import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
-import { column as c, Database, table } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { createD1Database } from "./d1";
 import { createSqlStorage } from "./sql-storage";
