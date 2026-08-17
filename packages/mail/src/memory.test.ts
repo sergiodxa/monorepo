@@ -7,11 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { RemixElement } from "remix/ui";
 
 import { isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { MemoryTransport } from "./memory";
 

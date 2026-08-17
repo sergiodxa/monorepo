@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { CodeBlock, Markdown } from "./markdown";
 
@@ -65,7 +65,7 @@ describe("Markdown", () => {
 	test("gives up its heading levels at three, which is as many as a card holds", async () => {
 		let { html } = await render(<Markdown>{"###### Deep"}</Markdown>);
 
-		expect(html).toStartWith("<h3");
+		expect(html).toMatch(/^<h3/);
 	});
 });
 
@@ -101,7 +101,7 @@ describe("CodeBlock", () => {
 	test("takes its fill from a table cell, which Outlook paints to the full width", async () => {
 		let { html } = await render(<CodeBlock code="x" />);
 
-		expect(html).toStartWith("<table");
+		expect(html).toMatch(/^<table/);
 		expect(html).toContain('class="mail-code"');
 	});
 });

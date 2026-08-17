@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Result } from "@pkg/result";
 import type { Handle } from "remix/ui";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { MemoryTransport } from "./memory";
 
@@ -172,7 +171,7 @@ describe("Mailer normalization", () => {
 
 		let message = lastMessage(transport);
 		expect(message.date).toBeInstanceOf(Date);
-		expect(message.messageId).toEndWith("@example.com>");
+		expect(message.messageId).toMatch(/@example\.com>$/);
 	});
 
 	test("keeps an explicit date and Message-ID so a test can stay deterministic", async () => {

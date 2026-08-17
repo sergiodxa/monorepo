@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { Email, render } from "./index";
 
@@ -112,11 +112,11 @@ describe("Email.Heading", () => {
 		let second = await render(<Email.Heading level={2}>Two</Email.Heading>);
 		let third = await render(<Email.Heading level={3}>Three</Email.Heading>);
 
-		expect(first.html).toStartWith("<h1");
+		expect(first.html).toMatch(/^<h1/);
 		expect(first.html).toContain("font-size:24px");
-		expect(second.html).toStartWith("<h2");
+		expect(second.html).toMatch(/^<h2/);
 		expect(second.html).toContain("font-size:20px");
-		expect(third.html).toStartWith("<h3");
+		expect(third.html).toMatch(/^<h3/);
 		expect(third.html).toContain("font-size:16px");
 	});
 });
@@ -125,7 +125,7 @@ describe("Email.Text", () => {
 	test("renders a paragraph with an explicit line height", async () => {
 		let { html, text } = await render(<Email.Text>Body copy</Email.Text>);
 
-		expect(html).toStartWith("<p");
+		expect(html).toMatch(/^<p/);
 		expect(html).toContain("line-height:1.6");
 		expect(text).toBe("Body copy");
 	});

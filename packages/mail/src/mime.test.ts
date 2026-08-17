@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import type { NormalizedMessage } from "./types";
 
@@ -180,7 +180,7 @@ describe("buildMimeMessage", () => {
 		let parsed = parseMessage(raw);
 		let parts = splitParts(parsed);
 
-		expect(header(parsed, "content-type")).toStartWith("multipart/alternative; boundary=");
+		expect(header(parsed, "content-type")).toMatch(/^multipart\/alternative; boundary=/);
 		expect(parts).toHaveLength(2);
 		expect(header(partAt(parts, 0), "content-type")).toBe("text/plain; charset=utf-8");
 		expect(header(partAt(parts, 1), "content-type")).toBe("text/html; charset=utf-8");
@@ -193,7 +193,7 @@ describe("buildMimeMessage", () => {
 		let boundary = boundaryOf(parseMessage(raw));
 
 		expect(raw).toContain(`--${boundary}--\r\n`);
-		expect(raw).toEndWith(`--${boundary}--\r\n`);
+		expect(raw.endsWith(`--${boundary}--\r\n`)).toBe(true);
 	});
 
 	test("writes every header a message needs to be accepted", () => {
@@ -304,8 +304,8 @@ describe("buildMimeMessage", () => {
 			.split("\r\n")
 			.slice(raw.split("\r\n").findIndex((line) => line.startsWith("Subject:")));
 
-		expect(subjectLines[0]).toStartWith("Subject: This subject");
-		expect(subjectLines[1]).toStartWith(" ");
+		expect(subjectLines[0]).toMatch(/^Subject: This subject/);
+		expect(subjectLines[1]).toMatch(/^ /);
 		expect(header(parseMessage(raw), "subject")).toBe(subject);
 	});
 
@@ -371,7 +371,7 @@ describe("buildMimeMessage", () => {
 		expect(decodePart(partAt(parts, 1))).toBe("<p>--=_Part_0000</p>");
 
 		for (let part of parts) {
-			for (let line of part.body.split("\r\n")) expect(line).not.toStartWith("--");
+			for (let line of part.body.split("\r\n")) expect(line).not.toMatch(/^--/);
 		}
 		expect(raw.split("\r\n").filter((line) => line.startsWith(`--${boundary}`))).toHaveLength(3);
 	});
@@ -383,7 +383,7 @@ describe("buildMimeMessage", () => {
 
 		expect(raw.replaceAll("\r\n", "")).not.toContain("\n");
 		expect(raw.replaceAll("\r\n", "")).not.toContain("\r");
-		expect(raw).toEndWith("\r\n");
+		expect(raw).toMatch(/\r\n$/);
 		expect(decodePart(partAt(splitParts(parseMessage(raw)), 0))).toBe(
 			"one\r\ntwo\r\nthree\r\nfour",
 		);
