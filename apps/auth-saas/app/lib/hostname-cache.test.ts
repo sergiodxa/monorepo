@@ -21,7 +21,7 @@ let hostnamesKv = createKVNamespace();
  * invalidates entries of its own.
  */
 function bindEnv(): void {
-	mock.module("cloudflare:workers", () => ({
+	void mock.module("cloudflare:workers", () => ({
 		env: createEnv<Cloudflare.Env>({ HOSTNAMES_KV: hostnamesKv }),
 	}));
 }

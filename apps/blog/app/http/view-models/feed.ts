@@ -144,6 +144,7 @@ export class FeedViewModel {
 	 * @returns `true` when the value is a renderable activity item.
 	 */
 	static isActivityItem(
+		this: void,
 		item: {
 			href: string;
 			label: string;

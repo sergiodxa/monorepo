@@ -75,7 +75,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 			migrations: "manual",
 		});
 
-		ctx.blockConcurrencyWhile(() => this.setup());
+		void ctx.blockConcurrencyWhile(() => this.setup());
 	}
 
 	/**

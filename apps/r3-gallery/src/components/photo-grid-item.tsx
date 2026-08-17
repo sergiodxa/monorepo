@@ -48,7 +48,7 @@ export function PhotoGridItem(handle: Handle<PhotoGridItemProps>) {
 
 	addEventListeners(fetcher, handle.signal, {
 		change() {
-			handle.update();
+			void handle.update();
 		},
 	});
 

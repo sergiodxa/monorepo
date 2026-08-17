@@ -233,7 +233,13 @@ export default createController(routes.dashboard.tenants.billing, {
 				try {
 					// Use env variable for product ID or fall back to placeholder
 					let productId = env.POLAR_PRODUCT_ID ?? "placeholder-product-id";
-					let successUrl = `${url.origin}${new Location({ pathname: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }), search: new URLSearchParams({ success: "true" }) })}`;
+					let successPath = String(
+						new Location({
+							pathname: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }),
+							search: new URLSearchParams({ success: "true" }),
+						}),
+					);
+					let successUrl = `${url.origin}${successPath}`;
 
 					let checkoutUrl = await Subscription.createCheckoutUrl(
 						db,

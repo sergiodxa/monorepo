@@ -176,6 +176,24 @@ const SecretResponseSchema = s.object({ id: s.string(), secret: s.string() });
 const MessageResponseSchema = s.object({ message: s.string() });
 
 /**
+ * Builds the headers for one Management API call: the JSON content type plus the
+ * signed internal token, over whatever the caller asked for. `HeadersInit` may be a
+ * `Headers` or an array of pairs, so the caller's headers are merged through
+ * `Headers` rather than spread — spreading either shape yields numeric index keys
+ * and silently drops every header. The internal token is set last: it authenticates
+ * the call and a caller must never be able to replace it.
+ * @param internalToken Signed token proving the call came from the control plane.
+ * @param headers Headers the caller passed alongside the request options.
+ * @returns The merged header set to send.
+ */
+function managementHeaders(internalToken: string, headers?: HeadersInit): Headers {
+	let merged = new Headers(headers);
+	if (!merged.has("Content-Type")) merged.set("Content-Type", "application/json");
+	merged.set("X-Internal-Token", internalToken);
+	return merged;
+}
+
+/**
  * Service for communicating with tenant Durable Objects via their Management API.
  * Used by the dashboard to manage tenant data with signed internal tokens.
  *
@@ -213,11 +231,7 @@ export class TenantApiService {
 
 		let response = await this.stub.fetch(url, {
 			...options,
-			headers: {
-				"Content-Type": "application/json",
-				"X-Internal-Token": internalToken,
-				...options.headers,
-			},
+			headers: managementHeaders(internalToken, options.headers),
 		});
 
 		if (!response.ok) {
@@ -252,11 +266,7 @@ export class TenantApiService {
 
 		let response = await this.stub.fetch(url, {
 			...options,
-			headers: {
-				"Content-Type": "application/json",
-				"X-Internal-Token": internalToken,
-				...options.headers,
-			},
+			headers: managementHeaders(internalToken, options.headers),
 		});
 
 		if (!response.ok) {

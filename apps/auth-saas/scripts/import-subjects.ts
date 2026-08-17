@@ -18,6 +18,9 @@
  * dashboard creates automatically on tenant creation.
  */
 
+// Marks this standalone script as an ES module, so its top-level `await` is legal.
+export {};
+
 interface SourceSubject {
 	id: string;
 	email_address: string;

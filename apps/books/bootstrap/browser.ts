@@ -50,7 +50,14 @@ run({
 		// `fetch` picks for `FormData`.
 		let body =
 			formData && encType === "application/x-www-form-urlencoded"
-				? new URLSearchParams(Array.from(formData, ([key, value]) => [key, String(value)]))
+				? new URLSearchParams(
+						// A file entry has no text form; a urlencoded submission carries its
+						// filename, which is what the server can act on.
+						Array.from(formData, ([key, value]) => [
+							key,
+							value instanceof File ? value.name : value,
+						]),
+					)
 				: formData;
 
 		// The response itself carries the URL it was redirected to, which the frame

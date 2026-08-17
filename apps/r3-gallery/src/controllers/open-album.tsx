@@ -15,7 +15,8 @@ import { routes } from "../routes";
 /** Redirects form submissions to the requested album page. */
 export const openAlbum = createAction(routes.openAlbum, async function openAlbum(ctx) {
 	let formData = await ctx.request.formData();
-	let albumId = String(formData.get("albumId") ?? "").trim();
+	let submitted = formData.get("albumId");
+	let albumId = typeof submitted === "string" ? submitted.trim() : "";
 
 	if (!albumId || !Number.isInteger(Number(albumId))) {
 		return new Response(null, { status: 302, headers: { Location: routes.home.href() } });

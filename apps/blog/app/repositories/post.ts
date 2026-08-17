@@ -205,7 +205,7 @@ export class Post {
 	 * Accepts ISO-like strings, SQL datetime strings, second-based numbers/strings,
 	 * and millisecond numbers/strings.
 	 */
-	private static parseTimestamp(value: unknown) {
+	private static parseTimestamp(value: string | number | null | undefined) {
 		if (value === null || value === undefined) return Number.NaN;
 
 		if (typeof value === "number") {
@@ -214,7 +214,7 @@ export class Post {
 			return value * 1000;
 		}
 
-		let text = typeof value === "string" ? value : String(value);
+		let text = value;
 		let parsed = Date.parse(text);
 		if (Number.isFinite(parsed)) return parsed;
 
