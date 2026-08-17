@@ -8,14 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { InvalidCronReason } from "@pkg/cron";
 import type { TFunction } from "@pkg/i18n";
 
 import { Schedule } from "@pkg/cron";
 import { createTranslator } from "@pkg/i18n";
 import { isFailure, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import de from "~/app/locales/de";
 import en from "~/app/locales/en";

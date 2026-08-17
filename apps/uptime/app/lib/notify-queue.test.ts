@@ -9,11 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 
@@ -25,9 +24,9 @@ import type { NotifyMessage } from "~/app/lib/notify-queue";
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 
 /** Batch boundaries are not recoverable from the recorded messages, so `sendBatch` is spied on too. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { enqueueNotifications } = await import("~/app/lib/notify-queue");
 

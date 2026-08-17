@@ -11,11 +11,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import { createD1Database, createEnv, createSendEmail } from "@pkg/cloudflare-mocks";
+import { describe, expect, test, vi } from "vitest";
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		DB: createD1Database(),
 		EMAIL: createSendEmail(),
