@@ -42,7 +42,7 @@ function makeStub() {
  * provisioner fans out; a blog resolves to the same stub every time, as on the platform.
  */
 function bindEnv(): void {
-	mock.module("cloudflare:workers", () => ({
+	void mock.module("cloudflare:workers", () => ({
 		env: createEnv<Cloudflare.Env>({
 			PLATFORM_DOMAIN: "blog.test",
 			OIDC_ISSUER: "https://sso.test",

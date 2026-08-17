@@ -21,7 +21,7 @@ import type { TestDatabase } from "~/app/test/db";
 
 // The analytics helper and job read `env` at import time; supply only the Analytics
 // Engine SQL API credentials, which is all the reporting path reads.
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 	DurableObject: class {},
 }));

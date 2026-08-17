@@ -71,9 +71,16 @@ run({
 		// A form that declares the default encoding is sent as one, so the server reads
 		// the body under the type the form asked for rather than the multipart type
 		// `fetch` picks for `FormData`.
+		// A file part carries no text, so it is sent as its filename — what a browser
+		// itself puts on the wire for a file input inside a urlencoded form.
 		let body =
 			formData && encType === "application/x-www-form-urlencoded"
-				? new URLSearchParams(Array.from(formData, ([key, value]) => [key, String(value)]))
+				? new URLSearchParams(
+						Array.from(formData, ([key, value]) => [
+							key,
+							typeof value === "string" ? value : value.name,
+						]),
+					)
 				: formData;
 
 		// The response itself carries the URL it was redirected to, which the frame

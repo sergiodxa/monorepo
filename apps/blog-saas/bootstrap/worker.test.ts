@@ -37,7 +37,7 @@ function tenantResponse(): Response {
  * supplied, so reading any other one fails by name.
  */
 function bindEnv(): void {
-	mock.module("cloudflare:workers", () => ({
+	void mock.module("cloudflare:workers", () => ({
 		env: createEnv<Cloudflare.Env>({
 			PLATFORM_DOMAIN: "blog.test",
 			ANALYTICS: analytics,

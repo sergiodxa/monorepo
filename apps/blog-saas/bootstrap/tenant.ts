@@ -68,7 +68,9 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	 */
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
-		ctx.blockConcurrencyWhile(async () => {
+		// A constructor cannot await; the runtime is what holds requests back until
+		// this settles, so the promise is deliberately left to it.
+		void ctx.blockConcurrencyWhile(async () => {
 			this.ensureMetaTable();
 			this.#meta = this.readMeta();
 			if (this.#meta) await this.bootEngine(this.#meta);

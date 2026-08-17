@@ -32,6 +32,20 @@ import routes from "~/routes/web";
 export const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
 /**
+ * Reads a text field out of a submitted form. Any field can arrive as a file
+ * part, which is not text, so it reads as the fallback instead of stringifying
+ * to the literal `"[object File]"` and being stored as a blog name or domain.
+ *
+ * @param formData The submitted form body.
+ * @param name The field name to read.
+ * @param fallback Returned when the field is absent or was submitted as a file.
+ */
+export function fieldText(formData: FormData, name: string, fallback = ""): string {
+	let value = formData.get(name);
+	return typeof value === "string" ? value : fallback;
+}
+
+/**
  * Loads a blog and asserts the current account owns it, the shared authorization
  * guard for every per-blog action. Returns a `Response` (login redirect or 404) the
  * caller should return as-is, or the account id and blog on success.
@@ -102,12 +116,12 @@ export default createController(routes.dashboard.blogs, {
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-			let name = String(ctx.formData.get("name") ?? "").trim();
+			let name = fieldText(ctx.formData, "name").trim();
 			if (!name) return badRequest("Blog name is required");
 
 			// Validate the region against the known list rather than casting arbitrary
 			// form input to a DurableObjectLocationHint.
-			let regionInput = String(ctx.formData.get("region") ?? "wnam");
+			let regionInput = fieldText(ctx.formData, "region", "wnam");
 			if (!REGIONS.includes(regionInput as Region)) return badRequest("Invalid region");
 			let region: Region = regionInput as Region;
 
@@ -211,7 +225,7 @@ export default createController(routes.dashboard.blogs, {
 			if (result instanceof Response) return result;
 			let { blog } = result;
 
-			let name = String(ctx.formData.get("name") ?? "").trim();
+			let name = fieldText(ctx.formData, "name").trim();
 			if (name) {
 				await db.update(
 					BlogModel.table,
@@ -296,9 +310,7 @@ export const domain = createController(routes.dashboard.blogDomain, {
 			if (result instanceof Response) return result;
 			let { blog } = result;
 
-			let hostname = String(ctx.formData.get("hostname") ?? "")
-				.trim()
-				.toLowerCase();
+			let hostname = fieldText(ctx.formData, "hostname").trim().toLowerCase();
 			if (!hostname || hostname.endsWith(`.${env.PLATFORM_DOMAIN}`))
 				return badRequest("Invalid domain");
 
