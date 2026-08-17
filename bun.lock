@@ -384,6 +384,7 @@
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
+        "msw": "^2.15.0",
       },
     },
     "packages/http": {
@@ -521,6 +522,7 @@
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
+        "msw": "^2.15.0",
       },
     },
     "packages/oidc-provider": {

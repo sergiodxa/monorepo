@@ -8,11 +8,26 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+
+import type { HttpResponseResolver } from "msw";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import type { HostnameResult } from "./index";
 
 import { HostnameApiError, HostnameClient } from "./index";
+
+/** The Cloudflare custom-hostnames collection the client is pointed at. */
+let API_URL = "https://api.cloudflare.com/client/v4/zones/zone-123/custom_hostnames";
+
+/** MSW server intercepting the Cloudflare API. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 /** Builds a client with predictable config for tests. */
 function makeClient(metadataKey?: string) {
@@ -37,10 +52,12 @@ function activeHostname(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-/** A request the client made, recorded so a test can assert on what it sent. */
+/** A request the client made, recorded off the wire so a test can assert on it. */
 interface RecordedCall {
 	url: string;
-	init?: RequestInit;
+	method: string;
+	headers: Headers;
+	body: string;
 }
 
 /** The create payload, as it arrives over the wire once serialized. */
@@ -52,38 +69,46 @@ interface SentHostname {
 
 /**
  * Parses the JSON body of a recorded call. Every payload the client sends is a
- * `JSON.stringify` result, so a body that is not a string means the request was
- * built wrong and the test should fail loudly rather than assert on `undefined`.
+ * `JSON.stringify` result, so an empty body means the request was built wrong and
+ * the test should fail loudly rather than assert on `undefined`.
  */
 function sentBody(call: RecordedCall | undefined): SentHostname {
-	let body = call?.init?.body;
-	if (typeof body !== "string") throw new TypeError("expected a serialized JSON body");
-	return JSON.parse(body) as SentHostname;
+	if (!call?.body) throw new TypeError("expected a serialized JSON body");
+	return JSON.parse(call.body) as SentHostname;
 }
 
-/** Installs a fetch mock returning `body` with `status`, capturing the last call. */
-function mockFetch(body: unknown, status = 200) {
+/**
+ * Answers every custom-hostname route with `body`/`status` and records what
+ * actually went on the wire. Any route the client hits that is not listed here
+ * fails the test through the `onUnhandledRequest: "error"` guard.
+ */
+function mockApi(body: Record<string, unknown>, status = 200) {
 	let calls: RecordedCall[] = [];
-	globalThis.fetch = mock((url: string, init?: RequestInit) => {
-		calls.push({ url, init });
-		return Promise.resolve(
-			new Response(JSON.stringify(body), {
-				status,
-				headers: { "content-type": "application/json" },
-			}),
-		);
-	}) as unknown as typeof fetch;
+
+	/** Records the intercepted request, then replies with the canned payload. */
+	let resolver: HttpResponseResolver = async ({ request }) => {
+		calls.push({
+			url: request.url,
+			method: request.method,
+			headers: request.headers,
+			body: await request.text(),
+		});
+		return HttpResponse.json(body, { status });
+	};
+
+	server.use(
+		http.post(API_URL, resolver),
+		http.get(API_URL, resolver),
+		http.get(`${API_URL}/:id`, resolver),
+		http.delete(`${API_URL}/:id`, resolver),
+	);
+
 	return calls;
 }
 
-let originalFetch = globalThis.fetch;
-afterEach(() => {
-	globalThis.fetch = originalFetch;
-});
-
 describe("HostnameClient.create", () => {
 	test("writes the configured metadata key and returns a normalized result", async () => {
-		let calls = mockFetch({
+		let calls = mockApi({
 			result: activeHostname({ status: "pending", ssl: { status: "pending_validation" } }),
 			success: true,
 			errors: [],
@@ -108,7 +133,7 @@ describe("HostnameClient.create", () => {
 	});
 
 	test("defaults region to wnam when omitted", async () => {
-		let calls = mockFetch({
+		let calls = mockApi({
 			result: activeHostname(),
 			success: true,
 			errors: [],
@@ -122,7 +147,7 @@ describe("HostnameClient.create", () => {
 	});
 
 	test("sends the bearer token header", async () => {
-		let calls = mockFetch({
+		let calls = mockApi({
 			result: activeHostname(),
 			success: true,
 			errors: [],
@@ -131,14 +156,13 @@ describe("HostnameClient.create", () => {
 
 		await makeClient().create("blog.example.com", "tenant-1");
 
-		let headers = new Headers(calls[0]?.init?.headers);
-		expect(headers.get("authorization")).toBe("Bearer test-token");
+		expect(calls[0]?.headers.get("authorization")).toBe("Bearer test-token");
 	});
 });
 
 describe("HostnameClient error handling", () => {
 	test("throws HostnameApiError with status and errors on API failure", async () => {
-		mockFetch({ success: false, errors: [{ code: 1001, message: "Invalid hostname" }] }, 400);
+		mockApi({ success: false, errors: [{ code: 1001, message: "Invalid hostname" }] }, 400);
 
 		let client = makeClient();
 		let error: unknown;
@@ -157,7 +181,7 @@ describe("HostnameClient error handling", () => {
 	});
 
 	test("throws HostnameApiError when the payload fails schema validation", async () => {
-		mockFetch({ success: true, result: { id: 123 }, errors: [], messages: [] });
+		mockApi({ success: true, result: { id: 123 }, errors: [], messages: [] });
 
 		let client = makeClient();
 		let promise = client.status("cf-1");
@@ -167,7 +191,7 @@ describe("HostnameClient error handling", () => {
 
 describe("HostnameClient.status", () => {
 	test("fetches by id and exposes both flat and nested ssl views", async () => {
-		let calls = mockFetch({
+		let calls = mockApi({
 			result: activeHostname({
 				ssl: {
 					status: "pending_validation",
@@ -192,7 +216,7 @@ describe("HostnameClient.status", () => {
 	});
 
 	test("falls back to ownership_verification for the validation record", async () => {
-		mockFetch({
+		mockApi({
 			result: activeHostname({
 				ssl: { status: "pending_validation" },
 				ownership_verification: { name: "_own.blog", value: "own-value" },
@@ -210,7 +234,7 @@ describe("HostnameClient.status", () => {
 
 describe("HostnameClient.getByName", () => {
 	test("returns the first match", async () => {
-		let calls = mockFetch({
+		let calls = mockApi({
 			result: [activeHostname()],
 			success: true,
 			errors: [],
@@ -224,7 +248,7 @@ describe("HostnameClient.getByName", () => {
 	});
 
 	test("returns null when there are no matches", async () => {
-		mockFetch({
+		mockApi({
 			result: [],
 			success: true,
 			errors: [],
@@ -261,34 +285,34 @@ describe("HostnameClient.listByEntity", () => {
 			},
 		];
 		let index = 0;
-		globalThis.fetch = mock(() => {
-			let body = responses[index++];
-			return Promise.resolve(
-				new Response(JSON.stringify(body), {
-					status: 200,
-					headers: { "content-type": "application/json" },
-				}),
-			);
-		}) as unknown as typeof fetch;
+		let pages: string[] = [];
+
+		server.use(
+			http.get(API_URL, ({ request }) => {
+				pages.push(new URL(request.url).searchParams.get("page") ?? "");
+				return HttpResponse.json(responses[index++]);
+			}),
+		);
 
 		let result = await makeClient("blog_id").listByEntity("blog-1");
 		expect(result.map((r) => r.id)).toEqual(["a", "c"]);
+		expect(pages).toEqual(["1", "2"]);
 	});
 });
 
 describe("HostnameClient.delete", () => {
 	test("issues a DELETE and resolves on success", async () => {
-		let calls = mockFetch({ success: true, result: null, errors: [], messages: [] });
+		let calls = mockApi({ success: true, result: null, errors: [], messages: [] });
 
 		await makeClient().delete("cf-1");
-		expect(calls[0]?.init?.method).toBe("DELETE");
+		expect(calls[0]?.method).toBe("DELETE");
 		expect(calls[0]?.url).toBe(
 			"https://api.cloudflare.com/client/v4/zones/zone-123/custom_hostnames/cf-1",
 		);
 	});
 
 	test("throws HostnameApiError with 404 when the hostname is gone", async () => {
-		mockFetch({ success: false, errors: [{ code: 1436, message: "not found" }] }, 404);
+		mockApi({ success: false, errors: [{ code: 1436, message: "not found" }] }, 404);
 
 		let error: unknown;
 		try {
