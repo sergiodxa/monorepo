@@ -11,19 +11,23 @@
  * columns are untyped JSON text columns this test harness's SQLite adapter can't bind
  * object values into — mocking isolates the orchestration logic in `alerts.ts` (this
  * file's subject) from that unrelated data-layer gap. `MaintenanceWindow` has no JSON
- * columns, so suppression is exercised against the real in-memory database.
+ * columns, so suppression is exercised against the real in-memory database. The three
+ * webhook endpoints are intercepted with MSW, so what a channel is asserted to have sent is
+ * the request that actually went out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 import type { Transport } from "@pkg/mail";
 
 import { Mailer, MailError } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { failure } from "@pkg/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import type {
 	AlertEventSnapshot,
@@ -145,6 +149,61 @@ function failingTransport(message: string): Transport {
 	};
 }
 
+/** The endpoint the `webhook` strategy's fixtures POST to. */
+const WEBHOOK_URL = "https://hooks.example.com/uptime";
+
+/** The endpoint the `slack` strategy's fixtures POST to. */
+const SLACK_URL = "https://hooks.slack.example/abc";
+
+/** The endpoint the `discord` strategy's fixtures POST to. */
+const DISCORD_URL = "https://discord.example/webhooks/abc";
+
+/** One webhook delivery as it went on the wire. */
+interface Delivery {
+	url: string;
+	method: string;
+	headers: Headers;
+	body: string;
+}
+
+/** Every delivery that left over the three webhook channels, in order. */
+let deliveries: Delivery[] = [];
+
+/**
+ * Records what a channel POSTs and answers with `status`. Registered at 200 for all three
+ * endpoints, since an accepted delivery is what most tests need; a test that wants an
+ * endpoint to refuse re-registers that one endpoint through `server.use`.
+ */
+function webhookHandler(url: string, status = 200) {
+	return http.post(url, async ({ request }) => {
+		deliveries.push({
+			url: request.url,
+			method: request.method,
+			headers: request.headers,
+			body: await request.text(),
+		});
+		return new HttpResponse(null, { status });
+	});
+}
+
+let server = setupServer(
+	webhookHandler(WEBHOOK_URL),
+	webhookHandler(SLACK_URL),
+	webhookHandler(DISCORD_URL),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** The one delivery a single-alert dispatch is expected to have made. */
+function onlyDelivery(): Delivery {
+	expect(deliveries).toHaveLength(1);
+	let [delivery] = deliveries;
+	if (!delivery) throw new Error("expected exactly one webhook delivery");
+	return delivery;
+}
+
 /** A minimal HTTP snapshot fixture. */
 let httpSnapshot: AlertEventSnapshot = {
 	type: "http",
@@ -181,9 +240,7 @@ beforeEach(() => {
 	isInCooldownMock.mockImplementation(async () => false);
 	countSentSinceRecoveryMock.mockImplementation(async () => 0);
 	summarizeIncidentMock.mockImplementation(async () => ({ sent: 0, suppressed: 0 }));
-	globalThis.fetch = mock(
-		async (..._args: unknown[]) => new Response(null, { status: 200 }),
-	) as unknown as typeof fetch;
+	deliveries = [];
 });
 
 describe("dashboardUrl", () => {
@@ -733,15 +790,10 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		listForMonitorMock.mockImplementation(async () => [
 			makeAlert({
 				id: "alert-11",
-				config: {
-					strategy: "webhook",
-					config: { url: "https://hooks.example.com/uptime", secret: "" },
-				},
+				config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
 			}),
 		]);
 		summarizeIncidentMock.mockImplementation(async () => ({ sent: 10, suppressed: 300 }));
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -756,8 +808,7 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		});
 
 		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let parsed = JSON.parse(init.body as string) as { message: string };
+		let parsed = JSON.parse(onlyDelivery().body) as { message: string };
 		expect(parsed.message).toContain(
 			"Notifications for this incident: 10 sent, 300 held back by the alert's cooldown.",
 		);
@@ -858,7 +909,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 		let failing = makeAlert({ id: "failing" });
 		let succeeding = makeAlert({
 			id: "succeeding",
-			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
+			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
 		});
 		listForMonitorMock.mockImplementation(async () => [failing, succeeding]);
 		let transport = failingTransport("boom");
@@ -960,12 +1011,8 @@ describe("dispatchAlerts — the DNS body", () => {
 	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
 		let { db } = createTestDatabase();
 		listForMonitorMock.mockImplementation(async () => [
-			makeAlert({
-				config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
-			}),
+			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
 		]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -979,8 +1026,7 @@ describe("dispatchAlerts — the DNS body", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		return (JSON.parse(init.body as string) as { text: string }).text;
+		return (JSON.parse(onlyDelivery().body) as { text: string }).text;
 	}
 
 	test("lists the counters and quotes every finding", async () => {
@@ -1070,14 +1116,9 @@ describe("dispatchAlerts — webhook delivery", () => {
 	test("POSTs a JSON body and signs it with a real HMAC-SHA256 signature when a secret is configured", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "webhook",
-				config: { url: "https://hooks.example.com/uptime", secret: "shh" },
-			},
+			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "shh" } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -1091,18 +1132,15 @@ describe("dispatchAlerts — webhook delivery", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		let [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe("https://hooks.example.com/uptime");
-		expect(init.method).toBe("POST");
-		let headers = init.headers as Headers;
-		expect(headers.get("Content-Type")).toBe("application/json");
+		let delivery = onlyDelivery();
+		expect(delivery.url).toBe(WEBHOOK_URL);
+		expect(delivery.method).toBe("POST");
+		expect(delivery.headers.get("Content-Type")).toBe("application/json");
 
-		let body = init.body as string;
-		let expectedSignature = `sha256=${await computeHmacSha256Hex("shh", body)}`;
-		expect(headers.get("Webhook-Signature")).toBe(expectedSignature);
+		let expectedSignature = `sha256=${await computeHmacSha256Hex("shh", delivery.body)}`;
+		expect(delivery.headers.get("Webhook-Signature")).toBe(expectedSignature);
 
-		let parsed = JSON.parse(body) as Record<string, unknown>;
+		let parsed = JSON.parse(delivery.body) as Record<string, unknown>;
 		expect(parsed.monitorId).toBe("monitor-1");
 		expect(parsed.monitorType).toBe("http");
 		expect(parsed.eventType).toBe("down");
@@ -1112,14 +1150,9 @@ describe("dispatchAlerts — webhook delivery", () => {
 	test("omits the Webhook-Signature header when no secret is configured", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "webhook",
-				config: { url: "https://hooks.example.com/uptime", secret: "" },
-			},
+			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -1133,23 +1166,16 @@ describe("dispatchAlerts — webhook delivery", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let headers = init.headers as Headers;
-		expect(headers.has("Webhook-Signature")).toBe(false);
+		expect(onlyDelivery().headers.has("Webhook-Signature")).toBe(false);
 	});
 
 	test("records 'failed' when the webhook endpoint responds with a non-2xx status", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "webhook",
-				config: { url: "https://hooks.example.com/uptime", secret: "" },
-			},
+			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(null, { status: 500 }),
-		) as unknown as typeof fetch;
+		server.use(webhookHandler(WEBHOOK_URL, 500));
 
 		await dispatchAlerts({
 			db,
@@ -1173,14 +1199,9 @@ describe("dispatchAlerts — Slack delivery", () => {
 	test("POSTs a formatted message to the Slack webhook URL, including an optional channel", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "slack",
-				config: { webhookUrl: "https://hooks.slack.example/abc", channel: "#alerts" },
-			},
+			config: { strategy: "slack", config: { webhookUrl: SLACK_URL, channel: "#alerts" } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -1194,9 +1215,9 @@ describe("dispatchAlerts — Slack delivery", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe("https://hooks.slack.example/abc");
-		let body = JSON.parse(init.body as string) as { text: string; channel?: string };
+		let delivery = onlyDelivery();
+		expect(delivery.url).toBe(SLACK_URL);
+		let body = JSON.parse(delivery.body) as { text: string; channel?: string };
 		expect(body.channel).toBe("#alerts");
 		expect(body.text).toContain("[Uptime Alert] Homepage is DOWN");
 	});
@@ -1204,11 +1225,9 @@ describe("dispatchAlerts — Slack delivery", () => {
 	test("omits the channel field when the alert has no channel configured", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
+			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -1222,20 +1241,17 @@ describe("dispatchAlerts — Slack delivery", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		let body = JSON.parse(init.body as string) as Record<string, unknown>;
+		let body = JSON.parse(onlyDelivery().body) as Record<string, unknown>;
 		expect("channel" in body).toBe(false);
 	});
 
 	test("records 'failed' when the Slack webhook responds with a non-2xx status", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: { strategy: "slack", config: { webhookUrl: "https://hooks.slack.example/abc" } },
+			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(null, { status: 404 }),
-		) as unknown as typeof fetch;
+		server.use(webhookHandler(SLACK_URL, 404));
 
 		await dispatchAlerts({
 			db,
@@ -1259,14 +1275,9 @@ describe("dispatchAlerts — Discord delivery", () => {
 	test("POSTs a formatted `content` field to the Discord webhook URL", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "discord",
-				config: { webhookUrl: "https://discord.example/webhooks/abc" },
-			},
+			config: { strategy: "discord", config: { webhookUrl: DISCORD_URL } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		let fetchMock = mock(async (..._args: unknown[]) => new Response(null, { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		await dispatchAlerts({
 			db,
@@ -1280,24 +1291,19 @@ describe("dispatchAlerts — Discord delivery", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe("https://discord.example/webhooks/abc");
-		let body = JSON.parse(init.body as string) as { content: string };
+		let delivery = onlyDelivery();
+		expect(delivery.url).toBe(DISCORD_URL);
+		let body = JSON.parse(delivery.body) as { content: string };
 		expect(body.content).toContain("[Uptime Alert] Homepage is DOWN");
 	});
 
 	test("records 'failed' when the Discord webhook responds with a non-2xx status", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert({
-			config: {
-				strategy: "discord",
-				config: { webhookUrl: "https://discord.example/webhooks/abc" },
-			},
+			config: { strategy: "discord", config: { webhookUrl: DISCORD_URL } },
 		});
 		listForMonitorMock.mockImplementation(async () => [alert]);
-		globalThis.fetch = mock(
-			async (..._args: unknown[]) => new Response(null, { status: 503 }),
-		) as unknown as typeof fetch;
+		server.use(webhookHandler(DISCORD_URL, 503));
 
 		await dispatchAlerts({
 			db,
