@@ -198,7 +198,7 @@ describe("generating and importing key pairs", () => {
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [restored]);
 
-		await expect(JWT.verify(signed, [restored])).resolves.toBeDefined();
+		expect(await JWT.verify(signed, [restored])).toBeDefined();
 	});
 });
 
@@ -348,7 +348,7 @@ describe("importLocal", () => {
 
 		let resolved = await JWK.importLocal(JWK.toJSON([pair]));
 
-		await expect(JWT.verify(signed, resolved, VERIFY)).resolves.toBeDefined();
+		expect(await JWT.verify(signed, resolved, VERIFY)).toBeDefined();
 	});
 
 	test("does not resolve a key from an unrelated issuer", async () => {
@@ -382,7 +382,7 @@ describe("importLocal", () => {
 
 		for (let pair of [current, retired]) {
 			let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [pair]);
-			await expect(JWT.verify(signed, resolved, VERIFY)).resolves.toBeDefined();
+			expect(await JWT.verify(signed, resolved, VERIFY)).toBeDefined();
 		}
 	});
 
@@ -487,7 +487,7 @@ describe("importRemote", () => {
 		published = [rotated, current];
 		let after = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, [rotated]);
 
-		await expect(JWT.verify(after, resolved, VERIFY)).resolves.toBeDefined();
+		expect(await JWT.verify(after, resolved, VERIFY)).toBeDefined();
 	});
 
 	test("fails when the endpoint does not serve a key set", async () => {
@@ -518,7 +518,7 @@ describe("signingKeys", () => {
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
 
-		await expect(JWT.verify(signed, keys)).resolves.toBeDefined();
+		expect(await JWT.verify(signed, keys)).toBeDefined();
 	});
 
 	test("returns the same key on a second call, rather than rotating", async () => {
@@ -570,7 +570,7 @@ describe("signingKeys", () => {
 		for (let { alg } of ALGORITHMS) {
 			let signed = await new JWT({ sub: "user-123" }).sign(alg, keys);
 
-			await expect(JWT.verify(signed, published, { algorithms: [alg] })).resolves.toBeDefined();
+			expect(await JWT.verify(signed, published, { algorithms: [alg] })).toBeDefined();
 		}
 	});
 
@@ -606,7 +606,7 @@ describe("signingKeys", () => {
 		// because every stored key is published and the token's `kid` finds it there.
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys.slice(-1));
 
-		await expect(JWT.verify(signed, published, VERIFY)).resolves.toBeDefined();
+		expect(await JWT.verify(signed, published, VERIFY)).toBeDefined();
 	});
 
 	test("skips a listed entry whose file has gone missing", async () => {
