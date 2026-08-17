@@ -110,6 +110,14 @@ function asObject(data: Value | undefined): ValueObject {
 	return data;
 }
 
+/** Narrow a value to a string, failing the test otherwise. */
+function asString(data: Value | undefined): string {
+	if (typeof data !== "string") {
+		throw new Error(`expected a string value, got ${JSON.stringify(data)}`);
+	}
+	return data;
+}
+
 /** Unwrap a failed result into its error, failing the test on success. */
 function unwrapError(result: Result<Value, SpecError>): SpecError {
 	if (!isFailure(result)) {
@@ -173,7 +181,7 @@ describe(createHttpPlugin.name, () => {
 		expect(data.text).toBe(JSON.stringify({ users: ["ada"] }));
 		let headers = asObject(data.headers);
 		expect(headers["x-request-id"]).toBe("42");
-		expect(String(headers["content-type"])).toContain("application/json");
+		expect(asString(headers["content-type"])).toContain("application/json");
 	});
 
 	test("post sends an object body as JSON", async () => {
@@ -191,7 +199,7 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		let json = asObject(asObject(unwrap(result)).json);
-		expect(String(json.contentType)).toContain("application/json");
+		expect(asString(json.contentType)).toContain("application/json");
 		expect(json.received).toEqual({ name: "Ada" });
 	});
 
@@ -210,7 +218,7 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		let json = asObject(asObject(unwrap(result)).json);
-		expect(String(json.contentType)).toContain("text/plain");
+		expect(asString(json.contentType)).toContain("text/plain");
 		expect(json.received).toBe("hello world");
 	});
 
@@ -229,7 +237,7 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		let json = asObject(asObject(unwrap(result)).json);
-		expect(String(json.contentType)).toContain("application/json");
+		expect(asString(json.contentType)).toContain("application/json");
 		expect(json.received).toEqual(["a", "b"]);
 	});
 
@@ -529,7 +537,7 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		let json = asObject(asObject(unwrap(result)).json);
-		expect(String(json.contentType)).toContain("application/json");
+		expect(asString(json.contentType)).toContain("application/json");
 		expect(json.received).toBe(JSON.stringify("a plain string"));
 	});
 
@@ -548,7 +556,7 @@ describe(createHttpPlugin.name, () => {
 			buildContext(),
 		);
 		let json = asObject(asObject(unwrap(result)).json);
-		expect(String(json.contentType)).toContain("text/plain");
+		expect(asString(json.contentType)).toContain("text/plain");
 		expect(json.received).toBe("hi there");
 	});
 

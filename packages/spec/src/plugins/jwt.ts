@@ -27,6 +27,7 @@ import type { Plugin, ToolContext, ToolDescriptor } from "../plugin";
 import type { ToolArg, Value, ValueObject } from "../values";
 
 import { ToolError } from "../errors";
+import { formatValue } from "../values";
 
 /** The only signature algorithm this capability supports; see the module note. */
 const SUPPORTED_ALG = "ES256";
@@ -136,7 +137,7 @@ async function verify(args: ToolArg[], context: ToolContext): Promise<Result<Val
 	if (alg !== SUPPORTED_ALG) {
 		return failure(
 			new ToolError(
-				`jwt.verify only supports the ${SUPPORTED_ALG} algorithm, but the token header declares "${String(alg)}"`,
+				`jwt.verify only supports the ${SUPPORTED_ALG} algorithm, but the token header declares ${formatValue(alg ?? null)}`,
 			),
 		);
 	}
@@ -246,7 +247,7 @@ async function importKey(jwk: ValueObject): Promise<Result<CryptoKey, SpecError>
 	if (material.kty !== "EC" || material.crv !== "P-256") {
 		return failure(
 			new ToolError(
-				`jwt.verify selected a key that is not EC P-256 (kty "${String(material.kty)}", crv "${String(material.crv)}")`,
+				`jwt.verify selected a key that is not EC P-256 (kty ${formatValue(material.kty ?? null)}, crv ${formatValue(material.crv ?? null)})`,
 			),
 		);
 	}

@@ -250,7 +250,7 @@ test(
 	async () => {
 		let connected = await connectStdioPlugin([process.execPath, DEMO_PLUGIN], "demo");
 		expect(isSuccess(connected)).toBe(true);
-		if (!isSuccess(connected)) throw new Error(String(connected));
+		if (!isSuccess(connected)) throw connected.error;
 		let plugin = connected.data;
 
 		let context = makeContext(tmpdir());
@@ -259,7 +259,7 @@ test(
 
 		// The transport must give the connected plugin a dispose that terminates
 		// its child — the runner calls it after every run.
-		expect(plugin.dispose).toBeDefined();
+		expect(typeof plugin.dispose).toBe("function");
 		await plugin.dispose?.();
 
 		// After dispose the child is gone, so a further call cannot be served.
@@ -276,7 +276,7 @@ test(
 			{ namespace: "demo", command: [process.execPath, DEMO_PLUGIN] },
 		]);
 		expect(isSuccess(ok)).toBe(true);
-		if (!isSuccess(ok)) throw new Error(String(ok));
+		if (!isSuccess(ok)) throw ok.error;
 		expect(ok.data).toHaveLength(1);
 		let call = await ok.data[0]?.call(
 			"upper",

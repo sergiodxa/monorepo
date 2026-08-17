@@ -72,8 +72,8 @@ function startServer() {
 
 let server = startServer();
 
-afterAll(() => {
-	server?.stop(true);
+afterAll(async () => {
+	await server?.stop(true);
 });
 
 test.skipIf(server === undefined)(

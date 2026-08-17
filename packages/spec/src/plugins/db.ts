@@ -204,7 +204,10 @@ function toValue(value: unknown): Value {
 		for (let [key, entry] of Object.entries(value)) object[key] = toValue(entry);
 		return object;
 	}
-	return String(value);
+	if (typeof value === "symbol" || typeof value === "function") return value.toString();
+
+	// Every `typeof` result is handled above, so nothing reaches here.
+	return null;
 }
 
 /** Render an unknown thrown value as a one-line message. */

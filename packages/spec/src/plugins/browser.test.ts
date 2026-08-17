@@ -389,7 +389,7 @@ describe("browser end to end", () => {
 
 	afterAll(async () => {
 		if (plugin.dispose !== undefined) await plugin.dispose();
-		server?.stop(true);
+		await server?.stop(true);
 	});
 
 	test.skipIf(!AVAILABLE)(
@@ -554,7 +554,7 @@ describe("browser session setup against a real browser", () => {
 
 	afterAll(async () => {
 		if (plugin.dispose !== undefined) await plugin.dispose();
-		server?.stop(true);
+		await server?.stop(true);
 	});
 
 	test.skipIf(!AVAILABLE)("a cookie set with `for` reaches the first request", async () => {
@@ -625,7 +625,7 @@ describe("a session seeded from the environment", () => {
 
 	afterAll(async () => {
 		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
-		server?.stop(true);
+		await server?.stop(true);
 		delete process.env.SPEC_E2E_SESSION;
 	});
 
@@ -687,7 +687,7 @@ describe("browser.url captured through the executor", () => {
 
 	afterAll(async () => {
 		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
-		server?.stop(true);
+		await server?.stop(true);
 	});
 
 	test.skipIf(!AVAILABLE)(
