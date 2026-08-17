@@ -414,7 +414,7 @@ export namespace Battle {
 		gameData: GameData;
 		sides: [SideArguments, SideArguments];
 		slots?: 1 | 2 | 3;
-		random?(): number;
+		random?: () => number;
 	}
 }
 

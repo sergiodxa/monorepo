@@ -94,7 +94,7 @@ export function getExperienceForLevel(growthRate: GrowthRate, level: number): nu
 			return Math.floor((normalizedLevel ** 3 * (normalizedLevel + 64)) / 100);
 		}
 		default: {
-			throw new RangeError(`Unknown growth rate: ${growthRate}`);
+			throw new RangeError(`Unknown growth rate: ${String(growthRate)}`);
 		}
 	}
 }

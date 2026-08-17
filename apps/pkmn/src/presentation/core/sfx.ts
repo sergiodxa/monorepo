@@ -28,6 +28,15 @@ export type SfxName =
 	| "level-up"
 	| "encounter";
 
+/**
+ * Any effect name a caller may ask for.
+ *
+ * The `string & {}` branch keeps arbitrary names assignable — callers driven by
+ * authored data can pass a name that has no definition, which is a documented
+ * no-op — while still offering the {@link SfxName} literals as completions.
+ */
+export type SfxNameInput = SfxName | (string & {});
+
 /** One time-stamped point in a pitch envelope: `[offsetSeconds, frequencyHz]`. */
 export type FrequencyPoint = [offset: number, frequency: number];
 
@@ -159,7 +168,7 @@ export function isAudioSupported(): boolean {
  * @param name - The effect to play.
  * @param options - Where to route it and how loud, see {@link PlaySfxOptions}.
  */
-export function playSfx(name: SfxName | string, options: PlaySfxOptions = {}): void {
+export function playSfx(name: SfxNameInput, options: PlaySfxOptions = {}): void {
 	let definition = (SFX_DEFINITIONS as Record<string, SfxDefinition | undefined>)[name];
 	if (!definition) return;
 

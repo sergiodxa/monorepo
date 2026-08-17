@@ -70,7 +70,7 @@ export namespace Engine {
 		/** Initial world state used when the engine starts. */
 		world: World;
 		/** Seedable RNG threaded into battles so whole sessions are reproducible. */
-		random?(): number;
+		random?: () => number;
 	}
 }
 

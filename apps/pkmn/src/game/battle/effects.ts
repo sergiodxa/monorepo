@@ -39,6 +39,7 @@ export class Effects {
 
 	/** Leaves battle state unchanged for moves with no secondary behavior. */
 	static none(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "none" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -47,6 +48,7 @@ export class Effects {
 
 	/** Resolves each nested effect in order and concatenates their events. */
 	static compound(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "compound" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -59,6 +61,7 @@ export class Effects {
 
 	/** Leaves turn-order metadata unchanged because priority is resolved earlier. */
 	static priority(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "priority" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -67,6 +70,7 @@ export class Effects {
 
 	/** Applies the recharge volatile so the user must skip its next action. */
 	static recharge(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "recharge" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -76,6 +80,7 @@ export class Effects {
 
 	/** Prevents the target from leaving the battle. */
 	static trap(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "trap" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -85,6 +90,7 @@ export class Effects {
 
 	/** Leaves forced switching to battle resolution. */
 	static forceSwitchTarget(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "force-switch-target" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -93,6 +99,7 @@ export class Effects {
 
 	/** Leaves self-switching to battle resolution. */
 	static switchSelf(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "switch-self" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -101,6 +108,7 @@ export class Effects {
 
 	/** Applies partial trapping and records which side caused it. */
 	static partialTrap(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -112,6 +120,7 @@ export class Effects {
 
 	/** Applies confusion turns to the target. */
 	static confuse(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "confuse" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -121,6 +130,7 @@ export class Effects {
 
 	/** Applies flinch when the chance roll succeeds. */
 	static flinch(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "flinch" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -131,6 +141,7 @@ export class Effects {
 
 	/** Prevents the target from using status moves for a fixed number of turns. */
 	static taunt(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "taunt" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -140,6 +151,7 @@ export class Effects {
 
 	/** Forces the target to repeat its last successfully chosen move. */
 	static encore(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "encore" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -151,6 +163,7 @@ export class Effects {
 
 	/** Disables one move slot on the target for a fixed number of turns. */
 	static disable(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "disable" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -161,6 +174,7 @@ export class Effects {
 
 	/** Marks the target as identified so ghost-type immunities can be ignored. */
 	static identify(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "identify" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -170,6 +184,7 @@ export class Effects {
 
 	/** Applies attraction to the target. */
 	static attract(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "attract" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -180,6 +195,7 @@ export class Effects {
 
 	/** Marks the user as the redirection target for opposing attacks this turn. */
 	static followMe(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "follow-me" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -189,6 +205,7 @@ export class Effects {
 
 	/** Applies protection to the user for the rest of the turn. */
 	static protect(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "protect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -200,6 +217,7 @@ export class Effects {
 
 	/** Applies endurance to the user for the rest of the turn. */
 	static endure(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "endure" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -211,6 +229,7 @@ export class Effects {
 
 	/** Applies Destiny Bond to the user until its next action or switch. */
 	static destinyBond(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "destiny-bond" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -220,6 +239,7 @@ export class Effects {
 
 	/** Marks the user so its next Electric move is empowered. */
 	static chargedElectric(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "charged-electric" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -229,6 +249,7 @@ export class Effects {
 
 	/** Raises the user's critical-hit ratio for later attacks. */
 	static focusEnergy(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "focus-energy" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -238,6 +259,7 @@ export class Effects {
 
 	/** Applies Aqua Ring healing to the user until it switches out. */
 	static aquaRing(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "aqua-ring" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -247,6 +269,7 @@ export class Effects {
 
 	/** Marks the side so the next switch-in is restored by Healing Wish. */
 	static healingWish(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "healing-wish" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -256,6 +279,7 @@ export class Effects {
 
 	/** Leaves Curse's split Ghost/non-Ghost behavior to battle resolution. */
 	static curse(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "curse" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -264,6 +288,7 @@ export class Effects {
 
 	/** Leaves Belly Drum's HP cost and stat update to battle resolution. */
 	static bellyDrum(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "belly-drum" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -272,6 +297,7 @@ export class Effects {
 
 	/** Leaves HP-floor handling to damage resolution. */
 	static cannotKO(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "cannot-ko" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -280,6 +306,7 @@ export class Effects {
 
 	/** Removes protection from the target before later effects resolve. */
 	static breakProtect(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "break-protect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -289,6 +316,7 @@ export class Effects {
 
 	/** Leaves first-turn gating to pre-move resolution. */
 	static firstTurnOnly(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "first-turn-only" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -297,6 +325,7 @@ export class Effects {
 
 	/** Leaves locked-turn rampage handling to move resolution. */
 	static rampage(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "rampage" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -305,6 +334,7 @@ export class Effects {
 
 	/** Leaves miss crash handling to battle resolution. */
 	static crashOnMiss(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "crash-on-miss" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -313,6 +343,7 @@ export class Effects {
 
 	/** Leaves multi-hit handling to damage resolution. */
 	static multiHit(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "multi-hit" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -321,6 +352,7 @@ export class Effects {
 
 	/** Leaves OHKO handling to damage resolution. */
 	static ohko(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "ohko" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -329,6 +361,7 @@ export class Effects {
 
 	/** Leaves fixed-damage handling to damage resolution. */
 	static fixedDamage(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "fixed-damage" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -337,6 +370,7 @@ export class Effects {
 
 	/** Leaves held-item-power (thrown-item) handling to damage resolution. */
 	static powerFromHeldItem(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "power-from-held-item" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -345,6 +379,7 @@ export class Effects {
 
 	/** Leaves user-HP fixed damage handling to damage resolution. */
 	static fixedDamageUserHP(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "fixed-damage-user-hp" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -353,6 +388,7 @@ export class Effects {
 
 	/** Leaves recoil handling to post-damage resolution. */
 	static recoil(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "recoil" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -361,6 +397,7 @@ export class Effects {
 
 	/** Restores a fraction of the user's max HP and reports the new remaining HP. */
 	static heal(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "heal" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -382,6 +419,7 @@ export class Effects {
 
 	/** Leaves drain healing to post-damage resolution. */
 	static drain(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "drain" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -390,6 +428,7 @@ export class Effects {
 
 	/** Leaves user KO handling to post-damage resolution. */
 	static selfDestruct(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "self-destruct" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -398,6 +437,7 @@ export class Effects {
 
 	/** Resets temporary stat stages for the chosen combatants. */
 	static resetStatStages(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "reset-stat-stages" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -424,6 +464,7 @@ export class Effects {
 
 	/** Clears selected side effects from one or both sides. */
 	static clearSideEffects(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "clear-side-effects" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -446,6 +487,7 @@ export class Effects {
 
 	/** Mutates one combatant stat stage and reports the resulting value. */
 	static modifyStat(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "modify-stat" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -469,6 +511,7 @@ export class Effects {
 
 	/** Routes a side-wide effect to its specific implementation. */
 	static sideEffect(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "side-effect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -510,6 +553,7 @@ export class Effects {
 
 	/** Routes a field-wide effect to its specific implementation. */
 	static fieldEffect(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "field-effect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -561,6 +605,7 @@ export class Effects {
 
 	/** Applies a major status directly to the target creature when possible. */
 	static applyStatus(
+		this: void,
 		effect: Extract<MoveEffect, { kind: "apply-status" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -614,6 +659,7 @@ export class Effects {
 
 	/** Applies Leech Seed to the target and records the source side. */
 	static leechSeed(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "leech-seed" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
@@ -624,6 +670,7 @@ export class Effects {
 
 	/** Leaves conditional damage calculations to battle resolution. */
 	static doublePowerOnDamagedTarget(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "double-power-on-damaged-target" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -632,6 +679,7 @@ export class Effects {
 
 	/** Leaves status-conditional damage calculations to battle resolution. */
 	static doublePowerOnStatusTarget(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "double-power-on-status-target" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -640,6 +688,7 @@ export class Effects {
 
 	/** Leaves speed-based power calculations to battle resolution. */
 	static powerFromTargetSpeed(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "power-from-target-speed" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -648,6 +697,7 @@ export class Effects {
 
 	/** Leaves inverse speed-based power calculations to battle resolution. */
 	static powerFromUserSpeed(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "power-from-user-speed" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -656,6 +706,7 @@ export class Effects {
 
 	/** Leaves low-HP power calculations to battle resolution. */
 	static powerFromUserHP(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "power-from-user-hp" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -664,6 +715,7 @@ export class Effects {
 
 	/** Leaves weight-based power calculations to battle resolution. */
 	static powerFromWeight(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "power-from-weight" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -672,6 +724,7 @@ export class Effects {
 
 	/** Leaves this-turn damage checks to battle resolution. */
 	static doublePowerIfTargetDamagedThisTurn(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "double-power-if-target-damaged-this-turn" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -680,6 +733,7 @@ export class Effects {
 
 	/** Leaves reflected physical damage to battle resolution. */
 	static counterLastPhysicalHit(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "counter-last-physical-hit" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -688,6 +742,7 @@ export class Effects {
 
 	/** Leaves reflected special damage to battle resolution. */
 	static counterLastSpecialHit(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "counter-last-special-hit" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -696,6 +751,7 @@ export class Effects {
 
 	/** Leaves reflected any-category damage to battle resolution. */
 	static counterLastAnyHit(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "counter-last-any-hit" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -704,6 +760,7 @@ export class Effects {
 
 	/** Leaves boost-on-KO handling to battle resolution. */
 	static boostOnKO(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "boost-on-ko" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -712,6 +769,7 @@ export class Effects {
 
 	/** Leaves Focus Punch interruption checks to battle resolution. */
 	static failIfUserDamagedThisTurn(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "fail-if-user-damaged-this-turn" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -720,6 +778,7 @@ export class Effects {
 
 	/** Leaves delayed attack scheduling to battle resolution. */
 	static delayedAttack(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "delayed-attack" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -728,6 +787,7 @@ export class Effects {
 
 	/** Leaves Endeavor-style HP-gap damage calculations to battle resolution. */
 	static fixedDamageTargetHPGap(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "fixed-damage-target-hp-gap" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
@@ -736,6 +796,7 @@ export class Effects {
 
 	/** Leaves charge handling to the move resolution phase before effect dispatch. */
 	static charge(
+		this: void,
 		_effect: Extract<MoveEffect, { kind: "charge" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {

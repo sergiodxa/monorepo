@@ -61,6 +61,7 @@ export class GameData<T extends string | number | symbol = string> {
 	 * @returns Validated runtime maps or the first reference error found
 	 */
 	static create<T extends string | number | symbol = string>(
+		this: void,
 		source: GameDataSource<T>,
 	): Result<GameData<T>, GameDataError> {
 		let species = new Map(Object.entries(source.species));

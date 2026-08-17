@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { AssetStore } from "./assets";
-import type { SfxName } from "./sfx";
+import type { SfxNameInput } from "./sfx";
 
 import { playSfx } from "./sfx";
 
@@ -108,7 +108,7 @@ export class AudioManager {
 	 * through the sfx channel so its volume follows `setVolume("sfx", ...)`. A
 	 * zero sfx-channel volume schedules nothing; an unknown name is a no-op.
 	 */
-	playSynthSfx(name: SfxName | string) {
+	playSynthSfx(name: SfxNameInput) {
 		// The sfx channel gain node already scales volume, so pass gain: 1 to avoid
 		// double-attenuating; gate on the channel volume so a muted channel schedules nothing.
 		if (this.channels.sfx.gain.value <= 0) return;
