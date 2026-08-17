@@ -3,6 +3,5 @@
 	"compilerOptions": {
 		"types": ["@total-typescript/ts-reset", "node", "bun"]
 	},
-	"include": ["src/**/*"],
-	"exclude": ["src/**/*.test.ts"]
+	"include": ["src/**/*"]
 }

@@ -15,7 +15,6 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
 	fmt: {
-		ignorePatterns: ["apps/auth-saas/src/app/controllers/dashboard/tenants/branding.ts"],
 		useTabs: true,
 		experimentalSortPackageJson: true,
 		experimentalSortImports: {
@@ -45,6 +44,7 @@ export default defineConfig({
 		options: {
 			typeAware: true,
 			typeCheck: true,
+			denyWarnings: true,
 		},
 		plugins: [
 			"eslint",
@@ -54,8 +54,6 @@ export default defineConfig({
 			"node",
 			"oxc",
 			"promise",
-			"react-perf",
-			"react",
 			"typescript",
 			"unicorn",
 		],
