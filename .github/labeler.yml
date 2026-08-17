@@ -12,10 +12,6 @@ docs:
           - "docs/**"
           - "*.md"
 
-content:
-  - changed-files:
-      - any-glob-to-any-file: "content/**"
-
 ci:
   - changed-files:
       - any-glob-to-any-file: ".github/**"
