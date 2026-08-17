@@ -87,6 +87,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
 - MUST add a new app's formatting or lint exceptions to `fmt.overrides` / `lint.overrides` in the root `vite.config.ts`, never as a per-package config file
+- MUST register every new app as a Vitest project in the root `vite.config.ts` and verify it with `vp test run --project <name>`; an app missing from `test.projects` collects none of its tests and still exits 0. Packages need no entry — one project covers `packages/*/src/**/*.test.ts?(x)`, so keep package tests under `src/`
 - MUST add new rules to this document when necessary, and update existing ones if they become outdated or need clarification
 - MUST follow the guidelines in this document, and suggest improvements when necessary
 - MUST use `bunx` instead of `npx`, or any other package runner, to ensure consistent behavior across environments
@@ -140,8 +141,9 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 ### Testing
 
-- MUST back database tests with an in-memory adapter (`bun:sqlite`) that mirrors the production adapter, rather than mocking the query layer
-- MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests, and use `mock.module("cloudflare:workers", …)` to supply `env`/bindings; never stub `globalThis.fetch` or inject a fake
+- MUST back database tests with an in-memory adapter from `@pkg/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
+- MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests; never stub `globalThis.fetch` or inject a fake
+- MUST let the `cloudflareWorkersStub()` plugin supply `env`/bindings — it is on every project whose workspace uses Cloudflare bindings, so a test importing `cloudflare:workers` needs no mock of its own; reach for `vi.doMock` + `await import(...)` only to replace a module before the subject loads
 - MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`
 - MUST add a regression test for every bug fixed: a test that fails against the old (buggy) behavior and passes with the fix, kept alongside the module's other tests, so the bug can never silently return
 
