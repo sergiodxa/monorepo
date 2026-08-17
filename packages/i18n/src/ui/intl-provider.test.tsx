@@ -1,10 +1,9 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-
 import type { i18n as I18n } from "i18next";
 import type { Handle } from "remix/ui";
 
 import { createInstance } from "i18next";
 import { renderToString } from "remix/ui/server";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { intl, IntlProvider, setIntl } from "./intl-provider";
 

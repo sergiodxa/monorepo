@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import type { SchemaOrg } from "./schema";
 
@@ -30,9 +30,9 @@ describe("serializeJsonLd", () => {
 		let hostile = 'Ends the tag early: </script><script>alert("xss")</script>';
 		let serialized = serializeJsonLd(nodeWithDescription(hostile));
 
-		expect(serialized).not.toInclude("</script");
-		expect(serialized).not.toInclude("<script");
-		expect(serialized).toInclude("\\u003c/script");
+		expect(serialized).not.toContain("</script");
+		expect(serialized).not.toContain("<script");
+		expect(serialized).toContain("\\u003c/script");
 	});
 
 	test("keeps the escaped content parsing back to the original text", () => {
@@ -45,14 +45,14 @@ describe("serializeJsonLd", () => {
 	test("escapes an HTML comment opener, the other way out of a script element", () => {
 		let serialized = serializeJsonLd(nodeWithDescription("<!-- hidden -->"));
 
-		expect(serialized).not.toInclude("<!--");
-		expect(serialized).toInclude("\\u003c!--");
+		expect(serialized).not.toContain("<!--");
+		expect(serialized).toContain("\\u003c!--");
 	});
 
 	test("escapes every `<` in the payload, not just the first", () => {
 		let serialized = serializeJsonLd(nodeWithDescription("< < <"));
 
-		expect(serialized).not.toInclude("<");
+		expect(serialized).not.toContain("<");
 		expect(serialized.match(/\\u003c/g)).toHaveLength(3);
 	});
 

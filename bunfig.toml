@@ -45,4 +45,8 @@ pathIgnorePatterns = [
 	"**/apps/auth-saas/**",
 	"**/packages/i18n/**",
 	"**/packages/seo/**",
+	"**/apps/blog-saas/app/http/controllers/api/webhooks/polar.test.ts",
+	"**/apps/blog-saas/app/http/controllers/dashboard/blogs.test.ts",
+	"**/apps/blog-saas/app/services/analytics.test.ts",
+	"**/apps/blog-saas/bootstrap/worker.test.ts",
 ]

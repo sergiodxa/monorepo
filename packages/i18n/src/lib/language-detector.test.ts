@@ -1,5 +1,3 @@
-import { describe, expect, test } from "bun:test";
-
 /**
  * Covers server-side language detection across every method: search params,
  * cookie, session (live session and storage-backed), Accept-Language header,
@@ -13,6 +11,7 @@ import type { Session, SessionStorage } from "remix/session";
 
 import { createCookie } from "remix/cookie";
 import { createSession } from "remix/session";
+import { describe, expect, test } from "vitest";
 
 import { LanguageDetector } from "./language-detector";
 

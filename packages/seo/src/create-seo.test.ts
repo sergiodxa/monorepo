@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { createSeo } from "./create-seo";
 
@@ -69,8 +69,8 @@ describe("createSeo", () => {
 			}),
 		);
 
-		expect(serialized).not.toInclude("</script");
-		expect(serialized).toInclude("\\u003c/script");
+		expect(serialized).not.toContain("</script");
+		expect(serialized).toContain("\\u003c/script");
 	});
 
 	test("binds the schema builders to the same configuration", () => {

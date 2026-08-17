@@ -1,5 +1,3 @@
-import { describe, expect, mock, test } from "bun:test";
-
 /**
  * Covers the i18next middleware: locale + per-request instance publication on
  * the request context, translation through inline resources and backend
@@ -15,6 +13,7 @@ import type { BackendModule } from "i18next";
 
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
+import { describe, expect, test, vi } from "vitest";
 
 import i18next from "./middleware";
 
@@ -38,7 +37,7 @@ function makeContext(path = "/", headers: Record<string, string> = {}): RequestC
 
 /** A `next` that records it ran and returns a sentinel response. */
 function passthroughNext() {
-	return mock(async () => new Response("ok", { status: 200 }));
+	return vi.fn(async () => new Response("ok", { status: 200 }));
 }
 
 describe("i18next middleware", () => {

@@ -1,7 +1,6 @@
-import { describe, expect, test } from "bun:test";
-
 import { createInstance } from "i18next";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { IntlProvider } from "./intl-provider";
 import { Trans } from "./trans";

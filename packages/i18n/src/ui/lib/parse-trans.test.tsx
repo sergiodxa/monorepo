@@ -1,8 +1,7 @@
-import { describe, expect, test } from "bun:test";
-
 import type { Handle, RemixElement } from "remix/ui";
 
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { parseTrans } from "./parse-trans";
 
