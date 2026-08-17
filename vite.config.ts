@@ -13,7 +13,31 @@
  */
 import { defineConfig } from "vite-plus";
 
+import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin";
+
 export default defineConfig({
+	test: {
+		projects: [
+			{
+				// Rooted at the app so its own tsconfig — and therefore the `~/*` aliases and
+				// `jsxImportSource` — apply, which a root-rooted run cannot see.
+				root: "apps/uptime",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "uptime",
+					// ADR-035 phase 2 pilot: only the converted files run under Vitest so far.
+					include: [
+						"app/lib/uptime-report.test.ts",
+						"app/lib/concurrency.test.ts",
+						"app/http/controllers/healthcheck-analytics-engine.test.ts",
+					],
+					pool: "threads",
+				},
+			},
+		],
+	},
+
 	fmt: {
 		// Vendored third-party content. Oxfmt reformats fenced code inside markdown, which
 		// would rewrite 600+ files nobody here authored and make the next vendor sync a

@@ -545,6 +545,12 @@ interface covering only what the mocks call; the Node one normalizes a missed `g
 `null` and reports an empty column list where `node:sqlite` throws, so the two behave
 identically at the call sites.
 
+Both enable SQLite's legacy double-quoted string literals, because `bun:sqlite` does and the
+two runners have to agree. An identifier that does not resolve therefore degrades to a string
+rather than raising — which is how `20250520185608` in the uptime migrations copies
+`"subject_id"` out of a table whose column is `user_id` without failing. Worth knowing when a
+query returns a column name where you expected a value.
+
 Nothing outside this package should import either implementation directly.
 
 ## Where the mock is more permissive than the platform

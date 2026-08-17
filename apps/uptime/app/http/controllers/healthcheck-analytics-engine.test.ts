@@ -15,17 +15,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
 
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 

@@ -17,7 +17,14 @@ export type { SqliteDatabase, SqliteStatement } from "./sqlite";
  * @returns The database, narrowed to the surface the mocks use.
  */
 export function openDatabase(filename: string): SqliteDatabase {
-	let database = new DatabaseSync(filename);
+	// Double-quoted string literals are SQLite's legacy behaviour: an identifier that does
+	// not resolve silently degrades to a string. `bun:sqlite` enables it and `node:sqlite`
+	// does not, so without this the same SQL behaves differently per runtime — and the
+	// repo's migration history already contains a statement that relies on it
+	// (20250520185608 copies "subject_id" out of a table whose column is `user_id`).
+	// Matching Bun keeps the two runners byte-identical; the cost is that a double-quoted
+	// typo stays silent here rather than erroring.
+	let database = new DatabaseSync(filename, { enableDoubleQuotedStringLiterals: true });
 
 	return {
 		query(sql: string): SqliteStatement {

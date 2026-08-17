@@ -3,3 +3,13 @@
 # Registers the virtual `cloudflare:workers` module (see test/setup.ts) so source
 # files that import `env` at module load can be exercised across every workspace.
 preload = ["./test/setup.ts"]
+
+# ADR-035 phase 2: files already converted to Vitest. Bun resolves the `vitest` package but
+# not its runner context, so anything using `vi.*` throws here. This list shrinks to a single
+# `apps/uptime/**` entry once the app is fully converted, and disappears when `vp test` owns
+# the whole suite.
+pathIgnorePatterns = [
+	"**/apps/uptime/app/lib/uptime-report.test.ts",
+	"**/apps/uptime/app/lib/concurrency.test.ts",
+	"**/apps/uptime/app/http/controllers/healthcheck-analytics-engine.test.ts",
+]
