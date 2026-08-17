@@ -9,13 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -31,7 +30,7 @@ import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
  * touch no binding, and the empty strict env proves it: any read would throw by the
  * binding's name instead of quietly answering a stand-in value.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: alertsController, alertsRoutes } = await import("./alerts");
 

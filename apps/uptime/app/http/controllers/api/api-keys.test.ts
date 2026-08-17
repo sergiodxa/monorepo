@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 

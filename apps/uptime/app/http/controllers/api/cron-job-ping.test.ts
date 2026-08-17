@@ -31,8 +31,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { IngestEvent } from "@pkg/polar";
 
 import { createAnalyticsEngine, createEnv, createRateLimit } from "@pkg/cloudflare-mocks";
@@ -43,6 +41,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -73,7 +72,7 @@ let pingResults = createAnalyticsEngine();
  */
 let deferred: Promise<unknown>[] = [];
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ RATE_LIMITER: rateLimiter, PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -88,7 +87,7 @@ let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job
  * asserted below are the ones the endpoint actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 beforeEach(() => {
 	pingResults.reset();

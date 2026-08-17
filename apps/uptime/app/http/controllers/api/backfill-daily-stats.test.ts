@@ -3,20 +3,19 @@
  * queue message and returns 202 Accepted, gated by
  * `requireApiKey("monitors:write")` like every other `/api/v1/*` endpoint. The
  * `env.QUEUE` binding is an in-memory queue installed through
- * `mock.module("cloudflare:workers", ...)`, since the controller reads `env` at
+ * `vi.doMock("cloudflare:workers", ...)`, since the controller reads `env` at
  * module load, so the assertions read the message that really landed on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -26,7 +25,7 @@ import type { ApiKeyScope } from "~/database/schema";
  */
 let queue = createQueue({ name: "uptime" });
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");

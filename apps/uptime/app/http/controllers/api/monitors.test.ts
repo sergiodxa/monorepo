@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -29,7 +28,7 @@ import routes from "~/routes/web";
  * binding, and the empty strict env proves it: any read would throw by the binding's name
  * instead of quietly answering `undefined`.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: monitorsController, monitorsRoutes } =
 	await import("~/app/http/controllers/api/monitors");

@@ -29,18 +29,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
 import {
@@ -56,6 +44,7 @@ import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
@@ -78,7 +67,7 @@ import routes from "~/routes/web";
 let CALLER_LIMIT = 60;
 
 /** The `GeoFetchDO` stub the HTTP check probes through. */
-let doFetchMock = mock(
+let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
@@ -108,7 +97,7 @@ let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 /** Promises the handler deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -129,15 +118,15 @@ await mock.module("cloudflare:workers", () => ({
  */
 let openSocket: () => Promise<void> = async () => {};
 
-await mock.module("cloudflare:sockets", () => ({
+vi.doMock("cloudflare:sockets", () => ({
 	connect: () => ({ opened: openSocket(), close: async () => {} }),
 }));
 
 let { default: pingCreate } = await import("./ping");
 
 /** Both guards log through the immediate logger; the assertions read responses instead. */
-spyOn(console, "info").mockImplementation(() => {});
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -489,7 +478,8 @@ describe("POST /api/v1/ping http", () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
-			async () => new Response("", { status: 204, headers: { "X-Response-Time": "8" } }),
+			// 204 is a null-body status, so the body has to be `null` rather than `""`.
+			async () => new Response(null, { status: 204, headers: { "X-Response-Time": "8" } }),
 		);
 
 		let response = await dispatch(db, {

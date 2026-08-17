@@ -15,14 +15,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-
 import { ServiceContainer } from "@pkg/service-container";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
