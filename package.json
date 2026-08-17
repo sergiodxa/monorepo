@@ -7,20 +7,22 @@
 	],
 	"type": "module",
 	"scripts": {
+		"check": "vp check",
+		"check:fix": "vp check --fix",
 		"format": "vp fmt --check",
 		"format:fix": "vp fmt",
 		"lint": "vp lint",
 		"lint:fix": "vp lint --fix",
-		"test": "bun test --isolate",
+		"test": "vp test run && bun test --isolate",
+		"test:bun": "bun test --isolate",
+		"test:vitest": "vp test run",
 		"typecheck": "vp check --no-fmt --no-lint",
 		"upgrade": "bun scripts/upgrade-dependencies.ts",
-		"upgrade:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run",
 		"upgrade:apps": "bun scripts/upgrade-dependencies.ts --workspace apps",
 		"upgrade:apps:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace apps",
+		"upgrade:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run",
 		"upgrade:packages": "bun scripts/upgrade-dependencies.ts --workspace packages",
-		"upgrade:packages:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace packages",
-		"check": "vp check",
-		"check:fix": "vp check --fix"
+		"upgrade:packages:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run --workspace packages"
 	},
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
