@@ -132,7 +132,7 @@ describe("Buttondown", () => {
 	test("a 403 is a dead API key, not a per-request failure", async () => {
 		server.use(http.get(SUBSCRIBER_URL, () => new HttpResponse(null, { status: 403 })));
 
-		expect(buttondown.isSubscribed("reader@example.com")).rejects.toThrow("Forbidden");
+		await expect(buttondown.isSubscribed("reader@example.com")).rejects.toThrow("Forbidden");
 	});
 
 	test("addMetadata patches the subscriber", async () => {
@@ -153,8 +153,8 @@ describe("Buttondown", () => {
 	test("addMetadata fails when the patch is rejected", async () => {
 		server.use(http.patch(SUBSCRIBER_URL, () => new HttpResponse(null, { status: 400 })));
 
-		expect(buttondown.addMetadata("reader@example.com", { purchase: "complete" })).rejects.toThrow(
-			"Failed to add metadata",
-		);
+		await expect(
+			buttondown.addMetadata("reader@example.com", { purchase: "complete" }),
+		).rejects.toThrow("Failed to add metadata");
 	});
 });
