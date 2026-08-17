@@ -14,8 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { PolarWebhookEvent } from "@pkg/polar";
 
 import { createEnv } from "@pkg/cloudflare-mocks";
@@ -25,6 +23,7 @@ import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { PolarSubscriptionOptions } from "~/app/lib/test/polar";
 
@@ -34,12 +33,12 @@ import { polarSubscription } from "~/app/lib/test/polar";
 import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ POLAR_WEBHOOK_SECRET: "whsec_test" }),
 }));
 
-spyOn(console, "info").mockImplementation(() => {});
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 let { default: polarWebhook } = await import("~/app/http/controllers/webhooks/polar");
 

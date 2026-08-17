@@ -32,8 +32,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 import type { Result } from "@pkg/result";
 import type { Renderer } from "remix/middleware/render";
@@ -56,6 +54,7 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
@@ -79,7 +78,7 @@ import routes from "~/routes/web";
 let probes: Array<{ url: string; headers: Headers }> = [];
 
 /** What the stub answers with; a test swaps it to shape the outcome. */
-let doFetch = mock(async (url: string, init?: RequestInit) => {
+let doFetch = vi.fn(async (url: string, init?: RequestInit) => {
 	probes.push({ url, headers: new Headers(init?.headers) });
 	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
 });
@@ -93,7 +92,7 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetch 
 /** Work the action deferred, drained by {@link dispatch} so the meter event can be read. */
 let deferred: Promise<unknown>[] = [];
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -126,14 +125,14 @@ let guardResult: Result<TrialProbeGrant, TrialRefusal> = success({
 	budgetRemaining: 499,
 });
 
-let guardTrialProbe = mock(async (_probe: TrialProbeRequest) => guardResult);
+let guardTrialProbe = vi.fn(async (_probe: TrialProbeRequest) => guardResult);
 
-let trialTurnstileSiteKey = mock((): string | null => null);
+let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
-await mock.module("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
+vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
 
 /** The guard's own logging is noise here; the assertions read the rendered page. */
-await mock.module("@pkg/logger", () => ({
+vi.doMock("@pkg/logger", () => ({
 	logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} },
 }));
 
