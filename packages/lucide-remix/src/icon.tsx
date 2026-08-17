@@ -33,6 +33,9 @@ export interface IconProps extends LucideProps {
 export function Icon({ props }: Handle<IconProps>) {
 	return () => {
 		let { name, ...rest } = props;
+		// Resolving the export by name is this module's whole purpose: `name` is only known
+		// at runtime, and `IconName` already constrains it to a key the registry exports.
+		// oxlint-disable-next-line import/namespace -- see above
 		let IconComponent = createLucideIcon(name, registry[iconExportNames[name]]);
 		return <IconComponent {...rest} />;
 	};
