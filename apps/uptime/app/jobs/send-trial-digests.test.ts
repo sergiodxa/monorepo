@@ -12,8 +12,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Transport } from "@pkg/mail";
 
 import { BatchedLogger } from "@pkg/logger";
@@ -22,6 +20,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { failure } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 
@@ -344,7 +343,7 @@ describe("SendTrialDigestsJob funnel events", () => {
 
 		let job = await runJob(db);
 
-		expect(funnelEvents(job)).toBeEmpty();
+		expect(funnelEvents(job)).toHaveLength(0);
 	});
 
 	test("emits nothing when the transport refuses the digest", async () => {
@@ -361,6 +360,6 @@ describe("SendTrialDigestsJob funnel events", () => {
 		let job = new SendTrialDigestsJob({ logger: new BatchedLogger("test") }, {});
 		await container.scope(() => job.perform());
 
-		expect(funnelEvents(job)).toBeEmpty();
+		expect(funnelEvents(job)).toHaveLength(0);
 	});
 });

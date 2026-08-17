@@ -10,13 +10,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import TeamDomain from "~/app/data/team-domain";
 import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
@@ -86,7 +85,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 			await job.perform();
 		});
 
-		expect(lookups).toBeEmpty();
+		expect(lookups).toHaveLength(0);
 	});
 
 	test("does nothing when the domain is already verified", async () => {
@@ -102,7 +101,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 			await job.perform();
 		});
 
-		expect(lookups).toBeEmpty();
+		expect(lookups).toHaveLength(0);
 	});
 
 	test("marks the domain verified when the TXT record matches", async () => {

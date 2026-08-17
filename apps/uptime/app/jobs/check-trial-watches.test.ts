@@ -21,8 +21,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
@@ -31,6 +29,7 @@ import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HttpCheckOptions, HttpCheckResult } from "~/app/services/http-check";
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
@@ -49,7 +48,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** The options every fake probe was constructed with, in the order the sweep built them. */
 let probes: HttpCheckOptions[] = [];
 
-let runMock = mock(async (_options: HttpCheckOptions): Promise<HttpCheckResult> => ({
+let runMock = vi.fn(async (_options: HttpCheckOptions): Promise<HttpCheckResult> => ({
 	outcome: {
 		responseStatus: 200,
 		responseTimeMs: 120,
@@ -70,11 +69,11 @@ let runMock = mock(async (_options: HttpCheckOptions): Promise<HttpCheckResult> 
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults, COSTS: costs }),
 }));
 
-await mock.module("~/app/services/http-check", () => ({
+vi.doMock("~/app/services/http-check", () => ({
 	HttpCheck: class {
 		#options: HttpCheckOptions;
 
@@ -457,8 +456,8 @@ describe("CheckTrialWatchesJob metering", () => {
 		await runJob(db);
 
 		// A watch belongs to no team, and every query against the ping dataset filters on one.
-		expect(pingResults.dataPoints).toBeEmpty();
-		expect(costs.dataPoints).toBeEmpty();
+		expect(pingResults.dataPoints).toHaveLength(0);
+		expect(costs.dataPoints).toHaveLength(0);
 	});
 
 	test("runs without a Polar client in the container, so nothing can be billed", async () => {
@@ -541,7 +540,7 @@ describe("CheckTrialWatchesJob funnel events", () => {
 		await makeDue(db, watch.id);
 		let second = await runJob(db);
 
-		expect(funnelEvents(second, "first_trial_check_completed")).toBeEmpty();
+		expect(funnelEvents(second, "first_trial_check_completed")).toHaveLength(0);
 	});
 
 	test("reports the first on-change email with both statuses", async () => {
@@ -587,7 +586,7 @@ describe("CheckTrialWatchesJob funnel events", () => {
 
 		let second = await runJob(db);
 		expect(sentOf(TrialChangeEmail)).toBe(2);
-		expect(funnelEvents(second, "first_trial_alert_sent")).toBeEmpty();
+		expect(funnelEvents(second, "first_trial_alert_sent")).toHaveLength(0);
 	});
 
 	test("emits no alert event when the send was refused", async () => {
@@ -599,6 +598,6 @@ describe("CheckTrialWatchesJob funnel events", () => {
 
 		let job = await runJob(db);
 
-		expect(funnelEvents(job, "first_trial_alert_sent")).toBeEmpty();
+		expect(funnelEvents(job, "first_trial_alert_sent")).toHaveLength(0);
 	});
 });

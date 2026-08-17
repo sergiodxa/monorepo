@@ -2,7 +2,7 @@
  * Unit tests for `EnqueuePendingDomainsJob.perform`: verifies it batches one
  * `verifyDomainOwnership` queue message per unverified team domain and skips the queue
  * call entirely when there is nothing pending. The `QUEUE` binding is an in-memory queue
- * installed through `mock.module("cloudflare:workers", ...)`, since the job reaches for
+ * installed through `vi.doMock("cloudflare:workers", ...)`, since the job reaches for
  * `env.QUEUE.sendBatch` directly, so the messages asserted on are the ones that really
  * landed on it.
  *
@@ -10,14 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
  * The queue the job enqueues through. It lives at module scope because the module under
@@ -26,9 +25,9 @@ import { Database } from "remix/data-table";
 let queue: QueueMock = createQueue({ name: "verify-domains" });
 
 /** Nothing pending means no call at all, which an empty `sent` cannot tell apart. */
-let sendBatch = spyOn(queue, "sendBatch");
+let sendBatch = vi.spyOn(queue, "sendBatch");
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let TeamDomain = (await import("~/app/data/team-domain")).default;
 let { createTestDatabase } = await import("~/app/lib/test/db");
@@ -58,7 +57,7 @@ describe("EnqueuePendingDomainsJob.perform", () => {
 		});
 
 		expect(sendBatch).not.toHaveBeenCalled();
-		expect(queue.sent).toBeEmpty();
+		expect(queue.sent).toHaveLength(0);
 		let event = logger.events.find((entry) => entry.event === "job.enqueue_pending_domains.none");
 		expect(event).toBeDefined();
 	});

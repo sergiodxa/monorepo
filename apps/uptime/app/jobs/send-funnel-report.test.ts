@@ -16,14 +16,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { BatchedLogger } from "@pkg/logger";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Lead from "~/app/data/lead";
 import TrialConversion from "~/app/data/trial-conversion";
@@ -53,7 +52,7 @@ interface FunnelEnv extends Env {
  */
 let env: FunnelEnv = createEnv<FunnelEnv>({ FUNNEL_REPORT_TO: "ops@example.com" });
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
@@ -113,7 +112,7 @@ describe("staying quiet", () => {
 
 		await runJob();
 
-		expect(reports()).toBeEmpty();
+		expect(reports()).toHaveLength(0);
 	});
 
 	test("still writes the day's row when there is nobody to send it to", async () => {
@@ -128,7 +127,7 @@ describe("staying quiet", () => {
 	test("sends nothing on a day when nothing at all happened", async () => {
 		await runJob();
 
-		expect(reports()).toBeEmpty();
+		expect(reports()).toHaveLength(0);
 	});
 
 	test("still writes a row of zeroes for a day when nothing happened", async () => {
@@ -147,7 +146,7 @@ describe("staying quiet", () => {
 
 		await runJob();
 
-		expect(reports()).toBeEmpty();
+		expect(reports()).toHaveLength(0);
 	});
 });
 

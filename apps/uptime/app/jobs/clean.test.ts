@@ -14,11 +14,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import { BatchedLogger } from "@pkg/logger";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import TrialConversion from "~/app/data/trial-conversion";
 import { CleanJob } from "~/app/jobs/clean";
@@ -297,8 +296,8 @@ describe("CleanJob.perform trial cleanup", () => {
 
 		await run();
 
-		expect(await db.findMany(trialWatches, {})).toBeEmpty();
-		expect(await db.findMany(trialWatchResults, {})).toBeEmpty();
+		expect(await db.findMany(trialWatches, {})).toHaveLength(0);
+		expect(await db.findMany(trialWatchResults, {})).toHaveLength(0);
 	});
 
 	/**
@@ -429,9 +428,9 @@ describe("CleanJob.perform trial cleanup", () => {
 
 		await run();
 
-		expect(await db.findMany(leads, {})).toBeEmpty();
-		expect(await db.findMany(trialWatches, {})).toBeEmpty();
-		expect(await db.findMany(trialWatchResults, {})).toBeEmpty();
+		expect(await db.findMany(leads, {})).toHaveLength(0);
+		expect(await db.findMany(trialWatches, {})).toHaveLength(0);
+		expect(await db.findMany(trialWatchResults, {})).toHaveLength(0);
 
 		let record = await TrialConversion.findByOwner(db, "subject-1");
 		expect(record?.emails_sent).toBe(6);
