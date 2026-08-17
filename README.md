@@ -22,13 +22,16 @@ concern from.
 
 - **Runtime**: Cloudflare Workers for deployed web apps; Bun for local tooling and selected apps
 - **Framework**: Remix v3
+- **Toolchain**: Vite+ (`vp`) — formatting, linting, type checking and tests, configured in the root `vite.config.ts`
 - **Package manager**: Bun
 - **Database**: Cloudflare D1, Durable Object SQLite, and Remix Data Table
 - **Styling**: Remix UI `css()` mixins
 
 ## Getting Started
 
-Prerequisites: [Bun](https://bun.sh)
+Prerequisites: [Bun](https://bun.sh) and [Node.js](https://nodejs.org). Bun installs
+dependencies and runs scripts; Node runs the Vite+ toolchain (`vp`), which `bun install`
+provides — `node:sqlite` means it needs Node 22.5 or newer.
 
 ```bash
 bun install              # Install dependencies
@@ -40,20 +43,23 @@ bun run dev              # Start development server
 
 Run from the repository root:
 
-| Command                        | Description                                             |
-| ------------------------------ | ------------------------------------------------------- |
-| `bun format`                   | Check formatting                                        |
-| `bun format:fix`               | Fix formatting                                          |
-| `bun lint`                     | Check linting                                           |
-| `bun lint:fix`                 | Fix linting issues                                      |
-| `bun typecheck`                | TypeScript type checking                                |
-| `bun test --isolate`           | Run all tests (`--isolate` is required — see AGENTS.md) |
-| `bun upgrade`                  | Upgrade all workspaces                                  |
-| `bun upgrade:dry-run`          | Preview all upgrades                                    |
-| `bun upgrade:apps`             | Upgrade app workspaces                                  |
-| `bun upgrade:apps:dry-run`     | Preview app upgrades                                    |
-| `bun upgrade:packages`         | Upgrade package workspaces                              |
-| `bun upgrade:packages:dry-run` | Preview package upgrades                                |
+| Command                        | Description                             |
+| ------------------------------ | --------------------------------------- |
+| `bun check`                    | Format, lint and type check in one pass |
+| `bun check:fix`                | Same, applying formatting and autofixes |
+| `bun format`                   | Check formatting                        |
+| `bun format:fix`               | Fix formatting                          |
+| `bun lint`                     | Check linting                           |
+| `bun lint:fix`                 | Fix linting issues                      |
+| `bun typecheck`                | TypeScript type checking                |
+| `bun run test`                 | Run every test                          |
+| `bun run test:vitest`          | Vitest only                             |
+| `bun upgrade`                  | Upgrade all workspaces                  |
+| `bun upgrade:dry-run`          | Preview all upgrades                    |
+| `bun upgrade:apps`             | Upgrade app workspaces                  |
+| `bun upgrade:apps:dry-run`     | Preview app upgrades                    |
+| `bun upgrade:packages`         | Upgrade package workspaces              |
+| `bun upgrade:packages:dry-run` | Preview package upgrades                |
 
 ## Workspace Imports
 
