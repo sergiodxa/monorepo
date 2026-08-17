@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import Subject from "~/app/data/subject";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -35,10 +35,10 @@ describe("Subject.create", () => {
 	test("stores the subject with epoch-ms timestamps and the default role", async () => {
 		let subject = await createSubject();
 
-		expect(subject.id).toBeString();
+		expect(subject.id).toBeTypeOf("string");
 		expect(subject.role).toBe("user");
-		expect(subject.created_at).toBeNumber();
-		expect(subject.updated_at).toBeNumber();
+		expect(subject.created_at).toBeTypeOf("number");
+		expect(subject.updated_at).toBeTypeOf("number");
 		expect(subject.created_at).toBeGreaterThan(1_700_000_000_000);
 	});
 

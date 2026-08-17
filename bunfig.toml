@@ -34,4 +34,9 @@ pathIgnorePatterns = [
 	"**/packages/session-storage-kv/**",
 	"**/packages/ui-router/**",
 	"**/packages/validate/**",
-]
+	"**/packages/dates/**",
+	"**/packages/cron/**",
+	"**/packages/http/**",
+	"**/packages/crypto/**",
+	"**/packages/result/**",
+, "**/apps/r3-auth/app/data/subject.test.ts"]
