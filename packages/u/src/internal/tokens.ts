@@ -104,8 +104,14 @@ export function boxLength(value: SizeValue): string {
 	return spacing(value);
 }
 
-/** True when `value` is a raw CSS length string rather than a spacing-scale number. */
-export function isLength(value: unknown): value is string {
+/**
+ * True when `value` is a raw CSS length string rather than a spacing-scale
+ * number. Deliberately not a `value is string` type predicate: a token name
+ * such as `"lg"` is a string that is *not* a length, so narrowing on the
+ * result would wrongly rule every string out of the negative branch and leave
+ * the scale names typed as `never`.
+ */
+export function isLength(value: unknown): boolean {
 	return typeof value === "string" && LENGTH_PATTERN.test(value);
 }
 

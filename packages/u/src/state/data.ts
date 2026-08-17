@@ -28,11 +28,11 @@ export function data<Node extends Element = Element>(
 ): UtilityMixin<Node>;
 export function data<Node extends Element = Element>(
 	attribute: string,
-	valueOrInput: string | number | UtilityInput<Node>,
+	valueOrInput: string | number | Exclude<UtilityInput<Node>, 0 | "">,
 	maybeInput?: UtilityInput<Node>,
 ): UtilityMixin<Node> {
-	if (maybeInput === undefined) {
-		return when<Node>(`&[data-${attribute}]`, valueOrInput as UtilityInput<Node>);
+	if (typeof valueOrInput === "string" || typeof valueOrInput === "number") {
+		return when<Node>(`&[data-${attribute}="${valueOrInput}"]`, maybeInput);
 	}
-	return when<Node>(`&[data-${attribute}="${valueOrInput}"]`, maybeInput);
+	return when<Node>(`&[data-${attribute}]`, valueOrInput);
 }

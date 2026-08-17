@@ -41,7 +41,7 @@ export function at<Node extends Element = Element>(
 ): UtilityMixin<Node>;
 export function at<Node extends Element = Element>(
 	size: ContainerName | (string & {}),
-	nameOrInput: string | UtilityInput<Node>,
+	nameOrInput: string | Exclude<UtilityInput<Node>, "">,
 	maybeInput?: UtilityInput<Node>,
 ): UtilityMixin<Node> {
 	let name = typeof nameOrInput === "string" ? nameOrInput : undefined;
@@ -73,7 +73,7 @@ export function atMax<Node extends Element = Element>(
 ): UtilityMixin<Node>;
 export function atMax<Node extends Element = Element>(
 	size: ContainerName | (string & {}),
-	nameOrInput: string | UtilityInput<Node>,
+	nameOrInput: string | Exclude<UtilityInput<Node>, "">,
 	maybeInput?: UtilityInput<Node>,
 ): UtilityMixin<Node> {
 	let name = typeof nameOrInput === "string" ? nameOrInput : undefined;
