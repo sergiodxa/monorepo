@@ -182,9 +182,9 @@ Move workspace scripts to `run.tasks` in the root config, enable caching in CI, 
 
 - [x] Phase 0 — `@pkg/cloudflare-mocks` adopted across the 84 files
 - [x] Phase 1 — `vp check` replaces Format, Lint and Typecheck
-- [ ] Phase 2 — `apps/uptime` on Vitest
-- [ ] Phase 3 — remaining workspaces on Vitest
-- [ ] Phase 4 — Workers apps on `vitest-pool-workers`
+- [x] Phase 2 — `apps/uptime` on Vitest
+- [x] Phase 3 — remaining workspaces on Vitest
+- [ ] Phase 4 — Workers apps on `vitest-pool-workers` (deferred, see below)
 - [ ] Phase 5 — task orchestration, caching, `AGENTS.md`
 
 ## Phase 1 Outcome
@@ -222,3 +222,83 @@ which are typed as the synchronous matcher set. Without it the type-aware path f
 `await` — would silently stop those assertions from asserting under Vitest, which only
 auto-awaits a hanging assertion as a deprecated courtesy. All 116 rejection assertions are now
 awaited, including 62 that already were not before this work.
+
+## Phases 2 and 3 Outcome
+
+The suite runs under Vitest: **1,058 files / 11,474 tests in 50.7s**, against the 276s baseline
+this ADR opened with — **5.4x faster**. `vp check` is 8.6s. One file remains on `bun test`.
+
+### The one file that keeps its own runner
+
+`packages/spec/src/plugins/db.test.ts`. `packages/spec` is a `bun build --compile` CLI, and that
+file's `describe("db end to end (SQLite)")` block connects through Bun's built-in `SQL` client to
+prove the `rows` / `affected_rows` / `count` shaping and the connect-reuse-dispose lifecycle. Bun's
+`SQL` has no Node equivalent, and under Node the lazy `import("bun")` fails, so those tests would
+error rather than skip. Its other 11 tests never open a connection and could be split out; that
+would leave `bun test` running three tests instead of fourteen, which is not worth splitting a
+cohesive file for.
+
+Everything else in the package did port: 25 of its modules already used `node:` APIs, and
+`bun build --compile` accepts them, so the compiled binary came out **byte-identical** at
+63,594,722 bytes with its `.spec` dogfood suites at 48/48.
+
+The rest of the package's Bun surface became: `Bun.file` → `node:fs`, `Bun.spawn` →
+`node:child_process`, `Bun.stdin` → `process.stdin`, `Bun.argv` → `process.argv`, `Bun.which` → a
+PATH scan, `Bun.serve` → `node:http`, `Glob` → `globSync`, `Bun.sleep` → `node:timers/promises`,
+`import.meta.dir` → `import.meta.dirname`, and `Bun.CryptoHasher` → `node:crypto`.
+
+### Where Vitest costs time
+
+`packages/u` — 303 files, 1,033 tests, a median of three assertions each — is **2-3x slower**
+under Vitest:
+
+|                    | bun   | Vitest |
+| ------------------ | ----- | ------ |
+| loaded (best of 5) | 3.11s | 5.71s  |
+| idle               | 1.60s | 5.10s  |
+
+Vitest's own breakdown explains it: 13.8s of import and 2.5s of transform fanned across threads
+for 3.6s of actual execution. Per-file setup dominates when files are tiny. The aggregate still
+wins by a wide margin, because the heavy files dominate the total — but this workspace is a real
+loss, not an averaging artifact.
+
+### Cross-runner divergences, each found by a failing test
+
+`bun:sqlite` and `node:sqlite` disagree in four ways, all now absorbed by
+`@pkg/cloudflare-mocks/sqlite` so a test cannot observe which runtime it is on:
+
+| Divergence                                                                   | Consequence before the fix                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integral numbers bind as REAL under Node, INTEGER under Bun                  | `?/60000` did float division; `claimDue` computed different results per runner, and several tests passed while exercising arithmetic production never performs                                                                                                                                                                                                                      |
+| A single array argument is positional under Bun, named parameters under Node | `Unknown named parameter '0'`                                                                                                                                                                                                                                                                                                                                                       |
+| Double-quoted string literals are enabled under Bun, not Node                | An unresolved identifier degrades to a string. The migration history depends on this: `20250520185608` copies `"subject_id"` from a table whose column is `user_id`, so on any SQLite with the legacy behaviour every migrated row got the literal text. The adapter matches Bun so the runners agree; the migration bug is untouched and still latent for a fresh replay with rows |
+| A miss is `undefined` under Node, `null` under Bun                           | Callers compare against `null`                                                                                                                                                                                                                                                                                                                                                      |
+
+Two more, outside SQLite: Bun's `setSystemTime()` with no argument un-mocks the clock while
+Vitest's **pins to real-now**, so the translation is `vi.useRealTimers()`; and Bun empties a
+`Response` body stream when `clone()` runs after `.body` was read, which MSW's interceptor does —
+worked around with a body-getter helper in the one affected file.
+
+### Constraints worth knowing before editing the config
+
+- **A `testTimeout` beside `projects` is not inherited by a project.** Verified with a 7s test that
+  still failed at `Test timed out in 5000ms`. Each project sets its own. The slowest files spend
+  ~4s applying every migration before their first assertion, so the 5s default left under 25%
+  margin on a machine faster than CI.
+- **A second `vi.doMock` for the same specifier in one file has no effect** — the second dynamic
+  import resolves to the instance already in the registry rather than re-running its top-level
+  code. This is why the two healthcheck branches are separate files.
+- **`apps/pkmn` runs with `fileParallelism: false`.** Four of its dev-export tests snapshot, write
+  and restore the app's real manifest and `src/assets` — writing to the real paths is what they
+  assert. That was only ever correct because `bun test` ran files one at a time; in parallel one
+  file's restore clobbers another's write. Parallelism exposed a genuine test-isolation bug rather
+  than causing one.
+
+### Phase 4 is deferred, not cancelled
+
+`@cloudflare/vitest-pool-workers` would run the Workers apps' tests inside workerd against real
+bindings, and the blocker this ADR identified is gone: `msw/node` works under `nodejs_compat`, and
+Vite+ support landed in workers-sdk#13075. It is deferred because Phases 2 and 3 already removed
+the reason it was urgent — the suite is 5.4x faster and `@pkg/cloudflare-mocks` gives every Worker
+test behaviour-accurate bindings. Revisit it when a bug slips through that only real bindings would
+have caught.
