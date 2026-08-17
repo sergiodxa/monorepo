@@ -8,10 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { PolarClient } from "@pkg/polar";
 import { failure, success } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { Product } from "~/app/data/product";
 import { FakeButtondown } from "~/app/lib/test/buttondown";

@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { PolarClient } from "@pkg/polar";
+import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
 import { FakePolarClient, makeDiscount, makeProduct } from "~/app/lib/test/polar";
