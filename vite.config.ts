@@ -19,6 +19,18 @@ export default defineConfig({
 	test: {
 		projects: [
 			{
+				// One project covers every package: none of them uses a `~/*` alias or ships a
+				// Vite config, so the root tsconfig resolves them all. `.spec` files belong to
+				// `@pkg/spec`'s own runner and never match this glob.
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "packages",
+					include: ["packages/arrays/src/**/*.test.ts?(x)", "packages/uuid/src/**/*.test.ts?(x)"],
+					pool: "threads",
+				},
+			},
+			{
 				// Rooted at the app so its own tsconfig — and therefore the `~/*` aliases and
 				// `jsxImportSource` — apply, which a root-rooted run cannot see.
 				root: "apps/uptime",

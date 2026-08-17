@@ -7,4 +7,4 @@ preload = ["./test/setup.ts"]
 # ADR-035 phase 2: workspaces that have moved to Vitest. Bun resolves the `vitest` package
 # but not its runner context, so anything using `vi.*` throws here. This whole block goes away
 # once `vp test` owns the suite.
-pathIgnorePatterns = ["**/apps/uptime/**"]
+pathIgnorePatterns = ["**/apps/uptime/**", "**/packages/arrays/**", "**/packages/uuid/**"]

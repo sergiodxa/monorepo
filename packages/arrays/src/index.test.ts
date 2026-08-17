@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { first, hasAny, hasMany, isEmpty, last, skip, toArray, unique } from "./index";
 
