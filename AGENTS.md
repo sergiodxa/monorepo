@@ -11,7 +11,9 @@ There are no `.oxlintrc.json` / `.oxfmtrc.json` files: per-package settings go i
 `lint.overrides` / `fmt.overrides` so one file describes how anything in the repo is checked.
 
 ```bash
-bun check                       # Format, lint and type check in one pass (~8s). This is the
+bun check                       # Format, lint and type check in one pass. Runs through Vite
+                                 # Task, so a re-run with nothing changed replays from a
+                                 # content-based cache in ~250ms instead of ~9s. This is the
                                  # one to run before a commit; CI runs exactly this.
 bun check:fix                   # Same, applying formatting and autofixes
 bun format                      # Check formatting only (oxfmt)

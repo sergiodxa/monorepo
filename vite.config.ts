@@ -16,6 +16,19 @@ import { defineConfig } from "vite-plus";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin";
 
 export default defineConfig({
+	run: {
+		tasks: {
+			// Named apart from the `check` script, which Vite Task refuses to shadow; the
+			// script delegates here so `bun check` keeps working and gets the content-based
+			// cache — a no-change re-run replays in ~240ms instead of ~9s.
+			//
+			// `test` is deliberately not a task. Vite Task reports it "modified its input":
+			// apps/pkmn's dev-export tests write into the workspace while running, which is
+			// what they assert, so the run invalidates its own cache every time.
+			"check:all": "vp check",
+		},
+	},
+
 	test: {
 		projects: [
 			{

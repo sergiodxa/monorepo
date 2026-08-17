@@ -185,7 +185,7 @@ Move workspace scripts to `run.tasks` in the root config, enable caching in CI, 
 - [x] Phase 2 — `apps/uptime` on Vitest
 - [x] Phase 3 — remaining workspaces on Vitest
 - [ ] Phase 4 — Workers apps on `vitest-pool-workers` (deferred, see below)
-- [ ] Phase 5 — task orchestration, caching, `AGENTS.md`
+- [x] Phase 5 — task orchestration, caching, `AGENTS.md`
 
 ## Phase 1 Outcome
 
@@ -302,3 +302,24 @@ Vite+ support landed in workers-sdk#13075. It is deferred because Phases 2 and 3
 the reason it was urgent — the suite is 5.4x faster and `@pkg/cloudflare-mocks` gives every Worker
 test behaviour-accurate bindings. Revisit it when a bug slips through that only real bindings would
 have caught.
+
+## Phase 5 Outcome
+
+`check` is a Vite Task (`check:all`), which the `check` script delegates to — Vite Task refuses to
+shadow a package.json script of the same name, and routing through it keeps `bun check` working.
+A re-run with nothing changed replays in **~250ms instead of ~9s**. The cache is content-based, so
+`touch` alone does not invalidate it, while a real edit reports
+`cache miss: '<file>' modified, executing` and re-runs.
+
+Two things were deliberately **not** done, both because measurement said they would not pay:
+
+- **`test` is not a task.** Vite Task reports it "modified its input": `apps/pkmn`'s dev-export
+  tests write into the workspace while running, which is exactly what they assert, so the run
+  invalidates its own cache. Cold and warm both measured ~51s.
+- **The cache is not restored in CI.** It only hits when no tracked input changed, and CI runs
+  because inputs changed — the hit rate would be approximately zero, so restoring it would add
+  download overhead for nothing. It is a local-iteration win, not a CI one.
+
+The 57 per-workspace `typecheck` scripts were also left in place. `vp check` covers every file they
+would, but `tsc --noEmit` inside a package is the documented second opinion, and this migration used
+it to find the places where tsgolint and `tsc` disagree.
