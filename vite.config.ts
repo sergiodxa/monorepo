@@ -11,9 +11,38 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { TestProjectInlineConfiguration } from "vitest/config";
+
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vite-plus";
+import { defaultExclude } from "vitest/config";
 
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
+
+/**
+ * The Workers-pool project: these tests execute inside workerd with the real bindings
+ * `apps/blog/wrangler.jsonc` declares, so a KV or D1 assertion is against Cloudflare's own
+ * implementation rather than a hand-written stand-in. Bindings are not restated here — the
+ * app's own config is the single source.
+ *
+ * `node:sqlite` does not exist in workerd, so a test whose database comes from
+ * `@pkg/cloudflare-mocks/sqlite` stays in the `blog` project on the threads pool. The
+ * `*.workers.test.ts` suffix is what selects a file into this one.
+ *
+ * Declared apart from the `projects` array on purpose: inline, it is the one entry with no
+ * `pool` of its own — the plugin supplies it — and type checking the array then compares this
+ * shape against every sibling and exceeds TypeScript's comparison depth (TS2321).
+ */
+const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	root: "apps/blog",
+	plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })],
+	resolve: { tsconfigPaths: true },
+	test: {
+		name: "blog-workers",
+		include: ["**/*.workers.test.ts?(x)"],
+		testTimeout: 20_000,
+	},
+};
 
 export default defineConfig({
 	run: {
@@ -81,6 +110,12 @@ export default defineConfig({
 				test: {
 					name: "blog",
 					include: ["**/*.test.ts?(x)"],
+					// `*.workers.test.ts` belongs to the `blog-workers` project: those files import
+					// `cloudflare:test`, which exists only inside the Workers pool. Vitest's
+					// defaults have to be spread back in — naming `exclude` replaces them, and
+					// dropping `**/node_modules/**` sends this glob through the app's symlinked
+					// workspace dependencies and collects the whole repo.
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the
 					// 5s default applies unless set here. The slowest files spend ~4s applying
@@ -88,6 +123,7 @@ export default defineConfig({
 					testTimeout: 20_000,
 				},
 			},
+			BLOG_WORKERS_PROJECT,
 			{
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub()],
