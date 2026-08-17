@@ -1,14 +1,3 @@
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { Message } from "@cloudflare/workers-types";
@@ -19,6 +8,7 @@ import { validate } from "@pkg/validate";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import * as s from "remix/data-schema";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Job, setJobUsageTracker } from "./index";
 
@@ -34,12 +24,12 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 // Console mocks
-let consoleInfoSpy: ReturnType<typeof spyOn>;
-let consoleErrorSpy: ReturnType<typeof spyOn>;
+let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-	consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
-	consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+	consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+	consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -48,8 +38,8 @@ afterEach(() => {
 });
 
 // Message mocks
-let retryMock = mock();
-let ackMock = mock();
+let retryMock = vi.fn();
+let ackMock = vi.fn();
 
 beforeEach(() => {
 	retryMock.mockReset();

@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { RequestContext as Context } from "remix/router";
 
 import { isFailure, isSuccess } from "@pkg/result";
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createTags } from "./create-tags";
 import cacheMiddleware from "./middleware";
@@ -45,7 +44,7 @@ function makeContext(path = "/posts/1", init: RequestInit = {}): RequestContext 
 
 /** A structured logger double, matching the shape a request logger publishes. */
 function makeLogger() {
-	return { error: mock((_event: string, _payload?: Record<string, unknown>) => {}) };
+	return { error: vi.fn((_event: string, _payload?: Record<string, unknown>) => {}) };
 }
 
 /** Publishes a logger on the context the way a logger middleware would. */
@@ -398,7 +397,7 @@ describe("cache middleware refusals", () => {
 	});
 
 	test("logs a refusal through a plain log function published on the context", async () => {
-		let log = mock((_message: string) => {});
+		let log = vi.fn((_message: string) => {});
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
 		let context = makeContext();
 		withLogger(context, log);

@@ -1,20 +1,20 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Logger } from "./request-logger";
 
 describe(Logger.name, () => {
-	let consoleInfoSpy: ReturnType<typeof spyOn>;
-	let consoleErrorSpy: ReturnType<typeof spyOn>;
-	let dateNowSpy: ReturnType<typeof spyOn>;
-	let cryptoRandomUUIDSpy: ReturnType<typeof spyOn>;
+	let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+	let dateNowSpy: ReturnType<typeof vi.spyOn>;
+	let cryptoRandomUUIDSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
-		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
-		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
-		cryptoRandomUUIDSpy = spyOn(crypto, "randomUUID").mockReturnValue(
-			"test-uuid-1234" as `${string}-${string}-${string}-${string}-${string}`,
-		);
+		consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1738590000000);
+		cryptoRandomUUIDSpy = vi
+			.spyOn(crypto, "randomUUID")
+			.mockReturnValue("test-uuid-1234" as `${string}-${string}-${string}-${string}-${string}`);
 	});
 
 	afterEach(() => {

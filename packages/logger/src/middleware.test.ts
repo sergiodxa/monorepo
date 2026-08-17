@@ -9,20 +9,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-
 import { RequestContext } from "remix/router";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import logger from "./middleware";
 import { Logger } from "./request-logger";
 
 describe("logger middleware", () => {
-	let consoleInfoSpy: ReturnType<typeof spyOn>;
-	let consoleErrorSpy: ReturnType<typeof spyOn>;
+	let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
-		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+		consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 	});
 
 	afterEach(() => {

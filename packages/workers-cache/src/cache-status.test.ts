@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { cacheStatus } from "./cache-status";
 import { CACHE_STATUS_HEADER } from "./platform";

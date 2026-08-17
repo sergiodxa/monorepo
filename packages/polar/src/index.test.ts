@@ -10,9 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, mock, test } from "bun:test";
-
 import * as Webhooks from "@pkg/webhooks";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { Customer, Discount, Order, Subscription } from "./index";
 
@@ -34,7 +33,7 @@ let validateEventImpl: (
 	secret: string,
 ) => unknown = () => ({ type: "checkout.updated" });
 
-void mock.module("@polar-sh/sdk/webhooks.js", () => ({
+vi.doMock("@polar-sh/sdk/webhooks.js", () => ({
 	WebhookVerificationError: SDKWebhookVerificationError,
 	validateEvent: (body: string, headers: Record<string, string>, secret: string) => {
 		validateEventCalls.push({ body, headers, secret });
@@ -42,7 +41,7 @@ void mock.module("@polar-sh/sdk/webhooks.js", () => ({
 	},
 }));
 
-void mock.module("@polar-sh/sdk/models/errors/polarerror.js", () => ({
+vi.doMock("@polar-sh/sdk/models/errors/polarerror.js", () => ({
 	PolarError: class PolarError extends Error {},
 }));
 
@@ -62,7 +61,7 @@ let subscriptionsListImpl: () => unknown[][] = () => [[{ id: "sub_1" }], [{ id: 
 let discountsListImpl: () => unknown[][] = () => [[{ id: "disc_1" }], [{ id: "disc_2" }]];
 let ordersListImpl: () => unknown[][] = () => [[{ id: "ord_1" }], [{ id: "ord_2" }]];
 
-void mock.module("@polar-sh/sdk", () => ({
+vi.doMock("@polar-sh/sdk", () => ({
 	Polar: class Polar {
 		accessToken: string;
 		constructor(opts: { accessToken: string }) {
