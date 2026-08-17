@@ -50,8 +50,18 @@ import { expandAtlasRegions, type AtlasManifestEntry } from "~/presentation/core
 import { SpeciesEditor } from "../editors/species-editor";
 import { SPECIES_ID_PATTERN, validateSpeciesId } from "../species-id";
 
-/** The style-object shape the `css()` mixin accepts, used for shared base styles. */
-type Styles = Parameters<typeof css>[0];
+/** The raw parameter type of the `css()` mixin, narrowed by {@link Styles}. */
+type CssMixinStyles = Parameters<typeof css>[0];
+
+/**
+ * The style-object shape the `css()` mixin accepts, used for shared base styles.
+ *
+ * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
+ * carries that interface's `Symbol.iterator` member and reads as an iterable.
+ * Dropping the symbol keys leaves the same plain property bag the base styles
+ * actually are, so they can be spread into an override object.
+ */
+type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
 /** Which flow the header is in: editing an existing species or creating a new one. */
 type Mode = "edit" | "new";

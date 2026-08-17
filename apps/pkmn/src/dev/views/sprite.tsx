@@ -25,8 +25,18 @@ import type { Handle } from "remix/ui";
 
 import { css, on, ref } from "remix/ui";
 
-/** The style-object shape the `css()` mixin accepts, used for shared base styles. */
-type Styles = Parameters<typeof css>[0];
+/** The raw parameter type of the `css()` mixin, narrowed by {@link Styles}. */
+type CssMixinStyles = Parameters<typeof css>[0];
+
+/**
+ * The style-object shape the `css()` mixin accepts, used for shared base styles.
+ *
+ * The mixin's own parameter type is derived from `CSSStyleDeclaration`, so it
+ * carries that interface's `Symbol.iterator` member and reads as an iterable.
+ * Dropping the symbol keys leaves the same plain property bag the base styles
+ * actually are, so they can be spread into an override object.
+ */
+type Styles = { [K in keyof CssMixinStyles as K extends symbol ? never : K]: CssMixinStyles[K] };
 
 import type { Rgb } from "../editors/pixel-grid";
 import type { SpriteTool } from "../editors/sprite-editor";

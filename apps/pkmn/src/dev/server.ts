@@ -67,7 +67,13 @@ async function buildClientBundle(): Promise<string> {
 	});
 
 	if (!result.success) {
-		let messages = result.logs.map((log) => String(log)).join("\n");
+		let messages = result.logs
+			.map((log) => {
+				let { position } = log;
+				if (!position) return log.message;
+				return `${position.file}:${position.line}:${position.column}: ${log.message}`;
+			})
+			.join("\n");
 		throw new Error(`Client bundle build failed:\n${messages}`);
 	}
 
