@@ -23,7 +23,7 @@ import { monitors, statusPageMonitors, statusPages, teams } from "~/database/sch
 import routes from "~/routes/web";
 
 /** `app/data/monitor.ts` imports `env` from `cloudflare:workers` for `Monitor.ping()`, which this route never calls, but the module-level import still needs a resolvable mock. */
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

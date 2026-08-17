@@ -56,7 +56,7 @@ import routes from "~/routes/web";
  * which doesn't exist under `bun test`; stub it so every test in this file — not just
  * `checkTcpMonitor` — can load the module graph.
  */
-mock.module("cloudflare:sockets", () => ({
+await mock.module("cloudflare:sockets", () => ({
 	connect: mock(() => ({
 		opened: Promise.resolve(),
 		close: mock(async () => {}),
@@ -78,7 +78,7 @@ let deferred: Promise<unknown>[] = [];
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** `waitUntil` collects deferred work so a test can await what the response doesn't. */
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);

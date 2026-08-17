@@ -73,7 +73,7 @@ let pingResults = createAnalyticsEngine();
  */
 let deferred: Promise<unknown>[] = [];
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ RATE_LIMITER: rateLimiter, PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);

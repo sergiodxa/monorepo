@@ -34,7 +34,7 @@ import { polarSubscription } from "~/app/lib/test/polar";
 import { monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ POLAR_WEBHOOK_SECRET: "whsec_test" }),
 }));
 

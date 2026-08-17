@@ -28,7 +28,7 @@ import routes from "~/routes/web";
 /** The write binding the controller probes; module-scoped because `env` is captured on import. */
 let pingResults = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

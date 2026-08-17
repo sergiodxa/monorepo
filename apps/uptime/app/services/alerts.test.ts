@@ -64,10 +64,12 @@ let realAlertEventModule = await import("~/app/data/alert-event");
 /**
  * The two history reads, captured as function values before `mock.module` rebinds the module
  * they came from — reaching for them through the module namespace later would find the mocks
- * and recurse. Neither reads `this`, so calling them unbound runs the real queries.
+ * and recurse. Bound to the real class so any static they reach for is the real one too.
  */
-let realIsInCooldown = realAlertEventModule.default.isInCooldown;
-let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceRecovery;
+let realIsInCooldown = realAlertEventModule.default.isInCooldown.bind(realAlertEventModule.default);
+let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceRecovery.bind(
+	realAlertEventModule.default,
+);
 
 beforeAll(async () => {
 	class FakeAlert extends realAlertModule.default {
@@ -874,8 +876,8 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 		});
 
 		expect(recordMock).toHaveBeenCalledTimes(2);
-		let statuses = recordMock.mock.calls.map((call) => (call[1] as Record<string, unknown>).status);
-		expect(statuses.sort()).toEqual(["failed", "sent"]);
+		let statuses = recordMock.mock.calls.map((call) => (call[1] as { status: string }).status);
+		expect(statuses.sort((a, b) => a.localeCompare(b))).toEqual(["failed", "sent"]);
 	});
 
 	test("email subject is prefixed with the alert's configured subjectPrefix", async () => {

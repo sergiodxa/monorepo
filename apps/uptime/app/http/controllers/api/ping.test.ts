@@ -96,7 +96,7 @@ let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 /** Promises the handler deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -117,7 +117,7 @@ mock.module("cloudflare:workers", () => ({
  */
 let openSocket: () => Promise<void> = async () => {};
 
-mock.module("cloudflare:sockets", () => ({
+await mock.module("cloudflare:sockets", () => ({
 	connect: () => ({ opened: openSocket(), close: async () => {} }),
 }));
 
@@ -211,7 +211,9 @@ async function dispatch(
 /** The `data.ping` payload of a served request. */
 async function pingBody(response: Response) {
 	let body = (await response.json()) as {
-		data: { ping: Record<string, unknown> };
+		// `id` is named because the billing assertions read it into a string; the rest of
+		// the payload stays unknown so each assertion has to say what it expects.
+		data: { ping: Record<string, unknown> & { id: string } };
 		meta: { requestId: string; timestamp: string };
 	};
 	return body;

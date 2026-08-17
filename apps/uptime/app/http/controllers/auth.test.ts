@@ -57,7 +57,7 @@ let startExternalAuthMock = mock(
 		}),
 );
 
-mock.module("remix/auth", () => ({
+await mock.module("remix/auth", () => ({
 	// The real provider's internals are never exercised — `finishExternalAuth`/
 	// `startExternalAuth` are fully replaced below — so a bare stub is enough to
 	// satisfy `createAuthProvider`'s call to it.
@@ -77,11 +77,11 @@ let fakeIdToken = {
 };
 let verifyIdTokenMock = mock(async () => fakeIdToken);
 
-mock.module("~/app/auth/value-objects/id-token", () => ({
+await mock.module("~/app/auth/value-objects/id-token", () => ({
 	verifyIdToken: verifyIdTokenMock,
 }));
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLIENT_ID: "client-id", CLIENT_SECRET: "client-secret" }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

@@ -70,7 +70,7 @@ let env = createEnv<Env>({ KV: kv, TRIAL_RATE_LIMITER: limiter });
 Object.defineProperty(env, "TURNSTILE_SECRET_KEY", { get: () => turnstileSecretKey });
 Object.defineProperty(env, "TURNSTILE_SITE_KEY", { get: () => turnstileSiteKey });
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));

@@ -75,7 +75,7 @@ let deferred: Promise<unknown>[] = [];
 /** The check's data point; nothing here asserts on it, but it has to land somewhere. */
 let pingResults = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -240,7 +240,7 @@ async function createHarness() {
 	 * widens the router's context while the handlers are written against the plain one —
 	 * casting a handler would be casting away the context it does use.
 	 */
-	let map = router.map as (target: unknown, action: unknown) => void;
+	let map = router.map.bind(router) as (target: unknown, action: unknown) => void;
 	let mapped = { middleware: [seedTeam(team, membership)] };
 
 	map(routes.actions.runPing, { ...mapped, handler: runPing.handler });

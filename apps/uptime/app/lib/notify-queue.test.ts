@@ -27,7 +27,7 @@ let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify
 /** Batch boundaries are not recoverable from the recorded messages, so `sendBatch` is spied on too. */
 let sendBatch = spyOn(queue, "sendBatch");
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { enqueueNotifications } = await import("~/app/lib/notify-queue");
 

@@ -66,7 +66,7 @@ let deferred: Promise<unknown>[] = [];
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -491,11 +491,9 @@ describe("checkFlowMonitor", () => {
 
 		let events = await ingestedEvents();
 		expect(events).toHaveLength(3);
-		expect(events.map((event) => event.externalId).sort()).toEqual([
-			`ping:${stored!.id}:0`,
-			`ping:${stored!.id}:1`,
-			`ping:${stored!.id}:2`,
-		]);
+		expect(
+			events.map((event) => event.externalId ?? "").sort((a, b) => a.localeCompare(b)),
+		).toEqual([`ping:${stored!.id}:0`, `ping:${stored!.id}:1`, `ping:${stored!.id}:2`]);
 		// One data point for the run, not one per request: the series is "how long did it take".
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});

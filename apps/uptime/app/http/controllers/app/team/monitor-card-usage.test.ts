@@ -46,7 +46,7 @@ import routes from "~/routes/web";
 
 import type { Database as SqliteDatabase } from "bun:sqlite";
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 

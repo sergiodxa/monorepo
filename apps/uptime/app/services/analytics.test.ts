@@ -33,7 +33,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let kvGet = spyOn(kv, "get");
 let kvPut = spyOn(kv, "put");
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

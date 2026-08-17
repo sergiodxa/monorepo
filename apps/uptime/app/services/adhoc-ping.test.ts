@@ -42,7 +42,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
  */
 let deferred: Promise<unknown>[] = [];
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -180,7 +180,7 @@ describe("recordAdhocPing billing", () => {
 		expect(() => record()).not.toThrow();
 		expect(pingResults.dataPoints).toHaveLength(1);
 
-		await expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
+		expect(Promise.all(deferred.splice(0))).rejects.toThrow("polar unavailable");
 	});
 
 	test("doesn't throw when the ingest is refused", async () => {
@@ -189,7 +189,7 @@ describe("recordAdhocPing billing", () => {
 		expect(() => record()).not.toThrow();
 
 		// Best-effort by design: a refused event is logged and dropped, never retried.
-		await expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
+		expect(Promise.all(deferred.splice(0))).resolves.toBeDefined();
 		expect(pingResults.dataPoints).toHaveLength(1);
 	});
 });

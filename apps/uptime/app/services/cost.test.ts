@@ -31,7 +31,7 @@ import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudf
  */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ COSTS: costs }),
 }));
 
@@ -168,7 +168,7 @@ describe("trackCost", () => {
 		let boom = new Error("job failed");
 		let ledger = new CostLedger({ handler: "queue" });
 
-		await expect(
+		expect(
 			trackCost(ledger, async () => {
 				apportionCostByTeam(["team-1"]);
 				throw boom;
@@ -314,7 +314,7 @@ describe("CostLedger self-accounting", () => {
 		// all a single-team flush makes, so the binding is itself again afterwards.
 		spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
 
-		await expect(
+		expect(
 			trackCost(new CostLedger({ handler: "fetch" }), async () => {
 				apportionCostByTeam(["team-1"]);
 				return "done";

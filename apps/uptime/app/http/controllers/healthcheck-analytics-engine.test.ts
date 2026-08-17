@@ -25,7 +25,7 @@ import { createRouter } from "remix/router";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
 
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 

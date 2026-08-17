@@ -261,7 +261,7 @@ async function createHarness(options: createHarness.Options = {}) {
 		],
 	});
 
-	let map = router.map as (target: unknown, action: unknown) => void;
+	let map = router.map.bind(router) as (target: unknown, action: unknown) => void;
 	map(routes.app.team.dnsMonitors.show, show);
 	map(routes.app.team.dnsMonitors.cards.results, options.results ?? cardResults);
 	map(routes.app.team.dnsMonitors.cards.checkHistory, cardCheckHistory);

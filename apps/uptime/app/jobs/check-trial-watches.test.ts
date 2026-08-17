@@ -72,11 +72,11 @@ let runMock = mock(
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults, COSTS: costs }),
 }));
 
-mock.module("~/app/services/http-check", () => ({
+await mock.module("~/app/services/http-check", () => ({
 	HttpCheck: class {
 		#options: HttpCheckOptions;
 

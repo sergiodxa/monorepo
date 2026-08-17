@@ -29,7 +29,7 @@ function fakeSocket(opened: Promise<void>): FakeSocket {
 	return socket;
 }
 
-mock.module("cloudflare:sockets", () => ({
+await mock.module("cloudflare:sockets", () => ({
 	connect: mock(() => nextSocket),
 }));
 

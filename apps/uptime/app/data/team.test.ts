@@ -54,7 +54,7 @@ import {
  * evaluates. Nothing here reaches the queue; the seed only creates monitors and reads them
  * back, so a send that did happen would surface as an unexpected recorded message.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
 
@@ -464,7 +464,7 @@ describe("Team.joinByDomain", () => {
 	test("throws when the email has no usable hostname", async () => {
 		let { db } = createTestDatabase();
 		let joiner = buildIdToken({ email: "" });
-		await expect(Team.joinByDomain(db, joiner)).rejects.toThrow("Invalid email format");
+		expect(Team.joinByDomain(db, joiner)).rejects.toThrow("Invalid email format");
 	});
 });
 
@@ -594,7 +594,7 @@ describe("Team.setRole", () => {
 		let { db } = createTestDatabase();
 		let team = await Team.createTeam(db, buildIdToken());
 
-		await expect(Team.setRole(db, team.id, crypto.randomUUID(), "admin")).rejects.toThrow(
+		expect(Team.setRole(db, team.id, crypto.randomUUID(), "admin")).rejects.toThrow(
 			/No membership/,
 		);
 	});

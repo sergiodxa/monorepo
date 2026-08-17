@@ -29,7 +29,13 @@ describe("createSessionMiddleware", () => {
 			return new Response("ok");
 		});
 
-		router.get("/read", (ctx) => new Response(String(ctx.session.get("probe") ?? "")));
+		router.get("/read", (ctx) => {
+			// Session values are untyped, so only the string `/set` wrote is echoed back —
+			// anything else reads as empty and shows up as a mismatch rather than as a
+			// default stringification.
+			let probe = ctx.session.get("probe");
+			return new Response(typeof probe === "string" ? probe : "");
+		});
 
 		return router;
 	}

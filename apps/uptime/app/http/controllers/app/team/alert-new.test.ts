@@ -35,7 +35,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./alert-new")).default as { handler: RequestHandler<any> };
 

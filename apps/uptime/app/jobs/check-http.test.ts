@@ -111,7 +111,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 /** The queue the check's own path never sends to, kept so a stray send would be recorded. */
 let queue: QueueMock = createQueue();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		QUEUE: queue,
@@ -272,7 +272,7 @@ describe("CheckHttpJob input", () => {
 	test("throws Job.NonRetriableError on invalid input", async () => {
 		let job = new CheckHttpJob({ logger: new BatchedLogger("test") }, { monitorId: "monitor-1" });
 
-		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
+		expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
 		expect(doFetchMock).not.toHaveBeenCalled();
 	});
 });
@@ -580,7 +580,7 @@ describe("CheckHttpJob error handling", () => {
 		);
 
 		// Resolving rather than rejecting is what makes `Job.run` ack the message.
-		await expect(runJob(db, monitor.id)).resolves.toBeDefined();
+		expect(runJob(db, monitor.id)).resolves.toBeDefined();
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 	});
 
@@ -598,7 +598,7 @@ describe("CheckHttpJob error handling", () => {
 			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
 		);
 
-		await expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		expect(makeContainer(db).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).toBeNull();
 		expect(pingResults.dataPoints).toHaveLength(0);
 	});
@@ -618,7 +618,7 @@ describe("CheckHttpJob error handling", () => {
 			{ id: `${monitor.id}:1`, monitorId: monitor.id, scheduledAt: 1 },
 		);
 
-		await expect(makeContainer(broken).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
+		expect(makeContainer(broken).scope(() => job.perform())).rejects.toThrow(Job.RetryError);
 		expect(
 			logger.events.find((entry) => entry.event === "job.check_http.infrastructure_error"),
 		).toBeDefined();
@@ -737,7 +737,9 @@ function toBinding(value: unknown): SQLQueryBindings {
 	if (typeof value === "bigint") return value;
 	if (typeof value === "boolean") return value ? 1 : 0;
 	if (value instanceof Uint8Array) return value;
-	return String(value);
+	// Anything else is not a value the driver ever compiles into a binding, and binding
+	// its default stringification would silently run the query against nonsense.
+	throw new TypeError(`Unsupported SQL binding of type ${typeof value}`);
 }
 
 describe("CheckHttpJob Durable Object wall time", () => {
@@ -999,7 +1001,7 @@ describe("CheckHttpJob cached status", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
 
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
 		expect(updated?.last_status).toBeNull();
@@ -1103,7 +1105,7 @@ describe("CheckHttpJob metering", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		await expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
+		expect(runJob(db, monitor.id)).rejects.toThrow(Job.RetryError);
 
 		expect(ingestEventsSafeMock).not.toHaveBeenCalled();
 	});

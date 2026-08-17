@@ -53,7 +53,7 @@ interface FunnelEnv extends Env {
  */
 let env: FunnelEnv = createEnv<FunnelEnv>({ FUNNEL_REPORT_TO: "ops@example.com" });
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));

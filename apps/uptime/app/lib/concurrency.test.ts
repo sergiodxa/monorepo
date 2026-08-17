@@ -72,7 +72,7 @@ describe("mapWithConcurrency", () => {
 			2,
 		);
 
-		expect(ran.sort()).toEqual([1, 2, 3, 4]);
+		expect(ran.sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
 		expect(settled.filter((outcome) => outcome.ok)).toHaveLength(3);
 
 		let failure = settled.find((outcome) => !outcome.ok);

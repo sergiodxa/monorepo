@@ -64,7 +64,7 @@ interface PingQueueMessage {
  */
 let queue: QueueMock<PingQueueMessage> = createQueue<PingQueueMessage>({ name: "uptime" });
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 /**
  * `Monitor.getStats*` now reads its p99 from Analytics Engine (see the method's
@@ -75,7 +75,7 @@ mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue })
 let p99Query = mock(
 	async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> => success(null),
 );
-mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
+await mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
 let { default: Monitor } = await import("~/app/data/monitor");
 
@@ -136,7 +136,9 @@ function toBinding(value: unknown): SQLQueryBindings {
 	if (typeof value === "bigint") return value;
 	if (typeof value === "boolean") return value ? 1 : 0;
 	if (value instanceof Uint8Array) return value;
-	return String(value);
+	// Anything else is not a value the driver ever compiles into a binding, and binding
+	// its default stringification would silently run the query against nonsense.
+	throw new TypeError(`Unsupported SQL binding of type ${typeof value}`);
 }
 
 /**

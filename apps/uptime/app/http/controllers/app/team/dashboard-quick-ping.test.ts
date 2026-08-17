@@ -49,7 +49,7 @@ import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */

@@ -56,7 +56,7 @@ const INGEST_URL = "https://api.polar.sh/v1/events/ingest";
  */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
@@ -316,7 +316,7 @@ describe("ReportCostsJob", () => {
 			http.post(ANALYTICS_URL, () => HttpResponse.text("upstream error", { status: 500 })),
 		);
 
-		await expect(run()).rejects.toThrow(Job.RetryError);
+		expect(run()).rejects.toThrow(Job.RetryError);
 	});
 
 	test("asks the queue to redeliver when Polar rejects the batch", async () => {
@@ -324,7 +324,7 @@ describe("ReportCostsJob", () => {
 		serve([costRow(team.id)], { ingestStatus: 500 });
 
 		// Safe to redeliver precisely because `externalId` deduplicates.
-		await expect(run()).rejects.toThrow(Job.RetryError);
+		expect(run()).rejects.toThrow(Job.RetryError);
 	});
 
 	test("sends nothing and completes when the day recorded no cost", async () => {

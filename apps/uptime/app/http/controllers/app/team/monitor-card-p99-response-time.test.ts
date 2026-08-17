@@ -54,7 +54,7 @@ let pingResults = createAnalyticsEngine();
 /** A cache read is a call, not a stored value, so the uncached path is pinned with a spy. */
 let kvGet = spyOn(kv, "get");
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

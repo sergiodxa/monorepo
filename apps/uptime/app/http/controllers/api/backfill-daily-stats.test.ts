@@ -26,7 +26,7 @@ import type { ApiKeyScope } from "~/database/schema";
  */
 let queue = createQueue({ name: "uptime" });
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");

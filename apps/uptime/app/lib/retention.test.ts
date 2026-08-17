@@ -117,21 +117,21 @@ describe("retention sweeps", () => {
 		});
 
 		test("rejects a table or column that is not a plain identifier", async () => {
-			await expect(
+			expect(
 				deleteOlderThan(db, "cron_job_pings; DROP TABLE teams", "created_at", 200),
 			).rejects.toThrow(/valid table or column identifier/);
 
-			await expect(
-				deleteOlderThan(db, "cron_job_pings", "created_at) OR (1=1", 200),
-			).rejects.toThrow(/valid table or column identifier/);
+			expect(deleteOlderThan(db, "cron_job_pings", "created_at) OR (1=1", 200)).rejects.toThrow(
+				/valid table or column identifier/,
+			);
 		});
 
 		test("rejects a non-positive batch size or ceiling", async () => {
-			await expect(
+			expect(
 				deleteOlderThan(db, "cron_job_pings", "created_at", 200, { batchSize: 0 }),
 			).rejects.toThrow(/positive integer/);
 
-			await expect(
+			expect(
 				deleteOlderThan(db, "cron_job_pings", "created_at", 200, { maxBatches: -1 }),
 			).rejects.toThrow(/positive integer/);
 		});
@@ -233,7 +233,7 @@ describe("retention sweeps", () => {
 		});
 
 		test("rejects an empty column list", async () => {
-			await expect(redactOlderThan(db, "cron_job_pings", "created_at", [], 200)).rejects.toThrow(
+			expect(redactOlderThan(db, "cron_job_pings", "created_at", [], 200)).rejects.toThrow(
 				/at least one column/,
 			);
 		});

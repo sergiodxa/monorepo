@@ -109,7 +109,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
 let sendBatch = spyOn(queue, "sendBatch");
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
@@ -123,7 +123,7 @@ let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
-mock.module("~/app/services/dns-check", () => ({
+await mock.module("~/app/services/dns-check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));
@@ -581,9 +581,16 @@ describe("CheckDnsJob ping reporting", () => {
 		return ingestEventsSafeMock.mock.calls.flatMap(([events]) => events);
 	}
 
-	/** The monitor each data point was written for, in the order the sweep wrote them. */
-	function pingedMonitorIds(): unknown[] {
-		return pingResults.dataPoints.map((point) => point.blobs?.[0]);
+	/**
+	 * The monitor each data point was written for, in the order the sweep wrote them. A
+	 * blob that is not text reads as empty, so it fails an assertion instead of sorting
+	 * as an opaque value.
+	 */
+	function pingedMonitorIds(): string[] {
+		return pingResults.dataPoints.map((point) => {
+			let blob = point.blobs?.[0];
+			return typeof blob === "string" ? blob : "";
+		});
 	}
 
 	/** The id of the result row a monitor's check wrote, which its ping is keyed on. */
@@ -645,9 +652,9 @@ describe("CheckDnsJob ping reporting", () => {
 		expect(ingestEventsSafeMock).toHaveBeenCalledTimes(1);
 		let events = ingestedEvents();
 		expect(events).toHaveLength(3);
-		expect(events.map((event) => event.metadata?.monitorId).sort()).toEqual(
-			[first.id, second.id, third.id].sort(),
-		);
+		expect(
+			events.map((event) => String(event.metadata?.monitorId)).sort((a, b) => a.localeCompare(b)),
+		).toEqual([first.id, second.id, third.id].sort((a, b) => a.localeCompare(b)));
 		expect(events).toContainEqual({
 			name: "ping",
 			externalCustomerId: "owner-1",
@@ -690,7 +697,9 @@ describe("CheckDnsJob ping reporting", () => {
 
 		// Its check still ran, was still recorded, and still counts as a success — only the
 		// billing is lost.
-		expect(pingedMonitorIds().sort()).toEqual([billable.id, orphan.id].sort());
+		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
+			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
+		);
 		expect(await DnsMonitor.listResults(db, orphan.id)).toHaveLength(1);
 		let completed = job.logger.events.find((event) => event.event === "job.check_dns.completed");
 		expect(completed?.successCount).toBe(2);

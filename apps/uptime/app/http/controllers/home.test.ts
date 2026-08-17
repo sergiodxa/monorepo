@@ -46,7 +46,7 @@ import routes from "~/routes/web";
  */
 let trialTurnstileSiteKey = mock((): string | null => null);
 
-mock.module("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
+await mock.module("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
 
 let { default: home } = await import("./home");
 

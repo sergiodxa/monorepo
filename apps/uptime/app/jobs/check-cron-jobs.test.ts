@@ -42,7 +42,7 @@ let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
 let sendBatch = spyOn(queue, "sendBatch");
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { CheckCronJobsJob } = await import("./check-cron-jobs");
 

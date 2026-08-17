@@ -55,7 +55,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 		let { Job } = await import("@pkg/jobs");
 		let job = new VerifyDomainOwnershipJob({ logger: new BatchedLogger("test") }, {});
 
-		await expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
+		expect(job.perform()).rejects.toThrow(Job.NonRetriableError);
 	});
 
 	test("does nothing when the domain does not exist", async () => {
@@ -156,7 +156,7 @@ describe("VerifyDomainOwnershipJob.perform", () => {
 
 		await container.scope(async () => {
 			let job = new VerifyDomainOwnershipJob({ logger }, { teamDomainId: domain.id });
-			await expect(job.perform()).resolves.toBeUndefined();
+			expect(job.perform()).resolves.toBeUndefined();
 		});
 
 		let updated = await TeamDomain.findById(db, domain.id);

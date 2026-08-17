@@ -33,7 +33,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { maintenanceWindows, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./maintenance-windows")).default as {
 	handler: RequestHandler<any>;

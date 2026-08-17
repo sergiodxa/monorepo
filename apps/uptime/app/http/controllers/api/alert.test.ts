@@ -30,7 +30,7 @@ import { alertEvents, alerts, teams } from "~/database/schema";
  * touch no binding, and the empty strict env proves it: any read would throw by the
  * binding's name instead of quietly answering a stand-in value.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: alertController, alertRoutes } = await import("./alert");
 

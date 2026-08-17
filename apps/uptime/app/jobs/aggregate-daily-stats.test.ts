@@ -33,7 +33,7 @@ let getHttpDailyAggregateMock = mock(
 	async (): Promise<Result<HttpDailyAggregate[], Error>> => success([]),
 );
 
-mock.module("~/app/services/analytics", () => ({
+await mock.module("~/app/services/analytics", () => ({
 	getHttpDailyAggregate: getHttpDailyAggregateMock,
 }));
 
@@ -57,7 +57,7 @@ class FakeMonitorDailyStats extends realDailyStatsModule.default {
 	}
 }
 
-mock.module("~/app/data/monitor-daily-stats", () => ({
+await mock.module("~/app/data/monitor-daily-stats", () => ({
 	...realDailyStatsModule,
 	default: FakeMonitorDailyStats,
 }));

@@ -18,7 +18,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 
 import { createDurableObjectState, createEnv } from "@pkg/cloudflare-mocks";
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
 	DurableObject: class {
 		constructor() {}

@@ -59,7 +59,7 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchM
 /** The dataset the ledger flushes to, which is where a probe's recorded costs are read back. */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		COSTS: costs,
@@ -389,7 +389,7 @@ describe("HttpCheck probe failures", () => {
 			throw new Error("Durable Object reset because its code was updated");
 		});
 
-		await expect(new HttpCheck(options()).probe()).rejects.toThrow(
+		expect(new HttpCheck(options()).probe()).rejects.toThrow(
 			"Durable Object reset because its code was updated",
 		);
 	});

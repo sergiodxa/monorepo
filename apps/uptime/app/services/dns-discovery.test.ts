@@ -85,13 +85,13 @@ let sweepDnsNameMock = mock(async (name: string): Promise<DnsNameSweep> => sweep
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
-mock.module("~/app/services/dns-check", () => ({
+await mock.module("~/app/services/dns-check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));

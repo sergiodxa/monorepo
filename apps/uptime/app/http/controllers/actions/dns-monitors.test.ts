@@ -86,7 +86,7 @@ let deferred: Promise<unknown>[] = [];
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** `waitUntil` collects deferred work so a test can await what the response doesn't. */
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);

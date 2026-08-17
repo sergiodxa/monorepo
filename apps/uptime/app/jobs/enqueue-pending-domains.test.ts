@@ -28,7 +28,7 @@ let queue: QueueMock = createQueue({ name: "verify-domains" });
 /** Nothing pending means no call at all, which an empty `sent` cannot tell apart. */
 let sendBatch = spyOn(queue, "sendBatch");
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let TeamDomain = (await import("~/app/data/team-domain")).default;
 let { createTestDatabase } = await import("~/app/lib/test/db");

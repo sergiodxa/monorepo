@@ -96,23 +96,19 @@ describe("resolveDns", () => {
 	test("throws when the HTTP response is not ok", async () => {
 		respondWith({}, { status: 500 });
 
-		await expect(resolveDns("example.com", "A")).rejects.toThrow(
-			"DNS query failed with status 500",
-		);
+		expect(resolveDns("example.com", "A")).rejects.toThrow("DNS query failed with status 500");
 	});
 
 	test("throws when the DNS query returns a non-zero Status", async () => {
 		respondWith({ Status: 2 });
 
-		await expect(resolveDns("example.com", "A")).rejects.toThrow(
-			"DNS query returned status code 2",
-		);
+		expect(resolveDns("example.com", "A")).rejects.toThrow("DNS query returned status code 2");
 	});
 
 	test("still throws on NXDOMAIN, which the probe fence reads as an unresolvable target", async () => {
 		respondWith({ Status: 3 });
 
-		await expect(resolveDns("zzz-nope.example.com", "A")).rejects.toThrow(
+		expect(resolveDns("zzz-nope.example.com", "A")).rejects.toThrow(
 			"DNS query returned status code 3",
 		);
 	});

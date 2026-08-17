@@ -72,13 +72,13 @@ import routes from "~/routes/web";
  * environment being strict is what keeps that claim honest, since a binding this route
  * quietly started reading would fail by name rather than read as `undefined`.
  */
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	DurableObject: class {},
 }));
 
-mock.module("~/app/services/trial-guard", () => ({
+await mock.module("~/app/services/trial-guard", () => ({
 	guardTrialProbe: async () => {
 		throw new Error("POST /try/lead must never run a probe");
 	},

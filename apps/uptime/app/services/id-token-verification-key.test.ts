@@ -76,7 +76,7 @@ describe("IdTokenVerificationKeyService", () => {
 
 		let service = new IdTokenVerificationKeyService();
 
-		await expect(
+		expect(
 			JWT.verify(token, await service.value, { algorithms: [JWK.Algorithm.ES256] }),
 		).rejects.toThrow();
 	});
@@ -89,7 +89,7 @@ describe("IdTokenVerificationKeyService", () => {
 
 		let service = new IdTokenVerificationKeyService();
 
-		await expect(
+		expect(
 			JWT.verify(token, await service.value, { algorithms: [JWK.Algorithm.ES256] }),
 		).rejects.toThrow();
 	});
@@ -99,7 +99,7 @@ describe("IdTokenVerificationKeyService", () => {
 		let second = new IdTokenVerificationKeyService();
 
 		expect(first.value).not.toBe(second.value);
-		await expect(first.value).resolves.toBeFunction();
-		await expect(second.value).resolves.toBeFunction();
+		expect(first.value).resolves.toBeFunction();
+		expect(second.value).resolves.toBeFunction();
 	});
 });

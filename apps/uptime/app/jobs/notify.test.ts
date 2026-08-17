@@ -68,11 +68,11 @@ let notifySslResultMock = mock(recordCall("ssl"));
  * for runs from this package's own directory too. Nothing on the routing path this file
  * covers reaches a binding, so none is supplied and one that got read would fail by name.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let realAlertsModule = await import("~/app/services/alerts");
 
-mock.module("~/app/services/alerts", () => ({
+await mock.module("~/app/services/alerts", () => ({
 	...realAlertsModule,
 	notifyTcpResult: notifyTcpResultMock,
 	notifyDnsResult: notifyDnsResultMock,
@@ -308,7 +308,7 @@ describe("NotifyJob", () => {
 	test("never retries a message whose shape is invalid", async () => {
 		let { db } = createTestDatabase();
 
-		await expect(
+		expect(
 			runJob(db, { type: "notify", monitorType: "carrier-pigeon", monitorId: "monitor-1" }),
 		).rejects.toBeInstanceOf(Job.NonRetriableError);
 	});
@@ -323,7 +323,7 @@ describe("NotifyJob", () => {
 			is_enabled: true,
 		});
 
-		await expect(
+		expect(
 			runJob(db, {
 				type: "notify",
 				monitorType: "tcp",
@@ -348,7 +348,7 @@ describe("NotifyJob", () => {
 			throw new Error("D1 unavailable");
 		});
 
-		await expect(
+		expect(
 			runJob(db, {
 				type: "notify",
 				monitorType: "tcp",

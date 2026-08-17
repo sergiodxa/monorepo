@@ -43,7 +43,7 @@ import routes from "~/routes/web";
  */
 let queue: QueueMock = createQueue();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

@@ -49,7 +49,7 @@ interface CheckHttpMessage {
  */
 let queue: QueueMock<CheckHttpMessage> = createQueue<CheckHttpMessage>();
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

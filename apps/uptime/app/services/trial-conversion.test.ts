@@ -583,7 +583,7 @@ describe("never blocking sign-in", () => {
 		await attempt(lead.id, "https://example.com", 1);
 		spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
 
-		await expect(convert()).resolves.toBeUndefined();
+		expect(convert()).resolves.toBeUndefined();
 	});
 
 	test("swallows a failure while creating a monitor, leaving the attempt unclaimed", async () => {

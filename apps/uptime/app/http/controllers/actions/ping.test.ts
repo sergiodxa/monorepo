@@ -76,7 +76,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 /** Promises the action deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,

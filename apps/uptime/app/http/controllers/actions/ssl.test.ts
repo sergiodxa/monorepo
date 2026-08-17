@@ -31,7 +31,7 @@ import routes from "~/routes/web";
  * Install an `env` so the import below can load; it is supplied with no bindings at all,
  * which is the assertion that these paths reach none — reading one would throw by name.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { updateSsl } = await import("./ssl");
 

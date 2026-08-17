@@ -29,7 +29,7 @@ import routes from "~/routes/web";
  * crash under `bun test`. No binding is supplied, so any that these paths reached would
  * fail by name rather than read as `undefined`.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
 let { default: Monitor } = await import("~/app/data/monitor");

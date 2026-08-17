@@ -93,7 +93,7 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetch 
 /** Work the action deferred, drained by {@link dispatch} so the meter event can be read. */
 let deferred: Promise<unknown>[] = [];
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -130,10 +130,10 @@ let guardTrialProbe = mock(async (_probe: TrialProbeRequest) => guardResult);
 
 let trialTurnstileSiteKey = mock((): string | null => null);
 
-mock.module("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
+await mock.module("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
 
 /** The guard's own logging is noise here; the assertions read the rendered page. */
-mock.module("@pkg/logger", () => ({
+await mock.module("@pkg/logger", () => ({
 	logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} },
 }));
 

@@ -62,11 +62,11 @@ let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
 let sendBatch = spyOn(queue, "sendBatch");
 
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let realSslInfoModule = await import("~/app/services/ssl-info");
 
-mock.module("~/app/services/ssl-info", () => ({
+await mock.module("~/app/services/ssl-info", () => ({
 	...realSslInfoModule,
 	calculateSslStatus: calculateSslStatusMock,
 }));

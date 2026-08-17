@@ -15,7 +15,7 @@ import { describe, expect, mock, test } from "bun:test";
 
 import { createD1Database, createEnv, createSendEmail } from "@pkg/cloudflare-mocks";
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		DB: createD1Database(),
 		EMAIL: createSendEmail(),

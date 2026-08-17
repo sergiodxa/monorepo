@@ -29,7 +29,7 @@ import routes from "~/routes/web";
  * binding, and the empty strict env proves it: any read would throw by the binding's name
  * instead of quietly answering `undefined`.
  */
-mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: monitorsController, monitorsRoutes } =
 	await import("~/app/http/controllers/api/monitors");
