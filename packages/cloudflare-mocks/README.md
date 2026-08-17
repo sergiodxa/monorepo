@@ -551,6 +551,13 @@ rather than raising — which is how `20250520185608` in the uptime migrations c
 `"subject_id"` out of a table whose column is `user_id` without failing. Worth knowing when a
 query returns a column name where you expected a value.
 
+The Node side also binds integral numbers as INTEGER rather than REAL. `node:sqlite` maps
+every JS number to REAL, which turns `?/60000` into float division where `bun:sqlite` and the
+production SQLite engines truncate — so code relying on integer division would compute
+different results per runner while its tests stayed green. Bindings passed as a single array
+are flattened to a positional list for the same reason: Bun accepts that spelling and Node
+reads it as named parameters.
+
 Nothing outside this package should import either implementation directly.
 
 ## Where the mock is more permissive than the platform
