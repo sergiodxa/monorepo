@@ -11,5 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {},
-	"devDependencies": {}
+	"devDependencies": {
+		"vitest": "4.1.10"
+	}
 }
