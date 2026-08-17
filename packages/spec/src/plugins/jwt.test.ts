@@ -1,8 +1,8 @@
 /**
  * Tests for the built-in `jwt` plugin. `jwt.decode` is exercised against a
  * known literal token with no network. `jwt.verify` is exercised against a real
- * ES256 keypair: the test generates the keypair with Bun's WebCrypto, hand-signs
- * tokens, and serves the matching JWKS from an in-process `Bun.serve`, so a
+ * ES256 keypair: the test generates the keypair with WebCrypto, hand-signs
+ * tokens, and serves the matching JWKS from an in-process HTTP server, so a
  * genuine signature verification — valid, tampered, expired, wrong-key — runs
  * end to end without any external service.
  *
@@ -10,11 +10,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
+import { createServer } from "node:http";
 
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success, unwrap } from "@pkg/result";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";
@@ -107,17 +108,30 @@ function epoch(delta = 0): number {
 	return Math.floor(Date.now() / 1000) + delta;
 }
 
-/** Serve a JWKS body containing the given keys (each already carrying a kid). */
-function serveJwks(keys: object[]): JwksServer {
-	let server = Bun.serve({
-		port: 0,
-		fetch() {
-			return Response.json({ keys });
-		},
+/**
+ * Serve a JWKS body containing the given keys (each already carrying a kid) on
+ * an ephemeral port. Resolves only once the port is known, so the URL it hands
+ * back is immediately fetchable.
+ */
+async function serveJwks(keys: object[]): Promise<JwksServer> {
+	let server = createServer((_request, response) => {
+		response.writeHead(200, { "content-type": "application/json" });
+		response.end(JSON.stringify({ keys }));
+	});
+	let port = await new Promise<number>((settle) => {
+		server.listen(0, () => {
+			let address = server.address();
+			settle(typeof address === "object" && address !== null ? address.port : 0);
+		});
 	});
 	return {
-		url: `http://localhost:${server.port}/.well-known/jwks.json`,
-		stop: () => server.stop(true),
+		url: `http://localhost:${port}/.well-known/jwks.json`,
+		stop: () => {
+			// Drop live sockets before closing: the plugin's fetch may leave a
+			// keep-alive connection open, which `close` alone would wait on.
+			server.closeAllConnections();
+			server.close();
+		},
 	};
 }
 
@@ -229,7 +243,7 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify returns the payload for a genuinely signed token", async () => {
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerOne, "k1", {
 				sub: "user-1",
@@ -249,7 +263,7 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify rejects a tampered token as a signature tool error", async () => {
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(3600) });
 			// Flip the last character of the payload segment; the header (and thus the
@@ -270,7 +284,7 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify without a net grant is denied before the JWKS is fetched", async () => {
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(3600) });
 			let calls: { host: string; port: number | undefined }[] = [];
@@ -286,7 +300,7 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify rejects an expired token", async () => {
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(-10) });
 			let error = unwrapError(
@@ -302,7 +316,7 @@ describe(createJwtPlugin.name, () => {
 	test("verify rejects a token whose kid is not in the JWKS", async () => {
 		// Two published keys, neither matching the token's kid: the sole-key fallback
 		// cannot apply, so a named-but-absent kid is a hard error.
-		let jwks = serveJwks([
+		let jwks = await serveJwks([
 			{ ...signerOne.jwk, kid: "k1" },
 			{ ...signerTwo.jwk, kid: "k2" },
 		]);
@@ -321,7 +335,7 @@ describe(createJwtPlugin.name, () => {
 	test("verify selects the right key by kid among several", async () => {
 		// signerTwo signs, and its key is published under kid k2 alongside k1; the
 		// token names k2, so verification must pick k2 and succeed.
-		let jwks = serveJwks([
+		let jwks = await serveJwks([
 			{ ...signerOne.jwk, kid: "k1" },
 			{ ...signerTwo.jwk, kid: "k2" },
 		]);
@@ -337,7 +351,7 @@ describe(createJwtPlugin.name, () => {
 	});
 
 	test("verify rejects a non-ES256 algorithm", async () => {
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			// Claim HS256 in the header; verify must refuse before touching the JWKS.
 			let token = await sign(signerOne, "k1", { sub: "user-1", exp: epoch(3600) }, "HS256");
@@ -354,7 +368,7 @@ describe(createJwtPlugin.name, () => {
 	test("verify wrong signing key fails the signature check", async () => {
 		// Publish signerOne under kid k1, but sign the token with signerTwo's private
 		// key under the same kid: selection picks k1's public key, signature fails.
-		let jwks = serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
+		let jwks = await serveJwks([{ ...signerOne.jwk, kid: "k1" }]);
 		try {
 			let token = await sign(signerTwo, "k1", { sub: "user-1", exp: epoch(3600) });
 			let error = unwrapError(

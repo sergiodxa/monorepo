@@ -31,11 +31,7 @@ export default defineConfig({
 					// `Bun.serve`, `Bun.which`, `Bun.stdin` and `import { SQL } from "bun"`, which have
 					// no Node equivalent. Porting them would change what the package is, so they stay
 					// on `bun test` and are the reason `bun test` survives at all.
-					exclude: [
-						"packages/spec/src/plugins/browser.test.ts",
-						"packages/spec/src/plugins/db.test.ts",
-						"packages/spec/src/plugins/jwt.test.ts",
-					],
+					exclude: ["packages/spec/src/plugins/db.test.ts"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the
 					// 5s default applies unless set here. The slowest files spend ~4s applying

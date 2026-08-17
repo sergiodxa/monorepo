@@ -9,11 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { createServer } from "node:http";
 
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
 import type { ExecutionContext } from "../executor";
@@ -28,12 +29,83 @@ import { executeTest } from "../executor";
 import { parse } from "../parser";
 import { createRegistry } from "../registry";
 
-import { createBrowserPlugin } from "./browser";
+import { browserBinaryPath, createBrowserPlugin } from "./browser";
 import { createEnvPlugin } from "./env";
 import { createUrlPlugin } from "./url";
 
 /** Whether the real `agent-browser` CLI is installed; gates the e2e suite. */
-const AVAILABLE = Bun.which("agent-browser") !== null;
+const AVAILABLE = browserBinaryPath() !== null;
+
+/** What a page handler reads off an incoming request. */
+interface PageRequest {
+	/** The request path, without host or query. */
+	path: string;
+	/** The `cookie` header, empty when the request carried none. */
+	cookie: string;
+	/** The `user-agent` header, empty when the request carried none. */
+	userAgent: string;
+}
+
+/** What a page handler answers with: a rendered page, or a redirect. */
+interface PageResponse {
+	/** The status to send; defaults to 200, or 302 when `location` is set. */
+	status?: number;
+	/** The HTML body. */
+	html?: string;
+	/** Where to redirect, which suppresses the body. */
+	location?: string;
+}
+
+/** A running page server and how to stop it. */
+interface PageServer {
+	/** The scheme, host and port, with no trailing slash. */
+	origin: string;
+	/** Stop serving, dropping any live socket. */
+	stop(): undefined;
+}
+
+/**
+ * Serve one page over an ephemeral port on 127.0.0.1, resolving only once the
+ * port is known so the origin it hands back is immediately navigable. The
+ * handler answers from what the request carried, which is what lets a test
+ * assert on the server's view of a browser session rather than the browser's.
+ *
+ * @param render - Answers each request from its path and headers.
+ * @returns The running server's origin and its stop function.
+ */
+async function servePage(render: (request: PageRequest) => PageResponse): Promise<PageServer> {
+	let server = createServer((request, response) => {
+		let url = new URL(request.url ?? "/", "http://127.0.0.1");
+		let answer = render({
+			path: url.pathname,
+			cookie: request.headers.cookie ?? "",
+			userAgent: request.headers["user-agent"] ?? "",
+		});
+		if (answer.location !== undefined) {
+			response.writeHead(answer.status ?? 302, { location: answer.location });
+			response.end();
+			return;
+		}
+		response.writeHead(answer.status ?? 200, { "content-type": "text/html" });
+		response.end(answer.html ?? "");
+	});
+	let port = await new Promise<number>((settle) => {
+		server.listen(0, "127.0.0.1", () => {
+			let address = server.address();
+			settle(typeof address === "object" && address !== null ? address.port : 0);
+		});
+	});
+	return {
+		origin: `http://127.0.0.1:${port}`,
+		stop() {
+			// Drop live sockets first: the browser keeps connections alive, which
+			// `close` alone would wait on.
+			server.closeAllConnections();
+			server.close();
+			return undefined;
+		},
+	};
+}
 
 /** The static page the end-to-end tests drive, served in-process. */
 const PAGE_HTML = `<!doctype html>
@@ -371,25 +443,21 @@ describe(createBrowserPlugin.name, () => {
 // suite above (and the whole package) stays green without the CLI present.
 describe("browser end to end", () => {
 	let plugin: Plugin;
-	let server: ReturnType<typeof Bun.serve> | undefined;
+	let server: PageServer | undefined;
 	let baseUrl = "";
 	let context: ToolContext;
 
-	beforeAll(() => {
+	beforeAll(async () => {
 		plugin = createBrowserPlugin();
-		server = Bun.serve({
-			port: 0,
-			hostname: "127.0.0.1",
-			fetch: () => new Response(PAGE_HTML, { headers: { "content-type": "text/html" } }),
-		});
-		baseUrl = `http://127.0.0.1:${server.port}/`;
+		server = await servePage(() => ({ html: PAGE_HTML }));
+		baseUrl = `${server.origin}/`;
 		// A real temp-dir-shaped root, so the derived session is unique.
 		context = buildContext(allowAll(), "/tmp/spec-browser-e2e-session");
 	});
 
 	afterAll(async () => {
 		if (plugin.dispose !== undefined) await plugin.dispose();
-		await server?.stop(true);
+		server?.stop();
 	});
 
 	test.skipIf(!AVAILABLE)(
@@ -527,34 +595,29 @@ async function runSpec(
 // reason those tools exist (arrive authenticated, arrive identifiable).
 describe("browser session setup against a real browser", () => {
 	let plugin: Plugin;
-	let server: ReturnType<typeof Bun.serve> | undefined;
+	let server: PageServer | undefined;
 	let baseUrl = "";
 	let context: ToolContext;
 
-	beforeAll(() => {
+	beforeAll(async () => {
 		plugin = createBrowserPlugin();
 		// The page reports what the request carried, so every assertion reads the
 		// server's view of the session, not the browser's.
-		server = Bun.serve({
-			port: 0,
-			hostname: "127.0.0.1",
-			fetch: (request) => {
-				let cookie = /session=([^;]*)/.exec(request.headers.get("cookie") ?? "");
-				let seen = cookie?.[1] ?? "none";
-				let agent = request.headers.get("user-agent") ?? "none";
-				return new Response(
-					`<!doctype html><html><body><p>Session: ${seen}</p><p>Agent: ${agent}</p></body></html>`,
-					{ headers: { "content-type": "text/html" } },
-				);
-			},
+		server = await servePage((request) => {
+			let cookie = /session=([^;]*)/.exec(request.cookie);
+			let seen = cookie?.[1] ?? "none";
+			let agent = request.userAgent === "" ? "none" : request.userAgent;
+			return {
+				html: `<!doctype html><html><body><p>Session: ${seen}</p><p>Agent: ${agent}</p></body></html>`,
+			};
 		});
-		baseUrl = `http://${server.hostname}:${server.port}/`;
+		baseUrl = `${server.origin}/`;
 		context = buildContext(allowAll(), "/tmp/spec-browser-cookie-session");
 	});
 
 	afterAll(async () => {
 		if (plugin.dispose !== undefined) await plugin.dispose();
-		await server?.stop(true);
+		server?.stop();
 	});
 
 	test.skipIf(!AVAILABLE)("a cookie set with `for` reaches the first request", async () => {
@@ -596,36 +659,29 @@ describe("browser session setup against a real browser", () => {
 describe("a session seeded from the environment", () => {
 	let browserPlugin: Plugin;
 	let envPlugin: Plugin;
-	let server: ReturnType<typeof Bun.serve> | undefined;
+	let server: PageServer | undefined;
 	let baseUrl = "";
 
-	beforeAll(() => {
+	beforeAll(async () => {
 		browserPlugin = createBrowserPlugin();
 		envPlugin = createEnvPlugin();
 		// A minimal protected app: `/app` renders only for the right session
 		// cookie, and redirects to `/login` without it.
-		server = Bun.serve({
-			port: 0,
-			hostname: "127.0.0.1",
-			fetch: (request) => {
-				let path = new URL(request.url).pathname;
-				let cookie = /session=([^;]*)/.exec(request.headers.get("cookie") ?? "");
-				if (path === "/app" && cookie?.[1] !== "s3cret") {
-					return new Response(null, { status: 302, headers: { location: "/login" } });
-				}
-				let heading = path === "/app" ? "Dashboard" : "Sign in";
-				return new Response(`<!doctype html><html><body><h1>${heading}</h1></body></html>`, {
-					headers: { "content-type": "text/html" },
-				});
-			},
+		server = await servePage((request) => {
+			let cookie = /session=([^;]*)/.exec(request.cookie);
+			if (request.path === "/app" && cookie?.[1] !== "s3cret") {
+				return { status: 302, location: "/login" };
+			}
+			let heading = request.path === "/app" ? "Dashboard" : "Sign in";
+			return { html: `<!doctype html><html><body><h1>${heading}</h1></body></html>` };
 		});
-		baseUrl = `http://127.0.0.1:${server.port}`;
+		baseUrl = server.origin;
 		process.env.SPEC_E2E_SESSION = "s3cret";
 	});
 
 	afterAll(async () => {
 		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
-		await server?.stop(true);
+		server?.stop();
 		delete process.env.SPEC_E2E_SESSION;
 	});
 
@@ -669,25 +725,21 @@ describe("a session seeded from the environment", () => {
 describe("browser.url captured through the executor", () => {
 	let browserPlugin: Plugin;
 	let urlPlugin: Plugin;
-	let server: ReturnType<typeof Bun.serve> | undefined;
+	let server: PageServer | undefined;
 	let baseUrl = "";
 
-	beforeAll(() => {
+	beforeAll(async () => {
 		browserPlugin = createBrowserPlugin();
 		urlPlugin = createUrlPlugin();
 		// Any path returns the page, so navigating to a URL with a query string
 		// leaves the session's current URL carrying that query string verbatim.
-		server = Bun.serve({
-			port: 0,
-			hostname: "127.0.0.1",
-			fetch: () => new Response(PAGE_HTML, { headers: { "content-type": "text/html" } }),
-		});
-		baseUrl = `http://127.0.0.1:${server.port}/`;
+		server = await servePage(() => ({ html: PAGE_HTML }));
+		baseUrl = `${server.origin}/`;
 	});
 
 	afterAll(async () => {
 		if (browserPlugin.dispose !== undefined) await browserPlugin.dispose();
-		await server?.stop(true);
+		server?.stop();
 	});
 
 	test.skipIf(!AVAILABLE)(
