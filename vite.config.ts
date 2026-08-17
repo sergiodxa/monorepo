@@ -32,9 +32,6 @@ export default defineConfig({
 					// no Node equivalent. Porting them would change what the package is, so they stay
 					// on `bun test` and are the reason `bun test` survives at all.
 					exclude: [
-						"packages/spec/src/db-example.test.ts",
-						"packages/spec/src/dogfood.test.ts",
-						"packages/spec/src/http-example.test.ts",
 						"packages/spec/src/plugins/browser.test.ts",
 						"packages/spec/src/plugins/db.test.ts",
 						"packages/spec/src/plugins/jwt.test.ts",

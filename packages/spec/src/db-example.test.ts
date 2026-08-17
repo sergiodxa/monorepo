@@ -12,18 +12,33 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { expect, test } from "bun:test";
+import { spawn, spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { SQL } from "bun";
+import { expect, test } from "vitest";
 
 /** Absolute path of this package, the example run's working directory. */
-const PACKAGE_DIR = resolve(import.meta.dir, "..");
+const PACKAGE_DIR = resolve(import.meta.dirname, "..");
 
-/** Whether Bun's SQL client exposes SQLite; the examples run against it. */
-const SQLITE_AVAILABLE = "SQLiteError" in SQL;
+/**
+ * The Bun executable, found on PATH. The CLI under test is a Bun program, so it
+ * is spawned by name rather than through the running runtime's own executable.
+ */
+const BUN_EXECUTABLE = "bun";
+
+/**
+ * Whether Bun's SQL client exposes SQLite; the examples run against it. The
+ * probe runs inside Bun rather than in this process, because the SQL client
+ * belongs to the runtime the child CLI executes under, not to this file's.
+ */
+const SQLITE_AVAILABLE =
+	spawnSync(
+		BUN_EXECUTABLE,
+		["-e", 'import { SQL } from "bun"; process.stdout.write(String("SQLiteError" in SQL));'],
+		{ encoding: "utf8" },
+	).stdout?.trim() === "true";
 
 /** How long the example run may take: it spawns one CLI and touches SQLite. */
 const EXAMPLE_TIMEOUT_MS = 60_000;
@@ -33,27 +48,27 @@ test.skipIf(!SQLITE_AVAILABLE)(
 	async () => {
 		let dbPath = join(tmpdir(), `spec-db-example-${process.pid}-${Date.now()}.sqlite`);
 		try {
-			let child = Bun.spawn({
-				cmd: [
-					process.execPath,
-					join(PACKAGE_DIR, "src", "cli.ts"),
-					"run",
-					"examples/db",
-					"--allow-env=DATABASE_URL",
-				],
-				cwd: PACKAGE_DIR,
-				// The per-call form: the connection string lives in the child's
-				// environment, and the run is granted exactly that one variable.
-				env: { ...process.env, DATABASE_URL: `sqlite://${dbPath}` },
-				stdin: "ignore",
-				stdout: "pipe",
-				stderr: "pipe",
+			let child = spawn(
+				BUN_EXECUTABLE,
+				[join(PACKAGE_DIR, "src", "cli.ts"), "run", "examples/db", "--allow-env=DATABASE_URL"],
+				{
+					cwd: PACKAGE_DIR,
+					// The per-call form: the connection string lives in the child's
+					// environment, and the run is granted exactly that one variable.
+					env: { ...process.env, DATABASE_URL: `sqlite://${dbPath}` },
+					stdio: ["ignore", "pipe", "pipe"],
+				},
+			);
+			let stdout = "";
+			let stderr = "";
+			child.stdout?.setEncoding("utf8");
+			child.stderr?.setEncoding("utf8");
+			child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
+			child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
+			let exitCode = await new Promise<number>((settle, reject) => {
+				child.once("error", reject);
+				child.once("close", (code: number | null) => settle(code ?? 1));
 			});
-			let [stdout, stderr, exitCode] = await Promise.all([
-				new Response(child.stdout).text(),
-				new Response(child.stderr).text(),
-				child.exited,
-			]);
 			let report = `db example CLI output:\n${stdout}${stderr}`;
 
 			expect(exitCode, report).toBe(0);

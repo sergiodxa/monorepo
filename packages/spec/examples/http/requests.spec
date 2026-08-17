@@ -1,7 +1,7 @@
 use http
 
 # The http capability against a real server. src/http-example.test.ts starts an
-# in-process Bun.serve on 127.0.0.1 and grants exactly that host:port; the URLs
+# in-process HTTP server on 127.0.0.1 and grants exactly that host:port; the URLs
 # below hardcode the same port because v1 has no environments mechanism to bind
 # a base URL against, so a spec names the full absolute URL. The port here and
 # the HTTP_EXAMPLE_PORT constant in http-example.test.ts must stay in lockstep.
