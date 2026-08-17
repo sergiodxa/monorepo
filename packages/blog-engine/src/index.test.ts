@@ -9,8 +9,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { describe, expect, test } from "bun:test";
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
+import { describe, expect, test } from "vitest";
 
 import { createBunSqliteDatabaseAdapter } from "./shared/test/db";
 
@@ -38,7 +38,7 @@ let metadata: OIDCMetadata = {
  * the host uses in production.
  */
 function createEngine() {
-	let sqliteDb = new SqliteDatabase(":memory:");
+	let sqliteDb = openDatabase(":memory:");
 	let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
 	return createBlogEngine({
 		database: adapter,

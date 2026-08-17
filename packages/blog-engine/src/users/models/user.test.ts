@@ -1,3 +1,4 @@
+import { Database } from "remix/data-table";
 /**
  * Verifies admin-role assignment in {@link User.findOrCreateFromAuthProfile}: the
  * allowlist always grants admin, the first-admin bootstrap is opt-in, and disabling
@@ -6,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
-
-import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { Role } from "../../roles/models/role";
 import { createTestDatabase } from "../../shared/test/db";

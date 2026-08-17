@@ -1,3 +1,5 @@
+import { Database } from "remix/data-table";
+import { createSession } from "remix/session";
 /**
  * Covers the SQL-backed session store's server-side expiry: a fresh session round
  * trips its data, while a session presented at/after its stored `expires_at` (or
@@ -7,10 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
-
-import { Database } from "remix/data-table";
-import { createSession } from "remix/session";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { createTestDatabase } from "../shared/test/db";
 
@@ -30,7 +29,7 @@ describe("SqlSessionStorage expiry", () => {
 		session.set("userId", "user_1");
 
 		let cookie = await storage.save(session);
-		expect(cookie).toBeString();
+		expect(cookie).toBeTypeOf("string");
 
 		let restored = await storage.read(cookie);
 		expect(restored.get("userId")).toBe("user_1");
@@ -42,7 +41,7 @@ describe("SqlSessionStorage expiry", () => {
 		let session = createSession();
 		session.set("userId", "user_2");
 		let cookie = await expiredStorage.save(session);
-		expect(cookie).toBeString();
+		expect(cookie).toBeTypeOf("string");
 
 		// A normal reader must reject the stale id and start a clean session.
 		let reader = new SqlSessionStorage(db);

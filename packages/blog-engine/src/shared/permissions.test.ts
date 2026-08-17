@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { hasAll, hasAny, parsePermissions, PERMISSION_KEYS } from "./permissions";
 

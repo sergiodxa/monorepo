@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import type { SelectPostMeta } from "../../database/schema";
 import type { PostTypeDefinition } from "../../post-types/models/post-type";

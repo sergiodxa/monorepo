@@ -1,3 +1,4 @@
+import { Database } from "remix/data-table";
 /**
  * Covers deriving the runtime theme from stored settings: `Settings.theme` decodes
  * the persisted `settings.theme` JSON, and feeding it to `renderThemeStyle` yields
@@ -7,9 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
-
-import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { renderThemeStyle } from "../../appearance/theme/theme";
 import { createTestDatabase } from "../../shared/test/db";

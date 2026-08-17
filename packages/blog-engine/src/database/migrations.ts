@@ -153,7 +153,7 @@ const journal = table({
  * Applies pending migrations against the adapter, tracked in a
  * `blog_engine_migrations` journal table. Idempotent: already-applied ids are
  * skipped, so it is safe to run on every cold start. Multi-statement SQL runs via
- * `executeScript`, which each adapter (D1, SqlStorage, bun:sqlite) handles.
+ * `executeScript`, which each adapter (D1, SqlStorage, plain SQLite) handles.
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
  */

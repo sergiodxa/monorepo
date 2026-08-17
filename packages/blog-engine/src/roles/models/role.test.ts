@@ -1,3 +1,4 @@
+import { Database } from "remix/data-table";
 /**
  * Covers role → permission-set resolution against a seeded database: built-in
  * roles expose exactly their seeded permissions, custom roles honor (and dedupe)
@@ -6,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { beforeEach, describe, expect, test } from "bun:test";
-
-import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { ADMIN_PERMISSIONS, PERMISSION_KEYS } from "../../shared/permissions";
 import { createTestDatabase } from "../../shared/test/db";
