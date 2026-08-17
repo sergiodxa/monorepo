@@ -11,8 +11,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
@@ -26,6 +24,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -49,7 +48,7 @@ interface CheckHttpMessage {
  */
 let queue: QueueMock<CheckHttpMessage> = createQueue<CheckHttpMessage>();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
@@ -75,7 +74,7 @@ let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import(
  * one would have thrown.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
@@ -662,7 +661,7 @@ describe("createMonitor funnel event", () => {
 
 		await create(db, team, membership, "First", "https://one.example.com", logger);
 
-		expect(funnelEvents(logger)).toBeEmpty();
+		expect(funnelEvents(logger)).toHaveLength(0);
 	});
 
 	test("fires on the second, with the team, the author and the count", async () => {
@@ -715,7 +714,7 @@ describe("createMonitor funnel event", () => {
 		await create(db, team, membership, "First", "https://one.example.com", logger);
 		await create(db, team, membership, "Second", "not-a-url", logger);
 
-		expect(funnelEvents(logger)).toBeEmpty();
+		expect(funnelEvents(logger)).toHaveLength(0);
 	});
 
 	test("the second monitor is still created when no logger is installed", async () => {

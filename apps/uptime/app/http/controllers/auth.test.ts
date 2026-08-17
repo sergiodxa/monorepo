@@ -15,8 +15,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -31,6 +29,7 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
@@ -48,8 +47,8 @@ let finishExternalAuthImpl: () => Promise<unknown> = async () => ({
 	result: { tokens: { idToken: "raw-id-token" } },
 	returnTo: undefined,
 });
-let finishExternalAuthMock = mock(() => finishExternalAuthImpl());
-let startExternalAuthMock = mock(
+let finishExternalAuthMock = vi.fn(() => finishExternalAuthImpl());
+let startExternalAuthMock = vi.fn(
 	async () =>
 		new Response(null, {
 			status: 302,
@@ -57,7 +56,7 @@ let startExternalAuthMock = mock(
 		}),
 );
 
-await mock.module("remix/auth", () => ({
+vi.doMock("remix/auth", () => ({
 	// The real provider's internals are never exercised — `finishExternalAuth`/
 	// `startExternalAuth` are fully replaced below — so a bare stub is enough to
 	// satisfy `createAuthProvider`'s call to it.
@@ -75,13 +74,13 @@ let fakeIdToken = {
 	username: "ada",
 	emailVerified: true,
 };
-let verifyIdTokenMock = mock(async () => fakeIdToken);
+let verifyIdTokenMock = vi.fn(async () => fakeIdToken);
 
-await mock.module("~/app/auth/value-objects/id-token", () => ({
+vi.doMock("~/app/auth/value-objects/id-token", () => ({
 	verifyIdToken: verifyIdTokenMock,
 }));
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLIENT_ID: "client-id", CLIENT_SECRET: "client-secret" }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
@@ -91,10 +90,10 @@ let { default: authController } = await import("./auth");
 /** A `PolarClient` stand-in whose `getExternalCustomer` short-circuits `Customer.findOrCreate`. */
 function createFakePolar() {
 	return {
-		getExternalCustomer: mock(async () => ({ id: "cus_1", externalId: "user-1" })),
-		findCustomerByEmail: mock(async () => null),
-		createCustomer: mock(async () => ({ id: "cus_1", externalId: null })),
-		updateCustomer: mock(async () => ({ id: "cus_1", externalId: "user-1" })),
+		getExternalCustomer: vi.fn(async () => ({ id: "cus_1", externalId: "user-1" })),
+		findCustomerByEmail: vi.fn(async () => null),
+		createCustomer: vi.fn(async () => ({ id: "cus_1", externalId: null })),
+		updateCustomer: vi.fn(async () => ({ id: "cus_1", externalId: "user-1" })),
 	};
 }
 
@@ -335,7 +334,7 @@ describe("GET /auth", () => {
  */
 describe("GET /auth trial conversion", () => {
 	afterEach(() => {
-		spyOn(Lead, "findByEmail").mockRestore();
+		vi.spyOn(Lead, "findByEmail").mockRestore();
 	});
 
 	/** A lead for the signing-in address with one claimable target. */
@@ -408,7 +407,7 @@ describe("GET /auth trial conversion", () => {
 	test("signs the user in even when the conversion fails outright", async () => {
 		let { db } = createTestDatabase();
 		await seedClaimableTarget(db);
-		spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
+		vi.spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
 
 		finishExternalAuthImpl = async () => ({
 			result: { tokens: { idToken: "raw-id-token" } },
@@ -423,6 +422,6 @@ describe("GET /auth trial conversion", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.app.index.href());
 		expect(session.get("id")).toBe("user-1");
-		expect(await db.findMany(monitors, {})).toBeEmpty();
+		expect(await db.findMany(monitors, {})).toHaveLength(0);
 	});
 });

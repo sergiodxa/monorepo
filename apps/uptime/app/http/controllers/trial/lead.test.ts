@@ -28,8 +28,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
@@ -47,6 +45,7 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { renderToString } from "remix/ui/server";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 
@@ -72,13 +71,13 @@ import routes from "~/routes/web";
  * environment being strict is what keeps that claim honest, since a binding this route
  * quietly started reading would fail by name rather than read as `undefined`.
  */
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
 	DurableObject: class {},
 }));
 
-await mock.module("~/app/services/trial-guard", () => ({
+vi.doMock("~/app/services/trial-guard", () => ({
 	guardTrialProbe: async () => {
 		throw new Error("POST /try/lead must never run a probe");
 	},
@@ -553,7 +552,7 @@ describe("POST /try/lead funnel event", () => {
 		let logger = new BatchedLogger("test");
 		await submit({ email: "reader@example.com" }, second, db, logger);
 
-		expect(funnelEvents(logger)).toBeEmpty();
+		expect(funnelEvents(logger)).toHaveLength(0);
 	});
 
 	test("a rejected address wrote nothing and so reports nothing", async () => {
@@ -563,7 +562,7 @@ describe("POST /try/lead funnel event", () => {
 
 		await submit({ email: "not-an-address" }, session, undefined, logger);
 
-		expect(funnelEvents(logger)).toBeEmpty();
+		expect(funnelEvents(logger)).toHaveLength(0);
 	});
 
 	test("a submission with no logger installed still opens the watch", async () => {

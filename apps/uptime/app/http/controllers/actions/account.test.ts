@@ -11,8 +11,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
@@ -23,6 +21,7 @@ import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
@@ -47,7 +46,7 @@ let cancelDeletion = accountActions.cancelDeletion as RequestHandler;
  * has no database trace.
  */
 function createFakeSession() {
-	return { destroy: mock(() => {}), flash: mock(() => {}) };
+	return { destroy: vi.fn(() => {}), flash: vi.fn(() => {}) };
 }
 
 /** Installs `ctx.get(Auth)` directly, standing in for the real session-backed `auth()` middleware. */
@@ -482,9 +481,9 @@ describe("POST /actions/export-data", () => {
 		expect(response.headers.get("cache-control")).toBe("no-store");
 
 		let disposition = response.headers.get("content-disposition") ?? "";
-		expect(disposition).toStartWith("attachment;");
+		expect(disposition).toMatch(/^attachment;/);
 		expect(disposition).toContain(viewer.id);
-		expect(disposition).toEndWith('.json"');
+		expect(disposition).toMatch(/\.json"$/);
 
 		let document = (await response.json()) as {
 			subject: { id: string };

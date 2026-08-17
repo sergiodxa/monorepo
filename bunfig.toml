@@ -266,4 +266,9 @@ pathIgnorePatterns = [
 	"**/apps/uptime/app/services/id-token-verification-key.test.ts",
 	"**/apps/uptime/app/services/trial-conversion.test.ts",
 	"**/apps/uptime/app/services/zone-file.test.ts",
+	"**/apps/uptime/app/http/controllers/auth.test.ts",
+	"**/apps/uptime/app/http/controllers/actions/account.test.ts",
+	"**/apps/uptime/app/http/controllers/actions/alerts.test.ts",
+	"**/apps/uptime/app/http/controllers/actions/monitors.test.ts",
+	"**/apps/uptime/app/http/controllers/trial/lead.test.ts",
 ]
