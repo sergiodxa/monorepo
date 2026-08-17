@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import type { TrialStatus } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";

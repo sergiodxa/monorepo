@@ -11,11 +11,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import type { Email } from "@pkg/mail";
 
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import { FunnelReportEmail } from "~/app/emails/funnel-report";
 

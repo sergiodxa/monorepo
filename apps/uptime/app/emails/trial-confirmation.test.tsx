@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";

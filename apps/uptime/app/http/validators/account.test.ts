@@ -6,10 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { isFailure, isSuccess } from "@pkg/result";
 import { validate } from "@pkg/validate";
+import { describe, expect, test } from "vitest";
 
 import { RequestAccountDeletionSchema } from "~/app/http/validators/account";
 

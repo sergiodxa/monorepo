@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import { AccountDeletedEmail } from "~/app/emails/account-deleted";
 import { emailTranslator } from "~/app/emails/locale";

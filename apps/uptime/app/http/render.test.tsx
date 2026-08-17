@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
 
 import DocumentLayout from "~/resources/layouts/document";
 

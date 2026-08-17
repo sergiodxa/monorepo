@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
-
 import { JWK, JWT } from "@pkg/jwt";
+import { describe, expect, test } from "vitest";
 
 import IdToken, { verifyIdToken } from "./id-token";
 
