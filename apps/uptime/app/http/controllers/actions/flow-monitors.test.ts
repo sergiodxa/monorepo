@@ -18,8 +18,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
@@ -36,6 +34,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -66,7 +65,7 @@ let deferred: Promise<unknown>[] = [];
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -79,7 +78,7 @@ await mock.module("cloudflare:workers", () => ({
  * ones the action actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 let server = setupServer();
 

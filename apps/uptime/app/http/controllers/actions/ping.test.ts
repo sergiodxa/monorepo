@@ -22,8 +22,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent, PolarClient as PolarClientType } from "@pkg/polar";
 
@@ -42,6 +40,7 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { QuickPingOutcome, QuickPingResult } from "~/app/http/controllers/actions/ping";
@@ -56,7 +55,7 @@ import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** The `GeoFetchDO` stub the quick check probes through. */
-let doFetchMock = mock(
+let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
@@ -76,7 +75,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 /** Promises the action deferred, drained by {@link dispatch} before it returns. */
 let deferred: Promise<unknown>[] = [];
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -91,7 +90,7 @@ await mock.module("cloudflare:workers", () => ({
 let { runPing, QUICK_PING_RESULT } = await import("./ping");
 
 /** The entitlement gate logs every inconclusive lookup; the assertions read the flash. */
-spyOn(console, "info").mockImplementation(() => {});
+vi.spyOn(console, "info").mockImplementation(() => {});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

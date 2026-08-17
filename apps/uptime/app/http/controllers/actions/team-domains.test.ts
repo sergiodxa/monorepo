@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
@@ -20,6 +18,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -39,7 +38,7 @@ interface VerifyDomainMessage {
  */
 let queue: QueueMock<VerifyDomainMessage> = createQueue<VerifyDomainMessage>();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

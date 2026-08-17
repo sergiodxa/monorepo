@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@pkg/cloudflare-mocks";
@@ -18,6 +16,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -31,7 +30,7 @@ import routes from "~/routes/web";
  * Install an `env` so the import below can load; it is supplied with no bindings at all,
  * which is the assertion that these paths reach none — reading one would throw by name.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { updateSsl } = await import("./ssl");
 

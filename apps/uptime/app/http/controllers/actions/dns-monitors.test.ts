@@ -28,18 +28,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
@@ -54,6 +42,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DnsRecordType } from "~/app/data/dns-monitor-record";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -86,7 +75,7 @@ let deferred: Promise<unknown>[] = [];
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** `waitUntil` collects deferred work so a test can await what the response doesn't. */
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -146,7 +135,7 @@ function stubResolver(bodies: Record<string, DohBody> = {}) {
  * below are the ones the action actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();

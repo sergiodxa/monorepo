@@ -10,8 +10,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { QueueMock } from "@pkg/cloudflare-mocks";
 import type { Middleware } from "remix/router";
 
@@ -26,6 +24,7 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
@@ -43,7 +42,7 @@ import routes from "~/routes/web";
  */
 let queue: QueueMock = createQueue();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue }),
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));

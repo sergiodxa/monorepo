@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { PolarClient } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
@@ -20,6 +18,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -76,10 +75,10 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 /** A fake `PolarClient`, registered on the container in place of the real class. */
 function createFakePolar() {
 	return {
-		listActiveSubscriptions: mock(async () => [
+		listActiveSubscriptions: vi.fn(async () => [
 			{ id: "sub_1", productId: "94161883-14eb-42e2-bb26-b4647199cda1", status: "active" },
 		]),
-		revokeSubscription: mock(async () => ({})),
+		revokeSubscription: vi.fn(async () => ({})),
 	};
 }
 

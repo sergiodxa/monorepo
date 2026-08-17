@@ -8,14 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -26,10 +25,10 @@ import routes from "~/routes/web";
 /**
  * `app/data/monitor.ts` (imported by `./content-checks`) reads `env` from
  * `cloudflare:workers` at module load time — install one so importing the module doesn't
- * crash under `bun test`. No binding is supplied, so any that these paths reached would
+ * crash in the test runner. No binding is supplied, so any that these paths reached would
  * fail by name rather than read as `undefined`.
  */
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
 let { default: Monitor } = await import("~/app/data/monitor");

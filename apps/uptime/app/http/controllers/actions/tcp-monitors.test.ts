@@ -1,8 +1,8 @@
 /**
  * Tests for the TCP monitor create/update/delete/check actions. `cloudflare:sockets`
- * is stubbed (its `connect()` never touches the network) so `checkTcpMonitor`'s
- * on-demand check can run under `bun test`; the other three actions don't reach that
- * code path but still transitively import it, so the stub applies to the whole file.
+ * is stubbed (its `connect()` never touches the network) so `checkTcpMonitor`'s on-demand
+ * check can run outside the Workers runtime; the other three actions don't reach that code
+ * path but still transitively import it, so the stub applies to the whole file.
  *
  * `cloudflare:workers` is replaced for the same reason and one more: the meter event an
  * on-demand check produces is handed to `waitUntil`, so the double collects that work
@@ -21,8 +21,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 import type { Middleware, RequestHandler } from "remix/router";
@@ -37,6 +35,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
@@ -53,13 +52,13 @@ import routes from "~/routes/web";
 
 /**
  * The controller (via `app/services/tcp-check.ts`) statically imports `cloudflare:sockets`,
- * which doesn't exist under `bun test`; stub it so every test in this file — not just
+ * which only exists inside the Workers runtime; stub it so every test in this file — not just
  * `checkTcpMonitor` — can load the module graph.
  */
-await mock.module("cloudflare:sockets", () => ({
-	connect: mock(() => ({
+vi.doMock("cloudflare:sockets", () => ({
+	connect: vi.fn(() => ({
 		opened: Promise.resolve(),
-		close: mock(async () => {}),
+		close: vi.fn(async () => {}),
 	})),
 }));
 
@@ -78,7 +77,7 @@ let deferred: Promise<unknown>[] = [];
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** `waitUntil` collects deferred work so a test can await what the response doesn't. */
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -91,7 +90,7 @@ await mock.module("cloudflare:workers", () => ({
  * below are the ones the action actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 beforeEach(() => {
 	ingestEventsSafeMock.mockClear();
