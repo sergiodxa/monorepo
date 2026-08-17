@@ -1,9 +1,21 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
 import { isFailure } from "@pkg/result";
 import { XML } from "@pkg/xml";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import { RSS } from "./index";
+
+/** The feed URL `RSS.fetch` is pointed at. */
+let FEED_URL = "https://example.com/feed.xml";
+
+/** MSW server intercepting the feed request. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 let FULL_SPEC_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:slash="http://purl.org/rss/1.0/modules/slash/" xmlns:media="http://search.yahoo.com/mrss/">
@@ -494,23 +506,20 @@ describe("RSS", () => {
 	});
 
 	test("fetch accepts XML content types and parses the response body", async () => {
-		let originalFetch = globalThis.fetch;
-		let fetchMock = mock(async (..._args: Parameters<typeof fetch>) => {
-			return new Response(FULL_SPEC_XML, {
-				headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
-			});
-		});
+		let requests = 0;
 
-		// The global carries `preconnect` alongside its call signature, so the
-		// replacement has to carry it too for the stand-in to be a whole `fetch`.
-		globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect });
+		server.use(
+			http.get(FEED_URL, () => {
+				requests++;
+				return new HttpResponse(FULL_SPEC_XML, {
+					headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
+				});
+			}),
+		);
 
-		try {
-			let rss = await RSS.fetch("https://example.com/feed.xml");
-			expect(rss.channel.title).toBe("Example Feed");
-			expect(fetchMock).toHaveBeenCalledTimes(1);
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+		let rss = await RSS.fetch(FEED_URL);
+
+		expect(rss.channel.title).toBe("Example Feed");
+		expect(requests).toBe(1);
 	});
 });
