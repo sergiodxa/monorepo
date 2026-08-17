@@ -11,8 +11,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -24,6 +22,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -33,7 +32,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { maintenanceWindows, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { handler } = (await import("./maintenance-windows")).default as {
 	handler: RequestHandler<any>;

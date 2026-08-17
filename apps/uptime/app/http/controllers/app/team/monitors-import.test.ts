@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -25,6 +23,7 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";

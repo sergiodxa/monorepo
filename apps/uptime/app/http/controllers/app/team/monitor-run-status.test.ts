@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@pkg/cloudflare-mocks";
@@ -19,6 +17,7 @@ import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -27,7 +26,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 

@@ -14,8 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import type {
 	DataManipulationRequest,
@@ -35,6 +33,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
@@ -45,7 +44,7 @@ import en from "~/app/locales/en";
 import { memberships, monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
@@ -253,7 +252,7 @@ describe("monitor-card-usage", () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
 		let db = createRawFailingDatabase(sqliteDb);
 
-		let errors = spyOn(logger, "error").mockImplementation(() => {});
+		let errors = vi.spyOn(logger, "error").mockImplementation(() => {});
 
 		try {
 			let response = await send(db, team, membership, monitor.id);
@@ -278,7 +277,7 @@ describe("monitor-card-usage", () => {
 		let { sqliteDb, team, membership, monitor } = await createFixture();
 		let db = createRawFailingDatabase(sqliteDb, [{ consumed: Number.NaN }]);
 
-		let errors = spyOn(logger, "error").mockImplementation(() => {});
+		let errors = vi.spyOn(logger, "error").mockImplementation(() => {});
 
 		try {
 			let response = await send(db, team, membership, monitor.id);
