@@ -17,11 +17,6 @@ import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin";
 
 export default defineConfig({
 	test: {
-		// The slowest tests run ~3.8s: each file applies every migration to a fresh in-memory
-		// database and the first test in the file absorbs that. Vitest's 5s default left under a
-		// 25% margin on this machine, and CI is slower — a genuine hang still fails, just later.
-		testTimeout: 20_000,
-
 		projects: [
 			{
 				// One project covers every package: none of them uses a `~/*` alias or ships a
@@ -31,71 +26,30 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "packages",
-					include: [
-						"packages/arrays/src/**/*.test.ts?(x)",
-						"packages/uuid/src/**/*.test.ts?(x)",
-						"packages/duration/src/**/*.test.ts?(x)",
-						"packages/markdown/src/**/*.test.ts?(x)",
-						"packages/rss/src/**/*.test.ts?(x)",
-						"packages/strings/src/**/*.test.ts?(x)",
-						"packages/typeid/src/**/*.test.ts?(x)",
-						"packages/u/src/**/*.test.ts?(x)",
-						"packages/ui/src/**/*.test.ts?(x)",
-						"packages/webhooks/src/**/*.test.ts?(x)",
-						"packages/xml/src/**/*.test.ts?(x)",
-						"packages/api-client/src/**/*.test.ts?(x)",
-						"packages/get-client-ip/src/**/*.test.ts?(x)",
-						"packages/hostname/src/**/*.test.ts?(x)",
-						"packages/iife/src/**/*.test.ts?(x)",
-						"packages/kv-cache/src/**/*.test.ts?(x)",
-						"packages/location/src/**/*.test.ts?(x)",
-						"packages/lucide-remix/src/**/*.test.ts?(x)",
-						"packages/oidc-client/src/**/*.test.ts?(x)",
-						"packages/response/src/**/*.test.ts?(x)",
-						"packages/service-container/src/**/*.test.ts?(x)",
-						"packages/session-storage-kv/src/**/*.test.ts?(x)",
-						"packages/ui-router/src/**/*.test.ts?(x)",
-						"packages/validate/src/**/*.test.ts?(x)",
-						"packages/dates/src/**/*.test.ts?(x)",
-						"packages/cron/src/**/*.test.ts?(x)",
-						"packages/http/src/**/*.test.ts?(x)",
-						"packages/crypto/src/**/*.test.ts?(x)",
-						"packages/result/src/**/*.test.ts?(x)",
-						"packages/i18n/src/**/*.test.ts?(x)",
-						"packages/seo/src/**/*.test.ts?(x)",
-						"packages/jwt/src/**/*.test.ts?(x)",
-						"packages/server-timing/src/**/*.test.ts?(x)",
-						"packages/sitemap/src/**/*.test.ts?(x)",
-						"packages/logger/src/**/*.test.ts?(x)",
-						"packages/jobs/src/**/*.test.ts?(x)",
-						"packages/polar/src/**/*.test.ts?(x)",
-						"packages/workers-cache/src/**/*.test.ts?(x)",
-						"packages/pagination/src/**/*.test.ts?(x)",
-						"packages/rate-limit/src/**/*.test.ts?(x)",
-						"packages/data-table-d1/src/**/*.test.ts?(x)",
-						"packages/data-table-sqlstorage/src/**/*.test.ts?(x)",
-						"packages/mail/src/**/*.test.ts?(x)",
-						"packages/cloudflare-mocks/src/**/*.test.ts?(x)",
-						"packages/oidc-provider/src/**/*.test.ts?(x)",
-						"packages/blog-engine/src/**/*.test.ts?(x)",
-						"packages/spec/src/executor.test.ts",
-						"packages/spec/src/expectation.test.ts",
-						"packages/spec/src/lexer.test.ts",
-						"packages/spec/src/loader.test.ts",
-						"packages/spec/src/parser.test.ts",
-						"packages/spec/src/permissions.test.ts",
-						"packages/spec/src/plugins/demo.test.ts",
-						"packages/spec/src/plugins/env.test.ts",
-						"packages/spec/src/plugins/fs.test.ts",
-						"packages/spec/src/plugins/http.test.ts",
-						"packages/spec/src/plugins/url.test.ts",
-						"packages/spec/src/registry.test.ts",
-						"packages/spec/src/reporter.test.ts",
-						"packages/spec/src/sources.test.ts",
-						"packages/spec/src/workers.test.ts",
-						"packages/spec/src/workspace.test.ts",
+					include: ["packages/*/src/**/*.test.ts?(x)"],
+					// `@pkg/spec` is a `bun build --compile` CLI: these twelve exercise `Bun.spawn`,
+					// `Bun.serve`, `Bun.which`, `Bun.stdin` and `import { SQL } from "bun"`, which have
+					// no Node equivalent. Porting them would change what the package is, so they stay
+					// on `bun test` and are the reason `bun test` survives at all.
+					exclude: [
+						"packages/spec/src/builtins.test.ts",
+						"packages/spec/src/cli.test.ts",
+						"packages/spec/src/db-example.test.ts",
+						"packages/spec/src/dogfood.test.ts",
+						"packages/spec/src/http-example.test.ts",
+						"packages/spec/src/project-config.test.ts",
+						"packages/spec/src/runner.test.ts",
+						"packages/spec/src/transport-stdio.test.ts",
+						"packages/spec/src/plugins/browser.test.ts",
+						"packages/spec/src/plugins/cli.test.ts",
+						"packages/spec/src/plugins/db.test.ts",
+						"packages/spec/src/plugins/jwt.test.ts",
 					],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -108,6 +62,10 @@ export default defineConfig({
 					name: "uptime",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -118,6 +76,10 @@ export default defineConfig({
 					name: "blog",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -147,6 +109,10 @@ export default defineConfig({
 					name: "books",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -157,6 +123,10 @@ export default defineConfig({
 					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -167,6 +137,10 @@ export default defineConfig({
 					name: "blog-saas",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 			{
@@ -179,6 +153,10 @@ export default defineConfig({
 					name: "pkmn",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
+					// Not inherited from the top-level `test` block: a project ignores it, so the
+					// 5s default applies unless set here. The slowest files spend ~4s applying
+					// every migration to a fresh database before their first assertion runs.
+					testTimeout: 20_000,
 				},
 			},
 		],
