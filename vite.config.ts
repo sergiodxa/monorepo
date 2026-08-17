@@ -42,6 +42,16 @@ export default defineConfig({
 					pool: "threads",
 				},
 			},
+			{
+				root: "apps/blog",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "blog",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+				},
+			},
 		],
 	},
 
