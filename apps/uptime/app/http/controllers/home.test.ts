@@ -14,7 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import type { Renderer } from "remix/middleware/render";
@@ -28,6 +27,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
@@ -44,9 +44,9 @@ import routes from "~/routes/web";
  * stub answers every binding read with a non-empty placeholder, so the unconfigured case —
  * the one where the widget and its loader must both be absent — is unreachable otherwise.
  */
-let trialTurnstileSiteKey = mock((): string | null => null);
+let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
-await mock.module("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
+vi.doMock("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
 
 let { default: home } = await import("./home");
 

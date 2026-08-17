@@ -10,8 +10,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Database as TestDb } from "remix/data-table";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
@@ -24,6 +22,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

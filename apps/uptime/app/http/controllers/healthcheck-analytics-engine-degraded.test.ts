@@ -14,14 +14,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
-
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
@@ -29,7 +28,7 @@ import routes from "~/routes/web";
 /** The write binding the controller probes; module-scoped because `env` is captured on import. */
 let pingResults = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

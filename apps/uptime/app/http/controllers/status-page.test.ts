@@ -20,8 +20,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -40,6 +38,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -64,7 +63,7 @@ let kv = createKVNamespace();
 let pingResults = createAnalyticsEngine();
 let queue = createQueue();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
 
 import docsIndex from "~/app/http/controllers/docs-index";
 import routes from "~/routes/web";
