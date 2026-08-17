@@ -11,6 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 
 import type { Result } from "@pkg/result";
@@ -167,11 +169,10 @@ export async function loadProjectConfig(
 	let directory = resolve(suiteRoot);
 	for (let name of CONFIG_NAMES) {
 		let path = resolve(directory, name);
-		let file = Bun.file(path);
-		if (!(await file.exists())) continue;
+		if (!existsSync(path)) continue;
 		let text: string;
 		try {
-			text = await file.text();
+			text = await readFile(path, "utf8");
 		} catch (error) {
 			return failure(
 				new LoadError(

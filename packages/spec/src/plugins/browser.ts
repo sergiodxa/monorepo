@@ -13,7 +13,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { basename } from "node:path";
+import { spawn } from "node:child_process";
+import { accessSync, constants } from "node:fs";
+import { basename, delimiter, join, sep } from "node:path";
 
 import type { Result } from "@pkg/result";
 
@@ -851,23 +853,17 @@ async function runBrowser(
 	args: string[],
 	session: string,
 ): Promise<Result<Record<string, unknown>, SpecError>> {
-	if (Bun.which(BROWSER_BINARY) === null) {
+	if (browserBinaryPath() === null) {
 		return failure(
 			new ToolError(
 				`the browser capability requires the "${BROWSER_BINARY}" CLI, which is not on PATH; install it globally with \`npm install -g agent-browser && agent-browser install\``,
 			),
 		);
 	}
-	let command = [BROWSER_BINARY, "--session", session, ...args, "--json"];
 	let stdout: string;
 	let stderr: string;
 	try {
-		let child = Bun.spawn({ cmd: command, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
-		[stdout, stderr] = await Promise.all([
-			new Response(child.stdout).text(),
-			new Response(child.stderr).text(),
-			child.exited,
-		]);
+		[stdout, stderr] = await captureBrowser(["--session", session, ...args, "--json"]);
 	} catch (error) {
 		return failure(
 			new ToolError(
@@ -892,6 +888,60 @@ async function runBrowser(
 		);
 	}
 	return success(envelope.data ?? {});
+}
+
+/**
+ * Locate the trusted `agent-browser` CLI by scanning PATH for an executable of
+ * that name, the way a shell would. Returning the resolved path rather than a
+ * boolean keeps the answer useful for diagnostics, and `null` is the single
+ * signal that the capability is unavailable — every browser tool refuses with
+ * an install hint, and the end-to-end tests skip on it.
+ *
+ * @returns The absolute path of the binary, or null when it is not installed.
+ */
+export function browserBinaryPath(): string | null {
+	// A name containing a separator is already a path, not a PATH lookup.
+	if (BROWSER_BINARY.includes(sep)) return executable(BROWSER_BINARY);
+	for (let directory of (process.env.PATH ?? "").split(delimiter)) {
+		if (directory === "") continue;
+		let found = executable(join(directory, BROWSER_BINARY));
+		if (found !== null) return found;
+	}
+	return null;
+}
+
+/** The path back, when it names a file this process may execute; null otherwise. */
+function executable(path: string): string | null {
+	try {
+		accessSync(path, constants.X_OK);
+		return path;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Run the browser CLI to completion and collect both output streams. The exit
+ * code is deliberately discarded: `agent-browser` exits 0 even when a command
+ * fails, so the caller reads success from the JSON envelope instead.
+ *
+ * @param args - Arguments to pass after the binary name.
+ * @returns The child's stdout and stderr, decoded as UTF-8.
+ * @throws When the binary cannot be started.
+ */
+async function captureBrowser(args: string[]): Promise<[string, string]> {
+	let child = spawn(BROWSER_BINARY, args, { stdio: ["ignore", "pipe", "pipe"] });
+	let stdout = "";
+	let stderr = "";
+	child.stdout?.setEncoding("utf8");
+	child.stderr?.setEncoding("utf8");
+	child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
+	child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
+	await new Promise<void>((settle, reject) => {
+		child.once("error", reject);
+		child.once("close", () => settle());
+	});
+	return [stdout, stderr];
 }
 
 /** Parse one `agent-browser --json` line, returning null when it is not the envelope. */

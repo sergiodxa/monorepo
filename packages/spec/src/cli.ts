@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { readFile } from "node:fs/promises";
+
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
@@ -228,9 +230,7 @@ export async function main(argv: string[], sink: Sink): Promise<number> {
 		if (result.error?.file !== undefined) paths.push(result.error.file);
 		for (let path of paths) {
 			if (!sources.has(path)) {
-				let text = await Bun.file(path)
-					.text()
-					.catch(() => "");
+				let text = await readFile(path, "utf8").catch(() => "");
 				sources.set(path, { path, text });
 			}
 		}
@@ -341,6 +341,6 @@ function parsePositiveInteger(text: string): number | undefined {
 
 if (import.meta.main) {
 	let sink: Sink = { write: (text) => void process.stdout.write(text) };
-	let code = await main(Bun.argv.slice(2), sink);
+	let code = await main(process.argv.slice(2), sink);
 	process.exit(code);
 }

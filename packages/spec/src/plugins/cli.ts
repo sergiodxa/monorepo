@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { spawn } from "node:child_process";
 import { basename } from "node:path";
 
 import type { Result } from "@pkg/result";
@@ -95,27 +96,48 @@ async function run(args: ToolArg[], context: ToolContext): Promise<Result<Value,
 	}
 	let allowed = context.permissions.checkRun(basename(executable));
 	if (isFailure(allowed)) return allowed;
-	let cmd: [string, ...string[]] = [executable, ...command.slice(1)];
 	try {
-		let child = Bun.spawn({
-			cmd,
-			cwd: context.workspace.root,
-			env: childEnvironment(context),
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		let [stdout, stderr, exitCode] = await Promise.all([
-			new Response(child.stdout).text(),
-			new Response(child.stderr).text(),
-			child.exited,
-		]);
-		return success({ stdout, stderr, exit_code: exitCode });
+		return success(await capture(executable, command.slice(1), context));
 	} catch (error) {
 		return failure(
 			new ToolError(`cli.run failed to start "${executable}": ${describeError(error)}`),
 		);
 	}
+}
+
+/**
+ * Run one program to completion inside the workspace and collect everything a
+ * spec can assert on. Output is decoded as UTF-8 text, and a child terminated
+ * by a signal reports a nonzero `exit_code` so `expect exit_code is 0` cannot
+ * pass for a process that never finished.
+ *
+ * @param executable - The program to run.
+ * @param args - Its arguments, already validated as strings.
+ * @param context - Supplies the workspace root and the granted variables.
+ * @returns The captured stdout, stderr and exit code.
+ * @throws When the program cannot be started at all.
+ */
+async function capture(
+	executable: string,
+	args: string[],
+	context: ToolContext,
+): Promise<{ stdout: string; stderr: string; exit_code: number }> {
+	let child = spawn(executable, args, {
+		cwd: context.workspace.root,
+		env: childEnvironment(context),
+		stdio: ["ignore", "pipe", "pipe"],
+	});
+	let stdout = "";
+	let stderr = "";
+	child.stdout?.setEncoding("utf8");
+	child.stderr?.setEncoding("utf8");
+	child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
+	child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
+	let code = await new Promise<number>((settle, reject) => {
+		child.once("error", reject);
+		child.once("close", (exitCode: number | null) => settle(exitCode ?? 1));
+	});
+	return { stdout, stderr, exit_code: code };
 }
 
 /**

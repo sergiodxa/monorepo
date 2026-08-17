@@ -12,9 +12,9 @@
  */
 
 import type { Result } from "@pkg/result";
+import type { SQL } from "bun";
 
 import { failure, isFailure, success } from "@pkg/result";
-import { SQL } from "bun";
 
 import type { SpecError } from "../errors";
 import type { Plugin, ToolDescriptor } from "../plugin";
@@ -83,7 +83,7 @@ export function createDbPlugin(): Plugin {
 				);
 			}
 			if (connection === null) {
-				let opened = openConnection(url);
+				let opened = await openConnection(url);
 				if (isFailure(opened)) return opened;
 				connection = opened.data;
 			}
@@ -123,12 +123,18 @@ function readSql(args: ToolArg[]): Result<string, SpecError> {
 }
 
 /**
- * Open a pooled connection to `url`. Bun's SQL client selects the driver from
- * the URL scheme (`sqlite://`, `postgres://`, …); a malformed URL or an
- * unsupported scheme surfaces as a {@link ToolError} rather than a throw.
+ * Open a pooled connection to `url`. The SQL client selects the driver from the
+ * URL scheme (`sqlite://`, `postgres://`, …); a malformed URL, an unsupported
+ * scheme, or a runtime that has no SQL client at all surfaces as a
+ * {@link ToolError} rather than a throw.
+ *
+ * The client is imported here rather than at module scope so this module — and
+ * therefore the tool descriptors and every argument check above — loads under
+ * any runtime. Only actually connecting needs the Bun runtime.
  */
-function openConnection(url: string): Result<SQL, SpecError> {
+async function openConnection(url: string): Promise<Result<SQL, SpecError>> {
 	try {
+		let { SQL } = await import("bun");
 		return success(new SQL(url));
 	} catch (error) {
 		return failure(

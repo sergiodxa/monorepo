@@ -23,6 +23,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { spawn } from "node:child_process";
 import path from "node:path";
 
 import type { Result } from "@pkg/result";
@@ -57,9 +58,9 @@ const WIRE_CODES: ReadonlySet<string> = new Set<DiagnosticCode>([
 /** The slice of a spawned child the transport needs, kept structural. */
 interface PluginProcess {
 	/** The pipe the host writes requests into. */
-	stdin: { write(chunk: string): unknown; flush(): unknown };
-	/** The pipe the plugin writes replies into. */
-	stdout: ReadableStream<Uint8Array>;
+	stdin: { write(chunk: string): unknown };
+	/** The pipe the plugin writes replies into, read as newline-delimited bytes. */
+	stdout: AsyncIterable<Uint8Array>;
 	/** Terminate the child process. */
 	kill(): void;
 }
@@ -129,13 +130,7 @@ export async function connectStdioPlugin(
 	}
 	let child: PluginProcess;
 	try {
-		child = Bun.spawn({
-			cmd: command,
-			stdin: "pipe",
-			stdout: "pipe",
-			stderr: "ignore",
-			env: { PATH: process.env.PATH ?? "" },
-		});
+		child = await spawnChild(command);
 	} catch (error) {
 		return failure(
 			new ToolError(
@@ -190,7 +185,7 @@ export async function connectStdioPlugin(
  * @param plugin - The local plugin implementation to expose over the wire.
  */
 export async function servePlugin(plugin: Plugin): Promise<undefined> {
-	for await (let line of readLines(Bun.stdin.stream())) {
+	for await (let line of readLines(process.stdin)) {
 		if (line.trim() === "") continue;
 		let request = parseWireRequest(line);
 		// A malformed line has no id to reply to; skipping it beats replying
@@ -222,6 +217,46 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
 		});
 	}
 	return undefined;
+}
+
+/**
+ * Spawn a plugin command and resolve only once the OS confirms the child
+ * started, so a missing executable rejects here as a spawn failure instead of
+ * surfacing later as a closed connection. The child inherits nothing but PATH,
+ * and its stdin swallows write errors: a plugin that exits mid-call leaves a
+ * broken pipe behind, and that is reported through the pending request rather
+ * than as an unhandled stream error.
+ *
+ * @param command - The argv to spawn, first element being the executable.
+ * @returns The started child, narrowed to what the transport reads and writes.
+ * @throws When the executable cannot be started.
+ */
+async function spawnChild(command: string[]): Promise<PluginProcess> {
+	let child = spawn(command[0] ?? "", command.slice(1), {
+		stdio: ["pipe", "pipe", "ignore"],
+		env: { PATH: process.env.PATH ?? "" },
+	});
+	child.stdin?.on("error", () => {
+		// A dead child's pipe is expected; the in-flight request reports it.
+	});
+	let failed = await new Promise<Error | undefined>((settle) => {
+		child.once("spawn", () => settle(undefined));
+		child.once("error", (error: Error) => settle(error));
+	});
+	if (failed !== undefined) throw failed;
+	let stdin = child.stdin;
+	let stdout = child.stdout;
+	if (stdin === null || stdout === null) {
+		child.kill();
+		throw new Error("the child was started without usable stdio pipes");
+	}
+	return {
+		stdin,
+		stdout,
+		kill() {
+			child.kill();
+		},
+	};
 }
 
 /** Wire one spawned child into a request/reply connection. */
@@ -301,7 +336,6 @@ function openConnection(child: PluginProcess): Connection {
 				}
 				try {
 					child.stdin.write(`${JSON.stringify({ id, ...body })}\n`);
-					child.stdin.flush();
 				} catch (error) {
 					settle(
 						id,
@@ -381,7 +415,7 @@ function writeReply(reply: WireReply): undefined {
  * @yields One line at a time, without its terminating newline.
  */
 async function* readLines(
-	stream: ReadableStream<Uint8Array>,
+	stream: AsyncIterable<Uint8Array>,
 ): AsyncGenerator<string, undefined, undefined> {
 	let decoder = new TextDecoder();
 	let buffer = "";
