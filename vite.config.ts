@@ -13,7 +13,7 @@
  */
 import { defineConfig } from "vite-plus";
 
-import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin";
+import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
 
 export default defineConfig({
 	run: {
