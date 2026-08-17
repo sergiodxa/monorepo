@@ -7,48 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { describe, expect, test } from "vitest";
 
-import { plugin } from "bun";
-import { Glob } from "bun";
-
-/**
- * `import.meta.glob` is a Vite build-time feature with no plain-`bun test` equivalent,
- * so this shim patches the one call in `docs.ts` out for a plain object of thunks that
- * resolve real file content read via `node:fs`, before that module is ever imported.
- */
-plugin({
-	name: "docs-glob-shim",
-	setup(build) {
-		build.onLoad({ filter: /app\/services\/docs\.ts$/ }, (args) => {
-			let source = readFileSync(args.path, "utf8");
-			let docsDir = join(dirname(args.path), "../../resources/docs");
-			let glob = new Glob("**/*.md");
-			let entries: string[] = [];
-			for (let file of glob.scanSync({ cwd: docsDir })) entries.push(file);
-			let objectEntries = entries.map((rel) => {
-				let content = readFileSync(join(docsDir, rel), "utf8");
-				let key = `../../resources/docs/${rel}`;
-				return `${JSON.stringify(key)}: () => Promise.resolve(${JSON.stringify(content)})`;
-			});
-			let replacement = `const docFileLoaders = {${objectEntries.join(",")}};`;
-			let patched = source.replace(
-				/const docFileLoaders = import\.meta\.glob<string>\(\s*"\.\.\/\.\.\/resources\/docs\/\*\*\/\*\.md",\s*\{[\s\S]*?\}\s*\);/,
-				replacement,
-			);
-			if (patched === source) {
-				throw new Error(
-					"glob shim: replacement pattern did not match — check docs.ts hasn't changed shape",
-				);
-			}
-			return { contents: patched, loader: "tsx" };
-		});
-	},
-});
-
-let { listDocs, getDocLoader } = await import("./docs");
+import { getDocLoader, listDocs } from "./docs";
 
 describe("listDocs", () => {
 	test("returns non-empty sections", async () => {

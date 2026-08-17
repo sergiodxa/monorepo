@@ -20,12 +20,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Glob } from "bun";
+import { describe, expect, test } from "vitest";
 
 import type { ClaimViolation } from "~/app/lib/public-claims";
 
@@ -103,7 +102,7 @@ describe("findClaimViolations", () => {
 });
 
 describe("locale copy", () => {
-	let paths = [...new Glob("app/locales/*.ts").scanSync(ROOT)].sort();
+	let paths = globSync("app/locales/*.ts", { cwd: ROOT }).sort();
 
 	test("scans every locale", () => {
 		expect(paths.length).toBe(6);

@@ -12,9 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import { StepperField } from "./stepper-field";
 
@@ -73,7 +74,7 @@ describe("StepperField", () => {
 		let moduleUrl = Object.values(h)[0]?.moduleUrl ?? "";
 
 		expect(moduleUrl.startsWith("/resources/")).toBe(true);
-		expect(await Bun.file(new URL(`../..${moduleUrl}`, import.meta.url)).exists()).toBe(true);
+		expect(existsSync(new URL(`../..${moduleUrl}`, import.meta.url))).toBe(true);
 	});
 
 	/** Every prop the client re-renders from has to survive serialization, or hydration boots a different field. */

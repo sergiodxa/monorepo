@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
@@ -26,6 +26,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
@@ -165,8 +166,8 @@ describe("GET /trust", () => {
 		expect(article).not.toMatch(/\buptime guarantee\b/i);
 	});
 
-	test("its copy passes the public-claims guard", async () => {
-		let source = await Bun.file(new URL("./trust.tsx", import.meta.url).pathname).text();
+	test("its copy passes the public-claims guard", () => {
+		let source = readFileSync(new URL("./trust.tsx", import.meta.url), "utf8");
 
 		expect(findClaimViolations(source)).toEqual([]);
 	});

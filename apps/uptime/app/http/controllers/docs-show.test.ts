@@ -1,6 +1,6 @@
 /**
- * Tests the `/docs/*slug` controller: a real slug (sourced from the shimmed doc
- * content) renders its parsed Markdoc content inside the shared `DocsLayout` chrome
+ * Tests the `/docs/*slug` controller: a real slug (sourced from the real Markdown
+ * files under `resources/docs/**`) renders its parsed Markdoc content inside the shared `DocsLayout` chrome
  * along with a canonical link and its frontmatter description in `<head>`, and an
  * unknown slug renders the same not-found page the router's `defaultHandler` uses —
  * with no canonical link, since a 404 is not an indexable document.
@@ -9,65 +9,25 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
 import { ServiceContainer } from "@pkg/service-container";
-import { plugin } from "bun";
-import { Glob } from "bun";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToString } from "remix/ui/server";
+import { describe, expect, test } from "vitest";
 
 import i18n from "~/app/http/middleware/i18n";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
-/**
- * `import.meta.glob` is a Vite build-time feature with no plain-`bun test` equivalent,
- * so this shim patches the one call in `~/app/services/docs.ts` (reached transitively
- * through this controller) out for a plain object of thunks that resolve real file
- * content read via `node:fs`, before that module is ever imported.
- */
-plugin({
-	name: "docs-glob-shim",
-	setup(build) {
-		build.onLoad({ filter: /app\/services\/docs\.ts$/ }, (args) => {
-			let source = readFileSync(args.path, "utf8");
-			let docsDir = join(dirname(args.path), "../../resources/docs");
-			let glob = new Glob("**/*.md");
-			let entries: string[] = [];
-			for (let file of glob.scanSync({ cwd: docsDir })) entries.push(file);
-			let objectEntries = entries.map((rel) => {
-				let content = readFileSync(join(docsDir, rel), "utf8");
-				let key = `../../resources/docs/${rel}`;
-				return `${JSON.stringify(key)}: () => Promise.resolve(${JSON.stringify(content)})`;
-			});
-			let replacement = `const docFileLoaders = {${objectEntries.join(",")}};`;
-			let patched = source.replace(
-				/const docFileLoaders = import\.meta\.glob<string>\(\s*"\.\.\/\.\.\/resources\/docs\/\*\*\/\*\.md",\s*\{[\s\S]*?\}\s*\);/,
-				replacement,
-			);
-			if (patched === source) {
-				throw new Error(
-					"glob shim: replacement pattern did not match — check docs.ts hasn't changed shape",
-				);
-			}
-			return { contents: patched, loader: "tsx" };
-		});
-	},
-});
-
-let { default: docsShow } = await import("./docs-show");
+import docsShow from "./docs-show";
 
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
