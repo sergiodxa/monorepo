@@ -6,29 +6,35 @@ This monorepo contains multiple applications in `apps/` and shared packages in `
 
 Global commands to run from the repository root using Bun.
 
+Static checks run through Vite+ (`vp`), configured entirely in the root `vite.config.ts`.
+There are no `.oxlintrc.json` / `.oxfmtrc.json` files: per-package settings go in that file's
+`lint.overrides` / `fmt.overrides` so one file describes how anything in the repo is checked.
+
 ```bash
-bun format                      # Check formatting (oxfmt)
+bun check                       # Format, lint and type check in one pass (~8s). This is the
+                                 # one to run before a commit; CI runs exactly this.
+bun check:fix                   # Same, applying formatting and autofixes
+bun format                      # Check formatting only (oxfmt)
 bun format:fix                  # Fix formatting
-bun lint                        # Check linting (oxlint)
+bun lint                        # Check linting only (oxlint)
 bun lint:fix                    # Fix linting issues
-bun typecheck                   # TypeScript type checking
+bun typecheck                   # Type check only, via the Oxlint type-aware path (tsgolint)
 bun test --isolate              # Run all tests (--isolate is required: many test files across
                                  # the monorepo use mock.module(), which permanently overrides a
                                  # module for the rest of the process once applied — without
                                  # --isolate, one file's mock leaks into every file that runs
                                  # after it in the same shared process, causing unrelated
                                  # failures. --isolate gives every file its own fresh registry.)
-bun run test                    # Run every test: the root pass above, then a second pass per
-                                 # workspace whose tests need a different JSX runtime. Bun resolves
-                                 # one tsconfig.json per invocation, from the working directory, so a
-                                 # single run has exactly one jsxImportSource. The root sets
-                                 # `remix/ui`; `apps/blog`, `apps/books` and `apps/uptime`
-                                 # set `react`. A test that imports a React `.tsx` therefore cannot
-                                 # run in the root pass: add that workspace to `pathIgnorePatterns`
-                                 # in bunfig.toml and to the `test:react` script.
+bun run test                    # Same as above; the root script is `bun test --isolate`
 bun test file-path               # Single file/directory scope doesn't need --isolate
 bun test --watch                # Watch mode
+vp lint <path>                  # Scope a check to one workspace while iterating
 ```
+
+`bun typecheck` no longer shells out to `tsc` per workspace. It runs the same type-aware pass
+`vp check` does, which covers every file the workspace's tsconfig includes — test files
+included. `tsc --noEmit` still works inside a package when you want a second opinion; the two
+agree except for compound-component expando assignments, which tsgolint does not model.
 
 Local commands to run from the app directory (e.g. `apps/blog`):
 
@@ -45,12 +51,12 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST use Bun to install dependencies, run scripts, and execute tests
 - MUST follow Conventional Commits for commit messages
 - MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits)
-- MUST run `bun format:fix` at the repo root before every commit
+- MUST run `bun check` at the repo root before every commit, and `bun check:fix` to apply formatting and autofixes
 - MUST preserve every individual commit when merging into `main` — use a fast-forward merge (`git merge --ff-only`), never squash and never create a merge commit
 - MUST use `@pkg/result` for error handling instead of throwing exceptions
 - MUST write using `bun:test`, never using external test runners like Jest or Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories
-- MUST use `oxfmt` for code formatting and `oxlint` for linting, never using other tools like Prettier or ESLint
+- MUST use Vite+ (`vp check`) for formatting, linting and type checking, never other tools like Prettier, ESLint or a direct `tsc` run in CI
 - MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `wrangler d1 migrations` directly
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
@@ -70,7 +76,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
-- MUST update `.oxfmtrc.json` to include new apps with their formatting and style configuration
+- MUST add a new app's formatting or lint exceptions to `fmt.overrides` / `lint.overrides` in the root `vite.config.ts`, never as a per-package config file
 - MUST suggest new content for my blog when some pattern, package, feature, etc. could be interesting to write about and add it to [](./content/ideas.md)
 - MUST add new rules to this document when necessary, and update existing ones if they become outdated or need clarification
 - MUST follow the guidelines in this document, and suggest improvements when necessary

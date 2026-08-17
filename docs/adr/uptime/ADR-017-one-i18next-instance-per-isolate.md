@@ -88,9 +88,7 @@ function sharedInstance(options) {
 	shared ??= (async () => {
 		let instance = createInstance();
 		for (let plugin of options.plugins ?? []) instance.use(plugin);
-		await instance.init({
-			/* every supported language, no `lng` */
-		});
+		await instance.init({/* every supported language, no `lng` */});
 		return instance;
 	})();
 	return shared;

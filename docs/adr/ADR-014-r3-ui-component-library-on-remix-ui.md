@@ -372,20 +372,20 @@ Every `@pkg/ui` export gets an `@pkg/r3-ui` counterpart. Strategy per component:
 
 **HTML + CSS only — complete without any mixin**
 
-| Components                                                                                                                                                     | Notes                                                                                                    |
+| Components | Notes |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------- |
-| Alert, Badge, Card, Empty, Skeleton, Spinner, Separator, Keyboard, Header, Heading, Text, Section, Group, Toolbar, OverlayArrow, ImagePlaceholder, AspectRatio | Static styling ported verbatim                                                                           |
-| Label, Description, FieldError, Form, TextField, Input, TextArea, SearchField, FileTrigger, DateField, TimeField                                               | Native form elements; `TextArea` auto-grows via `field-sizing`; date/time fields ride `<input type="date | time">` |
-| Button, LinkButton, Link, NavLink, Breadcrumbs, Pagination                                                                                                     | Buttons/anchors; pending and active states server-rendered (`aria-current`, data attributes)             |
-| Checkbox, CheckboxGroup, RadioGroup/Radio, Switch, Slider (single thumb), Meter, ProgressBar                                                                   | Styled native controls                                                                                   |
-| Dialog, AlertDialog, Modal, Drawer, Sheet, Confirm                                                                                                             | `<dialog>` + Invoker Commands                                                                            |
-| Popover, Tooltip, HoverCard, NavigationMenu                                                                                                                    | Popover API / CSS hover + anchor positioning                                                             |
-| Disclosure, Accordion                                                                                                                                          | `<details>` / `<details name>`                                                                           |
-| Select                                                                                                                                                         | Native `<select>` + customizable-select styling                                                          |
-| ScrollArea, SelectionIndicator                                                                                                                                 | CSS scrollbars; anchor-positioned indicator                                                              |
-| Table (display, sorting, pagination)                                                                                                                           | Sorting/selection via links and forms                                                                    |
-| Tabs (link mode)                                                                                                                                               | Server-selected tabs as links                                                                            |
-| ListBox (display mode)                                                                                                                                         | Static option list styling                                                                               |
+| Alert, Badge, Card, Empty, Skeleton, Spinner, Separator, Keyboard, Header, Heading, Text, Section, Group, Toolbar, OverlayArrow, ImagePlaceholder, AspectRatio | Static styling ported verbatim |
+| Label, Description, FieldError, Form, TextField, Input, TextArea, SearchField, FileTrigger, DateField, TimeField | Native form elements; `TextArea` auto-grows via `field-sizing`; date/time fields ride `<input type="date | time">` |
+| Button, LinkButton, Link, NavLink, Breadcrumbs, Pagination | Buttons/anchors; pending and active states server-rendered (`aria-current`, data attributes) |
+| Checkbox, CheckboxGroup, RadioGroup/Radio, Switch, Slider (single thumb), Meter, ProgressBar | Styled native controls |
+| Dialog, AlertDialog, Modal, Drawer, Sheet, Confirm | `<dialog>` + Invoker Commands |
+| Popover, Tooltip, HoverCard, NavigationMenu | Popover API / CSS hover + anchor positioning |
+| Disclosure, Accordion | `<details>` / `<details name>` |
+| Select | Native `<select>` + customizable-select styling |
+| ScrollArea, SelectionIndicator | CSS scrollbars; anchor-positioned indicator |
+| Table (display, sorting, pagination) | Sorting/selection via links and forms |
+| Tabs (link mode) | Server-selected tabs as links |
+| ListBox (display mode) | Static option list styling |
 
 **Pure UI + opt-in mixin — the component ships no JS; the consumer's island adds the mixin**
 

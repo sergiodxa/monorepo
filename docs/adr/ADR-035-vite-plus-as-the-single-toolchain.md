@@ -180,9 +180,45 @@ Move workspace scripts to `run.tasks` in the root config, enable caching in CI, 
 
 ## Current Progress
 
-- [ ] Phase 0 — `@pkg/cloudflare-mocks` adopted across the 84 files
-- [ ] Phase 1 — `vp check` replaces Format, Lint and Typecheck
+- [x] Phase 0 — `@pkg/cloudflare-mocks` adopted across the 84 files
+- [x] Phase 1 — `vp check` replaces Format, Lint and Typecheck
 - [ ] Phase 2 — `apps/uptime` on Vitest
 - [ ] Phase 3 — remaining workspaces on Vitest
 - [ ] Phase 4 — Workers apps on `vitest-pool-workers`
 - [ ] Phase 5 — task orchestration, caching, `AGENTS.md`
+
+## Phase 1 Outcome
+
+`vp check` runs format, lint and type check in ~8s, against ~3m24s across the three CI jobs it
+replaces. `.oxlintrc.json`, `packages/ui/.oxlintrc.json` and `.oxfmtrc.json` are gone; the root
+`vite.config.ts` is the only place any of it is configured.
+
+Enabling the type-aware path surfaced **769 findings the previous setup could not see**, all
+now fixed. Two causes, in roughly equal measure:
+
+- Ten packages excluded their own test files from `tsc`, so those files had never been type
+  checked at all. Removing the exclusions took the error count from 31 to 61.
+- The eight type-aware lint families had never run.
+
+Among them were real defects, not style noise. `no-base-to-string` alone found file uploads
+being written to the database as the literal `[object File]` across the blog-engine CMS, post
+metadata destroyed as `[object Object]` on a database write, and the same `[object File]`
+coercion in four apps' urlencoded form submissions. `no-floating-promises` found an unhandled
+rejection that also left `data-transitioning` stuck on the host in `packages/ui`, and 18
+unawaited rejection assertions in `packages/jwt` — one in a callback that was not even `async`.
+`require-array-sort-compare` found a numeric sort that passed only because its fixture was
+1–4. `packages/u`'s `isLength` was an unsound type predicate narrowing scale names to `never`,
+so four mixins were interpolating `never` into CSS variable names.
+
+Two tsgolint limitations are suppressed with `@ts-ignore` rather than worked around, both
+documented at the site: compound-component expando assignment (`Chart.Tooltip = …`, which
+`tsc` accepts) and the deliberately-incompatible override in `types/bun-test.d.ts`. Note that
+`oxlint-disable` cannot suppress a `typescript(TSnnnn)` diagnostic — only `@ts-ignore` can, and
+`@ts-expect-error` fails `tsc` with TS2578 because `tsc` reports no error there.
+
+`types/bun-test.d.ts` corrects `bun-types`' declaration of the `resolves`/`rejects` chains,
+which are typed as the synchronous matcher set. Without it the type-aware path flags every
+`await expect(...).rejects` as awaiting a non-thenable, and the tempting fix — dropping the
+`await` — would silently stop those assertions from asserting under Vitest, which only
+auto-awaits a hanging assertion as a deprecated courtesy. All 116 rejection assertions are now
+awaited, including 62 that already were not before this work.

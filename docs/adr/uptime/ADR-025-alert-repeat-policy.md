@@ -144,9 +144,9 @@ unchanged, and `AlertEvent.summarizeIncident` still backs it.
 ### Negative
 
 - **Incident email cost is unbounded in outage length again.** A 7-day outage on an hourly
-  alert is ~168 emails (~$0.15 at ADR-004's Resend rate of ~$0.0009/email). The floor's worst
-  case — a `cooldown_minutes` of 0 or below 5 — is 12 emails an hour, ~2,016 over 7 days
-  (~$1.81). ADR-004 rejected exactly this shape of cost. The decision here is that an alert
+  alert is ~~168 emails (~~$0.15 at ADR-004's Resend rate of ~$0.0009/email). The floor's worst
+  case — a `cooldown_minutes` of 0 or below 5 — is 12 emails an hour, ~~2,016 over 7 days
+  (~~$1.81). ADR-004 rejected exactly this shape of cost. The decision here is that an alert
   which never goes silent is worth it: the worst case requires both an explicitly low cooldown
   and a week-long unattended outage, and email remains the most expensive thing this app does.
 - **A team that leaves an outage unattended for days gets a notification an hour for days.**
