@@ -184,7 +184,7 @@ Move workspace scripts to `run.tasks` in the root config, enable caching in CI, 
 - [x] Phase 1 — `vp check` replaces Format, Lint and Typecheck
 - [x] Phase 2 — `apps/uptime` on Vitest
 - [x] Phase 3 — remaining workspaces on Vitest
-- [ ] Phase 4 — Workers apps on `vitest-pool-workers` (deferred, see below)
+- [x] Phase 4 — `vitest-pool-workers` adopted for the tests that stood in for a binding (see below)
 - [x] Phase 5 — task orchestration, caching, `AGENTS.md`
 
 ## Phase 1 Outcome
@@ -336,3 +336,58 @@ Two things were deliberately **not** done, both because measurement said they wo
 The 57 per-workspace `typecheck` scripts were also left in place. `vp check` covers every file they
 would, but `tsc --noEmit` inside a package is the documented second opinion, and this migration used
 it to find the places where tsgolint and `tsc` disagree.
+
+## Phase 4 Outcome
+
+`@cloudflare/vitest-pool-workers@0.21.3` runs tests inside workerd, and it is compatible with
+the Vitest this repo pins — it requires `vitest ^4.1.0` against our 4.1.10. Four projects now
+exist alongside the threads ones: `blog-workers`, `packages-workers`, `uptime-workers`, and the
+suite is 1,062 files / 11,504 tests with both pools in one run.
+
+### What moved, and why not everything
+
+**`node:sqlite` does not exist in workerd.** That is the boundary. Every database-backed test in
+this repo builds its database through `@pkg/cloudflare-mocks/sqlite`, so it cannot run in the
+Workers pool without being rewritten against a real D1 or Durable Object binding — 260 files in
+`apps/uptime` alone. Those stay on the threads pool, and `cloudflareWorkersStub()` stays with
+them, so the phase as originally written ("deletes the Vite plugin stub") is not achievable by
+moving tests alone.
+
+What did move is the set of tests that were **standing in for a binding**: four hand-written
+`KVNamespace` fakes, one of them duplicated three times, each cast through
+`as unknown as KVNamespace` and each stubbing `list()` to an empty result. A file selects into
+the Workers pool by the `*.workers.test.ts` suffix.
+
+### The divergence that justified the phase
+
+`@pkg/kv-cache` asserted that a `"30 seconds"` TTL produced `expirationTtl: 30` and passed. A
+real KV binding answers `400 Invalid expiration_ttl of 30. Expiration TTL must be at least 60`.
+The fake accepted any value, so the suite had been promising that sub-minute TTLs work. No call
+site passes one, so nothing was broken in production — but this is exactly the class of bug the
+phase existed to find, and a fake cannot find it.
+
+### Three things that cost time
+
+- **The documented config API does not exist in 0.21.** `defineWorkersConfig` /
+  `defineWorkersProject` are gone; the package exports a `cloudflareTest()` **plugin** that takes
+  what used to be `poolOptions.workers`. The shipped `vitest-v3-to-v4` codemod is what spells the
+  new shape out.
+- **A Workers project needs an explicit `TestProjectInlineConfiguration` annotation.** It is the
+  only project with no `pool` of its own — the plugin supplies it — and type checking the
+  `projects` array otherwise exceeds TypeScript's comparison depth with TS2321.
+- **Naming `exclude` on a project replaces Vitest's defaults**, including `**/node_modules/**`.
+  Keeping workers files out of a threads project by adding an `exclude` therefore sent the glob
+  through the app's symlinked workspace dependencies and collected 1,033 files instead of 2.
+  `defaultExclude` has to be spread back in.
+
+`uptime-workers` prints "something prevents the main process from exiting" when both its files
+run together, because the app's wrangler config declares a queue consumer and a Durable Object
+that miniflare keeps alive. Vitest force-exits, the run reports 0, and CI passes in a clean
+clone; it is noise rather than a hang.
+
+### Worth doing next
+
+`packages/data-table-d1` tests the production D1 adapter against a hand-written D1 shim over
+`node:sqlite`, which is the largest remaining fidelity gap. It needs splitting rather than
+converting: part of the file deliberately exercises a D1 that returns no `meta`, which a real
+binding never does, so those tests keep a shim while the rest move.

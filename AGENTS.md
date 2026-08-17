@@ -35,6 +35,14 @@ its `~/*` aliases and `jsxImportSource`, which a root-rooted run cannot see. Use
 `vi.doMock` for the same specifier in one file has no effect, because the second dynamic import
 resolves to the instance already in the registry.
 
+A test that would otherwise stand in for a Cloudflare binding belongs in the Workers pool
+instead: name it `*.workers.test.ts` and it runs inside workerd with real bindings, taken from
+the app's own `wrangler.jsonc` (or, for a package, declared inline in the `packages-workers`
+project). That is how a KV, D1 or R2 assertion gets checked against Cloudflare's implementation
+rather than a hand-written stub — which is what caught `@pkg/kv-cache` asserting a 30-second KV
+TTL that a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
+database comes from `@pkg/cloudflare-mocks/sqlite` stays on the threads pool.
+
 Nothing runs under `bun test` any more. Where a test needs a Bun-only API — `packages/spec`'s
 `db` plugin connects through Bun's built-in SQL client, which has no Node equivalent — the
 scenario runs in a Bun child process that reports what it observed as JSON, and the
@@ -144,6 +152,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 - MUST back database tests with an in-memory adapter from `@pkg/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
 - MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests; never stub `globalThis.fetch` or inject a fake
+- MUST NOT hand-write a fake for a Cloudflare binding (`as unknown as KVNamespace` and the like). Name the file `*.workers.test.ts` and use the real binding from `cloudflare:test`; a fake diverges silently, and every one this repo had stubbed `list()` to an empty result
 - MUST let the `cloudflareWorkersStub()` plugin supply `env`/bindings — it is on every project whose workspace uses Cloudflare bindings, so a test importing `cloudflare:workers` needs no mock of its own; reach for `vi.doMock` + `await import(...)` only to replace a module before the subject loads
 - MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`
 - MUST add a regression test for every bug fixed: a test that fails against the old (buggy) behavior and passes with the fix, kept alongside the module's other tests, so the bug can never silently return
