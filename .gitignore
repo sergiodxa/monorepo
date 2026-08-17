@@ -138,7 +138,5 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-templates/**/bun.lock
-
 # macOS metadata
 .DS_Store

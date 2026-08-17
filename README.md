@@ -12,8 +12,11 @@ docs/               # Documentation and ADRs
 docs/vendor/        # Documentation of third-party dependencies
 packages/           # Shared packages
 scripts/            # Global scripts
-templates/          # Templates for apps and packages
 ```
+
+New apps and packages are written from the `create-app` and `create-package` skills in
+`.agents/skills/`, which document the structure and point at the workspaces to copy each
+concern from.
 
 ## Tech Stack
 

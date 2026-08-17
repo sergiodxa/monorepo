@@ -3,8 +3,3 @@
 # Registers the virtual `cloudflare:workers` module (see test/setup.ts) so source
 # files that import `env` at module load can be exercised across every workspace.
 preload = ["./test/setup.ts"]
-
-# `templates/` is scaffolding for new apps (placeholder package name, no installed
-# dependencies), so its example specs can't resolve `remix/*` at the repo root.
-# Skip them; they run once a template has been copied into a real workspace.
-pathIgnorePatterns = ["**/templates/**"]

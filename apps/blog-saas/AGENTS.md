@@ -26,7 +26,11 @@ bun run typecheck         # Type-check
 
 ## Structure
 
-Laravel-style layout (see `templates/app`). Import with `~/<dir>/*` aliases.
+Laravel-style layout: no `src/`, and each top-level directory names a role —
+`bootstrap/` (runtime entry points), `routes/` (the route table), `app/` (application
+logic), `resources/` (rendering), `config/` (ambient `*.d.ts`), `database/` (schema and
+migrations). Import across them with the `~/<dir>/*` aliases declared in `tsconfig.json`;
+a relative path is only for a sibling inside the same directory.
 
 - `bootstrap/` — `worker.ts` (fetch/scheduled entry: hostname routing, page-view
   metering, crons), `app.ts` (dashboard router), `tenant.ts` (the Blog Durable

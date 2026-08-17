@@ -40,11 +40,6 @@ export default defineConfig({
 	},
 
 	lint: {
-		// `templates/` is scaffolding with a placeholder package name and no installed
-		// dependencies, so the type-aware path cannot resolve its types — the same reason
-		// `bunfig.toml` keeps it out of the test run. It is checked once it is copied into a
-		// real workspace.
-		ignorePatterns: ["templates/**"],
 		options: {
 			typeAware: true,
 			typeCheck: true,

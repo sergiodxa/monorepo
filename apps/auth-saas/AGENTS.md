@@ -33,8 +33,12 @@ bun run db:remote:migrate # Apply migrations to remote database
 
 ## Structure
 
-Laravel-style top-level layout (see `templates/app`). Import with the `~/<dir>/*`
-aliases (e.g. `~/app/http/controllers/...`, `~/routes/web`), not `src/`.
+Laravel-style top-level layout: there is no `src/`, and each top-level directory names a
+role — `bootstrap/` for runtime entry points, `routes/` for the route table, `app/` for
+application logic, `resources/` for anything that renders, `config/` for ambient `*.d.ts`,
+`database/` for schema and migrations. Import across them with the `~/<dir>/*` aliases
+declared in `tsconfig.json` (e.g. `~/app/http/controllers/...`, `~/routes/web`); a
+relative path is only for a sibling inside the same directory.
 
 - `bootstrap/` — runtime entry points: `worker.ts` (Cloudflare `fetch`/`scheduled`
   handler, the only place Cloudflare APIs are used), `app.ts` (router assembly +
