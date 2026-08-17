@@ -1,11 +1,10 @@
 /**
  * Tests the `/healthcheck/analytics-engine` controller's "degraded" branch: the
  * `PING_RESULTS` binding is a real in-memory Analytics Engine dataset, so writes
- * genuinely work, but the Analytics Engine read-API probe fails (simulated via a
- * rejecting global `fetch`, the same way `app/services/analytics.test.ts` stubs
- * it), so `queryAnalytics` returns a
- * `failure()` Result. The controller must still respond 200, since writes keep
- * working even though the read API is down — see the source's docblock. Split into
+ * genuinely work, but the Analytics Engine read-API probe fails: MSW answers the SQL
+ * API with a transport error, so the `fetch` inside `queryAnalytics` rejects and it
+ * returns a `failure()` Result. The controller must still respond 200, since writes
+ * keep working even though the read API is down — see the source's docblock. Split into
  * its own file (rather than a second `describe` in
  * `healthcheck-analytics-engine.test.ts`) because Bun's module cache does not
  * re-run `cloudflare:workers`' mocked top-level code on a second dynamic import of
@@ -15,10 +14,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { ServiceContainer } from "@pkg/service-container";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 
@@ -38,9 +39,18 @@ await mock.module("cloudflare:workers", () => ({
 
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 
-globalThis.fetch = mock(async (..._args: unknown[]) => {
-	throw new Error("network unreachable");
-}) as unknown as typeof fetch;
+/** The Analytics Engine SQL API endpoint the read probe POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/**
+ * MSW server failing the SQL API at the transport level. A non-2xx would exercise the
+ * other branch of `queryAnalytics`; this one is the unreachable-read-API case.
+ */
+let server = setupServer(http.post(SQL_URL, () => HttpResponse.error()));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 200 degraded when the write binding works but the read API fails", async () => {
@@ -67,6 +77,8 @@ describe("GET /healthcheck/analytics-engine", () => {
 		expect(body.binding).toBe(true);
 		expect(body.apiConnected).toBe(false);
 		expect(body.eventCount).toBeNull();
-		expect(body.message).toContain("network unreachable");
+		// The rejection's own message is surfaced, so an operator reading the healthcheck
+		// sees why the read API is unreachable rather than a generic "degraded".
+		expect(body.message).toContain("Failed to fetch");
 	});
 });
