@@ -19,7 +19,9 @@ describe(match, () => {
 	test("calls failure handler for failure result", () => {
 		let result = failure(new Error("Oops"));
 		let value = match(result, {
-			success: (data) => `Got: ${data}`,
+			// The literal narrows to a failure, so the success branch is only
+			// reachable through the annotation that pins the success type.
+			success: (data: number) => `Got: ${data}`,
 			failure: (error) => `Error: ${error.message}`,
 		});
 		expect(value).toBe("Error: Oops");
@@ -54,7 +56,7 @@ describe(match, () => {
 	test("works with async failure result", async () => {
 		let result = Promise.resolve(failure(new Error("Async error")));
 		let value = await match(result, {
-			success: (data) => `Got: ${data}`,
+			success: (data: number) => `Got: ${data}`,
 			failure: (error) => `Error: ${error.message}`,
 		});
 		expect(value).toBe("Error: Async error");

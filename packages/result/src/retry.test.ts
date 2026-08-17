@@ -21,6 +21,21 @@ import { success } from "./success.js";
  */
 const SECOND_MS = 1_000;
 
+/**
+ * The gap between each pair of consecutive timestamps, i.e. how long the
+ * retry loop waited before each re-attempt. Fewer than two timestamps means
+ * no wait happened, so the result is empty.
+ */
+function deltas(timestamps: number[]): number[] {
+	let gaps: number[] = [];
+	let previous: number | undefined;
+	for (let timestamp of timestamps) {
+		if (previous !== undefined) gaps.push(timestamp - previous);
+		previous = timestamp;
+	}
+	return gaps;
+}
+
 describe(retry, () => {
 	test("returns success immediately if first attempt succeeds", async () => {
 		let attempts = 0;
@@ -141,8 +156,7 @@ describe(retry, () => {
 		);
 
 		// Check delays are roughly constant (50ms each)
-		for (let i = 1; i < timestamps.length; i++) {
-			let diff = timestamps[i] - timestamps[i - 1];
+		for (let diff of deltas(timestamps)) {
 			expect(diff).toBeGreaterThanOrEqual(40);
 			expect(diff).toBeLessThan(100);
 		}
@@ -162,10 +176,7 @@ describe(retry, () => {
 		);
 
 		// Delays should be: 50, 100, 150 (delay * attempt)
-		let delays: number[] = [];
-		for (let i = 1; i < timestamps.length; i++) {
-			delays.push(timestamps[i] - timestamps[i - 1]);
-		}
+		let delays = deltas(timestamps);
 		// Check delays are in expected ranges with tolerance for timing jitter
 		expect(delays[0]).toBeGreaterThanOrEqual(40);
 		expect(delays[0]).toBeLessThan(80);
@@ -189,10 +200,7 @@ describe(retry, () => {
 		);
 
 		// Delays should be: 50, 100, 200 (delay * 2^(attempt-1))
-		let delays: number[] = [];
-		for (let i = 1; i < timestamps.length; i++) {
-			delays.push(timestamps[i] - timestamps[i - 1]);
-		}
+		let delays = deltas(timestamps);
 		// Check delays are in expected ranges with tolerance for timing jitter
 		expect(delays[0]).toBeGreaterThanOrEqual(40);
 		expect(delays[0]).toBeLessThan(80);
@@ -215,7 +223,7 @@ describe(retry, () => {
 			{ times: 3, delay: 50, backoff: "constant" },
 		);
 
-		let diff = timestamps[1] - timestamps[0];
+		let [diff] = deltas(timestamps);
 		expect(diff).toBeGreaterThanOrEqual(40);
 		expect(diff).toBeLessThan(100);
 	});
@@ -241,8 +249,9 @@ describe(retry, () => {
 		// untyped callers, and a duration string is no longer accepted.
 		let delay = "100ms" as unknown as number;
 
-		await expect(retry(async () => success("done"), { times: 3, delay })).rejects.toThrow(
-			TypeError,
+		let rejection = await retry(async () => success("done"), { times: 3, delay }).catch(
+			(error: unknown) => error,
 		);
+		expect(rejection).toBeInstanceOf(TypeError);
 	});
 });
