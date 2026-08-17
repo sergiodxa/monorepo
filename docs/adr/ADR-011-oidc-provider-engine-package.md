@@ -376,3 +376,4 @@ Move `action`/`middleware`/`form`/`db-errors` into a shared package consumed by 
 - The tenant DB schema and every endpoint are unchanged; this is a repackaging. A tenant DO created before the extraction keeps working after it (same SQLite, same migrations, same routes).
 - This ADR depends on the ADR-009 adapter extractions (`@pkg/data-table-sqlstorage`, `@pkg/data-table-d1`); sequence whichever platform lands first to do that extraction, and the other consumes it.
 - Naming: `@pkg/oidc-provider` describes what it is (an OIDC/OAuth2 provider) rather than paralleling `@pkg/blog-engine`'s role-based name — chosen deliberately for precision.
+- The Phase 5 item proposing a `templates/` self-hosted worker is no longer executable as written: `templates/` was removed when the Vite+ migration replaced it with the `create-app` / `create-package` skills (ADR-035). The example-worker idea stands on its own if it is ever wanted; it would land as an app under `apps/*`.
