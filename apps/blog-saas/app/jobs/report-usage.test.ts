@@ -1,5 +1,3 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
-
 /**
  * Unit tests for the usage-reporting cron `reportUsage`, focused on the metered-usage
  * idempotency fix: each blog-day is ingested into Polar with a deterministic
@@ -16,12 +14,14 @@ import type { PolarClient as PolarClientType } from "@pkg/polar";
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TestDatabase } from "~/app/test/db";
 
-// The analytics helper and job read `env` at import time; supply only the Analytics
-// Engine SQL API credentials, which is all the reporting path reads.
-await mock.module("cloudflare:workers", () => ({
+// The analytics helper and job read `env` at import time, and the mock only reaches imports
+// that run after it, so it is installed above the dynamic imports below. Only the Analytics
+// Engine SQL API credentials are supplied, which is all the reporting path reads.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 	DurableObject: class {},
 }));

@@ -160,20 +160,12 @@ export default defineConfig({
 				},
 			},
 			{
-				// Listed file by file rather than by glob: the app's model, job and provisioner
-				// tests go through `app/test/db.ts`, whose driver still opens `bun:sqlite`, so
-				// they stay on bun until that helper moves to the shared SQLite adapter.
 				root: "apps/blog-saas",
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "blog-saas",
-					include: [
-						"app/http/controllers/api/webhooks/polar.test.ts",
-						"app/http/controllers/dashboard/blogs.test.ts",
-						"app/services/analytics.test.ts",
-						"bootstrap/worker.test.ts",
-					],
+					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 				},
 			},

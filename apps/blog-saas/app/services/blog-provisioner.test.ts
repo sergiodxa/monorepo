@@ -1,5 +1,3 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
-
 /**
  * Unit tests for `BlogProvisioner`, the blog-lifecycle service: the billing
  * entitlement gate that decides whether a new blog boots active or suspended, slug
@@ -15,6 +13,7 @@ import type { HostnameClient } from "@pkg/hostname";
 import { createDurableObjectNamespace, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { http } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TestDatabase } from "~/app/test/db";
 import type { PlatformMeta } from "~/bootstrap/tenant";
@@ -37,25 +36,24 @@ function makeStub() {
 }
 
 /**
- * Publishes the current bindings as the provisioner's environment, so each test writes
- * into a slug cache of its own. The namespace hands back a stub recording the RPCs the
- * provisioner fans out; a blog resolves to the same stub every time, as on the platform.
+ * Publishes the bindings as the provisioner's environment. The mock only reaches imports that
+ * run after it, and the provisioner reads `env` at import time, so it is installed once here,
+ * above the dynamic imports below; each test empties the slug cache in place rather than
+ * swapping in a fresh one the published environment would never see. The namespace hands back
+ * a stub recording the RPCs the provisioner fans out, and a blog resolves to the same stub
+ * every time, as on the platform.
  */
-function bindEnv(): void {
-	void mock.module("cloudflare:workers", () => ({
-		env: createEnv<Cloudflare.Env>({
-			PLATFORM_DOMAIN: "blog.test",
-			OIDC_ISSUER: "https://sso.test",
-			SSO_MANAGEMENT_CLIENT_ID: "mgmt-client",
-			SSO_MANAGEMENT_CLIENT_SECRET: "mgmt-secret",
-			SLUG_CACHE: slugCache,
-			BLOG: createDurableObjectNamespace(() => makeStub()),
-		}),
-		DurableObject: class {},
-	}));
-}
-
-bindEnv();
+vi.doMock("cloudflare:workers", () => ({
+	env: createEnv<Cloudflare.Env>({
+		PLATFORM_DOMAIN: "blog.test",
+		OIDC_ISSUER: "https://sso.test",
+		SSO_MANAGEMENT_CLIENT_ID: "mgmt-client",
+		SSO_MANAGEMENT_CLIENT_SECRET: "mgmt-secret",
+		SLUG_CACHE: slugCache,
+		BLOG: createDurableObjectNamespace(() => makeStub()),
+	}),
+	DurableObject: class {},
+}));
 
 let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
@@ -110,8 +108,7 @@ afterAll(() => server.close());
 
 beforeEach(() => {
 	harness = createTestDatabase();
-	slugCache = createKVNamespace();
-	bindEnv();
+	slugCache.reset();
 	stubCalls = [];
 	fetchedUrls = [];
 	stubFetch();
