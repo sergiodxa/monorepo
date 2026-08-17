@@ -28,12 +28,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, globSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Glob } from "bun";
+import { describe, expect, test } from "vitest";
 
 import { findAriaViolations } from "./aria-tokens";
 
@@ -137,7 +136,7 @@ describe("ARIA token attributes, repo-wide", () => {
 		let scanned = 0;
 
 		for (let area of SCANNED) {
-			for (let file of new Glob("**/*.{ts,tsx}").scanSync(join(ROOT, area))) {
+			for (let file of globSync("**/*.{ts,tsx}", { cwd: join(ROOT, area) })) {
 				let path = `${area}/${file}`;
 				if (path.includes("/node_modules/")) continue;
 				if (path.includes(".test.")) continue;
@@ -171,7 +170,7 @@ describe("ARIA token attributes, repo-wide", () => {
 
 			let violations: string[] = [];
 
-			for (let file of new Glob("**/*.{ts,tsx}").scanSync(join(ROOT, exempt))) {
+			for (let file of globSync("**/*.{ts,tsx}", { cwd: join(ROOT, exempt) })) {
 				let path = `${exempt}${file}`;
 				if (path.includes("/node_modules/") || path.includes(".test.")) continue;
 				for (let violation of findAriaViolations(path, readFileSync(join(ROOT, path), "utf8"))) {

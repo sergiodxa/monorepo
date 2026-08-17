@@ -19,6 +19,17 @@ export default defineConfig({
 	test: {
 		projects: [
 			{
+				// The repo-root `test/` directory: cross-cutting guards that scan every workspace,
+				// so they belong to no single one.
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "root",
+					include: ["test/**/*.test.ts?(x)"],
+					pool: "threads",
+					testTimeout: 20_000,
+				},
+			},
+			{
 				// One project covers every package: none of them uses a `~/*` alias or ships a
 				// Vite config, so the root tsconfig resolves them all. `.spec` files belong to
 				// `@pkg/spec`'s own runner and never match this glob.

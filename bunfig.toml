@@ -8,6 +8,7 @@ preload = ["./test/setup.ts"]
 # but not its runner context, so anything using `vi.*` throws here. This whole block goes away
 # once `vp test` owns the suite.
 pathIgnorePatterns = [
+	"**/test/**",
 	"**/apps/uptime/**",
 	"**/packages/arrays/**",
 	"**/packages/uuid/**",
