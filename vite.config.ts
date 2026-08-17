@@ -58,6 +58,7 @@ export default defineConfig({
 						"packages/result/src/**/*.test.ts?(x)",
 						"packages/i18n/src/**/*.test.ts?(x)",
 						"packages/seo/src/**/*.test.ts?(x)",
+						"packages/mail/src/**/*.test.ts?(x)",
 					],
 					pool: "threads",
 				},

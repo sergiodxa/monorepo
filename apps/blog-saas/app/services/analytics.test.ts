@@ -5,13 +5,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-await mock.module("cloudflare:workers", () => ({
+// The helper reads `env` at import time, and the mock only reaches imports that run after
+// it, so the account credentials are published before the dynamic import below.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ CF_ACCOUNT_ID: "acct-1", CF_API_TOKEN: "token-1" }),
 }));
 

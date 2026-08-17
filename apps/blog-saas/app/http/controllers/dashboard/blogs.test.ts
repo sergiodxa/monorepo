@@ -7,15 +7,15 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Region } from "~/app/models/blog";
 
-// The controller module reads `env` at import time; supply only the platform domain, so
-// it loads under `bun test` without the Workers runtime.
-await mock.module("cloudflare:workers", () => ({
+// The controller module reads `env` at import time, and the mock only reaches imports that
+// run after it; supply only the platform domain, so the dynamic import below loads without
+// the Workers runtime.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ PLATFORM_DOMAIN: "blog.test" }),
 	DurableObject: class {},
 }));

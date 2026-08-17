@@ -8,13 +8,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, test } from "bun:test";
-
 import { createEnv } from "@pkg/cloudflare-mocks";
+import { describe, expect, test, vi } from "vitest";
 
-// The controller module reads `env` at import time; supply only the billing
-// configuration, so it loads under `bun test` without touching the Workers runtime.
-await mock.module("cloudflare:workers", () => ({
+// The controller module reads `env` at import time, and the mock only reaches imports that
+// run after it; supply only the billing configuration, so the dynamic import below loads
+// without touching the Workers runtime.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({
 		POLAR_PRODUCT_ID: "prod_configured",
 		POLAR_WEBHOOK_SECRET: "whsec_test",
