@@ -47,10 +47,10 @@ describe("rss utils", () => {
 	});
 
 	test("reads guid values and empty records", () => {
-		expect(getGuidValue({ guid: "plain-guid" })).toBe("plain-guid");
-		expect(getGuidValue({ guid: { value: "structured-guid", isPermaLink: false } })).toBe(
-			"structured-guid",
-		);
+		expect(getGuidValue({ title: "Post", guid: "plain-guid" })).toBe("plain-guid");
+		expect(
+			getGuidValue({ title: "Post", guid: { value: "structured-guid", isPermaLink: false } }),
+		).toBe("structured-guid");
 		expect(isEmptyRecord()).toBe(true);
 		expect(isEmptyRecord({})).toBe(true);
 		expect(isEmptyRecord({ key: "value" })).toBe(false);

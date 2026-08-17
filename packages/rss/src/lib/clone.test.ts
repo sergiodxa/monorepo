@@ -22,10 +22,10 @@ describe("rss clone helpers", () => {
 		};
 
 		let clone = cloneChannel(channel);
-		if (Array.isArray(clone.category) && typeof clone.category[0] !== "string") {
-			clone.category[0].value = "Changed";
-		}
-		if (Array.isArray(clone.atomLink)) clone.atomLink[0].href = "https://changed.example.com";
+		let clonedCategory = Array.isArray(clone.category) ? clone.category[0] : undefined;
+		if (clonedCategory && typeof clonedCategory !== "string") clonedCategory.value = "Changed";
+		let clonedAtomLink = Array.isArray(clone.atomLink) ? clone.atomLink[0] : undefined;
+		if (clonedAtomLink) clonedAtomLink.href = "https://changed.example.com";
 		if (clone.namespaces) clone.namespaces.media = "changed";
 		if (clone.extensions?.[0]?.attributes) clone.extensions[0].attributes.scheme = "changed";
 
@@ -37,6 +37,7 @@ describe("rss clone helpers", () => {
 
 	test("clones item data deeply enough to prevent mutation leaks", () => {
 		let item = {
+			title: "Post",
 			guid: { value: "tag:example.com,2026:1", isPermaLink: false },
 			category: [{ value: "Updates", domain: "topics" }],
 			enclosure: [{ url: "https://example.com/file.mp3", length: 12, type: "audio/mpeg" }],
@@ -53,12 +54,12 @@ describe("rss clone helpers", () => {
 
 		let clone = cloneItem(item);
 		if (typeof clone.guid !== "string" && clone.guid) clone.guid.value = "changed";
-		if (Array.isArray(clone.category) && typeof clone.category[0] !== "string") {
-			clone.category[0].value = "Changed";
-		}
-		if (Array.isArray(clone.enclosure)) clone.enclosure[0].url = "https://changed.example.com";
-		if (Array.isArray(clone.atomLink))
-			clone.atomLink[0].href = "https://changed.example.com/post.json";
+		let clonedCategory = Array.isArray(clone.category) ? clone.category[0] : undefined;
+		if (clonedCategory && typeof clonedCategory !== "string") clonedCategory.value = "Changed";
+		let clonedEnclosure = Array.isArray(clone.enclosure) ? clone.enclosure[0] : undefined;
+		if (clonedEnclosure) clonedEnclosure.url = "https://changed.example.com";
+		let clonedAtomLink = Array.isArray(clone.atomLink) ? clone.atomLink[0] : undefined;
+		if (clonedAtomLink) clonedAtomLink.href = "https://changed.example.com/post.json";
 		if (clone.extensions?.[0]?.attributes) clone.extensions[0].attributes.url = "changed";
 
 		expect(item.guid).toEqual({ value: "tag:example.com,2026:1", isPermaLink: false });

@@ -194,7 +194,7 @@ describe("RSS", () => {
 		rss.removeItem("1");
 
 		expect(rss.items).toHaveLength(1);
-		expect(rss.items[0].guid).toBe("2");
+		expect(rss.items[0]?.guid).toBe("2");
 	});
 
 	test("toJSON returns the full feed payload", () => {
@@ -494,14 +494,16 @@ describe("RSS", () => {
 	});
 
 	test("fetch accepts XML content types and parses the response body", async () => {
-		let fetchMock = mock(async () => {
+		let originalFetch = globalThis.fetch;
+		let fetchMock = mock(async (..._args: Parameters<typeof fetch>) => {
 			return new Response(FULL_SPEC_XML, {
 				headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
 			});
 		});
 
-		let originalFetch = globalThis.fetch;
-		globalThis.fetch = fetchMock as typeof fetch;
+		// The global carries `preconnect` alongside its call signature, so the
+		// replacement has to carry it too for the stand-in to be a whole `fetch`.
+		globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect });
 
 		try {
 			let rss = await RSS.fetch("https://example.com/feed.xml");
