@@ -151,7 +151,7 @@ export class TrainerValidationError extends Error {
  * Validates an untrusted parsed JSON value into a {@link TrainerDefinition}.
  *
  * The loader is pure and disk-free: callers hand it an already-parsed value
- * (e.g. from `Bun.file(path).json()` or a bundled JSON import) and receive back
+ * (e.g. from a file read or a bundled JSON import) and receive back
  * a typed definition or a {@link TrainerValidationError} carrying the first
  * validation issue. It never touches the filesystem so it can be unit-tested
  * directly and reused by both the editor and the export handler.

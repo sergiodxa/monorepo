@@ -17,7 +17,7 @@
  * stays loadable as content changes.
  *
  * The validator is pure and disk-free: callers hand it an already-parsed value
- * (a bundled JSON import or `Bun.file(path).json()`) so it can be unit-tested
+ * (a bundled JSON import or a file read) so it can be unit-tested
  * directly and reused by both the loader and the export handler.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

@@ -2,7 +2,7 @@
  * Client-safe species-id rules shared by the species editor view and the
  * server-side export handler.
  *
- * These are pure (no filesystem, no `import.meta.dir`) so the browser bundle can
+ * These are pure (no filesystem, no module-path resolution) so the browser bundle can
  * import them from the editor view without pulling in the server-only export
  * module — which resolves paths at load time and would crash in the browser.
  *

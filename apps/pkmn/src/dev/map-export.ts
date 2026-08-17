@@ -11,7 +11,7 @@
  * The handler ({@link runMapExport}) validates an untrusted payload with the map
  * loader (schema shape plus the cross-field invariants — layer lengths, tile refs),
  * shapes it, re-checks the target through the shared path-safety guard (defense in
- * depth), writes the JSON with `Bun.write` scoped to the app root, and registers
+ * depth), writes the JSON scoped to the app root, and registers
  * the map id → served URL in `src/content/manifest.json` (read/update/write,
  * tolerant of an absent or partial manifest). It reuses the same guard every other
  * dev-tools export uses so no write can escape the allow-list.
@@ -20,6 +20,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { failure, isFailure, type Result, success } from "@pkg/result";
@@ -28,7 +29,7 @@ import type { MapData } from "~/presentation/render/map-schema";
 
 import { loadMap } from "~/presentation/overworld/map-loader";
 
-import { APP_ROOT, ExportValidationError, MANIFEST_PATH } from "./export";
+import { APP_ROOT, ExportValidationError, MANIFEST_PATH, writeExportFile } from "./export";
 import { validateWritePath } from "./path-safety";
 
 /** Directory (under the app root) map JSON files are written into. */
@@ -70,7 +71,7 @@ export interface MapExportResult {
 	url: string;
 	/** The resolved on-disk location of the map JSON. */
 	absolutePath: string;
-	/** Byte count reported by `Bun.write` for the map JSON. */
+	/** Byte count written for the map JSON. */
 	bytesWritten: number;
 }
 
@@ -152,12 +153,12 @@ export function registerMap(manifest: ManifestMaps, payload: MapExportPayload): 
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
 async function readManifest(): Promise<Result<ManifestMaps, ExportValidationError>> {
-	let file = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
-	if (!(await file.exists())) return success({ maps: {} });
+	let manifestFile = resolve(APP_ROOT, MANIFEST_PATH);
+	if (!existsSync(manifestFile)) return success({ maps: {} });
 
 	let parsed: unknown;
 	try {
-		parsed = await file.json();
+		parsed = JSON.parse(readFileSync(manifestFile, "utf8"));
 	} catch {
 		return failure(new ExportValidationError("Asset manifest is not valid JSON."));
 	}
@@ -200,7 +201,7 @@ export async function runMapExport(payload: unknown): Promise<Result<MapExportRe
 	if (isFailure(safePath)) return failure(safePath.error);
 
 	let absolutePath = resolve(APP_ROOT, safePath.data);
-	let bytesWritten = await Bun.write(absolutePath, shaped.data.contents);
+	let bytesWritten = writeExportFile(absolutePath, shaped.data.contents);
 
 	// Register the map id → served URL in the manifest, tolerating an absent one.
 	let manifest = await readManifest();
@@ -210,7 +211,7 @@ export async function runMapExport(payload: unknown): Promise<Result<MapExportRe
 	let manifestPath = validateWritePath(MANIFEST_PATH);
 	if (isFailure(manifestPath)) return failure(manifestPath.error);
 
-	await Bun.write(
+	writeExportFile(
 		resolve(APP_ROOT, manifestPath.data),
 		`${JSON.stringify(nextManifest, null, "\t")}\n`,
 	);

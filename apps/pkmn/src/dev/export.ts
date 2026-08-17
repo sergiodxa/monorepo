@@ -1,8 +1,8 @@
 /**
  * Server-side export logic for the dev tools. It validates an export payload
  * with `remix/data-schema`, re-checks the target through the pure path-safety
- * guard, and writes the file with `Bun.write` scoped to the app root. Editors
- * post here to persist authored content into `src/content` / `src/assets`.
+ * guard, and writes the file scoped to the app root. Editors post here to
+ * persist authored content into `src/content` / `src/assets`.
  *
  * Alongside the text export ({@link runExport}) it exposes a binary export
  * ({@link runBinaryExport}) that decodes a base64 body to bytes before writing —
@@ -15,7 +15,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { failure, isFailure, type Result, success } from "@pkg/result";
 import { object, parseSafe, string } from "remix/data-schema";
@@ -34,7 +36,24 @@ import {
  * write is resolved against this so a validated relative path can never point
  * outside the app even if the process cwd changes.
  */
-export const APP_ROOT = resolve(import.meta.dir, "..", "..");
+export const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/**
+ * Writes `contents` at `absolutePath`, creating any missing parent directory
+ * first, and reports how many bytes landed on disk. Every export in the dev
+ * tools persists through this so a fresh checkout can write into a directory
+ * that does not exist yet, and so `bytesWritten` means the same thing
+ * everywhere.
+ *
+ * @param absolutePath Destination already resolved against {@link APP_ROOT}.
+ * @param contents UTF-8 text, or the decoded bytes of a binary asset.
+ * @returns The byte count written.
+ */
+export function writeExportFile(absolutePath: string, contents: string | Uint8Array): number {
+	mkdirSync(dirname(absolutePath), { recursive: true });
+	writeFileSync(absolutePath, contents);
+	return typeof contents === "string" ? Buffer.byteLength(contents) : contents.byteLength;
+}
 
 /**
  * Schema for an export request body. `path` is a relative destination under the
@@ -49,7 +68,7 @@ export const ExportPayloadSchema = object({
 /**
  * Successful export outcome describing what was written and where. `path` is the
  * validated relative path; `absolutePath` is the resolved on-disk location and
- * `bytesWritten` is the byte count reported by `Bun.write`.
+ * `bytesWritten` is the byte count written to disk.
  */
 export interface ExportResult {
 	path: string;
@@ -95,7 +114,7 @@ export async function runExport(payload: unknown): Promise<Result<ExportResult, 
 	if (isFailure(safePath)) return failure(safePath.error);
 
 	let absolutePath = resolve(APP_ROOT, safePath.data);
-	let bytesWritten = await Bun.write(absolutePath, parsed.value.contents);
+	let bytesWritten = writeExportFile(absolutePath, parsed.value.contents);
 
 	return success({ path: safePath.data, absolutePath, bytesWritten });
 }
@@ -157,7 +176,7 @@ export async function runBinaryExport(payload: unknown): Promise<Result<ExportRe
 	if (isFailure(bytes)) return failure(bytes.error);
 
 	let absolutePath = resolve(APP_ROOT, safePath.data);
-	let bytesWritten = await Bun.write(absolutePath, bytes.data);
+	let bytesWritten = writeExportFile(absolutePath, bytes.data);
 
 	return success({ path: safePath.data, absolutePath, bytesWritten });
 }
@@ -183,7 +202,7 @@ export interface SpriteExportResult {
 	path: string;
 	/** Served URL the manifest maps the id to. */
 	url: string;
-	/** Byte count reported by `Bun.write` for the PNG. */
+	/** Byte count written for the PNG. */
 	bytesWritten: number;
 }
 
@@ -195,12 +214,12 @@ export interface SpriteExportResult {
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
 async function readManifest(): Promise<Result<ManifestImages, ExportValidationError>> {
-	let file = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
-	if (!(await file.exists())) return success({ images: {} });
+	let manifestPath = resolve(APP_ROOT, MANIFEST_PATH);
+	if (!existsSync(manifestPath)) return success({ images: {} });
 
 	let parsed: unknown;
 	try {
-		parsed = await file.json();
+		parsed = JSON.parse(readFileSync(manifestPath, "utf8"));
 	} catch {
 		return failure(new ExportValidationError("Asset manifest is not valid JSON."));
 	}
@@ -257,7 +276,7 @@ export async function runSpriteExport(
 	let manifestPath = validateWritePath(MANIFEST_PATH);
 	if (isFailure(manifestPath)) return failure(manifestPath.error);
 
-	await Bun.write(
+	writeExportFile(
 		resolve(APP_ROOT, manifestPath.data),
 		`${JSON.stringify(nextManifest, null, "\t")}\n`,
 	);

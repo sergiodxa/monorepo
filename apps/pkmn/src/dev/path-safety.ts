@@ -54,7 +54,7 @@ export class PathSafetyError extends Error {
  * The path must be non-empty, use forward slashes, contain no `..` segment, not
  * be absolute, be already normalized (no `.` or empty segments), and resolve
  * under one of {@link ALLOWED_WRITE_PREFIXES}. On success the path is returned
- * unchanged so callers can pass it straight to a scoped `Bun.write`.
+ * unchanged so callers can pass it straight to a scoped write.
  *
  * @param candidate The raw, untrusted path supplied by an export payload.
  * @returns Success with the validated path, or failure with a {@link PathSafetyError}.

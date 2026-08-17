@@ -11,7 +11,7 @@
  *
  * The handler ({@link runTrainerExport}) validates an untrusted payload with the
  * trainer schema, shapes it, re-checks the target through the shared path-safety
- * guard (defense in depth), and writes the JSON with `Bun.write` scoped to the
+ * guard (defense in depth), and writes the JSON scoped to the
  * app root. It reuses the same guard every other dev-tools export uses so no
  * write can escape the allow-list.
  *
@@ -19,7 +19,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { failure, isFailure, type Result, success } from "@pkg/result";
 
@@ -27,6 +28,7 @@ import type { TrainerDefinition } from "~/content/trainers";
 
 import { parseTrainer } from "~/content/trainers";
 
+import { writeExportFile } from "./export";
 import { validateWritePath } from "./path-safety";
 
 /**
@@ -34,7 +36,7 @@ import { validateWritePath } from "./path-safety";
  * write is resolved against this so a validated relative path can never point
  * outside the app even if the process cwd changes.
  */
-export const APP_ROOT = resolve(import.meta.dir, "..", "..");
+export const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Directory (under the app root) trainer JSON files are written into. */
 export const TRAINER_CONTENT_DIR = "src/content/trainers";
@@ -64,7 +66,7 @@ export interface TrainerExportResult {
 	path: string;
 	/** The resolved on-disk location. */
 	absolutePath: string;
-	/** Byte count reported by `Bun.write`. */
+	/** Byte count written to disk. */
 	bytesWritten: number;
 }
 
@@ -140,7 +142,7 @@ export async function runTrainerExport(
 	if (isFailure(safePath)) return failure(safePath.error);
 
 	let absolutePath = resolve(APP_ROOT, safePath.data);
-	let bytesWritten = await Bun.write(absolutePath, shaped.data.contents);
+	let bytesWritten = writeExportFile(absolutePath, shaped.data.contents);
 
 	return success({ path: safePath.data, absolutePath, bytesWritten });
 }

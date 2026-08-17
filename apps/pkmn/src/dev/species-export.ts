@@ -14,7 +14,7 @@
  * The handler ({@link runSpeciesExport}) validates the incoming id and species
  * with the species schema, reads and validates the current `species.json`, shapes
  * the updated contents, re-checks the fixed write path through the shared
- * path-safety guard (defense in depth), and writes with `Bun.write` scoped to the
+ * path-safety guard (defense in depth), and writes scoped to the
  * app root. It reuses the same guard every other dev-tools export uses so no write
  * can escape the allow-list.
  *
@@ -22,7 +22,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { failure, isFailure, type Result, success } from "@pkg/result";
 
@@ -30,6 +32,7 @@ import type { Species, SpeciesId } from "~/game/data/species";
 
 import { parseSpecies } from "~/content/species-schema";
 
+import { writeExportFile } from "./export";
 import { validateWritePath } from "./path-safety";
 import {
 	MAX_SPECIES_ID_LENGTH,
@@ -43,7 +46,7 @@ import {
  * write is resolved against this so the validated relative path can never point
  * outside the app even if the process cwd changes.
  */
-export const APP_ROOT = resolve(import.meta.dir, "..", "..");
+export const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Relative path (under the app root) of the single species data file. */
 export const SPECIES_CONTENT_PATH = "src/content/species.json";
@@ -68,7 +71,7 @@ export interface SpeciesExportResult {
 	absolutePath: string;
 	/** The species id whose entry was replaced. */
 	id: string;
-	/** Byte count reported by `Bun.write`. */
+	/** Byte count written to disk. */
 	bytesWritten: number;
 }
 
@@ -153,7 +156,7 @@ export async function runSpeciesExport(
 	let absolutePath = resolve(APP_ROOT, SPECIES_CONTENT_PATH);
 	let currentIndex: Record<SpeciesId, Species>;
 	try {
-		let current = await Bun.file(absolutePath).json();
+		let current = JSON.parse(readFileSync(absolutePath, "utf8"));
 		currentIndex = parseSpecies(current);
 	} catch (error) {
 		return failure(error instanceof Error ? error : new Error(String(error)));
@@ -165,7 +168,7 @@ export async function runSpeciesExport(
 	let safePath = validateWritePath(shaped.data.path);
 	if (isFailure(safePath)) return failure(safePath.error);
 
-	let bytesWritten = await Bun.write(resolve(APP_ROOT, safePath.data), shaped.data.contents);
+	let bytesWritten = writeExportFile(resolve(APP_ROOT, safePath.data), shaped.data.contents);
 
 	return success({
 		path: safePath.data,

@@ -15,13 +15,13 @@
  * `atlases[id]` — without touching disk, so the mapping is unit-testable. The
  * server half ({@link runImporterExport}) writes the PNG through the shared
  * {@link runBinaryExport} (so it reuses the exact path-safety guard and base64
- * decode) and persists the updated manifest behind {@link validateWritePath} and
- * `Bun.write`.
+ * decode) and persists the updated manifest behind {@link validateWritePath}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { failure, isFailure, type Result, success } from "@pkg/result";
@@ -36,7 +36,13 @@ import {
 	type ManifestAtlases,
 	registerAtlasRegion,
 } from "./atlas-export";
-import { APP_ROOT, ExportValidationError, MANIFEST_PATH, runBinaryExport } from "./export";
+import {
+	APP_ROOT,
+	ExportValidationError,
+	MANIFEST_PATH,
+	runBinaryExport,
+	writeExportFile,
+} from "./export";
 import { validateWritePath } from "./path-safety";
 import { deriveSpriteTarget, type SpriteExportTarget, SpriteNameError } from "./sprite-export";
 
@@ -222,7 +228,7 @@ export interface ImporterExportResult {
 	atlasId: string;
 	/** The names of every region registered in the atlas. */
 	regions: string[];
-	/** Byte count reported by `Bun.write` for the PNG. */
+	/** Byte count written for the PNG. */
 	bytesWritten: number;
 }
 
@@ -235,12 +241,12 @@ export interface ImporterExportResult {
  * @returns Success with the parsed manifest, or failure describing the problem.
  */
 async function readManifest(): Promise<Result<ManifestAtlases, ExportValidationError>> {
-	let file = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
-	if (!(await file.exists())) return success({ images: {}, atlases: {} });
+	let manifestFile = resolve(APP_ROOT, MANIFEST_PATH);
+	if (!existsSync(manifestFile)) return success({ images: {}, atlases: {} });
 
 	let parsed: unknown;
 	try {
-		parsed = await file.json();
+		parsed = JSON.parse(readFileSync(manifestFile, "utf8"));
 	} catch {
 		return failure(new ExportValidationError("Asset manifest is not valid JSON."));
 	}
@@ -353,7 +359,7 @@ export async function runImporterExport(
 	let manifestPath = validateWritePath(MANIFEST_PATH);
 	if (isFailure(manifestPath)) return failure(manifestPath.error);
 
-	await Bun.write(
+	writeExportFile(
 		resolve(APP_ROOT, manifestPath.data),
 		`${JSON.stringify(nextManifest, null, "\t")}\n`,
 	);
