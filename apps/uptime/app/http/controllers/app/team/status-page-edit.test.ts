@@ -12,8 +12,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { RemixNode } from "remix/ui";
 
@@ -31,6 +29,7 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
@@ -45,7 +44,7 @@ let kv = createKVNamespace();
 let queue = createQueue();
 let pingResults = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",
