@@ -2,12 +2,15 @@
  * Unit tests for the OIDC relying-party helpers. Focus is on the security-critical
  * claim validation in {@link verifyIdToken}, the S256 PKCE derivation, and the
  * profile/metadata mapping. Network helpers (`discover`, `exchangeCode`,
- * `resolveEndSessionEndpoint`) are exercised against a stubbed `fetch`.
+ * `resolveEndSessionEndpoint`) are exercised against MSW-intercepted requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import {
 	buildAuthorizationUrl,
@@ -47,11 +50,17 @@ function validClaims(overrides: Record<string, unknown> = {}): Record<string, un
 	};
 }
 
-let originalFetch = globalThis.fetch;
+/** Builds the discovery-document URL an issuer is probed at. */
+function discoveryUrl(issuer: string): string {
+	return `${issuer}/.well-known/openid-configuration`;
+}
 
-afterEach(() => {
-	globalThis.fetch = originalFetch;
-});
+/** MSW server intercepting discovery and token-endpoint requests. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe("createPkce", () => {
 	test("derives an S256 challenge from the verifier", async () => {
@@ -221,19 +230,18 @@ describe("discover", () => {
 			authorization_endpoint: "https://a.example.com/authorize",
 			token_endpoint: "https://a.example.com/token",
 		};
-		let fetchMock = mock(
-			async (_input: RequestInfo | URL, _init?: RequestInit) =>
-				new Response(JSON.stringify(doc), { status: 200 }),
+		let requested: string[] = [];
+
+		server.use(
+			http.get(discoveryUrl("https://a.example.com"), ({ request }) => {
+				requested.push(new URL(request.url).pathname);
+				return HttpResponse.json(doc);
+			}),
 		);
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		let metadata = await discover("https://a.example.com");
 		expect(metadata.token_endpoint).toBe("https://a.example.com/token");
-		let requested = fetchMock.mock.calls[0]?.[0];
-		expect(requested).toBeInstanceOf(URL);
-		if (requested instanceof URL) {
-			expect(requested.pathname).toBe("/.well-known/openid-configuration");
-		}
+		expect(requested).toEqual(["/.well-known/openid-configuration"]);
 	});
 
 	test("caches by issuer across calls", async () => {
@@ -241,18 +249,27 @@ describe("discover", () => {
 			authorization_endpoint: "https://b.example.com/authorize",
 			token_endpoint: "https://b.example.com/token",
 		};
-		let fetchMock = mock(async () => new Response(JSON.stringify(doc), { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		let requests = 0;
+
+		server.use(
+			http.get(discoveryUrl("https://b.example.com"), () => {
+				requests++;
+				return HttpResponse.json(doc);
+			}),
+		);
 
 		await discover("https://b.example.com");
 		await discover("https://b.example.com");
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(requests).toBe(1);
 	});
 
 	test("throws on a non-2xx response", async () => {
-		globalThis.fetch = mock(
-			async () => new Response("nope", { status: 500 }),
-		) as unknown as typeof fetch;
+		server.use(
+			http.get(
+				discoveryUrl("https://c.example.com"),
+				() => new HttpResponse("nope", { status: 500 }),
+			),
+		);
 		await expect(discover("https://c.example.com")).rejects.toThrow("OIDC discovery failed: 500");
 	});
 });
@@ -264,11 +281,18 @@ describe("exchangeCode", () => {
 	};
 
 	test("posts with Basic auth and returns the id token", async () => {
-		let fetchMock = mock(
-			async (_input: RequestInfo | URL, _init?: RequestInit) =>
-				new Response(JSON.stringify({ id_token: "the.id.token" }), { status: 200 }),
+		let sent: { method: string; authorization: string | null; body: URLSearchParams } | undefined;
+
+		server.use(
+			http.post(metadata.token_endpoint, async ({ request }) => {
+				sent = {
+					method: request.method,
+					authorization: request.headers.get("authorization"),
+					body: new URLSearchParams(await request.text()),
+				};
+				return HttpResponse.json({ id_token: "the.id.token" });
+			}),
 		);
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 		let result = await exchangeCode(metadata, {
 			clientId: "client-123",
@@ -279,18 +303,19 @@ describe("exchangeCode", () => {
 		});
 		expect(result.idToken).toBe("the.id.token");
 
-		let [, init] = fetchMock.mock.calls[0] ?? [];
-		expect(init?.method).toBe("POST");
-		let headers = init?.headers as Record<string, string>;
-		expect(headers.authorization).toBe(`Basic ${btoa("client-123:secret")}`);
-		let body = init?.body as URLSearchParams;
-		expect(body.get("grant_type")).toBe("authorization_code");
+		expect(sent?.method).toBe("POST");
+		expect(sent?.authorization).toBe(`Basic ${btoa("client-123:secret")}`);
+		expect(sent?.body.get("grant_type")).toBe("authorization_code");
+		expect(sent?.body.get("code")).toBe("auth-code");
+		expect(sent?.body.get("code_verifier")).toBe("verifier");
 	});
 
 	test("throws with the provider error when present", async () => {
-		globalThis.fetch = mock(
-			async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
-		) as unknown as typeof fetch;
+		server.use(
+			http.post(metadata.token_endpoint, () =>
+				HttpResponse.json({ error: "invalid_grant" }, { status: 400 }),
+			),
+		);
 
 		await expect(
 			exchangeCode(metadata, {
@@ -304,9 +329,7 @@ describe("exchangeCode", () => {
 	});
 
 	test("throws a default message when id_token is missing", async () => {
-		globalThis.fetch = mock(
-			async () => new Response(JSON.stringify({}), { status: 200 }),
-		) as unknown as typeof fetch;
+		server.use(http.post(metadata.token_endpoint, () => HttpResponse.json({})));
 
 		await expect(
 			exchangeCode(metadata, {
@@ -321,18 +344,14 @@ describe("exchangeCode", () => {
 });
 
 describe("resolveEndSessionEndpoint", () => {
-	beforeEach(() => {
-		globalThis.fetch = mock(
-			async () =>
-				new Response(JSON.stringify({ end_session_endpoint: "https://d.example.com/logout" }), {
-					status: 200,
-				}),
-		) as unknown as typeof fetch;
-	});
-
 	test("prefers inline metadata without a network call", async () => {
-		let fetchMock = mock(async () => new Response("{}", { status: 200 }));
-		globalThis.fetch = fetchMock as unknown as typeof fetch;
+		// Any request fails the test both through this handler and through the
+		// `onUnhandledRequest: "error"` guard, so inline metadata must not discover.
+		server.use(
+			http.get(discoveryUrl("https://inline.example.com"), () => {
+				throw new Error("resolveEndSessionEndpoint must not discover with inline metadata");
+			}),
+		);
 
 		let endpoint = await resolveEndSessionEndpoint({
 			issuer: "https://inline.example.com",
@@ -346,22 +365,26 @@ describe("resolveEndSessionEndpoint", () => {
 			},
 		});
 		expect(endpoint).toBe("https://inline.example.com/logout");
-		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
 	test("discovers and caches the endpoint", async () => {
-		let endpoint = await resolveEndSessionEndpoint({
-			issuer: "https://d.example.com",
-			clientId: "c",
-			clientSecret: "s",
-		});
-		expect(endpoint).toBe("https://d.example.com/logout");
+		let requests = 0;
+
+		server.use(
+			http.get(discoveryUrl("https://d.example.com"), () => {
+				requests++;
+				return HttpResponse.json({ end_session_endpoint: "https://d.example.com/logout" });
+			}),
+		);
+
+		let config = { issuer: "https://d.example.com", clientId: "c", clientSecret: "s" };
+		expect(await resolveEndSessionEndpoint(config)).toBe("https://d.example.com/logout");
+		expect(await resolveEndSessionEndpoint(config)).toBe("https://d.example.com/logout");
+		expect(requests).toBe(1);
 	});
 
 	test("returns null when discovery fails", async () => {
-		globalThis.fetch = mock(async () => {
-			throw new Error("network down");
-		}) as unknown as typeof fetch;
+		server.use(http.get(discoveryUrl("https://e.example.com"), () => HttpResponse.error()));
 
 		let endpoint = await resolveEndSessionEndpoint({
 			issuer: "https://e.example.com",
