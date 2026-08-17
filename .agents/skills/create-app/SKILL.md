@@ -98,7 +98,7 @@ put lint or format exceptions in the root `vite.config.ts` rather than a config 
 
 ```jsonc
 // apps/team-ops/tsconfig.json
-{ "extends": "../../tsconfig.json", "include": ["app/**/*", "../../types/bun-test.d.ts"] }
+{ "extends": "../../tsconfig.json", "include": ["app/**/*"] }
 ```
 
 The project entry is the step that fails silently: an app missing from `test.projects` runs

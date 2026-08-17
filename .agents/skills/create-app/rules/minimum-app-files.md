@@ -85,8 +85,7 @@ like any other; `bun run upgrade` moves them across the whole repo at once.
 		"resources/**/*",
 		"routes/**/*",
 		"vite.config.ts",
-		"worker-configuration.d.ts",
-		"../../types/bun-test.d.ts"
+		"worker-configuration.d.ts"
 	],
 	"compilerOptions": {
 		"noEmit": true,

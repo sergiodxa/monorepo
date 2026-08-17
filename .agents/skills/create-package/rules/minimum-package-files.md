@@ -69,7 +69,7 @@ rather than off this rule; `bun run upgrade` moves them across the repo at once.
 ```json
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*", "../../types/bun-test.d.ts"]
+	"include": ["src/**/*"]
 }
 ```
 

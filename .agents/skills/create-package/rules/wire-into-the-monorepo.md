@@ -31,13 +31,13 @@ to, or rejected by, the checks CI runs.
 // Good
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*", "../../types/bun-test.d.ts"]
+	"include": ["src/**/*"]
 }
 ```
 
-`../../types/bun-test.d.ts` corrects `bun-types`' async matcher chains, so
-`await expect(p).rejects.toThrow()` type-checks with the `await` that Vitest will require.
-Every workspace adds it to `include` rather than duplicating the declaration.
+The root config supplies the shared compiler options, so a package's own file says only what
+differs. Copy `include` and `types` from a sibling package rather than deciding them per
+package.
 
 Add `compilerOptions` only to override something specific:
 
@@ -45,7 +45,7 @@ Add `compilerOptions` only to override something specific:
 // packages/cloudflare-mocks/tsconfig.json — builds Workers test doubles
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*", "../../types/bun-test.d.ts"],
+	"include": ["src/**/*"],
 	"compilerOptions": { "types": ["@cloudflare/workers-types", "bun"] }
 }
 ```
@@ -95,7 +95,7 @@ their own project entry.
 ## Rules
 
 1. Extend `../../tsconfig.json`; never write a standalone compiler config
-2. Include `../../types/bun-test.d.ts`, and never add an `exclude` for test files
+2. Never add an `exclude` for test files
 3. Declare every dependency the package imports; `@pkg/*` as `workspace:*`, test-only ones under `devDependencies`
 4. Add lint or format exceptions to `lint.overrides` / `fmt.overrides` in the root `vite.config.ts`, never as a file in the package
 5. Keep tests under `src/`, so the packages Vitest project collects them

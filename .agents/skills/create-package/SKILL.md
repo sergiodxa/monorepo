@@ -88,11 +88,11 @@ Many entry points off one src tree   -> packages/u
 
 #### wire-into-the-monorepo - @rules/wire-into-the-monorepo.md
 
-Extend the root `tsconfig.json`, include `../../types/bun-test.d.ts`, never exclude test
-files, and keep lint and format exceptions in the root `vite.config.ts`.
+Extend the root `tsconfig.json`, never exclude test files, and keep lint and format
+exceptions in the root `vite.config.ts`.
 
 ```json
-{ "extends": "../../tsconfig.json", "include": ["src/**/*", "../../types/bun-test.d.ts"] }
+{ "extends": "../../tsconfig.json", "include": ["src/**/*"] }
 ```
 
 ### Boundaries (HIGH)

@@ -52,8 +52,7 @@ Run from the repository root:
 | `bun lint`                     | Check linting                           |
 | `bun lint:fix`                 | Fix linting issues                      |
 | `bun typecheck`                | TypeScript type checking                |
-| `bun run test`                 | Run every test                          |
-| `bun run test:vitest`          | Vitest only                             |
+| `bun run test`                 | Run every test (Vitest)                 |
 | `bun upgrade`                  | Upgrade all workspaces                  |
 | `bun upgrade:dry-run`          | Preview all upgrades                    |
 | `bun upgrade:apps`             | Upgrade app workspaces                  |

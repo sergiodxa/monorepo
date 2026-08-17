@@ -35,14 +35,12 @@ rejected by, the checks CI runs.
 // Good
 {
 	"extends": "../../tsconfig.json",
-	"include": ["app/**/*", "bootstrap/**/*", "routes/**/*", "../../types/bun-test.d.ts"],
+	"include": ["app/**/*", "bootstrap/**/*", "routes/**/*"],
 	"compilerOptions": { "noEmit": true, "paths": { "~/app/*": ["./app/*"] } }
 }
 ```
 
-`../../types/bun-test.d.ts` corrects `bun-types`' async matcher chains, which are wrong for
-every workspace whose `types` includes `bun`. Copy the `include` from a sibling app rather
-than deciding this per app.
+Copy the `include` and `types` from a sibling app rather than deciding them per app.
 
 ### Register the app as a Vitest project
 
@@ -127,6 +125,6 @@ run while iterating without changing directory.
 1. Extend `../../tsconfig.json`; never write a standalone compiler config
 2. Add the app to `test.projects` in the root `vite.config.ts`, and verify with `vp test run --project <name>`
 3. Declare every `@pkg/*` the app imports, as `workspace:*`
-4. Include `../../types/bun-test.d.ts` and keep `*.test.ts` inside the include — no test exclude
+4. Keep `*.test.ts` inside the tsconfig `include` — no test exclude
 5. Add lint or format exceptions to `lint.overrides` / `fmt.overrides` in the root `vite.config.ts`, never as a file in the app
 6. Run `vp check` and `bun run test` from the repo root

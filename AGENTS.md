@@ -21,10 +21,8 @@ bun format:fix                  # Fix formatting
 bun lint                        # Check linting only (oxlint)
 bun lint:fix                    # Fix linting issues
 bun typecheck                   # Type check only, via the Oxlint type-aware path (tsgolint)
-bun run test                    # Run every test: Vitest for the whole repo, then the one
-                                 # remaining bun file. CI runs exactly this.
-bun run test:vitest             # Vitest only (`vp test run`)
-bun run test:bun                # The single bun file only
+bun run test                    # Run every test, all of them under Vitest (`vp test run`).
+                                 # CI runs exactly this.
 vp test run <path>              # Scope Vitest to a path while iterating
 vp test watch                   # Watch mode
 vp lint <path>                  # Scope a static check to one workspace while iterating
@@ -37,9 +35,12 @@ its `~/*` aliases and `jsxImportSource`, which a root-rooted run cannot see. Use
 `vi.doMock` for the same specifier in one file has no effect, because the second dynamic import
 resolves to the instance already in the registry.
 
-`packages/spec/src/plugins/db.test.ts` is the one file still on `bun:test`. Its end-to-end block
-connects through Bun's built-in SQL client, which has no Node equivalent, so it keeps its own
-runner rather than losing the coverage.
+Nothing runs under `bun test` any more. Where a test needs a Bun-only API — `packages/spec`'s
+`db` plugin connects through Bun's built-in SQL client, which has no Node equivalent — the
+scenario runs in a Bun child process that reports what it observed as JSON, and the
+expectations stay in the Vitest file. `db-e2e-probe.ts` beside `db.test.ts` is the pattern:
+the probe records, the test asserts, so a failure names the expectation rather than a
+subprocess exit code.
 
 `bun typecheck` no longer shells out to `tsc` per workspace. It runs the same type-aware pass
 `vp check` does, which covers every file the workspace's tsconfig includes — test files
