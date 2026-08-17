@@ -51,10 +51,6 @@ export default defineConfig({
 				test: {
 					name: "packages",
 					include: ["packages/*/src/**/*.test.ts?(x)"],
-					// `@pkg/spec`'s `db` end-to-end tests connect through `new SQL(url)`, the one
-					// Bun API with no `node:` counterpart and no driver this repo is willing to
-					// depend on. They stay on `bun test`, which is the only reason it survives.
-					exclude: ["packages/spec/src/plugins/db.test.ts"],
 					pool: "threads",
 					// Not inherited from the top-level `test` block: a project ignores it, so the
 					// 5s default applies unless set here. The slowest files spend ~4s applying

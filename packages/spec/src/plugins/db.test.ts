@@ -2,16 +2,20 @@
  * Tests for the built-in `db` plugin. The unit tests never open a database:
  * they exercise the static descriptor, argument validation, the scoped
  * `DATABASE_URL` permission check, and the unset-variable configuration error,
- * all before a connection would be attempted. The end-to-end tests drive a real
- * temp-file SQLite database through Bun's SQL client and cover the row/count
- * shaping and lifecycle; the functional acceptance layer lives in
- * `db-example.test.ts`, which runs the CLI against `examples/db`.
+ * all before a connection would be attempted, so they run under this runtime.
+ *
+ * The end-to-end tests cover the row/count shaping and the connection lifecycle
+ * against a real temp-file SQLite database. The plugin's connection comes from
+ * Bun's SQL client, which has no `node:` counterpart, so that half runs as a
+ * black box: `db-e2e-probe.ts` executes the scenarios under Bun and reports what
+ * it saw as JSON, and the expectations stay here. The functional acceptance layer
+ * lives in `../db-example.test.ts`, which runs the CLI against `examples/db`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { execFileSync, spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,20 +23,35 @@ import { join } from "node:path";
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success } from "@pkg/result";
-import { SQL } from "bun";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors";
 import type { PermissionSet } from "../permissions";
 import type { ToolContext } from "../plugin";
-import type { ToolArg, Value, ValueObject } from "../values";
+import type { ToolArg, Value } from "../values";
 import type { Workspace } from "../workspace";
 
-import { PermissionDeniedError, ToolError } from "../errors";
+import { PermissionDeniedError } from "../errors";
 
 import { createDbPlugin } from "./db";
 
-/** Whether Bun's SQL client exposes SQLite; gates the end-to-end suite. */
-const SQLITE_AVAILABLE = "SQLiteError" in SQL;
+/**
+ * The Bun executable, found on PATH. The code under test reaches for Bun's SQL client, so
+ * the end-to-end half is spawned by name rather than through this runtime's executable.
+ */
+const BUN_EXECUTABLE = "bun";
+
+/**
+ * Whether Bun's SQL client exposes SQLite; gates the end-to-end suite. The probe runs
+ * inside Bun rather than here, because the SQL client belongs to the runtime the child
+ * executes under, not to this file's.
+ */
+const SQLITE_AVAILABLE =
+	spawnSync(
+		BUN_EXECUTABLE,
+		["-e", 'import { SQL } from "bun"; process.stdout.write(String("SQLiteError" in SQL));'],
+		{ encoding: "utf8" },
+	).stdout?.trim() === "true";
 
 /** Wrap a runtime value as a positional value argument. */
 function value(data: Value): ToolArg {
@@ -89,20 +108,6 @@ function unwrapError(result: Result<Value, SpecError>): SpecError {
 		throw new Error(`expected a failure, got ${JSON.stringify(result.data)}`);
 	}
 	return result.error;
-}
-
-/** Narrow to the success data or fail the test with the error's message. */
-function expectSuccess(result: Result<Value, SpecError>): Value {
-	if (isFailure(result)) throw new Error(`Expected success, got: ${result.error.message}`);
-	return result.data;
-}
-
-/** Read a result value as an object, failing the test when it is not one. */
-function asObject(data: Value): ValueObject {
-	if (typeof data !== "object" || data === null || Array.isArray(data)) {
-		throw new Error(`expected an object result, got ${JSON.stringify(data)}`);
-	}
-	return data;
 }
 
 describe(createDbPlugin.name, () => {
@@ -216,117 +221,76 @@ describe(createDbPlugin.name, () => {
 	});
 });
 
-// The end-to-end suite proves row/count shaping and the connection lifecycle
-// against a real SQLite database in a temp file. It is skipped when Bun's SQL
-// client has no SQLite driver, so the unit suite stays green regardless.
+/** What `db-e2e-probe.ts` reports back, one field per expectation below. */
+interface ProbeObservations {
+	created: { rows: unknown; count: unknown };
+	inserted: { rows: unknown; count: unknown; affected_rows: unknown };
+	insertedMany: { affected_rows: unknown };
+	selected: { rows: unknown; count: unknown; affected_rows: unknown };
+	sqlError: { isToolError: boolean; code: string; message: string };
+	reuse: { count: unknown; disposeThrew: boolean };
+}
+
+/** How long the probe may take: it spawns Bun and touches SQLite. */
+const PROBE_TIMEOUT_MS = 60_000;
+
+// The end-to-end suite proves row/count shaping and the connection lifecycle against a real
+// SQLite database in a temp file. The scenarios execute under Bun — the plugin's SQL client
+// is Bun's — and every assertion stays here, so a failure names the expectation rather than
+// a subprocess exit code. Skipped when Bun's SQL client has no SQLite driver, so the unit
+// suite stays green regardless.
 describe("db end to end (SQLite)", () => {
-	let plugin = createDbPlugin();
+	let observed: ProbeObservations;
 	let dbPath = join(tmpdir(), `spec-db-e2e-${process.pid}-${Date.now()}.sqlite`);
-	let previous: string | undefined;
-	let context: ToolContext;
 
 	beforeAll(() => {
-		previous = process.env.DATABASE_URL;
-		process.env.DATABASE_URL = `sqlite://${dbPath}`;
-		context = buildContext();
-	});
+		if (!SQLITE_AVAILABLE) return;
+		try {
+			let stdout = execFileSync(
+				BUN_EXECUTABLE,
+				[join(import.meta.dirname, "db-e2e-probe.ts"), dbPath],
+				{ encoding: "utf8", timeout: PROBE_TIMEOUT_MS },
+			);
+			observed = JSON.parse(stdout) as ProbeObservations;
+		} finally {
+			// SQLite may leave a WAL/SHM sidecar; remove all three, ignore misses.
+			for (let suffix of ["", "-wal", "-shm"]) rmSync(`${dbPath}${suffix}`, { force: true });
+		}
+	}, PROBE_TIMEOUT_MS);
 
-	afterAll(async () => {
-		if (plugin.dispose !== undefined) await plugin.dispose();
-		if (previous === undefined) delete process.env.DATABASE_URL;
-		else process.env.DATABASE_URL = previous;
-		for (let suffix of ["", "-wal", "-shm"]) rmSync(`${dbPath}${suffix}`, { force: true });
-	});
+	test.skipIf(!SQLITE_AVAILABLE)("shapes DDL, DML and SELECT results", () => {
+		expect(observed.created.rows).toEqual([]);
+		expect(observed.created.count).toBe(0);
 
-	test.skipIf(!SQLITE_AVAILABLE)("shapes DDL, DML and SELECT results", async () => {
-		let created = asObject(
-			expectSuccess(
-				await plugin.call(
-					"query",
-					[value("CREATE TABLE ledger (id INTEGER PRIMARY KEY, entry TEXT)")],
-					context,
-				),
-			),
-		);
-		expect(created.rows).toEqual([]);
-		expect(created.count).toBe(0);
-
-		// An INSERT reports the rows it changed as affected_rows, with no rows
-		// returned — the canonical `expect result.affected_rows 1` shape.
-		let inserted = asObject(
-			expectSuccess(
-				await plugin.call("query", [value("INSERT INTO ledger (entry) VALUES ('a')")], context),
-			),
-		);
-		expect(inserted.affected_rows).toBe(1);
-		expect(inserted.count).toBe(0);
-		expect(inserted.rows).toEqual([]);
-
-		let insertedMany = asObject(
-			expectSuccess(
-				await plugin.call(
-					"query",
-					[value("INSERT INTO ledger (entry) VALUES ('b'), ('c')")],
-					context,
-				),
-			),
-		);
-		expect(insertedMany.affected_rows).toBe(2);
+		// An INSERT reports the rows it changed as affected_rows, with no rows returned —
+		// the canonical `expect result.affected_rows 1` shape.
+		expect(observed.inserted.affected_rows).toBe(1);
+		expect(observed.inserted.count).toBe(0);
+		expect(observed.inserted.rows).toEqual([]);
+		expect(observed.insertedMany.affected_rows).toBe(2);
 
 		// A SELECT returns rows; affected_rows and count both equal the row count.
-		let selected = asObject(
-			expectSuccess(
-				await plugin.call("query", [value("SELECT id, entry FROM ledger ORDER BY id")], context),
-			),
-		);
-		expect(selected.count).toBe(3);
-		expect(selected.affected_rows).toBe(3);
-		expect(selected.rows).toEqual([
+		expect(observed.selected.count).toBe(3);
+		expect(observed.selected.affected_rows).toBe(3);
+		expect(observed.selected.rows).toEqual([
 			{ id: 1, entry: "a" },
 			{ id: 2, entry: "b" },
 			{ id: 3, entry: "c" },
 		]);
 	});
 
-	test.skipIf(!SQLITE_AVAILABLE)("a SQL error surfaces the database's own message", async () => {
-		let error = unwrapError(
-			await plugin.call("query", [value("SELECT * FROM does_not_exist")], context),
-		);
-		expect(error).toBeInstanceOf(ToolError);
-		expect(error.code).toBe("tool-error");
-		expect(error.message).toContain("db.query failed");
-		expect(error.message).toContain("does_not_exist");
+	test.skipIf(!SQLITE_AVAILABLE)("a SQL error surfaces the database's own message", () => {
+		expect(observed.sqlError.isToolError).toBe(true);
+		expect(observed.sqlError.code).toBe("tool-error");
+		expect(observed.sqlError.message).toContain("db.query failed");
+		expect(observed.sqlError.message).toContain("does_not_exist");
 	});
 
-	test.skipIf(!SQLITE_AVAILABLE)(
-		"reuses one connection across calls, closed by dispose",
-		async () => {
-			// The same handle serves every call in a run; after dispose it is gone,
-			// and a fresh call would transparently reconnect. Two writes landing in
-			// the same table is the observable proof the connection was reused.
-			expectSuccess(
-				await plugin.call(
-					"query",
-					[value("CREATE TABLE IF NOT EXISTS reuse (id INTEGER PRIMARY KEY)")],
-					context,
-				),
-			);
-			expectSuccess(
-				await plugin.call("query", [value("INSERT INTO reuse DEFAULT VALUES")], context),
-			);
-			expectSuccess(
-				await plugin.call("query", [value("INSERT INTO reuse DEFAULT VALUES")], context),
-			);
-			let counted = asObject(
-				expectSuccess(await plugin.call("query", [value("SELECT id FROM reuse")], context)),
-			);
-			expect(counted.count).toBe(2);
-
-			// dispose is idempotent and best-effort: calling it twice never throws.
-			if (plugin.dispose !== undefined) {
-				await plugin.dispose();
-				await plugin.dispose();
-			}
-		},
-	);
+	test.skipIf(!SQLITE_AVAILABLE)("reuses one connection across calls, closed by dispose", () => {
+		// The same handle serves every call in a run; two writes landing in the same table is
+		// the observable proof the connection was reused.
+		expect(observed.reuse.count).toBe(2);
+		// dispose is idempotent and best-effort: calling it twice never throws.
+		expect(observed.reuse.disposeThrew).toBe(false);
+	});
 });
