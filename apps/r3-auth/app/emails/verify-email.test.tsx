@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import { emailTranslator } from "~/app/emails/locale";
 import { VerifyEmailEmail } from "~/app/emails/verify-email";

@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
+
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
 import Client from "~/app/data/client";
@@ -36,12 +36,12 @@ describe("Client.create", () => {
 	test("generates a secret and returns the stored row", async () => {
 		let client = await createClient({ description: "The blog", logo_url: null });
 
-		expect(client.id).toBeString();
-		expect(client.secret).toBeString();
+		expect(client.id).toBeTypeOf("string");
+		expect(client.secret).toBeTypeOf("string");
 		expect(client.secret).not.toBe("");
 		expect(client.name).toBe("Blog");
 		expect(client.description).toBe("The blog");
-		expect(client.created_at).toBeNumber();
+		expect(client.created_at).toBeTypeOf("number");
 	});
 
 	test("gives every client its own secret", async () => {
@@ -101,7 +101,7 @@ describe("Client.update", () => {
 		let client = await createClient();
 		let updated = await Client.update(db, client.id, { regenerateSecret: true });
 
-		expect(updated.newSecret).toBeString();
+		expect(updated.newSecret).toBeTypeOf("string");
 		expect(updated.secret).toBe(updated.newSecret as string);
 		expect(updated.secret).not.toBe(client.secret);
 	});

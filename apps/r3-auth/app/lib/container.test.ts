@@ -19,14 +19,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
-
 import { createEnv, createSecretsStoreSecret } from "@pkg/cloudflare-mocks";
 import { Mailer } from "@pkg/mail";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { MailTransport } from "~/app/services/mail-transport";
@@ -68,7 +67,9 @@ let accessToken = createSecretsStoreSecret({
 /** The plain local-development variable, absent unless a test sets it. */
 let localToken: string | undefined;
 
-await mock.module("cloudflare:workers", () => ({
+// Registered before the container is imported below, so the registration reads these
+// bindings rather than the runner's default stub.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		POLAR_ACCESS_TOKEN: accessToken,
 		// A getter, because a test sets the fallback after `env` is already captured; the

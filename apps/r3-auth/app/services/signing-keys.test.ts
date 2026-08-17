@@ -10,12 +10,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { R2BucketMock } from "@pkg/cloudflare-mocks";
 
 import { createR2Bucket } from "@pkg/cloudflare-mocks";
 import { JWK } from "@pkg/jwt";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let bucket: R2BucketMock;
 let listCalls = 0;
@@ -38,8 +37,12 @@ let countingBucket = {
 	},
 };
 
-await mock.module("cloudflare:workers", () => ({ env: { R2: countingBucket } }));
+vi.doMock("cloudflare:workers", () => ({ env: { R2: countingBucket } }));
 
+/**
+ * The subject, imported below the mock so it resolves the counting bucket: the replacement
+ * only reaches imports that run after it is registered.
+ */
 let { getSigningKey, invalidateSigningKeys } = await import("~/app/services/signing-keys");
 
 /**

@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { render } from "@pkg/mail";
+import { describe, expect, test } from "vitest";
 
 import type { DeviceType } from "~/app/http/view-models/account-session";
 

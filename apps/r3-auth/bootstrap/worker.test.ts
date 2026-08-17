@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createEnv, createExecutionContext, createQueue } from "@pkg/cloudflare-mocks";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The queue the cron produces into, holding what it enqueued. */
 let queue = createQueue({ name: "auth" });
@@ -21,9 +20,9 @@ let queue = createQueue({ name: "auth" });
 /** Collects the work the worker defers, so a test can await what it started. */
 let context = createExecutionContext();
 
-// A synchronous factory is installed synchronously — only an async one hands back a promise
-// — so this is complete on return and awaiting it would only add a top-level await.
-void mock.module("cloudflare:workers", () => ({
+// Registered here, at module scope, because only the imports that run afterwards see it —
+// which is why the worker below is imported dynamically rather than statically.
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		QUEUE: queue,
 		// Left unset on purpose: with no token the job skips its uptime ping, so no
@@ -35,6 +34,13 @@ void mock.module("cloudflare:workers", () => ({
 		context.waitUntil(promise);
 	},
 }));
+
+/**
+ * The worker under test, pulled in once here rather than inside each helper: it reaches the
+ * whole application graph, and loading that graph on first use would spend a test's own time
+ * budget on work no test is measuring.
+ */
+let { default: worker } = await import("~/bootstrap/worker");
 
 let db: DataTableDatabase;
 let subjectId: string;
@@ -48,8 +54,6 @@ let clientId: string;
  * behalf, hiding whether it ever acked.
  */
 async function deliver(...bodies: unknown[]) {
-	let { default: worker } = await import("~/bootstrap/worker");
-
 	for (let body of bodies) await queue.send(body);
 
 	return queue.consume(
@@ -60,8 +64,6 @@ async function deliver(...bodies: unknown[]) {
 
 /** Delivers a cron trigger to the worker's scheduled handler. */
 async function schedule(cron: string) {
-	let { default: worker } = await import("~/bootstrap/worker");
-
 	await worker.scheduled?.({
 		cron,
 		scheduledTime: Date.now(),

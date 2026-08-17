@@ -8,20 +8,29 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import { ok } from "@pkg/http/response/json";
 import { getContext } from "remix/middleware/async-context";
 import { get, route } from "remix/routes";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import requireAdmin from "~/app/http/middleware/require-admin";
-import requireSubject from "~/app/http/middleware/require-subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
+
+/**
+ * The two guards under test, imported after the harness above rather than alongside it.
+ *
+ * The harness installs the `cloudflare:workers` bindings as it loads, and a module only
+ * sees them if it loads afterwards. A static import here would sort before the harness
+ * and pull the guards — and every service they reach — in against the default binding
+ * stub instead; the app built below would then reuse those same cached modules, and the
+ * sign-in the tests drive would fail inside them rather than at any assertion.
+ */
+let { default: requireSubject } = await import("~/app/http/middleware/require-subject");
+let { default: requireAdmin } = await import("~/app/http/middleware/require-admin");
 
 /**
  * URLs that exist only for these tests.

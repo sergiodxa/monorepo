@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { Job } from "@pkg/jobs";
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { ServiceContainer } from "@pkg/service-container";
 import { generateUUID } from "@pkg/uuid";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import Client from "~/app/data/client";
 import Subject from "~/app/data/subject";

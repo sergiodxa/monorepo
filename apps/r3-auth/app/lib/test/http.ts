@@ -12,8 +12,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mock } from "bun:test";
-
 import type { Customer } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
@@ -24,6 +22,7 @@ import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { KVSessionStorage } from "@pkg/session-storage-kv";
 import { createCookie } from "remix/cookie";
+import { vi } from "vitest";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { MailTransport } from "~/app/services/mail-transport";
@@ -97,21 +96,31 @@ const TEST_ENV = {
 	GITHUB_CLIENT_SECRET: "test-github-client-secret",
 };
 
-let kv = createKVNamespace();
-let r2 = createR2Bucket();
-
 /**
  * Stand-in for the platform's `waitUntil`: the work is already running by the time it is
  * handed over, so this only has to keep a rejection from becoming an unhandled one. A
- * test asserting on a background write yields once (`await Bun.sleep(0)`) before reading.
+ * test asserting on a background write yields to the event loop once before reading.
  */
 function waitUntil(promise: Promise<unknown>): void {
 	void promise.catch(() => {});
 }
 
-// A synchronous factory is installed synchronously — only an async one hands back a promise
-// — so this is complete on return, and a top-level await is what the note below rules out.
-void mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 }, waitUntil }));
+/**
+ * The bindings every app instance shares, as one object that outlives them all.
+ *
+ * `createTestApp` gives each instance fresh storage by replacing the two properties here
+ * rather than by re-registering the module: the mock factory runs once, on the first
+ * import below, so a second registration would reach nothing. Every module reads
+ * `env.KV`/`env.R2` off this object when it needs them, which is what makes replacing a
+ * property visible to a module that loaded long before.
+ */
+let bindings: Record<string, unknown> = {
+	...TEST_ENV,
+	KV: createKVNamespace(),
+	R2: createR2Bucket(),
+};
+
+vi.doMock("cloudflare:workers", () => ({ env: bindings, waitUntil }));
 
 /**
  * The application modules, imported on first use rather than at module load.
@@ -195,17 +204,13 @@ export interface TestApp {
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
 	let { application, RateLimiters, createTestDatabase, DatabaseKey } = await loadModules();
 
-	kv = createKVNamespace();
-	r2 = createR2Bucket();
-	await mock.module("cloudflare:workers", () => ({
-		env: { ...TEST_ENV, KV: kv, R2: r2 },
-		waitUntil,
-	}));
+	// Held locally as well as installed, so this instance keeps its own storage even once a
+	// later `createTestApp()` has pointed the shared bindings at fresh namespaces.
+	let appKv = createKVNamespace();
+	let appR2 = createR2Bucket();
 
-	// Captured after the reset so this instance keeps its own bindings even once a
-	// later `createTestApp()` has replaced the module-level ones.
-	let appKv = kv;
-	let appR2 = r2;
+	bindings.KV = appKv;
+	bindings.R2 = appR2;
 
 	let { db } = createTestDatabase();
 

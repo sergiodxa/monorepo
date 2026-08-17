@@ -12,12 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-
 import { AuthSDK } from "@pkg/auth-sdk";
 import { isFailure } from "@pkg/result";
 import { http, passthrough } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -96,7 +95,7 @@ describe("the published client library", () => {
 
 		await sdk.fetchSubjectById(fixtures.subjectId, token);
 		// Let the cache write settle, so the second call is answered from it.
-		await Bun.sleep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		let subject = await sdk.fetchSubjectById(fixtures.subjectId, token);
 		if (isFailure(subject)) throw subject.error;

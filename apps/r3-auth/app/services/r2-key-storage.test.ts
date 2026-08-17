@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
-
 import type { R2BucketMock } from "@pkg/cloudflare-mocks";
 import type { KeyStorage } from "@pkg/jwt";
 
 import { createR2Bucket } from "@pkg/cloudflare-mocks";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { createR2KeyStorage } from "~/app/services/r2-key-storage";
 
@@ -61,7 +60,7 @@ describe("createR2KeyStorage", () => {
 		let first = await storage.list({ prefix: "jwks:", limit: 1 });
 
 		expect(first.files).toEqual([{ key: "jwks:key-1" }]);
-		expect(first.cursor).toBeString();
+		expect(first.cursor).toBeTypeOf("string");
 
 		let second = await storage.list({ prefix: "jwks:", limit: 1, cursor: first.cursor });
 

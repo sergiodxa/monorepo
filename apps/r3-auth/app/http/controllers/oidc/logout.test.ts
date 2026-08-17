@@ -12,11 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-
 import { JWK, JWT } from "@pkg/jwt";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -333,7 +332,7 @@ describe("GET /oidc/logout", () => {
 
 		expect(claims.sub).toBe(fixtures.subjectId);
 		expect(claims.aud).toBe(other);
-		expect(claims.sid).toBeString();
+		expect(claims.sid).toBeTypeOf("string");
 		expect(Object.keys(claims.events as object)).toEqual([
 			"http://schemas.openid.net/event/backchannel-logout",
 		]);

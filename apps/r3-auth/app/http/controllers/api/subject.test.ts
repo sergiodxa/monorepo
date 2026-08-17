@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -144,7 +144,7 @@ describe("GET /api/subjects/:subjectId", () => {
 		await fetchSubject(fixtures.subjectId, token);
 
 		// Let the background write settle: the put is handed to `waitUntil`.
-		await Bun.sleep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		let key = `clients:${fixtures.clientId}:subjects:${fixtures.subjectId}`;
 		let cached = await app.kv.get(key, "json");
@@ -269,7 +269,7 @@ describe("GET /api/subjects/:subjectId", () => {
 	test("caches the resolved client under the shared key", async () => {
 		let token = await clientCredentialsToken();
 		await fetchSubject(fixtures.subjectId, token);
-		await Bun.sleep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		expect(await app.kv.get(`clients:${fixtures.clientId}`, "json")).toMatchObject({
 			id: fixtures.clientId,
@@ -298,7 +298,7 @@ describe("GET /api/subjects/:subjectId", () => {
 	test("never returns the client secret in the cached client entry it writes", async () => {
 		let token = await clientCredentialsToken();
 		await fetchSubject(fixtures.subjectId, token);
-		await Bun.sleep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		let raw = await app.kv.get(`clients:${fixtures.clientId}`, "text");
 		expect(raw).not.toContain(fixtures.clientSecret);

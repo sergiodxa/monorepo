@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
-
 import { Base64Url, Hex, password, randomBytes, sha256 } from "@pkg/crypto";
 import { JWK } from "@pkg/jwt";
 import { unwrap } from "@pkg/result";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { OIDC } from "~/app/auth/oidc-provider";
 import { ISSUER } from "~/app/config";
@@ -77,19 +76,19 @@ type MockRepository = { [Key in keyof OIDC.Repository]: OIDC.Repository[Key] };
 // Mock repository
 function createMockRepository(): MockRepository {
 	return {
-		getSigningKey: mock(async () => testKeyPair),
-		findClientById: mock(async (id: string) => (id === testClient.id ? testClient : null)),
-		findClientByLogoutUri: mock(async (uri: string) =>
+		getSigningKey: vi.fn(async () => testKeyPair),
+		findClientById: vi.fn(async (id: string) => (id === testClient.id ? testClient : null)),
+		findClientByLogoutUri: vi.fn(async (uri: string) =>
 			uri === testClient.logoutUri ? testClient : null,
 		),
-		findSessionById: mock(async (id: string) => (id === testSession.id ? testSession : null)),
-		findAuthorizationCodeData: mock(async () => testAuthzCode),
-		findSubjectById: mock(async (id: string) => (id === testSubject.id ? testSubject : null)),
-		deleteSessionBySubjectId: mock(async () => {}),
-		deleteSessionById: mock(async () => {}),
-		touchSession: mock(async () => {}),
-		findSessionsForBackchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
-		findSessionsForFrontchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
+		findSessionById: vi.fn(async (id: string) => (id === testSession.id ? testSession : null)),
+		findAuthorizationCodeData: vi.fn(async () => testAuthzCode),
+		findSubjectById: vi.fn(async (id: string) => (id === testSubject.id ? testSubject : null)),
+		deleteSessionBySubjectId: vi.fn(async () => {}),
+		deleteSessionById: vi.fn(async () => {}),
+		touchSession: vi.fn(async () => {}),
+		findSessionsForBackchannelLogout: vi.fn(async () => [] as OIDC.SessionWithClient[]),
+		findSessionsForFrontchannelLogout: vi.fn(async () => [] as OIDC.SessionWithClient[]),
 	} as unknown as MockRepository;
 }
 
@@ -128,7 +127,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid authorization code", async () => {
 			let repo = createMockRepository();
-			repo.findAuthorizationCodeData = mock(async () => {
+			repo.findAuthorizationCodeData = vi.fn(async () => {
 				throw new Error("Authorization code not found.");
 			});
 			let provider = new OIDC(ISSUER, repo);
@@ -283,7 +282,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid refresh token", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = mock(async () => null);
+			repo.findSessionById = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo);
 
 			await expect(
@@ -327,7 +326,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects unknown client", async () => {
 			let repo = createMockRepository();
-			repo.findClientById = mock(async () => null);
+			repo.findClientById = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo);
 
 			await expect(
@@ -358,7 +357,7 @@ describe("OAuth2Provider", () => {
 
 		test("returns success for already-revoked token (per RFC 7009)", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = mock(async () => null);
+			repo.findSessionById = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo);
 
 			// Should not throw
@@ -371,7 +370,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects token belonging to different client", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = mock(async () => ({
+			repo.findSessionById = vi.fn(async () => ({
 				...testSession,
 				clientId: "different-client",
 			}));
@@ -449,7 +448,7 @@ describe("OAuth2Provider", () => {
 
 		test("returns inactive for expired/invalid token", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = mock(async () => null);
+			repo.findSessionById = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo);
 
 			let result = await provider.introspect({
@@ -754,11 +753,11 @@ describe("OIDC", () => {
 			// repository that stops answering once they are gone is exactly what
 			// production looks like.
 			let deleted = false;
-			repo.deleteSessionBySubjectId = mock(async () => {
+			repo.deleteSessionBySubjectId = vi.fn(async () => {
 				deleted = true;
 			});
-			repo.findSessionsForBackchannelLogout = mock(async () => (deleted ? [] : [target]));
-			repo.findSessionsForFrontchannelLogout = mock(async () => (deleted ? [] : [target]));
+			repo.findSessionsForBackchannelLogout = vi.fn(async () => (deleted ? [] : [target]));
+			repo.findSessionsForFrontchannelLogout = vi.fn(async () => (deleted ? [] : [target]));
 
 			let provider = new OIDC(ISSUER, repo);
 			let result = await provider.logout({ sessionSubject: testSubject.id });
@@ -787,7 +786,7 @@ describe("OIDC", () => {
 			// The sign-out already happened by the time delivery is attempted, so nothing
 			// that goes wrong here — down to not being able to sign the tokens at all — may
 			// turn it into a failure the person sees.
-			repo.getSigningKey = mock(async () => {
+			repo.getSigningKey = vi.fn(async () => {
 				throw new Error("key store unavailable");
 			});
 
@@ -971,14 +970,14 @@ function createLoginRepository(state: LoginRepositoryState): OIDC.Repository {
 	return {
 		...createMockRepository(),
 
-		findSubjectByEmail: mock(async () => (state.subjectMissing ? null : testSubject)),
+		findSubjectByEmail: vi.fn(async () => (state.subjectMissing ? null : testSubject)),
 
-		createSubject: mock(async (data: { avatar: string }) => {
+		createSubject: vi.fn(async (data: { avatar: string }) => {
 			state.avatars.push(data.avatar);
 			return testSubject;
 		}),
 
-		findCredential: mock(async () => {
+		findCredential: vi.fn(async () => {
 			if (state.storedHash === null) return null;
 			return {
 				subjectId: testSubject.id,
@@ -987,27 +986,27 @@ function createLoginRepository(state: LoginRepositoryState): OIDC.Repository {
 			};
 		}),
 
-		createCredential: mock(
+		createCredential: vi.fn(
 			async (_subjectId: string, passwordHash: string, verifiedAt: Date | null) => {
 				state.created.push(passwordHash);
 				state.createdVerifiedAt.push(verifiedAt);
 			},
 		),
 
-		updateCredentialPasswordHash: mock(async (_subjectId: string, passwordHash: string) => {
+		updateCredentialPasswordHash: vi.fn(async (_subjectId: string, passwordHash: string) => {
 			if (state.upgradeError) throw state.upgradeError;
 			state.upgraded.push(passwordHash);
 		}),
 
-		createSession: mock(async () => ({ id: testSession.id })),
+		createSession: vi.fn(async () => ({ id: testSession.id })),
 
-		findOrCreateGrant: mock(async () => ({
+		findOrCreateGrant: vi.fn(async () => ({
 			id: "grant-123",
 			subjectId: testSubject.id,
 			clientId: testClient.id,
 		})),
 
-		storeAuthorizationCode: mock(async () => {}),
+		storeAuthorizationCode: vi.fn(async () => {}),
 	} as unknown as OIDC.Repository;
 }
 

@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { Customer as PolarCustomer, PolarClient } from "@pkg/polar";
+
+import { describe, expect, test } from "vitest";
 
 import type { BillableSubject } from "~/app/services/customer";
 

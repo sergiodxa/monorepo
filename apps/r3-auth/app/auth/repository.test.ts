@@ -7,15 +7,29 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace } from "@pkg/cloudflare-mocks";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let kv = createKVNamespace();
 
-await mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
+/**
+ * The binding is exposed as a getter so every read resolves the namespace the current test
+ * is using: the factory below runs once, when the subject first imports the module, while
+ * `beforeEach` installs fresh storage per test. The subject reads `env.KV` per call, so the
+ * getter is what keeps one test's codes out of the next one's storage.
+ *
+ * The mock has to be registered before the subject is imported, which is why every import
+ * below it is dynamic.
+ */
+vi.doMock("cloudflare:workers", () => ({
+	env: {
+		get KV() {
+			return kv;
+		},
+	},
+}));
 
 let { createOidcRepository } = await import("~/app/auth/repository");
 let { AUTHZ_CODE_TTL } = await import("~/app/config");
@@ -47,7 +61,6 @@ function authzCodeData(overrides: Record<string, unknown> = {}) {
 
 beforeEach(async () => {
 	kv = createKVNamespace();
-	await mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
 
 	db = createTestDatabase().db;
 	repository = createOidcRepository(db);
