@@ -37,6 +37,23 @@ export function setJobUsageTracker(tracker: Job.UsageTracker | undefined): void 
 	usageTracker = tracker;
 }
 
+/**
+ * Renders a thrown `cause` that is not an `Error` as log text. An object is
+ * serialized rather than coerced, so a structured cause reaches the log with its
+ * fields intact instead of collapsing to `[object Object]`. Serialization is
+ * guarded because a cause that cycles must not take down the failure handler.
+ * @param cause Value found on `error.cause`, of any shape.
+ * @returns Text safe to place in the `message` field of a log entry.
+ */
+function describeCause(cause: unknown): string {
+	if (typeof cause !== "object" || cause === null) return String(cause);
+	try {
+		return JSON.stringify(cause);
+	} catch {
+		return Object.prototype.toString.call(cause);
+	}
+}
+
 export namespace Job {
 	export interface UptimeOptions {
 		token?: string;
@@ -201,7 +218,9 @@ export abstract class Job {
 								? {
 										name: error.cause instanceof Error ? error.cause.name : "UnknownError",
 										message:
-											error.cause instanceof Error ? error.cause.message : String(error.cause),
+											error.cause instanceof Error
+												? error.cause.message
+												: describeCause(error.cause),
 										issues: error.cause instanceof ValidationError ? error.cause.issues : undefined,
 									}
 								: undefined,

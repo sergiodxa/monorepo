@@ -37,7 +37,7 @@ describe("TimingCollector#measure", () => {
 			throw new Error("boom");
 		});
 
-		await expect(promise).rejects.toThrow("boom");
+		expect(promise).rejects.toThrow("boom");
 
 		expect(collector.toString()).toStartWith('db;desc="findUserById"');
 	});

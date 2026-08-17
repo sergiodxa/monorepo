@@ -61,7 +61,7 @@ describe("logger middleware", () => {
 		let ctx = createContext();
 		let error = new Error("boom");
 
-		await expect(
+		expect(
 			logger(ctx, async () => {
 				throw error;
 			}),
@@ -82,7 +82,7 @@ describe("logger middleware", () => {
 	test("stringifies a non-Error throw instead of reading .message/.stack, and still flushes", async () => {
 		let ctx = createContext();
 
-		await expect(
+		expect(
 			logger(ctx, async () => {
 				throw "not an error object";
 			}),

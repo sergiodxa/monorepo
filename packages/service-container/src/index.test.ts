@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RequestContext } from "remix/router";
+import type { ContextEntries, RequestContext } from "remix/router";
 
-import { asyncContext, getContext } from "remix/middleware/async-context";
+import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createController } from "remix/router";
 import { route } from "remix/routes";
@@ -41,7 +41,12 @@ interface JobContext {
 	jobName: string;
 }
 
-interface ControllerContext extends RequestContext<Record<string, string>> {
+/**
+ * The context a controller action receives once `renderWith()` has run: route
+ * params plus the installed renderer. Entries stay open (`ContextEntries`) so the
+ * middleware stack's own entry list still satisfies it.
+ */
+interface ControllerContext extends RequestContext<Record<string, string>, ContextEntries> {
 	render(data: unknown): Response;
 }
 
@@ -216,14 +221,17 @@ describe(inject.name, () => {
 		container.singleton(Database, () => database);
 		container.singleton(Logger, () => logger);
 
-		let action = inject([Database, Logger] as const, async (db, log) => {
+		let action = inject([Database, Logger] as const, async (db, log, ctx: ControllerContext) => {
 			log.info("Handling index action");
 			let users = await db.query("SELECT * FROM users");
-			return getContext().render({ users });
+			return ctx.render({ users });
 		});
 
 		let controller = createController(routes.something, {
-			middleware: [asyncContext(), renderWith(() => (data) => new Response(JSON.stringify(data)))],
+			middleware: [
+				asyncContext(),
+				renderWith(() => (data: unknown) => new Response(JSON.stringify(data))),
+			],
 			actions: { index: action },
 		});
 

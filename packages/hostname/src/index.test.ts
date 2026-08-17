@@ -37,9 +37,33 @@ function activeHostname(overrides: Record<string, unknown> = {}) {
 	};
 }
 
+/** A request the client made, recorded so a test can assert on what it sent. */
+interface RecordedCall {
+	url: string;
+	init?: RequestInit;
+}
+
+/** The create payload, as it arrives over the wire once serialized. */
+interface SentHostname {
+	hostname: string;
+	ssl: { method: string; type: string };
+	custom_metadata: Record<string, string>;
+}
+
+/**
+ * Parses the JSON body of a recorded call. Every payload the client sends is a
+ * `JSON.stringify` result, so a body that is not a string means the request was
+ * built wrong and the test should fail loudly rather than assert on `undefined`.
+ */
+function sentBody(call: RecordedCall | undefined): SentHostname {
+	let body = call?.init?.body;
+	if (typeof body !== "string") throw new TypeError("expected a serialized JSON body");
+	return JSON.parse(body) as SentHostname;
+}
+
 /** Installs a fetch mock returning `body` with `status`, capturing the last call. */
 function mockFetch(body: unknown, status = 200) {
-	let calls: Array<{ url: string; init?: RequestInit }> = [];
+	let calls: RecordedCall[] = [];
 	globalThis.fetch = mock((url: string, init?: RequestInit) => {
 		calls.push({ url, init });
 		return Promise.resolve(
@@ -73,7 +97,7 @@ describe("HostnameClient.create", () => {
 		expect(calls[0]?.url).toBe(
 			"https://api.cloudflare.com/client/v4/zones/zone-123/custom_hostnames",
 		);
-		let sent = JSON.parse(String(calls[0]?.init?.body));
+		let sent = sentBody(calls[0]);
 		expect(sent.custom_metadata).toEqual({ blog_id: "blog-9", region: "weur" });
 		expect(sent.hostname).toBe("blog.example.com");
 		expect(sent.ssl.method).toBe("txt");
@@ -93,7 +117,7 @@ describe("HostnameClient.create", () => {
 
 		await makeClient().create("blog.example.com", "tenant-1");
 
-		let sent = JSON.parse(String(calls[0]?.init?.body));
+		let sent = sentBody(calls[0]);
 		expect(sent.custom_metadata).toEqual({ tenant_id: "tenant-1", region: "wnam" });
 	});
 
@@ -137,7 +161,7 @@ describe("HostnameClient error handling", () => {
 
 		let client = makeClient();
 		let promise = client.status("cf-1");
-		await expect(promise).rejects.toBeInstanceOf(HostnameApiError);
+		expect(promise).rejects.toBeInstanceOf(HostnameApiError);
 	});
 });
 

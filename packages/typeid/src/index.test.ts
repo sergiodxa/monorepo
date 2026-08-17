@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { generateUUID } from "@pkg/uuid";
+
 import { encode } from "./lib/base32";
 import {
 	EmptyPrefixError,
@@ -16,7 +18,7 @@ import { typeid, TypeID } from "./index";
 
 describe(TypeID.name, () => {
 	test("creates a TypeID from a UUID", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 		let value = TypeID.fromUUID("user", uuid);
 
 		expect(value).toBeInstanceOf(TypeID);
@@ -27,7 +29,7 @@ describe(TypeID.name, () => {
 	});
 
 	test("creates a TypeID from a string", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 		let suffix = encode(uuid);
 		let value = TypeID.fromString(`user_${suffix}`);
 
@@ -37,7 +39,7 @@ describe(TypeID.name, () => {
 	});
 
 	test("creates a TypeID with an empty prefix", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 		let suffix = encode(uuid);
 		let value = TypeID.fromString(suffix);
 
@@ -47,7 +49,7 @@ describe(TypeID.name, () => {
 	});
 
 	test("throws when the prefix is invalid", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 
 		expect(() => TypeID.fromUUID("User", uuid)).toThrow(InvalidPrefixError);
 	});
@@ -84,7 +86,7 @@ describe(TypeID.name, () => {
 	});
 
 	test("throws when the prefix does not match", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 		let suffix = encode(uuid);
 
 		expect(() => TypeID.fromString(`user_${suffix}`, "org")).toThrow(PrefixMismatchError);
@@ -102,7 +104,7 @@ describe(TypeID.name, () => {
 
 describe(typeid.name, () => {
 	test("returns a typed factory for a prefix", () => {
-		let uuid = crypto.randomUUID();
+		let uuid = generateUUID();
 		let createUserID = typeid("user");
 		let value = createUserID(uuid);
 

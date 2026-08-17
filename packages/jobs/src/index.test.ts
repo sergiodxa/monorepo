@@ -11,9 +11,10 @@ import {
 } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { Message } from "@cloudflare/workers-types";
+import type { Message } from "@cloudflare/workers-types";
+import type { JSONValue } from "@pkg/types";
+
 import { isFailure } from "@pkg/result";
-import { JSONValue } from "@pkg/types";
 import { validate } from "@pkg/validate";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -78,7 +79,7 @@ class SuccessfulJob extends Job {
 }
 
 class SuccessfulJobWithMonitor extends Job {
-	static monitorId = MONITOR_ID;
+	static override monitorId = MONITOR_ID;
 	static schema = s.object({ teamId: s.string() });
 
 	async perform(): Promise<void> {
@@ -111,6 +112,14 @@ class NonRetriableJobWithCause extends Job {
 	async perform(): Promise<void> {
 		let cause = new Error("Validation error");
 		throw new Job.NonRetriableError("Invalid input", { cause });
+	}
+}
+
+class NonRetriableJobWithObjectCause extends Job {
+	async perform(): Promise<void> {
+		throw new Job.NonRetriableError("Invalid input", {
+			cause: { field: "teamId", code: 422 },
+		});
 	}
 }
 
@@ -316,13 +325,22 @@ describe(Job.name, () => {
 			let [, logData] = consoleErrorSpy.mock.calls[0];
 			expect(logData.events[1].error.message).toBe("Invalid input");
 		});
+
+		test("serializes a cause that is not an Error, instead of logging [object Object]", async () => {
+			let message = createMessage({ teamId: "team-123" });
+
+			await NonRetriableJobWithObjectCause.run({ message });
+
+			let [, logData] = consoleErrorSpy.mock.calls[0];
+			expect(logData.events[1].error.cause.message).toBe('{"field":"teamId","code":422}');
+		});
 	});
 
 	describe("unexpected error handling", () => {
 		test("logs error and re-throws for Cloudflare to handle", async () => {
 			let message = createMessage({ teamId: "team-123" });
 
-			await expect(UnexpectedErrorJob.run({ message })).rejects.toThrow("Something went wrong");
+			expect(UnexpectedErrorJob.run({ message })).rejects.toThrow("Something went wrong");
 
 			// Should not call ack or retry - let Cloudflare handle it
 			expect(ackMock).not.toHaveBeenCalled();

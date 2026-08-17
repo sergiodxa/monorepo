@@ -142,9 +142,9 @@ describe("macros", () => {
 	test("every macro normalizes to the same text as the expression it stands for", () => {
 		for (let { macro, expands } of MACROS) {
 			expectStableNormalization(macro);
-			expect({ macro, normalized: `${unwrap(Schedule.parse(macro))}` }).toEqual({
+			expect({ macro, normalized: unwrap(Schedule.parse(macro)).toString() }).toEqual({
 				macro,
-				normalized: `${unwrap(Schedule.parse(expands))}`,
+				normalized: unwrap(Schedule.parse(expands)).toString(),
 			});
 		}
 	});

@@ -201,6 +201,7 @@ describe("Pagination", () => {
 			let pagination = new Pagination({ page: 1, perPage: 10, total: 5 });
 
 			expect(JSON.stringify({ meta: pagination })).toContain('"pages":1');
+			// oxlint-disable-next-line typescript/no-misused-spread -- Losing the prototype is the behavior under test: every field is a getter, so a spread copies none of them and callers must serialize instead.
 			expect(Object.keys({ ...pagination })).toEqual([]);
 		});
 

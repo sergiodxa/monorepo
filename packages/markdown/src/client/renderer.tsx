@@ -48,6 +48,20 @@ function getTagName(node: Tag): string {
 }
 
 /**
+ * Reads a Markdoc attribute that has to render as text. Attribute values are
+ * arbitrary scalars, so a table, object or array reaching a string coercion would
+ * be painted into the document as `[object Object]`; those fall back instead.
+ * @param value Attribute value as Markdoc parsed it.
+ * @param fallback Text used when the value cannot be rendered as itself.
+ * @returns The attribute as text, or `fallback`.
+ */
+function textAttribute(value: unknown, fallback: string): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number") return String(value);
+	return fallback;
+}
+
+/**
  * Returns a plain attributes object for one Markdoc tag.
  */
 function getTagAttributes(node: Tag): Record<string, unknown> {
@@ -117,8 +131,8 @@ function renderChild(
 	if (tagName === "Fence") {
 		return (
 			<Fence
-				content={String(attrs.content ?? "")}
-				language={String(attrs.language ?? "plain")}
+				content={textAttribute(attrs.content, "")}
+				language={textAttribute(attrs.language, "plain")}
 				path={typeof attrs.path === "string" ? attrs.path : undefined}
 				title={typeof attrs.title === "string" ? attrs.title : undefined}
 			/>
@@ -178,7 +192,7 @@ function renderChild(
 	if (tagName === "a") {
 		return (
 			<a
-				href={String(attrs.href ?? "")}
+				href={textAttribute(attrs.href, "")}
 				target={typeof attrs.target === "string" ? attrs.target : undefined}
 				rel={typeof attrs.rel === "string" ? attrs.rel : undefined}
 				mix={[

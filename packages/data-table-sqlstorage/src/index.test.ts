@@ -114,7 +114,7 @@ describe("createSQLStorageDatabaseAdapter", () => {
 			throw boom;
 		});
 
-		await expect(promise).rejects.toBe(boom);
+		expect(promise).rejects.toBe(boom);
 
 		// Atomicity: none of the transaction's writes may remain committed.
 		expect(await db.count(users)).toBe(0);
@@ -129,7 +129,7 @@ describe("createSQLStorageDatabaseAdapter", () => {
 			await tx.create(users, { id: 1, email: "conflict@example.com" });
 		});
 
-		await expect(promise).rejects.toThrow();
+		expect(promise).rejects.toThrow();
 
 		// Only the pre-existing row survives; the transaction's write is gone.
 		expect(await db.count(users)).toBe(1);
@@ -145,7 +145,7 @@ describe("createSQLStorageDatabaseAdapter", () => {
 			await tx.create(users, { id: 2, email: "second@example.com" });
 			throw new Error("fail");
 		});
-		await expect(promise).rejects.toThrow();
+		expect(promise).rejects.toThrow();
 
 		await db.transaction(async (tx) => {
 			await tx.create(users, { id: 3, email: "third@example.com" });
@@ -164,7 +164,7 @@ describe("createSQLStorageDatabaseAdapter", () => {
 				await nested.create(users, { id: 2, email: "inner@example.com" });
 				throw new Error("inner fail");
 			});
-			await expect(inner).rejects.toThrow();
+			expect(inner).rejects.toThrow();
 		});
 
 		// The inner savepoint rolled back, the outer transaction committed.
