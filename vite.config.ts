@@ -92,6 +92,28 @@ export default defineConfig({
 					pool: "threads",
 				},
 			},
+			{
+				root: "apps/books",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "books",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+				},
+			},
+			{
+				// The one app whose sources live under `src/`, and the one with no Cloudflare
+				// bindings — nothing here imports `cloudflare:workers`, so the stub plugin has
+				// nothing to stand in for. Rooted at the app for its `~/*` aliases.
+				root: "apps/pkmn",
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "pkmn",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+				},
+			},
 		],
 	},
 

@@ -11,7 +11,7 @@
 // This package typechecks with only the Workers types loaded, which leaves out
 // the test runner's declarations; pull them in here so the file stays type-safe.
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { Cache } from "./index";
 

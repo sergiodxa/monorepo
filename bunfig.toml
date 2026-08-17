@@ -40,4 +40,6 @@ pathIgnorePatterns = [
 	"**/packages/crypto/**",
 	"**/packages/result/**",
 	"**/apps/r3-auth/app/data/subject.test.ts",
+	"**/apps/pkmn/**",
+	"**/apps/books/**",
 ]
