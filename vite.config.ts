@@ -15,6 +15,10 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
 	fmt: {
+		// Vendored third-party content. Oxfmt reformats fenced code inside markdown, which
+		// would rewrite 600+ files nobody here authored and make the next vendor sync a
+		// conflict; they are read, not maintained.
+		ignorePatterns: [".agents/**", "docs/vendor/**"],
 		useTabs: true,
 		experimentalSortPackageJson: true,
 		experimentalSortImports: {

@@ -72,8 +72,8 @@ await mock.module("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: qu
  * round trip, and so the scope each entry point passes is observable; the SQL text itself
  * is covered in `app/services/analytics.test.ts`.
  */
-let p99Query = mock(
-	async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> => success(null),
+let p99Query = mock(async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> =>
+	success(null),
 );
 await mock.module("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 

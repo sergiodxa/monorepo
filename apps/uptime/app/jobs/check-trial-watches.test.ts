@@ -49,20 +49,18 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** The options every fake probe was constructed with, in the order the sweep built them. */
 let probes: HttpCheckOptions[] = [];
 
-let runMock = mock(
-	async (_options: HttpCheckOptions): Promise<HttpCheckResult> => ({
-		outcome: {
-			responseStatus: 200,
-			responseTimeMs: 120,
-			doWallTimeMs: 5,
-			location: null,
-			body: "",
-			failed: false,
-		},
-		contentChecksPassed: true,
-		status: "up",
-	}),
-);
+let runMock = mock(async (_options: HttpCheckOptions): Promise<HttpCheckResult> => ({
+	outcome: {
+		responseStatus: 200,
+		responseTimeMs: 120,
+		doWallTimeMs: 5,
+		location: null,
+		body: "",
+		failed: false,
+	},
+	contentChecksPassed: true,
+	status: "up",
+}));
 
 /**
  * The two datasets anything in the sweep's path could write to, kept apart so a point

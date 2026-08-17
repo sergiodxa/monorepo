@@ -29,8 +29,8 @@ import type { HttpDailyAggregate } from "~/app/services/analytics";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { monitorDailyStats } from "~/database/schema";
 
-let getHttpDailyAggregateMock = mock(
-	async (): Promise<Result<HttpDailyAggregate[], Error>> => success([]),
+let getHttpDailyAggregateMock = mock(async (): Promise<Result<HttpDailyAggregate[], Error>> =>
+	success([]),
 );
 
 await mock.module("~/app/services/analytics", () => ({
