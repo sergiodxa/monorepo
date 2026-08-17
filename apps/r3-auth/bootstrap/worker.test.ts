@@ -21,7 +21,9 @@ let queue = createQueue({ name: "auth" });
 /** Collects the work the worker defers, so a test can await what it started. */
 let context = createExecutionContext();
 
-mock.module("cloudflare:workers", () => ({
+// A synchronous factory is installed synchronously — only an async one hands back a promise
+// — so this is complete on return and awaiting it would only add a top-level await.
+void mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		QUEUE: queue,
 		// Left unset on purpose: with no token the job skips its uptime ping, so no

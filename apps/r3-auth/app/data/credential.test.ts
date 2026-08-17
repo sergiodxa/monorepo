@@ -50,7 +50,7 @@ describe("Credential.create", () => {
 
 	test("refuses a second credential for the same subject", async () => {
 		await Credential.create(db, subjectId, "$2a$10$first", Date.now());
-		expect(Credential.create(db, subjectId, "$2a$10$second", Date.now())).rejects.toThrow();
+		await expect(Credential.create(db, subjectId, "$2a$10$second", Date.now())).rejects.toThrow();
 	});
 });
 

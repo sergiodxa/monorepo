@@ -67,8 +67,15 @@ let testAuthzCode = {
 	authTime: Math.floor(Date.now() / 1000),
 };
 
+/**
+ * The engine's repository with every member restated as a function property. A test holds
+ * the mock itself (`repo.touchSession`) to assert on it, which detaching a method from its
+ * object would not allow.
+ */
+type MockRepository = { [Key in keyof OIDC.Repository]: OIDC.Repository[Key] };
+
 // Mock repository
-function createMockRepository(): OIDC.Repository {
+function createMockRepository(): MockRepository {
 	return {
 		getSigningKey: mock(async () => testKeyPair),
 		findClientById: mock(async (id: string) => (id === testClient.id ? testClient : null)),
@@ -83,7 +90,7 @@ function createMockRepository(): OIDC.Repository {
 		touchSession: mock(async () => {}),
 		findSessionsForBackchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
 		findSessionsForFrontchannelLogout: mock(async () => [] as OIDC.SessionWithClient[]),
-	} as unknown as OIDC.Repository;
+	} as unknown as MockRepository;
 }
 
 beforeAll(async () => {

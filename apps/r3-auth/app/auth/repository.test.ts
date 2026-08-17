@@ -15,7 +15,7 @@ import { createKVNamespace } from "@pkg/cloudflare-mocks";
 
 let kv = createKVNamespace();
 
-mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
+await mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
 
 let { createOidcRepository } = await import("~/app/auth/repository");
 let { AUTHZ_CODE_TTL } = await import("~/app/config");
@@ -47,7 +47,7 @@ function authzCodeData(overrides: Record<string, unknown> = {}) {
 
 beforeEach(async () => {
 	kv = createKVNamespace();
-	mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
+	await mock.module("cloudflare:workers", () => ({ env: { KV: kv } }));
 
 	db = createTestDatabase().db;
 	repository = createOidcRepository(db);

@@ -57,10 +57,10 @@ export const CopyButton = clientEntry(
 					on("ui:copy", (event) => {
 						if (!event.success) return;
 						copied = true;
-						handle.update();
+						void handle.update();
 						setTimeout(() => {
 							copied = false;
-							handle.update();
+							void handle.update();
 						}, 2000);
 					}),
 				]}

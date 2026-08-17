@@ -38,7 +38,7 @@ let countingBucket = {
 	},
 };
 
-mock.module("cloudflare:workers", () => ({ env: { R2: countingBucket } }));
+await mock.module("cloudflare:workers", () => ({ env: { R2: countingBucket } }));
 
 let { getSigningKey, invalidateSigningKeys } = await import("~/app/services/signing-keys");
 

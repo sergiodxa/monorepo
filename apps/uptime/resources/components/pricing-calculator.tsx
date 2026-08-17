@@ -107,19 +107,19 @@ export const PricingCalculator = clientEntry(
 				id: `${handle.id}-monitor-${nextMonitorIndex++}`,
 				frequency: DEFAULT_FREQUENCY,
 			});
-			handle.update();
+			void handle.update();
 		}
 
 		function removeMonitor(id: string) {
 			monitors = monitors.filter((monitor) => monitor.id !== id);
-			handle.update();
+			void handle.update();
 		}
 
 		function setFrequency(id: string, frequency: number) {
 			monitors = monitors.map((monitor) =>
 				monitor.id === id ? { ...monitor, frequency } : monitor,
 			);
-			handle.update();
+			void handle.update();
 		}
 
 		return () => {

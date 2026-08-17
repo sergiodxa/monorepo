@@ -137,7 +137,7 @@ export const RunFlowButton = clientEntry(
 							let signal = handle.signal;
 
 							pending = true;
-							handle.update();
+							void handle.update();
 
 							try {
 								let response = await fetch(handle.props.action, {
@@ -155,7 +155,7 @@ export const RunFlowButton = clientEntry(
 								// A failed request says nothing rather than something wrong.
 							} finally {
 								pending = false;
-								handle.update();
+								void handle.update();
 							}
 						}),
 					]}

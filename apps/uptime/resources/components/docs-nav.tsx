@@ -106,7 +106,7 @@ export const DocsNav = clientEntry(
 							mix={[
 								on("input", (event) => {
 									search = event.currentTarget.value;
-									handle.update();
+									void handle.update();
 								}),
 							]}
 						/>

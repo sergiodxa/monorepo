@@ -67,10 +67,13 @@ export const CopyButton = clientEntry(
 					on("ui:copy", (event) => {
 						if (!event.success) return;
 						copied = true;
-						handle.update();
+						// The re-render is deliberately not waited on: the event handler and the
+						// timer below both finish before the label has swapped, and neither has
+						// anything to do once it has.
+						void handle.update();
 						setTimeout(() => {
 							copied = false;
-							handle.update();
+							void handle.update();
 						}, CONFIRMATION_MS);
 					}),
 				]}

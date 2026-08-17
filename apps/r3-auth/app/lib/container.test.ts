@@ -68,7 +68,7 @@ let accessToken = createSecretsStoreSecret({
 /** The plain local-development variable, absent unless a test sets it. */
 let localToken: string | undefined;
 
-mock.module("cloudflare:workers", () => ({
+await mock.module("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		POLAR_ACCESS_TOKEN: accessToken,
 		// A getter, because a test sets the fallback after `env` is already captured; the

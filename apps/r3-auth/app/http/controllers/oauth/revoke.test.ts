@@ -30,7 +30,7 @@ function basic(clientId = fixtures.clientId, secret = fixtures.clientSecret): st
 async function post(
 	path: string,
 	body: Record<string, string>,
-	headers: HeadersInit = {},
+	headers: Record<string, string> = {},
 ): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${path}`, {

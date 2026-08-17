@@ -33,6 +33,15 @@ enum SESSION_KEYS {
 }
 
 /**
+ * Reads a profile field out of the session as text. Session values are untyped, so
+ * anything that is not a string — an absent key, or one left by an older cookie shape —
+ * reads as empty rather than as that value's default stringification.
+ */
+function toText(value: unknown): string {
+	return typeof value === "string" ? value : "";
+}
+
+/**
  * Auth middleware that resolves the viewer from session data.
  */
 export let auth = createAuthMiddleware({
@@ -43,9 +52,9 @@ export let auth = createAuthMiddleware({
 				if (typeof id !== "string") return null;
 				return {
 					id,
-					name: String(session.get(SESSION_KEYS.NAME) ?? ""),
-					email: String(session.get(SESSION_KEYS.EMAIL) ?? ""),
-					avatar: String(session.get(SESSION_KEYS.AVATAR) ?? ""),
+					name: toText(session.get(SESSION_KEYS.NAME)),
+					email: toText(session.get(SESSION_KEYS.EMAIL)),
+					avatar: toText(session.get(SESSION_KEYS.AVATAR)),
 				};
 			},
 			verify(viewer) {

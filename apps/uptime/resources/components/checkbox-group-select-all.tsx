@@ -67,7 +67,7 @@ export const CheckboxGroupSelectAll = clientEntry(
 			if (next === allSelected && ready) return;
 			allSelected = next;
 			ready = true;
-			handle.update();
+			void handle.update();
 		}
 
 		return () => (

@@ -145,7 +145,7 @@ export const QuickPingForm = clientEntry(
 							if (pending) return;
 
 							pending = true;
-							handle.update();
+							void handle.update();
 							try {
 								/**
 								 * `manual` so the browser doesn't spend a request rendering the
@@ -162,7 +162,7 @@ export const QuickPingForm = clientEntry(
 								await handle.frame.reload();
 							} finally {
 								pending = false;
-								handle.update();
+								void handle.update();
 							}
 						}),
 					]}

@@ -30,7 +30,10 @@ function basic(clientId = fixtures.clientId, secret = fixtures.clientSecret): st
 }
 
 /** Posts a form-encoded body to the token endpoint. */
-async function post(body: Record<string, string>, headers: HeadersInit = {}): Promise<Response> {
+async function post(
+	body: Record<string, string>,
+	headers: Record<string, string> = {},
+): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.oauth.token.href()}`, {
 			method: "POST",

@@ -176,7 +176,7 @@ export const RunMonitorButton = clientEntry(
 							let signal = handle.signal;
 
 							pending = true;
-							handle.update();
+							void handle.update();
 
 							try {
 								let response = await fetch(handle.props.action, {
@@ -203,7 +203,12 @@ export const RunMonitorButton = clientEntry(
 								if (status === undefined) return;
 
 								// Reloaded before the toast so the numbers behind it are already the new ones.
-								await Promise.all(MONITOR_FRAMES.map((name) => handle.frames.get(name)?.reload()));
+								// A frame the page did not render has nothing to wait on, so it is dropped
+								// rather than contributing an `undefined` to the batch.
+								let frames = MONITOR_FRAMES.map((name) => handle.frames.get(name)).filter(
+									(frame) => frame !== undefined,
+								);
+								await Promise.all(frames.map((frame) => frame.reload()));
 
 								let toast = transitionToast(t, handle.props.name, run.status, status);
 								if (toast) showToast(toast);
@@ -211,7 +216,7 @@ export const RunMonitorButton = clientEntry(
 								// A failed run is already visible in the page; a broken toast helps nobody.
 							} finally {
 								pending = false;
-								handle.update();
+								void handle.update();
 							}
 						}),
 					]}

@@ -94,7 +94,7 @@ export const RangeSlider = clientEntry(
 								mix={[
 									on<HTMLInputElement, "input">("input", (event) => {
 										value = event.currentTarget.valueAsNumber;
-										handle.update();
+										void handle.update();
 									}),
 								]}
 							/>

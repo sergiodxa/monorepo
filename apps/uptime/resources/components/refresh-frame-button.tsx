@@ -65,13 +65,13 @@ export const RefreshFrameButton = clientEntry(
 							if (pending) return;
 
 							pending = true;
-							handle.update();
+							void handle.update();
 							try {
 								handle.frame.src = src;
 								await handle.frame.reload();
 							} finally {
 								pending = false;
-								handle.update();
+								void handle.update();
 							}
 						}),
 					]}

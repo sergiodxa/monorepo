@@ -109,7 +109,9 @@ function waitUntil(promise: Promise<unknown>): void {
 	void promise.catch(() => {});
 }
 
-mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 }, waitUntil }));
+// A synchronous factory is installed synchronously — only an async one hands back a promise
+// — so this is complete on return, and a top-level await is what the note below rules out.
+void mock.module("cloudflare:workers", () => ({ env: { KV: kv, R2: r2 }, waitUntil }));
 
 /**
  * The application modules, imported on first use rather than at module load.
@@ -195,7 +197,10 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	kv = createKVNamespace();
 	r2 = createR2Bucket();
-	mock.module("cloudflare:workers", () => ({ env: { ...TEST_ENV, KV: kv, R2: r2 }, waitUntil }));
+	await mock.module("cloudflare:workers", () => ({
+		env: { ...TEST_ENV, KV: kv, R2: r2 },
+		waitUntil,
+	}));
 
 	// Captured after the reset so this instance keeps its own bindings even once a
 	// later `createTestApp()` has replaced the module-level ones.

@@ -463,6 +463,15 @@ export function dailyCostQuery(day: string): string {
 }
 
 /**
+ * Reads a grouping column of a {@link dailyCostQuery} row as text. The SQL API types its
+ * cells as unknown, so only a scalar becomes text; anything else reads as empty rather
+ * than as a default stringification no team id or rate card could ever match.
+ */
+function toText(value: unknown): string {
+	return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+/**
  * Reads one {@link dailyCostQuery} row into a {@link DailyTeamCost}.
  *
  * Values are coerced with `Number` because the SQL API renders large sums as strings, and
@@ -476,8 +485,8 @@ export function toDailyTeamCost(row: Record<string, unknown>): DailyTeamCost {
 	for (let resource of COST_RESOURCES) quantities[resource] = Number(row[resource] ?? 0);
 
 	return {
-		teamId: String(row.teamId ?? ""),
-		rateCard: String(row.rateCard ?? ""),
+		teamId: toText(row.teamId),
+		rateCard: toText(row.rateCard),
 		quantities,
 		reportedCents: Number(row.reportedCents ?? 0),
 	};

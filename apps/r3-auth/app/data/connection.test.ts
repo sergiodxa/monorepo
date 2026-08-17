@@ -39,7 +39,7 @@ describe("Connection.create", () => {
 
 	test("refuses to link the same provider identity twice", async () => {
 		await Connection.create(db, "github", "12345", subjectId);
-		expect(Connection.create(db, "github", "12345", subjectId)).rejects.toThrow();
+		await expect(Connection.create(db, "github", "12345", subjectId)).rejects.toThrow();
 	});
 });
 
