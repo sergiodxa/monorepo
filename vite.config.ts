@@ -77,6 +77,7 @@ export default defineConfig({
 						"packages/mail/src/**/*.test.ts?(x)",
 						"packages/cloudflare-mocks/src/**/*.test.ts?(x)",
 						"packages/oidc-provider/src/**/*.test.ts?(x)",
+						"packages/blog-engine/src/**/*.test.ts?(x)",
 					],
 					pool: "threads",
 				},

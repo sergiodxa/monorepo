@@ -10,9 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { InvalidCursorError, InvalidOrderingError } from "./errors";
 import {

@@ -10,12 +10,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as Sqlite } from "bun:sqlite";
-import { beforeEach, describe, expect, test } from "bun:test";
+import { DatabaseSync as Sqlite } from "node:sqlite";
 
 import { isFailure, unwrap } from "@pkg/result";
 import { column as c, Database, table } from "remix/data-table";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { OrderByTuple } from "./keyset";
 
@@ -53,26 +53,25 @@ const ORDER_NEWEST_FIRST: readonly OrderByTuple[] = [
  * has three-row ties straddling every page boundary.
  */
 function seed(sqlite: Sqlite): void {
-	sqlite.run(
+	sqlite.exec(
 		"create table events (id text primary key, team_id integer, created_at integer, name text)",
 	);
 
+	let insert = sqlite.prepare(
+		"insert into events (id, team_id, created_at, name) values (?, ?, ?, ?)",
+	);
+
 	for (let index = 1; index <= 12; index++) {
-		sqlite.run("insert into events (id, team_id, created_at, name) values (?, ?, ?, ?)", [
+		insert.run(
 			`evt_${String(index).padStart(2, "0")}`,
 			1,
 			1000 + Math.floor((index - 1) / 3) * 10,
 			`event ${index}`,
-		]);
+		);
 	}
 
 	for (let index = 1; index <= 3; index++) {
-		sqlite.run("insert into events (id, team_id, created_at, name) values (?, ?, ?, ?)", [
-			`oth_${index}`,
-			2,
-			9000,
-			`other ${index}`,
-		]);
+		insert.run(`oth_${index}`, 2, 9000, `other ${index}`);
 	}
 }
 

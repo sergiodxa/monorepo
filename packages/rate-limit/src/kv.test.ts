@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
-
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RateLimitKVNamespace } from "./kv";
 
@@ -72,12 +71,12 @@ function createFailingKV(failing: keyof RateLimitKVNamespace): RateLimitKVNamesp
 }
 
 afterEach(() => {
-	setSystemTime();
+	vi.useRealTimers();
 });
 
 describe("KVAdapter", () => {
 	test("allows up to the limit and denies the next attempt", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 2, window: "10 seconds" });
 
@@ -90,7 +89,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("keys the counter by prefix, key, and window start", async () => {
-		setSystemTime(new Date(WINDOW_START + 2000));
+		vi.setSystemTime(new Date(WINDOW_START + 2000));
 		let { kv, entries } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 5, window: "10 seconds", prefix: "login" });
 
@@ -100,7 +99,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("defaults the prefix so unrelated limiters can share a namespace", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, entries } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 5, window: "10 seconds" });
 
@@ -111,14 +110,14 @@ describe("KVAdapter", () => {
 	});
 
 	test("starts a fresh budget in a new window, under a new entry key", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, entries } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 1, window: "10 seconds", prefix: "login" });
 
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(true);
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(false);
 
-		setSystemTime(new Date(WINDOW_START + 10_000));
+		vi.setSystemTime(new Date(WINDOW_START + 10_000));
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(true);
 		expect([...entries.keys()]).toEqual([
 			`login:ip:${WINDOW_START}`,
@@ -127,7 +126,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("writes a TTL of the window, raised to KV's own minimum", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let short = createKV();
 		let long = createKV();
 
@@ -139,7 +138,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("does not write on a denied attempt", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, puts } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 1, window: "10 seconds" });
 
@@ -151,7 +150,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("spends the requested cost in one write", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, puts } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 10, window: "10 seconds" });
 
@@ -160,7 +159,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("treats a corrupt entry as an empty counter", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, entries } = createKV();
 		entries.set(`rate-limit:ip:${WINDOW_START}`, "not a number");
 		let adapter = new KVAdapter(kv, { limit: 2, window: "10 seconds" });
@@ -169,7 +168,7 @@ describe("KVAdapter", () => {
 	});
 
 	test("reset removes the entry for the window in progress", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { kv, deletes } = createKV();
 		let adapter = new KVAdapter(kv, { limit: 1, window: "10 seconds", prefix: "login" });
 

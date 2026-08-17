@@ -39,7 +39,7 @@ pathIgnorePatterns = [
 	"**/packages/http/**",
 	"**/packages/crypto/**",
 	"**/packages/result/**",
-	"**/apps/r3-auth/app/data/subject.test.ts",
+	"**/apps/r3-auth/**",
 	"**/apps/pkmn/**",
 	"**/apps/books/**",
 	"**/apps/auth-saas/**",
@@ -59,4 +59,9 @@ pathIgnorePatterns = [
 	"**/packages/polar/**",
 	"**/packages/workers-cache/**",
 	"**/packages/oidc-provider/**",
+	"**/packages/blog-engine/**",
+	"**/packages/data-table-d1/**",
+	"**/packages/data-table-sqlstorage/**",
+	"**/packages/pagination/**",
+	"**/packages/rate-limit/**",
 ]

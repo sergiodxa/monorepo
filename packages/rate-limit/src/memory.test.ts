@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
-
 import { isSuccess, unwrap } from "@pkg/result";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { MemoryAdapter } from "./memory";
 
@@ -17,12 +16,12 @@ import { MemoryAdapter } from "./memory";
 const WINDOW_START = 1_700_000_000_000;
 
 afterEach(() => {
-	setSystemTime();
+	vi.useRealTimers();
 });
 
 describe("MemoryAdapter", () => {
 	test("allows up to the limit and denies the next attempt", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 2, window: "10 seconds" });
 
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(true);
@@ -35,7 +34,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("reports the budget left and the window's reset", async () => {
-		setSystemTime(new Date(WINDOW_START + 3000));
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
 		let adapter = new MemoryAdapter({ limit: 10, window: "10 seconds" });
 
 		let decision = unwrap(await adapter.consume("ip"));
@@ -46,13 +45,13 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("starts a fresh budget once the window rolls over", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(true);
 		expect(unwrap(await adapter.consume("ip")).allowed).toBe(false);
 
-		setSystemTime(new Date(WINDOW_START + 10_000));
+		vi.setSystemTime(new Date(WINDOW_START + 10_000));
 		let rolled = unwrap(await adapter.consume("ip"));
 
 		expect(rolled.allowed).toBe(true);
@@ -61,7 +60,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("does not spend budget on a denied attempt", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 
 		await adapter.consume("ip");
@@ -72,7 +71,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("counts each key against its own budget", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 
 		expect(unwrap(await adapter.consume("first")).allowed).toBe(true);
@@ -81,7 +80,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("spends the requested cost in one attempt", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 10, window: "10 seconds" });
 
 		expect(unwrap(await adapter.consume("ip", 4)).remaining).toBe(6);
@@ -90,7 +89,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("denies a cost that cannot fit in an empty budget", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 3, window: "10 seconds" });
 
 		let decision = unwrap(await adapter.consume("ip", 4));
@@ -100,7 +99,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("reset clears one key's counter and leaves the others", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 
 		await adapter.consume("first");
@@ -112,7 +111,7 @@ describe("MemoryAdapter", () => {
 	});
 
 	test("clear empties every counter", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 
 		await adapter.consume("first");

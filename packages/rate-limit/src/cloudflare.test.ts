@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
-
 import { isFailure, unwrap } from "@pkg/result";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RateLimiterBinding } from "./cloudflare";
 
@@ -41,7 +40,7 @@ function createFailingBinding(): RateLimiterBinding {
 }
 
 afterEach(() => {
-	setSystemTime();
+	vi.useRealTimers();
 });
 
 describe("CloudflareAdapter", () => {
@@ -56,7 +55,7 @@ describe("CloudflareAdapter", () => {
 	});
 
 	test("reports the declared limit and never a remaining count", async () => {
-		setSystemTime(new Date(WINDOW_START + 3000));
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
 		let adapter = new CloudflareAdapter(createBinding([true]), { limit: 20, window: "10 seconds" });
 
 		let decision = unwrap(await adapter.consume("client"));
@@ -66,7 +65,7 @@ describe("CloudflareAdapter", () => {
 	});
 
 	test("computes reset and retryAfter from the declared window", async () => {
-		setSystemTime(new Date(WINDOW_START + 4000));
+		vi.setSystemTime(new Date(WINDOW_START + 4000));
 		let adapter = new CloudflareAdapter(createBinding([false]), {
 			limit: 20,
 			window: "10 seconds",

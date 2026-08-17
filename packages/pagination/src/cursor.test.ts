@@ -9,10 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { Base64Url } from "@pkg/crypto";
 import { isFailure, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { decodeCursor, encodeCursor } from "./cursor";
 import { InvalidCursorError, UnencodableCursorValueError } from "./errors";

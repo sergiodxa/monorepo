@@ -1,9 +1,9 @@
 /**
  * Tests for the SqlStorage `DatabaseDriver`, focused on transaction atomicity.
  *
- * Durable Object `SqlStorage` runs synchronously and is not available in a plain
- * `bun:test` process, so these tests drive the real adapter through a small
- * `SqlStorage`-shaped shim over `bun:sqlite`. The shim implements the exact surface
+ * Durable Object `SqlStorage` runs synchronously and is not available in the test
+ * runner, so these tests drive the real adapter through a small `SqlStorage`-shaped
+ * shim over an in-memory `node:sqlite` database. The shim implements the exact surface
  * the adapter touches (`exec(query, ...bindings)` returning a cursor with
  * `toArray()` and `rowsWritten`), so `createSQLStorageDatabaseAdapter` runs
  * unmodified against an in-memory SQLite database that supports real
@@ -13,29 +13,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as BunSqlite, type SQLQueryBindings } from "bun:sqlite";
-import { beforeEach, describe, expect, test } from "bun:test";
+import { DatabaseSync } from "node:sqlite";
 
 import { column as c, Database, table } from "remix/data-table";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import { createSQLStorageDatabaseAdapter } from "./index";
 
+import type { SQLInputValue } from "node:sqlite";
+
 /**
- * Minimal `SqlStorage`-shaped wrapper over a `bun:sqlite` database.
+ * Minimal `SqlStorage`-shaped wrapper over a `node:sqlite` database.
  *
  * Only the members the adapter uses are implemented; every `exec` runs the
  * statement immediately and reports the rows written via SQLite's `changes()`.
- * @param db Open `bun:sqlite` database.
+ * @param db Open `node:sqlite` database.
  * @returns An object matching the `SqlStorage` surface consumed by the adapter.
  */
-function createSqlStorageShim(db: BunSqlite): SqlStorage {
+function createSqlStorageShim(db: DatabaseSync): SqlStorage {
 	return {
 		exec(query: string, ...bindings: unknown[]) {
-			let rows = db.query(query).all(...(bindings as SQLQueryBindings[])) as Record<
+			let rows = db.prepare(query).all(...(bindings as SQLInputValue[])) as Record<
 				string,
 				unknown
 			>[];
-			let changes = db.query("SELECT changes() as changes").get() as { changes: number };
+			let changes = db.prepare("SELECT changes() as changes").get() as { changes: number };
 
 			return {
 				toArray: () => rows,
@@ -72,11 +74,11 @@ let flags = table({
 
 /**
  * Builds a fresh in-memory database, adapter, and `remix/data-table` handle.
- * @returns The `remix/data-table` `db` and the raw `bun:sqlite` instance.
+ * @returns The `remix/data-table` `db` and the raw `node:sqlite` instance.
  */
 function setup() {
-	let sqlite = new BunSqlite(":memory:");
-	sqlite.run("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
+	let sqlite = new DatabaseSync(":memory:");
+	sqlite.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)");
 
 	let adapter = createSQLStorageDatabaseAdapter(createSqlStorageShim(sqlite));
 	let db = new Database(adapter);
@@ -92,7 +94,9 @@ describe("createSQLStorageDatabaseAdapter", () => {
 	});
 
 	test("advertises savepoint support", () => {
-		let adapter = createSQLStorageDatabaseAdapter(createSqlStorageShim(new BunSqlite(":memory:")));
+		let adapter = createSQLStorageDatabaseAdapter(
+			createSqlStorageShim(new DatabaseSync(":memory:")),
+		);
 		expect(adapter.capabilities.savepoints).toBe(true);
 	});
 

@@ -7,10 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
-
 import { failure, success } from "@pkg/result";
 import { RequestContext } from "remix/router";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RateLimitLogger } from "./middleware";
 import type { Adapter, RateLimitDecision } from "./types";
@@ -105,12 +104,12 @@ function createFailingAdapter(): Adapter {
 }
 
 afterEach(() => {
-	setSystemTime();
+	vi.useRealTimers();
 });
 
 describe("rateLimit middleware", () => {
 	test("annotates an allowed response with the quota it saw", async () => {
-		setSystemTime(new Date(WINDOW_START + 3000));
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
 		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 10, window: "10 seconds" }) });
 
 		let response = await middleware(
@@ -126,7 +125,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("answers a denied request with 429, Retry-After, and the error body", async () => {
-		setSystemTime(new Date(WINDOW_START + 3000));
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
 		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }) });
 		let handler = createHandler();
 
@@ -144,7 +143,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("limits by client address by default", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let middleware = rateLimit({ adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }) });
 
 		let first = await middleware(createClientContext("198.51.100.1"), async () => new Response());
@@ -157,7 +156,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("still limits a request that carries no client address", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = createRecordingAdapter();
 		let middleware = rateLimit({ adapter, prefix: "token" });
 
@@ -180,7 +179,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("prefixes keys per registration, so two limiters cannot collide", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let adapter = new MemoryAdapter({ limit: 1, window: "10 seconds" });
 		let first = rateLimit({ adapter });
 		let second = rateLimit({ adapter });
@@ -242,7 +241,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("onLimit replaces the denied response, keeping the rate limit headers", async () => {
-		setSystemTime(new Date(WINDOW_START + 3000));
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
 		let decisions: RateLimitDecision[] = [];
 		let middleware = rateLimit({
 			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
@@ -297,7 +296,7 @@ describe("rateLimit middleware", () => {
 	});
 
 	test("logs a denied attempt at info level", async () => {
-		setSystemTime(new Date(WINDOW_START));
+		vi.setSystemTime(new Date(WINDOW_START));
 		let { logger, events } = createLogger();
 		let middleware = rateLimit({
 			adapter: new MemoryAdapter({ limit: 1, window: "10 seconds" }),
