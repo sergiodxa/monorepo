@@ -1,6 +1,5 @@
-import { describe, expect, test } from "bun:test";
-
 import * as s from "remix/data-schema";
+import { describe, expect, test } from "vitest";
 
 import { email, hexColor, httpsUrl, maxLength, minLength, url } from "./schema-checks";
 

@@ -9,13 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import bcrypt from "bcryptjs";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
 
 import Credential from "./credential";
@@ -31,10 +32,10 @@ describe("Credential", () => {
 	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+		sqliteDb.exec(migration);
+		let adapter = createSqliteDatabaseAdapter(sqliteDb);
 		db = new Database(adapter);
 	});
 
@@ -73,7 +74,7 @@ describe("Credential", () => {
 			expect(credential).not.toBeNull();
 			expect(credential?.subject_id).toBe(subject.id);
 			expect(credential?.password_hash).not.toBe(password);
-			expect(credential?.password_hash).toStartWith(CURRENT_PREFIX);
+			expect(credential?.password_hash?.startsWith(CURRENT_PREFIX)).toBe(true);
 			expect(credential?.verified_at).toBeNull();
 		});
 	});
@@ -139,7 +140,7 @@ describe("Credential", () => {
 			await Credential.verify(db, subject.id, "correctPassword123");
 
 			let upgraded = (await Credential.findBySubject(db, subject.id))?.password_hash;
-			expect(upgraded).toStartWith(CURRENT_PREFIX);
+			expect(upgraded?.startsWith(CURRENT_PREFIX)).toBe(true);
 
 			// The password itself did not change, so its timestamp must not move.
 			expect((await Credential.findBySubject(db, subject.id))?.updated_at).toBe(

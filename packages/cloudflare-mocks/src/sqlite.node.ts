@@ -93,5 +93,9 @@ export function openDatabase(filename: string): SqliteDatabase {
 
 			database.prepare(sql).run(...(toBindings(values) as never[]));
 		},
+
+		close(): void {
+			database.close();
+		},
 	};
 }

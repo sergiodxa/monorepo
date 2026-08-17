@@ -56,5 +56,9 @@ export function openDatabase(filename: string): SqliteDatabase {
 
 			database.prepare(sql).run(...(toPositional(values) as never[]));
 		},
+
+		close(): void {
+			database.close();
+		},
 	};
 }

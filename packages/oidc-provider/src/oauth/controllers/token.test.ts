@@ -8,15 +8,16 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Logger } from "@pkg/logger/request";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import Client from "../../clients/models/client";
 import RedirectUri from "../../clients/models/redirect-uri";
@@ -25,7 +26,7 @@ import TenantMeta from "../../management/models/tenant-meta";
 import Resource from "../../resources/models/resource";
 import routes from "../../routes";
 import loggerMiddleware from "../../shared/middleware/logger";
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
 import SigningKey from "../../signing-keys/models/signing-key";
 import AuthorizationCode from "../models/authorization-code";
@@ -66,10 +67,10 @@ describe("POST /oauth/token — allowed_resources enforcement", () => {
 	let clientSecret: string;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
+		sqliteDb.exec(migration);
+		db = new Database(createSqliteDatabaseAdapter(sqliteDb));
 
 		await TenantMeta.setIssuer(db, "auth.example.com");
 		await SigningKey.generate(db);
@@ -129,7 +130,7 @@ describe("POST /oauth/token — allowed_resources enforcement", () => {
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { access_token: string; token_type: string };
 		expect(body.token_type).toBe("Bearer");
-		expect(body.access_token).toBeString();
+		expect(body.access_token).toBeTypeOf("string");
 	});
 
 	test("issues a token when no resource is requested at all", async () => {
@@ -141,7 +142,7 @@ describe("POST /oauth/token — allowed_resources enforcement", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { access_token: string };
-		expect(body.access_token).toBeString();
+		expect(body.access_token).toBeTypeOf("string");
 	});
 });
 
@@ -153,10 +154,10 @@ describe("POST /oauth/token — refresh-token gating on offline_access", () => {
 	let redirectUri = "https://app.example.com/callback";
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
+		sqliteDb.exec(migration);
+		db = new Database(createSqliteDatabaseAdapter(sqliteDb));
 
 		await TenantMeta.setIssuer(db, "auth.example.com");
 		await SigningKey.generate(db);
@@ -196,8 +197,8 @@ describe("POST /oauth/token — refresh-token gating on offline_access", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as { refresh_token?: string; access_token: string };
-		expect(body.access_token).toBeString();
-		expect(body.refresh_token).toBeString();
+		expect(body.access_token).toBeTypeOf("string");
+		expect(body.refresh_token).toBeTypeOf("string");
 	});
 
 	test("does not issue a refresh token when offline_access is absent", async () => {
@@ -205,7 +206,7 @@ describe("POST /oauth/token — refresh-token gating on offline_access", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as Record<string, unknown>;
-		expect(body.access_token).toBeString();
+		expect(body.access_token).toBeTypeOf("string");
 		expect("refresh_token" in body).toBe(false);
 	});
 });

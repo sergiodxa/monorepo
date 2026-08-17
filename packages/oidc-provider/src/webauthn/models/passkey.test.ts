@@ -1,9 +1,10 @@
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
 
 import Passkey from "./passkey";
@@ -13,13 +14,13 @@ describe("Passkey", () => {
 	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration0001 } = await import("../../migrations/0001-init.sql?raw");
 		let { default: migration0006 } =
 			await import("../../migrations/0006-add-passkey-credential-id.sql?raw");
-		sqliteDb.run(migration0001);
-		sqliteDb.run(migration0006);
-		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+		sqliteDb.exec(migration0001);
+		sqliteDb.exec(migration0006);
+		let adapter = createSqliteDatabaseAdapter(sqliteDb);
 		db = new Database(adapter);
 	});
 
@@ -40,7 +41,7 @@ describe("Passkey", () => {
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
 			expect(passkeys).toHaveLength(1);
-			expect(passkeys[0]!.id).toBeString();
+			expect(passkeys[0]!.id).toBeTypeOf("string");
 			expect(passkeys[0]!.subject_id).toBe(subject.id);
 			expect(passkeys[0]!.public_key).toBe("test-public-key-123");
 			expect(passkeys[0]!.counter).toBe(0);

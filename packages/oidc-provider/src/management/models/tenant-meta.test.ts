@@ -7,12 +7,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 
 import TenantMeta from "./tenant-meta";
 
@@ -27,13 +28,13 @@ describe("TenantMeta per-Database issuer cache isolation", () => {
 	beforeEach(async () => {
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
 
-		sqliteA = new SqliteDatabase(":memory:");
-		sqliteA.run(migration);
-		dbA = new Database(createBunSqliteDatabaseAdapter(sqliteA));
+		sqliteA = openDatabase(":memory:");
+		sqliteA.exec(migration);
+		dbA = new Database(createSqliteDatabaseAdapter(sqliteA));
 
-		sqliteB = new SqliteDatabase(":memory:");
-		sqliteB.run(migration);
-		dbB = new Database(createBunSqliteDatabaseAdapter(sqliteB));
+		sqliteB = openDatabase(":memory:");
+		sqliteB.exec(migration);
+		dbB = new Database(createSqliteDatabaseAdapter(sqliteB));
 	});
 
 	afterEach(() => {

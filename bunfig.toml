@@ -58,4 +58,5 @@ pathIgnorePatterns = [
 	"**/packages/logger/**",
 	"**/packages/polar/**",
 	"**/packages/workers-cache/**",
+	"**/packages/oidc-provider/**",
 ]

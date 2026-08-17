@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { checkUserRateLimit, clearUserRateLimitCache, USER_RATE_LIMITS } from "./user-rate-limit";
 

@@ -9,14 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import bcrypt from "bcryptjs";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createClient } from "../../shared/test/fixtures";
 
 import Secret from "./secret";
@@ -32,10 +33,10 @@ describe("Secret", () => {
 	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+		sqliteDb.exec(migration);
+		let adapter = createSqliteDatabaseAdapter(sqliteDb);
 		db = new Database(adapter);
 	});
 
@@ -139,7 +140,7 @@ describe("Secret", () => {
 			let client = await createClient(db);
 			await Secret.create(db, client.id);
 
-			expect(await readStoredHash(client.id)).toStartWith(CURRENT_PREFIX);
+			expect((await readStoredHash(client.id))?.startsWith(CURRENT_PREFIX)).toBe(true);
 		});
 	});
 
@@ -208,7 +209,7 @@ describe("Secret", () => {
 			await Secret.verify(db, client.id, plainSecret);
 
 			let upgraded = await readStoredHash(client.id);
-			expect(upgraded).toStartWith(CURRENT_PREFIX);
+			expect(upgraded?.startsWith(CURRENT_PREFIX)).toBe(true);
 
 			// The rewritten hash is the one the next request will be checked against.
 			expect(await Secret.verify(db, client.id, plainSecret)).toBe(true);

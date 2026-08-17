@@ -1,3 +1,4 @@
+import { Logger } from "@pkg/logger/request";
 /**
  * Integration smoke test that drives `createProviderRouter(...).fetch()` end-to-end
  * through the service-container DI the provider wires per request. It guards the
@@ -9,9 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import { Logger } from "@pkg/logger/request";
+import { describe, expect, test } from "vitest";
 
 import { createProviderRouter } from "./provider";
 import { createTestDatabase } from "./shared/test/db";

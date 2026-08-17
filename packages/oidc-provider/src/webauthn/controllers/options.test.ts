@@ -12,17 +12,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Logger } from "@pkg/logger/request";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { AnalyticsSink } from "../../index";
 
 import { createProviderRouter } from "../../provider";
 import { clearUserRateLimitCache } from "../../shared/lib/user-rate-limit";
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createSubject } from "../../shared/test/fixtures";
 import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
@@ -74,13 +75,13 @@ function formPost(path: string, fields: Record<string, string>): Request {
 
 describe("WebAuthn options endpoints", () => {
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration0001 } = await import("../../migrations/0001-init.sql?raw");
 		let { default: migration0006 } =
 			await import("../../migrations/0006-add-passkey-credential-id.sql?raw");
-		sqliteDb.run(migration0001);
-		sqliteDb.run(migration0006);
-		db = new Database(createBunSqliteDatabaseAdapter(sqliteDb));
+		sqliteDb.exec(migration0001);
+		sqliteDb.exec(migration0006);
+		db = new Database(createSqliteDatabaseAdapter(sqliteDb));
 		clearUserRateLimitCache();
 	});
 
@@ -97,8 +98,8 @@ describe("WebAuthn options endpoints", () => {
 
 			expect(response.status).toBe(200);
 			let payload = (await response.json()) as OptionsResponse;
-			expect(payload.challengeId).toBeString();
-			expect(payload.options.challenge).toBeString();
+			expect(payload.challengeId).toBeTypeOf("string");
+			expect(payload.options.challenge).toBeTypeOf("string");
 
 			// The core regression: options must NOT create the subject. If it did, the
 			// follow-up register/verify would reject with "subject already exists" and the

@@ -10,11 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { password } from "@pkg/crypto";
 import { isFailure, isSuccess, unwrap } from "@pkg/result";
 import bcrypt from "bcryptjs";
+import { describe, expect, test } from "vitest";
 
 import { hashSecret, spendVerificationCost, verifySecret } from "./password-hash";
 
@@ -28,7 +27,7 @@ describe("hashSecret", () => {
 	test("writes the current PBKDF2 format", async () => {
 		let stored = unwrap(await hashSecret("correct horse battery staple"));
 
-		expect(stored).toStartWith(CURRENT_PREFIX);
+		expect(stored.startsWith(CURRENT_PREFIX)).toBe(true);
 		expect(password.needsRehash(stored)).toBe(false);
 	});
 
@@ -92,7 +91,7 @@ describe("verifySecret", () => {
 		if (!isSuccess(checked)) return;
 
 		let rehashed = checked.data.rehashed;
-		expect(rehashed).toStartWith(CURRENT_PREFIX);
+		expect(rehashed?.startsWith(CURRENT_PREFIX)).toBe(true);
 		expect(rehashed).not.toBe(stored);
 		if (rehashed === null) return;
 

@@ -1,6 +1,5 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-
 import { JWK, JWT } from "@pkg/jwt";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import AccessToken from "./access-token";
 

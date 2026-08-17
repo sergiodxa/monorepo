@@ -17,6 +17,11 @@ import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin";
 
 export default defineConfig({
 	test: {
+		// The slowest tests run ~3.8s: each file applies every migration to a fresh in-memory
+		// database and the first test in the file absorbs that. Vitest's 5s default left under a
+		// 25% margin on this machine, and CI is slower — a genuine hang still fails, just later.
+		testTimeout: 20_000,
+
 		projects: [
 			{
 				// One project covers every package: none of them uses a `~/*` alias or ships a
@@ -65,8 +70,13 @@ export default defineConfig({
 						"packages/jobs/src/**/*.test.ts?(x)",
 						"packages/polar/src/**/*.test.ts?(x)",
 						"packages/workers-cache/src/**/*.test.ts?(x)",
+						"packages/pagination/src/**/*.test.ts?(x)",
+						"packages/rate-limit/src/**/*.test.ts?(x)",
+						"packages/data-table-d1/src/**/*.test.ts?(x)",
+						"packages/data-table-sqlstorage/src/**/*.test.ts?(x)",
 						"packages/mail/src/**/*.test.ts?(x)",
 						"packages/cloudflare-mocks/src/**/*.test.ts?(x)",
+						"packages/oidc-provider/src/**/*.test.ts?(x)",
 					],
 					pool: "threads",
 				},
@@ -99,7 +109,7 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "r3-auth",
-					include: ["app/data/subject.test.ts"],
+					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 				},
 			},

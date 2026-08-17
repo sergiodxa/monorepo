@@ -1,9 +1,10 @@
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 import { createClient, createSession, createSubject } from "../../shared/test/fixtures";
 
 import AuthorizationCode from "./authorization-code";
@@ -13,10 +14,10 @@ describe("AuthorizationCode", () => {
 	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+		sqliteDb.exec(migration);
+		let adapter = createSqliteDatabaseAdapter(sqliteDb);
 		db = new Database(adapter);
 	});
 
@@ -40,7 +41,7 @@ describe("AuthorizationCode", () => {
 				pkce: { challenge: "test-challenge", method: "S256" },
 			});
 
-			expect(code).toBeString();
+			expect(code).toBeTypeOf("string");
 			expect(code).toHaveLength(36); // UUID length
 
 			// Consume to verify the data was stored correctly
@@ -52,7 +53,7 @@ describe("AuthorizationCode", () => {
 			expect(data.scope).toEqual(["openid", "profile"]);
 			expect(data.nonce).toBe("test-nonce");
 			expect(data.pkce).toEqual({ challenge: "test-challenge", method: "S256" });
-			expect(data.authTime).toBeNumber();
+			expect(data.authTime).toBeTypeOf("number");
 		});
 
 		test("generates unique codes each time", async () => {
@@ -159,7 +160,7 @@ describe("AuthorizationCode", () => {
 			});
 
 			// Manually update the code to be expired
-			sqliteDb.run("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
+			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				code,
 			]);
@@ -182,7 +183,7 @@ describe("AuthorizationCode", () => {
 			});
 
 			// Manually update the code to be expired
-			sqliteDb.run("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
+			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				code,
 			]);
@@ -220,7 +221,7 @@ describe("AuthorizationCode", () => {
 			});
 
 			// Set both codes to be expired
-			sqliteDb.run("UPDATE authorization_codes SET expires_at = ? WHERE code IN (?, ?)", [
+			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code IN (?, ?)", [
 				Date.now() - 1000,
 				code1,
 				code2,
@@ -280,7 +281,7 @@ describe("AuthorizationCode", () => {
 			});
 
 			// Set only one code to be expired
-			sqliteDb.run("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
+			sqliteDb.exec("UPDATE authorization_codes SET expires_at = ? WHERE code = ?", [
 				Date.now() - 1000,
 				expiredCode,
 			]);

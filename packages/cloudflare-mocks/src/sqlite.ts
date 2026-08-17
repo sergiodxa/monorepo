@@ -57,6 +57,14 @@ export interface SqliteDatabase {
 	 * @param values Positional bindings.
 	 */
 	exec(sql: string, ...values: unknown[]): void;
+
+	/**
+	 * Releases the database and everything prepared against it.
+	 *
+	 * Tests that open one database per case call this so an in-memory database is not kept
+	 * alive by the statement cache for the rest of the run.
+	 */
+	close(): void;
 }
 
 /**

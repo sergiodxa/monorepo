@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { base64UrlDecode, base64UrlEncode } from "./base64url";
 

@@ -2,7 +2,7 @@
  * Engine-owned schema migration runner.
  *
  * Holds the ordered list of `?raw` SQL migrations and applies the pending ones
- * against any host adapter (D1, SqlStorage, bun:sqlite), tracking progress in an
+ * against any host adapter (D1, SqlStorage, plain SQLite), tracking progress in an
  * `oidc_migrations` journal so each migration runs exactly once per database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -55,7 +55,7 @@ const journal = table({
  * Applies pending migrations against the adapter, tracked in an `oidc_migrations`
  * journal table. Idempotent: already-applied ids are skipped, so it is safe to
  * run on every cold start. Multi-statement SQL is executed via `executeScript`,
- * which each adapter (D1, SqlStorage, bun:sqlite) handles.
+ * which each adapter (D1, SqlStorage, plain SQLite) handles.
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
  * @example

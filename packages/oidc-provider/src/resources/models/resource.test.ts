@@ -1,9 +1,10 @@
-import { Database as SqliteDatabase } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { SqliteDatabase } from "@pkg/cloudflare-mocks/sqlite";
 
+import { openDatabase } from "@pkg/cloudflare-mocks/sqlite";
 import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { createBunSqliteDatabaseAdapter } from "../../shared/test/db";
+import { createSqliteDatabaseAdapter } from "../../shared/test/db";
 
 import Resource from "./resource";
 
@@ -12,10 +13,10 @@ describe("Resource", () => {
 	let db: Database;
 
 	beforeEach(async () => {
-		sqliteDb = new SqliteDatabase(":memory:");
+		sqliteDb = openDatabase(":memory:");
 		let { default: migration } = await import("../../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
-		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
+		sqliteDb.exec(migration);
+		let adapter = createSqliteDatabaseAdapter(sqliteDb);
 		db = new Database(adapter);
 	});
 
