@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { InvalidDateError } from "./invalid-date-error";
 import { parseDate } from "./parse-date";

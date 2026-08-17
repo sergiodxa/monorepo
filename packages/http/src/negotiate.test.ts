@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { accepts, respond, AcceptList } from "./negotiate";
 
@@ -32,7 +32,7 @@ describe(accepts, () => {
 		let request = createRequest("text/html, application/json;q=0.9, text/plain;q=0.8");
 		let result = accepts(request);
 		let types = result.all();
-		expect(types).toBeArrayOfSize(3);
+		expect(types).toHaveLength(3);
 		expect(types).toEqual(["text/html", "application/json", "text/plain"]);
 	});
 });

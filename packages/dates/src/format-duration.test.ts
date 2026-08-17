@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import type { DurationString } from "@pkg/duration";
+
+import { describe, expect, test } from "vitest";
 
 import { formatDuration } from "./format-duration";
 

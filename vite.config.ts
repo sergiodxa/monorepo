@@ -56,6 +56,8 @@ export default defineConfig({
 						"packages/http/src/**/*.test.ts?(x)",
 						"packages/crypto/src/**/*.test.ts?(x)",
 						"packages/result/src/**/*.test.ts?(x)",
+						"packages/i18n/src/**/*.test.ts?(x)",
+						"packages/seo/src/**/*.test.ts?(x)",
 					],
 					pool: "threads",
 				},
@@ -98,6 +100,16 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "books",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+				},
+			},
+			{
+				root: "apps/auth-saas",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 				},

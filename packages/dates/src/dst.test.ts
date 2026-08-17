@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { endOfDay, startOfDay, startOfWeek } from "./boundaries";
 import { diffInDays, eachDayOfInterval, isSameDay } from "./compare";

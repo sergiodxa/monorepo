@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { expect } from "bun:test";
-
 import { isSuccess, unwrap } from "@pkg/result";
+import { expect } from "vitest";
 
 import type { ScheduleDescriptor } from "../describe";
 import type { CronFieldSet } from "../fields";

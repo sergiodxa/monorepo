@@ -9,9 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { CacheControl } from "remix/headers";
+import { describe, expect, test } from "vitest";
 
 import { policy } from "./policy";
 

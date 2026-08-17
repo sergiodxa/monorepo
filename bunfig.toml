@@ -42,4 +42,5 @@ pathIgnorePatterns = [
 	"**/apps/r3-auth/app/data/subject.test.ts",
 	"**/apps/pkmn/**",
 	"**/apps/books/**",
+	"**/apps/auth-saas/**",
 ]

@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import type { CronFieldSet } from "./fields";
 

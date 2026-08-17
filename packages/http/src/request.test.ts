@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type";
 import { formData, formURLEncoded, json, text, xml } from "./request";
@@ -133,7 +133,7 @@ describe(formData, () => {
 		data.append("name", "John");
 		let req = formData("https://example.com/api", data);
 		let contentType = req.headers.get("Content-Type");
-		expect(contentType).toStartWith("multipart/form-data");
+		expect(contentType).toMatch(/^multipart\/form-data/);
 		expect(contentType).toContain("boundary=");
 	});
 

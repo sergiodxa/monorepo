@@ -15,10 +15,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { unwrap } from "@pkg/result";
 import { CronExpressionParser } from "cron-parser";
+import { describe, expect, test } from "vitest";
 
 import { Schedule } from "./schedule";
 
@@ -140,6 +139,8 @@ describe("parity for what the product has stored", () => {
 		}
 	});
 
+	// Four expressions × 9,000 occurrences each, cross-checked one by one, needs more than
+	// the 5s default.
 	test("computes a whole month of occurrences the same way, which is what billing counts", () => {
 		// The product estimates consumed pings by walking a month of occurrences, so the
 		// count and not only the instants has to match.
@@ -159,7 +160,7 @@ describe("parity for what the product has stored", () => {
 				runs: theirs,
 			});
 		}
-	});
+	}, 30_000);
 });
 
 describe("parity through a daylight saving transition", () => {

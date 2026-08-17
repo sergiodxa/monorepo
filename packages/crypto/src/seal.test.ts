@@ -9,9 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { isFailure, unwrap } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { Base64Url } from "./encoding";
 import { DecryptionError, InvalidEnvelopeError, InvalidKeyError } from "./errors";

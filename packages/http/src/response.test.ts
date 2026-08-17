@@ -1,6 +1,5 @@
-import { describe, expect, test } from "bun:test";
-
 import { Location } from "@pkg/location";
+import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type";
 import {
