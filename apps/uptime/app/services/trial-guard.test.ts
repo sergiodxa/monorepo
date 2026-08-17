@@ -25,20 +25,33 @@
  * The Cloudflare bindings are an in-memory KV namespace and a really-counting rate limiter,
  * installed through `mock.module("cloudflare:workers", ...)`, so the day's counter is read
  * back from storage and a refused caller is one that spent its allowance. Both outbound
- * calls — DNS-over-HTTPS and Turnstile's siteverify — are stubbed on the global `fetch`,
- * routed by hostname so a test can fail one without touching the other.
+ * calls — DNS-over-HTTPS and Turnstile's siteverify — are intercepted with MSW, one handler
+ * each, so a test can fail one without touching the other and the calls a probe did *not*
+ * make are counted off the requests that really left.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
 
 import type { RateLimitMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createKVNamespace, createRateLimit } from "@pkg/cloudflare-mocks";
 import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import type { TrialProbeRequest } from "~/app/services/trial-guard";
 
@@ -91,18 +104,53 @@ let turnstileStatus = 200;
 /** The key today's global counter lives under. */
 let budgetKey = `trial:budget:${new Date().toISOString().slice(0, 10)}`;
 
-/** Builds the DoH JSON answer for one query out of {@link dnsRecords}. */
-function respondDns(url: URL): Response {
-	let name = url.searchParams.get("name") ?? "";
-	let type = url.searchParams.get("type") ?? "";
-	if (dnsFailures.has(`${name}:${type}`)) return new Response("{}", { status: 502 });
+/** The DNS-over-HTTPS endpoint the resolver queries. */
+const DOH_URL = "https://cloudflare-dns.com/dns-query";
 
-	let values = dnsRecords.get(`${name}:${type}`) ?? [];
-	return Response.json({
-		Status: 0,
-		Answer: values.map((data) => ({ name, type: type === "A" ? 1 : 28, TTL: 60, data })),
-	});
+/** Turnstile's verification endpoint. */
+const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+
+/** Every DNS query that left, so a test can tell a skipped lookup from a failed one. */
+let dnsQueries: { name: string; type: string }[] = [];
+
+/** One siteverify submission as it went on the wire. */
+interface Verification {
+	method: string;
+	body: URLSearchParams;
 }
+
+/** Every siteverify submission that left, in order. */
+let verifications: Verification[] = [];
+
+/**
+ * Both outbound endpoints, answering out of {@link dnsRecords}/{@link dnsFailures} and the
+ * Turnstile switches so a test steers them by setting state rather than by re-registering a
+ * handler. Registered as defaults, so `resetHandlers` puts them back between tests.
+ */
+let server = setupServer(
+	http.get(DOH_URL, ({ request }) => {
+		let url = new URL(request.url);
+		let name = url.searchParams.get("name") ?? "";
+		let type = url.searchParams.get("type") ?? "";
+		dnsQueries.push({ name, type });
+		if (dnsFailures.has(`${name}:${type}`)) return new HttpResponse("{}", { status: 502 });
+
+		let values = dnsRecords.get(`${name}:${type}`) ?? [];
+		return HttpResponse.json({
+			Status: 0,
+			Answer: values.map((data) => ({ name, type: type === "A" ? 1 : 28, TTL: 60, data })),
+		});
+	}),
+	http.post(SITEVERIFY_URL, async ({ request }) => {
+		verifications.push({ method: request.method, body: new URLSearchParams(await request.text()) });
+		if (turnstileStatus !== 200) return new HttpResponse("{}", { status: turnstileStatus });
+		return HttpResponse.json({ success: turnstileSuccess });
+	}),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 /**
  * A submission from a visitor, with the address the platform reported for them. Free
@@ -141,19 +189,12 @@ beforeEach(async () => {
 	dnsRecords.set("example.com:A", ["93.184.216.34"]);
 	dnsRecords.set("example.com:AAAA", []);
 
+	dnsQueries = [];
+	verifications = [];
+
 	// Silenced rather than left to print: the unconfigured-secret case logs on every request
 	// by design, and one of the tests below asserts on exactly that call.
 	spyOn(logger, "error").mockImplementation(() => {});
-
-	globalThis.fetch = mock(async (input: unknown) => {
-		let url = new URL(input instanceof URL ? input.href : String(input));
-		if (url.hostname === "cloudflare-dns.com") return respondDns(url);
-		if (url.hostname === "challenges.cloudflare.com") {
-			if (turnstileStatus !== 200) return new Response("{}", { status: turnstileStatus });
-			return Response.json({ success: turnstileSuccess });
-		}
-		throw new Error(`unexpected fetch to ${url.href}`);
-	}) as unknown as typeof fetch;
 });
 
 describe("isPublicAddress", () => {
@@ -431,23 +472,18 @@ describe("guardTrialProbe", () => {
 		if (isFailure(result)) return;
 		expect(result.data.addresses).toEqual(["8.8.8.8"]);
 
-		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
-		expect(calls.some((call) => String(call[0]).includes("cloudflare-dns.com"))).toBe(false);
+		expect(dnsQueries).toEqual([]);
 	});
 
 	test("verifies the token against siteverify with the secret and the calling address", async () => {
 		await guardTrialProbe(submission("example.com", { token: "token-9", address: "198.51.100.7" }));
 
-		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
-		let verification = calls.find((call) => String(call[0]).includes("siteverify"));
-		expect(verification).toBeDefined();
-
-		let init = verification?.[1] as RequestInit;
-		expect(init.method).toBe("POST");
-		let body = init.body as URLSearchParams;
-		expect(body.get("secret")).toBe("turnstile-secret");
-		expect(body.get("response")).toBe("token-9");
-		expect(body.get("remoteip")).toBe("198.51.100.7");
+		expect(verifications).toHaveLength(1);
+		let [verification] = verifications;
+		expect(verification?.method).toBe("POST");
+		expect(verification?.body.get("secret")).toBe("turnstile-secret");
+		expect(verification?.body.get("response")).toBe("token-9");
+		expect(verification?.body.get("remoteip")).toBe("198.51.100.7");
 	});
 
 	test("refuses when siteverify rejects the token", async () => {
@@ -467,8 +503,7 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("challenge-incomplete");
 		// The token is never sent for verification, so nothing is spent asking.
-		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
-		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
+		expect(verifications).toEqual([]);
 	});
 
 	test("treats an empty token the same as no token at all", async () => {
@@ -503,8 +538,7 @@ describe("guardTrialProbe", () => {
 		 */
 		expect(result.error.reason).toBe("unavailable");
 		expect(result.error.detail).toBe("turnstile-unconfigured");
-		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
-		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
+		expect(verifications).toEqual([]);
 		expect(log).toHaveBeenCalledWith("trial_guard.turnstile_unconfigured", expect.anything());
 	});
 
@@ -560,7 +594,8 @@ describe("guardTrialProbe", () => {
 		expect(result.error.reason).toBe("rate-limited");
 		expect(result.error.retryAfterSeconds).toBeGreaterThan(0);
 		expect(kvGet).not.toHaveBeenCalled();
-		expect(globalThis.fetch).not.toHaveBeenCalled();
+		expect(dnsQueries).toEqual([]);
+		expect(verifications).toEqual([]);
 	});
 
 	test("counts a granted probe against today's global budget", async () => {
@@ -625,7 +660,8 @@ describe("guardTrialProbe", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
-		expect(globalThis.fetch).not.toHaveBeenCalled();
+		expect(dnsQueries).toEqual([]);
+		expect(verifications).toEqual([]);
 		expect(kvPut).not.toHaveBeenCalled();
 	});
 
@@ -639,9 +675,7 @@ describe("guardTrialProbe", () => {
 		expect(limiter.count("trial-probe:203.0.113.9")).toBe(0);
 		expect(kvGet).not.toHaveBeenCalled();
 		expect(kvPut).not.toHaveBeenCalled();
-
-		let calls = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls;
-		expect(calls.some((call) => String(call[0]).includes("siteverify"))).toBe(false);
+		expect(verifications).toEqual([]);
 	});
 
 	test("holds a billed probe to the same target rules as a free one", async () => {
