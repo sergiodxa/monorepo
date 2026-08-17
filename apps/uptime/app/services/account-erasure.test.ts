@@ -12,12 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
-
 import type { PolarClient } from "@pkg/polar";
 import type { Database } from "remix/data-table";
 
 import { isFailure, isSuccess } from "@pkg/result";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
@@ -41,18 +40,18 @@ const EMAIL = "ada@example.com";
 /** A Polar client that reports one active subscription and accepts its revocation. */
 function createFakePolar() {
 	return {
-		listActiveSubscriptions: mock(async () => [polarSubscription()]),
-		revokeSubscription: mock(async () => polarSubscription({ status: "revoked" })),
+		listActiveSubscriptions: vi.fn(async () => [polarSubscription()]),
+		revokeSubscription: vi.fn(async () => polarSubscription({ status: "revoked" })),
 	};
 }
 
 /** A Polar client that is unreachable, which is the case the ordering exists for. */
 function createFailingPolar() {
 	return {
-		listActiveSubscriptions: mock(async () => {
+		listActiveSubscriptions: vi.fn(async () => {
 			throw new Error("Polar unavailable");
 		}),
-		revokeSubscription: mock(async () => polarSubscription()),
+		revokeSubscription: vi.fn(async () => polarSubscription()),
 	};
 }
 
@@ -361,7 +360,7 @@ describe("eraseAccount", () => {
 
 		let polar = createFakePolar();
 		// Nothing is active any more, which is what makes a second revocation a no-op.
-		polar.listActiveSubscriptions = mock(async () => []);
+		polar.listActiveSubscriptions = vi.fn(async () => []);
 
 		let second = await eraseAccount(db, asPolar(polar), SUBJECT, EMAIL);
 

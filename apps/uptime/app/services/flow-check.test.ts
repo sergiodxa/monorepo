@@ -12,10 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-
 import { HttpResponse, delay, http } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { resolveAllowedHosts, runFlowCheck, specHosts } from "~/app/services/flow-check";
 

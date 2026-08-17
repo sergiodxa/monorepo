@@ -7,9 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "bun:test";
-
 import { Forbidden, Ok, Unauthorized } from "@pkg/http/status-code";
+import { describe, expect, test } from "vitest";
 
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 

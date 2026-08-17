@@ -23,8 +23,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import {
@@ -32,6 +30,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@pkg/cloudflare-mocks";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ContentCheckRule } from "~/app/data/content-check";
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
@@ -42,7 +41,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { monitors } from "~/database/schema";
 
 /** The `GeoFetchDO` stub `probe` calls through `env.GEO_FETCH.get(id).fetch(...)`. */
-let doFetchMock = mock(
+let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
 		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
 );
@@ -59,7 +58,7 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchM
 /** The dataset the ledger flushes to, which is where a probe's recorded costs are read back. */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		COSTS: costs,

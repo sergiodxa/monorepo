@@ -23,7 +23,7 @@
  * asserted, because the failure modes are a spent budget nobody owed and an open prober.
  *
  * The Cloudflare bindings are an in-memory KV namespace and a really-counting rate limiter,
- * installed through `mock.module("cloudflare:workers", ...)`, so the day's counter is read
+ * installed through `vi.doMock("cloudflare:workers", ...)`, so the day's counter is read
  * back from storage and a refused caller is one that spent its allowance. Both outbound
  * calls — DNS-over-HTTPS and Turnstile's siteverify — are intercepted with MSW, one handler
  * each, so a test can fail one without touching the other and the calls a probe did *not*
@@ -33,18 +33,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { RateLimitMock } from "@pkg/cloudflare-mocks";
 
 import { createEnv, createKVNamespace, createRateLimit } from "@pkg/cloudflare-mocks";
@@ -52,6 +40,7 @@ import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TrialProbeRequest } from "~/app/services/trial-guard";
 
@@ -65,8 +54,8 @@ let kv = createKVNamespace();
  * The counter's namespace is spied on as well as stored to: the write's `expirationTtl`, and
  * a read that a billed or refused probe never made, are not things a stored value can say.
  */
-let kvGet = spyOn(kv, "get");
-let kvPut = spyOn(kv, "put");
+let kvGet = vi.spyOn(kv, "get");
+let kvPut = vi.spyOn(kv, "put");
 
 /** The per-caller limiter, counting for real, so a refusal is an allowance actually spent. */
 let limiter: RateLimitMock = createRateLimit({ limit: TRIAL_PROBE_LIMIT, period: 60 });
@@ -83,7 +72,7 @@ let env = createEnv<Env>({ KV: kv, TRIAL_RATE_LIMITER: limiter });
 Object.defineProperty(env, "TURNSTILE_SECRET_KEY", { get: () => turnstileSecretKey });
 Object.defineProperty(env, "TURNSTILE_SITE_KEY", { get: () => turnstileSiteKey });
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env,
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
@@ -194,7 +183,7 @@ beforeEach(async () => {
 
 	// Silenced rather than left to print: the unconfigured-secret case logs on every request
 	// by design, and one of the tests below asserts on exactly that call.
-	spyOn(logger, "error").mockImplementation(() => {});
+	vi.spyOn(logger, "error").mockImplementation(() => {});
 });
 
 describe("isPublicAddress", () => {
@@ -526,7 +515,7 @@ describe("guardTrialProbe", () => {
 
 	test("refuses, loudly, when no secret is configured rather than passing unchallenged", async () => {
 		turnstileSecretKey = undefined;
-		let log = spyOn(logger, "error").mockImplementation(() => {});
+		let log = vi.spyOn(logger, "error").mockImplementation(() => {});
 
 		let result = await guardTrialProbe(submission("example.com"));
 

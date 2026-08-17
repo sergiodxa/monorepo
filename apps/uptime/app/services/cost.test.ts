@@ -17,12 +17,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { D1StatementObservation } from "@pkg/data-table-d1";
 
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
  * The dataset the ledger flushes to. It lives at module scope because the module under test
@@ -31,7 +30,7 @@ import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudf
  */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ COSTS: costs }),
 }));
 
@@ -53,7 +52,7 @@ let {
 	trackCost,
 } = await import("./cost");
 
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
 	costs.reset();
@@ -312,7 +311,7 @@ describe("CostLedger self-accounting", () => {
 		// The binding rejecting the point is the failure mode: instrumentation that takes
 		// down the request it was measuring is worse than no instrumentation. One write is
 		// all a single-team flush makes, so the binding is itself again afterwards.
-		spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
+		vi.spyOn(costs, "writeDataPoint").mockImplementationOnce(() => raise());
 
 		await expect(
 			trackCost(new CostLedger({ handler: "fetch" }), async () => {

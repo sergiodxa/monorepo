@@ -1,3 +1,8 @@
+import type { AuthSDK, Subject } from "@pkg/auth-sdk";
+import type { Result } from "@pkg/result";
+
+import { AuthenticationError, SubjectNotFoundError } from "@pkg/auth-sdk";
+import { failure, success } from "@pkg/result";
 /**
  * Unit tests for `resolveSubjects`, the best-effort batch profile lookup used by
  * the team settings member list and the account page's team list. A fake
@@ -8,13 +13,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "bun:test";
-
-import type { AuthSDK, Subject } from "@pkg/auth-sdk";
-import type { Result } from "@pkg/result";
-
-import { AuthenticationError, SubjectNotFoundError } from "@pkg/auth-sdk";
-import { failure, success } from "@pkg/result";
+import { describe, expect, test } from "vitest";
 
 import { resolveSubjects } from "~/app/services/subjects";
 

@@ -17,8 +17,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
 import type { AnalyticsEngineMock, QueueMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@pkg/cloudflare-mocks";
@@ -28,6 +26,7 @@ import { MemoryTransport } from "@pkg/mail/memory";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
@@ -79,19 +78,19 @@ function sweepOf(name: string, outcomes: DnsQueryOutcome[]): DnsNameSweep {
 }
 
 /** Resolves nothing and fails nothing: no answers means no diff, so a check reads `ok`. */
-let sweepDnsNameMock = mock(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
+let sweepDnsNameMock = vi.fn(async (name: string): Promise<DnsNameSweep> => sweepOf(name, []));
 
 /** Where the job's status-change notifications land, and where its checks are reported. */
 let queue: QueueMock<NotifyMessage> = createQueue<NotifyMessage>({ name: "notify" });
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: queue, PING_RESULTS: pingResults }),
 }));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
-await mock.module("~/app/services/dns-check", () => ({
+vi.doMock("~/app/services/dns-check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));

@@ -5,7 +5,7 @@
  * dashboard query (team summaries' health-derivation rules, sparkline
  * ordering, the weighted 24-hour p99, and the daily aggregate). The Cloudflare bindings are
  * an in-memory KV namespace and a recording Analytics Engine dataset installed through
- * `mock.module("cloudflare:workers", ...)`, so a cache hit is a value the writer really
+ * `vi.doMock("cloudflare:workers", ...)`, so a cache hit is a value the writer really
  * stored; the SQL HTTP API is intercepted with MSW, so every assertion about a query reads
  * the request that actually went out rather than the arguments a stand-in was handed.
  *
@@ -13,24 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	spyOn,
-	test,
-} from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@pkg/cloudflare-mocks";
 import { isFailure } from "@pkg/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
  * The dashboard cache and the ping dataset. Both live at module scope because the module
@@ -43,10 +32,10 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
  * The cache is spied on as well as stored to: a write's `expirationTtl` and a read that
  * never happened are the two things a stored value cannot express.
  */
-let kvGet = spyOn(kv, "get");
-let kvPut = spyOn(kv, "put");
+let kvGet = vi.spyOn(kv, "get");
+let kvPut = vi.spyOn(kv, "put");
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "acct-1",
 		CLOUDFLARE_ANALYTICS_TOKEN: "token-1",

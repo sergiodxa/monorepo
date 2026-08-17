@@ -18,14 +18,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-
 import type { AnalyticsEngineMock } from "@pkg/cloudflare-mocks";
 import type { IngestEvent } from "@pkg/polar";
 
 import { createAnalyticsEngine, createEnv } from "@pkg/cloudflare-mocks";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { AdhocPing } from "./adhoc-ping";
 
@@ -42,7 +41,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
  */
 let deferred: Promise<unknown>[] = [];
 
-await mock.module("cloudflare:workers", () => ({
+vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ PING_RESULTS: pingResults }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
@@ -57,10 +56,10 @@ let { ADHOC_MONITOR_ID, recordAdhocPing } = await import("./adhoc-ping");
  * asserted below are the ones the service actually built.
  */
 let polar = new PolarClient({ accessToken: "polar_at_test" });
-let ingestEventsSafeMock = spyOn(polar, "ingestEventsSafe");
+let ingestEventsSafeMock = vi.spyOn(polar, "ingestEventsSafe");
 
 /** `ingestPings` logs its own failures; the assertions read the calls instead. */
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 let container = new ServiceContainer();
 container.singleton(PolarClient, () => polar);

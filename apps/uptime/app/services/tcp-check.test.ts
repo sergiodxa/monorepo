@@ -1,13 +1,13 @@
 /**
  * Unit tests for the raw TCP connectivity check. `cloudflare:sockets` only exists
- * inside the Workers runtime, so it's stubbed via `mock.module` with a fake
+ * inside the Workers runtime, so it's stubbed via `vi.doMock` with a fake
  * `connect()` that returns a controllable fake socket, letting every status
  * (up, down, timeout) be exercised deterministically without a live socket.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, mock, spyOn, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
 /** A minimal stand-in for the Workers `Socket` shape `checkTcpConnection` relies on. */
 interface FakeSocket {
@@ -29,8 +29,8 @@ function fakeSocket(opened: Promise<void>): FakeSocket {
 	return socket;
 }
 
-await mock.module("cloudflare:sockets", () => ({
-	connect: mock(() => nextSocket),
+vi.doMock("cloudflare:sockets", () => ({
+	connect: vi.fn(() => nextSocket),
 }));
 
 let { checkTcpConnection } = await import("~/app/services/tcp-check");
@@ -93,7 +93,7 @@ describe("checkTcpConnection", () => {
 	});
 
 	test("cancels the timeout timer once the socket opens, so a fast check doesn't hold the invocation open", async () => {
-		let clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
+		let clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 		nextSocket = fakeSocket(Promise.resolve());
 
 		try {
@@ -107,7 +107,7 @@ describe("checkTcpConnection", () => {
 	});
 
 	test("cancels the timeout timer when the connection fails before it fires", async () => {
-		let clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
+		let clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 		nextSocket = fakeSocket(Promise.reject(new Error("Connection refused")));
 
 		try {

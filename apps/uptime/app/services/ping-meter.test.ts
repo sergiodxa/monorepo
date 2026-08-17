@@ -18,16 +18,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, spyOn, test } from "bun:test";
-
 import type { IngestEvent, PolarClient } from "@pkg/polar";
+
+import { describe, expect, test, vi } from "vitest";
 
 import type { BillablePing } from "~/app/services/ping-meter";
 
 import { ingestPings, PING_EVENT_NAME, PING_METER_ID } from "~/app/services/ping-meter";
 
 /** The failure path logs; the assertions read the return value, not the console. */
-spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 /** A recording `PolarClient` stand-in, accepting every batch unless told otherwise. */
 function createFakePolar(accepted = true) {
