@@ -33,6 +33,8 @@ import { bs, is, maxBs, maxIs, minBs, minIs } from "@pkg/u/size";
 import { before, data, focusVisible, hover, when } from "@pkg/u/state";
 import { attrs } from "remix/ui";
 
+import { mergeStyle } from "../utils/merge-style";
+
 /** Default {@link Resizable.Props} orientation, applied when `orientation` is omitted. */
 const DEFAULT_ORIENTATION: Resizable.Orientation = "horizontal";
 
@@ -185,22 +187,11 @@ Resizable.Panel = function ResizablePanel(handle: Handle<Resizable.PanelProps>) 
 		let { mix, style, defaultSize, minSize, maxSize, ...rest } = handle.props;
 		let context = handle.context.get(Resizable);
 
-		let resolvedStyle =
-			typeof style === "string"
-				? [
-						style,
-						defaultSize != null && `--ui-resizable-panel-size:${defaultSize}%`,
-						minSize != null && `--ui-resizable-panel-min-size:${minSize}%`,
-						maxSize != null && `--ui-resizable-panel-max-size:${maxSize}%`,
-					]
-						.filter(Boolean)
-						.join(";")
-				: {
-						...style,
-						...(defaultSize != null && { "--ui-resizable-panel-size": `${defaultSize}%` }),
-						...(minSize != null && { "--ui-resizable-panel-min-size": `${minSize}%` }),
-						...(maxSize != null && { "--ui-resizable-panel-max-size": `${maxSize}%` }),
-					};
+		let resolvedStyle = mergeStyle(style, {
+			"--ui-resizable-panel-size": defaultSize == null ? null : `${defaultSize}%`,
+			"--ui-resizable-panel-min-size": minSize == null ? null : `${minSize}%`,
+			"--ui-resizable-panel-max-size": maxSize == null ? null : `${maxSize}%`,
+		});
 
 		return (
 			<div

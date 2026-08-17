@@ -27,6 +27,17 @@ function supportedRules(descriptor: CSSMixinDescriptor): Record<string, unknown>
 	return stylesOf(descriptor)[SUPPORTS_SCROLL_TIMELINE] as Record<string, unknown>;
 }
 
+/** Reads a rule's value as the string it must be, so a missing or nested rule fails loudly instead of interpolating as `undefined`. */
+function stringRule(rules: Record<string, unknown>, name: string): string {
+	let value = rules[name];
+
+	if (typeof value !== "string") {
+		throw new Error(`Expected rule "${name}" to hold a string, found ${typeof value}.`);
+	}
+
+	return value;
+}
+
 describe(scrollShadow.name, () => {
 	test("wraps its rules in a scroll-timeline @supports guard", () => {
 		let rules = stylesOf(scrollShadow());
@@ -50,7 +61,7 @@ describe(scrollShadow.name, () => {
 
 	test("emits keyframes from a transparent shadow to the themed shadow variable", () => {
 		let rules = supportedRules(scrollShadow());
-		let keyframesKey = `@keyframes ${rules.animationName}`;
+		let keyframesKey = `@keyframes ${stringRule(rules, "animationName")}`;
 		let keyframes = rules[keyframesKey] as {
 			from: { boxShadow: string };
 			to: { boxShadow: string };
@@ -84,7 +95,7 @@ describe(scrollProgress.name, () => {
 
 	test("grows inline-size from empty to full", () => {
 		let rules = supportedRules(scrollProgress());
-		let keyframesKey = `@keyframes ${rules.animationName}`;
+		let keyframesKey = `@keyframes ${stringRule(rules, "animationName")}`;
 		let keyframes = rules[keyframesKey] as {
 			from: { inlineSize: string };
 			to: { inlineSize: string };
@@ -101,7 +112,7 @@ describe(scrollProgress.name, () => {
 		expect(reduced.inlineSize).toBe("100%");
 		expect(reduced.animationName).not.toBe(rules.animationName);
 
-		let keyframesKey = `@keyframes ${reduced.animationName}`;
+		let keyframesKey = `@keyframes ${stringRule(reduced, "animationName")}`;
 		let keyframes = reduced[keyframesKey] as { from: { opacity: number }; to: { opacity: number } };
 
 		expect(keyframes.from.opacity).toBe(0);

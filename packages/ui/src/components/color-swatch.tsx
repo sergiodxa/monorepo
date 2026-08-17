@@ -24,6 +24,8 @@ import { after, before, data } from "@pkg/u/state";
 import { verticalAlign } from "@pkg/u/typography";
 import { attrs } from "remix/ui";
 
+import { mergeStyle } from "../utils/merge-style";
+
 /** Shape variant {@link ColorSwatch} falls back to when `shape` is omitted. */
 const DEFAULT_SHAPE: ColorSwatch.Shape = "rounded";
 
@@ -107,10 +109,7 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 		let { value, shape, size, mix, style, ...rest } = handle.props;
 		let resolvedShape = shape ?? DEFAULT_SHAPE;
 		let resolvedSize = size ?? DEFAULT_SIZE;
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};--ui-color-swatch-value:${value}`
-				: { ...style, "--ui-color-swatch-value": value };
+		let resolvedStyle = mergeStyle(style, { "--ui-color-swatch-value": value });
 
 		return (
 			<span

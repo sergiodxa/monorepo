@@ -23,6 +23,7 @@ export * from "./has-accessible-text";
 export * from "./hue-spectrum";
 export * from "./is-new-primary-press";
 export * from "./keyboard-nav";
+export * from "./merge-style";
 export * from "./paired-range-inputs";
 export * from "./placement";
 export * from "./prefers-reduced-motion";

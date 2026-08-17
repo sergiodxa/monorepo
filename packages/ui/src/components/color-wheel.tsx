@@ -43,6 +43,7 @@ import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
 import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";
 import { clampChannel, roundChannel } from "../utils/color-math";
 import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum";
+import { mergeStyle } from "../utils/merge-style";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
 /** Lower bound of {@link ColorWheel}'s fixed hue domain, in degrees. Never overridable — a wheel that picked from anything but the full domain would no longer be a hue wheel. */
@@ -197,14 +198,10 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 		let resolvedValue = value ?? defaultValue ?? DEFAULT_VALUE;
 		let resolvedStep = step ?? DEFAULT_STEP;
 		let resolvedHue = roundChannel(clampChannel(resolvedValue, DEFAULT_MIN, DEFAULT_MAX));
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};--ui-color-wheel-value:hsl(${resolvedHue} 100% 50%);--ui-color-wheel-hue:${resolvedHue}`
-				: {
-						...style,
-						"--ui-color-wheel-value": `hsl(${resolvedHue} 100% 50%)`,
-						"--ui-color-wheel-hue": `${resolvedHue}`,
-					};
+		let resolvedStyle = mergeStyle(style, {
+			"--ui-color-wheel-value": `hsl(${resolvedHue} 100% 50%)`,
+			"--ui-color-wheel-hue": `${resolvedHue}`,
+		});
 
 		warnIfNoAccessibleLabel(
 			handle.props,

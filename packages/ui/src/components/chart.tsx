@@ -1096,6 +1096,12 @@ ChartTooltip.Value = function ChartTooltipValue(handle: Handle<Chart.Tooltip.Val
 	};
 };
 
+// tsgolint alone rejects this expando assignment as TS2339. `tsc --noEmit` accepts the
+// whole file, and tsgolint itself reads the sibling `Chart.Legend`/`Line`/`Area`/`Pie`
+// assignments below and above without complaint, so it is a gap in its handling of this
+// one name rather than a defect here. `@ts-ignore` and not `@ts-expect-error`: `tsc` has
+// no error to expect on this line and would report the directive as unused.
+// @ts-ignore
 Chart.Tooltip = ChartTooltip;
 
 /**

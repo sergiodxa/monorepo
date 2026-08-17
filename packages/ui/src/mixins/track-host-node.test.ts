@@ -24,12 +24,12 @@ function createHostHandle() {
 
 	return {
 		handle: target as unknown as MixinHandle<EventTarget>,
-		insert(node: EventTarget) {
+		insert: (node: EventTarget) => {
 			let event = new Event("insert") as Event & { node: EventTarget };
 			event.node = node;
 			target.dispatchEvent(event);
 		},
-		remove() {
+		remove: () => {
 			target.dispatchEvent(new Event("remove"));
 		},
 	};

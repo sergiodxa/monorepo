@@ -191,10 +191,14 @@ export const viewTransition: MixinFactory<HTMLElement> = createMixin<HTMLElement
 
 			if (!state.transition) return;
 
+			let stopTransitioning = () => getHostNode()?.removeAttribute(TRANSITIONING_ATTRIBUTE);
+
 			hostNode?.toggleAttribute(TRANSITIONING_ATTRIBUTE, true);
-			state.transition.finished.finally(() =>
-				getHostNode()?.removeAttribute(TRANSITIONING_ATTRIBUTE),
-			);
+			// `finished` rejects when the browser skips or aborts the transition,
+			// which still ends it. Settling both ways drops the attribute whichever
+			// happens, and keeps a skipped transition from stranding the host as
+			// transitioning or surfacing as an unhandled rejection.
+			void state.transition.finished.then(stopTransitioning, stopTransitioning);
 		},
 		{ signal: handle.signal },
 	);

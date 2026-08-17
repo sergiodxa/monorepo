@@ -103,7 +103,7 @@ export function enterExit(options: EnterExit.Options = {}): CSSMixinDescriptor {
 	// Reduced-motion resets scale/translate on the base (exit-state) rule back
 	// to "no offset". The entered/open rule already rests at "none" regardless
 	// of motion preference, so only the exit side needs an override here.
-	let reducedMotionReset: CSSStyles = {};
+	let reducedMotion: CSSStyles = {};
 
 	if (options.opacity !== undefined) {
 		transitionProperties.push("opacity");
@@ -114,13 +114,13 @@ export function enterExit(options: EnterExit.Options = {}): CSSMixinDescriptor {
 		transitionProperties.push("scale");
 		exitState.scale = String(options.scale);
 		enteredState.scale = RESET_TRANSFORM;
-		reducedMotionReset.scale = RESET_TRANSFORM;
+		reducedMotion.scale = RESET_TRANSFORM;
 	}
 	if (options.translate !== undefined) {
 		transitionProperties.push("translate");
 		exitState.translate = options.translate;
 		enteredState.translate = RESET_TRANSFORM;
-		reducedMotionReset.translate = RESET_TRANSFORM;
+		reducedMotion.translate = RESET_TRANSFORM;
 	}
 	// `display`/`overlay` ride along on every host so the platform can hold the
 	// previous frame in place for the duration instead of unmounting instantly;
@@ -133,22 +133,23 @@ export function enterExit(options: EnterExit.Options = {}): CSSMixinDescriptor {
 	let startingStyle: CSSStyles = {};
 	startingStyle[entered] = exitState;
 
-	let reducedMotion: CSSStyles = {
-		transitionProperty: transitionProperties
-			.filter((property) => property !== "scale" && property !== "translate")
-			.join(", "),
-		...reducedMotionReset,
-	};
+	reducedMotion.transitionProperty = transitionProperties
+		.filter((property) => property !== "scale" && property !== "translate")
+		.join(", ");
 
-	let output: CSSStyles = {
-		...exitState,
+	// Copied onto a fresh object with `Object.assign` rather than spread into
+	// one: `exitState` doubles as the `@starting-style` block and must stay free
+	// of the transition declarations, and `CSSStyles` inherits a `Symbol.iterator`
+	// key from `CSSStyleDeclaration`, so spreading one reads as spreading an
+	// iterable even though a declaration block never is one.
+	let output: CSSStyles = Object.assign({}, exitState, {
 		transitionProperty: transitionProperties.join(", "),
 		transitionDuration: `${duration}ms`,
 		transitionTimingFunction: easing,
 		transitionBehavior: "allow-discrete",
 		"@starting-style": startingStyle,
 		"@media (prefers-reduced-motion: reduce)": reducedMotion,
-	};
+	});
 	output[entered] = enteredState;
 
 	return css(output);

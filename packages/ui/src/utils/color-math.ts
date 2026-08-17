@@ -330,10 +330,10 @@ function parseHexDigits(digits: string): RGBAColor | null {
 	let channels: string[];
 	switch (digits.length) {
 		case 3:
-			channels = [...[...digits].map(expandHexDigit), "ff"];
+			channels = [...Array.from(digits, expandHexDigit), "ff"];
 			break;
 		case 4:
-			channels = [...digits].map(expandHexDigit);
+			channels = Array.from(digits, expandHexDigit);
 			break;
 		case 6:
 			channels = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6), "ff"];

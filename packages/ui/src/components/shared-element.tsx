@@ -15,6 +15,8 @@ import type { Handle, Props as TagProps } from "remix/ui";
 
 import { block } from "@pkg/u/layout";
 
+import { mergeStyle } from "../utils/merge-style";
+
 /**
  * Stylesheet text {@link SharedElement} renders into a `<style>` element
  * alongside its host, rather than through a `css()` declaration on the host
@@ -101,10 +103,7 @@ export function SharedElement(handle: Handle<SharedElement.Props>) {
 			);
 		}
 
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};view-transition-name:${id}`
-				: { ...style, viewTransitionName: id };
+		let resolvedStyle = mergeStyle(style, { "view-transition-name": id });
 
 		return (
 			<>

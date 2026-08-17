@@ -19,6 +19,7 @@ import { focusItem, isPrintableKey, labelFor, queryItems, setRovingTabindex } fr
 function createItem(
 	overrides: {
 		disabled?: boolean;
+		focus?: () => void;
 		searchValue?: string | null;
 		textContent?: string | null;
 	} = {},
@@ -27,7 +28,7 @@ function createItem(
 
 	return {
 		tabIndex: -1,
-		focus: mock(() => {}),
+		focus: overrides.focus ?? mock(() => {}),
 		matches: (selector: string) => disabled && selector === ':disabled, [aria-disabled="true"]',
 		getAttribute: (name: string) =>
 			name === "data-search-value" ? (overrides.searchValue ?? null) : null,
@@ -134,16 +135,18 @@ describe(setRovingTabindex.name, () => {
 
 describe(focusItem.name, () => {
 	test("assigns roving tabindex and moves real focus to item", () => {
-		let first = createItem();
-		let second = createItem();
+		let focusFirst = mock(() => {});
+		let focusSecond = mock(() => {});
+		let first = createItem({ focus: focusFirst });
+		let second = createItem({ focus: focusSecond });
 		let items = [first, second];
 
 		focusItem(items, second);
 
 		expect(first.tabIndex).toBe(-1);
 		expect(second.tabIndex).toBe(0);
-		expect(second.focus).toHaveBeenCalledTimes(1);
-		expect(first.focus).not.toHaveBeenCalled();
+		expect(focusSecond).toHaveBeenCalledTimes(1);
+		expect(focusFirst).not.toHaveBeenCalled();
 	});
 });
 

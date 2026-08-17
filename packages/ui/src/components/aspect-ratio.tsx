@@ -16,6 +16,8 @@ import { block } from "@pkg/u/layout";
 import { overflow } from "@pkg/u/overflow";
 import { is } from "@pkg/u/size";
 
+import { mergeStyle } from "../utils/merge-style";
+
 /**
  * Ratio {@link AspectRatio} falls back to when `ratio` is omitted: a
  * perfect square.
@@ -62,10 +64,7 @@ export function AspectRatio(handle: Handle<AspectRatio.Props>) {
 	return () => {
 		let { ratio, mix, style, ...rest } = handle.props;
 		let resolvedRatio = ratio ?? DEFAULT_RATIO;
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};--ui-aspect-ratio:${resolvedRatio}`
-				: { ...style, "--ui-aspect-ratio": resolvedRatio };
+		let resolvedStyle = mergeStyle(style, { "--ui-aspect-ratio": resolvedRatio });
 
 		return (
 			<div

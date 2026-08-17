@@ -28,6 +28,7 @@ import { when } from "@pkg/u/state";
 import { scaleProperty } from "@pkg/u/transform";
 import { attrs } from "remix/ui";
 
+import { mergeStyle } from "../utils/merge-style";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name";
 
 /** Hue, in degrees, {@link ColorArea} falls back to when `hue` is omitted. */
@@ -165,10 +166,7 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 		let resolvedHue = hue ?? DEFAULT_HUE;
 		let resolvedSaturation = saturation ?? defaultSaturation ?? DEFAULT_SATURATION;
 		let resolvedValue = value ?? defaultValue ?? DEFAULT_VALUE;
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};--ui-color-area-hue:${resolvedHue}`
-				: { ...style, "--ui-color-area-hue": resolvedHue };
+		let resolvedStyle = mergeStyle(style, { "--ui-color-area-hue": resolvedHue });
 
 		warnIfNoAccessibleLabel(
 			handle.props,

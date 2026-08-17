@@ -34,6 +34,7 @@ import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
 import { rtlAwareGradientDirection } from "../styles/rtl-aware-gradient-direction";
 import { HUE_GRADIENT_STOPS } from "../utils/hue-spectrum";
+import { mergeStyle } from "../utils/merge-style";
 
 /**
  * Custom property carrying a {@link ColorSlider.Track}'s gradient direction,
@@ -252,10 +253,7 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 	return () => {
 		let { hue, mix, style, ...rest } = handle.props;
 		let resolvedHue = hue ?? DEFAULT_HUE;
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};${TRACK_HUE_PROPERTY}:${resolvedHue}`
-				: { ...style, [TRACK_HUE_PROPERTY]: `${resolvedHue}` };
+		let resolvedStyle = mergeStyle(style, { [TRACK_HUE_PROPERTY]: `${resolvedHue}` });
 
 		return (
 			<div

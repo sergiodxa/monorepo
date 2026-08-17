@@ -49,6 +49,7 @@ import {
 
 import { outputCaptionText } from "../styles/output-caption-text";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance";
+import { mergeStyle } from "../utils/merge-style";
 import { resolveFillPercent } from "../utils/resolve-fill-percent";
 
 /** Default {@link Slider.Props} orientation, applied when `orientation` is omitted. */
@@ -213,10 +214,7 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 		let { mix, style, ...rest } = handle.props;
 		let context = handle.context.get(Slider);
 		let fillPercent = resolveFillPercent(context.min, context.max, context.value);
-		let resolvedStyle =
-			typeof style === "string"
-				? `${style};--ui-slider-fill:${fillPercent}%`
-				: { ...style, "--ui-slider-fill": `${fillPercent}%` };
+		let resolvedStyle = mergeStyle(style, { "--ui-slider-fill": `${fillPercent}%` });
 
 		return (
 			<div
