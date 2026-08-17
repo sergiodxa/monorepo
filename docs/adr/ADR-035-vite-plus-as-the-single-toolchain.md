@@ -225,18 +225,31 @@ awaited, including 62 that already were not before this work.
 
 ## Phases 2 and 3 Outcome
 
-The suite runs under Vitest: **1,058 files / 11,474 tests in 50.7s**, against the 276s baseline
-this ADR opened with — **5.4x faster**. `vp check` is 8.6s. One file remains on `bun test`.
+The suite runs under Vitest: **1,059 files / 11,488 tests**, against the 276s baseline this ADR
+opened with. `vp check` is 8.6s. **Nothing runs under `bun test`.**
 
-### The one file that keeps its own runner
+### The last file, and the black-box pattern that closed it
 
-`packages/spec/src/plugins/db.test.ts`. `packages/spec` is a `bun build --compile` CLI, and that
-file's `describe("db end to end (SQLite)")` block connects through Bun's built-in `SQL` client to
-prove the `rows` / `affected_rows` / `count` shaping and the connect-reuse-dispose lifecycle. Bun's
-`SQL` has no Node equivalent, and under Node the lazy `import("bun")` fails, so those tests would
-error rather than skip. Its other 11 tests never open a connection and could be split out; that
-would leave `bun test` running three tests instead of fourteen, which is not worth splitting a
-cohesive file for.
+`packages/spec/src/plugins/db.test.ts` was the one holdout. `packages/spec` is a
+`bun build --compile` CLI, and that file's `describe("db end to end (SQLite)")` block connects
+through Bun's built-in `SQL` client to prove the `rows` / `affected_rows` / `count` shaping and
+the connect-reuse-dispose lifecycle. Bun's `SQL` has no Node equivalent, and under Node the lazy
+`import("bun")` fails, so those three tests would error rather than skip.
+
+Splitting the file to isolate them was rejected — it would have left a second runner configured
+for three tests. Instead the plugin keeps Bun's `SQL`, and the three scenarios run as a black box:
+`db-e2e-probe.ts` executes them under a Bun child process and writes what it observed as one JSON
+object, and the expectations stay in the Vitest file. A probe that only records, never asserts, is
+what keeps a failure naming the expectation instead of a subprocess exit code. `db-example.test.ts`
+already drove the real CLI this way, so the shape was established rather than invented.
+
+Two mutations confirmed the SQL genuinely executes rather than the probe returning canned values:
+reversing its `ORDER BY` fails the row-order assertion, and dropping one `INSERT` fails the
+connection-reuse count.
+
+Removing the last `bun:test` import also retired `types/bun-test.d.ts`, the shim correcting
+`bun-types`' `resolves`/`rejects` chains, and with it the `@ts-ignore` that shim required because
+tsgolint reports TS2430 where `tsc` does not.
 
 Everything else in the package did port: 25 of its modules already used `node:` APIs, and
 `bun build --compile` accepts them, so the compiled binary came out **byte-identical** at
